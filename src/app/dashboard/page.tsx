@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import {
   ShoppingBag, Package, Users, TrendingUp,
-  Plus, Settings, Store, ArrowRight
+  Plus, Store, ArrowRight
 } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -49,10 +49,9 @@ export default async function DashboardPage() {
             { href: "/dashboard/pedidos", label: "Pedidos", icon: ShoppingBag },
             { href: "/dashboard/vendedoras", label: "Vendedoras", icon: Users },
             { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store },
-            { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
           ].map(({ href, label, icon: Icon }) => (
             <Link
-              key={href}
+              key={`${href}-${label}`}
               href={href}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors font-medium text-sm"
             >
