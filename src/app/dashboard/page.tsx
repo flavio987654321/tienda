@@ -3,16 +3,18 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import CopyLinkButton from "@/components/CopyLinkButton";
 import {
   ShoppingBag, Package, Users, TrendingUp,
-  Plus, Store, ArrowRight
+  Plus, Store, ArrowRight, Share2
 } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  const userId = (session.user as { id: string }).id;
+  const user = session.user as { id: string; role?: string };
+  const userId = user.id;
 
   const store = await prisma.store.findUnique({
     where: { ownerId: userId },
@@ -20,6 +22,8 @@ export default async function DashboardPage() {
       _count: { select: { products: true, orders: true, affiliates: true } },
     },
   });
+
+  if (!store && user.role === "SELLER") redirect("/vendedoras");
 
   const recentOrders = await prisma.order.findMany({
     where: { storeId: store?.id },
@@ -75,6 +79,35 @@ export default async function DashboardPage() {
           <p className="text-gray-500 mt-1">Resumen de tu tienda <strong>{store?.name}</strong></p>
         </div>
 
+        {store && (
+          <div className="mb-8 rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600">
+                  <Share2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">Link publico de tu tienda</p>
+                  <p className="mt-1 break-all text-sm text-gray-500">/tienda/{store.slug}</p>
+                  <p className="mt-1 text-xs text-gray-400">Este es el link que ve cualquier cliente. No necesita login.</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <CopyLinkButton
+                  value={`/tienda/${store.slug}`}
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                />
+                <Link
+                  href={`/tienda/${store.slug}`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Ver tienda
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           {[
@@ -118,7 +151,7 @@ export default async function DashboardPage() {
           {[
             { href: "/dashboard/productos/nuevo", label: "Agregar producto", icon: Plus, desc: "Sumá un nuevo producto a tu catálogo" },
             { href: `/tienda/${store?.slug}`, label: "Ver mi tienda", icon: Store, desc: "Mirá cómo ven tu tienda los clientes" },
-            { href: "/dashboard/vendedoras/nueva", label: "Sumar vendedora", icon: Users, desc: "Invitá a alguien a vender por comisión" },
+            { href: "/dashboard/vendedoras", label: "Gestionar vendedoras", icon: Users, desc: "Activá solicitudes y aprobá a quienes pueden vender" },
           ].map(({ href, label, icon: Icon, desc }) => (
             <Link
               key={href}

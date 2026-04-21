@@ -10,27 +10,27 @@ function sessionUserId(session: unknown) {
 // GET - vendedora: ver tiendas disponibles / dueña: ver sus vendedoras
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const mode = searchParams.get("mode");
 
   if (mode === "tiendas-disponibles") {
     const userId = sessionUserId(session);
-    if (!userId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     const stores = await prisma.store.findMany({
       where: { affiliatesEnabled: true, isActive: true },
       include: {
         owner: { select: { name: true } },
         _count: { select: { products: true } },
         affiliates: {
-          where: { userId },
+          where: userId ? { userId } : { id: "__public_no_affiliate__" },
           select: { id: true, status: true, isActive: true },
         },
       },
     });
     return NextResponse.json({ stores });
   }
+
+  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   // Ver vendedoras de mi tienda
   const ownerId = sessionUserId(session);

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CheckCircle, Clock, Loader2, Send, Store, TrendingUp, Users, Wallet, XCircle } from "lucide-react";
+import CopyLinkButton from "@/components/CopyLinkButton";
 
 interface StoreItem {
   id: string;
@@ -169,15 +170,27 @@ export default function VendedorasPage() {
                       </div>
                     ) : null}
 
-                    <div className="flex gap-2">
-                      <Link href={`/tienda/${store.slug}`} className="flex-1 text-center text-sm py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors font-medium">
-                        Ver tienda
-                      </Link>
-                      {application?.status === "APPROVED" ? (
-                        <Link href="/vendedoras/billetera" className="flex-1 text-center text-sm py-2 rounded-lg bg-green-600 text-white font-medium">
-                          Ver link
+                    {application?.status === "APPROVED" ? (
+                      <div className="space-y-2">
+                        <div className="rounded-xl bg-green-50 p-3">
+                          <p className="text-xs font-bold text-green-700">Tu link para vender</p>
+                          <p className="mt-1 break-all text-xs text-green-700">/tienda/{store.slug}?ref={application.id}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <CopyLinkButton
+                            value={`/tienda/${store.slug}?ref=${application.id}`}
+                            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-green-600 py-2 text-sm font-medium text-white"
+                          />
+                          <Link href={`/tienda/${store.slug}?ref=${application.id}`} className="flex-1 text-center text-sm py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors font-medium">
+                            Abrir
+                          </Link>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Link href={`/tienda/${store.slug}`} className="flex-1 text-center text-sm py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors font-medium">
+                          Ver tienda
                         </Link>
-                      ) : (
                         <button
                           type="button"
                           onClick={() => openApplication(store)}
@@ -187,8 +200,8 @@ export default function VendedorasPage() {
                           <Send className="h-3.5 w-3.5" />
                           Postularme
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               );
