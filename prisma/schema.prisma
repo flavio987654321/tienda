@@ -24,7 +24,7 @@ model User {
   store       Store?
   orders      Order[]
   affiliates  Affiliate[] @relation("AffiliateOwner")
-  asAffiliate Affiliate?  @relation("AffiliateUser")
+  asAffiliate Affiliate[] @relation("AffiliateUser")
 }
 
 model Account {
@@ -217,7 +217,14 @@ model Shipping {
 
 model Affiliate {
   id        String   @id @default(cuid())
-  isActive  Boolean  @default(true)
+  status    String   @default("PENDING")
+  isActive  Boolean  @default(false)
+  applicationMessage String?
+  experience String?
+  cvUrl     String?
+  socialUrl String?
+  requestedAt DateTime @default(now())
+  reviewedAt DateTime?
   createdAt DateTime @default(now())
 
   storeId String
@@ -226,12 +233,14 @@ model Affiliate {
   ownerId String
   owner   User   @relation("AffiliateOwner", fields: [ownerId], references: [id])
 
-  userId String @unique
+  userId String
   user   User   @relation("AffiliateUser", fields: [userId], references: [id])
 
   orders      Order[]
   commissions Commission[]
   wallet      Wallet?
+
+  @@unique([storeId, userId])
 }
 
 model Commission {

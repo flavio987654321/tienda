@@ -7,6 +7,8 @@ import Link from "next/link";
 
 interface AffiliateData {
   id: string;
+  status: string;
+  isActive: boolean;
   store: { name: string; slug: string };
   wallet: {
     id: string;
@@ -185,18 +187,24 @@ export default function BilleteraPage() {
               </div>
             </div>
 
-            <div className="mb-4 rounded-xl bg-indigo-50 p-3">
-              <p className="text-xs font-semibold text-indigo-700 mb-1">Tu link de venta</p>
-              <Link
-                href={`/tienda/${affiliate.store.slug}?ref=${affiliate.id}`}
-                className="break-all text-xs text-indigo-600 hover:underline"
-              >
-                /tienda/{affiliate.store.slug}?ref={affiliate.id}
-              </Link>
-              <p className="mt-1 text-xs text-indigo-500">
-                Las compras hechas desde este link generan comision para vos cuando la tienda confirma el pago.
-              </p>
-            </div>
+            {affiliate.status === "APPROVED" && affiliate.isActive ? (
+              <div className="mb-4 rounded-xl bg-indigo-50 p-3">
+                <p className="text-xs font-semibold text-indigo-700 mb-1">Tu link de venta</p>
+                <Link
+                  href={`/tienda/${affiliate.store.slug}?ref=${affiliate.id}`}
+                  className="break-all text-xs text-indigo-600 hover:underline"
+                >
+                  /tienda/{affiliate.store.slug}?ref={affiliate.id}
+                </Link>
+                <p className="mt-1 text-xs text-indigo-500">
+                  Las compras hechas desde este link generan comision para vos cuando la tienda confirma el pago.
+                </p>
+              </div>
+            ) : (
+              <div className="mb-4 rounded-xl bg-yellow-50 p-3 text-xs text-yellow-700">
+                Tu solicitud todavia no esta aprobada. El link de venta aparece cuando la dueña te da permiso.
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 rounded-xl">
               <div className="text-center">

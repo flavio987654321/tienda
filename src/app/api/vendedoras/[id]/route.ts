@@ -1,0 +1,69 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
+
+export async function PATCH(req: NextRequest, context: RouteContext) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const ownerId = (session.user as { id?: string }).id;
+  if (!ownerId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const { id } = await context.params;
+  const { action } = await req.json();
+
+  const affiliate = await prisma.affiliate.findFirst({
+    where: { id, ownerId },
+    include: { wallet: true },
+  });
+
+  if (!affiliate) {
+    return NextResponse.json({ error: "Solicitud no encontrada" }, { status: 404 });
+  }
+
+  if (action === "approve") {
+    const updated = await prisma.affiliate.update({
+      where: { id },
+      data: {
+        status: "APPROVED",
+        isActive: true,
+        reviewedAt: new Date(),
+        wallet: affiliate.wallet
+          ? undefined
+          : { create: { balance: 0, totalEarned: 0, totalWithdrawn: 0 } },
+      },
+      include: { wallet: true },
+    });
+
+    return NextResponse.json({ affiliate: updated });
+  }
+
+  if (action === "reject") {
+    const updated = await prisma.affiliate.update({
+      where: { id },
+      data: {
+        status: "REJECTED",
+        isActive: false,
+        reviewedAt: new Date(),
+      },
+    });
+
+    return NextResponse.json({ affiliate: updated });
+  }
+
+  if (action === "deactivate") {
+    const updated = await prisma.affiliate.update({
+      where: { id },
+      data: { isActive: false, status: "PAUSED" },
+    });
+
+    return NextResponse.json({ affiliate: updated });
+  }
+
+  return NextResponse.json({ error: "Accion no valida" }, { status: 400 });
+}

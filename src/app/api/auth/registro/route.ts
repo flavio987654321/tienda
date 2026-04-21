@@ -13,10 +13,15 @@ function toSlug(text: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, password, storeName } = await req.json();
+    const { name, email, password, storeName, accountType } = await req.json();
 
-    if (!name || !email || !password || !storeName) {
+    if (!name || !email || !password) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
+    }
+
+    const type = accountType === "seller" ? "SELLER" : "OWNER";
+    if (type === "OWNER" && !storeName) {
+      return NextResponse.json({ error: "El nombre de la tienda es requerido" }, { status: 400 });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -26,22 +31,22 @@ export async function POST(req: NextRequest) {
 
     const hashed = await bcrypt.hash(password, 10);
 
-    let slug = toSlug(storeName);
-    const slugExists = await prisma.store.findUnique({ where: { slug } });
-    if (slugExists) slug = `${slug}-${Date.now()}`;
-
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashed,
-        role: "SELLER",
-        store: {
-          create: {
-            name: storeName,
-            slug,
-          },
-        },
+        role: type,
+        ...(type === "OWNER"
+          ? {
+              store: {
+                create: {
+                  name: storeName,
+                  slug: await uniqueStoreSlug(storeName),
+                },
+              },
+            }
+          : {}),
       },
     });
 
@@ -50,4 +55,11 @@ export async function POST(req: NextRequest) {
     console.error("REGISTRO ERROR:", e?.message, e?.stack);
     return NextResponse.json({ error: e?.message ?? "Error interno del servidor" }, { status: 500 });
   }
+}
+
+async function uniqueStoreSlug(storeName: string) {
+  let slug = toSlug(storeName);
+  const slugExists = await prisma.store.findUnique({ where: { slug } });
+  if (slugExists) slug = `${slug}-${Date.now()}`;
+  return slug;
 }
