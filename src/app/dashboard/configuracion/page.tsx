@@ -181,7 +181,7 @@ export default function ConfiguracionPage() {
           <p className="text-gray-500 mt-0.5 text-sm">Preview en vivo mientras editás</p>
         </div>
         <div className="flex items-center gap-3">
-          <a href={`/tienda/${config.name?.toLowerCase().replace(/\s+/g,"-")||"mi-tienda"}`} target="_blank"
+          <a href={`/tienda/${config.slug || config.name?.toLowerCase().replace(/\s+/g,"-") || "mi-tienda"}`} target="_blank"
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600 transition-colors border border-gray-200 px-3 py-2 rounded-xl">
             <ExternalLink className="h-3.5 w-3.5"/> Ver en vivo
           </a>

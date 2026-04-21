@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  const userId = (session.user as any).id;
+  const userId = (session.user as { id: string }).id;
 
   const store = await prisma.store.findUnique({
     where: { ownerId: userId },
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
             { href: "/dashboard/productos", label: "Productos", icon: Package },
             { href: "/dashboard/pedidos", label: "Pedidos", icon: ShoppingBag },
             { href: "/dashboard/vendedoras", label: "Vendedoras", icon: Users },
-            { href: "/dashboard/tienda", label: "Mi tienda", icon: Store },
+            { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store },
             { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
           ].map(({ href, label, icon: Icon }) => (
             <Link

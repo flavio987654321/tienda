@@ -8,7 +8,7 @@ const FbIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="h-3
 const TkIcon = () => <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.95a8.16 8.16 0 004.77 1.52V7.03a4.85 4.85 0 01-1-.34z"/></svg>;
 
 export interface StoreConfig {
-  name: string; tagline: string; description: string;
+  name: string; slug?: string; tagline: string; description: string;
   primaryColor: string; secondaryColor: string; accentColor: string;
   fontFamily: string; templateId: string;
   logo: string; banner: string;
