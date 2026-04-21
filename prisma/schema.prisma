@@ -1,0 +1,274 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String    @default("BUYER")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts    Account[]
+  sessions    Session[]
+  store       Store?
+  orders      Order[]
+  affiliates  Affiliate[] @relation("AffiliateOwner")
+  asAffiliate Affiliate?  @relation("AffiliateUser")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Store {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  description    String?
+  logo           String?
+  banner         String?
+  tagline        String?
+  primaryColor   String   @default("#6366f1")
+  secondaryColor String   @default("#f1f5f9")
+  accentColor    String   @default("#f59e0b")
+  fontFamily     String   @default("Inter")
+  templateId     String   @default("default")
+  productLayout  String   @default("grid3")
+  heroStyle      String   @default("full")
+  showPrices     Boolean  @default(true)
+  showStock      Boolean  @default(true)
+  showRatings    Boolean  @default(false)
+  // Anuncio
+  announcementBar      String?
+  announcementBarColor String  @default("#6366f1")
+  // Navbar
+  navbarStyle    String   @default("solid")
+  // Botones
+  buttonStyle    String   @default("rounded")
+  // Tarjetas
+  cardRadius     String   @default("md")
+  cardShadow     String   @default("sm")
+  cardHover      String   @default("scale")
+  // Fondo
+  backgroundStyle String  @default("plain")
+  // Redes sociales
+  instagramUrl   String?
+  facebookUrl    String?
+  tiktokUrl      String?
+  whatsappNumber String?
+  showWhatsappButton Boolean @default(false)
+  // Footer
+  footerText     String?
+  // Moneda y SEO
+  currency       String   @default("ARS")
+  seoTitle       String?
+  seoDescription String?
+  isActive       Boolean  @default(true)
+  affiliatesEnabled Boolean @default(false)
+  commissionRate Float    @default(10)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  ownerId String @unique
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  products   Product[]
+  orders     Order[]
+  affiliates Affiliate[]
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  price        Float
+  comparePrice Float?
+  images       String   @default("[]")
+  category     String   @default("general")
+  tags         String   @default("[]")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  variants   ProductVariant[]
+  orderItems OrderItem[]
+}
+
+model ProductVariant {
+  id    String  @id @default(cuid())
+  name  String
+  value String
+  stock Int     @default(0)
+  price Float?
+  sku   String?
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  orderItems OrderItem[]
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  status          String   @default("PENDING")
+  total           Float
+  shippingCost    Float    @default(0)
+  shippingMethod  String?
+  trackingCode    String?
+  notes           String?
+  shippingAddress String   @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  buyerId String
+  buyer   User   @relation(fields: [buyerId], references: [id])
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id])
+
+  affiliateId String?
+  affiliate   Affiliate? @relation(fields: [affiliateId], references: [id])
+
+  items      OrderItem[]
+  payment    Payment?
+  shipping   Shipping?
+  commission Commission?
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  quantity Int
+  price    Float
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+}
+
+model Payment {
+  id         String   @id @default(cuid())
+  provider   String   @default("mercadopago")
+  externalId String?  @unique
+  status     String   @default("PENDING")
+  amount     Float
+  currency   String   @default("ARS")
+  createdAt  DateTime @default(now())
+
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Shipping {
+  id            String   @id @default(cuid())
+  provider      String
+  service       String?
+  trackingCode  String?
+  status        String   @default("PENDING")
+  estimatedDays Int?
+  cost          Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Affiliate {
+  id        String   @id @default(cuid())
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  ownerId String
+  owner   User   @relation("AffiliateOwner", fields: [ownerId], references: [id])
+
+  userId String @unique
+  user   User   @relation("AffiliateUser", fields: [userId], references: [id])
+
+  orders      Order[]
+  commissions Commission[]
+  wallet      Wallet?
+}
+
+model Commission {
+  id        String   @id @default(cuid())
+  amount    Float
+  rate      Float
+  status    String   @default("PENDING")
+  paidAt    DateTime?
+  createdAt DateTime @default(now())
+
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id])
+}
+
+model Wallet {
+  id            String   @id @default(cuid())
+  balance       Float    @default(0)
+  totalEarned   Float    @default(0)
+  totalWithdrawn Float   @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  affiliateId String    @unique
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+
+  withdrawals WalletWithdrawal[]
+}
+
+model WalletWithdrawal {
+  id        String   @id @default(cuid())
+  amount    Float
+  status    String   @default("PENDING")
+  notes     String?
+  createdAt DateTime @default(now())
+
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id])
+}
