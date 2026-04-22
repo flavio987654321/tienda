@@ -8,7 +8,7 @@ import {
   Copy, Check, Share2, TrendingUp, ShoppingBag, ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/AuthProvider";
 
 interface WalletData {
   id: string;
@@ -377,7 +377,7 @@ function StarterGuide({ url, storeName, walletId, onAddBank }: { url: string; st
 // ── page ──────────────────────────────────────────────────────────────────────
 
 export default function BilleteraPage() {
-  const { status: sessionStatus } = useSession();
+  const { status: sessionStatus } = useAuth();
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBankForm, setShowBankForm] = useState<string | null>(null);

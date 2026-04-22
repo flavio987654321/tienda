@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth-session";
 
 type ProductRouteContext = RouteContext<"/api/productos/[id]">;
 
 async function getOwnerStoreId() {
-  const session = await getServerSession(authOptions);
-  if (!session) return { error: NextResponse.json({ error: "No autorizado" }, { status: 401 }) };
+  const user = await getCurrentUser();
+  if (!user) return { error: NextResponse.json({ error: "No autorizado" }, { status: 401 }) };
 
   const store = await prisma.store.findUnique({
-    where: { ownerId: (session.user as any).id },
+    where: { ownerId: user.id },
     select: { id: true },
   });
 

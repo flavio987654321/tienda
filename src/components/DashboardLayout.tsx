@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { useAuth } from "@/components/AuthProvider";
 
 const navItems = [
   { href: "/dashboard", label: "Inicio", icon: TrendingUp },
@@ -26,6 +26,7 @@ export default function DashboardLayout({
   userEmail?: string | null;
 }) {
   const pathname = usePathname();
+  const { signOut } = useAuth();
   const [pendingAffiliateIds, setPendingAffiliateIds] = useState<string[] | null>(null);
   const [seenPendingAffiliateIds, setSeenPendingAffiliateIds] = useState<string[]>([]);
 
@@ -107,7 +108,7 @@ export default function DashboardLayout({
             Configuración
           </Link>
           <button
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={() => signOut("/")}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors"
           >
             <LogOut className="h-4 w-4" />

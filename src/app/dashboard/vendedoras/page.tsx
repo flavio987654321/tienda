@@ -1,11 +1,10 @@
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import AffiliateActions from "@/components/affiliates/AffiliateActions";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Clock, DollarSign, Settings, TrendingUp, Users } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth-session";
 
 function statusClass(status: string) {
   if (status === "APPROVED") return "bg-green-100 text-green-700";
@@ -22,11 +21,10 @@ function statusLabel(status: string) {
 }
 
 export default async function VendedorasPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
-  const userId = (session.user as { id?: string }).id;
-  if (!userId) redirect("/login");
+  const userId = user.id;
 
   const store = await prisma.store.findUnique({
     where: { ownerId: userId },
@@ -52,7 +50,7 @@ export default async function VendedorasPage() {
   );
 
   return (
-    <DashboardLayout userName={session.user?.name} userEmail={session.user?.email}>
+    <DashboardLayout userName={user.name} userEmail={user.email}>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Afiliados</h1>

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase/client";
 import {
   ShoppingBag, Loader2, Eye, EyeOff, ArrowRight,
   Users, CheckCircle, Store, TrendingUp, Wallet,
@@ -13,6 +13,7 @@ import {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const supabase = createSupabaseBrowserClient();
   const registered = searchParams.get("registered");
 
   const [email, setEmail] = useState("");
@@ -25,11 +26,19 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const res = await signIn("credentials", { email, password, redirect: false });
-    if (res?.error) {
+
+    if (!hasSupabaseBrowserConfig()) {
+      setError("Falta configurar Supabase en las variables de entorno.");
+      setLoading(false);
+      return;
+    }
+
+    const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+    if (loginError) {
       setError("Email o contraseña incorrectos");
       setLoading(false);
     } else {
+      router.refresh();
       router.push("/panel");
     }
   }

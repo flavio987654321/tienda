@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth-session";
 
 const MIN_WITHDRAWAL = 500;
 const BANK_LOCKOUT_HOURS = 72;
-
-function sessionUserId(session: unknown) {
-  return (session as { user?: { id?: string } } | null)?.user?.id;
-}
 
 function isWithinLockout(bankUpdatedAt: Date | null): boolean {
   if (!bankUpdatedAt) return false;
@@ -33,11 +28,9 @@ function isValidAlias(alias: string): boolean {
 
 // GET - ver billetera
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-
-  const userId = sessionUserId(session);
-  if (!userId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const userId = user.id;
 
   const affiliates = await prisma.affiliate.findMany({
     where: { userId },
@@ -84,11 +77,9 @@ export async function GET() {
 
 // PUT - actualizar datos bancarios
 export async function PUT(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-
-  const userId = sessionUserId(session);
-  if (!userId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const userId = user.id;
 
   const body = await req.json();
   const { walletId, cbu, alias, cuil, bankHolder } = body;
@@ -153,11 +144,9 @@ export async function PUT(req: NextRequest) {
 
 // POST - solicitar retiro
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-
-  const userId = sessionUserId(session);
-  if (!userId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const userId = user.id;
 
   const body = await req.json();
   const { walletId, amount: rawAmount } = body;

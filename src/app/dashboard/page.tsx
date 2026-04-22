@@ -1,19 +1,17 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import CopyLinkButton from "@/components/CopyLinkButton";
+import { getCurrentUser } from "@/lib/auth-session";
 import {
   ShoppingBag, Package, Users, TrendingUp,
   Plus, Store, ArrowRight, Share2
 } from "lucide-react";
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
-  const user = session.user as { id: string; role?: string };
   const userId = user.id;
 
   const store = await prisma.store.findUnique({
@@ -66,7 +64,7 @@ export default async function DashboardPage() {
         </nav>
 
         <div className="border-t border-gray-100 pt-4">
-          <p className="text-xs text-gray-400 truncate">{session.user?.email}</p>
+          <p className="text-xs text-gray-400 truncate">{user.email}</p>
         </div>
       </div>
 
@@ -74,7 +72,7 @@ export default async function DashboardPage() {
       <div className="ml-64 p-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">
-            Bienvenida, {session.user?.name?.split(" ")[0]} 👋
+            Bienvenida, {user.name?.split(" ")[0]} 👋
           </h1>
           <p className="text-gray-500 mt-1">Resumen de tu tienda <strong>{store?.name}</strong></p>
         </div>

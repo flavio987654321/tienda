@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useAuth } from "@/components/AuthProvider";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent } from "framer-motion";
 import {
   ArrowRight, X, Store, Users, TrendingUp, Wallet, Truck, CheckCircle,
@@ -180,7 +180,7 @@ export default function Home() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
   const [realStores, setRealStores] = useState<RealStore[]>([]);
-  const { data: session } = useSession();
+  const { user: sessionUser } = useAuth();
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (v) => setNavScrolled(v > 50));
 
@@ -191,10 +191,10 @@ export default function Home() {
       .catch(() => {});
   }, []);
 
-  const role = (session?.user as any)?.role as string | undefined;
+  const role = sessionUser?.role;
   const panelHref = role === "OWNER" ? "/dashboard" : role === "SELLER" ? "/vendedoras" : "/mi-cuenta";
   const panelLabel = role === "OWNER" ? "Mi tienda" : role === "SELLER" ? "Mi panel" : "Mi cuenta";
-  const userName = session?.user?.name?.split(" ")[0] ?? null;
+  const userName = sessionUser?.name?.split(" ")[0] ?? null;
 
   return (
     <div className="min-h-screen bg-[#030712] text-white overflow-x-hidden">
@@ -236,7 +236,7 @@ export default function Home() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            {session ? (
+            {sessionUser ? (
               <>
                 <span className="text-gray-400 text-sm">Hola, {userName ?? "!"}</span>
                 <Link href={panelHref} className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105">
@@ -271,7 +271,7 @@ export default function Home() {
               ))}
               <button onClick={() => { setContact(true); setMobileMenu(false); }} className="block text-gray-300 hover:text-white py-2 w-full text-left">Contacto</button>
               <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
-                {session ? (
+                {sessionUser ? (
                   <Link href={panelHref} onClick={() => setMobileMenu(false)} className="text-center bg-indigo-600 rounded-xl py-2.5 text-sm font-semibold text-white">
                     {panelLabel}
                   </Link>

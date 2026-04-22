@@ -1,23 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-function sessionUserId(session: unknown) {
-  return (session as { user?: { id?: string } } | null)?.user?.id;
-}
+import { getCurrentUser } from "@/lib/auth-session";
 
 // GET - afiliado: ver tiendas disponibles / tienda: ver sus afiliados
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
   const { searchParams } = new URL(req.url);
   const mode = searchParams.get("mode");
 
   if (mode === "stats") {
-    if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    const userId = sessionUserId(session);
-    if (!userId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    const userId = user.id;
 
     const affiliates = await prisma.affiliate.findMany({
       where: { userId },
@@ -40,7 +34,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (mode === "tiendas-disponibles") {
-    const userId = sessionUserId(session);
+    const userId = user?.id;
     const stores = await prisma.store.findMany({
       where: { affiliatesEnabled: true, isActive: true },
       include: {
@@ -55,11 +49,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ stores });
   }
 
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   // Ver afiliados de mi tienda
-  const ownerId = sessionUserId(session);
-  if (!ownerId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ownerId = user.id;
   const store = await prisma.store.findUnique({
     where: { ownerId },
     include: {
@@ -78,12 +71,11 @@ export async function GET(req: NextRequest) {
 
 // POST - afiliado se une a una tienda
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const { storeId, applicationMessage, experience, cvUrl, socialUrl } = await req.json();
-  const userId = sessionUserId(session);
-  if (!userId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const userId = user.id;
 
   const store = await prisma.store.findUnique({ where: { id: storeId } });
   if (!store || !store.affiliatesEnabled) {

@@ -1,26 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth-session";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const user = await prisma.user.findUnique({
-    where: { id: (session.user as any).id },
+    where: { id: currentUser.id },
     select: { id: true, name: true, email: true, image: true, bio: true, city: true, instagramHandle: true, phone: true },
   });
   return NextResponse.json({ user });
 }
 
 export async function PUT(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const b = await req.json();
   const user = await prisma.user.update({
-    where: { id: (session.user as any).id },
+    where: { id: currentUser.id },
     data: {
       name:            b.name            || null,
       bio:             b.bio             || null,

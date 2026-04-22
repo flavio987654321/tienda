@@ -1,17 +1,16 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Plus, Package, Edit, Eye, EyeOff } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth-session";
 
 export default async function ProductosPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
   const store = await prisma.store.findUnique({
-    where: { ownerId: (session.user as any).id },
+    where: { ownerId: user.id },
     include: {
       products: {
         include: { variants: true },
@@ -23,7 +22,7 @@ export default async function ProductosPage() {
   const products = store?.products ?? [];
 
   return (
-    <DashboardLayout userName={session.user?.name} userEmail={session.user?.email}>
+    <DashboardLayout userName={user.name} userEmail={user.email}>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Productos</h1>

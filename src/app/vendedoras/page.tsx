@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/components/AuthProvider";
 import {
   CheckCircle, Clock, Loader2, Send, Store, TrendingUp, Users, Wallet,
   XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
@@ -699,7 +699,7 @@ const STATUS: Record<string, { label: string; cls: string; dot: string }> = {
 };
 
 export default function VendedorasPage() {
-  const { data: session, status: sessionStatus } = useSession();
+  const { user, status: sessionStatus, signOut } = useAuth();
   const router = useRouter();
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [loadingStores, setLoadingStores] = useState(true);
@@ -734,7 +734,7 @@ export default function VendedorasPage() {
     setApplyStore(null);
   }
 
-  const userName = (session?.user as any)?.name ?? "Afiliado";
+  const userName = user?.name ?? "Afiliado";
   const userInitial = userName.charAt(0).toUpperCase();
 
   return (
@@ -768,7 +768,7 @@ export default function VendedorasPage() {
                   <span className="text-sm text-gray-300 font-medium hidden sm:block">{userName}</span>
                 </div>
                 <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
+                  onClick={() => signOut("/")}
                   className="flex items-center gap-2 text-gray-500 hover:text-red-400 text-sm px-3 py-2 rounded-xl hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
                   title="Cerrar sesión"
                 >
