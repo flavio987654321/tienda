@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -538,7 +538,21 @@ interface VendedoraStats {
 function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; onClose: () => void; onSave: (p: UserProfile) => void }) {
   const [form, setForm] = useState({ name: profile.name ?? "", bio: profile.bio ?? "", city: profile.city ?? "", instagramHandle: profile.instagramHandle ?? "", phone: profile.phone ?? "", image: profile.image ?? "" });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const upd = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.url) upd("image", data.url);
+    setUploading(false);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -548,13 +562,15 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
     setSaving(false);
   }
 
+  const initial = (form.name || profile.email).charAt(0).toUpperCase();
+
   const inp = (label: string, key: keyof typeof form, ph: string, icon: React.ReactNode) => (
     <div>
-      <label className="block text-xs font-semibold text-gray-400 mb-1.5">{label}</label>
+      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{label}</label>
       <div className="relative">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600">{icon}</div>
+        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600">{icon}</div>
         <input value={form[key]} onChange={e => upd(key, e.target.value)} placeholder={ph}
-          className="w-full bg-white/5 border border-white/10 rounded-2xl pl-9 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+          className="w-full bg-gray-900 border border-white/8 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-700 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/40 text-sm transition-all" />
       </div>
     </div>
   );
@@ -562,57 +578,63 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-      <motion.form initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-md" />
+      <motion.form initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: "spring", damping: 28, stiffness: 320 }}
         onSubmit={submit} onClick={e => e.stopPropagation()}
-        className="relative bg-gray-950 border border-white/10 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
-        <div className="p-6 border-b border-white/5 flex items-center justify-between">
-          <div>
-            <p className="text-indigo-400 text-xs font-bold uppercase tracking-widest mb-0.5">Tu perfil</p>
-            <h3 className="text-xl font-black text-white">Editá tu información</h3>
-          </div>
-          <button type="button" onClick={onClose} className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all">
+        className="relative bg-[#0d0f1a] border border-white/8 rounded-3xl w-full max-w-md shadow-2xl shadow-black/60 overflow-hidden">
+
+        {/* Header */}
+        <div className="px-6 pt-6 pb-5 border-b border-white/5 flex items-center justify-between">
+          <h3 className="text-lg font-black text-white">Editá tu perfil</h3>
+          <button type="button" onClick={onClose} className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-500 hover:text-white transition-all">
             <XCircle className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Avatar preview */}
-        <div className="px-6 pt-5 flex items-center gap-4">
-          <div className="relative">
-            {form.image ? (
-              <img src={form.image} alt="" className="w-16 h-16 rounded-2xl object-cover border-2 border-indigo-500/40" />
-            ) : (
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-2xl font-black">
-                {(form.name || profile.email).charAt(0).toUpperCase()}
+        <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+          {/* Avatar picker */}
+          <div className="flex flex-col items-center gap-3">
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+            <button type="button" onClick={() => fileRef.current?.click()}
+              className="relative group w-24 h-24 rounded-2xl overflow-hidden border-2 border-white/10 hover:border-indigo-500/50 transition-all shadow-xl focus:outline-none">
+              {form.image ? (
+                <img src={form.image} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-4xl font-black">
+                  {initial}
+                </div>
+              )}
+              {/* Overlay */}
+              <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {uploading
+                  ? <Loader2 className="h-5 w-5 text-white animate-spin" />
+                  : <><Edit3 className="h-5 w-5 text-white" /><span className="text-white text-[10px] font-bold">Cambiar foto</span></>
+                }
               </div>
-            )}
+            </button>
+            <p className="text-xs text-gray-600">Tocá la foto para cambiarla</p>
           </div>
-          <div className="flex-1">
-            <label className="block text-xs font-semibold text-gray-400 mb-1.5">URL de foto de perfil</label>
-            <input value={form.image} onChange={e => upd("image", e.target.value)} placeholder="https://..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs" />
-          </div>
-        </div>
 
-        <div className="p-6 space-y-4">
           {inp("Nombre completo", "name", "Tu nombre", <Edit3 className="h-3.5 w-3.5" />)}
+
           <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1.5">Bio / Presentación</label>
-            <textarea value={form.bio} onChange={e => upd("bio", e.target.value)} placeholder="Contá quién sos en pocas palabras..." rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-none" />
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Bio / Presentación</label>
+            <textarea value={form.bio} onChange={e => upd("bio", e.target.value)} placeholder="Contá quién sos, qué vendés, cuál es tu zona..." rows={3}
+              className="w-full bg-gray-900 border border-white/8 rounded-xl px-4 py-3 text-white placeholder-gray-700 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/40 text-sm resize-none transition-all" />
           </div>
+
           {inp("Ciudad / Zona", "city", "Buenos Aires, Córdoba...", <MapPin className="h-3.5 w-3.5" />)}
           {inp("Instagram", "instagramHandle", "@tuusuario", <IgIconLg />)}
           {inp("Teléfono / WhatsApp", "phone", "+54 9 11 ...", <Phone className="h-3.5 w-3.5" />)}
         </div>
 
-        <div className="px-6 pb-6 flex gap-3">
-          <button type="button" onClick={onClose} className="flex-1 py-3 border border-white/10 rounded-2xl text-sm font-semibold text-gray-400 hover:text-white hover:border-white/20 transition-all">
+        <div className="px-6 pb-6 pt-4 border-t border-white/5 flex gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-3 border border-white/8 rounded-xl text-sm font-semibold text-gray-500 hover:text-white hover:border-white/20 transition-all">
             Cancelar
           </button>
-          <button type="submit" disabled={saving} className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-2xl font-semibold text-sm disabled:opacity-50 transition-all">
+          <button type="submit" disabled={saving || uploading} className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/20">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {saving ? "Guardando..." : "Guardar perfil"}
+            {saving ? "Guardando..." : "Guardar"}
           </button>
         </div>
       </motion.form>
