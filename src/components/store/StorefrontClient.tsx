@@ -66,6 +66,7 @@ type Store = {
   showWhatsappButton: boolean;
   footerText: string | null;
   currency: string;
+  pageBlocks: string;
   owner: { name: string | null; email: string };
   products: Product[];
 };
@@ -429,6 +430,74 @@ export default function StorefrontClient({ store, affiliateId }: { store: Store;
     );
   }
 
+  function renderBlocks() {
+    let blocks: Array<{ id: string; type: string; props: Record<string, string | number | boolean> }> = [];
+    try { blocks = JSON.parse(store.pageBlocks || "[]"); } catch { blocks = []; }
+    if (!blocks.length) return null;
+
+    return (
+      <div className="mx-auto max-w-7xl px-6 py-8 space-y-0">
+        {blocks.map((block) => {
+          const p = block.props as Record<string, string>;
+          if (block.type === "text") return (
+            <div key={block.id} className="py-10 px-4" style={{ textAlign: (p.align || "center") as "left" | "center" | "right", fontFamily: store.fontFamily }}>
+              {p.heading && <h2 className="font-black text-3xl md:text-4xl mb-4" style={{ color: store.primaryColor }}>{p.heading}</h2>}
+              {p.body && <p className="text-gray-500 max-w-2xl mx-auto text-base leading-relaxed">{p.body}</p>}
+            </div>
+          );
+          if (block.type === "banner") return (
+            <div key={block.id} className="py-3 px-6 text-center font-bold text-sm rounded-2xl" style={{ backgroundColor: p.bgColor || store.accentColor, color: p.textColor || "#fff" }}>
+              {p.text || "📢 Anuncio"}
+            </div>
+          );
+          if (block.type === "cta") return (
+            <div key={block.id} className="rounded-3xl p-12 text-center" style={{ backgroundColor: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily }}>
+              <h2 className="font-black text-3xl md:text-4xl mb-3">{p.heading || "¿Lista para comprar?"}</h2>
+              {p.sub && <p className="opacity-75 mb-6 max-w-xl mx-auto">{p.sub}</p>}
+              <a href="#productos" className="inline-block bg-white font-black px-8 py-3 rounded-full text-sm" style={{ color: p.bgColor || store.primaryColor }}>
+                {p.buttonText || "Ver catálogo"}
+              </a>
+            </div>
+          );
+          if (block.type === "image-text") {
+            const isRight = p.imagePosition === "right";
+            return (
+              <div key={block.id} className={`flex flex-col ${isRight ? "md:flex-row-reverse" : "md:flex-row"} gap-8 items-center py-8`} style={{ fontFamily: store.fontFamily }}>
+                <div className="flex-1 rounded-3xl overflow-hidden min-h-64 bg-gray-100 flex items-center justify-center">
+                  {p.image ? <img src={p.image} alt="" className="w-full h-full object-cover" style={{ minHeight: "260px" }} /> : <Package className="h-12 w-12 text-gray-300" />}
+                </div>
+                <div className="flex-1">
+                  {p.heading && <h2 className="font-black text-3xl mb-4" style={{ color: store.primaryColor }}>{p.heading}</h2>}
+                  {p.body && <p className="text-gray-500 leading-relaxed">{p.body}</p>}
+                </div>
+              </div>
+            );
+          }
+          if (block.type === "hero") return (
+            <div key={block.id} className="rounded-3xl overflow-hidden flex items-center justify-center text-center text-white py-16 px-8"
+              style={{ background: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily, minHeight: p.height === "xl" ? "480px" : p.height === "lg" ? "360px" : p.height === "sm" ? "180px" : "260px" }}>
+              <div>
+                <h2 className="font-black text-4xl mb-3 drop-shadow">{p.title || store.name}</h2>
+                {p.subtitle && <p className="opacity-80 mb-6 max-w-xl mx-auto">{p.subtitle}</p>}
+                {p.buttonText && <a href="#productos" className="inline-block bg-white font-black px-8 py-3 rounded-full text-sm" style={{ color: p.bgColor || store.primaryColor }}>{p.buttonText}</a>}
+              </div>
+            </div>
+          );
+          if (block.type === "spacer") {
+            const heights: Record<string,string> = { xs:"20px",sm:"40px",md:"80px",lg:"120px",xl:"180px" };
+            return <div key={block.id} style={{ height: heights[p.height||"md"] || "80px" }} />;
+          }
+          if (block.type === "divider") return (
+            <div key={block.id} className="py-2">
+              <hr style={{ border: "none", borderTop: `2px ${p.style || "solid"} ${p.color || "#e5e7eb"}` }} />
+            </div>
+          );
+          return null;
+        })}
+      </div>
+    );
+  }
+
   return (
     <div
       className={`min-h-screen ${isDark ? "bg-gray-950 text-white" : "text-gray-950"}`}
@@ -476,6 +545,8 @@ export default function StorefrontClient({ store, affiliateId }: { store: Store;
       </header>
 
       {renderHero()}
+
+      {renderBlocks()}
 
       <main id="productos" className="mx-auto max-w-7xl px-6 py-12">
         <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">

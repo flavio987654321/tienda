@@ -40,6 +40,7 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
       store={{
         id: store.id,
         slug: store.slug,
+        pageBlocks: store.pageBlocks,
         name: store.name,
         description: store.description,
         logo: store.logo,
