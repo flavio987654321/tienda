@@ -9,7 +9,7 @@ import {
   CheckCircle, Clock, Loader2, Send, Store, TrendingUp, Users, Wallet,
   XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
   Star, Package, ArrowRight, Eye, Edit3, MapPin, Phone, Save,
-  DollarSign, ShoppingCart, Award,
+  DollarSign, ShoppingCart, Award, FileText, UploadCloud, Trash2,
 } from "lucide-react";
 
 const IgIconLg = () => <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>;
@@ -394,6 +394,32 @@ interface StoreItem { id: string; name: string; slug: string; description: strin
 function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: () => void; onSuccess: (id: string) => void }) {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ applicationMessage: "", experience: "", socialUrl: "", cvUrl: "" });
+  const [cvUploading, setCvUploading] = useState(false);
+  const [cvFileName, setCvFileName] = useState("");
+  const [cvError, setCvError] = useState("");
+  const cvInputRef = useRef<HTMLInputElement>(null);
+
+  async function uploadCv(file: File) {
+    setCvUploading(true);
+    setCvError("");
+
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("purpose", "affiliate-doc");
+
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const data = await res.json();
+
+    setCvUploading(false);
+
+    if (!res.ok) {
+      setCvError(data.error || "No se pudo subir el archivo");
+      return;
+    }
+
+    setCvFileName(file.name);
+    setForm((p) => ({ ...p, cvUrl: data.url }));
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -460,10 +486,50 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1.5">CV o presentación (opcional)</label>
             <input
-              value={form.cvUrl} onChange={(e) => setForm((p) => ({ ...p, cvUrl: e.target.value }))}
-              placeholder="Link a Google Drive, Notion, LinkedIn..."
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              ref={cvInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadCv(file);
+              }}
             />
+            {form.cvUrl ? (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-emerald-200">{cvFileName || "Archivo subido"}</p>
+                    <p className="text-xs text-emerald-400/70">Se adjunta a tu solicitud</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForm((p) => ({ ...p, cvUrl: "" }));
+                      setCvFileName("");
+                    }}
+                    className="rounded-xl p-2 text-emerald-300 hover:bg-emerald-500/10 hover:text-white"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => cvInputRef.current?.click()}
+                disabled={cvUploading}
+                className="flex w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-5 text-sm font-semibold text-gray-400 transition-all hover:border-indigo-400/60 hover:bg-indigo-500/10 hover:text-indigo-200 disabled:opacity-60"
+              >
+                {cvUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <UploadCloud className="h-5 w-5" />}
+                {cvUploading ? "Subiendo archivo..." : "Subir PDF, Word, Excel o imagen"}
+              </button>
+            )}
+            <p className="mt-2 text-xs text-gray-600">Hasta 15 MB. Se aceptan PDF, DOC, DOCX, XLS, XLSX, PPT, TXT e imagenes.</p>
+            {cvError && <p className="mt-2 rounded-xl bg-red-500/10 px-3 py-2 text-xs text-red-300">{cvError}</p>}
           </div>
         </div>
         <div className="p-6 border-t border-white/5 flex gap-3">

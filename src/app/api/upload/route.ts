@@ -7,7 +7,20 @@ export const runtime = "nodejs";
 
 const MAX_FILE_SIZE_MB = 4;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const MAX_DOCUMENT_SIZE_MB = 15;
+const MAX_DOCUMENT_SIZE_BYTES = MAX_DOCUMENT_SIZE_MB * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const ALLOWED_DOCUMENT_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  ...ALLOWED_IMAGE_TYPES,
+]);
 const DEFAULT_BUCKET = "product-images";
 
 function getSupabaseStorageConfig() {
@@ -19,14 +32,20 @@ function getSupabaseStorageConfig() {
   return { supabaseUrl, serviceRoleKey, bucket };
 }
 
-async function uploadToSupabaseStorage(file: File, bytes: ArrayBuffer) {
+function extensionFor(file: File) {
+  const fromName = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (fromName) return fromName;
+  return file.type.split("/")[1] || "bin";
+}
+
+async function uploadToSupabaseStorage(file: File, bytes: ArrayBuffer, folder = "products") {
   const config = getSupabaseStorageConfig();
   if (!config) {
-    throw new Error("Falta configurar Supabase Storage en Vercel para subir imagenes.");
+    throw new Error("Falta configurar Supabase Storage en Vercel para subir archivos.");
   }
 
-  const ext = file.type.split("/")[1] || "webp";
-  const filePath = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const ext = extensionFor(file);
+  const filePath = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const uploadUrl = `${config.supabaseUrl}/storage/v1/object/${config.bucket}/${filePath}`;
 
   const res = await fetch(uploadUrl, {
@@ -56,29 +75,38 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
+    const purpose = String(formData.get("purpose") || "image");
+    const isDocument = purpose === "affiliate-doc";
     if (!file) return NextResponse.json({ error: "No se recibio archivo" }, { status: 400 });
-    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    if (isDocument) {
+      if (!ALLOWED_DOCUMENT_TYPES.has(file.type)) {
+        return NextResponse.json({ error: "Solo se permiten PDF, Word, Excel, PowerPoint, TXT o imagenes" }, { status: 400 });
+      }
+      if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
+        return NextResponse.json({ error: `El archivo no puede superar ${MAX_DOCUMENT_SIZE_MB} MB` }, { status: 413 });
+      }
+    } else if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
       return NextResponse.json({ error: "Solo se permiten imagenes JPG, PNG, WEBP o GIF" }, { status: 400 });
     }
-    if (file.size > MAX_FILE_SIZE_BYTES) {
+    if (!isDocument && file.size > MAX_FILE_SIZE_BYTES) {
       return NextResponse.json({ error: `La imagen no puede superar ${MAX_FILE_SIZE_MB} MB` }, { status: 413 });
     }
 
     const bytes = await file.arrayBuffer();
 
     if (getSupabaseStorageConfig()) {
-      const url = await uploadToSupabaseStorage(file, bytes);
+      const url = await uploadToSupabaseStorage(file, bytes, isDocument ? "affiliate-docs" : "products");
       return NextResponse.json({ url });
     }
 
     if (process.env.NODE_ENV === "production") {
       return NextResponse.json(
-        { error: "Falta configurar Supabase Storage en Vercel para subir imagenes." },
+        { error: "Falta configurar Supabase Storage en Vercel para subir archivos." },
         { status: 500 }
       );
     }
 
-    const ext = file.name.split(".").pop();
+    const ext = extensionFor(file);
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const uploadDir = path.join(process.cwd(), "public", "uploads");
     const buffer = Buffer.from(bytes);
