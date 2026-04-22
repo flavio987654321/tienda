@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
-import crypto from "crypto";
 import path from "path";
 
 export const runtime = "nodejs";
@@ -10,44 +9,45 @@ export const runtime = "nodejs";
 const MAX_FILE_SIZE_MB = 4;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const DEFAULT_BUCKET = "product-images";
 
-function hasCloudinaryConfig() {
-  return Boolean(
-    process.env.CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET
-  );
+function getSupabaseStorageConfig() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || DEFAULT_BUCKET;
+
+  if (!supabaseUrl || !serviceRoleKey) return null;
+  return { supabaseUrl, serviceRoleKey, bucket };
 }
 
-async function uploadToCloudinary(file: File, buffer: Buffer) {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME!;
-  const apiKey = process.env.CLOUDINARY_API_KEY!;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET!;
-  const timestamp = Math.floor(Date.now() / 1000);
-  const folder = "tienda/productos";
-  const signaturePayload = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
-  const signature = crypto.createHash("sha1").update(signaturePayload).digest("hex");
-  const dataUri = `data:${file.type};base64,${buffer.toString("base64")}`;
+async function uploadToSupabaseStorage(file: File, bytes: ArrayBuffer) {
+  const config = getSupabaseStorageConfig();
+  if (!config) {
+    throw new Error("Falta configurar Supabase Storage en Vercel para subir imagenes.");
+  }
 
-  const formData = new FormData();
-  formData.append("file", dataUri);
-  formData.append("api_key", apiKey);
-  formData.append("timestamp", String(timestamp));
-  formData.append("folder", folder);
-  formData.append("signature", signature);
+  const ext = file.type.split("/")[1] || "webp";
+  const filePath = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const uploadUrl = `${config.supabaseUrl}/storage/v1/object/${config.bucket}/${filePath}`;
 
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+  const res = await fetch(uploadUrl, {
     method: "POST",
-    body: formData,
+    headers: {
+      apikey: config.serviceRoleKey,
+      Authorization: `Bearer ${config.serviceRoleKey}`,
+      "Content-Type": file.type,
+      "x-upsert": "false",
+    },
+    body: bytes,
   });
-  const data = await res.json().catch(() => null);
+  const data = await res.json().catch(() => null) as { error?: string; message?: string } | null;
 
-  if (!res.ok || !data?.secure_url) {
-    const message = data?.error?.message || "No se pudo subir la imagen a Cloudinary";
+  if (!res.ok) {
+    const message = data?.message || data?.error || "No se pudo subir la imagen a Supabase Storage";
     throw new Error(message);
   }
 
-  return data.secure_url as string;
+  return `${config.supabaseUrl}/storage/v1/object/public/${config.bucket}/${filePath}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -66,16 +66,15 @@ export async function POST(req: NextRequest) {
     }
 
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
 
-    if (hasCloudinaryConfig()) {
-      const url = await uploadToCloudinary(file, buffer);
+    if (getSupabaseStorageConfig()) {
+      const url = await uploadToSupabaseStorage(file, bytes);
       return NextResponse.json({ url });
     }
 
     if (process.env.NODE_ENV === "production") {
       return NextResponse.json(
-        { error: "Falta configurar Cloudinary en Vercel para subir imagenes." },
+        { error: "Falta configurar Supabase Storage en Vercel para subir imagenes." },
         { status: 500 }
       );
     }
@@ -83,6 +82,7 @@ export async function POST(req: NextRequest) {
     const ext = file.name.split(".").pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const uploadDir = path.join(process.cwd(), "public", "uploads");
+    const buffer = Buffer.from(bytes);
 
     await mkdir(uploadDir, { recursive: true });
     await writeFile(path.join(uploadDir, fileName), buffer);
