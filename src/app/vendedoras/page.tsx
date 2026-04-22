@@ -8,9 +8,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle, Clock, Loader2, Send, Store, TrendingUp, Users, Wallet,
   XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
-  Star, Package, ArrowRight, BarChart3, Zap, ChevronDown, ChevronUp,
-  Bell, Eye,
+  Star, Package, ArrowRight, Eye, Edit3, MapPin, Phone, Save,
+  DollarSign, ShoppingCart, Award,
 } from "lucide-react";
+
+const IgIconLg = () => <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>;
 
 /* ── Social share icons ── */
 const WaIcon = () => <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.025.507 3.934 1.395 5.608L0 24l6.534-1.376A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.808 9.808 0 01-5.032-1.386l-.361-.214-3.741.981.999-3.648-.235-.374A9.818 9.818 0 012.182 12C2.182 6.58 6.58 2.182 12 2.182c5.42 0 9.818 4.398 9.818 9.818 0 5.42-4.398 9.818-9.818 9.818z"/></svg>;
@@ -523,6 +525,194 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
   );
 }
 
+/* ── Profile types ── */
+interface UserProfile {
+  id: string; name: string | null; email: string; image: string | null;
+  bio: string | null; city: string | null; instagramHandle: string | null; phone: string | null;
+}
+interface VendedoraStats {
+  totalOrders: number; totalEarned: number; pendingBalance: number; pendingCommissions: number;
+}
+
+/* ── Profile Edit Modal ── */
+function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; onClose: () => void; onSave: (p: UserProfile) => void }) {
+  const [form, setForm] = useState({ name: profile.name ?? "", bio: profile.bio ?? "", city: profile.city ?? "", instagramHandle: profile.instagramHandle ?? "", phone: profile.phone ?? "", image: profile.image ?? "" });
+  const [saving, setSaving] = useState(false);
+  const upd = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    const res = await fetch("/api/vendedoras/perfil", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    if (res.ok) { const { user } = await res.json(); onSave(user); }
+    setSaving(false);
+  }
+
+  const inp = (label: string, key: keyof typeof form, ph: string, icon: React.ReactNode) => (
+    <div>
+      <label className="block text-xs font-semibold text-gray-400 mb-1.5">{label}</label>
+      <div className="relative">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600">{icon}</div>
+        <input value={form[key]} onChange={e => upd(key, e.target.value)} placeholder={ph}
+          className="w-full bg-white/5 border border-white/10 rounded-2xl pl-9 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+      </div>
+    </div>
+  );
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <motion.form initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        onSubmit={submit} onClick={e => e.stopPropagation()}
+        className="relative bg-gray-950 border border-white/10 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+        <div className="p-6 border-b border-white/5 flex items-center justify-between">
+          <div>
+            <p className="text-indigo-400 text-xs font-bold uppercase tracking-widest mb-0.5">Tu perfil</p>
+            <h3 className="text-xl font-black text-white">Editá tu información</h3>
+          </div>
+          <button type="button" onClick={onClose} className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all">
+            <XCircle className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Avatar preview */}
+        <div className="px-6 pt-5 flex items-center gap-4">
+          <div className="relative">
+            {form.image ? (
+              <img src={form.image} alt="" className="w-16 h-16 rounded-2xl object-cover border-2 border-indigo-500/40" />
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-2xl font-black">
+                {(form.name || profile.email).charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs font-semibold text-gray-400 mb-1.5">URL de foto de perfil</label>
+            <input value={form.image} onChange={e => upd("image", e.target.value)} placeholder="https://..."
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs" />
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {inp("Nombre completo", "name", "Tu nombre", <Edit3 className="h-3.5 w-3.5" />)}
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 mb-1.5">Bio / Presentación</label>
+            <textarea value={form.bio} onChange={e => upd("bio", e.target.value)} placeholder="Contá quién sos en pocas palabras..." rows={3}
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-none" />
+          </div>
+          {inp("Ciudad / Zona", "city", "Buenos Aires, Córdoba...", <MapPin className="h-3.5 w-3.5" />)}
+          {inp("Instagram", "instagramHandle", "@tuusuario", <IgIconLg />)}
+          {inp("Teléfono / WhatsApp", "phone", "+54 9 11 ...", <Phone className="h-3.5 w-3.5" />)}
+        </div>
+
+        <div className="px-6 pb-6 flex gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-3 border border-white/10 rounded-2xl text-sm font-semibold text-gray-400 hover:text-white hover:border-white/20 transition-all">
+            Cancelar
+          </button>
+          <button type="submit" disabled={saving} className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-2xl font-semibold text-sm disabled:opacity-50 transition-all">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? "Guardando..." : "Guardar perfil"}
+          </button>
+        </div>
+      </motion.form>
+    </motion.div>
+  );
+}
+
+/* ── Profile Card ── */
+function ProfileCard({ profile, stats, onEdit }: { profile: UserProfile; stats: VendedoraStats | null; onEdit: () => void }) {
+  const initial = (profile.name || profile.email).charAt(0).toUpperCase();
+  const fmt = (n: number) => n >= 1000 ? `$${(n/1000).toFixed(1)}k` : `$${n.toLocaleString("es-AR")}`;
+
+  return (
+    <div className="relative bg-gradient-to-br from-gray-900 via-indigo-950/40 to-gray-900 border border-white/10 rounded-3xl p-6 overflow-hidden">
+      <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="relative flex flex-col sm:flex-row gap-5 items-start sm:items-center">
+        {/* Avatar */}
+        <div className="relative shrink-0">
+          {profile.image ? (
+            <img src={profile.image} alt="" className="w-20 h-20 rounded-2xl object-cover border-2 border-indigo-500/30 shadow-xl" />
+          ) : (
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-3xl font-black shadow-xl shadow-indigo-500/20">
+              {initial}
+            </div>
+          )}
+          <button onClick={onEdit} className="absolute -bottom-1 -right-1 w-6 h-6 bg-indigo-600 hover:bg-indigo-500 rounded-lg flex items-center justify-center transition-colors shadow-lg">
+            <Edit3 className="h-3 w-3 text-white" />
+          </button>
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black text-white">{profile.name || "Sin nombre"}</h2>
+              <p className="text-gray-400 text-sm">{profile.email}</p>
+            </div>
+            <button onClick={onEdit} className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 px-3 py-1.5 rounded-xl transition-all font-semibold shrink-0">
+              <Edit3 className="h-3 w-3" /> Editar
+            </button>
+          </div>
+
+          {profile.bio && <p className="text-gray-400 text-sm mt-2 leading-relaxed line-clamp-2">{profile.bio}</p>}
+
+          <div className="flex flex-wrap items-center gap-3 mt-3">
+            {profile.city && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <MapPin className="h-3 w-3" /> {profile.city}
+              </span>
+            )}
+            {profile.instagramHandle && (
+              <span className="flex items-center gap-1 text-xs text-pink-400">
+                <IgIconLg /> {profile.instagramHandle}
+              </span>
+            )}
+            {profile.phone && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <Phone className="h-3 w-3" /> {profile.phone}
+              </span>
+            )}
+            {!profile.bio && !profile.city && !profile.instagramHandle && (
+              <button onClick={onEdit} className="text-xs text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition-colors">
+                + Completá tu perfil para generar más confianza
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Stats reales */}
+      {stats && (
+        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3 pt-5 border-t border-white/5">
+          {[
+            { label: "Pedidos generados", value: stats.totalOrders, icon: ShoppingCart, color: "text-blue-400" },
+            { label: "Total ganado", value: fmt(stats.totalEarned), icon: Award, color: "text-emerald-400" },
+            { label: "Comisiones pend.", value: fmt(stats.pendingCommissions), icon: DollarSign, color: "text-yellow-400" },
+            { label: "Saldo disponible", value: fmt(stats.pendingBalance), icon: Wallet, color: "text-purple-400", link: "/vendedoras/billetera" },
+          ].map(({ label, value, icon: Icon, color, link }) =>
+            link ? (
+              <a key={label} href={link} className="bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl p-3 transition-all group cursor-pointer">
+                <Icon className={`h-4 w-4 ${color} mb-2`} />
+                <p className={`text-lg font-black ${color}`}>{value}</p>
+                <p className="text-gray-600 text-xs mt-0.5 group-hover:text-gray-400 transition-colors">{label} →</p>
+              </a>
+            ) : (
+              <div key={label} className="bg-white/5 border border-white/5 rounded-2xl p-3">
+                <Icon className={`h-4 w-4 ${color} mb-2`} />
+                <p className={`text-lg font-black ${color}`}>{value}</p>
+                <p className="text-gray-600 text-xs mt-0.5">{label}</p>
+              </div>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Status badge ── */
 const STATUS: Record<string, { label: string; cls: string; dot: string }> = {
   PENDING: { label: "Pendiente de aprobación", cls: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20", dot: "bg-yellow-400" },
@@ -538,12 +728,21 @@ export default function VendedorasPage() {
   const [loadingStores, setLoadingStores] = useState(true);
   const [applyStore, setApplyStore] = useState<StoreItem | null>(null);
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [stats, setStats] = useState<VendedoraStats | null>(null);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
 
   useEffect(() => {
     fetch("/api/vendedoras?mode=tiendas-disponibles")
       .then((r) => r.json())
       .then(({ stores }) => { setStores(stores ?? []); setLoadingStores(false); });
   }, []);
+
+  useEffect(() => {
+    if (sessionStatus !== "authenticated") return;
+    fetch("/api/vendedoras/perfil").then(r => r.json()).then(d => { if (d.user) setProfile(d.user); });
+    fetch("/api/vendedoras?mode=stats").then(r => r.json()).then(d => { setStats(d); });
+  }, [sessionStatus]);
 
   const isLoggedIn = sessionStatus === "authenticated";
   const myAffiliations = stores.filter((s) => s.affiliates.length > 0);
@@ -618,44 +817,33 @@ export default function VendedorasPage() {
       {isLoggedIn ? (
         /* LOGGED IN: Dashboard */
         <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
-          {/* Stats header */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="relative bg-gradient-to-br from-indigo-950 via-purple-950/50 to-gray-950 border border-white/10 rounded-3xl p-8 overflow-hidden">
-              <div className="absolute inset-0 grid-bg opacity-40" />
-              <div className="absolute -top-16 -right-16 w-48 h-48 bg-indigo-600/20 rounded-full blur-3xl" />
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl flex items-center justify-center">
-                    <Zap className="h-6 w-6 text-indigo-400" />
+          {/* Profile + Stats header */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            {profile && (
+              <ProfileCard profile={profile} stats={stats} onEdit={() => setShowProfileEdit(true)} />
+            )}
+            {/* Quick counters */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: "Tiendas activas", value: approvedStores.length, icon: CheckCircle, color: "text-emerald-400" },
+                { label: "Solicitudes pendientes", value: pendingStores.length, icon: Clock, color: "text-yellow-400" },
+                { label: "Tiendas disponibles", value: availableStores.length, icon: Store, color: "text-indigo-400" },
+                { label: "Mi billetera", value: "Ver →", icon: Wallet, color: "text-purple-400", link: "/vendedoras/billetera" },
+              ].map(({ label, value, icon: Icon, color, link }) => (
+                link ? (
+                  <Link key={label} href={link} className="bg-gray-900/80 hover:bg-gray-900 border border-white/10 rounded-2xl p-4 transition-all group">
+                    <Icon className={`h-5 w-5 ${color} mb-3`} />
+                    <p className={`text-lg font-black ${color} group-hover:underline`}>{value}</p>
+                    <p className="text-gray-500 text-xs mt-0.5">{label}</p>
+                  </Link>
+                ) : (
+                  <div key={label} className="bg-gray-900/80 border border-white/10 rounded-2xl p-4">
+                    <Icon className={`h-5 w-5 ${color} mb-3`} />
+                    <p className={`text-2xl font-black ${color}`}>{value}</p>
+                    <p className="text-gray-500 text-xs mt-0.5">{label}</p>
                   </div>
-                  <div>
-                    <h1 className="text-2xl font-black text-white">Panel de afiliado</h1>
-                    <p className="text-gray-400 text-sm">Hola, <span className="text-indigo-300 font-semibold">{userName}</span> 👋</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {[
-                    { label: "Tiendas activas", value: approvedStores.length, icon: CheckCircle, color: "text-emerald-400" },
-                    { label: "Solicitudes pendientes", value: pendingStores.length, icon: Clock, color: "text-yellow-400" },
-                    { label: "Tiendas disponibles", value: availableStores.length, icon: Store, color: "text-indigo-400" },
-                    { label: "Mi billetera", value: "Ver →", icon: Wallet, color: "text-purple-400", link: "/vendedoras/billetera" },
-                  ].map(({ label, value, icon: Icon, color, link }) => (
-                    link ? (
-                      <Link key={label} href={link} className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-4 transition-all group">
-                        <Icon className={`h-5 w-5 ${color} mb-3`} />
-                        <p className={`text-lg font-black ${color} group-hover:underline`}>{value}</p>
-                        <p className="text-gray-500 text-xs mt-0.5">{label}</p>
-                      </Link>
-                    ) : (
-                      <div key={label} className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                        <Icon className={`h-5 w-5 ${color} mb-3`} />
-                        <p className={`text-2xl font-black ${color}`}>{value}</p>
-                        <p className="text-gray-500 text-xs mt-0.5">{label}</p>
-                      </div>
-                    )
-                  ))}
-                </div>
-              </div>
+                )
+              ))}
             </div>
           </motion.div>
 
@@ -863,6 +1051,13 @@ export default function VendedorasPage() {
         )}
         {shareTarget && (
           <ShareModal target={shareTarget} onClose={() => setShareTarget(null)} />
+        )}
+        {showProfileEdit && profile && (
+          <ProfileEditModal
+            profile={profile}
+            onClose={() => setShowProfileEdit(false)}
+            onSave={(p) => { setProfile(p); setShowProfileEdit(false); }}
+          />
         )}
       </AnimatePresence>
     </div>

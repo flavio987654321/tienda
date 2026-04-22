@@ -16,6 +16,10 @@ model User {
   image         String?
   password      String?
   role          String    @default("BUYER")
+  bio           String?
+  city          String?
+  instagramHandle String?
+  phone         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

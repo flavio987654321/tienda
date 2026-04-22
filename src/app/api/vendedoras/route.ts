@@ -14,6 +14,31 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const mode = searchParams.get("mode");
 
+  if (mode === "stats") {
+    if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    const userId = sessionUserId(session);
+    if (!userId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+    const affiliates = await prisma.affiliate.findMany({
+      where: { userId },
+      include: {
+        commissions: { select: { amount: true, status: true } },
+        orders: { select: { id: true, total: true, createdAt: true } },
+        wallet: { select: { balance: true, totalEarned: true } },
+        store: { select: { name: true, slug: true } },
+      },
+    });
+
+    const totalOrders = affiliates.reduce((s, a) => s + a.orders.length, 0);
+    const totalEarned = affiliates.reduce((s, a) => s + (a.wallet?.totalEarned ?? 0), 0);
+    const pendingBalance = affiliates.reduce((s, a) => s + (a.wallet?.balance ?? 0), 0);
+    const pendingCommissions = affiliates.reduce(
+      (s, a) => s + a.commissions.filter((c) => c.status === "PENDING").reduce((x, c) => x + c.amount, 0), 0
+    );
+
+    return NextResponse.json({ totalOrders, totalEarned, pendingBalance, pendingCommissions, affiliates });
+  }
+
   if (mode === "tiendas-disponibles") {
     const userId = sessionUserId(session);
     const stores = await prisma.store.findMany({
