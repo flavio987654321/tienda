@@ -34,6 +34,9 @@ export default async function DashboardPage() {
     where: { storeId: store?.id, status: { in: ["CONFIRMED", "DELIVERED"] } },
     _sum: { total: true },
   });
+  const pendingAffiliateCount = store
+    ? await prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } })
+    : 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -51,16 +54,24 @@ export default async function DashboardPage() {
             { href: "/dashboard/pedidos", label: "Pedidos", icon: ShoppingBag },
             { href: "/dashboard/vendedoras", label: "Afiliados", icon: Users },
             { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store },
-          ].map(({ href, label, icon: Icon }) => (
+          ].map(({ href, label, icon: Icon }) => {
+            const showAffiliateBadge = href === "/dashboard/vendedoras" && pendingAffiliateCount > 0;
+            return (
             <Link
               key={`${href}-${label}`}
               href={href}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors font-medium text-sm"
             >
               <Icon className="h-4 w-4" />
-              {label}
+              <span className="flex-1">{label}</span>
+              {showAffiliateBadge && (
+                <span className="min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white">
+                  {pendingAffiliateCount > 9 ? "9+" : pendingAffiliateCount}
+                </span>
+              )}
             </Link>
-          ))}
+          );
+          })}
         </nav>
 
         <div className="border-t border-gray-100 pt-4">

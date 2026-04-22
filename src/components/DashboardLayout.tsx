@@ -18,14 +18,20 @@ export default function DashboardLayout({
   children,
   userName,
   userEmail,
+  initialPendingAffiliateCount = 0,
 }: {
   children: React.ReactNode;
   userName?: string | null;
   userEmail?: string | null;
+  initialPendingAffiliateCount?: number;
 }) {
   const pathname = usePathname();
   const { signOut } = useAuth();
-  const [pendingAffiliateCount, setPendingAffiliateCount] = useState(0);
+  const [pendingAffiliateCount, setPendingAffiliateCount] = useState(initialPendingAffiliateCount);
+
+  useEffect(() => {
+    setPendingAffiliateCount(initialPendingAffiliateCount);
+  }, [initialPendingAffiliateCount]);
 
   useEffect(() => {
     fetch("/api/vendedoras")

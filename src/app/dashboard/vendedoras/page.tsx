@@ -86,7 +86,7 @@ export default async function VendedorasPage() {
   );
 
   return (
-    <DashboardLayout userName={user.name} userEmail={user.email}>
+    <DashboardLayout userName={user.name} userEmail={user.email} initialPendingAffiliateCount={pending.length}>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Afiliados</h1>

@@ -20,9 +20,12 @@ export default async function ProductosPage() {
   });
 
   const products = store?.products ?? [];
+  const pendingAffiliateCount = store
+    ? await prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } })
+    : 0;
 
   return (
-    <DashboardLayout userName={user.name} userEmail={user.email}>
+    <DashboardLayout userName={user.name} userEmail={user.email} initialPendingAffiliateCount={pendingAffiliateCount}>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Productos</h1>

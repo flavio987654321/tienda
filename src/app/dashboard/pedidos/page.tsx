@@ -58,6 +58,9 @@ export default async function PedidosPage() {
         orderBy: { createdAt: "desc" },
       })
     : [];
+  const pendingAffiliateCount = store
+    ? await prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } })
+    : 0;
 
   const totalPending = orders.filter((order) => order.status === "PENDING").length;
   const totalConfirmed = orders.filter((order) => ["CONFIRMED", "SHIPPED", "DELIVERED"].includes(order.status)).length;
@@ -66,7 +69,7 @@ export default async function PedidosPage() {
     .reduce((sum, order) => sum + order.total, 0);
 
   return (
-    <DashboardLayout userName={user.name} userEmail={user.email}>
+    <DashboardLayout userName={user.name} userEmail={user.email} initialPendingAffiliateCount={pendingAffiliateCount}>
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pedidos</h1>
