@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent } from "framer-motion";
 import {
@@ -169,8 +170,14 @@ export default function Home() {
   const [contact, setContact] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
+  const { data: session } = useSession();
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (v) => setNavScrolled(v > 50));
+
+  const role = (session?.user as any)?.role as string | undefined;
+  const panelHref = role === "OWNER" ? "/dashboard" : "/vendedoras";
+  const panelLabel = role === "OWNER" ? "Mi tienda" : role === "SELLER" ? "Mi panel" : "Mi cuenta";
+  const userName = session?.user?.name?.split(" ")[0] ?? null;
 
   return (
     <div className="min-h-screen bg-[#030712] text-white overflow-x-hidden">
@@ -212,12 +219,23 @@ export default function Home() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="text-gray-300 hover:text-white text-sm font-medium px-5 py-2.5 rounded-xl border border-white/10 hover:border-white/25 hover:bg-white/5 transition-all">
-              Iniciar sesión
-            </Link>
-            <Link href="/registro" className="relative bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105">
-              Crear cuenta
-            </Link>
+            {session ? (
+              <>
+                <span className="text-gray-400 text-sm">Hola, {userName ?? "!"}</span>
+                <Link href={panelHref} className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105">
+                  {panelLabel}
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="text-gray-300 hover:text-white text-sm font-medium px-5 py-2.5 rounded-xl border border-white/10 hover:border-white/25 hover:bg-white/5 transition-all">
+                  Iniciar sesión
+                </Link>
+                <Link href="/registro" className="relative bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105">
+                  Crear cuenta
+                </Link>
+              </>
+            )}
           </div>
 
           <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden text-gray-400 hover:text-white">
@@ -236,8 +254,16 @@ export default function Home() {
               ))}
               <button onClick={() => { setContact(true); setMobileMenu(false); }} className="block text-gray-300 hover:text-white py-2 w-full text-left">Contacto</button>
               <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
-                <Link href="/login" className="text-center border border-white/10 rounded-xl py-2.5 text-sm text-white">Iniciar sesión</Link>
-                <Link href="/registro" className="text-center bg-indigo-600 rounded-xl py-2.5 text-sm font-semibold text-white">Crear cuenta</Link>
+                {session ? (
+                  <Link href={panelHref} onClick={() => setMobileMenu(false)} className="text-center bg-indigo-600 rounded-xl py-2.5 text-sm font-semibold text-white">
+                    {panelLabel}
+                  </Link>
+                ) : (
+                  <>
+                    <Link href="/login" className="text-center border border-white/10 rounded-xl py-2.5 text-sm text-white">Iniciar sesión</Link>
+                    <Link href="/registro" className="text-center bg-indigo-600 rounded-xl py-2.5 text-sm font-semibold text-white">Crear cuenta</Link>
+                  </>
+                )}
               </div>
             </motion.div>
           )}
