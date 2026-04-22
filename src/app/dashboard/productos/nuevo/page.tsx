@@ -52,6 +52,7 @@ const MAX_SOURCE_IMAGE_SIZE_BYTES = MAX_SOURCE_IMAGE_SIZE_MB * 1024 * 1024;
 const MAX_UPLOAD_IMAGE_SIZE_MB = 4;
 const MAX_UPLOAD_IMAGE_SIZE_BYTES = MAX_UPLOAD_IMAGE_SIZE_MB * 1024 * 1024;
 const MAX_IMAGE_SIDE = 2400;
+const MAX_PRODUCT_IMAGES = 5;
 
 function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
   return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
@@ -169,13 +170,13 @@ export default function NuevoProductoPage() {
   async function uploadImages(files: File[]) {
     if (!files.length) return;
 
-    const availableSlots = Math.max(0, 10 - images.length);
+    const availableSlots = Math.max(0, MAX_PRODUCT_IMAGES - images.length);
     const validFiles = files
       .filter((file) => file.type.startsWith("image/") && file.size <= MAX_SOURCE_IMAGE_SIZE_BYTES)
       .slice(0, availableSlots);
 
     if (!availableSlots) {
-      setError("Podes subir hasta 10 imagenes por producto.");
+      setError(`Podes subir hasta ${MAX_PRODUCT_IMAGES} imagenes por producto.`);
       return;
     }
 
@@ -300,7 +301,7 @@ export default function NuevoProductoPage() {
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-gray-900">Imagenes del producto</h2>
-                <span className="text-xs text-gray-400">{images.length}/10</span>
+                <span className="text-xs text-gray-400">{images.length}/{MAX_PRODUCT_IMAGES}</span>
               </div>
 
               {/* Upload zone */}
@@ -319,7 +320,7 @@ export default function NuevoProductoPage() {
                   {uploadingImg ? "Subiendo..." : "Hace clic o arrastra imagenes aqui"}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  JPG, PNG, WEBP - hasta {MAX_SOURCE_IMAGE_SIZE_MB} MB; se optimizan al subir
+                  Hasta {MAX_PRODUCT_IMAGES} fotos. JPG, PNG, WEBP - hasta {MAX_SOURCE_IMAGE_SIZE_MB} MB; se optimizan al subir
                 </p>
                 <input
                   ref={fileInputRef}
@@ -585,15 +586,15 @@ export default function NuevoProductoPage() {
                           >
                             <ChevronRight className="h-4 w-4 text-gray-700" />
                           </button>
-                          {/* Dots */}
-                          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+                          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
                             {images.map((_, i) => (
                               <button
                                 key={i}
                                 type="button"
                                 onClick={() => setCarouselIdx(i)}
-                                className={`w-1.5 h-1.5 rounded-full transition-all ${
-                                  i === carouselIdx ? "w-4 bg-white" : "bg-white/60"
+                                aria-label={`Ver imagen ${i + 1}`}
+                                className={`h-1.5 rounded-full transition-all ${
+                                  i === carouselIdx ? "w-5 bg-white" : "w-1.5 bg-white/60"
                                 }`}
                               />
                             ))}
@@ -629,6 +630,24 @@ export default function NuevoProductoPage() {
 
                 {/* Card body */}
                 <div className="p-4 space-y-3">
+                  {images.length > 1 && (
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {images.map((url, i) => (
+                        <button
+                          key={url}
+                          type="button"
+                          onClick={() => setCarouselIdx(i)}
+                          className={`aspect-square overflow-hidden rounded-md border-2 transition ${
+                            i === carouselIdx ? "border-indigo-500" : "border-gray-100 opacity-70 hover:opacity-100"
+                          }`}
+                          aria-label={`Seleccionar imagen ${i + 1}`}
+                        >
+                          <img src={url} alt="" className="h-full w-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Category */}
                   <p className="text-xs font-medium uppercase tracking-wider" style={{ color: store.primaryColor }}>
                     {form.category}
