@@ -121,7 +121,7 @@ export default async function ProductosPage() {
                     </td>
                     <td className="px-6 py-4">
                       <Link
-                        href={`/dashboard/productos/${product.id}`}
+                        href={`/dashboard/productos/nuevo?edit=${product.id}`}
                         className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
                       >
                         <Edit className="h-3.5 w-3.5" />

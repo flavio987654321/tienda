@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   Plus, Trash2, Loader2, ArrowLeft, ChevronLeft, ChevronRight,
@@ -53,6 +53,22 @@ const MAX_UPLOAD_IMAGE_SIZE_MB = 4;
 const MAX_UPLOAD_IMAGE_SIZE_BYTES = MAX_UPLOAD_IMAGE_SIZE_MB * 1024 * 1024;
 const MAX_IMAGE_SIDE = 2400;
 const MAX_PRODUCT_IMAGES = 5;
+const DEFAULT_VARIANT: Variant = { name: "Talle", value: "", stock: "0", price: "", sku: "" };
+
+function safeJsonArray(value: unknown) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function formatCategoryLabel(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
 
 function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
   return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
@@ -112,9 +128,13 @@ async function readJsonResponse(res: Response) {
   }
 }
 
-export default function NuevoProductoPage() {
+function ProductoFormPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editingId = searchParams.get("edit");
+  const isEditing = Boolean(editingId);
   const [loading, setLoading] = useState(false);
+  const [loadingProduct, setLoadingProduct] = useState(false);
   const [error, setError] = useState("");
   const [store, setStore] = useState<StoreConfig>({
     primaryColor: "#6366f1",
@@ -136,9 +156,8 @@ export default function NuevoProductoPage() {
     category: "ropa",
     tags: "",
   });
-  const [variants, setVariants] = useState<Variant[]>([
-    { name: "Talle", value: "", stock: "0", price: "", sku: "" },
-  ]);
+  const [customCategory, setCustomCategory] = useState("");
+  const [variants, setVariants] = useState<Variant[]>([DEFAULT_VARIANT]);
   const [images, setImages] = useState<string[]>([]);
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [uploadingImg, setUploadingImg] = useState(false);
@@ -150,6 +169,46 @@ export default function NuevoProductoPage() {
       .then((d) => d.store && setStore((p) => ({ ...p, ...d.store })))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!editingId) return;
+
+    setLoadingProduct(true);
+    setError("");
+    fetch(`/api/productos/${editingId}`)
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "No se pudo cargar el producto");
+        return data.product;
+      })
+      .then((product) => {
+        const knownCategory = CATEGORIAS.includes(product.category);
+        setForm({
+          name: product.name || "",
+          description: product.description || "",
+          price: product.price?.toString() || "",
+          comparePrice: product.comparePrice?.toString() || "",
+          category: knownCategory ? product.category : "otro",
+          tags: safeJsonArray(product.tags).join(", "),
+        });
+        setCustomCategory(knownCategory ? "" : product.category || "");
+        setImages(safeJsonArray(product.images).filter((url) => typeof url === "string") as string[]);
+        setCarouselIdx(0);
+        setVariants(
+          product.variants?.length
+            ? product.variants.map((v: any) => ({
+                name: v.name || "Talle",
+                value: v.value || "",
+                stock: v.stock?.toString() || "0",
+                price: v.price?.toString() || "",
+                sku: v.sku || "",
+              }))
+            : [DEFAULT_VARIANT]
+        );
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "No se pudo cargar el producto"))
+      .finally(() => setLoadingProduct(false));
+  }, [editingId]);
 
   function updateForm(field: string, value: string) {
     setForm((p) => ({ ...p, [field]: value }));
@@ -241,11 +300,19 @@ export default function NuevoProductoPage() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/productos", {
-      method: "POST",
+    const category = form.category === "otro" ? customCategory.trim() : form.category;
+    if (!category) {
+      setError("Escribi la categoria personalizada.");
+      setLoading(false);
+      return;
+    }
+
+    const res = await fetch(isEditing ? `/api/productos/${editingId}` : "/api/productos", {
+      method: isEditing ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
+        category,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         images,
         variants: variants.filter((v) => v.value),
@@ -267,6 +334,7 @@ export default function NuevoProductoPage() {
 
   const cardRadius = RADIUS_MAP[store.cardRadius] || "rounded-xl";
   const cardShadow = SHADOW_MAP[store.cardShadow] || "shadow-sm";
+  const previewCategory = form.category === "otro" ? customCategory.trim() || "otro" : form.category;
 
   const discount =
     form.comparePrice && form.price && parseFloat(form.comparePrice) > parseFloat(form.price)
@@ -284,8 +352,10 @@ export default function NuevoProductoPage() {
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Nuevo producto</h1>
-            <p className="text-gray-500 mt-0.5">Completa los datos y mira la vista previa en tiempo real</p>
+            <h1 className="text-2xl font-bold text-gray-900">{isEditing ? "Editar producto" : "Nuevo producto"}</h1>
+            <p className="text-gray-500 mt-0.5">
+              {isEditing ? "Actualiza los datos y guarda los cambios" : "Completa los datos y mira la vista previa en tiempo real"}
+            </p>
           </div>
         </div>
 
@@ -296,6 +366,12 @@ export default function NuevoProductoPage() {
         <div className="flex gap-6 flex-1 min-h-0">
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-1 space-y-5 pb-6">
+            {loadingProduct && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 text-sm text-gray-500 flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Cargando producto...
+              </div>
+            )}
 
             {/* Images */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
@@ -390,9 +466,18 @@ export default function NuevoProductoPage() {
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                   >
                     {CATEGORIAS.map((c) => (
-                      <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                      <option key={c} value={c}>{formatCategoryLabel(c)}</option>
                     ))}
                   </select>
+                  {form.category === "otro" && (
+                    <input
+                      type="text"
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      placeholder="Escribi la categoria"
+                      className="mt-3 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Tags (separados por coma)</label>
@@ -543,7 +628,7 @@ export default function NuevoProductoPage() {
                 className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50"
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                {loading ? "Guardando..." : "Guardar producto"}
+                {loading ? "Guardando..." : isEditing ? "Guardar cambios" : "Guardar producto"}
               </button>
             </div>
           </form>
@@ -650,7 +735,7 @@ export default function NuevoProductoPage() {
 
                   {/* Category */}
                   <p className="text-xs font-medium uppercase tracking-wider" style={{ color: store.primaryColor }}>
-                    {form.category}
+                    {previewCategory}
                   </p>
 
                   {/* Name */}
@@ -755,5 +840,13 @@ export default function NuevoProductoPage() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function NuevoProductoPage() {
+  return (
+    <Suspense fallback={<DashboardLayout><div className="p-6 text-sm text-gray-500">Cargando...</div></DashboardLayout>}>
+      <ProductoFormPage />
+    </Suspense>
   );
 }
