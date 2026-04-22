@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-const CATEGORIAS = ["ropa", "joyas", "accesorios", "calzado", "bolsos", "hogar", "belleza", "deporte", "otro"];
+const BASE_CATEGORIAS = ["ropa", "joyas", "accesorios", "calzado", "bolsos", "hogar", "belleza", "deporte"];
 
 interface Variant {
   name: string;
@@ -67,7 +67,11 @@ function safeJsonArray(value: unknown) {
 }
 
 function formatCategoryLabel(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
+  return value
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
@@ -156,6 +160,7 @@ function ProductoFormPage() {
     category: "ropa",
     tags: "",
   });
+  const [productCategories, setProductCategories] = useState<string[]>(BASE_CATEGORIAS);
   const [customCategory, setCustomCategory] = useState("");
   const [variants, setVariants] = useState<Variant[]>([DEFAULT_VARIANT]);
   const [images, setImages] = useState<string[]>([]);
@@ -167,6 +172,19 @@ function ProductoFormPage() {
     fetch("/api/configuracion")
       .then((r) => r.json())
       .then((d) => d.store && setStore((p) => ({ ...p, ...d.store })))
+      .catch(() => {});
+
+    fetch("/api/productos")
+      .then((r) => r.json())
+      .then((d) => {
+        const categories = Array.from(
+          new Set([
+            ...BASE_CATEGORIAS,
+            ...((d.products || []).map((product: any) => product.category).filter(Boolean) as string[]),
+          ])
+        );
+        setProductCategories(categories);
+      })
       .catch(() => {});
   }, []);
 
@@ -182,7 +200,7 @@ function ProductoFormPage() {
         return data.product;
       })
       .then((product) => {
-        const knownCategory = CATEGORIAS.includes(product.category);
+        const knownCategory = productCategories.includes(product.category);
         setForm({
           name: product.name || "",
           description: product.description || "",
@@ -208,7 +226,7 @@ function ProductoFormPage() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : "No se pudo cargar el producto"))
       .finally(() => setLoadingProduct(false));
-  }, [editingId]);
+  }, [editingId, productCategories]);
 
   function updateForm(field: string, value: string) {
     setForm((p) => ({ ...p, [field]: value }));
@@ -465,9 +483,10 @@ function ProductoFormPage() {
                     onChange={(e) => updateForm("category", e.target.value)}
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                   >
-                    {CATEGORIAS.map((c) => (
+                    {productCategories.map((c) => (
                       <option key={c} value={c}>{formatCategoryLabel(c)}</option>
                     ))}
+                    <option value="otro">Otra categoria</option>
                   </select>
                   {form.category === "otro" && (
                     <input

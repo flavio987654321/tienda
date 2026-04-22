@@ -52,7 +52,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"text",       emoji:"📝", label:"Bloque de texto",        desc:"Título y párrafo de texto libre",
     defaultProps:{ heading:"Sobre nosotros", body:"Somos una tienda con años de experiencia...", align:"center", fontSize:"md" } },
   { type:"products",   emoji:"🛍️", label:"Grilla de productos",    desc:"Muestra tu catálogo con columnas configurables",
-    defaultProps:{ heading:"Nuestros productos", columns:3, showHeading:true } },
+    defaultProps:{ heading:"Nuestros productos", columns:3, showHeading:true, categoryFilter:"all", showCategoryTabs:true } },
   { type:"banner",     emoji:"📢", label:"Banda de anuncio",       desc:"Franja de color con texto destacado",
     defaultProps:{ text:"🔥 ¡Oferta especial! Envío gratis hoy", bgColor:"#f59e0b", textColor:"#000000", size:"md" } },
   { type:"cta",        emoji:"🚀", label:"Llamada a la acción",    desc:"Sección oscura con botón grande destacado",
@@ -159,6 +159,15 @@ function Chips({ options, value, onChange }: { options:{id:string;label:string}[
 }
 
 /* ─── Block editor (per-type) ─── */
+function formatCategoryLabel(value: string) {
+  if (value === "all") return "Todas";
+  return value
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 function ContentGlobalSettings({
   config,
   set,
@@ -241,7 +250,7 @@ function ContentGlobalSettings({
   );
 }
 
-function BlockEditor({ block, onChange }: { block:Block; onChange:(props:Record<string,any>)=>void; config?:StoreConfig }) {
+function BlockEditor({ block, onChange, categories = [] }: { block:Block; onChange:(props:Record<string,any>)=>void; config?:StoreConfig; categories?:string[] }) {
   const p = block.props;
   const upd = (k:string,v:any) => onChange({...p,[k]:v});
 
@@ -298,6 +307,15 @@ function BlockEditor({ block, onChange }: { block:Block; onChange:(props:Record<
   </div>;
 
   if (block.type==="products") return <div className="space-y-3">
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Categoria a mostrar</label>
+      <select value={p.categoryFilter||"all"} onChange={e=>upd("categoryFilter",e.target.value)}
+        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+        <option value="all">Todas las categorias</option>
+        {categories.map((category)=><option key={category} value={category}>{formatCategoryLabel(category)}</option>)}
+      </select>
+    </div>
+    <Toggle label="Mostrar filtro de categorias" sub="Permite cambiar de categoria en la tienda" value={p.showCategoryTabs!==false} onChange={v=>upd("showCategoryTabs",v)}/>
     <Toggle label="Mostrar título de sección" value={p.showHeading!==false} onChange={v=>upd("showHeading",v)}/>
     {p.showHeading!==false && inp("Título de la sección","heading","Nuestros productos")}
     <div>
@@ -592,6 +610,7 @@ export default function ConfiguracionPage() {
   const bannerRef = useRef<HTMLInputElement>(null);
   const [config, setConfig]       = useState<StoreConfig>(DEFAULT_CONFIG);
   const [storeSlug, setStoreSlug] = useState<string>("");
+  const [productCategories, setProductCategories] = useState<string[]>([]);
 
   // Blocks state
   const [activeTab, setActiveTab]         = useState<"diseño"|"bloques">("diseño");
@@ -600,6 +619,14 @@ export default function ConfiguracionPage() {
   const [showBlockLibrary, setShowBlockLibrary] = useState(false);
 
   useEffect(()=>{
+    fetch("/api/productos")
+      .then(r=>r.json())
+      .then(({products})=>{
+        const categories = Array.from(new Set(((products || []) as any[]).map(product => product.category).filter(Boolean))) as string[];
+        setProductCategories(categories);
+      })
+      .catch(()=>{});
+
     fetch("/api/configuracion").then(r=>r.json()).then(({store})=>{
       if(store) {
         setStoreSlug(store.slug || "");
@@ -1017,7 +1044,7 @@ export default function ConfiguracionPage() {
                         {/* Inline editor */}
                         {isSel && (
                           <div className="border-t border-indigo-100 px-3 py-3 bg-indigo-50/50 space-y-3">
-                            <BlockEditor block={b} onChange={props=>updateBlock(b.id,props)} config={config}/>
+                            <BlockEditor block={b} onChange={props=>updateBlock(b.id,props)} config={config} categories={productCategories}/>
                           </div>
                         )}
                       </div>

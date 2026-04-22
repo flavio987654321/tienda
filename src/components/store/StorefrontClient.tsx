@@ -140,6 +140,14 @@ function money(value: number, currency = "ARS") {
   return `$${value.toLocaleString("es-AR")}`;
 }
 
+function formatCategoryLabel(value: string) {
+  return value
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
 }
@@ -251,6 +259,7 @@ export default function StorefrontClient({
   const isColorful = store.templateId === "colorful" || store.templateId === "kids";
   const pageBlocks = useMemo(() => parseBlocks(store.pageBlocks), [store.pageBlocks]);
   const contentBlocks = isStarterBlocks(pageBlocks) ? [] : pageBlocks;
+  const hasCustomProductBlock = contentBlocks.some((block) => block.type === "products");
   const cardRadius = RADIUS[store.cardRadius] ?? RADIUS.md;
   const cardShadow = SHADOW[store.cardShadow] ?? SHADOW.sm;
   const buttonRadius = buttonClass(store.buttonStyle);
@@ -586,6 +595,52 @@ export default function StorefrontClient({
       <div className="mx-auto max-w-7xl px-6 py-8 space-y-0">
         {blocks.map((block) => {
           const p = block.props as Record<string, any>;
+          if (block.type === "products") {
+            const categoryFilter = String(p.categoryFilter || "all");
+            const blockProducts =
+              categoryFilter === "all"
+                ? category === "all" || p.showCategoryTabs === false
+                  ? store.products
+                  : store.products.filter((product) => product.category === category)
+                : store.products.filter((product) => product.category === categoryFilter);
+            const columns = Number(p.columns || 3);
+            const gridClass = columns >= 5
+              ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
+              : columns === 4
+                ? "grid-cols-2 lg:grid-cols-4"
+                : columns === 2
+                  ? "grid-cols-1 sm:grid-cols-2"
+                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+
+            return (
+              <section key={block.id} id="productos" className="py-10" style={{ fontFamily: store.fontFamily }}>
+                {p.showHeading !== false && (
+                  <div className="mb-7 text-center">
+                    <h2 className="text-3xl font-black" style={{ color: store.primaryColor }}>{p.heading || "Nuestros productos"}</h2>
+                    {categoryFilter !== "all" && <p className={`mt-2 text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>{formatCategoryLabel(categoryFilter)}</p>}
+                  </div>
+                )}
+
+                {categoryFilter === "all" && p.showCategoryTabs !== false && categories.length > 1 && (
+                  <div className="mb-6 flex justify-center gap-2 overflow-x-auto pb-1">
+                    <button onClick={() => setCategory("all")} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold ${category === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={category === "all" ? { backgroundColor: store.primaryColor } : undefined}>Todo</button>
+                    {categories.map((cat) => (
+                      <button key={cat} onClick={() => setCategory(cat)} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold capitalize ${category === cat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={category === cat ? { backgroundColor: store.primaryColor } : undefined}>{formatCategoryLabel(cat)}</button>
+                    ))}
+                  </div>
+                )}
+
+                {blockProducts.length ? (
+                  <div className={`grid gap-5 ${gridClass}`}>{blockProducts.map(renderProductCard)}</div>
+                ) : (
+                  <div className={`py-16 text-center ${isDark ? "text-gray-400" : "text-gray-400"}`}>
+                    <Package className="mx-auto mb-3 h-10 w-10 opacity-40" />
+                    <p>No hay productos en esta categoria</p>
+                  </div>
+                )}
+              </section>
+            );
+          }
           if (block.type === "text") return (
             <div key={block.id} className="py-10 px-4" style={{ textAlign: (p.align || "center") as "left" | "center" | "right", fontFamily: store.fontFamily }}>
               {p.heading && <h2 className="font-black text-3xl md:text-4xl mb-4" style={{ color: store.primaryColor }}>{p.heading}</h2>}
@@ -755,7 +810,7 @@ export default function StorefrontClient({
 
       {renderBlocks()}
 
-      <main id="productos" className="mx-auto max-w-7xl px-6 py-12">
+      {!hasCustomProductBlock && <main id="productos" className="mx-auto max-w-7xl px-6 py-12">
         <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.2em]" style={{ color: store.primaryColor }}>{isKids ? "Todo para jugar" : "Catalogo"}</p>
@@ -804,7 +859,7 @@ export default function StorefrontClient({
             Consultar a la tienda
           </a>
         </div>
-      </main>
+      </main>}
 
       <footer className={`${isDark ? "border-t border-white/10 bg-gray-950 text-gray-400" : "border-t border-gray-100 bg-white text-gray-500"} px-6 py-8 text-center text-sm`}>
         {store.footerText || `${store.name} - tienda online`}
