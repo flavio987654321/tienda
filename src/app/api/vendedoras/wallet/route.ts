@@ -53,6 +53,7 @@ export async function GET() {
         take: 20,
         include: { order: { select: { total: true, createdAt: true } } },
       },
+      _count: { select: { commissions: true, orders: true } },
     },
   });
 
@@ -63,6 +64,8 @@ export async function GET() {
   // No exponer datos bancarios completos en el GET general
   const affiliatesSafe = affiliates.map((a) => ({
     ...a,
+    totalCommissions: a._count.commissions,
+    totalOrders: a._count.orders,
     wallet: a.wallet
       ? {
           ...a.wallet,
