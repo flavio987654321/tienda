@@ -14,8 +14,6 @@ const navItems = [
   { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store },
 ];
 
-const AFFILIATE_SEEN_KEY = "mitienda_seen_pending_affiliate_ids";
-
 export default function DashboardLayout({
   children,
   userName,
@@ -27,41 +25,21 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const { signOut } = useAuth();
-  const [pendingAffiliateIds, setPendingAffiliateIds] = useState<string[] | null>(null);
-  const [seenPendingAffiliateIds, setSeenPendingAffiliateIds] = useState<string[]>([]);
+  const [pendingAffiliateCount, setPendingAffiliateCount] = useState(0);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(AFFILIATE_SEEN_KEY);
-    try {
-      const parsed = stored ? JSON.parse(stored) : [];
-      setSeenPendingAffiliateIds(Array.isArray(parsed) ? parsed : []);
-    } catch {
-      setSeenPendingAffiliateIds([]);
-    }
-
     fetch("/api/vendedoras")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        const pendingIds = Array.isArray(data?.affiliates)
+        const pendingCount = Array.isArray(data?.affiliates)
           ? data.affiliates
               .filter((affiliate: { status?: string }) => affiliate.status === "PENDING")
-              .map((affiliate: { id?: string }) => affiliate.id)
-              .filter((id: string | undefined): id is string => Boolean(id))
-          : [];
-        setPendingAffiliateIds(pendingIds);
+              .length
+          : 0;
+        setPendingAffiliateCount(pendingCount);
       })
-      .catch(() => setPendingAffiliateIds([]));
+      .catch(() => setPendingAffiliateCount(0));
   }, []);
-
-  useEffect(() => {
-    if (pendingAffiliateIds === null || !pathname.startsWith("/dashboard/vendedoras")) return;
-    window.localStorage.setItem(AFFILIATE_SEEN_KEY, JSON.stringify(pendingAffiliateIds));
-    setSeenPendingAffiliateIds(pendingAffiliateIds);
-  }, [pathname, pendingAffiliateIds]);
-
-  const newAffiliateRequests = (pendingAffiliateIds ?? []).filter(
-    (id) => !seenPendingAffiliateIds.includes(id)
-  ).length;
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -76,7 +54,7 @@ export default function DashboardLayout({
         <nav className="flex-1 p-3 space-y-0.5">
           {navItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
-            const showAffiliateBadge = href === "/dashboard/vendedoras" && newAffiliateRequests > 0 && !active;
+            const showAffiliateBadge = href === "/dashboard/vendedoras" && pendingAffiliateCount > 0;
             return (
               <Link
                 key={href}
@@ -91,7 +69,7 @@ export default function DashboardLayout({
                 <span className="flex-1">{label}</span>
                 {showAffiliateBadge && (
                   <span className="min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white">
-                    {newAffiliateRequests > 9 ? "9+" : newAffiliateRequests}
+                    {pendingAffiliateCount > 9 ? "9+" : pendingAffiliateCount}
                   </span>
                 )}
               </Link>

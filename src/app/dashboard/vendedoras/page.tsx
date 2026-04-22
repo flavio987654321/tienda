@@ -69,6 +69,7 @@ export default async function VendedorasPage() {
 
   const affiliates = store?.affiliates ?? [];
   const pending = affiliates.filter((affiliate) => affiliate.status === "PENDING");
+  const teamAffiliates = affiliates.filter((affiliate) => affiliate.status !== "PENDING");
   const approved = affiliates.filter((affiliate) => affiliate.status === "APPROVED");
   const active = approved.filter((affiliate) => affiliate.isActive);
   const totalComisionesPagadas = affiliates.reduce(
@@ -198,19 +199,19 @@ export default async function VendedorasPage() {
             {money(totalComisionesPagadas)} pagadas
           </div>
         </div>
-        {affiliates.length === 0 ? (
+        {teamAffiliates.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
             <div className="bg-purple-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Users className="h-8 w-8 text-purple-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Aun no tenes solicitudes</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Todavia no hay afiliados en el equipo</h3>
             <p className="text-gray-400 mb-4">
-              Cuando alguien se postule a tu tienda, vas a poder aprobarlo desde aca.
+              Cuando apruebes una solicitud, esa persona pasa a esta seccion con sus links, ventas y comisiones.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            {affiliates.map((affiliate) => {
+            {teamAffiliates.map((affiliate) => {
               const confirmedOrders = affiliate.orders.filter((order) => ["CONFIRMED", "SHIPPED", "DELIVERED"].includes(order.status));
               const grossSales = confirmedOrders.reduce((sum, order) => sum + order.total, 0);
               const pendingCommission = affiliate.commissions
