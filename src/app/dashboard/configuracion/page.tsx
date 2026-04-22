@@ -157,6 +157,81 @@ function Chips({ options, value, onChange }: { options:{id:string;label:string}[
 }
 
 /* ─── Block editor (per-type) ─── */
+function ContentGlobalSettings({
+  config,
+  set,
+}: {
+  config: StoreConfig;
+  set: <K extends keyof StoreConfig>(k: K, v: StoreConfig[K]) => void;
+}) {
+  return (
+    <div className="space-y-2 border-t border-gray-100 pt-3">
+      <p className="px-1 text-xs font-bold uppercase tracking-wide text-gray-400">Ajustes de la tienda</p>
+
+      <Accordion label="Redes y contacto" icon={Share2} id="redes" open toggle={()=>{}}>
+        {([{label:"Instagram",field:"instagramUrl" as const,ph:"@mitienda",icon:"📸"},{label:"Facebook",field:"facebookUrl" as const,ph:"facebook.com/mitienda",icon:"👍"},{label:"TikTok",field:"tiktokUrl" as const,ph:"@mitienda",icon:"🎵"}] as const).map(({label,field,ph,icon})=>(
+          <div key={field}>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">{icon} {label}</label>
+            <input type="text" value={config[field]||""} onChange={e=>set(field,e.target.value)} placeholder={ph}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+          </div>
+        ))}
+        <div className="border-t border-gray-100 pt-3">
+          <Toggle label="Boton flotante de WhatsApp" sub="Aparece en el margen de la tienda" value={config.showWhatsappButton} onChange={v=>set("showWhatsappButton",v)}/>
+          {config.showWhatsappButton&&(
+            <div className="mt-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Numero de WhatsApp</label>
+              <input type="text" value={config.whatsappNumber} onChange={e=>set("whatsappNumber",e.target.value)}
+                placeholder="5491112345678"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+            </div>
+          )}
+        </div>
+      </Accordion>
+
+      <Accordion label="Footer" icon={CreditCard} id="footer" open toggle={()=>{}}>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1.5">Texto del footer</label>
+          <textarea value={config.footerText} onChange={e=>set("footerText",e.target.value)} rows={3}
+            placeholder="© 2025 Mi Tienda · Buenos Aires, Argentina"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+        </div>
+      </Accordion>
+
+      <Accordion label="Afiliados" icon={Users} id="vendedoras" open toggle={()=>{}}>
+        <Toggle label="Activar sistema de afiliados" sub="Otros pueden vender en tu tienda" value={Boolean(config.affiliatesEnabled)} onChange={v=>set("affiliatesEnabled",v)}/>
+        {config.affiliatesEnabled&&(
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-medium text-gray-700">Comision por venta</label>
+              <span className="text-sm font-bold text-indigo-600">{config.commissionRate||10}%</span>
+            </div>
+            <input type="range" min="1" max="50" value={config.commissionRate||10} onChange={e=>set("commissionRate",e.target.value)} className="w-full accent-indigo-600"/>
+            <p className="text-gray-400 mt-1" style={{fontSize:"10px"}}>
+              Venta $10.000 → afiliado gana ${(10000*parseFloat(String(config.commissionRate||"0"))/100).toLocaleString("es-AR")}
+            </p>
+          </div>
+        )}
+      </Accordion>
+
+      <Accordion label="SEO / Google" icon={Search} id="seo" open toggle={()=>{}}>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1.5">Titulo para Google</label>
+          <input type="text" value={config.seoTitle||""} onChange={e=>set("seoTitle",e.target.value)}
+            placeholder="Mi Tienda - Ropa y joyas online"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1.5">Descripcion para Google</label>
+          <textarea value={config.seoDescription||""} onChange={e=>set("seoDescription",e.target.value)} rows={3}
+            placeholder="Encontrá las mejores prendas y accesorios."
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+        </div>
+      </Accordion>
+    </div>
+  );
+}
+
 function BlockEditor({ block, onChange }: { block:Block; onChange:(props:Record<string,any>)=>void; config?:StoreConfig }) {
   const p = block.props;
   const upd = (k:string,v:any) => onChange({...p,[k]:v});
@@ -887,6 +962,8 @@ export default function ConfiguracionPage() {
                   })}
                 </div>
               )}
+
+              <ContentGlobalSettings config={config} set={set} />
 
               <p className="text-xs text-gray-400 text-center px-2">
                 Hacé clic en un bloque para editarlo · Los cambios se ven en tiempo real en la preview →
