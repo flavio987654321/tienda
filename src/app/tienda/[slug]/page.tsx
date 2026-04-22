@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import StorefrontClient from "@/components/store/StorefrontClient";
 import { notFound } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 
 type TiendaPageProps = {
   params: Promise<{ slug: string }>;
@@ -8,6 +9,7 @@ type TiendaPageProps = {
 };
 
 export default async function TiendaPage({ params, searchParams }: TiendaPageProps) {
+  noStore();
   const { slug } = await params;
   const { ref } = await searchParams;
 

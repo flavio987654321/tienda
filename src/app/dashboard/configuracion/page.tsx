@@ -438,6 +438,7 @@ export default function ConfiguracionPage() {
   const logoRef   = useRef<HTMLInputElement>(null);
   const bannerRef = useRef<HTMLInputElement>(null);
   const [config, setConfig]       = useState<StoreConfig>(DEFAULT_CONFIG);
+  const [storeSlug, setStoreSlug] = useState<string>("");
 
   // Blocks state
   const [activeTab, setActiveTab]         = useState<"diseño"|"bloques">("diseño");
@@ -448,6 +449,7 @@ export default function ConfiguracionPage() {
   useEffect(()=>{
     fetch("/api/configuracion").then(r=>r.json()).then(({store})=>{
       if(store) {
+        setStoreSlug(store.slug || "");
         setConfig(p=>({...p,...store,
           commissionRate:String(store.commissionRate||10),
           announcementBar:store.announcementBar||"",
@@ -478,13 +480,20 @@ export default function ConfiguracionPage() {
 
   async function handleSave() {
     setSaving(true); setSaved(false);
-    await fetch("/api/configuracion",{
-      method:"PUT",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({...config, pageBlocks:JSON.stringify(blocks)})
-    });
-    setSaving(false); setSaved(true);
-    setTimeout(()=>setSaved(false),3000);
+    try {
+      const res = await fetch("/api/configuracion",{
+        method:"PUT",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({...config, pageBlocks:JSON.stringify(blocks)})
+      });
+      if (!res.ok) throw new Error("Error al guardar");
+      setSaved(true);
+      setTimeout(()=>setSaved(false),3000);
+    } catch {
+      alert("Hubo un error al guardar. Intentá de nuevo.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   // Block helpers
@@ -534,7 +543,7 @@ export default function ConfiguracionPage() {
           <p className="text-gray-500 mt-0.5 text-sm">Preview en vivo mientras editás</p>
         </div>
         <div className="flex items-center gap-3">
-          <a href={`/tienda/${(config as any).slug||(config.name||"mi-tienda").toLowerCase().replace(/\s+/g,"-")}`} target="_blank"
+          <a href={`/tienda/${storeSlug}`} target="_blank"
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600 transition-colors border border-gray-200 px-3 py-2 rounded-xl">
             <ExternalLink className="h-3.5 w-3.5"/> Ver en vivo
           </a>
@@ -849,7 +858,7 @@ export default function ConfiguracionPage() {
                 <div className="w-3 h-3 rounded-full bg-red-500"/><div className="w-3 h-3 rounded-full bg-yellow-500"/><div className="w-3 h-3 rounded-full bg-green-500"/>
               </div>
               <div className="flex-1 mx-4 bg-gray-700 rounded-lg px-3 py-1 text-xs text-gray-400 text-center truncate">
-                mitienda.com/tienda/{(config.name||"mi-tienda").toLowerCase().replace(/\s+/g,"-")}
+                mitienda.com/tienda/{storeSlug || config.name || "mi-tienda"}
               </div>
               <div className="flex items-center gap-1">
                 {([["desktop",Monitor],["tablet",Tablet],["mobile",Smartphone]] as const).map(([id,Icon])=>(
