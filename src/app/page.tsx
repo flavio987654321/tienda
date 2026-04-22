@@ -142,14 +142,21 @@ function ContactModal({ onClose }: { onClose: () => void }) {
 const fadeUp = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, transition: { duration: 0.55 } } };
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 
-const SAMPLE_STORES = [
-  { name: "Luna Moda", category: "Ropa & Accesorios", rating: 4.9, sales: "2.3k", color: "#6366f1", img: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=600&q=80" },
-  { name: "Bella Joyas", category: "Joyería", rating: 4.8, sales: "1.1k", color: "#ec4899", img: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=600&q=80" },
-  { name: "Sport Pro", category: "Deportes", rating: 4.7, sales: "890", color: "#10b981", img: "https://images.unsplash.com/photo-1556906781-9a412961a28d?auto=format&fit=crop&w=600&q=80" },
-  { name: "Casa & Deco", category: "Hogar", rating: 4.9, sales: "3.4k", color: "#f59e0b", img: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=600&q=80" },
-  { name: "Petit Kids", category: "Ropa infantil", rating: 5.0, sales: "760", color: "#8b5cf6", img: "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?auto=format&fit=crop&w=600&q=80" },
-  { name: "Tech Store", category: "Tecnología", rating: 4.6, sales: "1.8k", color: "#0ea5e9", img: "https://images.unsplash.com/photo-1491933382434-500287f9b54b?auto=format&fit=crop&w=600&q=80" },
-];
+const PLACEHOLDER_COLORS = ["#6366f1", "#ec4899", "#10b981", "#f59e0b", "#8b5cf6", "#0ea5e9"];
+
+type RealStore = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  logo: string | null;
+  banner: string | null;
+  primaryColor: string;
+  totalProducts: number;
+  totalOrders: number;
+  categories: string[];
+  coverImg: string | null;
+};
 
 const FEATURES = [
   { icon: Store, title: "Tienda personalizable", desc: "10 plantillas, colores, fuentes, hero, tarjetas y más. Tu marca, tu estilo.", color: "#6366f1" },
@@ -166,13 +173,23 @@ const TESTIMONIALS = [
   { name: "Sofía G.", role: "Dueña · Bella Joyas", text: "La tienda quedó hermosa sin saber nada de diseño. Y las comisiones se calculan solas.", img: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=150&q=80" },
 ];
 
+const SLOTS = 6;
+
 export default function Home() {
   const [contact, setContact] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
+  const [realStores, setRealStores] = useState<RealStore[]>([]);
   const { data: session } = useSession();
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (v) => setNavScrolled(v > 50));
+
+  useEffect(() => {
+    fetch("/api/stores?featured=true&limit=6")
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d.stores)) setRealStores(d.stores); })
+      .catch(() => {});
+  }, []);
 
   const role = (session?.user as any)?.role as string | undefined;
   const panelHref = role === "OWNER" ? "/dashboard" : "/vendedoras";
@@ -488,37 +505,62 @@ export default function Home() {
           </motion.div>
 
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {SAMPLE_STORES.map((store) => (
-              <motion.div key={store.name} variants={fadeUp}>
-                <Card3D>
-                  <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group cursor-pointer">
-                    <div className="relative overflow-hidden h-48">
-                      <img src={store.img} alt={store.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        {store.rating}
+            {Array.from({ length: SLOTS }).map((_, i) => {
+              const store = realStores[i];
+              const color = PLACEHOLDER_COLORS[i % PLACEHOLDER_COLORS.length];
+              return (
+                <motion.div key={i} variants={fadeUp}>
+                  <Card3D>
+                    {store ? (
+                      <Link href={`/tienda/${store.slug}`} className="block bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
+                        <div className="relative overflow-hidden h-48">
+                          {store.coverImg || store.banner ? (
+                            <img src={(store.coverImg || store.banner)!} alt={store.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: store.primaryColor + "22" }}>
+                              <Store className="h-16 w-16 opacity-30" style={{ color: store.primaryColor }} />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                          <div className="absolute bottom-3 left-3">
+                            <span className="bg-white/20 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full border border-white/20">
+                              {store.categories[0] ?? "General"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="p-5">
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-bold text-gray-900">{store.name}</h3>
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: store.primaryColor }} />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-500">{store.totalProducts} productos</span>
+                            <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: store.primaryColor }}>
+                              <Eye className="h-4 w-4" /> Ver tienda
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    ) : (
+                      <div className="bg-white border border-dashed border-gray-200 rounded-3xl overflow-hidden h-full">
+                        <div className="h-48 flex items-center justify-center" style={{ backgroundColor: color + "11" }}>
+                          <div className="text-center">
+                            <div className="w-12 h-12 rounded-2xl mx-auto mb-2 flex items-center justify-center" style={{ backgroundColor: color + "22" }}>
+                              <Store className="h-6 w-6" style={{ color }} />
+                            </div>
+                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Próximamente</span>
+                          </div>
+                        </div>
+                        <div className="p-5">
+                          <div className="h-4 bg-gray-100 rounded-full w-3/4 mb-3" />
+                          <div className="h-3 bg-gray-100 rounded-full w-1/2" />
+                        </div>
                       </div>
-                      <div className="absolute bottom-3 left-3">
-                        <span className="bg-white/20 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full border border-white/20">{store.category}</span>
-                      </div>
-                    </div>
-                    <div className="p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-bold text-gray-900">{store.name}</h3>
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: store.color }} />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">{store.sales} ventas</span>
-                        <button className="flex items-center gap-1.5 text-sm font-semibold transition-colors" style={{ color: store.color }}>
-                          <Eye className="h-4 w-4" /> Ver tienda
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </Card3D>
-              </motion.div>
-            ))}
+                    )}
+                  </Card3D>
+                </motion.div>
+              );
+            })}
           </motion.div>
         </div>
       </section>
