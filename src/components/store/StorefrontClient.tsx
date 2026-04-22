@@ -259,6 +259,7 @@ export default function StorefrontClient({
   const isColorful = store.templateId === "colorful" || store.templateId === "kids";
   const pageBlocks = useMemo(() => parseBlocks(store.pageBlocks), [store.pageBlocks]);
   const contentBlocks = isStarterBlocks(pageBlocks) ? [] : pageBlocks;
+  const hasCustomHeroBlock = contentBlocks.some((block) => block.type === "hero");
   const hasCustomProductBlock = contentBlocks.some((block) => block.type === "products");
   const cardRadius = RADIUS[store.cardRadius] ?? RADIUS.md;
   const cardShadow = SHADOW[store.cardShadow] ?? SHADOW.sm;
@@ -592,7 +593,7 @@ export default function StorefrontClient({
     if (!blocks.length) return null;
 
     return (
-      <div className="mx-auto max-w-7xl px-6 py-8 space-y-0">
+      <div className="space-y-0">
         {blocks.map((block) => {
           const p = block.props as Record<string, any>;
           if (block.type === "products") {
@@ -613,7 +614,7 @@ export default function StorefrontClient({
                   : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
 
             return (
-              <section key={block.id} id="productos" className="py-10" style={{ fontFamily: store.fontFamily }}>
+              <section key={block.id} id="productos" className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ fontFamily: store.fontFamily }}>
                 {p.showHeading !== false && (
                   <div className="mb-7 text-center">
                     <h2 className="text-3xl font-black" style={{ color: store.primaryColor }}>{p.heading || "Nuestros productos"}</h2>
@@ -642,7 +643,7 @@ export default function StorefrontClient({
             );
           }
           if (block.type === "text") return (
-            <div key={block.id} className="py-10 px-4" style={{ textAlign: (p.align || "center") as "left" | "center" | "right", fontFamily: store.fontFamily }}>
+            <div key={block.id} className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ textAlign: (p.align || "center") as "left" | "center" | "right", fontFamily: store.fontFamily }}>
               {p.heading && <h2 className="font-black text-3xl md:text-4xl mb-4" style={{ color: store.primaryColor }}>{p.heading}</h2>}
               {p.body && <p className="text-gray-500 max-w-2xl mx-auto text-base leading-relaxed">{p.body}</p>}
             </div>
@@ -653,7 +654,7 @@ export default function StorefrontClient({
             </div>
           );
           if (block.type === "cta") return (
-            <div key={block.id} className="rounded-3xl p-12 text-center" style={{ backgroundColor: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily }}>
+            <div key={block.id} className="mx-4 rounded-3xl p-8 text-center sm:mx-6 sm:p-12" style={{ backgroundColor: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily }}>
               <h2 className="font-black text-3xl md:text-4xl mb-3">{p.heading || "¿Lista para comprar?"}</h2>
               {p.sub && <p className="opacity-75 mb-6 max-w-xl mx-auto">{p.sub}</p>}
               <a href="#productos" className="inline-block bg-white font-black px-8 py-3 rounded-full text-sm" style={{ color: p.bgColor || store.primaryColor }}>
@@ -664,7 +665,7 @@ export default function StorefrontClient({
           if (block.type === "image-text") {
             const isRight = p.imagePosition === "right";
             return (
-              <div key={block.id} className={`flex flex-col ${isRight ? "md:flex-row-reverse" : "md:flex-row"} gap-8 items-center py-8`} style={{ fontFamily: store.fontFamily }}>
+              <div key={block.id} className={`mx-auto flex max-w-7xl flex-col ${isRight ? "md:flex-row-reverse" : "md:flex-row"} gap-8 items-center px-4 py-8 sm:px-6`} style={{ fontFamily: store.fontFamily }}>
                 <div className="flex-1 rounded-3xl overflow-hidden min-h-64 bg-gray-100 flex items-center justify-center">
                   {p.image ? <img src={p.image} alt="" className="w-full h-full object-cover" style={{ minHeight: "260px" }} /> : <Package className="h-12 w-12 text-gray-300" />}
                 </div>
@@ -684,7 +685,7 @@ export default function StorefrontClient({
 
             if (layout === "card") {
               return (
-                <section key={block.id} className="py-8" style={{ fontFamily: store.fontFamily }}>
+                <section key={block.id} className="px-4 py-8 sm:px-6" style={{ fontFamily: store.fontFamily }}>
                   <div className={`mx-auto max-w-xl border p-6 text-center ${isDark ? "border-white/10 bg-white/5" : "border-gray-100 bg-white"} ${cardRadius} ${cardShadow}`}>
                     {p.showHeading !== false && <h2 className="mb-5 text-2xl font-black" style={{ color: store.primaryColor }}>{heading}</h2>}
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -708,7 +709,7 @@ export default function StorefrontClient({
             }
 
             return (
-              <section key={block.id} className="py-8 text-center" style={{ fontFamily: store.fontFamily }}>
+              <section key={block.id} className="px-4 py-8 text-center sm:px-6" style={{ fontFamily: store.fontFamily }}>
                 {p.showHeading !== false && <h2 className="mb-5 text-2xl font-black" style={{ color: store.primaryColor }}>{heading}</h2>}
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   {visibleItems.map((item) => (
@@ -734,7 +735,7 @@ export default function StorefrontClient({
             );
           }
           if (block.type === "hero") return (
-            <div key={block.id} className="rounded-3xl overflow-hidden flex items-center justify-center text-center text-white py-16 px-8"
+            <div key={block.id} className="overflow-hidden flex items-center justify-center text-center text-white px-6 py-14 sm:px-8 sm:py-16"
               style={{ background: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily, minHeight: p.height === "xl" ? "480px" : p.height === "lg" ? "360px" : p.height === "sm" ? "180px" : "260px" }}>
               <div>
                 <h2 className="font-black text-4xl mb-3 drop-shadow">{p.title || store.name}</h2>
@@ -806,7 +807,7 @@ export default function StorefrontClient({
         </div>
       </header>
 
-      {renderHero()}
+      {!hasCustomHeroBlock && renderHero()}
 
       {renderBlocks()}
 
