@@ -29,6 +29,7 @@ export default function ProductsTable({ products }: Props) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [stockFilter, setStockFilter] = useState("all");
 
   const categories = useMemo(
     () => Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort(),
@@ -38,20 +39,25 @@ export default function ProductsTable({ products }: Props) {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return products.filter((p) => {
+      const totalStock = p.variants.reduce((s, v) => s + v.stock, 0);
       if (q && !p.name.toLowerCase().includes(q) && !p.category.toLowerCase().includes(q) && !(p.subcategory || "").toLowerCase().includes(q)) return false;
       if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
       if (statusFilter === "active" && !p.isActive) return false;
       if (statusFilter === "hidden" && p.isActive) return false;
+      if (stockFilter === "out" && totalStock !== 0) return false;
+      if (stockFilter === "low" && (totalStock === 0 || totalStock >= 5)) return false;
+      if (stockFilter === "critical" && totalStock >= 5) return false;
       return true;
     });
-  }, [products, search, categoryFilter, statusFilter]);
+  }, [products, search, categoryFilter, statusFilter, stockFilter]);
 
-  const hasFilters = search || categoryFilter !== "all" || statusFilter !== "all";
+  const hasFilters = search || categoryFilter !== "all" || statusFilter !== "all" || stockFilter !== "all";
 
   function clearFilters() {
     setSearch("");
     setCategoryFilter("all");
     setStatusFilter("all");
+    setStockFilter("all");
   }
 
   return (
@@ -96,6 +102,17 @@ export default function ProductsTable({ products }: Props) {
           <option value="all">Todos los estados</option>
           <option value="active">Activos</option>
           <option value="hidden">Ocultos</option>
+        </select>
+
+        <select
+          value={stockFilter}
+          onChange={(e) => setStockFilter(e.target.value)}
+          className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600"
+        >
+          <option value="all">Todo el stock</option>
+          <option value="out">Sin stock (0 u.)</option>
+          <option value="low">Stock bajo (1–4 u.)</option>
+          <option value="critical">Stock crítico (0–4 u.)</option>
         </select>
 
         {hasFilters && (

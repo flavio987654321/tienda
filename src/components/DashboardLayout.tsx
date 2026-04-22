@@ -19,19 +19,26 @@ export default function DashboardLayout({
   userName,
   userEmail,
   initialPendingAffiliateCount = 0,
+  initialLowStockCount = 0,
 }: {
   children: React.ReactNode;
   userName?: string | null;
   userEmail?: string | null;
   initialPendingAffiliateCount?: number;
+  initialLowStockCount?: number;
 }) {
   const pathname = usePathname();
   const { signOut } = useAuth();
   const [pendingAffiliateCount, setPendingAffiliateCount] = useState(initialPendingAffiliateCount);
+  const [lowStockCount, setLowStockCount] = useState(initialLowStockCount);
 
   useEffect(() => {
     setPendingAffiliateCount(initialPendingAffiliateCount);
   }, [initialPendingAffiliateCount]);
+
+  useEffect(() => {
+    setLowStockCount(initialLowStockCount);
+  }, [initialLowStockCount]);
 
   useEffect(() => {
     fetch("/api/vendedoras")
@@ -45,6 +52,21 @@ export default function DashboardLayout({
         setPendingAffiliateCount(pendingCount);
       })
       .catch(() => setPendingAffiliateCount(0));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/productos")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const count = Array.isArray(data?.products)
+          ? data.products.filter((p: { variants: { stock: number }[] }) => {
+              const total = p.variants.reduce((s: number, v: { stock: number }) => s + v.stock, 0);
+              return total === 0;
+            }).length
+          : 0;
+        setLowStockCount(count);
+      })
+      .catch(() => {});
   }, []);
 
   return (
@@ -61,6 +83,7 @@ export default function DashboardLayout({
           {navItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             const showAffiliateBadge = href === "/dashboard/vendedoras" && pendingAffiliateCount > 0;
+            const showStockBadge = href === "/dashboard/productos" && lowStockCount > 0;
             return (
               <Link
                 key={href}
@@ -76,6 +99,11 @@ export default function DashboardLayout({
                 {showAffiliateBadge && (
                   <span className="min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white">
                     {pendingAffiliateCount > 9 ? "9+" : pendingAffiliateCount}
+                  </span>
+                )}
+                {showStockBadge && (
+                  <span className="min-w-5 rounded-full bg-orange-500 px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white">
+                    {lowStockCount > 9 ? "9+" : lowStockCount}
                   </span>
                 )}
               </Link>

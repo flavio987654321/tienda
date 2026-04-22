@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { sendLowStockEmail } from "@/lib/email";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -35,16 +36,41 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           return order;
         }
 
+        const stockAlerts: { name: string; variant: string; stock: number }[] = [];
+
         for (const item of order.items) {
           if (!item.variantId) continue;
           const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } });
           if (!variant || variant.stock < item.quantity) {
             throw new Error(`No hay stock suficiente para ${item.product.name}`);
           }
+          const newStock = variant.stock - item.quantity;
           await tx.productVariant.update({
             where: { id: item.variantId },
             data: { stock: { decrement: item.quantity } },
           });
+          if (newStock <= 4) {
+            stockAlerts.push({
+              name: item.product.name,
+              variant: `${variant.name}: ${variant.value}`,
+              stock: newStock,
+            });
+          }
+        }
+
+        if (stockAlerts.length > 0) {
+          const owner = await tx.user.findUnique({
+            where: { id: ownerId },
+            select: { email: true, name: true },
+          });
+          if (owner?.email) {
+            sendLowStockEmail({
+              ownerEmail: owner.email,
+              ownerName: owner.name || "vendedora",
+              storeName: order.store.name,
+              products: stockAlerts,
+            }).catch(() => {});
+          }
         }
 
         if (order.affiliateId && order.store.affiliatesEnabled && !order.commission) {
