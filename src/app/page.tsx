@@ -192,7 +192,7 @@ export default function Home() {
   }, []);
 
   const role = (session?.user as any)?.role as string | undefined;
-  const panelHref = role === "OWNER" ? "/dashboard" : "/vendedoras";
+  const panelHref = role === "OWNER" ? "/dashboard" : role === "SELLER" ? "/vendedoras" : "/mi-cuenta";
   const panelLabel = role === "OWNER" ? "Mi tienda" : role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const userName = session?.user?.name?.split(" ")[0] ?? null;
 

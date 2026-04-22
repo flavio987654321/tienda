@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
     }
 
-    const type = accountType === "seller" ? "SELLER" : "OWNER";
+    const type = accountType === "seller" ? "SELLER" : accountType === "buyer" ? "BUYER" : "OWNER";
     if (type === "OWNER" && !storeName) {
       return NextResponse.json({ error: "El nombre de la tienda es requerido" }, { status: 400 });
     }
