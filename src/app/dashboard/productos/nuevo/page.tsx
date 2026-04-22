@@ -19,6 +19,11 @@ interface Variant {
   sku: string;
 }
 
+interface Attribute {
+  key: string;
+  value: string;
+}
+
 interface StoreConfig {
   primaryColor: string;
   accentColor: string;
@@ -163,6 +168,7 @@ function ProductoFormPage() {
   const [productCategories, setProductCategories] = useState<string[]>(BASE_CATEGORIAS);
   const [customCategory, setCustomCategory] = useState("");
   const [variants, setVariants] = useState<Variant[]>([DEFAULT_VARIANT]);
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [uploadingImg, setUploadingImg] = useState(false);
@@ -223,6 +229,9 @@ function ProductoFormPage() {
               }))
             : [DEFAULT_VARIANT]
         );
+        setAttributes(safeJsonArray(product.attributes).filter(
+          (a: any) => a && typeof a.key === "string" && typeof a.value === "string"
+        ) as Attribute[]);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "No se pudo cargar el producto"))
       .finally(() => setLoadingProduct(false));
@@ -242,6 +251,18 @@ function ProductoFormPage() {
 
   function removeVariant(idx: number) {
     setVariants((p) => p.filter((_, i) => i !== idx));
+  }
+
+  function addAttribute() {
+    setAttributes((p) => [...p, { key: "", value: "" }]);
+  }
+
+  function updateAttribute(idx: number, field: keyof Attribute, value: string) {
+    setAttributes((p) => p.map((a, i) => (i === idx ? { ...a, [field]: value } : a)));
+  }
+
+  function removeAttribute(idx: number) {
+    setAttributes((p) => p.filter((_, i) => i !== idx));
   }
 
   async function uploadImages(files: File[]) {
@@ -334,6 +355,7 @@ function ProductoFormPage() {
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         images,
         variants: variants.filter((v) => v.value),
+        attributes: attributes.filter((a) => a.key.trim() && a.value.trim()),
       }),
     });
 
@@ -629,6 +651,62 @@ function ProductoFormPage() {
                       </button>
                     )}
                   </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Atributos adicionales */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-semibold text-gray-900">Atributos adicionales</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Número de serie, peso, material, dimensiones, etc.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={addAttribute}
+                  className="flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  Agregar
+                </button>
+              </div>
+
+              {attributes.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-4">
+                  Sin atributos. Usá esto para especificar datos técnicos del producto.
+                </p>
+              )}
+
+              {attributes.map((attr, idx) => (
+                <div key={idx} className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Nombre del atributo</label>
+                    <input
+                      type="text"
+                      value={attr.key}
+                      onChange={(e) => updateAttribute(idx, "key", e.target.value)}
+                      placeholder="Ej: Número de serie, Peso, Material"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Valor</label>
+                    <input
+                      type="text"
+                      value={attr.value}
+                      onChange={(e) => updateAttribute(idx, "value", e.target.value)}
+                      placeholder="Ej: ABC-123, 2.5 kg, Algodón"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeAttribute(idx)}
+                    className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors mb-0.5"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               ))}
             </div>

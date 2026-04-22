@@ -2,8 +2,9 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Package, Edit, Eye, EyeOff } from "lucide-react";
+import { Plus, Package } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
+import ProductsTable from "./ProductsTable";
 
 export default async function ProductosPage() {
   const user = await getCurrentUser();
@@ -56,86 +57,7 @@ export default async function ProductosPage() {
           </Link>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-50">
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Producto</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Categoría</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Precio</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Stock</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-4"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {products.map((product) => {
-                const totalStock = product.variants.reduce((s, v) => s + v.stock, 0);
-                const images = JSON.parse(product.images || "[]");
-                return (
-                  <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gray-100 rounded-xl overflow-hidden shrink-0">
-                          {images[0] ? (
-                            <img src={images[0]} alt={product.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Package className="h-5 w-5 text-gray-300" />
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {product.variants.length} variante{product.variants.length !== 1 ? "s" : ""}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-500 capitalize">{product.category}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-semibold text-gray-900 text-sm">
-                          ${product.price.toLocaleString("es-AR")}
-                        </p>
-                        {product.comparePrice && (
-                          <p className="text-xs text-gray-400 line-through">
-                            ${product.comparePrice.toLocaleString("es-AR")}
-                          </p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-sm font-medium ${totalStock === 0 ? "text-red-500" : totalStock < 5 ? "text-yellow-500" : "text-green-600"}`}>
-                        {totalStock} u.
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${
-                        product.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                      }`}>
-                        {product.isActive ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                        {product.isActive ? "Activo" : "Oculto"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/dashboard/productos/nuevo?edit=${product.id}`}
-                        className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                        Editar
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <ProductsTable products={products} />
       )}
     </DashboardLayout>
   );

@@ -44,7 +44,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
   if (!existing) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
   const body = await req.json();
-  const { name, description, price, comparePrice, category, tags, images, variants } = body;
+  const { name, description, price, comparePrice, category, tags, images, variants, attributes } = body;
 
   if (!name || !price) {
     return NextResponse.json({ error: "Nombre y precio son requeridos" }, { status: 400 });
@@ -63,6 +63,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         category: category || "general",
         tags: JSON.stringify(tags || []),
         images: JSON.stringify(images || []),
+        attributes: JSON.stringify(attributes || []),
         variants: {
           create: (variants || []).map((v: any) => ({
             name: v.name,
