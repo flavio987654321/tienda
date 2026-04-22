@@ -716,7 +716,7 @@ export default function StorefrontClient({ store, affiliateId }: { store: Store;
 
       {affiliateId && (
         <div className="fixed bottom-5 left-5 z-20 rounded-full bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 shadow-sm">
-          Compra atribuida a una vendedora
+          Compra atribuida a un afiliado
         </div>
       )}
 

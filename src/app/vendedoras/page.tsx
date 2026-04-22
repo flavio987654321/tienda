@@ -119,7 +119,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
             <>
               {/* Link box */}
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tu link de afiliada</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tu link de afiliado</p>
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-3 flex items-center gap-3">
                   <p className="flex-1 text-xs text-indigo-300 break-all font-mono">{storeUrl}</p>
                   <button
@@ -279,7 +279,7 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
         className="relative bg-gray-950 border border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl"
       >
         <div className="p-6 border-b border-white/5">
-          <p className="text-indigo-400 text-xs font-bold uppercase tracking-widest mb-1">Solicitud de vendedora</p>
+          <p className="text-indigo-400 text-xs font-bold uppercase tracking-widest mb-1">Solicitud de afiliado</p>
           <h3 className="text-xl font-black text-white">{store.name}</h3>
           <p className="text-gray-500 text-sm mt-0.5">Comisión ofrecida: <span className="text-emerald-400 font-semibold">{store.commissionRate}%</span> por venta confirmada</p>
         </div>
@@ -368,7 +368,7 @@ export default function VendedorasPage() {
     setApplyStore(null);
   }
 
-  const userName = (session?.user as any)?.name ?? "Vendedora";
+  const userName = (session?.user as any)?.name ?? "Afiliado";
   const userInitial = userName.charAt(0).toUpperCase();
 
   return (
@@ -439,7 +439,7 @@ export default function VendedorasPage() {
                     <Zap className="h-6 w-6 text-indigo-400" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-black text-white">Panel de vendedora</h1>
+                    <h1 className="text-2xl font-black text-white">Panel de afiliado</h1>
                     <p className="text-gray-400 text-sm">Hola, <span className="text-indigo-300 font-semibold">{userName}</span> 👋</p>
                   </div>
                 </div>
@@ -595,7 +595,7 @@ export default function VendedorasPage() {
                   Vendé para marcas activas y cobrá comisiones
                 </div>
                 <h1 className="text-5xl lg:text-7xl font-black mb-6 leading-tight">
-                  Postulate como<br /><span className="gt">vendedora</span>
+                  Postulate como<br /><span className="gt">afiliado</span>
                 </h1>
                 <p className="text-gray-400 text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
                   Elegí tiendas, mandá tu presentación y esperá la aprobación de la dueña. Cuando te acepten, vas a tener tu link propio y cobrar comisiones automáticas.
@@ -642,7 +642,7 @@ export default function VendedorasPage() {
           {/* Available stores preview */}
           <section className="py-16">
             <div className="max-w-6xl mx-auto px-6">
-              <h2 className="text-2xl font-black text-white mb-8">Tiendas que buscan vendedoras</h2>
+              <h2 className="text-2xl font-black text-white mb-8">Tiendas que buscan afiliados</h2>
               {loadingStores ? (
                 <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-indigo-400" /></div>
               ) : stores.length === 0 ? (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut } from "lucide-react";
@@ -9,9 +10,11 @@ const navItems = [
   { href: "/dashboard", label: "Inicio", icon: TrendingUp },
   { href: "/dashboard/productos", label: "Productos", icon: Package },
   { href: "/dashboard/pedidos", label: "Pedidos", icon: ShoppingBag },
-  { href: "/dashboard/vendedoras", label: "Vendedoras", icon: Users },
+  { href: "/dashboard/vendedoras", label: "Afiliados", icon: Users },
   { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store },
 ];
+
+const AFFILIATE_SEEN_KEY = "mitienda_seen_pending_affiliate_ids";
 
 export default function DashboardLayout({
   children,
@@ -23,6 +26,41 @@ export default function DashboardLayout({
   userEmail?: string | null;
 }) {
   const pathname = usePathname();
+  const [pendingAffiliateIds, setPendingAffiliateIds] = useState<string[] | null>(null);
+  const [seenPendingAffiliateIds, setSeenPendingAffiliateIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(AFFILIATE_SEEN_KEY);
+    try {
+      const parsed = stored ? JSON.parse(stored) : [];
+      setSeenPendingAffiliateIds(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      setSeenPendingAffiliateIds([]);
+    }
+
+    fetch("/api/vendedoras")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const pendingIds = Array.isArray(data?.affiliates)
+          ? data.affiliates
+              .filter((affiliate: { status?: string }) => affiliate.status === "PENDING")
+              .map((affiliate: { id?: string }) => affiliate.id)
+              .filter((id: string | undefined): id is string => Boolean(id))
+          : [];
+        setPendingAffiliateIds(pendingIds);
+      })
+      .catch(() => setPendingAffiliateIds([]));
+  }, []);
+
+  useEffect(() => {
+    if (pendingAffiliateIds === null || !pathname.startsWith("/dashboard/vendedoras")) return;
+    window.localStorage.setItem(AFFILIATE_SEEN_KEY, JSON.stringify(pendingAffiliateIds));
+    setSeenPendingAffiliateIds(pendingAffiliateIds);
+  }, [pathname, pendingAffiliateIds]);
+
+  const newAffiliateRequests = (pendingAffiliateIds ?? []).filter(
+    (id) => !seenPendingAffiliateIds.includes(id)
+  ).length;
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -37,6 +75,7 @@ export default function DashboardLayout({
         <nav className="flex-1 p-3 space-y-0.5">
           {navItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
+            const showAffiliateBadge = href === "/dashboard/vendedoras" && newAffiliateRequests > 0 && !active;
             return (
               <Link
                 key={href}
@@ -48,7 +87,12 @@ export default function DashboardLayout({
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                {label}
+                <span className="flex-1">{label}</span>
+                {showAffiliateBadge && (
+                  <span className="min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white">
+                    {newAffiliateRequests > 9 ? "9+" : newAffiliateRequests}
+                  </span>
+                )}
               </Link>
             );
           })}

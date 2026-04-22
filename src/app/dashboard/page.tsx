@@ -51,7 +51,7 @@ export default async function DashboardPage() {
             { href: "/dashboard", label: "Inicio", icon: TrendingUp },
             { href: "/dashboard/productos", label: "Productos", icon: Package },
             { href: "/dashboard/pedidos", label: "Pedidos", icon: ShoppingBag },
-            { href: "/dashboard/vendedoras", label: "Vendedoras", icon: Users },
+            { href: "/dashboard/vendedoras", label: "Afiliados", icon: Users },
             { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store },
           ].map(({ href, label, icon: Icon }) => (
             <Link
@@ -130,7 +130,7 @@ export default async function DashboardPage() {
               color: "text-indigo-600 bg-indigo-50",
             },
             {
-              label: "Vendedoras",
+              label: "Afiliados",
               value: store?._count.affiliates ?? 0,
               icon: Users,
               color: "text-purple-600 bg-purple-50",
@@ -151,7 +151,7 @@ export default async function DashboardPage() {
           {[
             { href: "/dashboard/productos/nuevo", label: "Agregar producto", icon: Plus, desc: "Sumá un nuevo producto a tu catálogo" },
             { href: `/tienda/${store?.slug}`, label: "Ver mi tienda", icon: Store, desc: "Mirá cómo ven tu tienda los clientes" },
-            { href: "/dashboard/vendedoras", label: "Gestionar vendedoras", icon: Users, desc: "Activá solicitudes y aprobá a quienes pueden vender" },
+            { href: "/dashboard/vendedoras", label: "Gestionar afiliados", icon: Users, desc: "Activa solicitudes y aproba a quienes pueden vender" },
           ].map(({ href, label, icon: Icon, desc }) => (
             <Link
               key={href}

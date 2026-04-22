@@ -152,16 +152,16 @@ const SAMPLE_STORES = [
 
 const FEATURES = [
   { icon: Store, title: "Tienda personalizable", desc: "10 plantillas, colores, fuentes, hero, tarjetas y más. Tu marca, tu estilo.", color: "#6366f1" },
-  { icon: Users, title: "Red de vendedoras", desc: "Las vendedoras se postulan. Vos aprobás quién puede vender con tu link.", color: "#8b5cf6" },
+  { icon: Users, title: "Red de afiliados", desc: "Los afiliados se postulan. Vos aprobas quien puede vender con tu link.", color: "#8b5cf6" },
   { icon: TrendingUp, title: "Comisiones automáticas", desc: "Cada venta por link afiliado genera comisión al instante en la billetera.", color: "#ec4899" },
   { icon: Wallet, title: "Billetera digital", desc: "Saldo, historial de ganancias y retiros con un solo clic.", color: "#f59e0b" },
   { icon: Truck, title: "Envíos integrados", desc: "Andreani, OCA y Correo Argentino con tracking automático.", color: "#10b981" },
-  { icon: Shield, title: "Control total", desc: "Vos decidís qué vendedoras activar, qué stock mostrar y cómo presentarte.", color: "#0ea5e9" },
+  { icon: Shield, title: "Control total", desc: "Vos decidis que afiliados activar, que stock mostrar y como presentarte.", color: "#0ea5e9" },
 ];
 
 const TESTIMONIALS = [
-  { name: "Valentina M.", role: "Dueña · Luna Moda", text: "En 3 meses duplicamos las ventas gracias al sistema de vendedoras. Es increíblemente fácil de usar.", img: "https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=150&q=80" },
-  { name: "Camila R.", role: "Vendedora afiliada", text: "Gano $180k por mes compartiendo links desde mi celular. Sin invertir nada, solo tiempo.", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80" },
+  { name: "Valentina M.", role: "Dueña · Luna Moda", text: "En 3 meses duplicamos las ventas gracias al sistema de afiliados. Es increiblemente facil de usar.", img: "https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=150&q=80" },
+  { name: "Camila R.", role: "Afiliada", text: "Gano $180k por mes compartiendo links desde mi celular. Sin invertir nada, solo tiempo.", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80" },
   { name: "Sofía G.", role: "Dueña · Bella Joyas", text: "La tienda quedó hermosa sin saber nada de diseño. Y las comisiones se calculan solas.", img: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=150&q=80" },
 ];
 
@@ -255,7 +255,7 @@ export default function Home() {
           <motion.div initial="hidden" animate="show" variants={stagger}>
             <motion.div variants={fadeUp} className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 px-4 py-1.5 rounded-full text-sm font-medium mb-8">
               <Star className="h-3.5 w-3.5 fill-indigo-400 text-indigo-400" />
-              Plataforma #1 para vendedoras argentinas
+              Plataforma #1 para afiliados argentinos
             </motion.div>
 
             <motion.h1 variants={fadeUp} className="text-5xl lg:text-7xl font-black leading-[1.05] mb-6 tracking-tight">
@@ -265,8 +265,8 @@ export default function Home() {
             </motion.h1>
 
             <motion.p variants={fadeUp} className="text-lg text-gray-400 mb-10 leading-relaxed max-w-lg">
-              Las dueñas crean su tienda, cargan productos y aprueban vendedoras.
-              Las vendedoras comparten su link y cobran comisiones automáticamente.
+              Las tiendas cargan productos y aprueban afiliados.
+              Los afiliados comparten su link y cobran comisiones automaticamente.
             </motion.p>
 
             <motion.div variants={fadeUp} className="flex flex-wrap gap-4 mb-14">
@@ -289,7 +289,7 @@ export default function Home() {
             <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6">
               {[
                 { value: "1.200+", label: "Tiendas activas" },
-                { value: "3.800+", label: "Vendedoras" },
+                { value: "3.800+", label: "Afiliados" },
                 { value: "$12M+", label: "Ventas/mes" },
               ].map((s) => (
                 <div key={s.label} className="border-l border-indigo-500/30 pl-4">
@@ -324,7 +324,7 @@ export default function Home() {
                       <div className="ml-auto bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium">Activa</div>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
-                      {["$83.200", "24 ventas", "8 vendedoras"].map((v, i) => (
+                      {["$83.200", "24 ventas", "8 afiliados"].map((v, i) => (
                         <div key={i} className="bg-white/10 rounded-xl p-2.5 text-center">
                           <p className="text-white font-bold text-sm">{v}</p>
                           <p className="text-indigo-200 text-xs">{["Este mes", "Este mes", "Activas"][i]}</p>
@@ -349,7 +349,7 @@ export default function Home() {
                         </div>
                       ))}
                     </div>
-                    {/* Vendedora row */}
+                    {/* Afiliado row */}
                     <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full overflow-hidden">
                         <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=80&q=80" alt="" className="w-full h-full object-cover" />
@@ -376,7 +376,7 @@ export default function Home() {
                   transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
                   className="absolute -bottom-4 -left-6 bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg shadow-indigo-500/30 flex items-center gap-1.5"
                 >
-                  <Users className="h-3 w-3" /> 8 vendedoras activas
+                  <Users className="h-3 w-3" /> 8 afiliados activos
                 </motion.div>
               </div>
             </Card3D>
@@ -390,7 +390,7 @@ export default function Home() {
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} variants={stagger} className="text-center mb-16">
             <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Plataforma completa</motion.p>
             <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-4">Todo lo que necesitás para vender</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">Tienda, productos, pedidos, vendedoras, comisiones y retiros en un solo panel.</motion.p>
+            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">Tienda, productos, pedidos, afiliados, comisiones y retiros en un solo panel.</motion.p>
           </motion.div>
 
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -428,7 +428,7 @@ export default function Home() {
             <div className="hidden md:block absolute top-10 left-[calc(16.66%+1rem)] right-[calc(16.66%+1rem)] h-px bg-gradient-to-r from-indigo-600/0 via-indigo-600/50 to-indigo-600/0" />
             {[
               { n: "01", title: "Creás tu tienda", desc: "Registrate, elegí una plantilla, personalizá colores y cargá tus productos en minutos.", icon: Store },
-              { n: "02", title: "Aprobás vendedoras", desc: "Las vendedoras se postulan. Revisás su perfil y decidís quién puede vender con tu marca.", icon: Users },
+              { n: "02", title: "Aprobas afiliados", desc: "Los afiliados se postulan. Revisas su perfil y decidis quien puede vender con tu marca.", icon: Users },
               { n: "03", title: "Vendés con equipo", desc: "Cada venta por link afiliado suma comisión automáticamente. Vos crecés, ellas también.", icon: TrendingUp },
             ].map(({ n, title, desc, icon: Icon }) => (
               <motion.div key={n} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: parseInt(n) * 0.15 }} className="relative text-center">
@@ -503,7 +503,7 @@ export default function Home() {
         <div className="relative max-w-6xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
             <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-4">Dos caminos, una plataforma</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-400 text-lg">¿Sos dueña o vendedora? Cada perfil tiene su panel propio.</motion.p>
+            <motion.p variants={fadeUp} className="text-gray-400 text-lg">¿Tenes tienda o sos afiliado? Cada perfil tiene su panel propio.</motion.p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -511,14 +511,14 @@ export default function Home() {
               {
                 icon: Store, color: "#6366f1", gradient: "from-indigo-600/20 to-purple-600/10", border: "border-indigo-500/20",
                 title: "Para dueñas", sub: "Creá y administrá tu tienda",
-                items: ["Tienda propia con dominio personalizable", "Hasta 10 plantillas de diseño distintas", "Panel de vendedoras con aprobación", "Control de stock, pedidos y envíos", "Comisiones automáticas y reportes"],
+                items: ["Tienda propia con dominio personalizable", "Hasta 10 plantillas de diseño distintas", "Panel de afiliados con aprobacion", "Control de stock, pedidos y envios", "Comisiones automaticas y reportes"],
                 cta: "Crear mi tienda", href: "/registro",
               },
               {
                 icon: Users, color: "#a855f7", gradient: "from-purple-600/20 to-pink-600/10", border: "border-purple-500/20",
-                title: "Para vendedoras", sub: "Ganás sin tener tienda propia",
-                items: ["Postulate a tiendas activas", "Link de afiliada con tracking propio", "Billetera digital con historial", "Retirá tus ganancias cuando quieras", "Panel simple desde el celular"],
-                cta: "Quiero ser vendedora", href: "/vendedoras",
+                title: "Para afiliados", sub: "Ganas sin tener tienda propia",
+                items: ["Postulate a tiendas activas", "Link de afiliado con tracking propio", "Billetera digital con historial", "Retira tus ganancias cuando quieras", "Panel simple desde el celular"],
+                cta: "Quiero ser afiliado", href: "/vendedoras",
               },
             ].map(({ icon: Icon, color, gradient, border, title, sub, items, cta, href }) => (
               <motion.div key={title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
@@ -598,10 +598,10 @@ export default function Home() {
             <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Quiénes somos</motion.p>
             <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-900 mb-6">Construimos la plataforma que quisiéramos usar</motion.h2>
             <motion.p variants={fadeUp} className="text-gray-500 leading-relaxed mb-5">
-              Somos un equipo argentino que entendió el potencial de las redes de vendedoras. Vimos cómo las dueñas de tiendas perdían ventas por no tener herramientas para gestionar su equipo de forma profesional.
+              Somos un equipo argentino que entendio el potencial de las redes de afiliados. Vimos como las tiendas perdian ventas por no tener herramientas para gestionar su equipo de forma profesional.
             </motion.p>
             <motion.p variants={fadeUp} className="text-gray-500 leading-relaxed mb-8">
-              MiTienda nació para democratizar el ecommerce: que cualquier persona pueda tener una tienda online hermosa, con vendedoras, pagos y envíos, sin necesitar conocimientos técnicos.
+              MiTienda nacio para democratizar el ecommerce: que cualquier persona pueda tener una tienda online hermosa, con afiliados, pagos y envios, sin necesitar conocimientos tecnicos.
             </motion.p>
             <motion.div variants={fadeUp} className="grid grid-cols-2 gap-5">
               {[
@@ -664,7 +664,7 @@ export default function Home() {
                 <span className="text-lg font-bold text-white">MiTienda</span>
               </div>
               <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
-                La plataforma de ecommerce con sistema de vendedoras para crecer con equipo.
+                La plataforma de ecommerce con sistema de afiliados para crecer con equipo.
               </p>
               <div className="flex items-center gap-4 mt-5">
                 <button onClick={() => setContact(true)} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-400 transition-colors">
@@ -681,7 +681,7 @@ export default function Home() {
               </ul>
             </div>
             <div>
-              <p className="text-white font-semibold text-sm mb-4">Vendedoras</p>
+              <p className="text-white font-semibold text-sm mb-4">Afiliados</p>
               <ul className="space-y-2.5">
                 {[["/vendedoras", "Postularme"], ["/vendedoras/billetera", "Mi billetera"], ["#nosotros", "Quiénes somos"]].map(([href, label]) => (
                   <li key={label}><a href={href} className="text-gray-500 hover:text-white text-sm transition-colors">{label}</a></li>
@@ -692,7 +692,7 @@ export default function Home() {
           </div>
           <div className="border-t border-white/5 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-gray-600 text-sm">© 2026 MiTienda. Hecho con ❤️ en Argentina.</p>
-            <p className="text-gray-700 text-xs">Plataforma ecommerce para dueñas y vendedoras</p>
+            <p className="text-gray-700 text-xs">Plataforma ecommerce para tiendas y afiliados</p>
           </div>
         </div>
       </footer>

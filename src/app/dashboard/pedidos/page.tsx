@@ -167,7 +167,7 @@ export default async function PedidosPage() {
                       <p><strong>Tracking:</strong> {order.trackingCode || order.shipping?.trackingCode || "Sin cargar"}</p>
                       {order.affiliate ? (
                         <div className="mt-3 rounded-lg bg-purple-50 p-2 text-purple-700">
-                          <p className="font-semibold">Venta por vendedora</p>
+                          <p className="font-semibold">Venta por afiliado</p>
                           <p>{order.affiliate.user.name || order.affiliate.user.email}</p>
                           <p>Comision: {order.commission ? money(order.commission.amount) : "se genera al confirmar pago"}</p>
                         </div>

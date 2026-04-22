@@ -14,12 +14,12 @@ type AccountType = "owner" | "seller";
 const OWNER_PERKS = [
   "Tienda con dominio personalizable",
   "10 plantillas de diseño incluidas",
-  "Sistema de vendedoras y comisiones",
+  "Sistema de afiliados y comisiones",
   "Panel de pedidos y stock",
 ];
 const SELLER_PERKS = [
   "Sin inversión inicial requerida",
-  "Link de afiliada con tracking",
+  "Link de afiliado con tracking",
   "Billetera digital para cobrar",
   "Panel simple desde el celular",
 ];
@@ -107,7 +107,7 @@ export default function RegistroPage() {
                     <Store className="h-7 w-7 text-indigo-400" />
                   </div>
                   <h3 className="text-xl font-black text-white mb-2">Soy dueña</h3>
-                  <p className="text-gray-500 text-sm mb-5 leading-relaxed">Creá tu tienda online y gestioná tu equipo de vendedoras.</p>
+                  <p className="text-gray-500 text-sm mb-5 leading-relaxed">Crea tu tienda online y gestiona tu equipo de afiliados.</p>
                   <ul className="space-y-2 mb-6">
                     {OWNER_PERKS.map((p) => (
                       <li key={p} className="flex items-center gap-2 text-xs text-gray-400">
@@ -121,12 +121,12 @@ export default function RegistroPage() {
                   </div>
                 </button>
 
-                {/* Vendedora */}
+                {/* Afiliado */}
                 <button onClick={() => selectType("seller")} className="group text-left bg-purple-500/5 hover:bg-purple-500/10 border border-purple-500/20 hover:seller-glow rounded-3xl p-7 transition-all duration-300">
                   <div className="w-14 h-14 bg-purple-500/15 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
                     <Users className="h-7 w-7 text-purple-400" />
                   </div>
-                  <h3 className="text-xl font-black text-white mb-2">Soy vendedora</h3>
+                  <h3 className="text-xl font-black text-white mb-2">Soy afiliado</h3>
                   <p className="text-gray-500 text-sm mb-5 leading-relaxed">Postulate a tiendas activas y ganás comisiones compartiendo tu link.</p>
                   <ul className="space-y-2 mb-6">
                     {SELLER_PERKS.map((p) => (
@@ -168,7 +168,7 @@ export default function RegistroPage() {
                     : <Users className="h-4 w-4 text-purple-400" />
                   }
                   <span className={`text-sm font-semibold ${accountType === "owner" ? "text-indigo-300" : "text-purple-300"}`}>
-                    {accountType === "owner" ? "Dueña · crear tienda" : "Vendedora · postularme"}
+                    {accountType === "owner" ? "Dueña · crear tienda" : "Afiliado · postularme"}
                   </span>
                 </div>
                 <button
@@ -184,7 +184,7 @@ export default function RegistroPage() {
                 <p className="text-gray-500">
                   {accountType === "owner"
                     ? "Tu tienda estará lista en segundos."
-                    : "Te mandamos al panel de vendedora."}
+                    : "Te mandamos al panel de afiliado."}
                 </p>
               </div>
 
@@ -272,7 +272,7 @@ export default function RegistroPage() {
                     ? "Creando cuenta..."
                     : accountType === "owner"
                     ? "Crear mi tienda gratis"
-                    : "Crear cuenta de vendedora"}
+                    : "Crear cuenta de afiliado"}
                 </button>
 
                 <p className="text-center text-xs text-gray-600 pt-1">

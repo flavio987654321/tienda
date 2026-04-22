@@ -61,13 +61,13 @@ function LoginForm() {
               Tu tienda te<br /><span className="gradient-text">está esperando</span>
             </h2>
             <p className="text-indigo-200/70 leading-relaxed">
-              Gestioná productos, pedidos y vendedoras desde un panel simple y potente.
+              Gestiona productos, pedidos y afiliados desde un panel simple y potente.
             </p>
           </div>
           <ul className="space-y-3.5">
             {[
               { icon: Store, label: "10 plantillas de tienda personalizable" },
-              { icon: Users, label: "Sistema de vendedoras con comisiones" },
+              { icon: Users, label: "Sistema de afiliados con comisiones" },
               { icon: TrendingUp, label: "Reportes y estadísticas en tiempo real" },
               { icon: Wallet, label: "Billetera digital para retiros" },
             ].map(({ icon: Icon, label }) => (
@@ -88,7 +88,7 @@ function LoginForm() {
               ))}
             </div>
             <p className="text-indigo-100/80 text-sm italic leading-relaxed">
-              "Triplicamos las ventas en 2 meses con el sistema de vendedoras. Impresionante."
+              "Triplicamos las ventas en 2 meses con el sistema de afiliados. Impresionante."
             </p>
             <div className="flex items-center gap-2.5 mt-3">
               <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=80&q=80" className="w-8 h-8 rounded-full object-cover" alt="" />
@@ -128,7 +128,7 @@ function LoginForm() {
             >
               <CheckCircle className="h-5 w-5 flex-shrink-0" />
               {registered === "seller"
-                ? "¡Cuenta de vendedora creada! Ahora iniciá sesión."
+                ? "Cuenta de afiliado creada. Ahora inicia sesion."
                 : "¡Cuenta creada con éxito! Ahora iniciá sesión."}
             </motion.div>
           )}
@@ -198,7 +198,7 @@ function LoginForm() {
           {/* Divider */}
           <div className="flex items-center gap-4 my-7">
             <div className="flex-1 h-px bg-white/5" />
-            <span className="text-xs text-gray-700 font-medium">¿Sos vendedora?</span>
+            <span className="text-xs text-gray-700 font-medium">¿Sos afiliado?</span>
             <div className="flex-1 h-px bg-white/5" />
           </div>
 
@@ -208,9 +208,9 @@ function LoginForm() {
               <Users className="h-5 w-5 text-purple-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white mb-1">Acceso de vendedora</p>
+              <p className="text-sm font-bold text-white mb-1">Acceso de afiliado</p>
               <p className="text-xs text-gray-500 leading-relaxed">
-                Si tenés cuenta de vendedora iniciá sesión arriba. Si querés postularte a una tienda, explorá las activas.
+                Si tenes cuenta de afiliado inicia sesion arriba. Si queres postularte a una tienda, explora las activas.
               </p>
               <Link
                 href="/vendedoras"

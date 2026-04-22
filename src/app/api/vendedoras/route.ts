@@ -7,7 +7,7 @@ function sessionUserId(session: unknown) {
   return (session as { user?: { id?: string } } | null)?.user?.id;
 }
 
-// GET - vendedora: ver tiendas disponibles / dueña: ver sus vendedoras
+// GET - afiliado: ver tiendas disponibles / tienda: ver sus afiliados
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
 
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  // Ver vendedoras de mi tienda
+  // Ver afiliados de mi tienda
   const ownerId = sessionUserId(session);
   if (!ownerId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const store = await prisma.store.findUnique({
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ affiliates: store?.affiliates ?? [] });
 }
 
-// POST - vendedora se une a una tienda
+// POST - afiliado se une a una tienda
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (store.ownerId === userId) {
-    return NextResponse.json({ error: "No podés ser vendedora de tu propia tienda" }, { status: 400 });
+    return NextResponse.json({ error: "No podes ser afiliado de tu propia tienda" }, { status: 400 });
   }
 
   const existing = await prisma.affiliate.findFirst({

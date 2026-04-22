@@ -746,8 +746,8 @@ export default function ConfiguracionPage() {
                 </div>
               </Accordion>
 
-              <Accordion label="Vendedoras" icon={Users} id="vendedoras" open={open.includes("vendedoras")} toggle={toggle}>
-                <Toggle label="Activar sistema de vendedoras" sub="Otros pueden vender en tu tienda" value={Boolean(config.affiliatesEnabled)} onChange={v=>set("affiliatesEnabled",v)}/>
+              <Accordion label="Afiliados" icon={Users} id="vendedoras" open={open.includes("vendedoras")} toggle={toggle}>
+                <Toggle label="Activar sistema de afiliados" sub="Otros pueden vender en tu tienda" value={Boolean(config.affiliatesEnabled)} onChange={v=>set("affiliatesEnabled",v)}/>
                 {config.affiliatesEnabled&&(
                   <div>
                     <div className="flex items-center justify-between mb-1">
@@ -756,7 +756,7 @@ export default function ConfiguracionPage() {
                     </div>
                     <input type="range" min="1" max="50" value={config.commissionRate||10} onChange={e=>set("commissionRate",e.target.value)} className="w-full accent-indigo-600"/>
                     <p className="text-gray-400 mt-1" style={{fontSize:"10px"}}>
-                      Venta $10.000 → vendedora gana ${(10000*parseFloat(String(config.commissionRate||"0"))/100).toLocaleString("es-AR")}
+                      Venta $10.000 → afiliado gana ${(10000*parseFloat(String(config.commissionRate||"0"))/100).toLocaleString("es-AR")}
                     </p>
                   </div>
                 )}

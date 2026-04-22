@@ -4,7 +4,7 @@ import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "MiTienda - La plataforma de ventas #1 de Argentina",
-  description: "Creá tu tienda online, vendé productos y sumá vendedoras con comisiones automáticas.",
+  description: "Crea tu tienda online, vende productos y suma afiliados con comisiones automaticas.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

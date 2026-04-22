@@ -55,7 +55,7 @@ export default async function VendedorasPage() {
     <DashboardLayout userName={session.user?.name} userEmail={session.user?.email}>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vendedoras</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Afiliados</h1>
           <p className="text-gray-500 mt-1">
             Revisá solicitudes, aprobá permisos y controlá comisiones.
           </p>
@@ -71,12 +71,12 @@ export default async function VendedorasPage() {
       }`}>
         <div>
           <p className={`font-semibold ${store?.affiliatesEnabled ? "text-green-800" : "text-yellow-800"}`}>
-            {store?.affiliatesEnabled ? "Sistema de vendedoras activo" : "Sistema de vendedoras desactivado"}
+            {store?.affiliatesEnabled ? "Sistema de afiliados activo" : "Sistema de afiliados desactivado"}
           </p>
           <p className={`text-sm mt-0.5 ${store?.affiliatesEnabled ? "text-green-600" : "text-yellow-600"}`}>
             {store?.affiliatesEnabled
               ? `Comision configurada: ${store.commissionRate}% por venta aprobada`
-              : "Activalo en Configuracion para que las vendedoras puedan postularse"}
+              : "Activalo en Configuracion para que otras personas puedan postularse"}
           </p>
         </div>
         <Link href="/dashboard/configuracion" className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
@@ -89,7 +89,7 @@ export default async function VendedorasPage() {
       <div className="grid grid-cols-4 gap-4 mb-8">
         {[
           { label: "Pendientes", value: pending.length, icon: Clock, color: "text-yellow-600 bg-yellow-50" },
-          { label: "Aprobadas", value: approved.length, icon: Users, color: "text-indigo-600 bg-indigo-50" },
+          { label: "Aprobados", value: approved.length, icon: Users, color: "text-indigo-600 bg-indigo-50" },
           { label: "Ventas generadas", value: affiliates.reduce((sum, affiliate) => sum + affiliate._count.orders, 0), icon: TrendingUp, color: "text-green-600 bg-green-50" },
           { label: "Comisiones pagadas", value: `$${totalComisionesPagadas.toLocaleString("es-AR")}`, icon: DollarSign, color: "text-purple-600 bg-purple-50" },
         ].map(({ label, value, icon: Icon, color }) => (
@@ -156,7 +156,7 @@ export default async function VendedorasPage() {
       )}
 
       <section>
-        <h2 className="font-bold text-gray-900 mb-4">Equipo de vendedoras</h2>
+        <h2 className="font-bold text-gray-900 mb-4">Equipo de afiliados</h2>
         {affiliates.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
             <div className="bg-purple-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -164,7 +164,7 @@ export default async function VendedorasPage() {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Aun no tenes solicitudes</h3>
             <p className="text-gray-400 mb-4">
-              Cuando una vendedora se postule a tu tienda, vas a poder aprobarla desde aca.
+              Cuando alguien se postule a tu tienda, vas a poder aprobarlo desde aca.
             </p>
           </div>
         ) : (
@@ -172,7 +172,7 @@ export default async function VendedorasPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-50">
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Vendedora</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Afiliado</th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Estado</th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Ventas</th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Saldo</th>
