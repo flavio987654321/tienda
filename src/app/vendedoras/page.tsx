@@ -19,14 +19,56 @@ const TwIcon = () => <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><
 const TgIcon = () => <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>;
 
 /* ── Share Modal ── */
-interface ShareProduct { id: string; name: string; price: number; images: string; category: string; }
+interface ShareProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  comparePrice: number | null;
+  images: string;
+  category: string;
+}
 interface ShareTarget { storeSlug: string; storeName: string; affiliateId: string; commissionRate: number; }
+
+function parseImages(images: string) {
+  try {
+    const parsed = JSON.parse(images);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function money(value: number) {
+  return `$${value.toLocaleString("es-AR")}`;
+}
+
+function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines: number) {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let line = "";
+
+  for (const word of words) {
+    const testLine = line ? `${line} ${word}` : word;
+    if (ctx.measureText(testLine).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = testLine;
+    }
+    if (lines.length === maxLines) break;
+  }
+
+  if (line && lines.length < maxLines) lines.push(line);
+  lines.forEach((item, index) => ctx.fillText(item, x, y + index * lineHeight));
+}
 
 function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => void }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [products, setProducts] = useState<ShareProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [tab, setTab] = useState<"tienda" | "productos">("tienda");
+  const [cardLoading, setCardLoading] = useState<string | null>(null);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const storeUrl = `${origin}/tienda/${target.storeSlug}?ref=${target.affiliateId}`;
@@ -46,6 +88,125 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
 
   function productUrl(productId: string) {
     return `${origin}/tienda/${target.storeSlug}?ref=${target.affiliateId}&producto=${productId}`;
+  }
+
+  function productShareText(product: ShareProduct, url: string) {
+    return [
+      `Mira este producto de ${target.storeName}`,
+      product.name,
+      money(product.price),
+      product.description ? product.description : "",
+      url,
+    ].filter(Boolean).join("\n");
+  }
+
+  async function shareProduct(product: ShareProduct) {
+    const url = productUrl(product.id);
+    const text = productShareText(product, url);
+
+    if (navigator.share) {
+      await navigator.share({ title: product.name, text, url }).catch(() => {});
+      return;
+    }
+
+    copy(text, `share-${product.id}`);
+  }
+
+  async function loadCardImage(src: string) {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = src;
+    });
+  }
+
+  async function makeProductCard(product: ShareProduct) {
+    const url = productUrl(product.id);
+    const imageUrl = parseImages(product.images)[0];
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1350;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("No se pudo crear la placa");
+
+    ctx.fillStyle = "#070b18";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (imageUrl) {
+      try {
+        const image = await loadCardImage(imageUrl);
+        const scale = Math.max(1080 / image.width, 760 / image.height);
+        const width = image.width * scale;
+        const height = image.height * scale;
+        ctx.drawImage(image, (1080 - width) / 2, 0, width, height);
+      } catch {
+        ctx.fillStyle = "#111827";
+        ctx.fillRect(0, 0, 1080, 760);
+      }
+    }
+
+    const gradient = ctx.createLinearGradient(0, 520, 0, 1350);
+    gradient.addColorStop(0, "rgba(7,11,24,0)");
+    gradient.addColorStop(0.24, "rgba(7,11,24,.86)");
+    gradient.addColorStop(1, "#070b18");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 420, 1080, 930);
+
+    ctx.fillStyle = "#a5b4fc";
+    ctx.font = "700 34px Arial";
+    ctx.fillText(target.storeName.toUpperCase(), 72, 785);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 76px Arial";
+    wrapCanvasText(ctx, product.name, 72, 875, 930, 84, 3);
+
+    ctx.fillStyle = "#34d399";
+    ctx.font = "900 68px Arial";
+    ctx.fillText(money(product.price), 72, 1120);
+
+    if (product.description) {
+      ctx.fillStyle = "#cbd5e1";
+      ctx.font = "400 30px Arial";
+      wrapCanvasText(ctx, product.description, 72, 1180, 780, 40, 2);
+    }
+
+    ctx.fillStyle = "#4f46e5";
+    ctx.roundRect(72, 1245, 430, 62, 31);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "800 26px Arial";
+    ctx.fillText(`${target.commissionRate}% comision`, 108, 1285);
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "500 24px Arial";
+    ctx.fillText("Link en la publicacion", 650, 1285);
+
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("No se pudo exportar la placa"))), "image/png", 0.92);
+    });
+  }
+
+  async function shareCard(product: ShareProduct) {
+    setCardLoading(product.id);
+    try {
+      const blob = await makeProductCard(product);
+      const file = new File([blob], `${product.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-placa.png`, { type: "image/png" });
+      const text = productShareText(product, productUrl(product.id));
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: product.name, text, files: [file] });
+      } else {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = file.name;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      }
+    } finally {
+      setCardLoading(null);
+    }
   }
 
   const shareButtons = (url: string, label: string) => [
@@ -191,42 +352,71 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                   <p className="text-xs text-gray-500">Elegí un producto para compartir su link con tu comisión incluida.</p>
                   {products.map((p) => {
                     const pUrl = productUrl(p.id);
-                    const imgs = (() => { try { return JSON.parse(p.images); } catch { return []; } })();
+                    const imgs = parseImages(p.images);
                     return (
-                      <div key={p.id} className="bg-white/5 border border-white/8 rounded-2xl p-4 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
+                      <div key={p.id} className="bg-white/5 border border-white/8 rounded-2xl p-4 space-y-3">
+                        <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
                           {imgs[0] ? (
                             <img src={imgs[0]} alt={p.name} className="w-full h-full object-cover" />
                           ) : (
-                            <Package className="h-5 w-5 text-gray-600 m-auto mt-3.5" />
+                            <Package className="h-6 w-6 text-gray-600 m-auto mt-5" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-white text-sm font-semibold truncate">{p.name}</p>
-                          <p className="text-indigo-400 text-xs font-bold">${p.price.toLocaleString("es-AR")}</p>
+                          {p.description && <p className="mt-1 line-clamp-2 text-xs text-gray-500">{p.description}</p>}
+                          <p className="mt-1 text-indigo-400 text-xs font-bold">{money(p.price)}</p>
                         </div>
-                        <div className="flex gap-2 flex-shrink-0">
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                          <button
+                            onClick={() => shareProduct(p)}
+                            className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-indigo-500"
+                          >
+                            <Share2 className="h-3.5 w-3.5" />
+                            Compartir
+                          </button>
                           <button
                             onClick={() => copy(pUrl, p.id)}
-                            className="w-9 h-9 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all"
+                            className="flex items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-gray-300 transition hover:bg-white/10 border border-white/10"
                             title="Copiar link"
                           >
                             {copied === p.id ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                            Link
                           </button>
                           <button
                             onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name}\n${pUrl}`)}`, "_blank")}
-                            className="w-9 h-9 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/20 rounded-xl flex items-center justify-center text-[#25D366] transition-all"
+                            className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366]/10 px-3 py-2 text-xs font-bold text-[#25D366] transition hover:bg-[#25D366]/20 border border-[#25D366]/20"
                             title="Compartir por WhatsApp"
                           >
                             <WaIcon />
+                            WhatsApp
                           </button>
                           <button
                             onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pUrl)}`, "_blank")}
-                            className="w-9 h-9 bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/20 rounded-xl flex items-center justify-center text-[#1877F2] transition-all"
+                            className="flex items-center justify-center gap-2 rounded-xl bg-[#1877F2]/10 px-3 py-2 text-xs font-bold text-[#1877F2] transition hover:bg-[#1877F2]/20 border border-[#1877F2]/20"
                             title="Compartir en Facebook"
                           >
                             <FbIcon />
+                            Facebook
                           </button>
+                          <button
+                            onClick={() => shareCard(p)}
+                            disabled={cardLoading === p.id}
+                            className="flex items-center justify-center gap-2 rounded-xl bg-purple-500/10 px-3 py-2 text-xs font-bold text-purple-300 transition hover:bg-purple-500/20 border border-purple-500/20 disabled:opacity-60"
+                          >
+                            {cardLoading === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
+                            Placa
+                          </button>
+                          <Link
+                            href={pUrl}
+                            target="_blank"
+                            className="flex items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-gray-300 transition hover:bg-white/10 border border-white/10"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Ver
+                          </Link>
                         </div>
                       </div>
                     );
@@ -508,7 +698,7 @@ export default function VendedorasPage() {
                             onClick={() => setShareTarget({ storeSlug: store.slug, storeName: store.name, affiliateId: aff.id, commissionRate: store.commissionRate })}
                             className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-2xl font-semibold text-sm transition-all"
                           >
-                            <Share2 className="h-4 w-4" /> Compartir
+                            <Share2 className="h-4 w-4" /> Ver productos y compartir
                           </button>
                           <Link
                             href={`/tienda/${store.slug}?ref=${aff.id}`}

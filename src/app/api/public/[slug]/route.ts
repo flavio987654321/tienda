@@ -8,7 +8,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     include: {
       products: {
         where: { isActive: true },
-        select: { id: true, name: true, price: true, images: true, category: true },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          comparePrice: true,
+          images: true,
+          category: true,
+        },
         orderBy: { createdAt: "desc" },
         take: 30,
       },

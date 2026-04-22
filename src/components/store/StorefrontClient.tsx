@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Loader2,
   Mail,
@@ -189,7 +189,15 @@ function isStarterBlocks(blocks: PageBlock[]) {
   );
 }
 
-export default function StorefrontClient({ store, affiliateId }: { store: Store; affiliateId?: string }) {
+export default function StorefrontClient({
+  store,
+  affiliateId,
+  initialProductId,
+}: {
+  store: Store;
+  affiliateId?: string;
+  initialProductId?: string;
+}) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [openCart, setOpenCart] = useState(false);
   const [category, setCategory] = useState("all");
@@ -208,6 +216,7 @@ export default function StorefrontClient({ store, affiliateId }: { store: Store;
   const [submitting, setSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [successOrderId, setSuccessOrderId] = useState("");
+  const [highlightProductId, setHighlightProductId] = useState<string | null>(null);
 
   const categories = useMemo(() => [...new Set(store.products.map((p) => p.category).filter(Boolean))], [store.products]);
   const products = category === "all" ? store.products : store.products.filter((product) => product.category === category);
@@ -230,6 +239,25 @@ export default function StorefrontClient({ store, affiliateId }: { store: Store;
   const cardShadow = SHADOW[store.cardShadow] ?? SHADOW.sm;
   const buttonRadius = buttonClass(store.buttonStyle);
   const productGrid = GRID[store.productLayout] ?? GRID.grid3;
+
+  useEffect(() => {
+    if (!initialProductId) return;
+    const product = store.products.find((item) => item.id === initialProductId);
+    if (!product) return;
+
+    setCategory(product.category || "all");
+    setHighlightProductId(product.id);
+
+    const timer = window.setTimeout(() => {
+      document.getElementById(`producto-${product.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+    const clearHighlight = window.setTimeout(() => setHighlightProductId(null), 3800);
+
+    return () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(clearHighlight);
+    };
+  }, [initialProductId, store.products]);
 
   function updateCustomer(field: keyof Customer, value: string) {
     setCustomer((prev) => ({ ...prev, [field]: value }));
@@ -428,7 +456,13 @@ export default function StorefrontClient({ store, affiliateId }: { store: Store;
       const bg = [`${store.primaryColor}18`, `${store.accentColor}18`, "#fce7f3", "#ede9fe", "#dcfce7", "#fff7ed"][index % 6];
 
       return (
-        <article key={product.id} className="relative overflow-hidden rounded-[28px] border-2 border-white bg-white text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+        <article
+          id={`producto-${product.id}`}
+          key={product.id}
+          className={`relative overflow-hidden rounded-[28px] border-2 border-white bg-white text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg ${
+            highlightProductId === product.id ? "ring-4 ring-indigo-400 ring-offset-4" : ""
+          }`}
+        >
           <div className="relative aspect-square p-3" style={{ backgroundColor: bg }}>
             <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-20">{emoji}</div>
             <div className="relative h-full overflow-hidden rounded-[22px]">
@@ -463,10 +497,11 @@ export default function StorefrontClient({ store, affiliateId }: { store: Store;
 
     return (
       <article
+        id={`producto-${product.id}`}
         key={product.id}
         className={`${featured ? "sm:col-span-2 sm:row-span-2" : ""} ${list ? "grid grid-cols-[150px_1fr] md:grid-cols-[220px_1fr]" : ""} overflow-hidden border transition duration-300 hover:-translate-y-0.5 ${cardRadius} ${cardShadow} ${
           isDark ? "border-white/10 bg-white/5 text-white" : "border-gray-100 bg-white text-gray-950"
-        }`}
+        } ${highlightProductId === product.id ? "ring-4 ring-indigo-400 ring-offset-4 ring-offset-white" : ""}`}
       >
         <div className={`${list ? "h-full min-h-40" : featured ? "aspect-[4/3]" : "aspect-square"} relative overflow-hidden ${isColorful ? "p-2" : ""}`} style={{ backgroundColor: store.secondaryColor }}>
           <div className={`h-full w-full overflow-hidden ${isColorful ? "rounded-2xl" : ""}`}>

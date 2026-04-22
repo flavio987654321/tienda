@@ -2,16 +2,70 @@ import { prisma } from "@/lib/prisma";
 import StorefrontClient from "@/components/store/StorefrontClient";
 import { notFound } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
+import type { Metadata } from "next";
 
 type TiendaPageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ ref?: string }>;
+  searchParams: Promise<{ ref?: string; producto?: string }>;
 };
+
+function parseImages(images: string) {
+  try {
+    const parsed = JSON.parse(images);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function generateMetadata({ params, searchParams }: TiendaPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const { producto } = await searchParams;
+
+  const store = await prisma.store.findFirst({
+    where: { slug, isActive: true },
+    select: {
+      name: true,
+      description: true,
+      products: producto
+        ? {
+            where: { id: producto, isActive: true },
+            select: { name: true, description: true, images: true, price: true },
+            take: 1,
+          }
+        : false,
+    },
+  });
+
+  if (!store) return {};
+
+  const product = Array.isArray(store.products) ? store.products[0] : null;
+  const image = product ? parseImages(product.images)[0] : null;
+  const title = product ? `${product.name} | ${store.name}` : store.name;
+  const description = product?.description || store.description || `Compra en ${store.name}`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      images: image ? [{ url: image, alt: product?.name || store.name }] : undefined,
+    },
+    twitter: {
+      card: image ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: image ? [image] : undefined,
+    },
+  };
+}
 
 export default async function TiendaPage({ params, searchParams }: TiendaPageProps) {
   noStore();
   const { slug } = await params;
-  const { ref } = await searchParams;
+  const { ref, producto } = await searchParams;
 
   const store = await prisma.store.findFirst({
     where: { slug, isActive: true },
@@ -39,6 +93,7 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
   return (
     <StorefrontClient
       affiliateId={affiliateId}
+      initialProductId={producto}
       store={{
         id: store.id,
         slug: store.slug,
