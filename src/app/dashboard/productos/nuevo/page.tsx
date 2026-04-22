@@ -47,6 +47,9 @@ const RADIUS_MAP: Record<string, string> = {
   full: "rounded-3xl",
 };
 
+const MAX_IMAGE_SIZE_MB = 20;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+
 export default function NuevoProductoPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -107,7 +110,7 @@ export default function NuevoProductoPage() {
 
     const availableSlots = Math.max(0, 10 - images.length);
     const validFiles = files
-      .filter((file) => file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024)
+      .filter((file) => file.type.startsWith("image/") && file.size <= MAX_IMAGE_SIZE_BYTES)
       .slice(0, availableSlots);
 
     if (!availableSlots) {
@@ -116,7 +119,7 @@ export default function NuevoProductoPage() {
     }
 
     if (!validFiles.length) {
-      setError("Subi imagenes JPG, PNG o WEBP de hasta 5 MB.");
+      setError(`Subi imagenes JPG, PNG o WEBP de hasta ${MAX_IMAGE_SIZE_MB} MB.`);
       return;
     }
 
@@ -253,7 +256,7 @@ export default function NuevoProductoPage() {
                 <p className="text-sm text-gray-500">
                   {uploadingImg ? "Subiendo..." : "Hace clic o arrastra imagenes aqui"}
                 </p>
-                <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP - max. 5 MB c/u</p>
+                <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP - max. {MAX_IMAGE_SIZE_MB} MB c/u</p>
                 <input
                   ref={fileInputRef}
                   type="file"
