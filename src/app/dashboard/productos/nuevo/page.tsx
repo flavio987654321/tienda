@@ -47,8 +47,69 @@ const RADIUS_MAP: Record<string, string> = {
   full: "rounded-3xl",
 };
 
-const MAX_IMAGE_SIZE_MB = 20;
-const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+const MAX_SOURCE_IMAGE_SIZE_MB = 20;
+const MAX_SOURCE_IMAGE_SIZE_BYTES = MAX_SOURCE_IMAGE_SIZE_MB * 1024 * 1024;
+const MAX_UPLOAD_IMAGE_SIZE_MB = 4;
+const MAX_UPLOAD_IMAGE_SIZE_BYTES = MAX_UPLOAD_IMAGE_SIZE_MB * 1024 * 1024;
+const MAX_IMAGE_SIDE = 2400;
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
+  return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
+}
+
+async function optimizeImageForUpload(file: File) {
+  if (file.size <= MAX_UPLOAD_IMAGE_SIZE_BYTES) return file;
+
+  const image = new Image();
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("No se pudo leer la imagen"));
+      image.src = objectUrl;
+    });
+
+    const sourceMaxSide = Math.max(image.width, image.height);
+    const baseScale = Math.min(1, MAX_IMAGE_SIDE / sourceMaxSide);
+    const outputType = "image/webp";
+
+    for (const scaleFactor of [1, 0.85, 0.7, 0.55]) {
+      const scale = baseScale * scaleFactor;
+      const width = Math.max(1, Math.round(image.width * scale));
+      const height = Math.max(1, Math.round(image.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("No se pudo preparar la imagen");
+      ctx.drawImage(image, 0, 0, width, height);
+
+      for (const quality of [0.86, 0.78, 0.7, 0.62, 0.54]) {
+        const blob = await canvasToBlob(canvas, outputType, quality);
+        if (blob && blob.size <= MAX_UPLOAD_IMAGE_SIZE_BYTES) {
+          const name = file.name.replace(/\.[^.]+$/, "") || "producto";
+          return new File([blob], `${name}.webp`, { type: outputType });
+        }
+      }
+    }
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+
+  throw new Error(`No pudimos optimizar ${file.name}. Proba con una foto un poco mas liviana.`);
+}
+
+async function readJsonResponse(res: Response) {
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text) as { url?: string; error?: string };
+  } catch {
+    return { error: text };
+  }
+}
 
 export default function NuevoProductoPage() {
   const router = useRouter();
@@ -110,7 +171,7 @@ export default function NuevoProductoPage() {
 
     const availableSlots = Math.max(0, 10 - images.length);
     const validFiles = files
-      .filter((file) => file.type.startsWith("image/") && file.size <= MAX_IMAGE_SIZE_BYTES)
+      .filter((file) => file.type.startsWith("image/") && file.size <= MAX_SOURCE_IMAGE_SIZE_BYTES)
       .slice(0, availableSlots);
 
     if (!availableSlots) {
@@ -119,7 +180,7 @@ export default function NuevoProductoPage() {
     }
 
     if (!validFiles.length) {
-      setError(`Subi imagenes JPG, PNG o WEBP de hasta ${MAX_IMAGE_SIZE_MB} MB.`);
+      setError(`Subi imagenes JPG, PNG o WEBP de hasta ${MAX_SOURCE_IMAGE_SIZE_MB} MB.`);
       return;
     }
 
@@ -128,10 +189,11 @@ export default function NuevoProductoPage() {
     try {
       const urls: string[] = [];
       for (const file of validFiles) {
+        const uploadFile = await optimizeImageForUpload(file);
         const fd = new FormData();
-        fd.append("file", file);
+        fd.append("file", uploadFile);
         const res = await fetch("/api/upload", { method: "POST", body: fd });
-        const data = await res.json();
+        const data = await readJsonResponse(res);
         if (!res.ok) throw new Error(data.error || "No se pudo subir la imagen");
         if (data.url) urls.push(data.url);
       }
@@ -256,7 +318,9 @@ export default function NuevoProductoPage() {
                 <p className="text-sm text-gray-500">
                   {uploadingImg ? "Subiendo..." : "Hace clic o arrastra imagenes aqui"}
                 </p>
-                <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP - max. {MAX_IMAGE_SIZE_MB} MB c/u</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  JPG, PNG, WEBP - hasta {MAX_SOURCE_IMAGE_SIZE_MB} MB; se optimizan al subir
+                </p>
                 <input
                   ref={fileInputRef}
                   type="file"
