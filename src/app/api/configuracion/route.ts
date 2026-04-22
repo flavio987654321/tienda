@@ -52,6 +52,7 @@ export async function PUT(req: NextRequest) {
       seoDescription:     b.seoDescription || null,
       affiliatesEnabled:  Boolean(b.affiliatesEnabled),
       commissionRate:     parseFloat(b.commissionRate) || 10,
+      pageBlocks:         b.pageBlocks || "[]",
     },
   });
 
