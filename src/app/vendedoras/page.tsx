@@ -791,7 +791,7 @@ export default function VendedorasPage() {
   const myAffiliations = stores.filter((s) => s.affiliates.length > 0);
   const approvedStores = myAffiliations.filter((s) => s.affiliates[0]?.status === "APPROVED");
   const pendingStores = myAffiliations.filter((s) => s.affiliates[0]?.status === "PENDING");
-  const availableStores = stores.filter((s) => s.affiliates.length === 0);
+  const availableStores = stores.filter((s) => s.affiliates.length === 0 || s.affiliates[0]?.status === "REJECTED");
 
   function handleApplySuccess(storeId: string, affiliateId: string) {
     setStores((prev) =>
@@ -1111,6 +1111,7 @@ export default function VendedorasPage() {
 function StoreCard({ store, onApply, requiresLogin }: { store: StoreItem; onApply: () => void; requiresLogin?: boolean }) {
   const aff = store.affiliates[0];
   const status = aff ? STATUS[aff.status] : null;
+  const canApply = !aff || aff.status === "REJECTED";
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-gray-900/80 border border-white/8 rounded-3xl overflow-hidden hover:border-white/15 transition-all group">
@@ -1138,13 +1139,13 @@ function StoreCard({ store, onApply, requiresLogin }: { store: StoreItem; onAppl
           <Link href={`/tienda/${store.slug}`} target="_blank" className="flex-1 text-center py-2.5 border border-white/10 hover:border-white/20 rounded-xl text-xs text-gray-400 hover:text-white transition-all font-medium">
             Ver tienda
           </Link>
-          {!aff && (
+          {canApply && (
             <button
               onClick={onApply}
               className="flex-1 flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl text-xs font-semibold transition-all"
             >
               <Send className="h-3 w-3" />
-              {requiresLogin ? "Postularme" : "Postularme"}
+              {aff?.status === "REJECTED" ? "Volver a postularme" : "Postularme"}
             </button>
           )}
         </div>

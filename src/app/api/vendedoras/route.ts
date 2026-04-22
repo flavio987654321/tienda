@@ -90,7 +90,29 @@ export async function POST(req: NextRequest) {
     where: { userId, storeId },
   });
   if (existing) {
-    return NextResponse.json({ error: "Ya enviaste una solicitud a esta tienda" }, { status: 400 });
+    if (existing.status === "REJECTED") {
+      const affiliate = await prisma.affiliate.update({
+        where: { id: existing.id },
+        data: {
+          status: "PENDING",
+          isActive: false,
+          applicationMessage: applicationMessage || null,
+          experience: experience || null,
+          cvUrl: cvUrl || null,
+          socialUrl: socialUrl || null,
+          requestedAt: new Date(),
+          reviewedAt: null,
+        },
+      });
+
+      return NextResponse.json({ affiliate, message: "Solicitud reenviada" });
+    }
+
+    const message =
+      existing.status === "PENDING"
+        ? "Ya tenes una solicitud pendiente para esta tienda"
+        : "Ya tenes una relacion activa con esta tienda";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 
   const affiliate = await prisma.affiliate.create({
