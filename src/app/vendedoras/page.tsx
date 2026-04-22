@@ -102,18 +102,6 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
     ].filter(Boolean).join("\n");
   }
 
-  async function shareProduct(product: ShareProduct) {
-    const url = productUrl(product.id);
-    const text = productShareText(product, url);
-
-    if (navigator.share) {
-      await navigator.share({ title: product.name, text, url }).catch(() => {});
-      return;
-    }
-
-    copy(text, `share-${product.id}`);
-  }
-
   async function loadCardImage(src: string) {
     return new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
@@ -211,213 +199,180 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
     }
   }
 
-  const shareButtons = (url: string, label: string) => [
-    {
-      label: "WhatsApp",
-      icon: <WaIcon />,
-      color: "bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 border-[#25D366]/20",
-      action: () => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá ${label}! 🛍️\n${url}`)}`, "_blank"),
-    },
-    {
-      label: "Facebook",
-      icon: <FbIcon />,
-      color: "bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 border-[#1877F2]/20",
-      action: () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, "_blank"),
-    },
-    {
-      label: "Twitter / X",
-      icon: <TwIcon />,
-      color: "bg-gray-800 text-gray-300 hover:bg-gray-700 border-white/10",
-      action: () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`¡Mirá ${label}! 🛍️`)}&url=${encodeURIComponent(url)}`, "_blank"),
-    },
-    {
-      label: "Telegram",
-      icon: <TgIcon />,
-      color: "bg-[#0088CC]/10 text-[#0088CC] hover:bg-[#0088CC]/20 border-[#0088CC]/20",
-      action: () => window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(`¡Mirá ${label}!`)}`, "_blank"),
-    },
-  ];
-
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-md" />
       <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        transition={{ type: "spring", damping: 28, stiffness: 320 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative bg-gray-950 border border-white/10 rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl"
+        className="relative bg-[#0d0f1a] border border-white/8 rounded-3xl w-full max-w-lg max-h-[92vh] flex flex-col shadow-2xl shadow-black/60"
       >
         {/* Header */}
-        <div className="p-6 border-b border-white/5 flex items-center justify-between flex-shrink-0">
+        <div className="px-6 pt-5 pb-4 border-b border-white/5 flex items-center justify-between flex-shrink-0">
           <div>
-            <h3 className="text-lg font-bold text-white">Compartir · {target.storeName}</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Comisión: <span className="text-emerald-400 font-semibold">{target.commissionRate}%</span> por venta</p>
+            <h3 className="text-base font-black text-white">{target.storeName}</h3>
+            <p className="text-xs text-gray-600 mt-0.5">Comisión: <span className="text-emerald-400 font-bold">{target.commissionRate}%</span> por venta confirmada</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all">
+          <button onClick={onClose} className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-500 hover:text-white transition-all">
             <XCircle className="h-4 w-4" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-4 border-b border-white/5 flex-shrink-0">
-          {[["tienda", "Tienda completa"], ["productos", "Por producto"]].map(([t, l]) => (
-            <button
-              key={t}
-              onClick={() => setTab(t as "tienda" | "productos")}
-              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${tab === t ? "bg-indigo-600 text-white" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"}`}
-            >
-              {l}
+        <div className="flex p-3 border-b border-white/5 gap-2 flex-shrink-0">
+          {(["tienda", "productos"] as const).map((t) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === t ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-gray-600 hover:text-gray-400 hover:bg-white/5"}`}>
+              {t === "tienda" ? "Tienda completa" : "Por producto"}
             </button>
           ))}
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto">
           {tab === "tienda" ? (
-            <>
+            <div className="p-5 space-y-4">
               {/* Link box */}
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tu link de afiliado</p>
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-3 flex items-center gap-3">
-                  <p className="flex-1 text-xs text-indigo-300 break-all font-mono">{storeUrl}</p>
-                  <button
-                    onClick={() => copy(storeUrl, "store")}
-                    className="flex-shrink-0 w-9 h-9 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 rounded-xl flex items-center justify-center text-indigo-400 transition-all"
-                  >
-                    {copied === "store" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+              <div className="bg-white/4 border border-white/8 rounded-2xl p-4">
+                <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-2">Tu link de afiliado</p>
+                <div className="flex items-center gap-3">
+                  <p className="flex-1 text-xs text-indigo-300 font-mono break-all leading-relaxed">{storeUrl}</p>
+                  <button onClick={() => copy(storeUrl, "store")}
+                    className="flex-shrink-0 flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all">
+                    {copied === "store" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied === "store" ? "¡Copiado!" : "Copiar"}
                   </button>
                 </div>
               </div>
 
-              {/* Social buttons */}
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Compartir en redes</p>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {shareButtons(storeUrl, target.storeName).map((btn) => (
-                    <button
-                      key={btn.label}
-                      onClick={btn.action}
-                      className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl border font-semibold text-sm transition-all ${btn.color}`}
-                    >
-                      {btn.icon}
-                      {btn.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* WhatsApp — hero */}
+              <button
+                onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá esta tienda! 🛍️\n${target.storeName}\n${storeUrl}`)}`, "_blank")}
+                className="w-full flex items-center justify-center gap-3 bg-[#25D366] hover:bg-[#20b85a] text-white font-black py-4 rounded-2xl text-base transition-all shadow-lg shadow-[#25D366]/20"
+              >
+                <WaIcon /> Compartir por WhatsApp
+              </button>
 
-              {/* Instagram / TikTok tip */}
-              <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm">📱</span>
-                  <p className="text-sm font-bold text-white">Instagram & TikTok</p>
-                </div>
-                <p className="text-xs text-gray-400 leading-relaxed mb-3">
-                  Copiá tu link y pegalo en tu bio o en una historia con sticker de link.
-                </p>
-                <button
-                  onClick={() => copy(storeUrl, "ig")}
-                  className="flex items-center gap-2 bg-gradient-to-r from-purple-600/30 to-pink-600/30 border border-purple-500/30 text-purple-300 px-4 py-2 rounded-xl text-xs font-semibold hover:from-purple-600/50 hover:to-pink-600/50 transition-all"
-                >
-                  {copied === "ig" ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copied === "ig" ? "¡Copiado!" : "Copiar link para bio"}
+              {/* Other networks */}
+              <div className="grid grid-cols-3 gap-2">
+                <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(storeUrl)}`, "_blank")}
+                  className="flex items-center justify-center gap-2 bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/20 text-[#1877F2] font-bold py-3 rounded-xl text-sm transition-all">
+                  <FbIcon /> Facebook
+                </button>
+                <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`¡Mirá ${target.storeName}! 🛍️`)}&url=${encodeURIComponent(storeUrl)}`, "_blank")}
+                  className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-bold py-3 rounded-xl text-sm transition-all">
+                  <TwIcon /> X
+                </button>
+                <button onClick={() => window.open(`https://t.me/share/url?url=${encodeURIComponent(storeUrl)}&text=${encodeURIComponent(`¡Mirá ${target.storeName}!`)}`, "_blank")}
+                  className="flex items-center justify-center gap-2 bg-[#0088CC]/10 hover:bg-[#0088CC]/20 border border-[#0088CC]/20 text-[#0088CC] font-bold py-3 rounded-xl text-sm transition-all">
+                  <TgIcon /> Telegram
                 </button>
               </div>
 
-              {/* View store */}
-              <Link
-                href={storeUrl}
-                target="_blank"
-                className="flex items-center justify-center gap-2 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white py-3 rounded-2xl text-sm font-medium transition-all hover:bg-white/5"
-              >
-                <Eye className="h-4 w-4" /> Ver cómo queda tu tienda
+              {/* Instagram & TikTok — paso a paso */}
+              <div className="bg-gradient-to-br from-purple-950/60 to-pink-950/40 border border-purple-500/20 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <IgIconLg />
+                  <p className="text-sm font-black text-white">Instagram & TikTok</p>
+                </div>
+                <ol className="space-y-2">
+                  {["Copiá tu link de afiliado (arriba ↑)", "Abrí Instagram → Stories → sticker de link", "Pegá el link y publicá la historia"].map((step, i) => (
+                    <li key={i} className="flex items-start gap-2.5 text-xs text-gray-400">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-600/30 border border-purple-500/30 text-purple-300 font-black text-[10px] flex items-center justify-center mt-0.5">{i + 1}</span>
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+                <button onClick={() => copy(storeUrl, "ig")}
+                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600/25 to-pink-600/25 hover:from-purple-600/40 hover:to-pink-600/40 border border-purple-500/25 text-purple-300 font-bold py-2.5 rounded-xl text-sm transition-all">
+                  {copied === "ig" ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied === "ig" ? "¡Link copiado!" : "Copiar link"}
+                </button>
+              </div>
+
+              <Link href={storeUrl} target="_blank"
+                className="flex items-center justify-center gap-2 border border-white/8 hover:border-white/15 text-gray-500 hover:text-gray-300 py-3 rounded-2xl text-sm font-medium transition-all hover:bg-white/4">
+                <Eye className="h-4 w-4" /> Ver cómo queda la tienda
               </Link>
-            </>
+            </div>
           ) : (
-            <>
+            <div className="p-5">
               {loadingProducts ? (
-                <div className="flex items-center justify-center py-10">
+                <div className="flex items-center justify-center py-16">
                   <Loader2 className="h-6 w-6 animate-spin text-indigo-400" />
                 </div>
               ) : products.length === 0 ? (
-                <div className="text-center py-10">
-                  <Package className="h-10 w-10 text-gray-700 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm">Esta tienda aún no tiene productos cargados.</p>
+                <div className="text-center py-16">
+                  <Package className="h-10 w-10 text-gray-800 mx-auto mb-3" />
+                  <p className="text-gray-600 text-sm">Esta tienda aún no tiene productos.</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <p className="text-xs text-gray-500">Elegí un producto para compartir su link con tu comisión incluida.</p>
+                <div className="space-y-4">
+                  {/* Instagram tip sticky */}
+                  <div className="flex items-start gap-3 bg-purple-950/40 border border-purple-500/15 rounded-2xl px-4 py-3">
+                    <span className="text-lg mt-0.5">💡</span>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      <span className="text-purple-300 font-bold">Para Instagram/TikTok:</span> generá la placa de cada producto, descargala y subila a tus stories con el sticker de link.
+                    </p>
+                  </div>
+
                   {products.map((p) => {
                     const pUrl = productUrl(p.id);
                     const imgs = parseImages(p.images);
+                    const isLoading = cardLoading === p.id;
                     return (
-                      <div key={p.id} className="bg-white/5 border border-white/8 rounded-2xl p-4 space-y-3">
-                        <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
-                          {imgs[0] ? (
-                            <img src={imgs[0]} alt={p.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <Package className="h-6 w-6 text-gray-600 m-auto mt-5" />
-                          )}
+                      <div key={p.id} className="bg-white/4 border border-white/8 rounded-2xl overflow-hidden">
+                        {/* Product info row */}
+                        <div className="flex items-center gap-4 p-4 pb-3">
+                          <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-800/60 flex-shrink-0 border border-white/5">
+                            {imgs[0]
+                              ? <img src={imgs[0]} alt={p.name} className="w-full h-full object-cover" />
+                              : <div className="w-full h-full flex items-center justify-center"><Package className="h-6 w-6 text-gray-700" /></div>
+                            }
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-sm font-bold truncate">{p.name}</p>
+                            {p.description && <p className="text-gray-600 text-xs mt-0.5 line-clamp-1">{p.description}</p>}
+                            <p className="text-emerald-400 text-sm font-black mt-1">{money(p.price)}</p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white text-sm font-semibold truncate">{p.name}</p>
-                          {p.description && <p className="mt-1 line-clamp-2 text-xs text-gray-500">{p.description}</p>}
-                          <p className="mt-1 text-indigo-400 text-xs font-bold">{money(p.price)}</p>
-                        </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                          <button
-                            onClick={() => shareProduct(p)}
-                            className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-indigo-500"
-                          >
-                            <Share2 className="h-3.5 w-3.5" />
-                            Compartir
+
+                        {/* CTA principal: Placa */}
+                        <div className="px-4 pb-3">
+                          <button onClick={() => shareCard(p)} disabled={isLoading}
+                            className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-60 text-white font-black py-3.5 rounded-xl text-sm transition-all shadow-lg shadow-purple-500/20">
+                            {isLoading
+                              ? <><Loader2 className="h-4 w-4 animate-spin" /> Generando placa...</>
+                              : <><Star className="h-4 w-4" /> Generar placa para Instagram / TikTok</>
+                            }
                           </button>
-                          <button
-                            onClick={() => copy(pUrl, p.id)}
-                            className="flex items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-gray-300 transition hover:bg-white/10 border border-white/10"
-                            title="Copiar link"
-                          >
+                        </div>
+
+                        {/* Acciones secundarias */}
+                        <div className="px-4 pb-4 grid grid-cols-4 gap-2">
+                          <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name} — ${money(p.price)}\n${pUrl}`)}`, "_blank")}
+                            className="flex flex-col items-center gap-1 py-2.5 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/15 text-[#25D366] rounded-xl text-[10px] font-bold transition-all">
+                            <WaIcon /> WhatsApp
+                          </button>
+                          <button onClick={() => copy(pUrl, p.id)}
+                            className="flex flex-col items-center gap-1 py-2.5 bg-white/5 hover:bg-white/10 border border-white/8 text-gray-400 hover:text-white rounded-xl text-[10px] font-bold transition-all">
                             {copied === p.id ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-                            Link
+                            {copied === p.id ? "¡Listo!" : "Copiar link"}
                           </button>
-                          <button
-                            onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name}\n${pUrl}`)}`, "_blank")}
-                            className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366]/10 px-3 py-2 text-xs font-bold text-[#25D366] transition hover:bg-[#25D366]/20 border border-[#25D366]/20"
-                            title="Compartir por WhatsApp"
-                          >
-                            <WaIcon />
-                            WhatsApp
+                          <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pUrl)}`, "_blank")}
+                            className="flex flex-col items-center gap-1 py-2.5 bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/15 text-[#1877F2] rounded-xl text-[10px] font-bold transition-all">
+                            <FbIcon /> Facebook
                           </button>
-                          <button
-                            onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pUrl)}`, "_blank")}
-                            className="flex items-center justify-center gap-2 rounded-xl bg-[#1877F2]/10 px-3 py-2 text-xs font-bold text-[#1877F2] transition hover:bg-[#1877F2]/20 border border-[#1877F2]/20"
-                            title="Compartir en Facebook"
-                          >
-                            <FbIcon />
-                            Facebook
-                          </button>
-                          <button
-                            onClick={() => shareCard(p)}
-                            disabled={cardLoading === p.id}
-                            className="flex items-center justify-center gap-2 rounded-xl bg-purple-500/10 px-3 py-2 text-xs font-bold text-purple-300 transition hover:bg-purple-500/20 border border-purple-500/20 disabled:opacity-60"
-                          >
-                            {cardLoading === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
-                            Placa
-                          </button>
-                          <Link
-                            href={pUrl}
-                            target="_blank"
-                            className="flex items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-gray-300 transition hover:bg-white/10 border border-white/10"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                            Ver
+                          <Link href={pUrl} target="_blank"
+                            className="flex flex-col items-center gap-1 py-2.5 bg-white/5 hover:bg-white/10 border border-white/8 text-gray-400 hover:text-white rounded-xl text-[10px] font-bold transition-all">
+                            <ExternalLink className="h-4 w-4" /> Ver
                           </Link>
                         </div>
                       </div>
@@ -425,7 +380,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                   })}
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </motion.div>
