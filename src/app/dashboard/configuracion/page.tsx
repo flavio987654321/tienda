@@ -164,11 +164,18 @@ function ContentGlobalSettings({
   config: StoreConfig;
   set: <K extends keyof StoreConfig>(k: K, v: StoreConfig[K]) => void;
 }) {
+  const [open, setOpen] = useState<DesignSection[]>([]);
+  const toggle = (section: DesignSection) => {
+    setOpen((current) =>
+      current.includes(section) ? current.filter((item) => item !== section) : [...current, section]
+    );
+  };
+
   return (
     <div className="space-y-2 border-t border-gray-100 pt-3">
       <p className="px-1 text-xs font-bold uppercase tracking-wide text-gray-400">Ajustes de la tienda</p>
 
-      <Accordion label="Redes y contacto" icon={Share2} id="redes" open toggle={()=>{}}>
+      <Accordion label="Redes y contacto" icon={Share2} id="redes" open={open.includes("redes")} toggle={toggle}>
         {([{label:"Instagram",field:"instagramUrl" as const,ph:"@mitienda",icon:"📸"},{label:"Facebook",field:"facebookUrl" as const,ph:"facebook.com/mitienda",icon:"👍"},{label:"TikTok",field:"tiktokUrl" as const,ph:"@mitienda",icon:"🎵"}] as const).map(({label,field,ph,icon})=>(
           <div key={field}>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">{icon} {label}</label>
@@ -189,7 +196,7 @@ function ContentGlobalSettings({
         </div>
       </Accordion>
 
-      <Accordion label="Footer" icon={CreditCard} id="footer" open toggle={()=>{}}>
+      <Accordion label="Footer" icon={CreditCard} id="footer" open={open.includes("footer")} toggle={toggle}>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1.5">Texto del footer</label>
           <textarea value={config.footerText} onChange={e=>set("footerText",e.target.value)} rows={3}
@@ -198,7 +205,7 @@ function ContentGlobalSettings({
         </div>
       </Accordion>
 
-      <Accordion label="Afiliados" icon={Users} id="vendedoras" open toggle={()=>{}}>
+      <Accordion label="Afiliados" icon={Users} id="vendedoras" open={open.includes("vendedoras")} toggle={toggle}>
         <Toggle label="Activar sistema de afiliados" sub="Otros pueden vender en tu tienda" value={Boolean(config.affiliatesEnabled)} onChange={v=>set("affiliatesEnabled",v)}/>
         {config.affiliatesEnabled&&(
           <div>
@@ -214,7 +221,7 @@ function ContentGlobalSettings({
         )}
       </Accordion>
 
-      <Accordion label="SEO / Google" icon={Search} id="seo" open toggle={()=>{}}>
+      <Accordion label="SEO / Google" icon={Search} id="seo" open={open.includes("seo")} toggle={toggle}>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1.5">Titulo para Google</label>
           <input type="text" value={config.seoTitle||""} onChange={e=>set("seoTitle",e.target.value)}
