@@ -165,6 +165,30 @@ function ProductImage({ image, name, className = "" }: { image: string | null; n
   );
 }
 
+type PageBlock = { id: string; type: string; props: Record<string, string | number | boolean> };
+
+function parseBlocks(pageBlocks: string): PageBlock[] {
+  try {
+    const blocks = JSON.parse(pageBlocks || "[]");
+    return Array.isArray(blocks) ? blocks : [];
+  } catch {
+    return [];
+  }
+}
+
+function isStarterBlocks(blocks: PageBlock[]) {
+  if (blocks.length !== 3) return false;
+  const [hero, text, products] = blocks;
+  return (
+    hero?.type === "hero" &&
+    text?.type === "text" &&
+    products?.type === "products" &&
+    hero.props.title === "¡Bienvenidos a mi tienda!" &&
+    text.props.heading === "Sobre nosotros" &&
+    products.props.heading === "Nuestros productos"
+  );
+}
+
 export default function StorefrontClient({ store, affiliateId }: { store: Store; affiliateId?: string }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [openCart, setOpenCart] = useState(false);
@@ -196,9 +220,12 @@ export default function StorefrontClient({ store, affiliateId }: { store: Store;
   const heroImage = store.banner || firstProducts[0]?.image || null;
   const textColor = readableText(store.primaryColor);
   const isDark = store.templateId === "tech";
+  const isKids = store.templateId === "kids";
   const isSplit = ["fashion", "luxury", "boutique"].includes(store.templateId);
   const isMarket = store.templateId === "market";
   const isColorful = store.templateId === "colorful" || store.templateId === "kids";
+  const pageBlocks = useMemo(() => parseBlocks(store.pageBlocks), [store.pageBlocks]);
+  const contentBlocks = isStarterBlocks(pageBlocks) ? [] : pageBlocks;
   const cardRadius = RADIUS[store.cardRadius] ?? RADIUS.md;
   const cardShadow = SHADOW[store.cardShadow] ?? SHADOW.sm;
   const buttonRadius = buttonClass(store.buttonStyle);
@@ -310,6 +337,31 @@ export default function StorefrontClient({ store, affiliateId }: { store: Store;
       );
     }
 
+    if (isKids) {
+      return (
+        <section className="px-3 pt-3">
+          <div
+            className="relative mx-auto flex min-h-[260px] max-w-7xl flex-col items-center justify-center overflow-hidden rounded-[36px] px-6 py-12 text-center text-white shadow-sm md:min-h-[340px]"
+            style={{
+              background: heroImage
+                ? `linear-gradient(rgba(0,0,0,.18),rgba(0,0,0,.18)), url(${heroImage}) center/cover`
+                : `linear-gradient(135deg, ${store.primaryColor}, ${store.accentColor})`,
+            }}
+          >
+            <span className="mb-2 text-5xl drop-shadow-lg">🎀</span>
+            <p className="mb-2 text-xs font-black uppercase tracking-[0.24em] opacity-75">{store.tagline || "Para los mas peques"}</p>
+            <h1 className="max-w-3xl text-4xl font-black drop-shadow md:text-6xl">{store.name}</h1>
+            {store.description && <p className="mt-3 max-w-xl text-sm font-semibold text-white/80 md:text-base">{store.description}</p>}
+            <a href="#productos" className="mt-6 rounded-full bg-white px-7 py-3 text-sm font-black shadow-lg" style={{ color: store.primaryColor }}>
+              ¡Ver todo!
+            </a>
+            <div className="absolute left-6 top-6 text-3xl opacity-60">✨</div>
+            <div className="absolute right-7 top-8 text-2xl opacity-60">🌈</div>
+          </div>
+        </section>
+      );
+    }
+
     if (isSplit) {
       return (
         <section className={`${isDark ? "bg-gray-950 text-white" : "bg-white text-gray-950"}`}>
@@ -371,6 +423,44 @@ export default function StorefrontClient({ store, affiliateId }: { store: Store;
     const list = store.productLayout === "list";
     const featured = store.templateId === "boutique" && index === 0 && !list;
 
+    if (isKids && !list) {
+      const emoji = ["🦄", "⭐", "🎀", "🌈", "🎉", "🍭"][index % 6];
+      const bg = [`${store.primaryColor}18`, `${store.accentColor}18`, "#fce7f3", "#ede9fe", "#dcfce7", "#fff7ed"][index % 6];
+
+      return (
+        <article key={product.id} className="relative overflow-hidden rounded-[28px] border-2 border-white bg-white text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+          <div className="relative aspect-square p-3" style={{ backgroundColor: bg }}>
+            <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-20">{emoji}</div>
+            <div className="relative h-full overflow-hidden rounded-[22px]">
+              <ProductImage image={image} name={product.name} className="transition duration-500 hover:scale-105" />
+            </div>
+            {hasDiscount && <span className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-black text-white" style={{ backgroundColor: store.accentColor }}>OFERTA ✨</span>}
+            {!available && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/70">
+                <span className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-gray-500">Sin stock</span>
+              </div>
+            )}
+          </div>
+          <div className="p-4">
+            <p className="text-base font-black leading-tight text-gray-950">{product.name}</p>
+            {product.description && <p className="mt-1 line-clamp-2 text-sm text-gray-500">{product.description}</p>}
+            {store.showPrices && <p className="mt-2 text-lg font-black" style={{ color: store.primaryColor }}>{money(product.price, store.currency)}</p>}
+            {store.showStock && product.variants.length > 0 && <p className={`mt-1 text-xs font-semibold ${available ? "text-emerald-600" : "text-red-500"}`}>{available ? `${totalStock} disponibles` : "Sin stock"}</p>}
+            <button
+              type="button"
+              disabled={!available}
+              onClick={() => addToCart(product)}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-black text-white transition disabled:opacity-40"
+              style={{ backgroundColor: store.primaryColor }}
+            >
+              <ShoppingBag className="h-4 w-4" />
+              {!available ? "Sin stock" : "¡Lo quiero!"}
+            </button>
+          </div>
+        </article>
+      );
+    }
+
     return (
       <article
         key={product.id}
@@ -431,8 +521,7 @@ export default function StorefrontClient({ store, affiliateId }: { store: Store;
   }
 
   function renderBlocks() {
-    let blocks: Array<{ id: string; type: string; props: Record<string, string | number | boolean> }> = [];
-    try { blocks = JSON.parse(store.pageBlocks || "[]"); } catch { blocks = []; }
+    const blocks = contentBlocks;
     if (!blocks.length) return null;
 
     return (
@@ -504,7 +593,9 @@ export default function StorefrontClient({ store, affiliateId }: { store: Store;
       style={{
         fontFamily: store.fontFamily,
         background:
-          store.backgroundStyle === "gradient"
+          isKids
+            ? `linear-gradient(160deg, ${store.primaryColor}14, ${store.accentColor}14, #ffffff)`
+            : store.backgroundStyle === "gradient"
             ? `linear-gradient(135deg, ${store.secondaryColor}, #ffffff 45%, ${store.primaryColor}22)`
             : store.backgroundStyle === "pattern"
               ? `radial-gradient(circle at 20px 20px, ${store.primaryColor}14 2px, transparent 3px), ${isDark ? "#030712" : store.secondaryColor}`
@@ -551,14 +642,14 @@ export default function StorefrontClient({ store, affiliateId }: { store: Store;
       <main id="productos" className="mx-auto max-w-7xl px-6 py-12">
         <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em]" style={{ color: store.primaryColor }}>Catalogo</p>
-            <h2 className="mt-2 text-3xl font-black">Productos destacados</h2>
+            <p className="text-sm font-bold uppercase tracking-[0.2em]" style={{ color: store.primaryColor }}>{isKids ? "Todo para jugar" : "Catalogo"}</p>
+            <h2 className="mt-2 text-3xl font-black">{isKids ? "Nuestros favoritos" : "Productos destacados"}</h2>
           </div>
           {categories.length > 1 && !isMarket && (
             <div className="flex gap-2 overflow-x-auto pb-1">
-              <button onClick={() => setCategory("all")} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold ${category === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={category === "all" ? { backgroundColor: store.primaryColor } : undefined}>Todo</button>
+              <button onClick={() => setCategory("all")} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold ${category === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"} ${isKids ? "border-2 border-white shadow-sm" : ""}`} style={category === "all" ? { backgroundColor: store.primaryColor } : undefined}>Todo{isKids ? " 🎁" : ""}</button>
               {categories.map((cat) => (
-                <button key={cat} onClick={() => setCategory(cat)} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold capitalize ${category === cat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={category === cat ? { backgroundColor: store.primaryColor } : undefined}>{cat}</button>
+                <button key={cat} onClick={() => setCategory(cat)} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold capitalize ${category === cat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"} ${isKids ? "border-2 border-white shadow-sm" : ""}`} style={category === cat ? { backgroundColor: store.primaryColor } : undefined}>{cat}</button>
               ))}
             </div>
           )}
