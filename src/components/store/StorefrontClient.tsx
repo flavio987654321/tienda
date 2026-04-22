@@ -140,6 +140,22 @@ function money(value: number, currency = "ARS") {
   return `$${value.toLocaleString("es-AR")}`;
 }
 
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function socialUrl(kind: "instagram" | "facebook" | "tiktok" | "whatsapp" | "email", value: string) {
+  const clean = value.trim();
+  if (!clean) return "";
+  if (kind === "email") return `mailto:${clean}`;
+  if (kind === "whatsapp") return `https://wa.me/${onlyDigits(clean)}`;
+  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
+  const handle = clean.replace(/^@/, "");
+  if (kind === "instagram") return `https://instagram.com/${handle}`;
+  if (kind === "facebook") return `https://facebook.com/${handle}`;
+  return `https://tiktok.com/@${handle}`;
+}
+
 function buttonClass(style: string) {
   if (style === "pill") return "rounded-full";
   if (style === "square") return "rounded-none";
@@ -239,6 +255,13 @@ export default function StorefrontClient({
   const cardShadow = SHADOW[store.cardShadow] ?? SHADOW.sm;
   const buttonRadius = buttonClass(store.buttonStyle);
   const productGrid = GRID[store.productLayout] ?? GRID.grid3;
+  const socialItems = [
+    store.instagramUrl ? { key: "showInstagram", label: "Instagram", short: "IG", href: socialUrl("instagram", store.instagramUrl) } : null,
+    store.facebookUrl ? { key: "showFacebook", label: "Facebook", short: "FB", href: socialUrl("facebook", store.facebookUrl) } : null,
+    store.tiktokUrl ? { key: "showTiktok", label: "TikTok", short: "TT", href: socialUrl("tiktok", store.tiktokUrl) } : null,
+    store.whatsappNumber ? { key: "showWhatsapp", label: "WhatsApp", short: "WA", href: socialUrl("whatsapp", store.whatsappNumber) } : null,
+    store.owner.email ? { key: "showEmail", label: "Email", short: "@", href: socialUrl("email", store.owner.email) } : null,
+  ].filter(Boolean) as { key: string; label: string; short: string; href: string }[];
 
   useEffect(() => {
     if (!initialProductId) return;
@@ -562,7 +585,7 @@ export default function StorefrontClient({
     return (
       <div className="mx-auto max-w-7xl px-6 py-8 space-y-0">
         {blocks.map((block) => {
-          const p = block.props as Record<string, string>;
+          const p = block.props as Record<string, any>;
           if (block.type === "text") return (
             <div key={block.id} className="py-10 px-4" style={{ textAlign: (p.align || "center") as "left" | "center" | "right", fontFamily: store.fontFamily }}>
               {p.heading && <h2 className="font-black text-3xl md:text-4xl mb-4" style={{ color: store.primaryColor }}>{p.heading}</h2>}
@@ -595,6 +618,64 @@ export default function StorefrontClient({
                   {p.body && <p className="text-gray-500 leading-relaxed">{p.body}</p>}
                 </div>
               </div>
+            );
+          }
+          if (block.type === "socials") {
+            const visibleItems = socialItems.filter((item) => p[item.key] !== false);
+            if (!visibleItems.length) return null;
+
+            const layout = String(p.layout || "icons");
+            const heading = String(p.heading || "Seguinos y contactanos");
+
+            if (layout === "card") {
+              return (
+                <section key={block.id} className="py-8" style={{ fontFamily: store.fontFamily }}>
+                  <div className={`mx-auto max-w-xl border p-6 text-center ${isDark ? "border-white/10 bg-white/5" : "border-gray-100 bg-white"} ${cardRadius} ${cardShadow}`}>
+                    {p.showHeading !== false && <h2 className="mb-5 text-2xl font-black" style={{ color: store.primaryColor }}>{heading}</h2>}
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {visibleItems.map((item) => (
+                        <a
+                          key={item.label}
+                          href={item.href}
+                          target={item.label === "Email" ? undefined : "_blank"}
+                          rel={item.label === "Email" ? undefined : "noreferrer"}
+                          className={`flex items-center justify-center gap-3 border px-4 py-3 text-sm font-black transition hover:-translate-y-0.5 ${buttonRadius}`}
+                          style={{ borderColor: `${store.primaryColor}44`, color: store.primaryColor }}
+                        >
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full text-xs text-white" style={{ backgroundColor: store.primaryColor }}>{item.short}</span>
+                          {item.label}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              );
+            }
+
+            return (
+              <section key={block.id} className="py-8 text-center" style={{ fontFamily: store.fontFamily }}>
+                {p.showHeading !== false && <h2 className="mb-5 text-2xl font-black" style={{ color: store.primaryColor }}>{heading}</h2>}
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  {visibleItems.map((item) => (
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      target={item.label === "Email" ? undefined : "_blank"}
+                      rel={item.label === "Email" ? undefined : "noreferrer"}
+                      aria-label={item.label}
+                      className={`inline-flex items-center justify-center gap-2 font-black transition hover:-translate-y-0.5 ${layout === "buttons" ? `px-5 py-3 text-sm ${buttonRadius}` : "h-12 min-w-12 rounded-full px-3 text-xs"}`}
+                      style={{
+                        backgroundColor: layout === "buttons" ? store.primaryColor : isDark ? "rgba(255,255,255,.08)" : "#ffffff",
+                        color: layout === "buttons" ? textColor : store.primaryColor,
+                        border: layout === "buttons" ? "none" : `1px solid ${store.primaryColor}33`,
+                      }}
+                    >
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] text-white" style={{ backgroundColor: layout === "buttons" ? "rgba(255,255,255,.18)" : store.primaryColor }}>{item.short}</span>
+                      {layout === "buttons" ? item.label : <span className="sr-only">{item.label}</span>}
+                    </a>
+                  ))}
+                </div>
+              </section>
             );
           }
           if (block.type === "hero") return (
@@ -653,9 +734,9 @@ export default function StorefrontClient({
           </a>
           <div className="flex items-center gap-3">
             <div className={`hidden items-center gap-3 text-sm md:flex ${isDark ? "text-gray-300" : "text-gray-500"}`}>
-              {store.instagramUrl && <a href={store.instagramUrl} target="_blank" rel="noreferrer" className="font-bold">Instagram</a>}
-              {store.facebookUrl && <a href={store.facebookUrl} target="_blank" rel="noreferrer" className="font-bold">Facebook</a>}
-              {store.tiktokUrl && <span className="font-bold">TikTok</span>}
+              {store.instagramUrl && <a href={socialUrl("instagram", store.instagramUrl)} target="_blank" rel="noreferrer" className="font-bold">Instagram</a>}
+              {store.facebookUrl && <a href={socialUrl("facebook", store.facebookUrl)} target="_blank" rel="noreferrer" className="font-bold">Facebook</a>}
+              {store.tiktokUrl && <a href={socialUrl("tiktok", store.tiktokUrl)} target="_blank" rel="noreferrer" className="font-bold">TikTok</a>}
             </div>
             <button
               type="button"
@@ -731,7 +812,7 @@ export default function StorefrontClient({
 
       {store.showWhatsappButton && store.whatsappNumber && (
         <a
-          href={`https://wa.me/${store.whatsappNumber}`}
+          href={socialUrl("whatsapp", store.whatsappNumber)}
           target="_blank"
           rel="noreferrer"
           className="fixed bottom-24 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xl"

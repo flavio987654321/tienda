@@ -43,7 +43,7 @@ const CURRENCIES    = [{id:"ARS",label:"Pesos ARS"},{id:"USD",label:"Dólares US
 type DesignSection = "template"|"colores"|"textos"|"imagenes"|"layout"|"tarjetas"|"anuncio"|"redes"|"footer"|"vendedoras"|"seo";
 
 /* ─── Block types ─── */
-export type BlockType = "hero"|"text"|"products"|"banner"|"cta"|"image-text"|"spacer"|"divider";
+export type BlockType = "hero"|"text"|"products"|"banner"|"cta"|"image-text"|"socials"|"spacer"|"divider";
 export interface Block { id:string; type:BlockType; props:Record<string,any> }
 
 const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; defaultProps:Record<string,any> }[] = [
@@ -61,6 +61,8 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
     defaultProps:{ heading:"¿Por qué elegirnos?", body:"Calidad y atención garantizada en cada compra.", image:"", imagePosition:"left" } },
   { type:"spacer",     emoji:"⬜", label:"Espacio en blanco",      desc:"Separador de altura personalizable",
     defaultProps:{ height:"md" } },
+  { type:"socials",    emoji:"link", label:"Redes / Contacto",       desc:"Iconos, botones o tarjeta con tus canales",
+    defaultProps:{ heading:"Seguinos y contactanos", showHeading:true, layout:"icons", showInstagram:true, showFacebook:true, showTiktok:true, showWhatsapp:true, showEmail:true } },
   { type:"divider",    emoji:"─", label:"Línea separadora",        desc:"Línea horizontal decorativa",
     defaultProps:{ style:"solid", color:"#e5e7eb" } },
 ];
@@ -345,6 +347,24 @@ function BlockEditor({ block, onChange }: { block:Block; onChange:(props:Record<
     </div>
   </div>;
 
+  if (block.type==="socials") return <div className="space-y-3">
+    <Toggle label="Mostrar titulo" value={p.showHeading!==false} onChange={v=>upd("showHeading",v)}/>
+    {p.showHeading!==false && inp("Titulo","heading","Seguinos y contactanos")}
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Estilo visual</label>
+      <Chips options={[{id:"icons",label:"Iconos"},{id:"buttons",label:"Botones"},{id:"card",label:"Tarjeta"}]} value={p.layout||"icons"} onChange={v=>upd("layout",v)}/>
+    </div>
+    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-2">
+      <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Canales visibles</p>
+      <Toggle label="Instagram" value={p.showInstagram!==false} onChange={v=>upd("showInstagram",v)}/>
+      <Toggle label="Facebook" value={p.showFacebook!==false} onChange={v=>upd("showFacebook",v)}/>
+      <Toggle label="TikTok" value={p.showTiktok!==false} onChange={v=>upd("showTiktok",v)}/>
+      <Toggle label="WhatsApp" value={p.showWhatsapp!==false} onChange={v=>upd("showWhatsapp",v)}/>
+      <Toggle label="Email" value={p.showEmail!==false} onChange={v=>upd("showEmail",v)}/>
+    </div>
+    <p className="text-xs text-gray-400">Los links se cargan en Ajustes de la tienda, abajo de la lista de bloques.</p>
+  </div>;
+
   if (block.type==="spacer") return <div className="space-y-2">
     <label className="block text-xs font-medium text-gray-600">Altura del espacio</label>
     <Chips options={[{id:"xs",label:"8px"},{id:"sm",label:"24px"},{id:"md",label:"48px"},{id:"lg",label:"80px"},{id:"xl",label:"120px"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
@@ -374,6 +394,13 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   const FONT_SIZE: Record<string,string> = { sm:"16px",md:"20px",lg:"28px",xl:"36px" };
   const HERO_H: Record<string,string> = { sm:"80px",md:"120px",lg:"180px",xl:"240px" };
   const ALIGN_MAP: Record<string,string> = { left:"flex-start",center:"center",right:"flex-end" };
+  const socialItems = [
+    { key:"showInstagram", label:"Instagram", short:"IG", value:c.instagramUrl },
+    { key:"showFacebook", label:"Facebook", short:"FB", value:c.facebookUrl },
+    { key:"showTiktok", label:"TikTok", short:"TT", value:c.tiktokUrl },
+    { key:"showWhatsapp", label:"WhatsApp", short:"WA", value:c.whatsappNumber },
+    { key:"showEmail", label:"Email", short:"@", value:"email" },
+  ].filter(item => p[item.key] !== false && item.value);
 
   function renderContent() {
     if (block.type==="hero") {
@@ -443,6 +470,35 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center"}}>
             {p.heading&&<h3 style={{fontSize:"16px",fontWeight:800,color:c.primaryColor,marginBottom:"8px"}}>{p.heading}</h3>}
             {p.body&&<p style={{fontSize:"12px",color:"#6b7280",lineHeight:1.7}}>{p.body}</p>}
+          </div>
+        </div>
+      );
+    }
+    if (block.type==="socials") {
+      const layout = p.layout || "icons";
+      const items = socialItems.length ? socialItems : [{ key:"demo", label:"Instagram", short:"IG", value:"demo" }, { key:"demo2", label:"WhatsApp", short:"WA", value:"demo" }];
+      if (layout === "card") {
+        return (
+          <div style={{padding:"28px 24px",fontFamily:c.fontFamily}}>
+            <div style={{maxWidth:"520px",margin:"0 auto",border:"1px solid #e5e7eb",borderRadius:"18px",padding:"22px",textAlign:"center",background:"#fff"}}>
+              {p.showHeading!==false&&<h3 style={{fontSize:"18px",fontWeight:900,color:c.primaryColor,marginBottom:"14px"}}>{p.heading||"Seguinos y contactanos"}</h3>}
+              <div style={{display:"grid",gap:"8px"}}>
+                {items.map(item=><div key={item.label} style={{border:`1px solid ${c.primaryColor}33`,borderRadius:"12px",padding:"10px 12px",fontSize:"12px",fontWeight:800,color:c.primaryColor}}>{item.label}</div>)}
+              </div>
+            </div>
+          </div>
+        );
+      }
+      return (
+        <div style={{padding:"30px 24px",fontFamily:c.fontFamily,textAlign:"center"}}>
+          {p.showHeading!==false&&<h3 style={{fontSize:"18px",fontWeight:900,color:c.primaryColor,marginBottom:"16px"}}>{p.heading||"Seguinos y contactanos"}</h3>}
+          <div style={{display:"flex",justifyContent:"center",gap:"10px",flexWrap:"wrap"}}>
+            {items.map(item=>(
+              <div key={item.label} style={{display:"inline-flex",alignItems:"center",gap:"8px",border:`1px solid ${c.primaryColor}33`,background:layout==="buttons"?c.primaryColor:"#fff",color:layout==="buttons"?"#fff":c.primaryColor,borderRadius:layout==="buttons"?"999px":"14px",padding:layout==="buttons"?"10px 16px":"10px",fontSize:"12px",fontWeight:900}}>
+                <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:"24px",height:"24px",borderRadius:"999px",background:layout==="buttons"?"rgba(255,255,255,.18)":c.primaryColor,color:"#fff",fontSize:"10px"}}>{item.short}</span>
+                {layout==="buttons"&&item.label}
+              </div>
+            ))}
           </div>
         </div>
       );
