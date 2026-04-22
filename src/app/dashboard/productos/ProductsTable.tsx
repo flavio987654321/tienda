@@ -13,6 +13,7 @@ interface Product {
   id: string;
   name: string;
   category: string;
+  subcategory: string | null;
   price: number;
   comparePrice: number | null;
   images: string;
@@ -37,7 +38,7 @@ export default function ProductsTable({ products }: Props) {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return products.filter((p) => {
-      if (q && !p.name.toLowerCase().includes(q) && !p.category.toLowerCase().includes(q)) return false;
+      if (q && !p.name.toLowerCase().includes(q) && !p.category.toLowerCase().includes(q) && !(p.subcategory || "").toLowerCase().includes(q)) return false;
       if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
       if (statusFilter === "active" && !p.isActive) return false;
       if (statusFilter === "hidden" && p.isActive) return false;
@@ -161,7 +162,10 @@ export default function ProductsTable({ products }: Props) {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-gray-500 capitalize">{product.category}</span>
+                      <div>
+                        <span className="text-sm text-gray-500 capitalize">{product.category}</span>
+                        {product.subcategory && <p className="text-xs text-gray-400 capitalize">{product.subcategory}</p>}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div>

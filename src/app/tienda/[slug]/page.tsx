@@ -136,6 +136,7 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
           comparePrice: product.comparePrice,
           images: product.images,
           category: product.category,
+          subcategory: product.subcategory,
           variants: product.variants.map((variant) => ({
             id: variant.id,
             name: variant.name,

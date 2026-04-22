@@ -16,6 +16,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
           comparePrice: true,
           images: true,
           category: true,
+          subcategory: true,
         },
         orderBy: { createdAt: "desc" },
         take: 30,

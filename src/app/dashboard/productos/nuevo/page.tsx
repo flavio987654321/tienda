@@ -10,6 +10,16 @@ import {
 import Link from "next/link";
 
 const BASE_CATEGORIAS = ["ropa", "joyas", "accesorios", "calzado", "bolsos", "hogar", "belleza", "deporte"];
+const BASE_SUBCATEGORIAS: Record<string, string[]> = {
+  ropa: ["remeras", "pantalones", "camperas", "vestidos", "buzos", "shorts"],
+  joyas: ["collares", "anillos", "pulseras", "aros"],
+  accesorios: ["cinturones", "lentes", "panuelos", "gorros"],
+  calzado: ["zapatillas", "sandalias", "botas", "zapatos"],
+  bolsos: ["carteras", "mochilas", "riñoneras", "bolsos"],
+  hogar: ["decoracion", "cocina", "textiles"],
+  belleza: ["maquillaje", "skincare", "perfumes"],
+  deporte: ["calzas", "tops", "camisetas", "accesorios"],
+};
 
 interface Variant {
   name: string;
@@ -163,10 +173,13 @@ function ProductoFormPage() {
     price: "",
     comparePrice: "",
     category: "ropa",
+    subcategory: "",
     tags: "",
   });
   const [productCategories, setProductCategories] = useState<string[]>(BASE_CATEGORIAS);
+  const [productSubcategories, setProductSubcategories] = useState<Record<string, string[]>>(BASE_SUBCATEGORIAS);
   const [customCategory, setCustomCategory] = useState("");
+  const [customSubcategory, setCustomSubcategory] = useState("");
   const [variants, setVariants] = useState<Variant[]>([DEFAULT_VARIANT]);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [images, setImages] = useState<string[]>([]);
@@ -190,6 +203,12 @@ function ProductoFormPage() {
           ])
         );
         setProductCategories(categories);
+        const grouped = (d.products || []).reduce((acc: Record<string, string[]>, product: any) => {
+          if (!product.category || !product.subcategory) return acc;
+          acc[product.category] = Array.from(new Set([...(acc[product.category] || []), product.subcategory]));
+          return acc;
+        }, { ...BASE_SUBCATEGORIAS });
+        setProductSubcategories(grouped);
       })
       .catch(() => {});
   }, []);
@@ -213,9 +232,11 @@ function ProductoFormPage() {
           price: product.price?.toString() || "",
           comparePrice: product.comparePrice?.toString() || "",
           category: knownCategory ? product.category : "otro",
+          subcategory: product.subcategory ? (productSubcategories[product.category] || []).includes(product.subcategory) ? product.subcategory : "otro" : "",
           tags: safeJsonArray(product.tags).join(", "),
         });
         setCustomCategory(knownCategory ? "" : product.category || "");
+        setCustomSubcategory(product.subcategory && !((productSubcategories[product.category] || []).includes(product.subcategory)) ? product.subcategory : "");
         setImages(safeJsonArray(product.images).filter((url) => typeof url === "string") as string[]);
         setCarouselIdx(0);
         setVariants(
@@ -340,6 +361,7 @@ function ProductoFormPage() {
     setError("");
 
     const category = form.category === "otro" ? customCategory.trim() : form.category;
+    const subcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
     if (!category) {
       setError("Escribi la categoria personalizada.");
       setLoading(false);
@@ -352,6 +374,7 @@ function ProductoFormPage() {
       body: JSON.stringify({
         ...form,
         category,
+        subcategory,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         images,
         variants: variants.filter((v) => v.value),
@@ -375,6 +398,8 @@ function ProductoFormPage() {
   const cardRadius = RADIUS_MAP[store.cardRadius] || "rounded-xl";
   const cardShadow = SHADOW_MAP[store.cardShadow] || "shadow-sm";
   const previewCategory = form.category === "otro" ? customCategory.trim() || "otro" : form.category;
+  const previewSubcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
+  const availableSubcategories = form.category === "otro" ? [] : productSubcategories[form.category] || [];
 
   const discount =
     form.comparePrice && form.price && parseFloat(form.comparePrice) > parseFloat(form.price)
@@ -502,7 +527,7 @@ function ProductoFormPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoria</label>
                   <select
                     value={form.category}
-                    onChange={(e) => updateForm("category", e.target.value)}
+                    onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value, subcategory: "" }))}
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                   >
                     {productCategories.map((c) => (
@@ -516,6 +541,29 @@ function ProductoFormPage() {
                       value={customCategory}
                       onChange={(e) => setCustomCategory(e.target.value)}
                       placeholder="Escribi la categoria"
+                      className="mt-3 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Subcategoria</label>
+                  <select
+                    value={form.subcategory}
+                    onChange={(e) => updateForm("subcategory", e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  >
+                    <option value="">Sin subcategoria</option>
+                    {availableSubcategories.map((subcat) => (
+                      <option key={subcat} value={subcat}>{formatCategoryLabel(subcat)}</option>
+                    ))}
+                    <option value="otro">Otra subcategoria</option>
+                  </select>
+                  {form.subcategory === "otro" && (
+                    <input
+                      type="text"
+                      value={customSubcategory}
+                      onChange={(e) => setCustomSubcategory(e.target.value)}
+                      placeholder="Ej: remeras, pantalones, camperas"
                       className="mt-3 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   )}
@@ -832,7 +880,7 @@ function ProductoFormPage() {
 
                   {/* Category */}
                   <p className="text-xs font-medium uppercase tracking-wider" style={{ color: store.primaryColor }}>
-                    {previewCategory}
+                    {previewSubcategory ? `${previewCategory} / ${previewSubcategory}` : previewCategory}
                   </p>
 
                   {/* Name */}

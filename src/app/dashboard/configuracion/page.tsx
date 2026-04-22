@@ -52,7 +52,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"text",       emoji:"📝", label:"Bloque de texto",        desc:"Título y párrafo de texto libre",
     defaultProps:{ heading:"Sobre nosotros", body:"Somos una tienda con años de experiencia...", align:"center", fontSize:"md" } },
   { type:"products",   emoji:"🛍️", label:"Grilla de productos",    desc:"Muestra tu catálogo con columnas configurables",
-    defaultProps:{ heading:"Nuestros productos", columns:3, showHeading:true, categoryFilter:"all", showCategoryTabs:true } },
+    defaultProps:{ heading:"Nuestros productos", columns:3, showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:true } },
   { type:"banner",     emoji:"📢", label:"Banda de anuncio",       desc:"Franja de color con texto destacado",
     defaultProps:{ text:"🔥 ¡Oferta especial! Envío gratis hoy", bgColor:"#f59e0b", textColor:"#000000", size:"md" } },
   { type:"cta",        emoji:"🚀", label:"Llamada a la acción",    desc:"Sección oscura con botón grande destacado",
@@ -250,9 +250,12 @@ function ContentGlobalSettings({
   );
 }
 
-function BlockEditor({ block, onChange, categories = [] }: { block:Block; onChange:(props:Record<string,any>)=>void; config?:StoreConfig; categories?:string[] }) {
+function BlockEditor({ block, onChange, categories = [], subcategoriesByCategory = {} }: { block:Block; onChange:(props:Record<string,any>)=>void; config?:StoreConfig; categories?:string[]; subcategoriesByCategory?:Record<string,string[]> }) {
   const p = block.props;
   const upd = (k:string,v:any) => onChange({...p,[k]:v});
+  const availableSubcategories = p.categoryFilter && p.categoryFilter !== "all"
+    ? subcategoriesByCategory[p.categoryFilter] || []
+    : Array.from(new Set(Object.values(subcategoriesByCategory).flat()));
 
   const inp = (label:string, key:string, ph?:string) => (
     <div key={key}>
@@ -316,6 +319,14 @@ function BlockEditor({ block, onChange, categories = [] }: { block:Block; onChan
       </select>
     </div>
     <Toggle label="Mostrar filtro de categorias" sub="Permite cambiar de categoria en la tienda" value={p.showCategoryTabs!==false} onChange={v=>upd("showCategoryTabs",v)}/>
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Subcategoria a mostrar</label>
+      <select value={p.subcategoryFilter||"all"} onChange={e=>upd("subcategoryFilter",e.target.value)}
+        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+        <option value="all">Todas las subcategorias</option>
+        {availableSubcategories.map((subcat)=><option key={subcat} value={subcat}>{formatCategoryLabel(subcat)}</option>)}
+      </select>
+    </div>
     <Toggle label="Mostrar título de sección" value={p.showHeading!==false} onChange={v=>upd("showHeading",v)}/>
     {p.showHeading!==false && inp("Título de la sección","heading","Nuestros productos")}
     <div>
@@ -611,6 +622,7 @@ export default function ConfiguracionPage() {
   const [config, setConfig]       = useState<StoreConfig>(DEFAULT_CONFIG);
   const [storeSlug, setStoreSlug] = useState<string>("");
   const [productCategories, setProductCategories] = useState<string[]>([]);
+  const [productSubcategories, setProductSubcategories] = useState<Record<string,string[]>>({});
 
   // Blocks state
   const [activeTab, setActiveTab]         = useState<"diseño"|"bloques">("diseño");
@@ -624,6 +636,12 @@ export default function ConfiguracionPage() {
       .then(({products})=>{
         const categories = Array.from(new Set(((products || []) as any[]).map(product => product.category).filter(Boolean))) as string[];
         setProductCategories(categories);
+        const grouped = ((products || []) as any[]).reduce((acc: Record<string,string[]>, product) => {
+          if (!product.category || !product.subcategory) return acc;
+          acc[product.category] = Array.from(new Set([...(acc[product.category] || []), product.subcategory]));
+          return acc;
+        }, {});
+        setProductSubcategories(grouped);
       })
       .catch(()=>{});
 
@@ -1044,7 +1062,7 @@ export default function ConfiguracionPage() {
                         {/* Inline editor */}
                         {isSel && (
                           <div className="border-t border-indigo-100 px-3 py-3 bg-indigo-50/50 space-y-3">
-                            <BlockEditor block={b} onChange={props=>updateBlock(b.id,props)} config={config} categories={productCategories}/>
+                            <BlockEditor block={b} onChange={props=>updateBlock(b.id,props)} config={config} categories={productCategories} subcategoriesByCategory={productSubcategories}/>
                           </div>
                         )}
                       </div>

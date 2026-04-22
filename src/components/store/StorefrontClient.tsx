@@ -31,6 +31,7 @@ type Product = {
   comparePrice: number | null;
   images: string;
   category: string;
+  subcategory: string | null;
   variants: Variant[];
 };
 
@@ -225,6 +226,7 @@ export default function StorefrontClient({
   const [cart, setCart] = useState<CartItem[]>([]);
   const [openCart, setOpenCart] = useState(false);
   const [category, setCategory] = useState("all");
+  const [subcategory, setSubcategory] = useState("all");
   const [shippingMethod, setShippingMethod] = useState(SHIPPING_OPTIONS[0].id);
   const [paymentProvider, setPaymentProvider] = useState(PAYMENT_OPTIONS[0].id);
   const [customer, setCustomer] = useState<Customer>({
@@ -243,7 +245,22 @@ export default function StorefrontClient({
   const [highlightProductId, setHighlightProductId] = useState<string | null>(null);
 
   const categories = useMemo(() => [...new Set(store.products.map((p) => p.category).filter(Boolean))], [store.products]);
-  const products = category === "all" ? store.products : store.products.filter((product) => product.category === category);
+  const subcategories = useMemo(
+    () => [
+      ...new Set(
+        store.products
+          .filter((product) => category === "all" || product.category === category)
+          .map((product) => product.subcategory)
+          .filter(Boolean)
+      ),
+    ] as string[],
+    [category, store.products]
+  );
+  const products = store.products.filter((product) => {
+    if (category !== "all" && product.category !== category) return false;
+    if (subcategory !== "all" && product.subcategory !== subcategory) return false;
+    return true;
+  });
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = SHIPPING_OPTIONS.find((option) => option.id === shippingMethod) ?? SHIPPING_OPTIONS[0];
   const total = subtotal + shipping.cost;
@@ -279,6 +296,7 @@ export default function StorefrontClient({
     if (!product) return;
 
     setCategory(product.category || "all");
+    setSubcategory(product.subcategory || "all");
     setHighlightProductId(product.id);
 
     const timer = window.setTimeout(() => {
@@ -291,6 +309,12 @@ export default function StorefrontClient({
       window.clearTimeout(clearHighlight);
     };
   }, [initialProductId, store.products]);
+
+  useEffect(() => {
+    if (subcategory !== "all" && !subcategories.includes(subcategory)) {
+      setSubcategory("all");
+    }
+  }, [subcategory, subcategories]);
 
   function updateCustomer(field: keyof Customer, value: string) {
     setCustomer((prev) => ({ ...prev, [field]: value }));
@@ -598,12 +622,20 @@ export default function StorefrontClient({
           const p = block.props as Record<string, any>;
           if (block.type === "products") {
             const categoryFilter = String(p.categoryFilter || "all");
+            const subcategoryFilter = String(p.subcategoryFilter || "all");
             const blockProducts =
               categoryFilter === "all"
-                ? category === "all" || p.showCategoryTabs === false
-                  ? store.products
-                  : store.products.filter((product) => product.category === category)
-                : store.products.filter((product) => product.category === categoryFilter);
+                ? store.products.filter((product) => {
+                    if (p.showCategoryTabs !== false) {
+                      if (category !== "all" && product.category !== category) return false;
+                      if (subcategory !== "all" && product.subcategory !== subcategory) return false;
+                    }
+                    return subcategoryFilter === "all" || product.subcategory === subcategoryFilter;
+                  })
+                : store.products.filter((product) => {
+                    if (product.category !== categoryFilter) return false;
+                    return subcategoryFilter === "all" || product.subcategory === subcategoryFilter;
+                  });
             const columns = Number(p.columns || 3);
             const gridClass = columns >= 5
               ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
@@ -618,15 +650,24 @@ export default function StorefrontClient({
                 {p.showHeading !== false && (
                   <div className="mb-7 text-center">
                     <h2 className="text-3xl font-black" style={{ color: store.primaryColor }}>{p.heading || "Nuestros productos"}</h2>
-                    {categoryFilter !== "all" && <p className={`mt-2 text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>{formatCategoryLabel(categoryFilter)}</p>}
+                    {categoryFilter !== "all" && <p className={`mt-2 text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>{formatCategoryLabel(categoryFilter)}{subcategoryFilter !== "all" ? ` / ${formatCategoryLabel(subcategoryFilter)}` : ""}</p>}
                   </div>
                 )}
 
                 {categoryFilter === "all" && p.showCategoryTabs !== false && categories.length > 1 && (
                   <div className="mb-6 flex justify-center gap-2 overflow-x-auto pb-1">
-                    <button onClick={() => setCategory("all")} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold ${category === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={category === "all" ? { backgroundColor: store.primaryColor } : undefined}>Todo</button>
+                    <button onClick={() => { setCategory("all"); setSubcategory("all"); }} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold ${category === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={category === "all" ? { backgroundColor: store.primaryColor } : undefined}>Todo</button>
                     {categories.map((cat) => (
-                      <button key={cat} onClick={() => setCategory(cat)} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold capitalize ${category === cat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={category === cat ? { backgroundColor: store.primaryColor } : undefined}>{formatCategoryLabel(cat)}</button>
+                      <button key={cat} onClick={() => { setCategory(cat); setSubcategory("all"); }} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold capitalize ${category === cat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={category === cat ? { backgroundColor: store.primaryColor } : undefined}>{formatCategoryLabel(cat)}</button>
+                    ))}
+                  </div>
+                )}
+
+                {categoryFilter === "all" && p.showCategoryTabs !== false && subcategories.length > 1 && (
+                  <div className="mb-6 flex justify-center gap-2 overflow-x-auto pb-1">
+                    <button onClick={() => setSubcategory("all")} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${subcategory === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={subcategory === "all" ? { backgroundColor: store.accentColor } : undefined}>Todo {category === "all" ? "" : formatCategoryLabel(category)}</button>
+                    {subcategories.map((subcat) => (
+                      <button key={subcat} onClick={() => setSubcategory(subcat)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold capitalize ${subcategory === subcat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={subcategory === subcat ? { backgroundColor: store.accentColor } : undefined}>{formatCategoryLabel(subcat)}</button>
                     ))}
                   </div>
                 )}
@@ -822,6 +863,14 @@ export default function StorefrontClient({
               <button onClick={() => setCategory("all")} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold ${category === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"} ${isKids ? "border-2 border-white shadow-sm" : ""}`} style={category === "all" ? { backgroundColor: store.primaryColor } : undefined}>Todo{isKids ? " 🎁" : ""}</button>
               {categories.map((cat) => (
                 <button key={cat} onClick={() => setCategory(cat)} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold capitalize ${category === cat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"} ${isKids ? "border-2 border-white shadow-sm" : ""}`} style={category === cat ? { backgroundColor: store.primaryColor } : undefined}>{cat}</button>
+              ))}
+            </div>
+          )}
+          {subcategories.length > 1 && !isMarket && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              <button onClick={() => setSubcategory("all")} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${subcategory === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={subcategory === "all" ? { backgroundColor: store.accentColor } : undefined}>Todas</button>
+              {subcategories.map((subcat) => (
+                <button key={subcat} onClick={() => setSubcategory(subcat)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold capitalize ${subcategory === subcat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={subcategory === subcat ? { backgroundColor: store.accentColor } : undefined}>{formatCategoryLabel(subcat)}</button>
               ))}
             </div>
           )}

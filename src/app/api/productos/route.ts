@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
   const body = await req.json();
-  const { name, description, price, comparePrice, category, tags, images, variants, attributes } = body;
+  const { name, description, price, comparePrice, category, subcategory, tags, images, variants, attributes } = body;
 
   if (!name || !price) {
     return NextResponse.json({ error: "Nombre y precio son requeridos" }, { status: 400 });
@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
       price: parseFloat(price),
       comparePrice: comparePrice ? parseFloat(comparePrice) : null,
       category: category || "general",
+      subcategory: subcategory || null,
       tags: JSON.stringify(tags || []),
       images: JSON.stringify(images || []),
       attributes: JSON.stringify(attributes || []),
