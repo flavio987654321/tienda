@@ -63,7 +63,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"spacer",     emoji:"⬜", label:"Espacio en blanco",      desc:"Separador de altura personalizable",
     defaultProps:{ height:"md" } },
   { type:"socials",    emoji:"link", label:"Redes / Contacto",       desc:"Iconos, botones o tarjeta con tus canales",
-    defaultProps:{ heading:"Seguinos y contactanos", showHeading:true, layout:"icons", showInstagram:true, showFacebook:true, showTiktok:true, showWhatsapp:true, showEmail:true, instagramUrl:"", facebookUrl:"", tiktokUrl:"", whatsappNumber:"", emailAddress:"" } },
+    defaultProps:{ heading:"Seguinos y contactanos", showHeading:true, layout:"icons", color:"", showInstagram:true, showFacebook:true, showTiktok:true, showWhatsapp:true, showEmail:true, instagramUrl:"", facebookUrl:"", tiktokUrl:"", whatsappNumber:"", emailAddress:"" } },
   { type:"divider",    emoji:"─", label:"Línea separadora",        desc:"Línea horizontal decorativa",
     defaultProps:{ style:"solid", color:"#e5e7eb" } },
 ];
@@ -380,6 +380,7 @@ function BlockEditor({ block, onChange, categories = [], subcategoriesByCategory
       <label className="block text-xs font-medium text-gray-600 mb-1">Estilo visual</label>
       <Chips options={[{id:"icons",label:"Iconos"},{id:"buttons",label:"Botones"},{id:"card",label:"Tarjeta"}]} value={p.layout||"icons"} onChange={v=>upd("layout",v)}/>
     </div>
+    <ColorPicker label="Color del bloque (vacío = color principal)" value={p.color||""} onChange={v=>upd("color",v)}/>
     <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-3">
       <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Canales</p>
       {([
@@ -398,6 +399,7 @@ function BlockEditor({ block, onChange, categories = [], subcategoriesByCategory
         </div>
       ))}
     </div>
+    <p className="text-xs text-gray-400">Los logos mantienen sus colores reales. Este color cambia el titulo, bordes y botones del bloque.</p>
   </div>;
 
   if (block.type==="spacer") return <div className="space-y-2">
@@ -519,6 +521,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     }
     if (block.type==="socials") {
       const layout = p.layout || "icons";
+      const blockColor = p.color || c.primaryColor;
       const demoItems = [
         { key:"d1", label:"Instagram", color:"#E1306C", gradient:"linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" },
         { key:"d2", label:"WhatsApp",  color:"#25D366", gradient:null },
@@ -533,10 +536,10 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
         return (
           <div style={{padding:"28px 24px",fontFamily:c.fontFamily}}>
             <div style={{maxWidth:"520px",margin:"0 auto",border:"1px solid #e5e7eb",borderRadius:"18px",padding:"22px",textAlign:"center",background:"#fff"}}>
-              {p.showHeading!==false&&<h3 style={{fontSize:"18px",fontWeight:900,color:c.primaryColor,marginBottom:"14px"}}>{p.heading||"Seguinos y contactanos"}</h3>}
+              {p.showHeading!==false&&<h3 style={{fontSize:"18px",fontWeight:900,color:blockColor,marginBottom:"14px"}}>{p.heading||"Seguinos y contactanos"}</h3>}
               <div style={{display:"grid",gap:"8px"}}>
                 {items.map(item=>(
-                  <div key={item.label} style={{display:"flex",alignItems:"center",gap:"10px",border:`1px solid ${c.primaryColor}33`,borderRadius:"12px",padding:"10px 14px",fontSize:"12px",fontWeight:800,color:c.primaryColor}}>
+                  <div key={item.label} style={{display:"flex",alignItems:"center",gap:"10px",border:`1px solid ${blockColor}33`,borderRadius:"12px",padding:"10px 14px",fontSize:"12px",fontWeight:800,color:blockColor}}>
                     {iconCircle(item)}{item.label}
                   </div>
                 ))}
@@ -547,10 +550,10 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       }
       return (
         <div style={{padding:"30px 24px",fontFamily:c.fontFamily,textAlign:"center"}}>
-          {p.showHeading!==false&&<h3 style={{fontSize:"18px",fontWeight:900,color:c.primaryColor,marginBottom:"16px"}}>{p.heading||"Seguinos y contactanos"}</h3>}
+          {p.showHeading!==false&&<h3 style={{fontSize:"18px",fontWeight:900,color:blockColor,marginBottom:"16px"}}>{p.heading||"Seguinos y contactanos"}</h3>}
           <div style={{display:"flex",justifyContent:"center",gap:"10px",flexWrap:"wrap"}}>
             {items.map(item=>(
-              <div key={item.label} style={{display:"inline-flex",alignItems:"center",gap:"8px",border:layout==="buttons"?"none":`1px solid ${item.color}44`,background:layout==="buttons"?item.color:"#fff",color:layout==="buttons"?"#fff":item.color,borderRadius:layout==="buttons"?"999px":"14px",padding:layout==="buttons"?"9px 16px":"9px",fontSize:"12px",fontWeight:900}}>
+              <div key={item.label} style={{display:"inline-flex",alignItems:"center",gap:"8px",border:layout==="buttons"?"none":`1px solid ${blockColor}44`,background:layout==="buttons"?blockColor:"#fff",color:layout==="buttons"?"#fff":blockColor,borderRadius:layout==="buttons"?"999px":"14px",padding:layout==="buttons"?"9px 16px":"9px",fontSize:"12px",fontWeight:900}}>
                 {iconCircle(item)}
                 {layout==="buttons"&&item.label}
               </div>

@@ -730,6 +730,8 @@ export default function StorefrontClient({
           if (block.type === "socials") {
             const layout = String(p.layout || "icons");
             const heading = String(p.heading || "Seguinos y contactanos");
+            const blockColor = String(p.color || store.primaryColor);
+            const blockTextColor = readableText(blockColor);
             // Build items from block-level URLs, fall back to store-level
             const blockItems = [
               { key:"showInstagram", label:"Instagram", network:"instagram", href: p.instagramUrl ? socialUrl("instagram", p.instagramUrl) : store.instagramUrl ? socialUrl("instagram", store.instagramUrl) : null },
@@ -745,7 +747,7 @@ export default function StorefrontClient({
               return (
                 <section key={block.id} className="px-4 py-8 sm:px-6" style={{ fontFamily: store.fontFamily }}>
                   <div className={`mx-auto max-w-xl border p-6 text-center ${isDark ? "border-white/10 bg-white/5" : "border-gray-100 bg-white"} ${cardRadius} ${cardShadow}`}>
-                    {p.showHeading !== false && <h2 className="mb-5 text-2xl font-black" style={{ color: store.primaryColor }}>{heading}</h2>}
+                    {p.showHeading !== false && <h2 className="mb-5 text-2xl font-black" style={{ color: blockColor }}>{heading}</h2>}
                     <div className="grid gap-3 sm:grid-cols-2">
                       {visibleItems.map((item) => (
                         <a
@@ -754,7 +756,7 @@ export default function StorefrontClient({
                           target={item.label === "Email" ? undefined : "_blank"}
                           rel={item.label === "Email" ? undefined : "noreferrer"}
                           className={`flex items-center justify-center gap-3 border px-4 py-3 text-sm font-black transition hover:-translate-y-0.5 ${buttonRadius}`}
-                          style={{ borderColor: `${store.primaryColor}44`, color: store.primaryColor }}
+                          style={{ borderColor: `${blockColor}44`, color: blockColor }}
                         >
                           <SocialIconCircle network={item.network} size={32} />
                           {item.label}
@@ -768,7 +770,7 @@ export default function StorefrontClient({
 
             return (
               <section key={block.id} className="px-4 py-8 text-center sm:px-6" style={{ fontFamily: store.fontFamily }}>
-                {p.showHeading !== false && <h2 className="mb-5 text-2xl font-black" style={{ color: store.primaryColor }}>{heading}</h2>}
+                {p.showHeading !== false && <h2 className="mb-5 text-2xl font-black" style={{ color: blockColor }}>{heading}</h2>}
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   {visibleItems.map((item) => (
                     <a
@@ -779,9 +781,9 @@ export default function StorefrontClient({
                       aria-label={item.label}
                       className={`inline-flex items-center justify-center gap-2 font-black transition hover:-translate-y-0.5 ${layout === "buttons" ? `px-5 py-3 text-sm ${buttonRadius}` : "h-12 min-w-12 rounded-full px-3 text-xs"}`}
                       style={{
-                        backgroundColor: layout === "buttons" ? store.primaryColor : isDark ? "rgba(255,255,255,.08)" : "#ffffff",
-                        color: layout === "buttons" ? textColor : store.primaryColor,
-                        border: layout === "buttons" ? "none" : `1px solid ${store.primaryColor}33`,
+                        backgroundColor: layout === "buttons" ? blockColor : isDark ? "rgba(255,255,255,.08)" : "#ffffff",
+                        color: layout === "buttons" ? blockTextColor : blockColor,
+                        border: layout === "buttons" ? "none" : `1px solid ${blockColor}33`,
                       }}
                     >
                       <SocialIconCircle network={item.network} size={28} forButton={layout === "buttons"} />
