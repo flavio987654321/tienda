@@ -714,10 +714,12 @@ export default function StorefrontClient({
           );
           if (block.type === "image-text") {
             const isRight = p.imagePosition === "right";
+            const imageFit = String(p.imageFit || "cover") as "cover" | "contain";
+            const imageFocus = String(p.imageFocus || "center");
             return (
               <div key={block.id} className={`mx-auto flex max-w-7xl flex-col ${isRight ? "md:flex-row-reverse" : "md:flex-row"} gap-8 items-center px-4 py-8 sm:px-6`} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
                 <div className="flex-1 rounded-3xl overflow-hidden min-h-64 flex items-center justify-center" style={{ backgroundColor: String(p.imageBgColor || "#f3f4f6") }}>
-                  {p.image ? <img src={p.image} alt="" className="w-full h-full object-cover" style={{ minHeight: "260px" }} /> : <Package className="h-12 w-12 text-gray-300" />}
+                  {p.image ? <img src={p.image} alt="" className={`w-full h-full ${imageFit === "contain" ? "object-contain" : "object-cover"}`} style={{ minHeight: "260px", objectPosition: imageFocus }} /> : <Package className="h-12 w-12 text-gray-300" />}
                 </div>
                 <div className="flex-1">
                   {p.heading && <h2 className="font-black text-3xl mb-4" style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>}

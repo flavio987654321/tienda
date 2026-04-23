@@ -59,7 +59,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"cta",        emoji:"🚀", label:"Llamada a la acción",    desc:"Sección oscura con botón grande destacado",
     defaultProps:{ heading:"¿Lista para comprar?", sub:"Envíos a todo el país", buttonText:"Ver catálogo", bgColor:"#0f172a", textColor:"#ffffff" } },
   { type:"image-text", emoji:"🖼️", label:"Imagen + Texto",         desc:"Foto al lado de texto descriptivo (split)",
-    defaultProps:{ heading:"¿Por qué elegirnos?", body:"Calidad y atención garantizada en cada compra.", image:"", imagePosition:"left", color:"", textColor:"", bgColor:"", imageBgColor:"" } },
+    defaultProps:{ heading:"¿Por qué elegirnos?", body:"Calidad y atención garantizada en cada compra.", image:"", imagePosition:"left", imageFit:"cover", imageFocus:"center", color:"", textColor:"", bgColor:"", imageBgColor:"" } },
   { type:"spacer",     emoji:"⬜", label:"Espacio en blanco",      desc:"Separador de altura personalizable",
     defaultProps:{ height:"md" } },
   { type:"socials",    emoji:"link", label:"Redes / Contacto",       desc:"Iconos, botones o tarjeta con tus canales",
@@ -387,7 +387,7 @@ function BlockEditor({
       {p.image ? (
         <div className="space-y-2">
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50">
-            <img src={p.image} alt="" className="h-32 w-full object-cover" />
+            <img src={p.image} alt="" className={`h-32 w-full ${p.imageFit==="contain" ? "object-contain" : "object-cover"}`} style={{ objectPosition: p.imageFocus || "center" }} />
           </div>
           <div className="flex gap-2">
             <button
@@ -423,6 +423,14 @@ function BlockEditor({
     <ColorPicker label="Color del texto (vacío = gris por defecto)" value={p.textColor||""} onChange={v=>upd("textColor",v)}/>
     <ColorPicker label="Color de fondo (vacío = fondo normal)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
     <ColorPicker label="Fondo del cuadro de imagen" value={p.imageBgColor||"#f3f4f6"} onChange={v=>upd("imageBgColor",v)}/>
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Cómo encaja la imagen</label>
+      <Chips options={[{id:"cover",label:"Recortar"},{id:"contain",label:"Completa"}]} value={p.imageFit||"cover"} onChange={v=>upd("imageFit",v)}/>
+    </div>
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Posición de la foto</label>
+      <Chips options={[{id:"center",label:"Centro"},{id:"top",label:"Arriba"},{id:"bottom",label:"Abajo"}]} value={p.imageFocus||"center"} onChange={v=>upd("imageFocus",v)}/>
+    </div>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Posición de la imagen</label>
       <div className="flex gap-2">
@@ -577,10 +585,12 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const textColor = p.textColor || "#6b7280";
       const blockBg = p.bgColor || "transparent";
       const imageBg = p.imageBgColor || "#f3f4f6";
+      const imageFit = p.imageFit || "cover";
+      const imageFocus = p.imageFocus || "center";
       return (
         <div style={{display:"flex",flexDirection:isRight?"row-reverse":"row",padding:"24px",gap:"20px",fontFamily:c.fontFamily,background:blockBg}}>
           <div style={{flex:1,background:imageBg,borderRadius:"12px",minHeight:"120px",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
-            {p.image?<img src={p.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{opacity:0.3,fontSize:"24px"}}>🖼️</span>}
+            {p.image?<img src={p.image} alt="" style={{width:"100%",height:"100%",objectFit:imageFit,objectPosition:imageFocus}}/>:<span style={{opacity:0.3,fontSize:"24px"}}>🖼️</span>}
           </div>
           <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center"}}>
             {p.heading&&<h3 style={{fontSize:"16px",fontWeight:800,color:blockColor,marginBottom:"8px"}}>{p.heading}</h3>}
