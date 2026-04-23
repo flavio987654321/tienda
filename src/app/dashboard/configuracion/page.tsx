@@ -593,6 +593,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
 
   return (
     <div
+      data-block-id={block.id}
       className={`relative group cursor-pointer transition-all ${selected?"ring-2 ring-indigo-500 ring-offset-1":"hover:ring-2 hover:ring-indigo-300 hover:ring-offset-1"}`}
       onClick={onSelect}
       style={{borderRadius:"4px"}}
@@ -681,6 +682,7 @@ export default function ConfiguracionPage() {
   const [blocks, setBlocks]               = useState<Block[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string|null>(null);
   const [showBlockLibrary, setShowBlockLibrary] = useState(false);
+  const previewScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(()=>{
     fetch("/api/productos")
@@ -804,6 +806,15 @@ export default function ConfiguracionPage() {
 
   const previewW ={desktop:"w-full",tablet:"w-[420px]",mobile:"w-[280px]"}[preview];
   const hasCustomBlocks = blocks.length > 0 && !isStarterConfigBlocks(blocks);
+
+  useEffect(() => {
+    if (activeTab !== "contenido" || !selectedBlockId) return;
+    const viewport = previewScrollRef.current;
+    if (!viewport) return;
+    const target = viewport.querySelector<HTMLElement>(`[data-block-id="${selectedBlockId}"]`);
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [activeTab, selectedBlockId]);
 
   if(loading) return <DashboardLayout><div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin text-indigo-600"/></div></DashboardLayout>;
 
@@ -1085,10 +1096,10 @@ export default function ConfiguracionPage() {
                     const lib = BLOCK_LIBRARY.find(x=>x.type===b.type);
                     const isSel = selectedBlockId===b.id;
                     return (
-                      <div key={b.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                      <div key={b.id} className={`rounded-2xl overflow-hidden transition-all ${isSel ? "bg-white border-2 border-indigo-300 shadow-lg shadow-indigo-100/70" : "bg-white border border-gray-100"}`}>
                         <div
                           onClick={()=>setSelectedBlockId(isSel?null:b.id)}
-                          className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${isSel?"bg-indigo-50":"hover:bg-gray-50"}`}
+                          className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${isSel?"bg-gradient-to-r from-indigo-50 to-violet-50":"hover:bg-gray-50"}`}
                         >
                           <span className="text-lg">{lib?.emoji}</span>
                           <div className="flex-1 min-w-0">
@@ -1119,8 +1130,14 @@ export default function ConfiguracionPage() {
 
                         {/* Inline editor */}
                         {isSel && (
-                          <div className="border-t border-indigo-100 px-3 py-3 bg-indigo-50/50 space-y-3">
+                          <div className="border-t-2 border-indigo-200 px-3 py-3 bg-gradient-to-b from-indigo-50/80 via-white to-indigo-50/40 space-y-3">
+                            <div className="sticky top-0 z-[1] -mx-3 -mt-3 mb-3 border-b border-indigo-100 bg-white/90 px-3 py-2 backdrop-blur">
+                              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-indigo-500">Editando este bloque</p>
+                            </div>
                             <BlockEditor block={b} onChange={props=>updateBlock(b.id,props)} config={config} categories={productCategories} subcategoriesByCategory={productSubcategories}/>
+                            <div className="border-t border-dashed border-indigo-200 pt-2">
+                              <p className="text-[11px] text-indigo-400">Fin de este bloque</p>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1159,7 +1176,7 @@ export default function ConfiguracionPage() {
             </div>
 
             <div className="bg-gray-900 flex items-start justify-center p-4 overflow-auto" style={{minHeight:"620px"}}>
-              <div className={`${previewW} transition-all duration-300 bg-white rounded-lg overflow-hidden shadow-2xl`} style={{maxHeight:"620px",overflowY:"auto"}}>
+              <div ref={previewScrollRef} className={`${previewW} transition-all duration-300 bg-white rounded-lg overflow-hidden shadow-2xl`} style={{maxHeight:"620px",overflowY:"auto"}}>
                 {activeTab==="diseño" ? (
                   <StorePreview config={config}/>
                 ) : (
