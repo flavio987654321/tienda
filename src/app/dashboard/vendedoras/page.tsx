@@ -228,8 +228,12 @@ export default async function VendedorasPage() {
                   <div className="border-b border-gray-50 p-5">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 text-lg font-black text-white">
-                          {displayName[0]?.toUpperCase() ?? "A"}
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 text-lg font-black text-white overflow-hidden">
+                          {affiliate.user.image ? (
+                            <img src={affiliate.user.image} alt={displayName} className="h-12 w-12 object-cover" />
+                          ) : (
+                            displayName[0]?.toUpperCase() ?? "A"
+                          )}
                         </div>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
