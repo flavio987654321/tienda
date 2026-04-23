@@ -20,13 +20,16 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setInfo("");
 
     if (!hasSupabaseBrowserConfig()) {
       setError("Falta configurar Supabase en las variables de entorno.");
@@ -43,6 +46,33 @@ function LoginForm() {
       router.refresh();
       router.push("/panel");
     }
+  }
+
+  async function handleForgotPassword() {
+    setError("");
+    setInfo("");
+
+    if (!email.trim()) {
+      setError("Ingresa tu email primero para enviarte el link de recuperacion.");
+      return;
+    }
+
+    if (!hasSupabaseBrowserConfig()) {
+      setError("Falta configurar Supabase en las variables de entorno.");
+      return;
+    }
+
+    setResetting(true);
+    const redirectTo = `${window.location.origin}/actualizar-contrasena`;
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+
+    if (resetError) {
+      setError("No se pudo enviar el mail de recuperacion.");
+    } else {
+      setInfo("Te enviamos un link para recuperar tu contrasena. Revisa tu email.");
+    }
+
+    setResetting(false);
   }
 
   if (redirecting) {
@@ -166,6 +196,16 @@ function LoginForm() {
             </motion.div>
           )}
 
+          {info && (
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3.5 rounded-2xl text-sm mb-6"
+            >
+              {info}
+            </motion.div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-1.5">Email</label>
@@ -182,8 +222,8 @@ function LoginForm() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-sm font-medium text-gray-400">Contraseña</label>
-                <button type="button" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
-                  ¿Olvidaste tu contraseña?
+                <button type="button" onClick={handleForgotPassword} disabled={resetting} className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors disabled:opacity-60">
+                  {resetting ? "Enviando..." : "¿Olvidaste tu contraseña?"}
                 </button>
               </div>
               <div className="relative">
