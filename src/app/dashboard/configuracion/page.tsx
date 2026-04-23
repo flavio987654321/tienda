@@ -63,7 +63,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"spacer",     emoji:"⬜", label:"Espacio en blanco",      desc:"Separador de altura personalizable",
     defaultProps:{ height:"md" } },
   { type:"socials",    emoji:"link", label:"Redes / Contacto",       desc:"Iconos, botones o tarjeta con tus canales",
-    defaultProps:{ heading:"Seguinos y contactanos", showHeading:true, layout:"icons", showInstagram:true, showFacebook:true, showTiktok:true, showWhatsapp:true, showEmail:true } },
+    defaultProps:{ heading:"Seguinos y contactanos", showHeading:true, layout:"icons", showInstagram:true, showFacebook:true, showTiktok:true, showWhatsapp:true, showEmail:true, instagramUrl:"", facebookUrl:"", tiktokUrl:"", whatsappNumber:"", emailAddress:"" } },
   { type:"divider",    emoji:"─", label:"Línea separadora",        desc:"Línea horizontal decorativa",
     defaultProps:{ style:"solid", color:"#e5e7eb" } },
 ];
@@ -187,14 +187,10 @@ function ContentGlobalSettings({
     <div className="space-y-2 border-t border-gray-100 pt-3">
       <p className="px-1 text-xs font-bold uppercase tracking-wide text-gray-400">Ajustes de la tienda</p>
 
-      <Accordion label="Redes y contacto" icon={Share2} id="redes" open={open.includes("redes")} toggle={toggle}>
-        {([{label:"Instagram",field:"instagramUrl" as const,ph:"@mitienda",icon:"📸"},{label:"Facebook",field:"facebookUrl" as const,ph:"facebook.com/mitienda",icon:"👍"},{label:"TikTok",field:"tiktokUrl" as const,ph:"@mitienda",icon:"🎵"}] as const).map(({label,field,ph,icon})=>(
-          <div key={field}>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">{icon} {label}</label>
-            <input type="text" value={config[field]||""} onChange={e=>set(field,e.target.value)} placeholder={ph}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-          </div>
-        ))}
+      <Accordion label="WhatsApp flotante" icon={Share2} id="redes" open={open.includes("redes")} toggle={toggle}>
+        <p className="text-xs text-gray-500">
+          Los links de redes del bloque se cargan dentro de cada bloque &quot;Redes / Contacto&quot;. Este ajuste global queda solo para el boton flotante.
+        </p>
         <div className="border-t border-gray-100 pt-3">
           <Toggle label="Boton flotante de WhatsApp" sub="Aparece en el margen de la tienda" value={config.showWhatsappButton} onChange={v=>set("showWhatsappButton",v)}/>
           {config.showWhatsappButton&&(
@@ -384,15 +380,24 @@ function BlockEditor({ block, onChange, categories = [], subcategoriesByCategory
       <label className="block text-xs font-medium text-gray-600 mb-1">Estilo visual</label>
       <Chips options={[{id:"icons",label:"Iconos"},{id:"buttons",label:"Botones"},{id:"card",label:"Tarjeta"}]} value={p.layout||"icons"} onChange={v=>upd("layout",v)}/>
     </div>
-    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-2">
-      <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Canales visibles</p>
-      <Toggle label="Instagram" value={p.showInstagram!==false} onChange={v=>upd("showInstagram",v)}/>
-      <Toggle label="Facebook" value={p.showFacebook!==false} onChange={v=>upd("showFacebook",v)}/>
-      <Toggle label="TikTok" value={p.showTiktok!==false} onChange={v=>upd("showTiktok",v)}/>
-      <Toggle label="WhatsApp" value={p.showWhatsapp!==false} onChange={v=>upd("showWhatsapp",v)}/>
-      <Toggle label="Email" value={p.showEmail!==false} onChange={v=>upd("showEmail",v)}/>
+    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Canales</p>
+      {([
+        {show:"showInstagram",url:"instagramUrl",   label:"Instagram", ph:"@mitienda o URL completa"},
+        {show:"showFacebook", url:"facebookUrl",    label:"Facebook",  ph:"facebook.com/mitienda"},
+        {show:"showTiktok",   url:"tiktokUrl",      label:"TikTok",    ph:"@mitienda"},
+        {show:"showWhatsapp", url:"whatsappNumber", label:"WhatsApp",  ph:"5491112345678"},
+        {show:"showEmail",    url:"emailAddress",   label:"Email",     ph:"tu@email.com"},
+      ] as const).map(({show,url,label,ph})=>(
+        <div key={show} className="space-y-1.5">
+          <Toggle label={label} value={p[show]!==false} onChange={v=>upd(show,v)}/>
+          {p[show]!==false&&(
+            <input type="text" value={p[url]||""} onChange={e=>upd(url,e.target.value)} placeholder={ph}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"/>
+          )}
+        </div>
+      ))}
     </div>
-    <p className="text-xs text-gray-400">Los links se cargan en Ajustes de la tienda, abajo de la lista de bloques.</p>
   </div>;
 
   if (block.type==="spacer") return <div className="space-y-2">
@@ -425,12 +430,20 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   const HERO_H: Record<string,string> = { sm:"80px",md:"120px",lg:"180px",xl:"240px" };
   const ALIGN_MAP: Record<string,string> = { left:"flex-start",center:"center",right:"flex-end" };
   const socialItems = [
-    { key:"showInstagram", label:"Instagram", short:"IG", value:c.instagramUrl },
-    { key:"showFacebook", label:"Facebook", short:"FB", value:c.facebookUrl },
-    { key:"showTiktok", label:"TikTok", short:"TT", value:c.tiktokUrl },
-    { key:"showWhatsapp", label:"WhatsApp", short:"WA", value:c.whatsappNumber },
-    { key:"showEmail", label:"Email", short:"@", value:"email" },
-  ].filter(item => p[item.key] !== false && item.value);
+    { key:"showInstagram", label:"Instagram", color:"#E1306C", gradient:"linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" },
+    { key:"showFacebook",  label:"Facebook",  color:"#1877F2", gradient:null },
+    { key:"showTiktok",    label:"TikTok",    color:"#010101", gradient:null },
+    { key:"showWhatsapp",  label:"WhatsApp",  color:"#25D366", gradient:null },
+    { key:"showEmail",     label:"Email",     color:"#6366f1", gradient:null },
+  ].filter(item => p[item.key] !== false);
+
+  const socialIconSvg: Record<string, string> = {
+    Instagram: "M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z",
+    Facebook: "M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z",
+    TikTok: "M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.95a8.16 8.16 0 004.77 1.52V7.03a4.85 4.85 0 01-1-.34z",
+    WhatsApp: "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z",
+    Email: "M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z",
+  };
 
   function renderContent() {
     if (block.type==="hero") {
@@ -506,14 +519,27 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     }
     if (block.type==="socials") {
       const layout = p.layout || "icons";
-      const items = socialItems.length ? socialItems : [{ key:"demo", label:"Instagram", short:"IG", value:"demo" }, { key:"demo2", label:"WhatsApp", short:"WA", value:"demo" }];
+      const demoItems = [
+        { key:"d1", label:"Instagram", color:"#E1306C", gradient:"linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" },
+        { key:"d2", label:"WhatsApp",  color:"#25D366", gradient:null },
+      ];
+      const items = socialItems.length ? socialItems : demoItems;
+      const iconCircle = (item: typeof items[0]) => (
+        <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:"26px",height:"26px",borderRadius:"999px",background:item.gradient||(layout==="buttons"?"rgba(255,255,255,.2)":item.color),flexShrink:0}}>
+          <svg viewBox="0 0 24 24" fill="white" width="13" height="13"><path d={socialIconSvg[item.label]||socialIconSvg.Email}/></svg>
+        </span>
+      );
       if (layout === "card") {
         return (
           <div style={{padding:"28px 24px",fontFamily:c.fontFamily}}>
             <div style={{maxWidth:"520px",margin:"0 auto",border:"1px solid #e5e7eb",borderRadius:"18px",padding:"22px",textAlign:"center",background:"#fff"}}>
               {p.showHeading!==false&&<h3 style={{fontSize:"18px",fontWeight:900,color:c.primaryColor,marginBottom:"14px"}}>{p.heading||"Seguinos y contactanos"}</h3>}
               <div style={{display:"grid",gap:"8px"}}>
-                {items.map(item=><div key={item.label} style={{border:`1px solid ${c.primaryColor}33`,borderRadius:"12px",padding:"10px 12px",fontSize:"12px",fontWeight:800,color:c.primaryColor}}>{item.label}</div>)}
+                {items.map(item=>(
+                  <div key={item.label} style={{display:"flex",alignItems:"center",gap:"10px",border:`1px solid ${c.primaryColor}33`,borderRadius:"12px",padding:"10px 14px",fontSize:"12px",fontWeight:800,color:c.primaryColor}}>
+                    {iconCircle(item)}{item.label}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -524,8 +550,8 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           {p.showHeading!==false&&<h3 style={{fontSize:"18px",fontWeight:900,color:c.primaryColor,marginBottom:"16px"}}>{p.heading||"Seguinos y contactanos"}</h3>}
           <div style={{display:"flex",justifyContent:"center",gap:"10px",flexWrap:"wrap"}}>
             {items.map(item=>(
-              <div key={item.label} style={{display:"inline-flex",alignItems:"center",gap:"8px",border:`1px solid ${c.primaryColor}33`,background:layout==="buttons"?c.primaryColor:"#fff",color:layout==="buttons"?"#fff":c.primaryColor,borderRadius:layout==="buttons"?"999px":"14px",padding:layout==="buttons"?"10px 16px":"10px",fontSize:"12px",fontWeight:900}}>
-                <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:"24px",height:"24px",borderRadius:"999px",background:layout==="buttons"?"rgba(255,255,255,.18)":c.primaryColor,color:"#fff",fontSize:"10px"}}>{item.short}</span>
+              <div key={item.label} style={{display:"inline-flex",alignItems:"center",gap:"8px",border:layout==="buttons"?"none":`1px solid ${item.color}44`,background:layout==="buttons"?item.color:"#fff",color:layout==="buttons"?"#fff":item.color,borderRadius:layout==="buttons"?"999px":"14px",padding:layout==="buttons"?"9px 16px":"9px",fontSize:"12px",fontWeight:900}}>
+                {iconCircle(item)}
                 {layout==="buttons"&&item.label}
               </div>
             ))}
@@ -957,14 +983,10 @@ export default function ConfiguracionPage() {
                 <ColorPicker label="Color de la barra" value={config.announcementBarColor} onChange={v=>set("announcementBarColor",v)}/>
               </Accordion>
 
-              <Accordion label="Redes y contacto" icon={Share2} id="redes" open={open.includes("redes")} toggle={toggle}>
-                {([{label:"Instagram",field:"instagramUrl" as const,ph:"@mitienda",icon:"📸"},{label:"Facebook",field:"facebookUrl" as const,ph:"facebook.com/mitienda",icon:"👍"},{label:"TikTok",field:"tiktokUrl" as const,ph:"@mitienda",icon:"🎵"}] as const).map(({label,field,ph,icon})=>(
-                  <div key={field}>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">{icon} {label}</label>
-                    <input type="text" value={config[field]||""} onChange={e=>set(field,e.target.value)} placeholder={ph}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-                  </div>
-                ))}
+              <Accordion label="WhatsApp flotante" icon={Share2} id="redes" open={open.includes("redes")} toggle={toggle}>
+                <p className="text-xs text-gray-500">
+                  Los links de redes del bloque se cargan dentro de cada bloque &quot;Redes / Contacto&quot;. Este ajuste global queda solo para el boton flotante.
+                </p>
                 <div className="border-t border-gray-100 pt-3">
                   <Toggle label="Botón flotante de WhatsApp" sub="Aparece en el margen de la tienda" value={config.showWhatsappButton} onChange={v=>set("showWhatsappButton",v)}/>
                   {config.showWhatsappButton&&(
@@ -1135,7 +1157,7 @@ export default function ConfiguracionPage() {
                       <div style={{padding:"40px 24px",textAlign:"center",color:"#9ca3af"}}>
                         <div style={{fontSize:"32px",marginBottom:"12px"}}>📐</div>
                         <p style={{fontWeight:600,marginBottom:"6px"}}>Agregá bloques para ver la preview</p>
-                        <p style={{fontSize:"12px"}}>Usá el botón "Agregar bloque" en el panel izquierdo</p>
+                        <p style={{fontSize:"12px"}}>Usá el botón &quot;Agregar bloque&quot; en el panel izquierdo</p>
                       </div>
                     ) : (
                       blocks.map((b,idx)=>(
