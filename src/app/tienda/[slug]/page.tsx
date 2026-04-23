@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import StorefrontClient from "@/components/store/StorefrontClient";
 import { notFound } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
+import { getCurrentUser } from "@/lib/auth-session";
 import type { Metadata } from "next";
 
 type TiendaPageProps = {
@@ -90,10 +91,23 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
     affiliateId = affiliate?.id;
   }
 
+  const currentUser = await getCurrentUser();
+  let initialFavoriteIds: string[] = [];
+  if (currentUser) {
+    const productIds = store.products.map((p) => p.id);
+    const favs = await prisma.favorite.findMany({
+      where: { userId: currentUser.id, productId: { in: productIds } },
+      select: { productId: true },
+    });
+    initialFavoriteIds = favs.map((f) => f.productId);
+  }
+
   return (
     <StorefrontClient
       affiliateId={affiliateId}
       initialProductId={producto}
+      userId={currentUser?.id}
+      initialFavoriteIds={initialFavoriteIds}
       store={{
         id: store.id,
         slug: store.slug,

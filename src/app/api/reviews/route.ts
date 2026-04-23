@@ -1,0 +1,58 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth-session";
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const productId = searchParams.get("productId");
+  if (!productId) return NextResponse.json({ error: "productId requerido" }, { status: 400 });
+
+  const reviews = await prisma.review.findMany({
+    where: { productId },
+    include: { user: { select: { name: true, image: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const avg =
+    reviews.length > 0
+      ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+      : 0;
+
+  return NextResponse.json({ reviews, avg, total: reviews.length });
+}
+
+export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const { productId, orderId, rating, comment } = await req.json();
+
+  if (!productId || !orderId || !rating) {
+    return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
+  }
+  if (rating < 1 || rating > 5) {
+    return NextResponse.json({ error: "El rating debe ser entre 1 y 5" }, { status: 400 });
+  }
+
+  // Verificar que el usuario compró este producto en este pedido
+  const orderItem = await prisma.orderItem.findFirst({
+    where: { orderId, productId, order: { buyerId: user.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } } },
+  });
+  if (!orderItem) {
+    return NextResponse.json({ error: "Solo podés reseñar productos que compraste y fueron confirmados" }, { status: 403 });
+  }
+
+  const existing = await prisma.review.findUnique({
+    where: { userId_productId: { userId: user.id, productId } },
+  });
+  if (existing) {
+    return NextResponse.json({ error: "Ya reseñaste este producto" }, { status: 409 });
+  }
+
+  const review = await prisma.review.create({
+    data: { userId: user.id, productId, orderId, rating, comment: comment?.trim() || null },
+    include: { user: { select: { name: true, image: true } } },
+  });
+
+  return NextResponse.json(review, { status: 201 });
+}

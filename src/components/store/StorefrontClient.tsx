@@ -20,6 +20,7 @@ function SocialIconCircle({ network, size = 40, forButton = false }: { network: 
   );
 }
 import {
+  Heart,
   Loader2,
   Mail,
   Minus,
@@ -235,10 +236,14 @@ export default function StorefrontClient({
   store,
   affiliateId,
   initialProductId,
+  userId,
+  initialFavoriteIds = [],
 }: {
   store: Store;
   affiliateId?: string;
   initialProductId?: string;
+  userId?: string;
+  initialFavoriteIds?: string[];
 }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [openCart, setOpenCart] = useState(false);
@@ -246,6 +251,8 @@ export default function StorefrontClient({
   const [subcategory, setSubcategory] = useState("all");
   const [shippingMethod, setShippingMethod] = useState(SHIPPING_OPTIONS[0].id);
   const [paymentProvider, setPaymentProvider] = useState(PAYMENT_OPTIONS[0].id);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set(initialFavoriteIds));
+  const [togglingFav, setTogglingFav] = useState<string | null>(null);
   const [customer, setCustomer] = useState<Customer>({
     name: "",
     email: "",
@@ -327,6 +334,28 @@ export default function StorefrontClient({
 
   function updateCustomer(field: keyof Customer, value: string) {
     setCustomer((prev) => ({ ...prev, [field]: value }));
+  }
+
+  async function toggleFavorite(productId: string) {
+    if (!userId) { window.location.href = `/login?redirect=/tienda/${store.slug}`; return; }
+    if (togglingFav === productId) return;
+    setTogglingFav(productId);
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      next.has(productId) ? next.delete(productId) : next.add(productId);
+      return next;
+    });
+    try {
+      await fetch("/api/favoritos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId }) });
+    } catch {
+      setFavoriteIds((prev) => {
+        const next = new Set(prev);
+        next.has(productId) ? next.delete(productId) : next.add(productId);
+        return next;
+      });
+    } finally {
+      setTogglingFav(null);
+    }
   }
 
   function addToCart(product: Product) {
@@ -535,6 +564,12 @@ export default function StorefrontClient({
               <ProductImage image={image} name={product.name} className="transition duration-500 hover:scale-105" />
             </div>
             {hasDiscount && <span className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-black text-white" style={{ backgroundColor: store.accentColor }}>OFERTA ✨</span>}
+            <button
+              onClick={() => toggleFavorite(product.id)}
+              className="absolute right-3 top-3 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-white transition-colors"
+            >
+              <Heart className={`h-4 w-4 transition-colors ${favoriteIds.has(product.id) ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+            </button>
             {!available && (
               <div className="absolute inset-0 flex items-center justify-center bg-white/70">
                 <span className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-gray-500">Sin stock</span>
@@ -574,6 +609,12 @@ export default function StorefrontClient({
             <ProductImage image={image} name={product.name} className="transition duration-500 hover:scale-105" />
           </div>
           {hasDiscount && <span className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-black text-white" style={{ backgroundColor: store.accentColor }}>OFERTA</span>}
+          <button
+            onClick={() => toggleFavorite(product.id)}
+            className="absolute right-2 top-2 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-white transition-colors"
+          >
+            <Heart className={`h-4 w-4 transition-colors ${favoriteIds.has(product.id) ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+          </button>
           {!available && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/35">
               <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-gray-700">Sin stock</span>

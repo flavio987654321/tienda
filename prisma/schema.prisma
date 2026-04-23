@@ -29,6 +29,8 @@ model User {
   orders      Order[]
   affiliates  Affiliate[] @relation("AffiliateOwner")
   asAffiliate Affiliate[] @relation("AffiliateUser")
+  favorites   Favorite[]
+  reviews     Review[]
 }
 
 model Account {
@@ -136,6 +138,8 @@ model Product {
 
   variants   ProductVariant[]
   orderItems OrderItem[]
+  favorites  Favorite[]
+  reviews    Review[]
 }
 
 model ProductVariant {
@@ -177,6 +181,7 @@ model Order {
   payment    Payment?
   shipping   Shipping?
   commission Commission?
+  reviews    Review[]
 }
 
 model OrderItem {
@@ -283,6 +288,37 @@ model Wallet {
   affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
 
   withdrawals WalletWithdrawal[]
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
 }
 
 model WalletWithdrawal {
