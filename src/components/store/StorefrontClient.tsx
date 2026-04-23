@@ -732,6 +732,7 @@ export default function StorefrontClient({
             const heading = String(p.heading || "Seguinos y contactanos");
             const blockColor = String(p.color || store.primaryColor);
             const blockTextColor = readableText(blockColor);
+            const blockBg = String(p.bgColor || (isDark ? "rgba(255,255,255,.03)" : "#ffffff"));
             // Build items from block-level URLs, fall back to store-level
             const blockItems = [
               { key:"showInstagram", label:"Instagram", network:"instagram", href: p.instagramUrl ? socialUrl("instagram", p.instagramUrl) : store.instagramUrl ? socialUrl("instagram", store.instagramUrl) : null },
@@ -745,8 +746,8 @@ export default function StorefrontClient({
 
             if (layout === "card") {
               return (
-                <section key={block.id} className="px-4 py-8 sm:px-6" style={{ fontFamily: store.fontFamily }}>
-                  <div className={`mx-auto max-w-xl border p-6 text-center ${isDark ? "border-white/10 bg-white/5" : "border-gray-100 bg-white"} ${cardRadius} ${cardShadow}`}>
+                <section key={block.id} className="px-4 py-8 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: blockBg }}>
+                  <div className={`mx-auto max-w-xl border p-6 text-center ${cardRadius} ${cardShadow}`} style={{ borderColor: `${blockColor}22`, backgroundColor: blockBg }}>
                     {p.showHeading !== false && <h2 className="mb-5 text-2xl font-black" style={{ color: blockColor }}>{heading}</h2>}
                     <div className="grid gap-3 sm:grid-cols-2">
                       {visibleItems.map((item) => (
@@ -769,7 +770,7 @@ export default function StorefrontClient({
             }
 
             return (
-              <section key={block.id} className="px-4 py-8 text-center sm:px-6" style={{ fontFamily: store.fontFamily }}>
+              <section key={block.id} className="px-4 py-8 text-center sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: blockBg }}>
                 {p.showHeading !== false && <h2 className="mb-5 text-2xl font-black" style={{ color: blockColor }}>{heading}</h2>}
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   {visibleItems.map((item) => (
