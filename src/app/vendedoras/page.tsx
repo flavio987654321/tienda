@@ -9,7 +9,7 @@ import {
   CheckCircle, Clock, Loader2, Send, Store, TrendingUp, Users, Wallet,
   XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
   Star, Package, ArrowRight, Eye, Edit3, MapPin, Phone, Save,
-  DollarSign, ShoppingCart, Award, FileText, UploadCloud, Trash2,
+  DollarSign, ShoppingCart, Award, FileText, UploadCloud, Trash2, Download, Search,
 } from "lucide-react";
 
 const IgIconLg = () => <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>;
@@ -71,6 +71,8 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [tab, setTab] = useState<"tienda" | "productos">("tienda");
   const [cardLoading, setCardLoading] = useState<string | null>(null);
+  const [productSearch, setProductSearch] = useState("");
+  const [selectedImages, setSelectedImages] = useState<Record<string, number>>({});
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const storeUrl = `${origin}/tienda/${target.storeSlug}?ref=${target.affiliateId}`;
@@ -112,9 +114,48 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
     });
   }
 
-  async function makeProductCard(product: ShareProduct) {
-    const url = productUrl(product.id);
-    const imageUrl = parseImages(product.images)[0];
+  async function downloadWithWatermark(imageUrl: string, productName: string) {
+    try {
+      const img = await loadCardImage(imageUrl);
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0);
+      const fontSize = Math.max(18, Math.round(w * 0.04));
+      const text = target.storeName;
+      ctx.font = `700 ${fontSize}px Arial`;
+      const tw = ctx.measureText(text).width;
+      const pad = fontSize * 0.55;
+      const bx = w - tw - pad * 2 - 14;
+      const by = h - fontSize - pad * 2 - 14;
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
+      ctx.beginPath();
+      ctx.roundRect(bx, by, tw + pad * 2, fontSize + pad * 2, 8);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fillText(text, bx + pad, by + fontSize + pad * 0.35);
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `${productName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.png`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }, "image/png", 0.92);
+    } catch {
+      const a = document.createElement("a");
+      a.href = imageUrl;
+      a.download = `${productName}.png`;
+      a.click();
+    }
+  }
+
+  async function makeProductCard(product: ShareProduct, imageIndex = 0) {
+    const imageUrl = parseImages(product.images)[imageIndex];
     const canvas = document.createElement("canvas");
     canvas.width = 1080;
     canvas.height = 1350;
@@ -181,7 +222,8 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
   async function shareCard(product: ShareProduct) {
     setCardLoading(product.id);
     try {
-      const blob = await makeProductCard(product);
+      const imageIndex = selectedImages[product.id] ?? 0;
+      const blob = await makeProductCard(product, imageIndex);
       const file = new File([blob], `${product.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-placa.png`, { type: "image/png" });
       const text = productShareText(product, productUrl(product.id));
 
@@ -315,69 +357,145 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Instagram tip sticky */}
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-600 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      placeholder="Buscar producto..."
+                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    />
+                    {productSearch && (
+                      <button onClick={() => setProductSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400">
+                        <XCircle className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Instagram tip */}
                   <div className="flex items-start gap-3 bg-purple-950/40 border border-purple-500/15 rounded-2xl px-4 py-3">
                     <span className="text-lg mt-0.5">💡</span>
                     <p className="text-xs text-gray-400 leading-relaxed">
-                      <span className="text-purple-300 font-bold">Para Instagram/TikTok:</span> generá la placa de cada producto, descargala y subila a tus stories con el sticker de link.
+                      <span className="text-purple-300 font-bold">Para Instagram/TikTok:</span> elegí la foto, generá la placa y subila a stories con el sticker de link. También podés descargar las fotos directamente.
                     </p>
                   </div>
 
-                  {products.map((p) => {
-                    const pUrl = productUrl(p.id);
-                    const imgs = parseImages(p.images);
-                    const isLoading = cardLoading === p.id;
-                    return (
-                      <div key={p.id} className="bg-white/4 border border-white/8 rounded-2xl overflow-hidden">
-                        {/* Product info row */}
-                        <div className="flex items-center gap-4 p-4 pb-3">
-                          <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-800/60 flex-shrink-0 border border-white/5">
-                            {imgs[0]
-                              ? <img src={imgs[0]} alt={p.name} className="w-full h-full object-cover" />
-                              : <div className="w-full h-full flex items-center justify-center"><Package className="h-6 w-6 text-gray-700" /></div>
-                            }
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-white text-sm font-bold truncate">{p.name}</p>
-                            {p.description && <p className="text-gray-600 text-xs mt-0.5 line-clamp-1">{p.description}</p>}
-                            <p className="text-emerald-400 text-sm font-black mt-1">{money(p.price)}</p>
-                          </div>
-                        </div>
+                  {(() => {
+                    const filteredProducts = productSearch
+                      ? products.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                      : products;
 
-                        {/* CTA principal: Placa */}
-                        <div className="px-4 pb-3">
-                          <button onClick={() => shareCard(p)} disabled={isLoading}
-                            className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-60 text-white font-black py-3.5 rounded-xl text-sm transition-all shadow-lg shadow-purple-500/20">
-                            {isLoading
-                              ? <><Loader2 className="h-4 w-4 animate-spin" /> Generando placa...</>
-                              : <><Star className="h-4 w-4" /> Generar placa para Instagram / TikTok</>
-                            }
-                          </button>
+                    if (filteredProducts.length === 0) {
+                      return (
+                        <div className="text-center py-10">
+                          <p className="text-gray-600 text-sm">Sin resultados para &quot;{productSearch}&quot;</p>
                         </div>
+                      );
+                    }
 
-                        {/* Acciones secundarias */}
-                        <div className="px-4 pb-4 grid grid-cols-4 gap-2">
-                          <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name} — ${money(p.price)}\n${pUrl}`)}`, "_blank")}
-                            className="flex flex-col items-center gap-1 py-2.5 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/15 text-[#25D366] rounded-xl text-[10px] font-bold transition-all">
-                            <WaIcon /> WhatsApp
-                          </button>
-                          <button onClick={() => copy(pUrl, p.id)}
-                            className="flex flex-col items-center gap-1 py-2.5 bg-white/5 hover:bg-white/10 border border-white/8 text-gray-400 hover:text-white rounded-xl text-[10px] font-bold transition-all">
-                            {copied === p.id ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-                            {copied === p.id ? "¡Listo!" : "Copiar link"}
-                          </button>
-                          <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pUrl)}`, "_blank")}
-                            className="flex flex-col items-center gap-1 py-2.5 bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/15 text-[#1877F2] rounded-xl text-[10px] font-bold transition-all">
-                            <FbIcon /> Facebook
-                          </button>
-                          <Link href={pUrl} target="_blank"
-                            className="flex flex-col items-center gap-1 py-2.5 bg-white/5 hover:bg-white/10 border border-white/8 text-gray-400 hover:text-white rounded-xl text-[10px] font-bold transition-all">
-                            <ExternalLink className="h-4 w-4" /> Ver
-                          </Link>
+                    return filteredProducts.map((p) => {
+                      const pUrl = productUrl(p.id);
+                      const imgs = parseImages(p.images);
+                      const isLoading = cardLoading === p.id;
+                      const selectedIdx = selectedImages[p.id] ?? 0;
+                      return (
+                        <div key={p.id} className="bg-white/4 border border-white/8 rounded-2xl overflow-hidden">
+                          {/* Product info row */}
+                          <div className="flex items-center gap-4 p-4 pb-3">
+                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-800/60 flex-shrink-0 border border-white/5">
+                              {imgs[selectedIdx]
+                                ? <img src={imgs[selectedIdx]} alt={p.name} className="w-full h-full object-cover" />
+                                : <div className="w-full h-full flex items-center justify-center"><Package className="h-6 w-6 text-gray-700" /></div>
+                              }
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-sm font-bold truncate">{p.name}</p>
+                              {p.description && <p className="text-gray-600 text-xs mt-0.5 line-clamp-1">{p.description}</p>}
+                              <p className="text-emerald-400 text-sm font-black mt-1">{money(p.price)}</p>
+                            </div>
+                          </div>
+
+                          {/* Image selector (multiple photos) */}
+                          {imgs.length > 1 && (
+                            <div className="px-4 pb-3">
+                              <p className="text-[10px] text-gray-600 uppercase tracking-wider font-bold mb-2">
+                                Elegí la foto · {imgs.length} disponibles
+                              </p>
+                              <div className="flex gap-2 flex-wrap">
+                                {imgs.map((imgUrl, i) => (
+                                  <div key={i} className="relative group/thumb">
+                                    <button
+                                      onClick={() => setSelectedImages((prev) => ({ ...prev, [p.id]: i }))}
+                                      className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${
+                                        selectedIdx === i
+                                          ? "border-purple-500 opacity-100 ring-2 ring-purple-500/30"
+                                          : "border-white/10 opacity-50 hover:opacity-80"
+                                      }`}
+                                    >
+                                      <img src={imgUrl} alt="" className="w-full h-full object-cover" />
+                                    </button>
+                                    <button
+                                      onClick={() => downloadWithWatermark(imgUrl, p.name)}
+                                      title="Descargar foto"
+                                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-800 hover:bg-indigo-600 border border-white/20 rounded-full flex items-center justify-center transition-all opacity-0 group-hover/thumb:opacity-100 shadow"
+                                    >
+                                      <Download className="h-2.5 w-2.5 text-white" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Single image: download button */}
+                          {imgs.length === 1 && imgs[0] && (
+                            <div className="px-4 pb-2">
+                              <button
+                                onClick={() => downloadWithWatermark(imgs[0], p.name)}
+                                className="flex items-center gap-1.5 text-[11px] text-gray-600 hover:text-indigo-400 transition-colors"
+                              >
+                                <Download className="h-3 w-3" /> Descargar foto
+                              </button>
+                            </div>
+                          )}
+
+                          {/* CTA principal: Placa */}
+                          <div className="px-4 pb-3">
+                            <button onClick={() => shareCard(p)} disabled={isLoading}
+                              className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-60 text-white font-black py-3.5 rounded-xl text-sm transition-all shadow-lg shadow-purple-500/20">
+                              {isLoading
+                                ? <><Loader2 className="h-4 w-4 animate-spin" /> Generando placa...</>
+                                : <><Star className="h-4 w-4" /> Generar placa{imgs.length > 1 ? ` · foto ${selectedIdx + 1}` : ""}</>
+                              }
+                            </button>
+                          </div>
+
+                          {/* Acciones secundarias */}
+                          <div className="px-4 pb-4 grid grid-cols-4 gap-2">
+                            <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name} — ${money(p.price)}\n${pUrl}`)}`, "_blank")}
+                              className="flex flex-col items-center gap-1 py-2.5 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/15 text-[#25D366] rounded-xl text-[10px] font-bold transition-all">
+                              <WaIcon /> WhatsApp
+                            </button>
+                            <button onClick={() => copy(pUrl, p.id)}
+                              className="flex flex-col items-center gap-1 py-2.5 bg-white/5 hover:bg-white/10 border border-white/8 text-gray-400 hover:text-white rounded-xl text-[10px] font-bold transition-all">
+                              {copied === p.id ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                              {copied === p.id ? "¡Listo!" : "Copiar link"}
+                            </button>
+                            <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pUrl)}`, "_blank")}
+                              className="flex flex-col items-center gap-1 py-2.5 bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/15 text-[#1877F2] rounded-xl text-[10px] font-bold transition-all">
+                              <FbIcon /> Facebook
+                            </button>
+                            <Link href={pUrl} target="_blank"
+                              className="flex flex-col items-center gap-1 py-2.5 bg-white/5 hover:bg-white/10 border border-white/8 text-gray-400 hover:text-white rounded-xl text-[10px] font-bold transition-all">
+                              <ExternalLink className="h-4 w-4" /> Ver
+                            </Link>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </div>
