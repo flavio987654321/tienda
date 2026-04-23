@@ -21,6 +21,7 @@ function LoginForm() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,9 +39,18 @@ function LoginForm() {
       setError("Email o contraseña incorrectos");
       setLoading(false);
     } else {
+      setRedirecting(true);
       router.refresh();
       router.push("/panel");
     }
+  }
+
+  if (redirecting) {
+    return (
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+      </div>
+    );
   }
 
   return (

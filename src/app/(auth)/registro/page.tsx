@@ -107,6 +107,7 @@ export default function RegistroPage() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
@@ -135,9 +136,18 @@ export default function RegistroPage() {
       setLoading(false);
       return;
     }
+    setRedirecting(true);
     if (accountType === "seller") router.push("/login?registered=seller");
     else if (accountType === "buyer") router.push("/login?registered=buyer");
     else router.push("/login?registered=true");
+  }
+
+  if (redirecting) {
+    return (
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+      </div>
+    );
   }
 
   const selected = TYPES.find((t) => t.key === accountType)!;
