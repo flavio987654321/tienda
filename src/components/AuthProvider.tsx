@@ -40,9 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut(callbackUrl = "/") {
+    setStatus("loading");
     await supabase.auth.signOut();
-    setUser(null);
-    setStatus("unauthenticated");
     window.location.href = callbackUrl;
   }
 

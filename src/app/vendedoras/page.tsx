@@ -905,6 +905,14 @@ export default function VendedorasPage() {
     fetch("/api/vendedoras?mode=stats").then(r => r.json()).then(d => { setStats(d); });
   }, [sessionStatus]);
 
+  if (sessionStatus === "loading") {
+    return (
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+      </div>
+    );
+  }
+
   const isLoggedIn = sessionStatus === "authenticated";
   const myAffiliations = stores.filter((s) => s.affiliates.length > 0);
   const approvedStores = myAffiliations.filter((s) => s.affiliates[0]?.status === "APPROVED");
