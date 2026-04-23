@@ -46,6 +46,14 @@ type DesignSection = "template"|"colores"|"textos"|"imagenes"|"layout"|"tarjetas
 /* ─── Block types ─── */
 export type BlockType = "hero"|"text"|"products"|"banner"|"cta"|"image-text"|"socials"|"spacer"|"divider";
 export interface Block { id:string; type:BlockType; props:Record<string,any> }
+type PreviewProduct = {
+  id: string;
+  name: string;
+  price?: number | null;
+  images?: string | null;
+  category?: string | null;
+  subcategory?: string | null;
+}
 
 const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; defaultProps:Record<string,any> }[] = [
   { type:"hero",       emoji:"🖼️", label:"Hero / Portada",       desc:"Título grande, subtítulo y botón de acción",
@@ -167,6 +175,16 @@ function formatCategoryLabel(value: string) {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function parsePreviewImages(images: string | null | undefined) {
+  if (!images) return [];
+  try {
+    const parsed = JSON.parse(images);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
 }
 
 function ContentGlobalSettings({
@@ -488,10 +506,11 @@ function BlockEditor({
 }
 
 /* ─── Block renderer for preview ─── */
-function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown, onDuplicate, onDelete, isFirst, isLast }: {
+function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown, onDuplicate, onDelete, isFirst, isLast, previewProducts = [] }: {
   block:Block; config:StoreConfig; selected:boolean;
   onSelect:()=>void; onMoveUp:()=>void; onMoveDown:()=>void; onDuplicate:()=>void; onDelete:()=>void;
   isFirst:boolean; isLast:boolean;
+  previewProducts?: PreviewProduct[];
 }) {
   const p = block.props;
   const c = config;
@@ -542,22 +561,77 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const cols = p.columns||3;
       const blockColor = p.color || c.primaryColor;
       const blockBg = p.bgColor || "transparent";
+      const categoryFilter = String(p.categoryFilter || "all");
+      const subcategoryFilter = String(p.subcategoryFilter || "all");
+      const categories = Array.from(new Set(previewProducts.map((product) => product.category).filter(Boolean))) as string[];
+      const subcategories = Array.from(new Set(previewProducts.filter((product) => categoryFilter === "all" || product.category === categoryFilter).map((product) => product.subcategory).filter(Boolean))) as string[];
+      const visibleProducts = previewProducts
+        .filter((product) => {
+          if (categoryFilter !== "all" && product.category !== categoryFilter) return false;
+          if (subcategoryFilter !== "all" && product.subcategory !== subcategoryFilter) return false;
+          return true;
+        })
+        .slice(0, Math.max(cols * 2, 4));
       return (
         <div style={{padding:"24px 16px",fontFamily:c.fontFamily,background:blockBg}}>
           {p.showHeading!==false&&p.heading&&<h3 style={{fontSize:"16px",fontWeight:800,color:blockColor,marginBottom:"14px",textAlign:"center"}}>{p.heading}</h3>}
-          <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:"10px"}}>
-            {Array.from({length:cols*2}).map((_,i)=>(
-              <div key={i} style={{borderRadius:"12px",overflow:"hidden",background:"#f3f4f6",border:"1px solid #e5e7eb"}}>
-                <div style={{aspectRatio:"1",background:"linear-gradient(135deg,#e5e7eb,#d1d5db)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <span style={{fontSize:"20px",opacity:0.4}}>📦</span>
-                </div>
-                <div style={{padding:"8px"}}>
-                  <div style={{height:"8px",background:"#d1d5db",borderRadius:"4px",marginBottom:"6px"}}/>
-                  <div style={{height:"10px",background:blockColor+"40",borderRadius:"4px",width:"60%"}}/>
-                </div>
-              </div>
-            ))}
-          </div>
+          {(p.showCategoryTabs !== false || categoryFilter !== "all" || subcategoryFilter !== "all") && (
+            <div style={{display:"flex",justifyContent:"center",gap:"8px",flexWrap:"wrap",marginBottom:"14px"}}>
+              {p.showCategoryTabs !== false && (
+                <>
+                  <span style={{padding:"6px 12px",borderRadius:"999px",fontSize:"11px",fontWeight:800,background:blockColor,color:"#fff"}}>
+                    {categoryFilter === "all" ? "Todo" : formatCategoryLabel(categoryFilter)}
+                  </span>
+                  {categoryFilter === "all" && categories.slice(0, 3).map((category) => (
+                    <span key={category} style={{padding:"6px 12px",borderRadius:"999px",fontSize:"11px",fontWeight:700,background:"#fff",color:"#6b7280",border:"1px solid #e5e7eb"}}>
+                      {formatCategoryLabel(category)}
+                    </span>
+                  ))}
+                </>
+              )}
+              {categoryFilter !== "all" && subcategoryFilter === "all" && subcategories.slice(0, 3).map((subcategory) => (
+                <span key={subcategory} style={{padding:"6px 12px",borderRadius:"999px",fontSize:"11px",fontWeight:700,background:"#fff",color:"#6b7280",border:"1px solid #e5e7eb"}}>
+                  {formatCategoryLabel(subcategory)}
+                </span>
+              ))}
+              {subcategoryFilter !== "all" && (
+                <span style={{padding:"6px 12px",borderRadius:"999px",fontSize:"11px",fontWeight:700,background:"#fff",color:"#6b7280",border:"1px solid #e5e7eb"}}>
+                  {formatCategoryLabel(subcategoryFilter)}
+                </span>
+              )}
+            </div>
+          )}
+          {visibleProducts.length === 0 ? (
+            <div style={{padding:"20px 12px",border:"1px dashed #d1d5db",borderRadius:"14px",textAlign:"center",color:"#9ca3af",fontSize:"12px"}}>
+              No hay productos para esa categoria o subcategoria.
+            </div>
+          ) : (
+            <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:"10px"}}>
+              {visibleProducts.map((product)=> {
+                const image = parsePreviewImages(product.images || "")[0];
+                return (
+                  <div key={product.id} style={{borderRadius:"12px",overflow:"hidden",background:"#fff",border:"1px solid #e5e7eb"}}>
+                    <div style={{aspectRatio:"1",background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+                      {image ? (
+                        <img src={image} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                      ) : (
+                        <span style={{fontSize:"20px",opacity:0.4}}>📦</span>
+                      )}
+                    </div>
+                    <div style={{padding:"8px"}}>
+                      <p style={{fontSize:"11px",fontWeight:800,color:"#111827",marginBottom:"4px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                        {product.name}
+                      </p>
+                      <p style={{fontSize:"10px",color:"#6b7280",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                        {product.subcategory ? formatCategoryLabel(product.subcategory) : product.category ? formatCategoryLabel(product.category) : "Producto"}
+                      </p>
+                      <div style={{height:"10px",background:blockColor+"40",borderRadius:"4px",width:"60%",marginTop:"7px"}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       );
     }
@@ -739,6 +813,7 @@ export default function ConfiguracionPage() {
   const [storeSlug, setStoreSlug] = useState<string>("");
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [productSubcategories, setProductSubcategories] = useState<Record<string,string[]>>({});
+  const [previewProducts, setPreviewProducts] = useState<PreviewProduct[]>([]);
 
   // Blocks state
   const [activeTab, setActiveTab]         = useState<"diseño"|"bloques">("diseño");
@@ -751,6 +826,7 @@ export default function ConfiguracionPage() {
     fetch("/api/productos")
       .then(r=>r.json())
       .then(({products})=>{
+        setPreviewProducts(Array.isArray(products) ? products : []);
         const categories = Array.from(new Set(((products || []) as any[]).map(product => product.category).filter(Boolean))) as string[];
         setProductCategories(categories);
         const grouped = ((products || []) as any[]).reduce((acc: Record<string,string[]>, product) => {
@@ -1297,6 +1373,7 @@ export default function ConfiguracionPage() {
                           key={b.id}
                           block={b}
                           config={config}
+                          previewProducts={previewProducts}
                           selected={selectedBlockId===b.id}
                           onSelect={()=>setSelectedBlockId(selectedBlockId===b.id?null:b.id)}
                           onMoveUp={()=>moveBlock(b.id,-1)}
