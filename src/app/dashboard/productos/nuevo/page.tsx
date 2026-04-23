@@ -339,6 +339,18 @@ function ProductoFormPage() {
     uploadImages(Array.from(e.dataTransfer.files || []));
   }
 
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  function moveImage(from: number, to: number) {
+    setImages((p) => {
+      const next = [...p];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+    setCarouselIdx(to);
+  }
+
   function removeImage(idx: number) {
     setImages((p) => {
       const next = p.filter((_, i) => i !== idx);
@@ -478,17 +490,22 @@ function ProductoFormPage() {
                 <div className="flex gap-2 flex-wrap">
                   {images.map((url, i) => (
                     <div
-                      key={i}
+                      key={url + i}
+                      draggable
+                      onDragStart={() => setDragIdx(i)}
+                      onDragOver={(e) => { e.preventDefault(); }}
+                      onDrop={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== i) moveImage(dragIdx, i); setDragIdx(null); }}
+                      onDragEnd={() => setDragIdx(null)}
                       onClick={() => setCarouselIdx(i)}
-                      className={`group relative w-16 h-16 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
-                        carouselIdx === i ? "border-indigo-500 scale-105" : "border-transparent hover:border-gray-300"
-                      }`}
+                      className={`group relative w-16 h-16 rounded-lg cursor-grab active:cursor-grabbing border-2 transition-all flex-shrink-0 ${
+                        dragIdx === i ? "opacity-40 scale-95" : ""
+                      } ${carouselIdx === i ? "border-indigo-500 scale-105" : "border-transparent hover:border-gray-300"}`}
                     >
-                      <img src={url} alt="" className="w-full h-full object-cover" />
+                      <img src={url} alt="" className="w-full h-full object-cover rounded-[6px]" />
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); removeImage(i); }}
-                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity shadow"
+                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10"
                       >
                         <X className="h-3 w-3" />
                       </button>
