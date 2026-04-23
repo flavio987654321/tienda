@@ -8,7 +8,7 @@ import {
   Loader2, Save, Users, Palette, Layout, Type,
   Image as ImageIcon, Monitor, Smartphone, Tablet, LayoutGrid,
   List, Grid2X2, ChevronDown, ChevronUp, Megaphone, Share2,
-  MousePointer2, CreditCard, Search, ExternalLink,
+  MousePointer2, CreditCard, Search, ExternalLink, MessageCircle,
   Plus, Trash2, Layers, X, Copy,
 } from "lucide-react";
 
@@ -247,7 +247,22 @@ function ContentGlobalSettings({
   );
 }
 
-function BlockEditor({ block, onChange, categories = [], subcategoriesByCategory = {} }: { block:Block; onChange:(props:Record<string,any>)=>void; config?:StoreConfig; categories?:string[]; subcategoriesByCategory?:Record<string,string[]> }) {
+function BlockEditor({
+  block,
+  onChange,
+  categories = [],
+  subcategoriesByCategory = {},
+  uploadingImage = false,
+  onPickImage,
+}: {
+  block:Block;
+  onChange:(props:Record<string,any>)=>void;
+  config?:StoreConfig;
+  categories?:string[];
+  subcategoriesByCategory?:Record<string,string[]>;
+  uploadingImage?: boolean;
+  onPickImage?: () => void;
+}) {
   const p = block.props;
   const upd = (k:string,v:any) => onChange({...p,[k]:v});
   const availableSubcategories = p.categoryFilter && p.categoryFilter !== "all"
@@ -367,7 +382,43 @@ function BlockEditor({ block, onChange, categories = [], subcategoriesByCategory
   if (block.type==="image-text") return <div className="space-y-3">
     {inp("Título","heading","¿Por qué elegirnos?")}
     {ta("Descripción","body","Calidad garantizada en cada compra.")}
-    {inp("URL de imagen","image","https://...")}
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Imagen</label>
+      {p.image ? (
+        <div className="space-y-2">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50">
+            <img src={p.image} alt="" className="h-32 w-full object-cover" />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => onPickImage?.()}
+              disabled={uploadingImage}
+              className="flex-1 rounded-xl border border-gray-200 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-60"
+            >
+              {uploadingImage ? "Subiendo..." : "Cambiar imagen"}
+            </button>
+            <button
+              type="button"
+              onClick={() => upd("image","")}
+              className="rounded-xl border border-red-200 px-3 py-2 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
+            >
+              Quitar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onPickImage?.()}
+          disabled={uploadingImage}
+          className="flex h-24 w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-gray-200 text-gray-400 transition-colors hover:border-indigo-300 hover:text-indigo-500 disabled:opacity-60"
+        >
+          {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+          <span className="text-xs font-medium">{uploadingImage ? "Subiendo..." : "Subir imagen"}</span>
+        </button>
+      )}
+    </div>
     <ColorPicker label="Color del bloque (vacío = color principal)" value={p.color||""} onChange={v=>upd("color",v)}/>
     <ColorPicker label="Color del texto (vacío = gris por defecto)" value={p.textColor||""} onChange={v=>upd("textColor",v)}/>
     <ColorPicker label="Color de fondo (vacío = fondo normal)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
@@ -668,8 +719,10 @@ export default function ConfiguracionPage() {
   const [open, setOpen]           = useState<DesignSection[]>(["template","colores"]);
   const [uploadingLogo, setUL]    = useState(false);
   const [uploadingBanner, setUB]  = useState(false);
+  const [uploadingBlockImage, setUploadingBlockImage] = useState(false);
   const logoRef   = useRef<HTMLInputElement>(null);
   const bannerRef = useRef<HTMLInputElement>(null);
+  const blockImageRef = useRef<HTMLInputElement>(null);
   const [config, setConfig]       = useState<StoreConfig>(DEFAULT_CONFIG);
   const [isDirty, setIsDirty]     = useState(false);
   const loadedRef                 = useRef(false);
@@ -737,13 +790,29 @@ export default function ConfiguracionPage() {
   };
   const toggle = (s:DesignSection) => setOpen(p=>p.includes(s)?p.filter(x=>x!==s):[...p,s]);
 
-  async function upload(file:File, field:"logo"|"banner") {
-    if(field==="logo") setUL(true); else setUB(true);
+  async function uploadAsset(file: File) {
     const fd=new FormData(); fd.append("file",file);
     const res=await fetch("/api/upload",{method:"POST",body:fd});
     const {url}=await res.json();
+    return url as string | undefined;
+  }
+
+  async function upload(file:File, field:"logo"|"banner") {
+    if(field==="logo") setUL(true); else setUB(true);
+    const url = await uploadAsset(file);
     if(url) set(field,url);
     if(field==="logo") setUL(false); else setUB(false);
+  }
+
+  async function uploadBlockImage(file: File) {
+    if (!selectedBlockId) return;
+    setUploadingBlockImage(true);
+    const url = await uploadAsset(file);
+    if (url) {
+      const current = blocks.find((block) => block.id === selectedBlockId);
+      if (current) updateBlock(selectedBlockId, { ...current.props, image: url });
+    }
+    setUploadingBlockImage(false);
   }
 
   async function handleSave() {
@@ -934,6 +1003,7 @@ export default function ConfiguracionPage() {
               <Accordion label="Imágenes" icon={ImageIcon} id="imagenes" open={open.includes("imagenes")} toggle={toggle}>
                 <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&upload(e.target.files[0],"logo")}/>
                 <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&upload(e.target.files[0],"banner")}/>
+                <input ref={blockImageRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&uploadBlockImage(e.target.files[0])}/>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-2">Logo</label>
                   <div className="flex items-center gap-3">
@@ -1134,7 +1204,18 @@ export default function ConfiguracionPage() {
                             <div className="sticky top-0 z-[1] -mx-3 -mt-3 mb-3 border-b border-indigo-100 bg-white/90 px-3 py-2 backdrop-blur">
                               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-indigo-500">Editando este bloque</p>
                             </div>
-                            <BlockEditor block={b} onChange={props=>updateBlock(b.id,props)} config={config} categories={productCategories} subcategoriesByCategory={productSubcategories}/>
+                            <BlockEditor
+                              block={b}
+                              onChange={props=>updateBlock(b.id,props)}
+                              config={config}
+                              categories={productCategories}
+                              subcategoriesByCategory={productSubcategories}
+                              uploadingImage={uploadingBlockImage && selectedBlockId === b.id}
+                              onPickImage={() => {
+                                setSelectedBlockId(b.id);
+                                blockImageRef.current?.click();
+                              }}
+                            />
                             <div className="border-t border-dashed border-indigo-200 pt-2">
                               <p className="text-[11px] text-indigo-400">Fin de este bloque</p>
                             </div>
@@ -1176,7 +1257,7 @@ export default function ConfiguracionPage() {
             </div>
 
             <div className="bg-gray-900 flex items-start justify-center p-4 overflow-auto" style={{minHeight:"620px"}}>
-              <div ref={previewScrollRef} className={`${previewW} transition-all duration-300 bg-white rounded-lg overflow-hidden shadow-2xl`} style={{maxHeight:"620px",overflowY:"auto"}}>
+              <div ref={previewScrollRef} className={`${previewW} relative transition-all duration-300 bg-white rounded-lg overflow-hidden shadow-2xl`} style={{maxHeight:"620px",overflowY:"auto"}}>
                 {activeTab==="diseño" ? (
                   <StorePreview config={config}/>
                 ) : (
@@ -1233,6 +1314,15 @@ export default function ConfiguracionPage() {
                       <p style={{fontSize:"11px",color:"#9ca3af"}}>{config.footerText||`© 2025 ${config.name||"Mi Tienda"}`}</p>
                     </div>
                   </div>
+                )}
+                {activeTab==="bloques" && config.showWhatsappButton && config.whatsappNumber && (
+                  <a
+                    href={`https://wa.me/${config.whatsappNumber.replace(/\D/g, "")}`}
+                    className="absolute bottom-16 right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg"
+                    aria-label="WhatsApp flotante"
+                  >
+                    <MessageCircle className="h-5 w-5" />
+                  </a>
                 )}
               </div>
             </div>
