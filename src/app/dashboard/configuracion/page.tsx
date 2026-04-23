@@ -51,15 +51,15 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"hero",       emoji:"🖼️", label:"Hero / Portada",       desc:"Título grande, subtítulo y botón de acción",
     defaultProps:{ title:"¡Bienvenidos a mi tienda!", subtitle:"Encontrá todo lo que buscás", buttonText:"Ver productos", bgColor:"", textColor:"#ffffff", layout:"center", height:"lg" } },
   { type:"text",       emoji:"📝", label:"Bloque de texto",        desc:"Título y párrafo de texto libre",
-    defaultProps:{ heading:"Sobre nosotros", body:"Somos una tienda con años de experiencia...", align:"center", fontSize:"md" } },
+    defaultProps:{ heading:"Sobre nosotros", body:"Somos una tienda con años de experiencia...", align:"center", fontSize:"md", color:"", textColor:"", bgColor:"" } },
   { type:"products",   emoji:"🛍️", label:"Grilla de productos",    desc:"Muestra tu catálogo con columnas configurables",
-    defaultProps:{ heading:"Nuestros productos", columns:3, showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:true } },
+    defaultProps:{ heading:"Nuestros productos", columns:3, showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:true, color:"", bgColor:"" } },
   { type:"banner",     emoji:"📢", label:"Banda de anuncio",       desc:"Franja de color con texto destacado",
     defaultProps:{ text:"🔥 ¡Oferta especial! Envío gratis hoy", bgColor:"#f59e0b", textColor:"#000000", size:"md" } },
   { type:"cta",        emoji:"🚀", label:"Llamada a la acción",    desc:"Sección oscura con botón grande destacado",
     defaultProps:{ heading:"¿Lista para comprar?", sub:"Envíos a todo el país", buttonText:"Ver catálogo", bgColor:"#0f172a", textColor:"#ffffff" } },
   { type:"image-text", emoji:"🖼️", label:"Imagen + Texto",         desc:"Foto al lado de texto descriptivo (split)",
-    defaultProps:{ heading:"¿Por qué elegirnos?", body:"Calidad y atención garantizada en cada compra.", image:"", imagePosition:"left" } },
+    defaultProps:{ heading:"¿Por qué elegirnos?", body:"Calidad y atención garantizada en cada compra.", image:"", imagePosition:"left", color:"", textColor:"", bgColor:"", imageBgColor:"" } },
   { type:"spacer",     emoji:"⬜", label:"Espacio en blanco",      desc:"Separador de altura personalizable",
     defaultProps:{ height:"md" } },
   { type:"socials",    emoji:"link", label:"Redes / Contacto",       desc:"Iconos, botones o tarjeta con tus canales",
@@ -292,6 +292,9 @@ function BlockEditor({ block, onChange, categories = [], subcategoriesByCategory
   if (block.type==="text") return <div className="space-y-3">
     {inp("Título","heading","Sobre nosotros")}
     {ta("Texto / Párrafo","body","Somos una tienda...")}
+    <ColorPicker label="Color del bloque (vacío = color principal)" value={p.color||""} onChange={v=>upd("color",v)}/>
+    <ColorPicker label="Color del texto (vacío = gris por defecto)" value={p.textColor||""} onChange={v=>upd("textColor",v)}/>
+    <ColorPicker label="Color de fondo (vacío = fondo normal)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Alineación</label>
       <div className="flex gap-2">
@@ -307,6 +310,8 @@ function BlockEditor({ block, onChange, categories = [], subcategoriesByCategory
   </div>;
 
   if (block.type==="products") return <div className="space-y-3">
+    <ColorPicker label="Color del bloque (vacío = color principal)" value={p.color||""} onChange={v=>upd("color",v)}/>
+    <ColorPicker label="Color de fondo (vacío = fondo normal)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Categoria a mostrar</label>
       <select value={p.categoryFilter||"all"} onChange={e=>upd("categoryFilter",e.target.value)}
@@ -363,6 +368,10 @@ function BlockEditor({ block, onChange, categories = [], subcategoriesByCategory
     {inp("Título","heading","¿Por qué elegirnos?")}
     {ta("Descripción","body","Calidad garantizada en cada compra.")}
     {inp("URL de imagen","image","https://...")}
+    <ColorPicker label="Color del bloque (vacío = color principal)" value={p.color||""} onChange={v=>upd("color",v)}/>
+    <ColorPicker label="Color del texto (vacío = gris por defecto)" value={p.textColor||""} onChange={v=>upd("textColor",v)}/>
+    <ColorPicker label="Color de fondo (vacío = fondo normal)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
+    <ColorPicker label="Fondo del cuadro de imagen" value={p.imageBgColor||"#f3f4f6"} onChange={v=>upd("imageBgColor",v)}/>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Posición de la imagen</label>
       <div className="flex gap-2">
@@ -460,18 +469,23 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       );
     }
     if (block.type==="text") {
+      const blockColor = p.color || c.primaryColor;
+      const textColor = p.textColor || "#6b7280";
+      const blockBg = p.bgColor || "transparent";
       return (
-        <div style={{padding:"32px 24px",textAlign:(p.align||"center") as any,fontFamily:c.fontFamily}}>
-          {p.heading&&<h3 style={{fontSize:FONT_SIZE[p.fontSize||"md"]||"20px",fontWeight:800,color:c.primaryColor,marginBottom:"10px"}}>{p.heading}</h3>}
-          {p.body&&<p style={{fontSize:"13px",color:"#6b7280",lineHeight:1.7}}>{p.body}</p>}
+        <div style={{padding:"32px 24px",textAlign:(p.align||"center") as any,fontFamily:c.fontFamily,background:blockBg}}>
+          {p.heading&&<h3 style={{fontSize:FONT_SIZE[p.fontSize||"md"]||"20px",fontWeight:800,color:blockColor,marginBottom:"10px"}}>{p.heading}</h3>}
+          {p.body&&<p style={{fontSize:"13px",color:textColor,lineHeight:1.7}}>{p.body}</p>}
         </div>
       );
     }
     if (block.type==="products") {
       const cols = p.columns||3;
+      const blockColor = p.color || c.primaryColor;
+      const blockBg = p.bgColor || "transparent";
       return (
-        <div style={{padding:"24px 16px",fontFamily:c.fontFamily}}>
-          {p.showHeading!==false&&p.heading&&<h3 style={{fontSize:"16px",fontWeight:800,color:c.primaryColor,marginBottom:"14px",textAlign:"center"}}>{p.heading}</h3>}
+        <div style={{padding:"24px 16px",fontFamily:c.fontFamily,background:blockBg}}>
+          {p.showHeading!==false&&p.heading&&<h3 style={{fontSize:"16px",fontWeight:800,color:blockColor,marginBottom:"14px",textAlign:"center"}}>{p.heading}</h3>}
           <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:"10px"}}>
             {Array.from({length:cols*2}).map((_,i)=>(
               <div key={i} style={{borderRadius:"12px",overflow:"hidden",background:"#f3f4f6",border:"1px solid #e5e7eb"}}>
@@ -480,7 +494,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 </div>
                 <div style={{padding:"8px"}}>
                   <div style={{height:"8px",background:"#d1d5db",borderRadius:"4px",marginBottom:"6px"}}/>
-                  <div style={{height:"10px",background:c.primaryColor+"40",borderRadius:"4px",width:"60%"}}/>
+                  <div style={{height:"10px",background:blockColor+"40",borderRadius:"4px",width:"60%"}}/>
                 </div>
               </div>
             ))}
@@ -508,14 +522,18 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     }
     if (block.type==="image-text") {
       const isRight = p.imagePosition==="right";
+      const blockColor = p.color || c.primaryColor;
+      const textColor = p.textColor || "#6b7280";
+      const blockBg = p.bgColor || "transparent";
+      const imageBg = p.imageBgColor || "#f3f4f6";
       return (
-        <div style={{display:"flex",flexDirection:isRight?"row-reverse":"row",padding:"24px",gap:"20px",fontFamily:c.fontFamily}}>
-          <div style={{flex:1,background:"#f3f4f6",borderRadius:"12px",minHeight:"120px",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+        <div style={{display:"flex",flexDirection:isRight?"row-reverse":"row",padding:"24px",gap:"20px",fontFamily:c.fontFamily,background:blockBg}}>
+          <div style={{flex:1,background:imageBg,borderRadius:"12px",minHeight:"120px",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
             {p.image?<img src={p.image} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{opacity:0.3,fontSize:"24px"}}>🖼️</span>}
           </div>
           <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center"}}>
-            {p.heading&&<h3 style={{fontSize:"16px",fontWeight:800,color:c.primaryColor,marginBottom:"8px"}}>{p.heading}</h3>}
-            {p.body&&<p style={{fontSize:"12px",color:"#6b7280",lineHeight:1.7}}>{p.body}</p>}
+            {p.heading&&<h3 style={{fontSize:"16px",fontWeight:800,color:blockColor,marginBottom:"8px"}}>{p.heading}</h3>}
+            {p.body&&<p style={{fontSize:"12px",color:textColor,lineHeight:1.7}}>{p.body}</p>}
           </div>
         </div>
       );

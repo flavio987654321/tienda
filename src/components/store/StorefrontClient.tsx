@@ -656,28 +656,28 @@ export default function StorefrontClient({
                   : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
 
             return (
-              <section key={block.id} id="productos" className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ fontFamily: store.fontFamily }}>
+              <section key={block.id} id="productos" className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
                 {p.showHeading !== false && (
                   <div className="mb-7 text-center">
-                    <h2 className="text-3xl font-black" style={{ color: store.primaryColor }}>{p.heading || "Nuestros productos"}</h2>
+                    <h2 className="text-3xl font-black" style={{ color: String(p.color || store.primaryColor) }}>{p.heading || "Nuestros productos"}</h2>
                     {categoryFilter !== "all" && <p className={`mt-2 text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>{formatCategoryLabel(categoryFilter)}{subcategoryFilter !== "all" ? ` / ${formatCategoryLabel(subcategoryFilter)}` : ""}</p>}
                   </div>
                 )}
 
                 {categoryFilter === "all" && p.showCategoryTabs !== false && categories.length > 1 && (
                   <div className="mb-6 flex justify-center gap-2 overflow-x-auto pb-1">
-                    <button onClick={() => { setCategory("all"); setSubcategory("all"); }} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold ${category === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={category === "all" ? { backgroundColor: store.primaryColor } : undefined}>Todo</button>
+                    <button onClick={() => { setCategory("all"); setSubcategory("all"); }} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold ${category === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={category === "all" ? { backgroundColor: String(p.color || store.primaryColor) } : undefined}>Todo</button>
                     {categories.map((cat) => (
-                      <button key={cat} onClick={() => { setCategory(cat); setSubcategory("all"); }} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold capitalize ${category === cat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={category === cat ? { backgroundColor: store.primaryColor } : undefined}>{formatCategoryLabel(cat)}</button>
+                      <button key={cat} onClick={() => { setCategory(cat); setSubcategory("all"); }} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold capitalize ${category === cat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={category === cat ? { backgroundColor: String(p.color || store.primaryColor) } : undefined}>{formatCategoryLabel(cat)}</button>
                     ))}
                   </div>
                 )}
 
                 {categoryFilter === "all" && p.showCategoryTabs !== false && subcategories.length > 1 && (
                   <div className="mb-6 flex justify-center gap-2 overflow-x-auto pb-1">
-                    <button onClick={() => setSubcategory("all")} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${subcategory === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={subcategory === "all" ? { backgroundColor: store.accentColor } : undefined}>Todo {category === "all" ? "" : formatCategoryLabel(category)}</button>
+                    <button onClick={() => setSubcategory("all")} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${subcategory === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={subcategory === "all" ? { backgroundColor: String(p.color || store.accentColor) } : undefined}>Todo {category === "all" ? "" : formatCategoryLabel(category)}</button>
                     {subcategories.map((subcat) => (
-                      <button key={subcat} onClick={() => setSubcategory(subcat)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold capitalize ${subcategory === subcat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={subcategory === subcat ? { backgroundColor: store.accentColor } : undefined}>{formatCategoryLabel(subcat)}</button>
+                      <button key={subcat} onClick={() => setSubcategory(subcat)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold capitalize ${subcategory === subcat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={subcategory === subcat ? { backgroundColor: String(p.color || store.accentColor) } : undefined}>{formatCategoryLabel(subcat)}</button>
                     ))}
                   </div>
                 )}
@@ -694,9 +694,9 @@ export default function StorefrontClient({
             );
           }
           if (block.type === "text") return (
-            <div key={block.id} className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ textAlign: (p.align || "center") as "left" | "center" | "right", fontFamily: store.fontFamily }}>
-              {p.heading && <h2 className="font-black text-3xl md:text-4xl mb-4" style={{ color: store.primaryColor }}>{p.heading}</h2>}
-              {p.body && <p className="text-gray-500 max-w-2xl mx-auto text-base leading-relaxed">{p.body}</p>}
+            <div key={block.id} className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ textAlign: (p.align || "center") as "left" | "center" | "right", fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
+              {p.heading && <h2 className="font-black text-3xl md:text-4xl mb-4" style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>}
+              {p.body && <p className="max-w-2xl mx-auto text-base leading-relaxed" style={{ color: String(p.textColor || "#6b7280") }}>{p.body}</p>}
             </div>
           );
           if (block.type === "banner") return (
@@ -716,13 +716,13 @@ export default function StorefrontClient({
           if (block.type === "image-text") {
             const isRight = p.imagePosition === "right";
             return (
-              <div key={block.id} className={`mx-auto flex max-w-7xl flex-col ${isRight ? "md:flex-row-reverse" : "md:flex-row"} gap-8 items-center px-4 py-8 sm:px-6`} style={{ fontFamily: store.fontFamily }}>
-                <div className="flex-1 rounded-3xl overflow-hidden min-h-64 bg-gray-100 flex items-center justify-center">
+              <div key={block.id} className={`mx-auto flex max-w-7xl flex-col ${isRight ? "md:flex-row-reverse" : "md:flex-row"} gap-8 items-center px-4 py-8 sm:px-6`} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
+                <div className="flex-1 rounded-3xl overflow-hidden min-h-64 flex items-center justify-center" style={{ backgroundColor: String(p.imageBgColor || "#f3f4f6") }}>
                   {p.image ? <img src={p.image} alt="" className="w-full h-full object-cover" style={{ minHeight: "260px" }} /> : <Package className="h-12 w-12 text-gray-300" />}
                 </div>
                 <div className="flex-1">
-                  {p.heading && <h2 className="font-black text-3xl mb-4" style={{ color: store.primaryColor }}>{p.heading}</h2>}
-                  {p.body && <p className="text-gray-500 leading-relaxed">{p.body}</p>}
+                  {p.heading && <h2 className="font-black text-3xl mb-4" style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>}
+                  {p.body && <p className="leading-relaxed" style={{ color: String(p.textColor || "#6b7280") }}>{p.body}</p>}
                 </div>
               </div>
             );
