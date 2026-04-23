@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase/client";
 import {
   ShoppingBag, Loader2, Eye, EyeOff, ArrowRight,
-  Users, CheckCircle, Store, TrendingUp, Wallet,
+  Users, CheckCircle, Store, Wallet,
 } from "lucide-react";
 
 function LoginForm() {
@@ -74,46 +74,47 @@ function LoginForm() {
           <span className="text-xl font-bold text-white">MiTienda</span>
         </Link>
 
-        <div className="relative space-y-7">
+        <div className="relative space-y-6">
           <div>
             <h2 className="text-4xl font-black text-white leading-tight mb-3">
-              Tu tienda te<br /><span className="gradient-text">está esperando</span>
+              Una plataforma,<br /><span className="gradient-text">tres formas de usarla</span>
             </h2>
-            <p className="text-indigo-200/70 leading-relaxed">
-              Gestiona productos, pedidos y afiliados desde un panel simple y potente.
+            <p className="text-indigo-200/70 leading-relaxed text-sm">
+              Vendedoras, afiliados y clientes comparten el mismo acceso.
             </p>
           </div>
-          <ul className="space-y-3.5">
-            {[
-              { icon: Store, label: "10 plantillas de tienda personalizable" },
-              { icon: Users, label: "Sistema de afiliados con comisiones" },
-              { icon: TrendingUp, label: "Reportes y estadísticas en tiempo real" },
-              { icon: Wallet, label: "Billetera digital para retiros" },
-            ].map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-3 text-sm text-indigo-200/80">
-                <div className="w-7 h-7 bg-indigo-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Icon className="h-3.5 w-3.5 text-indigo-300" />
-                </div>
-                {label}
-              </li>
-            ))}
-          </ul>
 
-          {/* Fake testimonial */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-            <div className="flex gap-0.5 mb-3">
-              {[1,2,3,4,5].map((s) => (
-                <svg key={s} className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-              ))}
-            </div>
-            <p className="text-indigo-100/80 text-sm italic leading-relaxed">
-              "Triplicamos las ventas en 2 meses con el sistema de afiliados. Impresionante."
-            </p>
-            <div className="flex items-center gap-2.5 mt-3">
-              <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=80&q=80" className="w-8 h-8 rounded-full object-cover" alt="" />
+          <div className="space-y-3">
+            {/* Tienda */}
+            <div className="bg-white/5 border border-indigo-500/20 rounded-2xl p-4 flex items-start gap-4">
+              <div className="w-9 h-9 bg-indigo-500/20 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Store className="h-4 w-4 text-indigo-300" />
+              </div>
               <div>
-                <p className="text-white text-xs font-semibold">Valentina M.</p>
-                <p className="text-indigo-300/60 text-xs">Dueña · Luna Moda</p>
+                <p className="text-white text-sm font-bold mb-0.5">Tengo una tienda</p>
+                <p className="text-indigo-200/60 text-xs leading-relaxed">Gestioná productos, pedidos, afiliados y stock desde tu panel.</p>
+              </div>
+            </div>
+
+            {/* Afiliado */}
+            <div className="bg-white/5 border border-purple-500/20 rounded-2xl p-4 flex items-start gap-4">
+              <div className="w-9 h-9 bg-purple-500/20 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Users className="h-4 w-4 text-purple-300" />
+              </div>
+              <div>
+                <p className="text-white text-sm font-bold mb-0.5">Soy vendedor/a</p>
+                <p className="text-indigo-200/60 text-xs leading-relaxed">Postulate a tiendas, compartí tu link y cobrá comisiones automáticas.</p>
+              </div>
+            </div>
+
+            {/* Cliente */}
+            <div className="bg-white/5 border border-pink-500/20 rounded-2xl p-4 flex items-start gap-4">
+              <div className="w-9 h-9 bg-pink-500/20 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Wallet className="h-4 w-4 text-pink-300" />
+              </div>
+              <div>
+                <p className="text-white text-sm font-bold mb-0.5">Soy cliente</p>
+                <p className="text-indigo-200/60 text-xs leading-relaxed">Explorá tiendas, guardá favoritos y seguí el estado de tus pedidos.</p>
               </div>
             </div>
           </div>
