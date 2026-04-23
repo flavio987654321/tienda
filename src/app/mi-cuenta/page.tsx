@@ -57,12 +57,24 @@ type Favorite = {
   };
 };
 
-type Review = {
+type PendingReview = {
+  productId: string;
+  orderId: string;
+  productName: string;
+  productImages: string;
+  orderDate: string;
+  storeName: string;
+  storeSlug: string;
+};
+
+type SubmittedReview = {
   id: string;
   rating: number;
   comment: string | null;
   createdAt: string;
-  product: { id: string; name: string; images: string };
+  productId: string;
+  productName: string;
+  productImages: string;
 };
 
 type Profile = {
@@ -117,7 +129,11 @@ export default function MiCuentaPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [pendingReviews, setPendingReviews] = useState<PendingReview[]>([]);
+  const [submittedReviews, setSubmittedReviews] = useState<SubmittedReview[]>([]);
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: number; comment: string }>>({});
+  const [submittingReview, setSubmittingReview] = useState<string | null>(null);
+  const [resenasFetched, setResenasFetched] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -151,6 +167,15 @@ export default function MiCuentaPage() {
     if (tab === "favoritos" && favorites.length === 0) {
       fetch("/api/favoritos").then((r) => r.json()).then(setFavorites);
     }
+    if (tab === "resenas" && !resenasFetched) {
+      setResenasFetched(true);
+      fetch("/api/mi-cuenta/resenas")
+        .then((r) => r.json())
+        .then((data) => {
+          setPendingReviews(data.pending || []);
+          setSubmittedReviews(data.submitted || []);
+        });
+    }
   }, [tab]);
 
   async function saveProfile() {
@@ -166,6 +191,37 @@ export default function MiCuentaPage() {
     setProfile((p) => p ? { ...p, ...data } : data);
     setEditing(false);
     setSaving(false);
+  }
+
+  async function submitReview(productId: string, orderId: string) {
+    const draft = reviewDrafts[productId];
+    if (!draft?.rating) return;
+    setSubmittingReview(productId);
+    const res = await fetch("/api/reviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId, orderId, rating: draft.rating, comment: draft.comment || null }),
+    });
+    const data = await res.json();
+    setSubmittingReview(null);
+    if (res.ok) {
+      const pending = pendingReviews.find((p) => p.productId === productId);
+      if (pending) {
+        setPendingReviews((prev) => prev.filter((x) => x.productId !== productId));
+        setSubmittedReviews((prev) => [
+          {
+            id: data.id,
+            rating: data.rating,
+            comment: data.comment,
+            createdAt: data.createdAt,
+            productId: data.productId,
+            productName: pending.productName,
+            productImages: pending.productImages,
+          },
+          ...prev,
+        ]);
+      }
+    }
   }
 
   async function removeFavorite(productId: string) {
@@ -184,6 +240,7 @@ export default function MiCuentaPage() {
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "pedidos", label: "Mis pedidos", icon: Package },
     { key: "favoritos", label: "Favoritos", icon: Heart },
+    { key: "resenas", label: "Reseñas", icon: Star },
     { key: "perfil", label: "Mi perfil", icon: User },
   ];
 
@@ -378,6 +435,102 @@ export default function MiCuentaPage() {
                   );
                 })}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Reseñas */}
+        {tab === "resenas" && (
+          <div className="space-y-6">
+            {pendingReviews.length === 0 && submittedReviews.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
+                <Star className="h-12 w-12 text-gray-200 mx-auto mb-4" />
+                <h3 className="font-bold text-gray-900 mb-1">Todavía no tenés compras para reseñar</h3>
+                <p className="text-sm text-gray-400 mb-4">Cuando hagas una compra confirmada, podrás dejar tu opinión.</p>
+                <Link href="/tiendas" className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-500 transition-colors">
+                  Explorar tiendas <ChevronRight className="h-4 w-4" />
+                </Link>
+              </div>
+            ) : (
+              <>
+                {pendingReviews.length > 0 && (
+                  <div>
+                    <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                      Pendientes de reseña
+                    </h2>
+                    <div className="space-y-4">
+                      {pendingReviews.map((item) => {
+                        const imgs = (() => { try { return JSON.parse(item.productImages); } catch { return []; } })();
+                        const draft = reviewDrafts[item.productId] || { rating: 0, comment: "" };
+                        return (
+                          <div key={item.productId} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="h-12 w-12 rounded-xl bg-gray-100 shrink-0 overflow-hidden">
+                                {imgs[0] && <img src={imgs[0]} alt={item.productName} className="h-12 w-12 object-cover" />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-bold text-gray-900 truncate">{item.productName}</p>
+                                <p className="text-xs text-gray-400">{item.storeName}</p>
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              <div>
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Tu calificación</p>
+                                <Stars
+                                  rating={draft.rating}
+                                  interactive
+                                  onRate={(r) => setReviewDrafts((prev) => ({ ...prev, [item.productId]: { ...draft, rating: r } }))}
+                                />
+                              </div>
+                              <textarea
+                                value={draft.comment}
+                                onChange={(e) => setReviewDrafts((prev) => ({ ...prev, [item.productId]: { ...draft, comment: e.target.value } }))}
+                                placeholder="¿Qué te pareció el producto? (opcional)"
+                                rows={2}
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                              />
+                              <button
+                                onClick={() => submitReview(item.productId, item.orderId)}
+                                disabled={!draft.rating || submittingReview === item.productId}
+                                className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-500 disabled:opacity-40 transition-colors"
+                              >
+                                {submittingReview === item.productId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                Publicar reseña
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {submittedReviews.length > 0 && (
+                  <div>
+                    <h2 className="font-bold text-gray-900 mb-4">Mis reseñas</h2>
+                    <div className="space-y-3">
+                      {submittedReviews.map((review) => {
+                        const imgs = (() => { try { return JSON.parse(review.productImages); } catch { return []; } })();
+                        return (
+                          <div key={review.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex gap-3">
+                            <div className="h-12 w-12 rounded-xl bg-gray-100 shrink-0 overflow-hidden">
+                              {imgs[0] && <img src={imgs[0]} alt={review.productName} className="h-12 w-12 object-cover" />}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold text-gray-900 text-sm truncate">{review.productName}</p>
+                              <Stars rating={review.rating} />
+                              {review.comment && <p className="text-sm text-gray-600 mt-1">{review.comment}</p>}
+                              <p className="text-xs text-gray-300 mt-1">
+                                {new Date(review.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

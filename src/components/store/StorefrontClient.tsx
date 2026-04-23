@@ -245,6 +245,11 @@ export default function StorefrontClient({
   userId?: string;
   initialFavoriteIds?: string[];
 }) {
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productReviews, setProductReviews] = useState<{ id: string; rating: number; comment: string | null; createdAt: string; user: { name: string | null; image: string | null } }[]>([]);
+  const [reviewsAvg, setReviewsAvg] = useState(0);
+  const [reviewsTotal, setReviewsTotal] = useState(0);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [openCart, setOpenCart] = useState(false);
   const [category, setCategory] = useState("all");
@@ -306,6 +311,21 @@ export default function StorefrontClient({
   const cardShadow = SHADOW[store.cardShadow] ?? SHADOW.sm;
   const buttonRadius = buttonClass(store.buttonStyle);
   const productGrid = GRID[store.productLayout] ?? GRID.grid3;
+  useEffect(() => {
+    if (!selectedProduct) return;
+    setReviewsLoading(true);
+    setProductReviews([]);
+    fetch(`/api/reviews?productId=${selectedProduct.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setProductReviews(data.reviews || []);
+        setReviewsAvg(data.avg || 0);
+        setReviewsTotal(data.total || 0);
+        setReviewsLoading(false);
+      })
+      .catch(() => setReviewsLoading(false));
+  }, [selectedProduct?.id]);
+
   useEffect(() => {
     if (!initialProductId) return;
     const product = store.products.find((item) => item.id === initialProductId);
@@ -560,7 +580,7 @@ export default function StorefrontClient({
         >
           <div className="relative aspect-square p-3" style={{ backgroundColor: bg }}>
             <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-20">{emoji}</div>
-            <div className="relative h-full overflow-hidden rounded-[22px]">
+            <div className="relative h-full overflow-hidden rounded-[22px] cursor-pointer" onClick={() => setSelectedProduct(product)}>
               <ProductImage image={image} name={product.name} className="transition duration-500 hover:scale-105" />
             </div>
             {hasDiscount && <span className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-black text-white" style={{ backgroundColor: store.accentColor }}>OFERTA ✨</span>}
@@ -605,7 +625,7 @@ export default function StorefrontClient({
         } ${highlightProductId === product.id ? "ring-4 ring-indigo-400 ring-offset-4 ring-offset-white" : ""}`}
       >
         <div className={`${list ? "h-full min-h-40" : featured ? "aspect-[4/3]" : "aspect-square"} relative overflow-hidden ${isColorful ? "p-2" : ""}`} style={{ backgroundColor: store.secondaryColor }}>
-          <div className={`h-full w-full overflow-hidden ${isColorful ? "rounded-2xl" : ""}`}>
+          <div className={`h-full w-full overflow-hidden cursor-pointer ${isColorful ? "rounded-2xl" : ""}`} onClick={() => setSelectedProduct(product)}>
             <ProductImage image={image} name={product.name} className="transition duration-500 hover:scale-105" />
           </div>
           {hasDiscount && <span className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-black text-white" style={{ backgroundColor: store.accentColor }}>OFERTA</span>}
@@ -1000,6 +1020,155 @@ export default function StorefrontClient({
       {affiliateId && (
         <div className="fixed bottom-5 left-5 z-20 rounded-full bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 shadow-sm">
           Compra atribuida a un afiliado
+        </div>
+      )}
+
+      {selectedProduct && (
+        <div className="fixed inset-0 z-50">
+          <button type="button" className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedProduct(null)} />
+          <div className="absolute inset-x-0 bottom-0 max-h-[92vh] overflow-y-auto rounded-t-3xl bg-white shadow-2xl md:inset-0 md:m-auto md:max-h-[88vh] md:max-w-2xl md:rounded-3xl">
+            <button
+              type="button"
+              onClick={() => setSelectedProduct(null)}
+              className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow backdrop-blur-sm"
+            >
+              <X className="h-4 w-4 text-gray-700" />
+            </button>
+
+            {(() => {
+              const imgs = parseImages(selectedProduct.images);
+              return (
+                <div className="aspect-[4/3] overflow-hidden rounded-t-3xl bg-gray-100">
+                  {imgs[0] ? (
+                    <img src={imgs[0]} alt={selectedProduct.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <Package className="h-16 w-16 text-gray-200" />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            <div className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-xl font-black text-gray-950">{selectedProduct.name}</h2>
+                <button
+                  type="button"
+                  onClick={() => toggleFavorite(selectedProduct.id)}
+                  className="shrink-0 h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-red-50 transition-colors"
+                >
+                  <Heart className={`h-4 w-4 ${favoriteIds.has(selectedProduct.id) ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                </button>
+              </div>
+
+              {selectedProduct.description && (
+                <p className="mt-2 text-sm leading-relaxed text-gray-500">{selectedProduct.description}</p>
+              )}
+
+              {store.showPrices && (
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-2xl font-black" style={{ color: store.primaryColor }}>
+                    {money(selectedProduct.price, store.currency)}
+                  </span>
+                  {selectedProduct.comparePrice && selectedProduct.comparePrice > selectedProduct.price && (
+                    <span className="text-sm text-gray-400 line-through">{money(selectedProduct.comparePrice, store.currency)}</span>
+                  )}
+                </div>
+              )}
+
+              {selectedProduct.variants.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Variantes disponibles</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedProduct.variants.map((v) => (
+                      <span
+                        key={v.id}
+                        className={`rounded-full border px-3 py-1 text-sm ${
+                          v.stock > 0 ? "border-gray-200 text-gray-700" : "border-gray-100 text-gray-300 line-through"
+                        }`}
+                      >
+                        {v.value}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(() => {
+                const totalStock = selectedProduct.variants.reduce((s, v) => s + v.stock, 0);
+                const available = selectedProduct.variants.length === 0 || totalStock > 0;
+                return (
+                  <button
+                    type="button"
+                    disabled={!available}
+                    onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); }}
+                    className={`mt-5 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
+                    style={{ backgroundColor: store.primaryColor, color: textColor }}
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    {available ? "Agregar al carrito" : "Sin stock"}
+                  </button>
+                );
+              })()}
+            </div>
+
+            <div className="border-t border-gray-100 p-5 pb-8">
+              <h3 className="mb-4 font-bold text-gray-900">
+                Opiniones de compradores
+                {!reviewsLoading && reviewsTotal > 0 && (
+                  <span className="ml-2 text-sm font-normal text-gray-400">{reviewsTotal} reseña{reviewsTotal !== 1 ? "s" : ""}</span>
+                )}
+              </h3>
+
+              {reviewsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
+                </div>
+              ) : productReviews.length === 0 ? (
+                <p className="text-center text-sm text-gray-400 py-4">Todavía no hay reseñas para este producto.</p>
+              ) : (
+                <div className="space-y-1">
+                  {reviewsAvg > 0 && (
+                    <div className="mb-4 flex items-center gap-3 rounded-xl bg-gray-50 p-3">
+                      <span className="text-3xl font-black text-gray-950">{reviewsAvg.toFixed(1)}</span>
+                      <div>
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star key={s} className={`h-4 w-4 ${s <= Math.round(reviewsAvg) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
+                          ))}
+                        </div>
+                        <p className="mt-0.5 text-xs text-gray-400">{reviewsTotal} reseña{reviewsTotal !== 1 ? "s" : ""}</p>
+                      </div>
+                    </div>
+                  )}
+                  {productReviews.map((r) => (
+                    <div key={r.id} className="border-b border-gray-50 py-3 last:border-0">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-100">
+                          {r.user.image ? (
+                            <img src={r.user.image} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-xs font-bold text-indigo-600">{r.user.name?.[0]?.toUpperCase() ?? "?"}</span>
+                          )}
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">{r.user.name || "Comprador"}</span>
+                        <div className="ml-auto flex gap-0.5">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star key={s} className={`h-3 w-3 ${s <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
+                          ))}
+                        </div>
+                      </div>
+                      {r.comment && <p className="mt-1.5 ml-9 text-sm text-gray-600">{r.comment}</p>}
+                      <p className="mt-1 ml-9 text-xs text-gray-300">
+                        {new Date(r.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
