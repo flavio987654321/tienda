@@ -808,7 +808,7 @@ export default function ConfiguracionPage() {
   const hasCustomBlocks = blocks.length > 0 && !isStarterConfigBlocks(blocks);
 
   useEffect(() => {
-    if (activeTab !== "contenido" || !selectedBlockId) return;
+    if (activeTab !== "bloques" || !selectedBlockId) return;
     const viewport = previewScrollRef.current;
     if (!viewport) return;
     const target = viewport.querySelector<HTMLElement>(`[data-block-id="${selectedBlockId}"]`);
