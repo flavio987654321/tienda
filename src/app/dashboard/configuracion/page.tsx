@@ -889,6 +889,10 @@ export default function ConfiguracionPage() {
 
   return (
     <DashboardLayout>
+      <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&upload(e.target.files[0],"logo")}/>
+      <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&upload(e.target.files[0],"banner")}/>
+      <input ref={blockImageRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&uploadBlockImage(e.target.files[0])}/>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
@@ -1001,9 +1005,6 @@ export default function ConfiguracionPage() {
               </Accordion>
 
               <Accordion label="Imágenes" icon={ImageIcon} id="imagenes" open={open.includes("imagenes")} toggle={toggle}>
-                <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&upload(e.target.files[0],"logo")}/>
-                <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&upload(e.target.files[0],"banner")}/>
-                <input ref={blockImageRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&uploadBlockImage(e.target.files[0])}/>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-2">Logo</label>
                   <div className="flex items-center gap-3">
