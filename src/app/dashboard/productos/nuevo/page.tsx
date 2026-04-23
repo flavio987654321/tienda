@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
+import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import {
   Plus, Trash2, Loader2, ArrowLeft, ChevronLeft, ChevronRight,
   Upload, X, Star, ShoppingCart, Heart, Tag, Package,
@@ -186,6 +187,8 @@ function ProductoFormPage() {
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [uploadingImg, setUploadingImg] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     fetch("/api/configuracion")
@@ -255,35 +258,47 @@ function ProductoFormPage() {
         ) as Attribute[]);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "No se pudo cargar el producto"))
-      .finally(() => setLoadingProduct(false));
+      .finally(() => { setLoadingProduct(false); loadedRef.current = true; });
   }, [editingId, productCategories]);
+
+  // For new products (no editingId), mark as loaded immediately after mount
+  useEffect(() => { if (!editingId) loadedRef.current = true; }, [editingId]);
+
+  function markDirty() { if (loadedRef.current) setIsDirty(true); }
 
   function updateForm(field: string, value: string) {
     setForm((p) => ({ ...p, [field]: value }));
+    markDirty();
   }
 
   function updateVariant(idx: number, field: keyof Variant, value: string) {
     setVariants((p) => p.map((v, i) => (i === idx ? { ...v, [field]: value } : v)));
+    markDirty();
   }
 
   function addVariant() {
     setVariants((p) => [...p, { name: "Talle", value: "", stock: "0", price: "", sku: "" }]);
+    markDirty();
   }
 
   function removeVariant(idx: number) {
     setVariants((p) => p.filter((_, i) => i !== idx));
+    markDirty();
   }
 
   function addAttribute() {
     setAttributes((p) => [...p, { key: "", value: "" }]);
+    markDirty();
   }
 
   function updateAttribute(idx: number, field: keyof Attribute, value: string) {
     setAttributes((p) => p.map((a, i) => (i === idx ? { ...a, [field]: value } : a)));
+    markDirty();
   }
 
   function removeAttribute(idx: number) {
     setAttributes((p) => p.filter((_, i) => i !== idx));
+    markDirty();
   }
 
   async function uploadImages(files: File[]) {
@@ -322,6 +337,7 @@ function ProductoFormPage() {
         setCarouselIdx(next.length - urls.length);
         return next;
       });
+      markDirty();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudieron subir las imagenes");
     } finally {
@@ -399,6 +415,7 @@ function ProductoFormPage() {
       setError(data.error || "Error al guardar");
       setLoading(false);
     } else {
+      setIsDirty(false);
       router.push("/dashboard/productos");
     }
   }
@@ -1001,6 +1018,7 @@ function ProductoFormPage() {
           </div>
         </div>
       </div>
+      <UnsavedChangesGuard isDirty={isDirty} />
     </DashboardLayout>
   );
 }

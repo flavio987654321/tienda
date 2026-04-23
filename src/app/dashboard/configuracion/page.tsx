@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import DashboardLayout from "@/components/DashboardLayout";
 import StorePreview, { StoreConfig } from "@/components/StorePreview";
 import {
@@ -620,6 +621,8 @@ export default function ConfiguracionPage() {
   const logoRef   = useRef<HTMLInputElement>(null);
   const bannerRef = useRef<HTMLInputElement>(null);
   const [config, setConfig]       = useState<StoreConfig>(DEFAULT_CONFIG);
+  const [isDirty, setIsDirty]     = useState(false);
+  const loadedRef                 = useRef(false);
   const [storeSlug, setStoreSlug] = useState<string>("");
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [productSubcategories, setProductSubcategories] = useState<Record<string,string[]>>({});
@@ -673,10 +676,14 @@ export default function ConfiguracionPage() {
         } catch {}
       }
       setLoading(false);
+      loadedRef.current = true;
     });
   },[]);
 
-  const set = <K extends keyof StoreConfig>(k:K,v:StoreConfig[K]) => setConfig(p=>({...p,[k]:v}));
+  const set = <K extends keyof StoreConfig>(k:K,v:StoreConfig[K]) => {
+    setConfig(p=>({...p,[k]:v}));
+    if (loadedRef.current) setIsDirty(true);
+  };
   const toggle = (s:DesignSection) => setOpen(p=>p.includes(s)?p.filter(x=>x!==s):[...p,s]);
 
   async function upload(file:File, field:"logo"|"banner") {
@@ -698,6 +705,7 @@ export default function ConfiguracionPage() {
       });
       if (!res.ok) throw new Error("Error al guardar");
       setSaved(true);
+      setIsDirty(false);
       setTimeout(()=>setSaved(false),3000);
     } catch {
       alert("Hubo un error al guardar. Intentá de nuevo.");
@@ -712,14 +720,17 @@ export default function ConfiguracionPage() {
     const newBlock: Block = { id:`${type}-${Date.now()}`, type, props:{...lib.defaultProps} };
     setBlocks(p=>[...p,newBlock]);
     setSelectedBlockId(newBlock.id);
+    setIsDirty(true);
   }
 
   function updateBlock(id:string, props:Record<string,any>) {
     setBlocks(p=>p.map(b=>b.id===id?{...b,props}:b));
+    setIsDirty(true);
   }
 
   function deleteBlock(id:string) {
     setBlocks(p=>p.filter(b=>b.id!==id));
+    setIsDirty(true);
     if(selectedBlockId===id) setSelectedBlockId(null);
   }
 
@@ -730,6 +741,7 @@ export default function ConfiguracionPage() {
     const newB: Block = { ...orig, id:`${orig.type}-${Date.now()}` };
     setBlocks(p=>[...p.slice(0,idx+1),newB,...p.slice(idx+1)]);
     setSelectedBlockId(newB.id);
+    setIsDirty(true);
   }
 
   function moveBlock(id:string, dir:-1|1) {
@@ -738,6 +750,7 @@ export default function ConfiguracionPage() {
       const ni=idx+dir; if(ni<0||ni>=p.length) return p;
       const a=[...p]; [a[idx],a[ni]]=[a[ni],a[idx]]; return a;
     });
+    setIsDirty(true);
   }
 
   const previewW ={desktop:"w-full",tablet:"w-[420px]",mobile:"w-[280px]"}[preview];
@@ -1170,6 +1183,8 @@ export default function ConfiguracionPage() {
 
       {/* Block library modal */}
       {showBlockLibrary&&<BlockLibraryModal onAdd={addBlock} onClose={()=>setShowBlockLibrary(false)}/>}
+
+      <UnsavedChangesGuard isDirty={isDirty} />
     </DashboardLayout>
   );
 }
