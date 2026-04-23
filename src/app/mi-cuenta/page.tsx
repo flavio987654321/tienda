@@ -12,7 +12,7 @@ import {
   ChevronRight,
   MapPin,
   Phone,
-  Instagram,
+  AtSign,
   Edit2,
   Check,
   X,
@@ -219,7 +219,7 @@ export default function MiCuentaPage() {
               <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-gray-400">
                 {profile?.city && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{profile.city}</span>}
                 {profile?.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{profile.phone}</span>}
-                {profile?.instagramHandle && <span className="flex items-center gap-1"><Instagram className="h-3 w-3" />@{profile.instagramHandle.replace(/^@/, "")}</span>}
+                {profile?.instagramHandle && <span className="flex items-center gap-1"><AtSign className="h-3 w-3" />@{profile.instagramHandle.replace(/^@/, "")}</span>}
               </div>
             </div>
             <button
