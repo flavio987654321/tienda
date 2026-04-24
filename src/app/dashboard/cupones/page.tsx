@@ -176,6 +176,9 @@ export default function CuponesPage() {
                 />
               </div>
             </div>
+            <p className="mt-3 text-xs text-gray-400">
+              La imagen del cupÃ³n cambia automÃ¡ticamente segÃºn el tipo y la fuerza de la promociÃ³n.
+            </p>
             {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
             <div className="mt-4 flex gap-3">
               <button type="submit" disabled={saving}
