@@ -857,12 +857,17 @@ export default function StorefrontClient({
             const isRight = p.imagePosition === "right";
             const imageFit = String(p.imageFit || "cover") as "cover" | "contain";
             const imageFocus = String(p.imageFocus || "center");
+            const imageWidth = Math.min(70, Math.max(30, Number(p.imageWidth) || 50));
+            const imageHeight = Math.min(520, Math.max(180, Number(p.imageHeight) || 320));
             return (
               <div key={block.id} className={`mx-auto flex max-w-7xl flex-col ${isRight ? "md:flex-row-reverse" : "md:flex-row"} gap-8 items-center px-4 py-8 sm:px-6`} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
-                <div className="flex-1 rounded-3xl overflow-hidden min-h-64 flex items-center justify-center" style={{ backgroundColor: String(p.imageBgColor || "#f3f4f6") }}>
-                  {p.image ? <img src={p.image} alt="" className={`w-full h-full ${imageFit === "contain" ? "object-contain" : "object-cover"}`} style={{ minHeight: "260px", objectPosition: imageFocus }} /> : <Package className="h-12 w-12 text-gray-300" />}
+                <div
+                  className="w-full rounded-3xl overflow-hidden flex items-center justify-center md:w-auto"
+                  style={{ backgroundColor: String(p.imageBgColor || "#f3f4f6"), height: `${imageHeight}px`, flex: `0 0 ${imageWidth}%` }}
+                >
+                  {p.image ? <img src={p.image} alt="" className={`w-full h-full ${imageFit === "contain" ? "object-contain" : "object-cover"}`} style={{ objectPosition: imageFocus }} /> : <Package className="h-12 w-12 text-gray-300" />}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1" style={{ flexBasis: `${100 - imageWidth}%` }}>
                   {p.heading && <h2 className="font-black text-3xl mb-4" style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>}
                   {p.body && <p className="leading-relaxed" style={{ color: String(p.textColor || "#6b7280") }}>{p.body}</p>}
                 </div>

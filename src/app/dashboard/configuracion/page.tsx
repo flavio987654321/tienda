@@ -451,6 +451,22 @@ function BlockEditor({
     </div>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Posición de la imagen</label>
+      <div className="mb-3 space-y-3">
+        <div>
+          <div className="mb-1 flex items-center justify-between">
+            <label className="block text-xs font-medium text-gray-600">Ancho del cuadro de imagen</label>
+            <span className="text-xs font-semibold text-indigo-600">{p.imageWidth||50}%</span>
+          </div>
+          <input type="range" min="30" max="70" step="5" value={p.imageWidth||50} onChange={e=>upd("imageWidth",parseInt(e.target.value))} className="w-full accent-indigo-600"/>
+        </div>
+        <div>
+          <div className="mb-1 flex items-center justify-between">
+            <label className="block text-xs font-medium text-gray-600">Alto del cuadro de imagen</label>
+            <span className="text-xs font-semibold text-indigo-600">{p.imageHeight||320}px</span>
+          </div>
+          <input type="range" min="180" max="520" step="20" value={p.imageHeight||320} onChange={e=>upd("imageHeight",parseInt(e.target.value))} className="w-full accent-indigo-600"/>
+        </div>
+      </div>
       <div className="flex gap-2">
         {[["left","Izquierda"],["right","Derecha"]].map(([v,l])=>(
           <button key={v} onClick={()=>upd("imagePosition",v)} className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${p.imagePosition===v?"border-indigo-500 bg-indigo-50 text-indigo-700":"border-gray-200 text-gray-500 hover:border-gray-300"}`}>{l}</button>
@@ -661,12 +677,14 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const imageBg = p.imageBgColor || "#f3f4f6";
       const imageFit = p.imageFit || "cover";
       const imageFocus = p.imageFocus || "center";
+      const imageWidth = Math.min(70, Math.max(30, Number(p.imageWidth) || 50));
+      const imageHeight = Math.min(520, Math.max(180, Number(p.imageHeight) || 320));
       return (
         <div style={{display:"flex",flexDirection:isRight?"row-reverse":"row",padding:"24px",gap:"20px",fontFamily:c.fontFamily,background:blockBg}}>
-          <div style={{flex:1,background:imageBg,borderRadius:"12px",minHeight:"120px",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+          <div style={{flex:`0 0 ${imageWidth}%`,background:imageBg,borderRadius:"12px",height:`${imageHeight}px`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
             {p.image?<img src={p.image} alt="" style={{width:"100%",height:"100%",objectFit:imageFit,objectPosition:imageFocus}}/>:<span style={{opacity:0.3,fontSize:"24px"}}>🖼️</span>}
           </div>
-          <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center"}}>
+          <div style={{flex:`1 1 ${100-imageWidth}%`,display:"flex",flexDirection:"column",justifyContent:"center"}}>
             {p.heading&&<h3 style={{fontSize:"16px",fontWeight:800,color:blockColor,marginBottom:"8px"}}>{p.heading}</h3>}
             {p.body&&<p style={{fontSize:"12px",color:textColor,lineHeight:1.7}}>{p.body}</p>}
           </div>
