@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const SOCIAL_ICONS: Record<string, { path: string; color: string; gradient?: string }> = {
   instagram: { path: "M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z", color: "#E1306C", gradient: "linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" },
@@ -246,6 +246,8 @@ export default function StorefrontClient({
   initialFavoriteIds?: string[];
 }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [imgIndex, setImgIndex] = useState(0);
+  const touchStartX = useRef(0);
   const [productReviews, setProductReviews] = useState<{ id: string; rating: number; comment: string | null; createdAt: string; user: { name: string | null; image: string | null } }[]>([]);
   const [reviewsAvg, setReviewsAvg] = useState(0);
   const [reviewsTotal, setReviewsTotal] = useState(0);
@@ -311,6 +313,10 @@ export default function StorefrontClient({
   const cardShadow = SHADOW[store.cardShadow] ?? SHADOW.sm;
   const buttonRadius = buttonClass(store.buttonStyle);
   const productGrid = GRID[store.productLayout] ?? GRID.grid3;
+  useEffect(() => {
+    setImgIndex(0);
+  }, [selectedProduct?.id]);
+
   useEffect(() => {
     if (!selectedProduct) return;
     setReviewsLoading(true);
@@ -1023,82 +1029,129 @@ export default function StorefrontClient({
         </div>
       )}
 
-      {selectedProduct && (
-        <div className="fixed inset-0 z-50">
-          <button type="button" className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedProduct(null)} />
-          <div className="absolute inset-x-0 bottom-0 max-h-[92vh] overflow-y-auto rounded-t-3xl bg-white shadow-2xl md:inset-0 md:m-auto md:max-h-[88vh] md:max-w-2xl md:rounded-3xl">
-            <button
-              type="button"
-              onClick={() => setSelectedProduct(null)}
-              className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow backdrop-blur-sm"
-            >
-              <X className="h-4 w-4 text-gray-700" />
-            </button>
+      {selectedProduct && (() => {
+        const imgs = parseImages(selectedProduct.images);
+        const hasMany = imgs.length > 1;
+        const clampedIdx = Math.min(imgIndex, imgs.length - 1);
+        const totalStock = selectedProduct.variants.reduce((s, v) => s + v.stock, 0);
+        const available = selectedProduct.variants.length === 0 || totalStock > 0;
+        return (
+          <div className="fixed inset-0 z-50">
+            <button type="button" className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedProduct(null)} />
+            {/* Shell: overflow-hidden clips corners, flex-col splits image from body */}
+            <div className="absolute inset-x-0 bottom-0 flex max-h-[92vh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl md:inset-0 md:m-auto md:max-h-[88vh] md:max-w-2xl md:rounded-3xl">
 
-            {(() => {
-              const imgs = parseImages(selectedProduct.images);
-              return (
-                <div className="aspect-[4/3] overflow-hidden rounded-t-3xl bg-gray-100">
-                  {imgs[0] ? (
-                    <img src={imgs[0]} alt={selectedProduct.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <Package className="h-16 w-16 text-gray-200" />
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+              {/* Close button – always visible, outside scroll */}
+              <button
+                type="button"
+                onClick={() => setSelectedProduct(null)}
+                className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow backdrop-blur-sm"
+              >
+                <X className="h-4 w-4 text-gray-700" />
+              </button>
 
-            <div className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="text-xl font-black text-gray-950">{selectedProduct.name}</h2>
-                <button
-                  type="button"
-                  onClick={() => toggleFavorite(selectedProduct.id)}
-                  className="shrink-0 h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-red-50 transition-colors"
-                >
-                  <Heart className={`h-4 w-4 ${favoriteIds.has(selectedProduct.id) ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
-                </button>
-              </div>
+              {/* Image gallery – not scrollable */}
+              <div
+                className="relative aspect-[4/3] w-full shrink-0 bg-gray-100"
+                onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+                onTouchEnd={(e) => {
+                  const diff = touchStartX.current - e.changedTouches[0].clientX;
+                  if (Math.abs(diff) > 40) {
+                    if (diff > 0) setImgIndex((i) => Math.min(i + 1, imgs.length - 1));
+                    else setImgIndex((i) => Math.max(i - 1, 0));
+                  }
+                }}
+              >
+                {imgs.length > 0 ? (
+                  <img src={imgs[clampedIdx]} alt={selectedProduct.name} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Package className="h-16 w-16 text-gray-200" />
+                  </div>
+                )}
 
-              {selectedProduct.description && (
-                <p className="mt-2 text-sm leading-relaxed text-gray-500">{selectedProduct.description}</p>
-              )}
+                {/* Prev / Next arrows */}
+                {hasMany && clampedIdx > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setImgIndex((i) => i - 1)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow backdrop-blur-sm"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4 w-4 text-gray-700"><path d="M15 18l-6-6 6-6"/></svg>
+                  </button>
+                )}
+                {hasMany && clampedIdx < imgs.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setImgIndex((i) => i + 1)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow backdrop-blur-sm"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4 w-4 text-gray-700"><path d="M9 18l6-6-6-6"/></svg>
+                  </button>
+                )}
 
-              {store.showPrices && (
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="text-2xl font-black" style={{ color: store.primaryColor }}>
-                    {money(selectedProduct.price, store.currency)}
-                  </span>
-                  {selectedProduct.comparePrice && selectedProduct.comparePrice > selectedProduct.price && (
-                    <span className="text-sm text-gray-400 line-through">{money(selectedProduct.comparePrice, store.currency)}</span>
-                  )}
-                </div>
-              )}
-
-              {selectedProduct.variants.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Variantes disponibles</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedProduct.variants.map((v) => (
-                      <span
-                        key={v.id}
-                        className={`rounded-full border px-3 py-1 text-sm ${
-                          v.stock > 0 ? "border-gray-200 text-gray-700" : "border-gray-100 text-gray-300 line-through"
-                        }`}
-                      >
-                        {v.value}
-                      </span>
+                {/* Dot indicators */}
+                {hasMany && (
+                  <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
+                    {imgs.map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setImgIndex(i)}
+                        className={`h-1.5 rounded-full transition-all ${i === clampedIdx ? "w-4 bg-white" : "w-1.5 bg-white/50"}`}
+                      />
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              {(() => {
-                const totalStock = selectedProduct.variants.reduce((s, v) => s + v.stock, 0);
-                const available = selectedProduct.variants.length === 0 || totalStock > 0;
-                return (
+              {/* Scrollable body */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <h2 className="text-xl font-black text-gray-950">{selectedProduct.name}</h2>
+                    <button
+                      type="button"
+                      onClick={() => toggleFavorite(selectedProduct.id)}
+                      className="shrink-0 h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-red-50 transition-colors"
+                    >
+                      <Heart className={`h-4 w-4 ${favoriteIds.has(selectedProduct.id) ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                    </button>
+                  </div>
+
+                  {selectedProduct.description && (
+                    <p className="mt-2 text-sm leading-relaxed text-gray-500">{selectedProduct.description}</p>
+                  )}
+
+                  {store.showPrices && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="text-2xl font-black" style={{ color: store.primaryColor }}>
+                        {money(selectedProduct.price, store.currency)}
+                      </span>
+                      {selectedProduct.comparePrice && selectedProduct.comparePrice > selectedProduct.price && (
+                        <span className="text-sm text-gray-400 line-through">{money(selectedProduct.comparePrice, store.currency)}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {selectedProduct.variants.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Variantes disponibles</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedProduct.variants.map((v) => (
+                          <span
+                            key={v.id}
+                            className={`rounded-full border px-3 py-1 text-sm ${
+                              v.stock > 0 ? "border-gray-200 text-gray-700" : "border-gray-100 text-gray-300 line-through"
+                            }`}
+                          >
+                            {v.value}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     disabled={!available}
@@ -1109,68 +1162,68 @@ export default function StorefrontClient({
                     <ShoppingBag className="h-4 w-4" />
                     {available ? "Agregar al carrito" : "Sin stock"}
                   </button>
-                );
-              })()}
-            </div>
-
-            <div className="border-t border-gray-100 p-5 pb-8">
-              <h3 className="mb-4 font-bold text-gray-900">
-                Opiniones de compradores
-                {!reviewsLoading && reviewsTotal > 0 && (
-                  <span className="ml-2 text-sm font-normal text-gray-400">{reviewsTotal} reseña{reviewsTotal !== 1 ? "s" : ""}</span>
-                )}
-              </h3>
-
-              {reviewsLoading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
                 </div>
-              ) : productReviews.length === 0 ? (
-                <p className="text-center text-sm text-gray-400 py-4">Todavía no hay reseñas para este producto.</p>
-              ) : (
-                <div className="space-y-1">
-                  {reviewsAvg > 0 && (
-                    <div className="mb-4 flex items-center gap-3 rounded-xl bg-gray-50 p-3">
-                      <span className="text-3xl font-black text-gray-950">{reviewsAvg.toFixed(1)}</span>
-                      <div>
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star key={s} className={`h-4 w-4 ${s <= Math.round(reviewsAvg) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
-                          ))}
+
+                <div className="border-t border-gray-100 p-5 pb-8">
+                  <h3 className="mb-4 font-bold text-gray-900">
+                    Opiniones de compradores
+                    {!reviewsLoading && reviewsTotal > 0 && (
+                      <span className="ml-2 text-sm font-normal text-gray-400">{reviewsTotal} reseña{reviewsTotal !== 1 ? "s" : ""}</span>
+                    )}
+                  </h3>
+
+                  {reviewsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
+                    </div>
+                  ) : productReviews.length === 0 ? (
+                    <p className="text-center text-sm text-gray-400 py-4">Todavía no hay reseñas para este producto.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {reviewsAvg > 0 && (
+                        <div className="mb-4 flex items-center gap-3 rounded-xl bg-gray-50 p-3">
+                          <span className="text-3xl font-black text-gray-950">{reviewsAvg.toFixed(1)}</span>
+                          <div>
+                            <div className="flex gap-0.5">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star key={s} className={`h-4 w-4 ${s <= Math.round(reviewsAvg) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
+                              ))}
+                            </div>
+                            <p className="mt-0.5 text-xs text-gray-400">{reviewsTotal} reseña{reviewsTotal !== 1 ? "s" : ""}</p>
+                          </div>
                         </div>
-                        <p className="mt-0.5 text-xs text-gray-400">{reviewsTotal} reseña{reviewsTotal !== 1 ? "s" : ""}</p>
-                      </div>
+                      )}
+                      {productReviews.map((r) => (
+                        <div key={r.id} className="border-b border-gray-50 py-3 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-100">
+                              {r.user.image ? (
+                                <img src={r.user.image} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                <span className="text-xs font-bold text-indigo-600">{r.user.name?.[0]?.toUpperCase() ?? "?"}</span>
+                              )}
+                            </div>
+                            <span className="text-sm font-semibold text-gray-900">{r.user.name || "Comprador"}</span>
+                            <div className="ml-auto flex gap-0.5">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star key={s} className={`h-3 w-3 ${s <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
+                              ))}
+                            </div>
+                          </div>
+                          {r.comment && <p className="mt-1.5 ml-9 text-sm text-gray-600">{r.comment}</p>}
+                          <p className="mt-1 ml-9 text-xs text-gray-300">
+                            {new Date(r.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   )}
-                  {productReviews.map((r) => (
-                    <div key={r.id} className="border-b border-gray-50 py-3 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-100">
-                          {r.user.image ? (
-                            <img src={r.user.image} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            <span className="text-xs font-bold text-indigo-600">{r.user.name?.[0]?.toUpperCase() ?? "?"}</span>
-                          )}
-                        </div>
-                        <span className="text-sm font-semibold text-gray-900">{r.user.name || "Comprador"}</span>
-                        <div className="ml-auto flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star key={s} className={`h-3 w-3 ${s <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
-                          ))}
-                        </div>
-                      </div>
-                      {r.comment && <p className="mt-1.5 ml-9 text-sm text-gray-600">{r.comment}</p>}
-                      <p className="mt-1 ml-9 text-xs text-gray-300">
-                        {new Date(r.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
-                      </p>
-                    </div>
-                  ))}
                 </div>
-              )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {openCart && (
         <div className="fixed inset-0 z-40">
