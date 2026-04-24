@@ -163,7 +163,7 @@ export default async function MetricasPage() {
 
   return (
     <DashboardLayout userName={user.name} userEmail={user.email}>
-      <div className="max-w-5xl">
+      <div className="mx-auto w-full max-w-6xl">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Métricas</h1>
           <p className="mt-1 text-sm text-gray-500">Resumen de rendimiento de <strong>{store.name}</strong></p>
