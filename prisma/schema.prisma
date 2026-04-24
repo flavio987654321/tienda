@@ -116,6 +116,7 @@ model Store {
   products   Product[]
   orders     Order[]
   affiliates Affiliate[]
+  coupons    Coupon[]
 }
 
 model Product {
@@ -160,6 +161,8 @@ model Order {
   id              String   @id @default(cuid())
   status          String   @default("PENDING")
   total           Float
+  subtotal        Float    @default(0)
+  discountAmount  Float    @default(0)
   shippingCost    Float    @default(0)
   shippingMethod  String?
   trackingCode    String?
@@ -176,6 +179,9 @@ model Order {
 
   affiliateId String?
   affiliate   Affiliate? @relation(fields: [affiliateId], references: [id])
+
+  couponId String?
+  coupon   Coupon? @relation(fields: [couponId], references: [id])
 
   items      OrderItem[]
   payment    Payment?
@@ -319,6 +325,26 @@ model Review {
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
+}
+
+model Coupon {
+  id             String   @id @default(cuid())
+  code           String
+  discountType   String   @default("percentage")
+  discountValue  Float
+  minOrderAmount Float    @default(0)
+  maxUses        Int?
+  usedCount      Int      @default(0)
+  expiresAt      DateTime?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  orders Order[]
+
+  @@unique([storeId, code])
 }
 
 model WalletWithdrawal {

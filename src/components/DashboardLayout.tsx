@@ -3,14 +3,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut } from "lucide-react";
+import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 
 const navItems = [
   { href: "/dashboard", label: "Inicio", icon: TrendingUp },
+  { href: "/dashboard/metricas", label: "Métricas", icon: BarChart2 },
   { href: "/dashboard/productos", label: "Productos", icon: Package },
   { href: "/dashboard/pedidos", label: "Pedidos", icon: ShoppingBag },
   { href: "/dashboard/vendedoras", label: "Afiliados", icon: Users },
+  { href: "/dashboard/cupones", label: "Cupones", icon: Tag },
   { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store },
 ];
 
@@ -31,6 +33,7 @@ export default function DashboardLayout({
   const { signOut } = useAuth();
   const [pendingAffiliateCount, setPendingAffiliateCount] = useState(initialPendingAffiliateCount);
   const [lowStockCount, setLowStockCount] = useState(initialLowStockCount);
+  const [pendingOrderCount, setPendingOrderCount] = useState(0);
 
   useEffect(() => {
     setPendingAffiliateCount(initialPendingAffiliateCount);
@@ -52,6 +55,13 @@ export default function DashboardLayout({
         setPendingAffiliateCount(pendingCount);
       })
       .catch(() => setPendingAffiliateCount(0));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/pedidos")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setPendingOrderCount(data?.pendingCount ?? 0))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -84,6 +94,7 @@ export default function DashboardLayout({
             const active = pathname === href;
             const showAffiliateBadge = href === "/dashboard/vendedoras" && pendingAffiliateCount > 0;
             const showStockBadge = href === "/dashboard/productos" && lowStockCount > 0;
+            const showOrderBadge = href === "/dashboard/pedidos" && pendingOrderCount > 0;
             return (
               <Link
                 key={href}
@@ -104,6 +115,11 @@ export default function DashboardLayout({
                 {showStockBadge && (
                   <span className="min-w-5 rounded-full bg-orange-500 px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white">
                     {lowStockCount > 9 ? "9+" : lowStockCount}
+                  </span>
+                )}
+                {showOrderBadge && (
+                  <span className="min-w-5 rounded-full bg-yellow-500 px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white">
+                    {pendingOrderCount > 9 ? "9+" : pendingOrderCount}
                   </span>
                 )}
               </Link>

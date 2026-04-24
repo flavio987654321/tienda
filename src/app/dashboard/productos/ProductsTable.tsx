@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Edit, Eye, EyeOff, Package, Search, X } from "lucide-react";
+import { Edit, Eye, EyeOff, Package, Search, X, Percent, ChevronDown } from "lucide-react";
 
 interface Variant {
   id: string;
@@ -25,11 +25,18 @@ interface Props {
   products: Product[];
 }
 
-export default function ProductsTable({ products }: Props) {
+export default function ProductsTable({ products: initialProducts }: Props) {
+  const [products, setProducts] = useState(initialProducts);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkCategory, setBulkCategory] = useState("all");
+  const [bulkPct, setBulkPct] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkError, setBulkError] = useState("");
+  const [bulkSuccess, setBulkSuccess] = useState("");
 
   const categories = useMemo(
     () => Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort(),
@@ -58,6 +65,37 @@ export default function ProductsTable({ products }: Props) {
     setCategoryFilter("all");
     setStatusFilter("all");
     setStockFilter("all");
+  }
+
+  const bulkAffected = products.filter((p) => bulkCategory === "all" || p.category === bulkCategory).length;
+
+  async function applyBulkPrice() {
+    const pct = parseFloat(bulkPct);
+    if (isNaN(pct) || pct === 0) { setBulkError("Ingresá un porcentaje válido distinto de 0"); return; }
+    const label = pct > 0 ? `+${pct}%` : `${pct}%`;
+    if (!confirm(`¿Actualizar precios de ${bulkAffected} producto${bulkAffected !== 1 ? "s" : ""} en ${label}? Esta acción no se puede deshacer.`)) return;
+    setBulkLoading(true);
+    setBulkError("");
+    setBulkSuccess("");
+    const res = await fetch("/api/productos/bulk-precio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ percentage: pct, category: bulkCategory }),
+    });
+    const data = await res.json();
+    setBulkLoading(false);
+    if (!res.ok) { setBulkError(data.error || "Error al actualizar precios"); return; }
+    setBulkSuccess(`${data.updated} producto${data.updated !== 1 ? "s" : ""} actualizados correctamente`);
+    setBulkPct("");
+    const factor = 1 + pct / 100;
+    setProducts((prev) => prev.map((p) => {
+      if (bulkCategory !== "all" && p.category !== bulkCategory) return p;
+      return {
+        ...p,
+        price: Math.max(1, Math.round(p.price * factor)),
+        comparePrice: p.comparePrice ? Math.max(1, Math.round(p.comparePrice * factor)) : null,
+      };
+    }));
   }
 
   return (
@@ -123,6 +161,63 @@ export default function ProductsTable({ products }: Props) {
             <X className="h-3.5 w-3.5" />
             Limpiar
           </button>
+        )}
+      </div>
+
+      {/* Bulk price update */}
+      <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
+        <button
+          type="button"
+          onClick={() => { setShowBulk((v) => !v); setBulkError(""); setBulkSuccess(""); }}
+          className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <Percent className="h-4 w-4 text-indigo-500" />
+          Actualizar precios en masa
+          <ChevronDown className={`ml-auto h-4 w-4 text-gray-400 transition-transform ${showBulk ? "rotate-180" : ""}`} />
+        </button>
+        {showBulk && (
+          <div className="border-t border-gray-100 px-4 py-4 space-y-3">
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="flex-1 min-w-40">
+                <label className="mb-1 block text-xs font-semibold text-gray-500">Categoría</label>
+                <select
+                  value={bulkCategory}
+                  onChange={(e) => setBulkCategory(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="all">Todos los productos ({products.length})</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)} ({products.filter((p) => p.category === c).length})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-44">
+                <label className="mb-1 block text-xs font-semibold text-gray-500">Porcentaje (ej: 20 o -15)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={bulkPct}
+                    onChange={(e) => { setBulkPct(e.target.value); setBulkError(""); setBulkSuccess(""); }}
+                    placeholder="ej: 20"
+                    min={-99}
+                    max={1000}
+                    className="w-full rounded-xl border border-gray-200 pl-3 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={applyBulkPrice}
+                disabled={bulkLoading || !bulkPct}
+                className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {bulkLoading ? "Aplicando..." : `Aplicar a ${bulkAffected} producto${bulkAffected !== 1 ? "s" : ""}`}
+              </button>
+            </div>
+            {bulkError && <p className="text-xs text-red-500">{bulkError}</p>}
+            {bulkSuccess && <p className="text-xs text-green-600 font-semibold">{bulkSuccess}</p>}
+          </div>
         )}
       </div>
 

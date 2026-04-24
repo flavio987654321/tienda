@@ -10,6 +10,7 @@ type CheckoutItem = {
 type CheckoutBody = {
   storeId: string;
   affiliateId?: string | null;
+  couponId?: string | null;
   items: CheckoutItem[];
   customer: {
     name: string;
@@ -33,7 +34,7 @@ const SHIPPING_COSTS: Record<string, { label: string; cost: number }> = {
 
 export async function POST(req: NextRequest) {
   const body = (await req.json()) as CheckoutBody;
-  const { storeId, affiliateId, items, customer, shippingMethod, paymentProvider } = body;
+  const { storeId, affiliateId, couponId, items, customer, shippingMethod, paymentProvider } = body;
 
   if (!storeId || !items?.length) {
     return NextResponse.json({ error: "El carrito esta vacio" }, { status: 400 });
@@ -103,7 +104,28 @@ export async function POST(req: NextRequest) {
       });
 
       const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      const total = subtotal + shipping.cost;
+
+      let discountAmount = 0;
+      let validCouponId: string | null = null;
+      if (couponId) {
+        const coupon = await tx.coupon.findFirst({
+          where: { id: couponId, storeId, isActive: true },
+        });
+        if (coupon) {
+          const now = new Date();
+          const expired = coupon.expiresAt && coupon.expiresAt < now;
+          const exhausted = coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses;
+          if (!expired && !exhausted && subtotal >= coupon.minOrderAmount) {
+            discountAmount = coupon.discountType === "percentage"
+              ? Math.round((subtotal * coupon.discountValue) / 100)
+              : Math.min(coupon.discountValue, subtotal);
+            validCouponId = coupon.id;
+            await tx.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } });
+          }
+        }
+      }
+
+      const total = subtotal - discountAmount + shipping.cost;
 
       const buyer = await tx.user.upsert({
         where: { email: emailNorm },
@@ -115,6 +137,9 @@ export async function POST(req: NextRequest) {
         data: {
           status: "PENDING",
           total,
+          subtotal,
+          discountAmount,
+          couponId: validCouponId,
           shippingCost: shipping.cost,
           shippingMethod: shipping.label,
           notes: customer.notes || null,

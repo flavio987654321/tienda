@@ -282,6 +282,10 @@ export default function StorefrontClient({
   const [checkoutError, setCheckoutError] = useState("");
   const [successOrderId, setSuccessOrderId] = useState("");
   const [highlightProductId, setHighlightProductId] = useState<string | null>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount: number } | null>(null);
 
   const categories = useMemo(() => [...new Set(store.products.map((p) => p.category).filter(Boolean))], [store.products]);
   const subcategories = useMemo(
@@ -302,7 +306,8 @@ export default function StorefrontClient({
   });
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = SHIPPING_OPTIONS.find((option) => option.id === shippingMethod) ?? SHIPPING_OPTIONS[0];
-  const total = subtotal + shipping.cost;
+  const couponDiscount = appliedCoupon ? Math.min(appliedCoupon.discount, subtotal) : 0;
+  const total = subtotal - couponDiscount + shipping.cost;
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const firstProducts = store.products.slice(0, 3).map((product) => ({ product, image: parseImages(product.images)[0] ?? null }));
@@ -480,6 +485,23 @@ export default function StorefrontClient({
     );
   }
 
+  async function applyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponLoading(true);
+    setCouponError("");
+    const res = await fetch("/api/cupones/validar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, storeId: store.id, subtotal }),
+    });
+    const data = await res.json();
+    setCouponLoading(false);
+    if (!res.ok) { setCouponError(data.error || "Cupón inválido"); return; }
+    setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discount: data.discount });
+    setCouponInput("");
+  }
+
   async function submitCheckout(e: React.FormEvent) {
     e.preventDefault();
     if (!cart.length) return;
@@ -494,6 +516,7 @@ export default function StorefrontClient({
       body: JSON.stringify({
         storeId: store.id,
         affiliateId,
+        couponId: appliedCoupon?.id ?? null,
         items: cart.map((item) => ({
           productId: item.productId,
           variantId: item.variantId,
@@ -515,6 +538,8 @@ export default function StorefrontClient({
 
     setSuccessOrderId(data.order.id);
     setCart([]);
+    setAppliedCoupon(null);
+    setCouponInput("");
   }
 
   function renderHero() {
@@ -1374,8 +1399,39 @@ export default function StorefrontClient({
 
                   <textarea value={customer.notes} onChange={(e) => updateCustomer("notes", e.target.value)} placeholder="Notas para la tienda" rows={3} className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
 
+                  {/* Cupón */}
+                  {appliedCoupon ? (
+                    <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm">
+                      <span className="font-semibold text-green-700">Cupón <code className="font-black">{appliedCoupon.code}</code> aplicado</span>
+                      <button type="button" onClick={() => setAppliedCoupon(null)} className="text-xs text-green-600 underline hover:text-green-800">Quitar</button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={couponInput}
+                          onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(""); }}
+                          placeholder="Código de cupón"
+                          maxLength={20}
+                          className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-mono uppercase outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={applyCoupon}
+                          disabled={couponLoading || !couponInput.trim()}
+                          className="rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                        >
+                          {couponLoading ? "..." : "Aplicar"}
+                        </button>
+                      </div>
+                      {couponError && <p className="text-xs text-red-500">{couponError}</p>}
+                    </div>
+                  )}
+
                   <div className="rounded-2xl bg-gray-50 p-4 text-sm">
                     <div className="flex justify-between"><span>Subtotal</span><strong>{money(subtotal, store.currency)}</strong></div>
+                    {couponDiscount > 0 && <div className="mt-1 flex justify-between text-green-600"><span>Descuento</span><strong>-{money(couponDiscount, store.currency)}</strong></div>}
                     <div className="mt-1 flex justify-between"><span>Envio</span><strong>{shipping.cost ? money(shipping.cost, store.currency) : "Gratis"}</strong></div>
                     <div className="mt-3 flex justify-between border-t border-gray-200 pt-3 text-base"><span>Total</span><strong>{money(total, store.currency)}</strong></div>
                   </div>
