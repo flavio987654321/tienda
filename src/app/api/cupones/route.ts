@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { isValidCouponCode, normalizeCouponCode } from "@/lib/coupons";
 
 // GET - listar cupones de la tienda
 export async function GET() {
@@ -29,11 +30,11 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { code, discountType, discountValue, minOrderAmount, maxUses, expiresAt } = body;
 
-  const codeClean = String(code || "").trim().toUpperCase();
+  const codeClean = normalizeCouponCode(code);
   if (!codeClean || codeClean.length < 3 || codeClean.length > 20) {
     return NextResponse.json({ error: "El código debe tener entre 3 y 20 caracteres" }, { status: 400 });
   }
-  if (!/^[A-Z0-9_-]+$/.test(codeClean)) {
+  if (!isValidCouponCode(codeClean)) {
     return NextResponse.json({ error: "El código solo puede tener letras, números, guiones y guiones bajos" }, { status: 400 });
   }
   if (!["percentage", "fixed"].includes(discountType)) {

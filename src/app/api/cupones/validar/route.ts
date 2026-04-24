@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizeCouponCode } from "@/lib/coupons";
 
 // POST - validar un código de cupón antes del checkout
 export async function POST(req: NextRequest) {
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
   }
 
   const coupon = await prisma.coupon.findUnique({
-    where: { storeId_code: { storeId, code: String(code).trim().toUpperCase() } },
+    where: { storeId_code: { storeId, code: normalizeCouponCode(code) } },
   });
 
   if (!coupon || !coupon.isActive) {

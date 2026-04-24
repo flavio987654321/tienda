@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Plus, Trash2, ToggleLeft, ToggleRight, Tag, Copy, Check, Download, Eye } from "lucide-react";
+import { normalizeCouponCode } from "@/lib/coupons";
 
 type Coupon = {
   id: string;
@@ -111,11 +112,11 @@ export default function CuponesPage() {
                 <label className="mb-1 block text-xs font-semibold text-gray-500">Código</label>
                 <input
                   value={form.code}
-                  onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                  placeholder="VERANO20"
+                  onChange={(e) => setForm({ ...form, code: normalizeCouponCode(e.target.value) })}
+                  placeholder="OTOÑO 20%"
                   required
                   maxLength={20}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-mono uppercase outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-indigo-400"
                 />
               </div>
               <div>
@@ -228,7 +229,8 @@ export default function CuponesPage() {
                       </div>
                       <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-400">
                         {c.minOrderAmount > 0 && <span>Mínimo ${c.minOrderAmount.toLocaleString("es-AR")}</span>}
-                        <span>{c.usedCount} uso{c.usedCount !== 1 ? "s" : ""}{c.maxUses ? ` / ${c.maxUses}` : ""}</span>
+                        <span>Usado {c.usedCount} vez{c.usedCount !== 1 ? "es" : ""}</span>
+                        {c.maxUses !== null && <span>{Math.max(0, c.maxUses - c.usedCount)} restante{Math.max(0, c.maxUses - c.usedCount) !== 1 ? "s" : ""}</span>}
                         {c.expiresAt && <span>Vence {new Date(c.expiresAt).toLocaleDateString("es-AR")}</span>}
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">

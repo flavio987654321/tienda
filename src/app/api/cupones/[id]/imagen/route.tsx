@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
+import { getCouponVisualSeed } from "@/lib/coupons";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -25,10 +26,13 @@ function safeColor(value: string | null | undefined, fallback: string) {
     : fallback;
 }
 
-function getTemplate(coupon: { discountType: string; discountValue: number }) {
-  if (coupon.discountType === "fixed") return "minimal";
-  if (coupon.discountValue >= 30) return "spotlight";
-  return "modern";
+function getTemplate(coupon: { code: string; discountType: string; discountValue: number }) {
+  const variants = coupon.discountType === "fixed"
+    ? ["minimal", "modern"]
+    : coupon.discountValue >= 30
+      ? ["spotlight", "modern", "minimal"]
+      : ["modern", "minimal", "spotlight"];
+  return variants[getCouponVisualSeed(coupon.code) % variants.length];
 }
 
 function renderModern(args: {
