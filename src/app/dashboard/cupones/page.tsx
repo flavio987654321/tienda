@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Trash2, ToggleLeft, ToggleRight, Tag, Copy, Check } from "lucide-react";
+import { Plus, Trash2, ToggleLeft, ToggleRight, Tag, Copy, Check, Download, Eye } from "lucide-react";
 
 type Coupon = {
   id: string;
@@ -227,6 +227,26 @@ export default function CuponesPage() {
                         {c.minOrderAmount > 0 && <span>Mínimo ${c.minOrderAmount.toLocaleString("es-AR")}</span>}
                         <span>{c.usedCount} uso{c.usedCount !== 1 ? "s" : ""}{c.maxUses ? ` / ${c.maxUses}` : ""}</span>
                         {c.expiresAt && <span>Vence {new Date(c.expiresAt).toLocaleDateString("es-AR")}</span>}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <a
+                          href={`/api/cupones/${c.id}/imagen`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          Ver imagen
+                        </a>
+                        <a
+                          href={`/api/cupones/${c.id}/imagen?download=1`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Descargar
+                        </a>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
