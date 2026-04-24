@@ -1049,7 +1049,7 @@ export default function StorefrontClient({
             }}
           >
             {imgs.length > 0 ? (
-              <img src={imgs[clampedIdx]} alt={selectedProduct.name} className="h-full w-full object-cover" />
+              <img src={imgs[clampedIdx]} alt={selectedProduct.name} className="h-full w-full object-contain" />
             ) : (
               <div className="flex h-full w-full items-center justify-center">
                 <Package className="h-16 w-16 text-gray-200" />
