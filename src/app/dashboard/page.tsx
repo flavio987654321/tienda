@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import { getCurrentUser } from "@/lib/auth-session";
+import DashboardLayout from "@/components/DashboardLayout";
 import {
   ShoppingBag, Package, Users, TrendingUp,
   Plus, Store, ArrowRight, Share2, Star
@@ -37,6 +38,16 @@ export default async function DashboardPage() {
   const pendingAffiliateCount = store
     ? await prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } })
     : 0;
+  const initialLowStockCount = store
+    ? await prisma.product.count({
+        where: {
+          storeId: store.id,
+          variants: {
+            every: { stock: 0 },
+          },
+        },
+      })
+    : 0;
 
   const recentReviews = store
     ? await prisma.review.findMany({
@@ -51,48 +62,13 @@ export default async function DashboardPage() {
     : [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-100 p-6 flex flex-col">
-        <div className="flex items-center gap-2 mb-8">
-          <ShoppingBag className="h-7 w-7 text-indigo-600" />
-          <span className="text-xl font-bold text-gray-900">MiTienda</span>
-        </div>
-
-        <nav className="space-y-1 flex-1">
-          {[
-            { href: "/dashboard", label: "Inicio", icon: TrendingUp },
-            { href: "/dashboard/productos", label: "Productos", icon: Package },
-            { href: "/dashboard/pedidos", label: "Pedidos", icon: ShoppingBag },
-            { href: "/dashboard/vendedoras", label: "Afiliados", icon: Users },
-            { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store },
-          ].map(({ href, label, icon: Icon }) => {
-            const showAffiliateBadge = href === "/dashboard/vendedoras" && pendingAffiliateCount > 0;
-            return (
-            <Link
-              key={`${href}-${label}`}
-              href={href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors font-medium text-sm"
-            >
-              <Icon className="h-4 w-4" />
-              <span className="flex-1">{label}</span>
-              {showAffiliateBadge && (
-                <span className="min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white">
-                  {pendingAffiliateCount > 9 ? "9+" : pendingAffiliateCount}
-                </span>
-              )}
-            </Link>
-          );
-          })}
-        </nav>
-
-        <div className="border-t border-gray-100 pt-4">
-          <p className="text-xs text-gray-400 truncate">{user.email}</p>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="ml-64 p-8">
+    <DashboardLayout
+      userName={user.name}
+      userEmail={user.email}
+      initialPendingAffiliateCount={pendingAffiliateCount}
+      initialLowStockCount={initialLowStockCount}
+    >
+      <div>
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">
             Bienvenida, {user.name?.split(" ")[0]} 👋
@@ -267,6 +243,6 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
