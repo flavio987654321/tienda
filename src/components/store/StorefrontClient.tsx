@@ -31,6 +31,8 @@ import {
   Star,
   Truck,
   X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 
 type Variant = {
@@ -247,6 +249,7 @@ export default function StorefrontClient({
 }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [imgIndex, setImgIndex] = useState(0);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const touchStartX = useRef(0);
   const [productReviews, setProductReviews] = useState<{ id: string; rating: number; comment: string | null; createdAt: string; user: { name: string | null; image: string | null } }[]>([]);
   const [reviewsAvg, setReviewsAvg] = useState(0);
@@ -326,9 +329,23 @@ export default function StorefrontClient({
   const cardShadow = SHADOW[store.cardShadow] ?? SHADOW.sm;
   const buttonRadius = buttonClass(store.buttonStyle);
   const productGrid = GRID[store.productLayout] ?? GRID.grid3;
-  useEffect(() => {
+
+  function openProduct(product: Product) {
+    setSelectedProduct(product);
     setImgIndex(0);
-  }, [selectedProduct?.id]);
+    setZoomLevel(1);
+  }
+
+  function closeProduct() {
+    setSelectedProduct(null);
+    setImgIndex(0);
+    setZoomLevel(1);
+  }
+
+  function showImage(index: number) {
+    setImgIndex(index);
+    setZoomLevel(1);
+  }
 
   useEffect(() => {
     if (!selectedProduct) return;
@@ -660,7 +677,7 @@ export default function StorefrontClient({
         >
           <div className="relative aspect-square p-3" style={{ backgroundColor: bg }}>
             <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-20">{emoji}</div>
-            <div className="relative h-full overflow-hidden rounded-[22px] cursor-pointer" onClick={() => setSelectedProduct(product)}>
+            <div className="relative h-full overflow-hidden rounded-[22px] cursor-pointer" onClick={() => openProduct(product)}>
               <ProductImage image={image} name={product.name} className="transition duration-500 hover:scale-105" />
             </div>
             {hasDiscount && <span className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-black text-white" style={{ backgroundColor: store.accentColor }}>OFERTA ✨</span>}
@@ -705,7 +722,7 @@ export default function StorefrontClient({
         } ${highlightProductId === product.id ? "ring-4 ring-indigo-400 ring-offset-4 ring-offset-white" : ""}`}
       >
         <div className={`${list ? "h-full min-h-40" : featured ? "aspect-[4/3]" : "aspect-square"} relative overflow-hidden ${isColorful ? "p-2" : ""}`} style={{ backgroundColor: store.secondaryColor }}>
-          <div className={`h-full w-full overflow-hidden cursor-pointer ${isColorful ? "rounded-2xl" : ""}`} onClick={() => setSelectedProduct(product)}>
+          <div className={`h-full w-full overflow-hidden cursor-pointer ${isColorful ? "rounded-2xl" : ""}`} onClick={() => openProduct(product)}>
             <ProductImage image={image} name={product.name} className="transition duration-500 hover:scale-105" />
           </div>
           {hasDiscount && <span className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-black text-white" style={{ backgroundColor: store.accentColor }}>OFERTA</span>}
@@ -1114,34 +1131,72 @@ export default function StorefrontClient({
         const clampedIdx = Math.min(imgIndex, imgs.length - 1);
         const totalStock = selectedProduct.variants.reduce((s, v) => s + v.stock, 0);
         const available = selectedProduct.variants.length === 0 || totalStock > 0;
+        const canZoomIn = imgs.length > 0 && zoomLevel < 3;
+        const canZoomOut = zoomLevel > 1;
 
         const gallery = (
           <div
             className="relative h-56 w-full shrink-0 bg-gray-100 md:h-full md:w-[58%] md:shrink-0"
             onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={(e) => {
+              if (zoomLevel > 1) return;
               const diff = touchStartX.current - e.changedTouches[0].clientX;
               if (Math.abs(diff) > 40) {
-                if (diff > 0) setImgIndex((i) => Math.min(i + 1, imgs.length - 1));
-                else setImgIndex((i) => Math.max(i - 1, 0));
+                if (diff > 0) showImage(Math.min(clampedIdx + 1, imgs.length - 1));
+                else showImage(Math.max(clampedIdx - 1, 0));
               }
             }}
           >
             {imgs.length > 0 ? (
-              <img src={imgs[clampedIdx]} alt={selectedProduct.name} className="h-full w-full object-contain" />
+              <div className={`h-full w-full ${zoomLevel > 1 ? "overflow-auto cursor-move" : "overflow-hidden"}`}>
+                <img
+                  src={imgs[clampedIdx]}
+                  alt={selectedProduct.name}
+                  onClick={() => setZoomLevel((current) => (current > 1 ? 1 : 2))}
+                  className={`h-full w-full object-contain transition-transform duration-200 ${zoomLevel > 1 ? "cursor-zoom-out" : "cursor-zoom-in"}`}
+                  style={{ transform: `scale(${zoomLevel})`, transformOrigin: "center center" }}
+                />
+              </div>
             ) : (
               <div className="flex h-full w-full items-center justify-center">
                 <Package className="h-16 w-16 text-gray-200" />
               </div>
             )}
+            {imgs.length > 0 && (
+              <div className="absolute left-3 top-3 z-10 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel((current) => Math.max(1, current - 0.5))}
+                  disabled={!canZoomOut}
+                  aria-label="Alejar imagen"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow transition disabled:opacity-40"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel((current) => Math.min(3, current + 0.5))}
+                  disabled={!canZoomIn}
+                  aria-label="Acercar imagen"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow transition disabled:opacity-40"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            {imgs.length > 0 && (
+              <div className="absolute bottom-3 left-3 z-10 rounded-full bg-black/45 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+                {zoomLevel > 1 ? `${zoomLevel.toFixed(1)}x` : "Toca para zoom"}
+              </div>
+            )}
             {hasMany && clampedIdx > 0 && (
-              <button type="button" onClick={() => setImgIndex((i) => i - 1)}
+              <button type="button" onClick={() => showImage(clampedIdx - 1)}
                 className="absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4 w-4 text-gray-700"><path d="M15 18l-6-6 6-6"/></svg>
               </button>
             )}
             {hasMany && clampedIdx < imgs.length - 1 && (
-              <button type="button" onClick={() => setImgIndex((i) => i + 1)}
+              <button type="button" onClick={() => showImage(clampedIdx + 1)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4 w-4 text-gray-700"><path d="M9 18l6-6-6-6"/></svg>
               </button>
@@ -1149,7 +1204,7 @@ export default function StorefrontClient({
             {hasMany && (
               <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
                 {imgs.map((_, i) => (
-                  <button key={i} type="button" onClick={() => setImgIndex(i)}
+                  <button key={i} type="button" onClick={() => showImage(i)}
                     className={`h-1.5 rounded-full transition-all ${i === clampedIdx ? "w-4 bg-white" : "w-1.5 bg-white/50"}`} />
                 ))}
               </div>
@@ -1199,7 +1254,7 @@ export default function StorefrontClient({
               <button
                 type="button"
                 disabled={!available}
-                onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); }}
+                onClick={() => { addToCart(selectedProduct); closeProduct(); }}
                 className={`mt-5 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
                 style={{ backgroundColor: store.primaryColor, color: textColor }}
               >
@@ -1303,10 +1358,10 @@ export default function StorefrontClient({
 
         return (
           <div className="fixed inset-0 z-50">
-            <button type="button" className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedProduct(null)} />
+            <button type="button" className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeProduct} />
             {/* Mobile: flex-col bottom sheet | Desktop: flex-row centered */}
             <div className="absolute inset-x-0 bottom-0 flex max-h-[90vh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl md:inset-0 md:m-auto md:h-[82vh] md:max-w-3xl md:flex-row md:rounded-3xl">
-              <button type="button" onClick={() => setSelectedProduct(null)}
+              <button type="button" onClick={closeProduct}
                 className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow backdrop-blur-sm">
                 <X className="h-4 w-4 text-gray-700" />
               </button>

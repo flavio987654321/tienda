@@ -880,6 +880,7 @@ const STATUS: Record<string, { label: string; cls: string; dot: string }> = {
   APPROVED: { label: "Aprobada ✓", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", dot: "bg-emerald-400" },
   REJECTED: { label: "Rechazada", cls: "bg-red-500/10 text-red-400 border-red-500/20", dot: "bg-red-400" },
   PAUSED: { label: "Pausada", cls: "bg-gray-500/10 text-gray-400 border-gray-500/20", dot: "bg-gray-400" },
+  REMOVED: { label: "Dada de baja", cls: "bg-red-500/10 text-red-400 border-red-500/20", dot: "bg-red-400" },
 };
 
 export default function VendedorasPage() {
@@ -917,7 +918,7 @@ export default function VendedorasPage() {
   const myAffiliations = stores.filter((s) => s.affiliates.length > 0);
   const approvedStores = myAffiliations.filter((s) => s.affiliates[0]?.status === "APPROVED");
   const pendingStores = myAffiliations.filter((s) => s.affiliates[0]?.status === "PENDING");
-  const availableStores = stores.filter((s) => s.affiliates.length === 0 || s.affiliates[0]?.status === "REJECTED");
+  const availableStores = stores.filter((s) => s.affiliates.length === 0 || ["REJECTED", "REMOVED"].includes(s.affiliates[0]?.status));
 
   function handleApplySuccess(storeId: string, affiliateId: string) {
     setStores((prev) =>
@@ -1237,7 +1238,7 @@ export default function VendedorasPage() {
 function StoreCard({ store, onApply, requiresLogin }: { store: StoreItem; onApply: () => void; requiresLogin?: boolean }) {
   const aff = store.affiliates[0];
   const status = aff ? STATUS[aff.status] : null;
-  const canApply = !aff || aff.status === "REJECTED";
+  const canApply = !aff || ["REJECTED", "REMOVED"].includes(aff.status);
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-gray-900/80 border border-white/8 rounded-3xl overflow-hidden hover:border-white/15 transition-all group">
@@ -1271,7 +1272,7 @@ function StoreCard({ store, onApply, requiresLogin }: { store: StoreItem; onAppl
               className="flex-1 flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl text-xs font-semibold transition-all"
             >
               <Send className="h-3 w-3" />
-              {aff?.status === "REJECTED" ? "Volver a postularme" : "Postularme"}
+              {aff && ["REJECTED", "REMOVED"].includes(aff.status) ? "Volver a postularme" : "Postularme"}
             </button>
           )}
         </div>

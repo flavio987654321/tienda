@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import DashboardLayout from "@/components/DashboardLayout";
 import StorePreview, { StoreConfig } from "@/components/StorePreview";
@@ -46,6 +46,8 @@ type DesignSection = "template"|"colores"|"textos"|"imagenes"|"layout"|"tarjetas
 /* ─── Block types ─── */
 export type BlockType = "hero"|"text"|"products"|"banner"|"cta"|"image-text"|"socials"|"spacer"|"divider";
 export interface Block { id:string; type:BlockType; props:Record<string,any> }
+type PreviewViewport = "desktop"|"tablet"|"mobile";
+type TextPosition = { x: number; y: number };
 type PreviewProduct = {
   id: string;
   name: string;
@@ -185,6 +187,53 @@ function parsePreviewImages(images: string | null | undefined) {
   } catch {
     return [];
   }
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function blockSupportsMovableText(type: BlockType) {
+  return ["hero", "text", "products", "banner", "cta", "image-text", "socials"].includes(type);
+}
+
+function getViewportTextPositions(props: Record<string, any>, viewport: PreviewViewport): Record<string, TextPosition> {
+  const all = props.textPositions;
+  if (!all || typeof all !== "object") return {};
+  const current = all[viewport];
+  return current && typeof current === "object" ? current : {};
+}
+
+function updateViewportTextPosition(
+  props: Record<string, any>,
+  viewport: PreviewViewport,
+  key: string,
+  position: TextPosition
+) {
+  const all = props.textPositions && typeof props.textPositions === "object" ? props.textPositions : {};
+  const current = all[viewport] && typeof all[viewport] === "object" ? all[viewport] : {};
+  return {
+    ...props,
+    textPositions: {
+      ...all,
+      [viewport]: {
+        ...current,
+        [key]: position,
+      },
+    },
+  };
+}
+
+function clearViewportTextPositions(props: Record<string, any>, viewport: PreviewViewport) {
+  const all = props.textPositions && typeof props.textPositions === "object" ? props.textPositions : {};
+  if (!all[viewport]) return props;
+  return {
+    ...props,
+    textPositions: {
+      ...all,
+      [viewport]: {},
+    },
+  };
 }
 
 function ContentGlobalSettings({
@@ -521,12 +570,144 @@ function BlockEditor({
   return null;
 }
 
+type MovableTextItem = {
+  id: string;
+  content: ReactNode;
+  defaultPos: TextPosition;
+  className?: string;
+  style?: CSSProperties;
+};
+
+function MovableTextStage({
+  blockProps,
+  viewport,
+  items,
+  onChange,
+  style,
+  className = "",
+}: {
+  blockProps: Record<string, any>;
+  viewport: PreviewViewport;
+  items: MovableTextItem[];
+  onChange: (props: Record<string, any>) => void;
+  style?: CSSProperties;
+  className?: string;
+}) {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const dragRef = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  const [draftPositions, setDraftPositions] = useState<Record<string, TextPosition>>(() => {
+    const stored = getViewportTextPositions(blockProps, viewport);
+    return items.reduce<Record<string, TextPosition>>((acc, item) => {
+      acc[item.id] = stored[item.id] ?? item.defaultPos;
+      return acc;
+    }, {});
+  });
+  const latestRef = useRef<Record<string, TextPosition>>(draftPositions);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    latestRef.current = draftPositions;
+  }, [draftPositions]);
+
+  useEffect(() => {
+    function handleMouseMove(event: MouseEvent) {
+      if (!dragRef.current || !stageRef.current) return;
+      const stageRect = stageRef.current.getBoundingClientRect();
+      const itemNode = itemRefs.current[dragRef.current.id];
+      if (!itemNode) return;
+      const itemRect = itemNode.getBoundingClientRect();
+      const maxX = Math.max(0, stageRect.width - itemRect.width);
+      const maxY = Math.max(0, stageRect.height - itemRect.height);
+      const nextX = clamp(event.clientX - stageRect.left - dragRef.current.offsetX, 0, maxX);
+      const nextY = clamp(event.clientY - stageRect.top - dragRef.current.offsetY, 0, maxY);
+
+      setDraftPositions((current) => ({
+        ...current,
+        [dragRef.current!.id]: {
+          x: Number(((nextX / Math.max(stageRect.width, 1)) * 100).toFixed(2)),
+          y: Number(((nextY / Math.max(stageRect.height, 1)) * 100).toFixed(2)),
+        },
+      }));
+    }
+
+    function handleMouseUp() {
+      if (!dragRef.current) return;
+      const currentDrag = dragRef.current;
+      dragRef.current = null;
+      setDraggingId(null);
+      onChange(updateViewportTextPosition(blockProps, viewport, currentDrag.id, latestRef.current[currentDrag.id]));
+    }
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [blockProps, onChange, viewport]);
+
+  function startDrag(id: string, event: ReactMouseEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!stageRef.current || !itemRefs.current[id]) return;
+    const stageRect = stageRef.current.getBoundingClientRect();
+    const itemRect = itemRefs.current[id]!.getBoundingClientRect();
+    dragRef.current = {
+      id,
+      offsetX: event.clientX - itemRect.left,
+      offsetY: event.clientY - itemRect.top,
+    };
+    setDraggingId(id);
+    setDraftPositions((current) => {
+      const currentItem = current[id];
+      if (currentItem) return current;
+      return {
+        ...current,
+        [id]: {
+          x: Number((((itemRect.left - stageRect.left) / Math.max(stageRect.width, 1)) * 100).toFixed(2)),
+          y: Number((((itemRect.top - stageRect.top) / Math.max(stageRect.height, 1)) * 100).toFixed(2)),
+        },
+      };
+    });
+  }
+
+  return (
+    <div
+      ref={stageRef}
+      className={`relative overflow-hidden ${className}`}
+      style={style}
+    >
+      {items.map((item) => {
+        const pos = draftPositions[item.id] ?? item.defaultPos;
+        return (
+          <div
+            key={item.id}
+            ref={(node) => { itemRefs.current[item.id] = node; }}
+            onMouseDown={(event) => startDrag(item.id, event)}
+            className={`${item.className ?? ""} ${draggingId === item.id ? "cursor-grabbing" : "cursor-grab"} select-none`}
+            style={{
+              position: "absolute",
+              left: `${pos.x}%`,
+              top: `${pos.y}%`,
+              ...item.style,
+            }}
+          >
+            {item.content}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ─── Block renderer for preview ─── */
-function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown, onDuplicate, onDelete, isFirst, isLast, previewProducts = [] }: {
+function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown, onDuplicate, onDelete, onChangeProps, isFirst, isLast, previewProducts = [], viewport }: {
   block:Block; config:StoreConfig; selected:boolean;
-  onSelect:()=>void; onMoveUp:()=>void; onMoveDown:()=>void; onDuplicate:()=>void; onDelete:()=>void;
+  onSelect:()=>void; onMoveUp:()=>void; onMoveDown:()=>void; onDuplicate:()=>void; onDelete:()=>void; onChangeProps:(props:Record<string,any>)=>void;
   isFirst:boolean; isLast:boolean;
   previewProducts?: PreviewProduct[];
+  viewport: PreviewViewport;
 }) {
   const p = block.props;
   const c = config;
@@ -534,45 +715,110 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   const SPACER_H: Record<string,string> = { xs:"8px",sm:"24px",md:"48px",lg:"80px",xl:"120px" };
   const FONT_SIZE: Record<string,string> = { sm:"16px",md:"20px",lg:"28px",xl:"36px" };
   const HERO_H: Record<string,string> = { sm:"80px",md:"120px",lg:"180px",xl:"240px" };
-  const ALIGN_MAP: Record<string,string> = { left:"flex-start",center:"center",right:"flex-end" };
   const socialItems = [
-    { key:"showInstagram", label:"Instagram", color:"#E1306C", gradient:"linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" },
-    { key:"showFacebook",  label:"Facebook",  color:"#1877F2", gradient:null },
-    { key:"showTiktok",    label:"TikTok",    color:"#010101", gradient:null },
-    { key:"showWhatsapp",  label:"WhatsApp",  color:"#25D366", gradient:null },
-    { key:"showEmail",     label:"Email",     color:"#6366f1", gradient:null },
-  ].filter(item => p[item.key] !== false);
+    { key:"showInstagram", label:"Instagram", bg:"linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" },
+    { key:"showFacebook", label:"Facebook", bg:"#1877F2" },
+    { key:"showTiktok", label:"TikTok", bg:"#111827" },
+    { key:"showWhatsapp", label:"WhatsApp", bg:"#25D366" },
+    { key:"showEmail", label:"Email", bg:"#6366f1" },
+  ].filter((item) => p[item.key] !== false);
 
-  const socialIconSvg: Record<string, string> = {
-    Instagram: "M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z",
-    Facebook: "M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z",
-    TikTok: "M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.95a8.16 8.16 0 004.77 1.52V7.03a4.85 4.85 0 01-1-.34z",
-    WhatsApp: "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z",
-    Email: "M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z",
+  const wrapStyle: CSSProperties = {
+    position: "relative",
+    outline: selected ? "2px solid #818cf8" : "1px solid transparent",
+    outlineOffset: "-2px",
+    cursor: "pointer",
   };
+
+  const floatingControls = selected ? (
+    <>
+      <div style={{position:"absolute",top:"12px",left:"12px",zIndex:4,padding:"4px 8px",borderRadius:"999px",background:"rgba(99,102,241,0.12)",color:"#4f46e5",fontSize:"10px",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.08em"}}>
+        {BLOCK_LIBRARY.find((item) => item.type === block.type)?.label || block.type}
+      </div>
+      <div style={{position:"absolute",top:"12px",right:"12px",zIndex:4,display:"flex",gap:"6px"}}>
+        <button type="button" onClick={(event)=>{event.stopPropagation();onMoveUp();}} disabled={isFirst} style={{width:"28px",height:"28px",borderRadius:"999px",border:"1px solid #e5e7eb",background:"rgba(255,255,255,0.96)",color:isFirst?"#d1d5db":"#6b7280"}}><ChevronUp style={{width:"14px",height:"14px",margin:"0 auto"}}/></button>
+        <button type="button" onClick={(event)=>{event.stopPropagation();onMoveDown();}} disabled={isLast} style={{width:"28px",height:"28px",borderRadius:"999px",border:"1px solid #e5e7eb",background:"rgba(255,255,255,0.96)",color:isLast?"#d1d5db":"#6b7280"}}><ChevronDown style={{width:"14px",height:"14px",margin:"0 auto"}}/></button>
+        <button type="button" onClick={(event)=>{event.stopPropagation();onDuplicate();}} style={{width:"28px",height:"28px",borderRadius:"999px",border:"1px solid #e5e7eb",background:"rgba(255,255,255,0.96)",color:"#6b7280"}}><Copy style={{width:"14px",height:"14px",margin:"0 auto"}}/></button>
+        <button type="button" onClick={(event)=>{event.stopPropagation();onDelete();}} style={{width:"28px",height:"28px",borderRadius:"999px",border:"1px solid #fecaca",background:"rgba(255,255,255,0.96)",color:"#ef4444"}}><Trash2 style={{width:"14px",height:"14px",margin:"0 auto"}}/></button>
+      </div>
+      {blockSupportsMovableText(block.type) && (
+        <div style={{position:"absolute",right:"12px",bottom:"12px",zIndex:4,padding:"6px 10px",borderRadius:"999px",background:"rgba(255,255,255,0.92)",color:"#4f46e5",fontSize:"11px",fontWeight:700,boxShadow:"0 8px 24px rgba(15,23,42,0.08)"}}>
+          Arrastrá los textos
+        </div>
+      )}
+    </>
+  ) : null;
 
   function renderContent() {
     if (block.type==="hero") {
-      const hh = HERO_H[p.height||"lg"]||"180px";
+      const hh = HERO_H[p.height||"lg"] || "180px";
+      const layout = p.layout || "center";
+      const baseX = layout === "left" ? 8 : layout === "right" ? 54 : 28;
       return (
-        <div style={{ background:p.bgColor||c.primaryColor, color:p.textColor||"#fff", fontFamily:c.fontFamily, minHeight:hh, display:"flex", flexDirection:"column", alignItems:(ALIGN_MAP[p.layout||"center"]||"center") as any, justifyContent:"center", padding:"24px 32px", textAlign:(p.layout||"center") as any }}>
-          <h2 style={{fontSize:"22px",fontWeight:900,marginBottom:"8px",lineHeight:1.2}}>{p.title||"¡Bienvenidos!"}</h2>
-          {p.subtitle&&<p style={{fontSize:"13px",opacity:0.85,marginBottom:"16px"}}>{p.subtitle}</p>}
-          {p.buttonText&&<button style={{background:"rgba(255,255,255,0.2)",border:"2px solid rgba(255,255,255,0.6)",color:"inherit",padding:"8px 20px",borderRadius:"10px",fontSize:"12px",fontWeight:700,cursor:"pointer"}}>{p.buttonText}</button>}
+        <div style={{ background:p.bgColor||c.primaryColor, color:p.textColor||"#fff", fontFamily:c.fontFamily, minHeight:hh, padding:"24px 32px" }}>
+          <MovableTextStage
+            key={`hero-${viewport}-${Boolean(p.title)}-${Boolean(p.subtitle)}-${Boolean(p.buttonText)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
+            blockProps={p}
+            viewport={viewport}
+            onChange={onChangeProps}
+            style={{ minHeight: hh }}
+            items={[
+              ...(p.title ? [{
+                id: "title",
+                defaultPos: { x: baseX, y: 18 },
+                style: { width: "min(72%, 520px)", textAlign: layout as "left" | "center" | "right" },
+                content: <h2 style={{fontSize:FONT_SIZE[p.fontSize||"xl"]||"36px",fontWeight:900,lineHeight:1.1}}>{p.title}</h2>,
+              }] : []),
+              ...(p.subtitle ? [{
+                id: "subtitle",
+                defaultPos: { x: baseX, y: 40 },
+                style: { width: "min(72%, 520px)", textAlign: layout as "left" | "center" | "right" },
+                content: <p style={{fontSize:"13px",opacity:0.88,lineHeight:1.6}}>{p.subtitle}</p>,
+              }] : []),
+              ...(p.buttonText ? [{
+                id: "buttonText",
+                defaultPos: { x: baseX + (layout === "center" ? 10 : 0), y: 65 },
+                content: <button style={{background:"rgba(255,255,255,0.18)",border:"1px solid rgba(255,255,255,0.48)",color:"inherit",padding:"10px 18px",borderRadius:"12px",fontSize:"12px",fontWeight:700,cursor:"inherit"}}>{p.buttonText}</button>,
+              }] : []),
+            ]}
+          />
         </div>
       );
     }
+
     if (block.type==="text") {
       const blockColor = p.color || c.primaryColor;
       const textColor = p.textColor || "#6b7280";
       const blockBg = p.bgColor || "transparent";
+      const align = p.align || "center";
+      const baseX = align === "left" ? 8 : align === "right" ? 42 : 20;
       return (
-        <div style={{padding:"32px 24px",textAlign:(p.align||"center") as any,fontFamily:c.fontFamily,background:blockBg}}>
-          {p.heading&&<h3 style={{fontSize:FONT_SIZE[p.fontSize||"md"]||"20px",fontWeight:800,color:blockColor,marginBottom:"10px"}}>{p.heading}</h3>}
-          {p.body&&<p style={{fontSize:"13px",color:textColor,lineHeight:1.7}}>{p.body}</p>}
+        <div style={{padding:"32px 24px",fontFamily:c.fontFamily,background:blockBg}}>
+          <MovableTextStage
+            key={`text-${viewport}-${Boolean(p.heading)}-${Boolean(p.body)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
+            blockProps={p}
+            viewport={viewport}
+            onChange={onChangeProps}
+            style={{ minHeight: "170px" }}
+            items={[
+              ...(p.heading ? [{
+                id: "heading",
+                defaultPos: { x: baseX, y: 18 },
+                style: { width: "min(76%, 560px)", textAlign: align as "left" | "center" | "right" },
+                content: <h3 style={{fontSize:FONT_SIZE[p.fontSize||"md"]||"20px",fontWeight:800,color:blockColor}}>{p.heading}</h3>,
+              }] : []),
+              ...(p.body ? [{
+                id: "body",
+                defaultPos: { x: baseX, y: 46 },
+                style: { width: "min(82%, 640px)", textAlign: align as "left" | "center" | "right" },
+                content: <p style={{fontSize:"13px",color:textColor,lineHeight:1.7}}>{p.body}</p>,
+              }] : []),
+            ]}
+          />
         </div>
       );
     }
+
     if (block.type==="products") {
       const cols = p.columns||3;
       const blockColor = p.color || c.primaryColor;
@@ -588,9 +834,26 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           return true;
         })
         .slice(0, Math.max(cols * 2, 4));
+
       return (
         <div style={{padding:"24px 16px",fontFamily:c.fontFamily,background:blockBg}}>
-          {p.showHeading!==false&&p.heading&&<h3 style={{fontSize:"16px",fontWeight:800,color:blockColor,marginBottom:"14px",textAlign:"center"}}>{p.heading}</h3>}
+          {p.showHeading!==false && p.heading && (
+            <MovableTextStage
+              key={`products-${viewport}-${Boolean(p.heading)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
+              blockProps={p}
+              viewport={viewport}
+              onChange={onChangeProps}
+              style={{ minHeight: "52px", marginBottom: "14px" }}
+              items={[
+                {
+                  id: "heading",
+                  defaultPos: { x: 34, y: 10 },
+                  style: { width: "min(70%, 420px)", textAlign: "center" as const },
+                  content: <h3 style={{fontSize:"16px",fontWeight:800,color:blockColor}}>{p.heading}</h3>,
+                },
+              ]}
+            />
+          )}
           {(p.showCategoryTabs !== false || categoryFilter !== "all" || subcategoryFilter !== "all") && (
             <div style={{display:"flex",justifyContent:"center",gap:"8px",flexWrap:"wrap",marginBottom:"14px"}}>
               {p.showCategoryTabs !== false && (
@@ -619,7 +882,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           )}
           {visibleProducts.length === 0 ? (
             <div style={{padding:"20px 12px",border:"1px dashed #d1d5db",borderRadius:"14px",textAlign:"center",color:"#9ca3af",fontSize:"12px"}}>
-              No hay productos para esa categoria o subcategoria.
+              No hay productos para esa categoría o subcategoría.
             </div>
           ) : (
             <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:"10px"}}>
@@ -631,17 +894,12 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                       {image ? (
                         <img src={image} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
                       ) : (
-                        <span style={{fontSize:"20px",opacity:0.4}}>📦</span>
+                        <span style={{fontSize:"20px",opacity:0.35}}>IMG</span>
                       )}
                     </div>
-                    <div style={{padding:"8px"}}>
-                      <p style={{fontSize:"11px",fontWeight:800,color:"#111827",marginBottom:"4px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
-                        {product.name}
-                      </p>
-                      <p style={{fontSize:"10px",color:"#6b7280",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
-                        {product.subcategory ? formatCategoryLabel(product.subcategory) : product.category ? formatCategoryLabel(product.category) : "Producto"}
-                      </p>
-                      <div style={{height:"10px",background:blockColor+"40",borderRadius:"4px",width:"60%",marginTop:"7px"}}/>
+                    <div style={{padding:"12px"}}>
+                      <p style={{fontSize:"12px",fontWeight:700,color:"#111827",marginBottom:"4px",lineHeight:1.4}}>{product.name}</p>
+                      <p style={{fontSize:"11px",color:"#10b981",fontWeight:800}}>${Number(product.price || 0).toLocaleString("es-AR")}</p>
                     </div>
                   </div>
                 );
@@ -651,139 +909,164 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
         </div>
       );
     }
+
     if (block.type==="banner") {
-      const PAD_MAP: Record<string,string> = {sm:"6px",md:"12px",lg:"20px"};
-      const padH = PAD_MAP[p.size||"md"]||"12px";
+      const padH = p.size==="sm" ? "8px" : p.size==="lg" ? "16px" : "12px";
       return (
-        <div style={{background:p.bgColor||"#f59e0b",color:p.textColor||"#000",padding:`${padH} 24px`,textAlign:"center",fontFamily:c.fontFamily,fontSize:"13px",fontWeight:700}}>
-          {p.text||"📢 Anuncio"}
+        <div style={{background:p.bgColor||"#f59e0b",color:p.textColor||"#000",padding:`${padH} 24px`,fontFamily:c.fontFamily}}>
+          <MovableTextStage
+            key={`banner-${viewport}-${Boolean(p.text)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
+            blockProps={p}
+            viewport={viewport}
+            onChange={onChangeProps}
+            style={{ minHeight: "32px" }}
+            items={[
+              {
+                id: "text",
+                defaultPos: { x: 26, y: 18 },
+                style: { width: "min(72%, 520px)", textAlign: "center" as const },
+                content: <p style={{fontSize:"13px",fontWeight:800,letterSpacing:"0.01em"}}>{p.text||"Oferta especial"}</p>,
+              },
+            ]}
+          />
         </div>
       );
     }
+
     if (block.type==="cta") {
       return (
-        <div style={{background:p.bgColor||"#0f172a",color:p.textColor||"#fff",padding:"40px 24px",textAlign:"center",fontFamily:c.fontFamily}}>
-          <h3 style={{fontSize:"20px",fontWeight:900,marginBottom:"8px"}}>{p.heading||"¿Lista para comprar?"}</h3>
-          {p.sub&&<p style={{fontSize:"12px",opacity:0.7,marginBottom:"18px"}}>{p.sub}</p>}
-          <button style={{background:c.primaryColor,color:"#fff",padding:"10px 28px",borderRadius:"10px",fontSize:"13px",fontWeight:700,border:"none",cursor:"pointer"}}>{p.buttonText||"Ver catálogo"}</button>
+        <div style={{background:p.bgColor||"#0f172a",color:p.textColor||"#fff",padding:"40px 24px",fontFamily:c.fontFamily}}>
+          <MovableTextStage
+            key={`cta-${viewport}-${Boolean(p.heading)}-${Boolean(p.sub)}-${Boolean(p.buttonText)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
+            blockProps={p}
+            viewport={viewport}
+            onChange={onChangeProps}
+            style={{ minHeight: "180px" }}
+            items={[
+              {
+                id: "heading",
+                defaultPos: { x: 28, y: 16 },
+                style: { width: "min(72%, 520px)", textAlign: "center" as const },
+                content: <h3 style={{fontSize:"20px",fontWeight:900}}>{p.heading||"Lista para comprar?"}</h3>,
+              },
+              ...(p.sub ? [{
+                id: "sub",
+                defaultPos: { x: 27, y: 40 },
+                style: { width: "min(72%, 520px)", textAlign: "center" as const },
+                content: <p style={{fontSize:"12px",opacity:0.78,lineHeight:1.6}}>{p.sub}</p>,
+              }] : []),
+              {
+                id: "buttonText",
+                defaultPos: { x: 36, y: 66 },
+                content: <button style={{background:"#fff",color:"#111827",padding:"10px 18px",borderRadius:"12px",fontSize:"12px",fontWeight:800,cursor:"inherit"}}>{p.buttonText||"Ver catalogo"}</button>,
+              },
+            ]}
+          />
         </div>
       );
     }
+
     if (block.type==="image-text") {
-      const isRight = p.imagePosition==="right";
+      const imageWidth = Number(p.imageWidth || 50);
+      const imageHeight = Number(p.imageHeight || 320);
       const blockColor = p.color || c.primaryColor;
       const textColor = p.textColor || "#6b7280";
-      const blockBg = p.bgColor || "transparent";
-      const imageBg = p.imageBgColor || "#f3f4f6";
-      const imageFit = p.imageFit || "cover";
-      const imageFocus = p.imageFocus || "center";
-      const imageWidth = Math.min(70, Math.max(30, Number(p.imageWidth) || 50));
-      const imageHeight = Math.min(520, Math.max(180, Number(p.imageHeight) || 320));
       return (
-        <div style={{display:"flex",flexDirection:isRight?"row-reverse":"row",padding:"24px",gap:"20px",fontFamily:c.fontFamily,background:blockBg}}>
-          <div style={{flex:`0 0 ${imageWidth}%`,background:imageBg,borderRadius:"12px",height:`${imageHeight}px`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
-            {p.image?<img src={p.image} alt="" style={{width:"100%",height:"100%",objectFit:imageFit,objectPosition:imageFocus}}/>:<span style={{opacity:0.3,fontSize:"24px"}}>🖼️</span>}
+        <div style={{display:"flex",gap:"20px",padding:"24px",background:p.bgColor||"transparent",fontFamily:c.fontFamily,alignItems:"stretch",flexDirection:p.imagePosition === "right" ? "row-reverse" : "row"}}>
+          <div style={{flex:`0 0 ${imageWidth}%`,minHeight:`${imageHeight}px`,borderRadius:"18px",overflow:"hidden",background:p.imageBgColor||"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            {p.image ? (
+              <img src={p.image} alt={p.heading || "Imagen del bloque"} style={{width:"100%",height:"100%",objectFit:p.imageFit||"cover",objectPosition:p.imageFocus||"center"}} />
+            ) : (
+              <div style={{color:"#9ca3af",fontSize:"12px",fontWeight:700}}>Sin imagen</div>
+            )}
           </div>
           <div style={{flex:`1 1 ${100-imageWidth}%`,display:"flex",flexDirection:"column",justifyContent:"center"}}>
-            {p.heading&&<h3 style={{fontSize:"16px",fontWeight:800,color:blockColor,marginBottom:"8px"}}>{p.heading}</h3>}
-            {p.body&&<p style={{fontSize:"12px",color:textColor,lineHeight:1.7}}>{p.body}</p>}
+            <MovableTextStage
+              key={`image-text-${viewport}-${Boolean(p.heading)}-${Boolean(p.body)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
+              blockProps={p}
+              viewport={viewport}
+              onChange={onChangeProps}
+              style={{ minHeight: `${imageHeight}px` }}
+              items={[
+                ...(p.heading ? [{
+                  id: "heading",
+                  defaultPos: { x: 6, y: 28 },
+                  style: { width: "min(90%, 420px)", textAlign: "left" as const },
+                  content: <h3 style={{fontSize:"16px",fontWeight:800,color:blockColor}}>{p.heading}</h3>,
+                }] : []),
+                ...(p.body ? [{
+                  id: "body",
+                  defaultPos: { x: 6, y: 44 },
+                  style: { width: "min(92%, 460px)", textAlign: "left" as const },
+                  content: <p style={{fontSize:"12px",color:textColor,lineHeight:1.7}}>{p.body}</p>,
+                }] : []),
+              ]}
+            />
           </div>
         </div>
       );
     }
+
     if (block.type==="socials") {
-      const layout = p.layout || "icons";
-      const blockColor = p.color || c.primaryColor;
-      const blockBg = p.bgColor || "#ffffff";
-      const demoItems = [
-        { key:"d1", label:"Instagram", color:"#E1306C", gradient:"linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" },
-        { key:"d2", label:"WhatsApp",  color:"#25D366", gradient:null },
-      ];
-      const items = socialItems.length ? socialItems : demoItems;
-      const iconCircle = (item: typeof items[0]) => (
-        <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:"26px",height:"26px",borderRadius:"999px",background:item.gradient||(layout==="buttons"?"rgba(255,255,255,.2)":item.color),flexShrink:0}}>
-          <svg viewBox="0 0 24 24" fill="white" width="13" height="13"><path d={socialIconSvg[item.label]||socialIconSvg.Email}/></svg>
-        </span>
-      );
-      if (layout === "card") {
-        return (
-          <div style={{padding:"28px 24px",fontFamily:c.fontFamily,background:blockBg}}>
-            <div style={{maxWidth:"520px",margin:"0 auto",border:`1px solid ${blockColor}22`,borderRadius:"18px",padding:"22px",textAlign:"center",background:blockBg}}>
-              {p.showHeading!==false&&<h3 style={{fontSize:"18px",fontWeight:900,color:blockColor,marginBottom:"14px"}}>{p.heading||"Seguinos y contactanos"}</h3>}
-              <div style={{display:"grid",gap:"8px"}}>
-                {items.map(item=>(
-                  <div key={item.label} style={{display:"flex",alignItems:"center",gap:"10px",border:`1px solid ${blockColor}33`,borderRadius:"12px",padding:"10px 14px",fontSize:"12px",fontWeight:800,color:blockColor}}>
-                    {iconCircle(item)}{item.label}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      }
+      const columns = Math.max(2, Math.min(4, socialItems.length || 2));
       return (
-        <div style={{padding:"30px 24px",fontFamily:c.fontFamily,textAlign:"center",background:blockBg}}>
-          {p.showHeading!==false&&<h3 style={{fontSize:"18px",fontWeight:900,color:blockColor,marginBottom:"16px"}}>{p.heading||"Seguinos y contactanos"}</h3>}
-          <div style={{display:"flex",justifyContent:"center",gap:"10px",flexWrap:"wrap"}}>
-            {items.map(item=>(
-              <div key={item.label} style={{display:"inline-flex",alignItems:"center",gap:"8px",border:layout==="buttons"?"none":`1px solid ${blockColor}44`,background:layout==="buttons"?blockColor:"#fff",color:layout==="buttons"?"#fff":blockColor,borderRadius:layout==="buttons"?"999px":"14px",padding:layout==="buttons"?"9px 16px":"9px",fontSize:"12px",fontWeight:900}}>
-                {iconCircle(item)}
-                {layout==="buttons"&&item.label}
+        <div style={{padding:"28px 24px",fontFamily:c.fontFamily,background:p.bgColor||"transparent"}}>
+          {p.heading && (
+            <MovableTextStage
+              key={`socials-${viewport}-${Boolean(p.heading)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
+              blockProps={p}
+              viewport={viewport}
+              onChange={onChangeProps}
+              style={{ minHeight: "54px", marginBottom: "14px" }}
+              items={[
+                {
+                  id: "heading",
+                  defaultPos: { x: 32, y: 14 },
+                  style: { width: "min(72%, 440px)", textAlign: "center" as const },
+                  content: <h3 style={{fontSize:"16px",fontWeight:800,color:p.color || c.primaryColor}}>{p.heading}</h3>,
+                },
+              ]}
+            />
+          )}
+          <div style={{display:"grid",gridTemplateColumns:`repeat(${columns}, minmax(0, 1fr))`,gap:"12px"}}>
+            {socialItems.map((item) => (
+              <div key={item.label} style={{border:"1px solid #e5e7eb",borderRadius:"16px",padding:"14px 12px",display:"flex",alignItems:"center",gap:"10px",background:"#fff"}}>
+                <div style={{width:"36px",height:"36px",borderRadius:"999px",display:"grid",placeItems:"center",background:item.bg,color:"#fff",fontSize:"11px",fontWeight:800}}>
+                  {item.label.slice(0,2).toUpperCase()}
+                </div>
+                <div>
+                  <p style={{fontSize:"12px",fontWeight:700,color:"#111827"}}>{item.label}</p>
+                  <p style={{fontSize:"11px",color:"#6b7280"}}>Canal activo</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       );
     }
-    if (block.type==="spacer") return <div style={{height:SPACER_H[p.height as keyof typeof SPACER_H||"md"]||"48px",background:"repeating-linear-gradient(45deg,#f9fafb,#f9fafb 10px,#f3f4f6 10px,#f3f4f6 20px)"}}/>;
-    if (block.type==="divider") return (
-      <div style={{padding:"8px 24px"}}>
-        <hr style={{border:"none",borderTop:`2px ${p.style||"solid"} ${p.color||"#e5e7eb"}`}}/>
-      </div>
-    );
+
+    if (block.type==="spacer") {
+      return <div style={{height:SPACER_H[p.height as keyof typeof SPACER_H||"md"]||"48px",background:"repeating-linear-gradient(45deg,#f9fafb,#f9fafb 10px,#f3f4f6 10px,#f3f4f6 20px)"}}/>;
+    }
+
+    if (block.type==="divider") {
+      return (
+        <div style={{padding:"8px 24px"}}>
+          <hr style={{border:"none",borderTop:`2px ${p.style||"solid"} ${p.color||"#e5e7eb"}`}}/>
+        </div>
+      );
+    }
+
     return null;
   }
 
   return (
-    <div
-      data-block-id={block.id}
-      className={`relative group cursor-pointer transition-all ${selected?"ring-2 ring-indigo-500 ring-offset-1":"hover:ring-2 hover:ring-indigo-300 hover:ring-offset-1"}`}
-      onClick={onSelect}
-      style={{borderRadius:"4px"}}
-    >
+    <div data-block-id={block.id} style={wrapStyle} onClick={onSelect}>
       {renderContent()}
-
-      {/* Floating controls */}
-      <div className={`absolute top-1 right-1 z-10 flex gap-1 transition-opacity ${selected?"opacity-100":"opacity-0 group-hover:opacity-100"}`}>
-        <button onClick={e=>{e.stopPropagation();onMoveUp();}} disabled={isFirst} title="Subir"
-          className="w-6 h-6 bg-white border border-gray-200 rounded-lg flex items-center justify-center shadow-sm hover:bg-indigo-50 disabled:opacity-30 transition-colors">
-          <ChevronUp className="h-3 w-3 text-gray-600"/>
-        </button>
-        <button onClick={e=>{e.stopPropagation();onMoveDown();}} disabled={isLast} title="Bajar"
-          className="w-6 h-6 bg-white border border-gray-200 rounded-lg flex items-center justify-center shadow-sm hover:bg-indigo-50 disabled:opacity-30 transition-colors">
-          <ChevronDown className="h-3 w-3 text-gray-600"/>
-        </button>
-        <button onClick={e=>{e.stopPropagation();onDuplicate();}} title="Duplicar"
-          className="w-6 h-6 bg-white border border-gray-200 rounded-lg flex items-center justify-center shadow-sm hover:bg-blue-50 transition-colors">
-          <Copy className="h-3 w-3 text-gray-600"/>
-        </button>
-        <button onClick={e=>{e.stopPropagation();onDelete();}} title="Eliminar"
-          className="w-6 h-6 bg-red-50 border border-red-200 rounded-lg flex items-center justify-center shadow-sm hover:bg-red-100 transition-colors">
-          <Trash2 className="h-3 w-3 text-red-500"/>
-        </button>
-      </div>
-
-      {/* Type label */}
-      {selected&&(
-        <div className="absolute top-1 left-1 z-10 bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-lg font-semibold">
-          {BLOCK_LIBRARY.find(b=>b.type===block.type)?.emoji} {BLOCK_LIBRARY.find(b=>b.type===block.type)?.label}
-        </div>
-      )}
+      {floatingControls}
     </div>
   );
 }
-
-/* ─── Block Library Modal ─── */
 function BlockLibraryModal({ onAdd, onClose }: { onAdd:(type:BlockType)=>void; onClose:()=>void }) {
   return (
     <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4" onClick={onClose}>
@@ -1321,6 +1604,15 @@ export default function ConfiguracionPage() {
                                 blockImageRef.current?.click();
                               }}
                             />
+                            {blockSupportsMovableText(b.type) && (
+                              <button
+                                type="button"
+                                onClick={() => updateBlock(b.id, clearViewportTextPositions(b.props, preview))}
+                                className="w-full rounded-xl border border-dashed border-indigo-200 bg-white px-3 py-2 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-50"
+                              >
+                                Resetear posiciones de texto ({preview})
+                              </button>
+                            )}
                             <div className="border-t border-dashed border-indigo-200 pt-2">
                               <p className="text-[11px] text-indigo-400">Fin de este bloque</p>
                             </div>
@@ -1392,12 +1684,14 @@ export default function ConfiguracionPage() {
                           block={b}
                           config={config}
                           previewProducts={previewProducts}
+                          viewport={preview}
                           selected={selectedBlockId===b.id}
                           onSelect={()=>setSelectedBlockId(selectedBlockId===b.id?null:b.id)}
                           onMoveUp={()=>moveBlock(b.id,-1)}
                           onMoveDown={()=>moveBlock(b.id,1)}
                           onDuplicate={()=>duplicateBlock(b.id)}
                           onDelete={()=>deleteBlock(b.id)}
+                          onChangeProps={(props)=>updateBlock(b.id,props)}
                           isFirst={idx===0}
                           isLast={idx===blocks.length-1}
                         />

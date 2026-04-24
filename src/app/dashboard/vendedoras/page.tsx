@@ -24,6 +24,7 @@ function statusClass(status: string) {
   if (status === "APPROVED") return "bg-green-100 text-green-700";
   if (status === "REJECTED") return "bg-red-100 text-red-700";
   if (status === "PAUSED") return "bg-gray-100 text-gray-600";
+  if (status === "REMOVED") return "bg-red-100 text-red-700";
   return "bg-yellow-100 text-yellow-700";
 }
 
@@ -31,6 +32,7 @@ function statusLabel(status: string) {
   if (status === "APPROVED") return "Aprobada";
   if (status === "REJECTED") return "Rechazada";
   if (status === "PAUSED") return "Pausada";
+  if (status === "REMOVED") return "Dada de baja";
   return "Pendiente";
 }
 

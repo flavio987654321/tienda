@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
     where: { userId, storeId },
   });
   if (existing) {
-    if (existing.status === "REJECTED") {
+    if (existing.status === "REJECTED" || existing.status === "REMOVED") {
       const affiliate = await prisma.affiliate.update({
         where: { id: existing.id },
         data: {
