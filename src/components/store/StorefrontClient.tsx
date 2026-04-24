@@ -1038,7 +1038,7 @@ export default function StorefrontClient({
 
         const gallery = (
           <div
-            className="relative h-56 w-full shrink-0 bg-gray-100 md:h-full md:w-[44%] md:shrink-0"
+            className="relative h-56 w-full shrink-0 bg-gray-100 md:h-full md:w-[58%] md:shrink-0"
             onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={(e) => {
               const diff = touchStartX.current - e.changedTouches[0].clientX;
