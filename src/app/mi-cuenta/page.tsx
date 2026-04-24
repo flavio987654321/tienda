@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -13,7 +13,6 @@ import {
   MapPin,
   Phone,
   AtSign,
-  Edit2,
   Check,
   X,
   Loader2,
@@ -22,8 +21,10 @@ import {
   Truck,
   CheckCircle,
   XCircle,
-  AlertCircle,
+  LogOut,
+  Camera,
 } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 
 type Tab = "pedidos" | "favoritos" | "resenas" | "perfil";
 
@@ -125,6 +126,7 @@ function Stars({ rating, interactive = false, onRate }: { rating: number; intera
 }
 
 export default function MiCuentaPage() {
+  const { signOut } = useAuth();
   const [tab, setTab] = useState<Tab>("pedidos");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -135,10 +137,12 @@ export default function MiCuentaPage() {
   const [submittingReview, setSubmittingReview] = useState<string | null>(null);
   const [resenasFetched, setResenasFetched] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", bio: "", city: "", phone: "", instagramHandle: "" });
   const [saveError, setSaveError] = useState("");
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/mi-cuenta/perfil")
@@ -181,6 +185,7 @@ export default function MiCuentaPage() {
   async function saveProfile() {
     setSaving(true);
     setSaveError("");
+    setSaveSuccess(false);
     const res = await fetch("/api/mi-cuenta/perfil", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -189,8 +194,28 @@ export default function MiCuentaPage() {
     const data = await res.json();
     if (!res.ok) { setSaveError(data.error || "Error al guardar"); setSaving(false); return; }
     setProfile((p) => p ? { ...p, ...data } : data);
-    setEditing(false);
     setSaving(false);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  }
+
+  async function uploadPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) { setUploadingPhoto(false); return; }
+    const imageUrl = data.url;
+    await fetch("/api/mi-cuenta/perfil", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: imageUrl }),
+    });
+    setProfile((p) => p ? { ...p, image: imageUrl } : p);
+    setUploadingPhoto(false);
   }
 
   async function submitReview(productId: string, orderId: string) {
@@ -253,9 +278,18 @@ export default function MiCuentaPage() {
             <ShoppingBag className="h-5 w-5 text-indigo-600" />
             MiTienda
           </Link>
-          <Link href="/tiendas" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors">
-            Explorar tiendas
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/tiendas" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors">
+              Explorar tiendas
+            </Link>
+            <button
+              onClick={() => signOut("/")}
+              className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-red-500 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Salir
+            </button>
+          </div>
         </div>
       </header>
 
@@ -263,13 +297,26 @@ export default function MiCuentaPage() {
         {/* Perfil card */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-2xl bg-indigo-50 flex items-center justify-center shrink-0 overflow-hidden">
-              {profile?.image ? (
-                <Image src={profile.image} alt={profile.name || ""} width={64} height={64} className="object-cover h-16 w-16" />
-              ) : (
-                <User className="h-8 w-8 text-indigo-400" />
-              )}
+            {/* Avatar con botón de upload */}
+            <div className="relative shrink-0">
+              <div className="h-16 w-16 rounded-2xl bg-indigo-50 flex items-center justify-center overflow-hidden">
+                {profile?.image ? (
+                  <Image src={profile.image} alt={profile.name || ""} width={64} height={64} className="object-cover h-16 w-16" />
+                ) : (
+                  <User className="h-8 w-8 text-indigo-400" />
+                )}
+              </div>
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-indigo-600 flex items-center justify-center shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                title="Cambiar foto"
+              >
+                {uploadingPhoto ? <Loader2 className="h-3 w-3 text-white animate-spin" /> : <Camera className="h-3 w-3 text-white" />}
+              </button>
+              <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={uploadPhoto} />
             </div>
+
             <div className="min-w-0 flex-1">
               <h1 className="text-xl font-black text-gray-950 truncate">{profile?.name || profile?.email}</h1>
               <p className="text-sm text-gray-400">{profile?.email}</p>
@@ -279,13 +326,6 @@ export default function MiCuentaPage() {
                 {profile?.instagramHandle && <span className="flex items-center gap-1"><AtSign className="h-3 w-3" />@{profile.instagramHandle.replace(/^@/, "")}</span>}
               </div>
             </div>
-            <button
-              onClick={() => setEditing(true)}
-              className="shrink-0 flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500 border border-indigo-100 rounded-xl px-3 py-2 hover:bg-indigo-50 transition-colors"
-            >
-              <Edit2 className="h-3.5 w-3.5" />
-              Editar
-            </button>
           </div>
           {profile?.bio && <p className="mt-4 text-sm text-gray-500 bg-gray-50 rounded-xl p-3">{profile.bio}</p>}
         </div>
@@ -323,7 +363,6 @@ export default function MiCuentaPage() {
             ) : (
               orders.map((order) => {
                 const { label, icon: StatusIcon, color, bg } = statusInfo(order.status);
-                const imgs = (() => { try { return JSON.parse(order.items[0]?.product.images); } catch { return []; } })();
                 return (
                   <article key={order.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                     <div className="p-5 border-b border-gray-50">
@@ -568,6 +607,11 @@ export default function MiCuentaPage() {
                 />
               </div>
               {saveError && <p className="text-sm text-red-500">{saveError}</p>}
+              {saveSuccess && (
+                <p className="text-sm text-green-600 font-semibold flex items-center gap-1.5">
+                  <Check className="h-4 w-4" /> Cambios guardados
+                </p>
+              )}
               <button
                 onClick={saveProfile}
                 disabled={saving}
@@ -576,70 +620,20 @@ export default function MiCuentaPage() {
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                 {saving ? "Guardando..." : "Guardar cambios"}
               </button>
+
+              <div className="pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => signOut("/")}
+                  className="w-full flex items-center justify-center gap-2 border border-red-200 text-red-500 py-3 rounded-xl font-semibold text-sm hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Cerrar sesión
+                </button>
+              </div>
             </div>
           </div>
         )}
       </div>
-
-      {/* Modal editar perfil */}
-      {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-bold text-gray-900">Editar perfil</h2>
-              <button onClick={() => setEditing(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              {[
-                { label: "Nombre", field: "name" as const, placeholder: "Tu nombre" },
-                { label: "Ciudad", field: "city" as const, placeholder: "Buenos Aires" },
-                { label: "Teléfono", field: "phone" as const, placeholder: "+54 11 1234-5678" },
-                { label: "Instagram", field: "instagramHandle" as const, placeholder: "@usuario" },
-              ].map(({ label, field, placeholder }) => (
-                <div key={field}>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">{label}</label>
-                  <input
-                    type="text"
-                    value={editForm[field]}
-                    onChange={(e) => setEditForm((f) => ({ ...f, [field]: e.target.value }))}
-                    placeholder={placeholder}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              ))}
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Bio</label>
-                <textarea
-                  value={editForm.bio}
-                  onChange={(e) => setEditForm((f) => ({ ...f, bio: e.target.value }))}
-                  placeholder="Contá algo sobre vos..."
-                  rows={3}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                />
-              </div>
-              {saveError && <p className="text-sm text-red-500">{saveError}</p>}
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setEditing(false)}
-                  className="flex-1 border border-gray-200 text-gray-700 py-3 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={saveProfile}
-                  disabled={saving}
-                  className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-indigo-500 disabled:opacity-50 transition-colors"
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  {saving ? "Guardando..." : "Guardar"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

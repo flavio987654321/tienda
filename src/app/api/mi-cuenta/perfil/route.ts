@@ -18,7 +18,7 @@ export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { name, bio, city, phone, instagramHandle } = await req.json();
+  const { name, bio, city, phone, instagramHandle, image } = await req.json();
 
   if (name !== undefined && (!name.trim() || name.trim().length < 2)) {
     return NextResponse.json({ error: "El nombre debe tener al menos 2 caracteres" }, { status: 400 });
@@ -32,6 +32,7 @@ export async function PUT(req: NextRequest) {
       ...(city !== undefined && { city: city?.trim() || null }),
       ...(phone !== undefined && { phone: phone?.trim() || null }),
       ...(instagramHandle !== undefined && { instagramHandle: instagramHandle?.trim() || null }),
+      ...(image !== undefined && { image: image || null }),
     },
     select: { id: true, name: true, email: true, image: true, bio: true, city: true, phone: true, instagramHandle: true },
   });
