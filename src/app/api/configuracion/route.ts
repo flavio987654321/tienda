@@ -9,10 +9,35 @@ export async function GET() {
   return NextResponse.json({ store });
 }
 
+function isValidHex(color: string): boolean {
+  return /^#[0-9A-Fa-f]{6}$/.test(color);
+}
+
 export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const b = await req.json();
+
+  if (!b.name || typeof b.name !== "string" || b.name.trim().length === 0) {
+    return NextResponse.json({ error: "El nombre de la tienda es requerido" }, { status: 400 });
+  }
+  for (const field of ["primaryColor", "secondaryColor", "accentColor"] as const) {
+    if (b[field] && !isValidHex(b[field])) {
+      return NextResponse.json({ error: `Color inválido: ${field}` }, { status: 400 });
+    }
+  }
+  const commissionRate = parseFloat(b.commissionRate);
+  if (b.commissionRate !== undefined && (isNaN(commissionRate) || commissionRate < 0 || commissionRate > 100)) {
+    return NextResponse.json({ error: "La tasa de comisión debe estar entre 0 y 100" }, { status: 400 });
+  }
+  if (b.pageBlocks && b.pageBlocks !== "[]") {
+    try {
+      const blocks = JSON.parse(b.pageBlocks);
+      if (!Array.isArray(blocks)) throw new Error();
+    } catch {
+      return NextResponse.json({ error: "Bloques de página inválidos" }, { status: 400 });
+    }
+  }
 
   const store = await prisma.store.update({
     where: { ownerId: user.id },
@@ -50,7 +75,7 @@ export async function PUT(req: NextRequest) {
       seoTitle:           b.seoTitle       || null,
       seoDescription:     b.seoDescription || null,
       affiliatesEnabled:  Boolean(b.affiliatesEnabled),
-      commissionRate:     parseFloat(b.commissionRate) || 10,
+      commissionRate:     isNaN(commissionRate) ? 10 : commissionRate,
       pageBlocks:         b.pageBlocks || "[]",
     },
   });

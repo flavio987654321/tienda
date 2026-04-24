@@ -25,13 +25,20 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { productId, orderId, rating, comment } = await req.json();
+  const body = await req.json();
+  const productId = String(body.productId || "").trim();
+  const orderId = String(body.orderId || "").trim();
+  const rating = Math.floor(Number(body.rating));
+  const comment = body.comment?.trim() || null;
 
-  if (!productId || !orderId || !rating) {
+  if (!productId || !orderId) {
     return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
   }
-  if (rating < 1 || rating > 5) {
-    return NextResponse.json({ error: "El rating debe ser entre 1 y 5" }, { status: 400 });
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return NextResponse.json({ error: "El rating debe ser un número entero entre 1 y 5" }, { status: 400 });
+  }
+  if (comment && comment.length > 1000) {
+    return NextResponse.json({ error: "El comentario no puede superar 1000 caracteres" }, { status: 400 });
   }
 
   // Verificar que el usuario compró este producto en este pedido
@@ -50,7 +57,7 @@ export async function POST(req: NextRequest) {
   }
 
   const review = await prisma.review.create({
-    data: { userId: user.id, productId, orderId, rating, comment: comment?.trim() || null },
+    data: { userId: user.id, productId, orderId, rating, comment },
     include: { user: { select: { name: true, image: true } } },
   });
 

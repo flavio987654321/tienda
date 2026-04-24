@@ -39,8 +39,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "El carrito esta vacio" }, { status: 400 });
   }
 
-  if (!customer?.name || !customer?.email) {
-    return NextResponse.json({ error: "Nombre y email son requeridos" }, { status: 400 });
+  if (!customer?.name || typeof customer.name !== "string" || customer.name.trim().length < 2) {
+    return NextResponse.json({ error: "Nombre requerido (mínimo 2 caracteres)" }, { status: 400 });
+  }
+  const emailNorm = customer?.email?.toLowerCase().trim() ?? "";
+  if (!emailNorm || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+    return NextResponse.json({ error: "Email inválido" }, { status: 400 });
   }
 
   const shipping = SHIPPING_COSTS[shippingMethod] ?? SHIPPING_COSTS.pickup;
@@ -102,15 +106,9 @@ export async function POST(req: NextRequest) {
       const total = subtotal + shipping.cost;
 
       const buyer = await tx.user.upsert({
-        where: { email: customer.email.toLowerCase().trim() },
-        update: {
-          name: customer.name,
-        },
-        create: {
-          email: customer.email.toLowerCase().trim(),
-          name: customer.name,
-          role: "BUYER",
-        },
+        where: { email: emailNorm },
+        update: { name: customer.name.trim() },
+        create: { email: emailNorm, name: customer.name.trim(), role: "BUYER" },
       });
 
       return tx.order.create({

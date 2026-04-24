@@ -69,6 +69,15 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ affiliates: store?.affiliates ?? [] });
 }
 
+function isSafeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ["http:", "https:"].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
 // POST - afiliado se une a una tienda
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -76,6 +85,24 @@ export async function POST(req: NextRequest) {
 
   const { storeId, applicationMessage, experience, cvUrl, socialUrl } = await req.json();
   const userId = user.id;
+
+  if (!storeId || typeof storeId !== "string") {
+    return NextResponse.json({ error: "ID de tienda inválido" }, { status: 400 });
+  }
+  const appMsg = applicationMessage?.trim() || null;
+  if (appMsg && appMsg.length > 1000) {
+    return NextResponse.json({ error: "El mensaje no puede superar 1000 caracteres" }, { status: 400 });
+  }
+  const exp = experience?.trim() || null;
+  if (exp && exp.length > 500) {
+    return NextResponse.json({ error: "La experiencia no puede superar 500 caracteres" }, { status: 400 });
+  }
+  if (cvUrl && !isSafeUrl(cvUrl)) {
+    return NextResponse.json({ error: "URL del CV inválida" }, { status: 400 });
+  }
+  if (socialUrl && !isSafeUrl(socialUrl)) {
+    return NextResponse.json({ error: "URL de redes inválida" }, { status: 400 });
+  }
 
   const store = await prisma.store.findUnique({ where: { id: storeId } });
   if (!store || !store.affiliatesEnabled) {
@@ -96,8 +123,8 @@ export async function POST(req: NextRequest) {
         data: {
           status: "PENDING",
           isActive: false,
-          applicationMessage: applicationMessage || null,
-          experience: experience || null,
+          applicationMessage: appMsg,
+          experience: exp,
           cvUrl: cvUrl || null,
           socialUrl: socialUrl || null,
           requestedAt: new Date(),
@@ -122,8 +149,8 @@ export async function POST(req: NextRequest) {
       ownerId: store.ownerId,
       status: "PENDING",
       isActive: false,
-      applicationMessage: applicationMessage || null,
-      experience: experience || null,
+      applicationMessage: appMsg,
+      experience: exp,
       cvUrl: cvUrl || null,
       socialUrl: socialUrl || null,
     },

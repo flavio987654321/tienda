@@ -116,7 +116,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Alias inválido: solo letras, números, puntos y guiones (6-20 caracteres)" }, { status: 400 });
   }
 
-  if (cuilClean && !isValidCuil(cuil?.trim() || "")) {
+  if (cuilClean && !isValidCuil(cuilClean)) {
     return NextResponse.json({ error: "CUIL inválido: formato XX-XXXXXXXX-X" }, { status: 400 });
   }
 
@@ -155,10 +155,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
-  const amount = parseFloat(rawAmount);
+  const MAX_WITHDRAWAL = 10_000_000;
+  const amount = Math.round(parseFloat(rawAmount) * 100) / 100;
   if (isNaN(amount) || amount < MIN_WITHDRAWAL) {
     return NextResponse.json(
       { error: `El monto mínimo de retiro es $${MIN_WITHDRAWAL.toLocaleString("es-AR")}` },
+      { status: 400 }
+    );
+  }
+  if (amount > MAX_WITHDRAWAL) {
+    return NextResponse.json(
+      { error: `El monto máximo de retiro es $${MAX_WITHDRAWAL.toLocaleString("es-AR")}` },
       { status: 400 }
     );
   }

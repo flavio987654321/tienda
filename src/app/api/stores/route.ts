@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
-  const limit = Math.min(48, parseInt(searchParams.get("limit") ?? "12"));
+  const rawPage = parseInt(searchParams.get("page") ?? "1");
+  const rawLimit = parseInt(searchParams.get("limit") ?? "12");
+  const page = Math.max(1, isNaN(rawPage) ? 1 : rawPage);
+  const limit = Math.min(48, Math.max(1, isNaN(rawLimit) ? 12 : rawLimit));
   const category = searchParams.get("category") ?? "";
   const featured = searchParams.get("featured") === "true";
 

@@ -40,20 +40,23 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
         for (const item of order.items) {
           if (!item.variantId) continue;
-          const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } });
-          if (!variant || variant.stock < item.quantity) {
-            throw new Error(`No hay stock suficiente para ${item.product.name}`);
-          }
-          const newStock = variant.stock - item.quantity;
-          await tx.productVariant.update({
-            where: { id: item.variantId },
+          const updated = await tx.productVariant.updateMany({
+            where: { id: item.variantId, stock: { gte: item.quantity } },
             data: { stock: { decrement: item.quantity } },
           });
-          if (newStock <= 4) {
+          if (updated.count === 0) {
+            const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } });
+            throw new Error(
+              `No hay stock suficiente para ${item.product.name}` +
+              (variant ? ` (disponible: ${variant.stock}, pedido: ${item.quantity})` : "")
+            );
+          }
+          const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } });
+          if (variant && variant.stock <= 4) {
             stockAlerts.push({
               name: item.product.name,
               variant: `${variant.name}: ${variant.value}`,
-              stock: newStock,
+              stock: variant.stock,
             });
           }
         }

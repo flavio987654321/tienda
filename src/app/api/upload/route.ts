@@ -23,6 +23,22 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
 ]);
 const DEFAULT_BUCKET = "product-images";
 
+const uploadRateMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 20;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = uploadRateMap.get(userId);
+  if (!entry || now > entry.resetAt) {
+    uploadRateMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
 function getSupabaseStorageConfig() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -72,6 +88,13 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+    if (!checkRateLimit(user.id)) {
+      return NextResponse.json(
+        { error: "Demasiadas subidas en poco tiempo. Esperá un momento." },
+        { status: 429 }
+      );
+    }
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
