@@ -7,18 +7,42 @@ export async function GET(req: NextRequest) {
   const productId = searchParams.get("productId");
   if (!productId) return NextResponse.json({ error: "productId requerido" }, { status: 400 });
 
-  const reviews = await prisma.review.findMany({
-    where: { productId },
-    include: { user: { select: { name: true, image: true } } },
-    orderBy: { createdAt: "desc" },
+  const user = await getCurrentUser();
+
+  const [reviews, userReview, eligibleOrder] = await Promise.all([
+    prisma.review.findMany({
+      where: { productId },
+      include: { user: { select: { name: true, image: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    user
+      ? prisma.review.findUnique({
+          where: { userId_productId: { userId: user.id, productId } },
+          select: { id: true, rating: true, comment: true },
+        })
+      : null,
+    user
+      ? prisma.orderItem.findFirst({
+          where: {
+            productId,
+            order: { buyerId: user.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+          },
+          select: { orderId: true },
+        })
+      : null,
+  ]);
+
+  const avg = reviews.length > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
+  const canReview = !!eligibleOrder && !userReview;
+
+  return NextResponse.json({
+    reviews,
+    avg,
+    total: reviews.length,
+    canReview,
+    eligibleOrderId: eligibleOrder?.orderId ?? null,
+    userReview: userReview ?? null,
   });
-
-  const avg =
-    reviews.length > 0
-      ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
-      : 0;
-
-  return NextResponse.json({ reviews, avg, total: reviews.length });
 }
 
 export async function POST(req: NextRequest) {

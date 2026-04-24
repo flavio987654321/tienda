@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { sendLowStockEmail } from "@/lib/email";
+import { sendLowStockEmail, sendReviewRequestEmail } from "@/lib/email";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -21,6 +21,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         where: { id, store: { ownerId } },
         include: {
           store: true,
+          buyer: { select: { email: true, name: true } },
           items: { include: { product: true, variant: true } },
           payment: true,
           shipping: true,
@@ -129,11 +130,19 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           where: { orderId: order.id },
           data: { status: "DELIVERED" },
         });
-        return tx.order.update({
+        const delivered = await tx.order.update({
           where: { id: order.id },
           data: { status: "DELIVERED" },
           include: { payment: true, shipping: true, items: true, commission: true },
         });
+        sendReviewRequestEmail({
+          buyerEmail: order.buyer.email,
+          buyerName: order.buyer.name || "",
+          storeName: order.store.name,
+          storeSlug: order.store.slug,
+          products: order.items.map((i) => ({ id: i.product.id, name: i.product.name })),
+        }).catch(() => {});
+        return delivered;
       }
 
       if (action === "cancel") {

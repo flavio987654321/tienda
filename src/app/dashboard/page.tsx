@@ -5,7 +5,7 @@ import CopyLinkButton from "@/components/CopyLinkButton";
 import { getCurrentUser } from "@/lib/auth-session";
 import {
   ShoppingBag, Package, Users, TrendingUp,
-  Plus, Store, ArrowRight, Share2
+  Plus, Store, ArrowRight, Share2, Star
 } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -37,6 +37,18 @@ export default async function DashboardPage() {
   const pendingAffiliateCount = store
     ? await prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } })
     : 0;
+
+  const recentReviews = store
+    ? await prisma.review.findMany({
+        where: { product: { storeId: store.id } },
+        include: {
+          user: { select: { name: true } },
+          product: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      })
+    : [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -180,6 +192,42 @@ export default async function DashboardPage() {
             </Link>
           ))}
         </div>
+
+        {/* Recent reviews */}
+        {recentReviews.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-bold text-gray-900">Reseñas recientes</h2>
+              <div className="flex items-center gap-1 text-yellow-400">
+                <Star className="h-4 w-4 fill-current" />
+                <span className="text-sm font-bold text-gray-700">
+                  {(recentReviews.reduce((s, r) => s + r.rating, 0) / recentReviews.length).toFixed(1)}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {recentReviews.map((r) => (
+                <div key={r.id} className="flex items-start gap-3 py-3 border-b border-gray-50 last:border-0">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">
+                    {r.user.name?.[0]?.toUpperCase() ?? "?"}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{r.user.name || "Comprador"}</p>
+                      <div className="flex shrink-0 gap-0.5">
+                        {[1,2,3,4,5].map((s) => (
+                          <Star key={s} className={`h-3 w-3 ${s <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-400 truncate">{r.product.name}</p>
+                    {r.comment && <p className="mt-0.5 text-sm text-gray-600 line-clamp-2">{r.comment}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Recent orders */}
         <div className="bg-white rounded-xl border border-gray-100 p-6">

@@ -89,3 +89,58 @@ export async function sendLowStockEmail({
     `,
   });
 }
+
+export async function sendReviewRequestEmail({
+  buyerEmail,
+  buyerName,
+  storeName,
+  storeSlug,
+  products,
+}: {
+  buyerEmail: string;
+  buyerName: string;
+  storeName: string;
+  storeSlug: string;
+  products: { id: string; name: string }[];
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const productLinks = products
+    .map(
+      (p) =>
+        `<a href="${appUrl}/tienda/${storeSlug}?producto=${p.id}"
+           style="display:block;padding:10px 16px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#6366f1;text-decoration:none;">
+          ⭐ Dejar reseña de <strong>${p.name}</strong>
+        </a>`
+    )
+    .join("");
+
+  await transporter.sendMail({
+    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    to: buyerEmail,
+    subject: `¿Cómo te fue con tu compra en ${storeName}?`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+          <p style="color:#e0e7ff;font-size:13px;margin:0 0 4px;">${storeName}</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">¡Tu pedido fue entregado!</h1>
+        </div>
+
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${buyerName || "compradora"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:24px;">
+          Esperamos que hayas quedado contenta con tu compra en <strong>${storeName}</strong>.
+          Tu opinión ayuda a otras compradoras a elegir mejor. ¿Nos dejás una reseña?
+        </p>
+
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:24px;">
+          ${productLinks}
+        </div>
+
+        <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
+          Este mensaje fue enviado automáticamente porque tu pedido fue marcado como entregado.
+        </p>
+      </div>
+    `,
+  });
+}

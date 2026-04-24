@@ -252,6 +252,14 @@ export default function StorefrontClient({
   const [reviewsAvg, setReviewsAvg] = useState(0);
   const [reviewsTotal, setReviewsTotal] = useState(0);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [canReview, setCanReview] = useState(false);
+  const [eligibleOrderId, setEligibleOrderId] = useState<string | null>(null);
+  const [userReview, setUserReview] = useState<{ id: string; rating: number; comment: string | null } | null>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+  const [reviewSuccess, setReviewSuccess] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [openCart, setOpenCart] = useState(false);
   const [category, setCategory] = useState("all");
@@ -321,16 +329,57 @@ export default function StorefrontClient({
     if (!selectedProduct) return;
     setReviewsLoading(true);
     setProductReviews([]);
+    setCanReview(false);
+    setEligibleOrderId(null);
+    setUserReview(null);
+    setReviewRating(0);
+    setReviewComment("");
+    setReviewError("");
+    setReviewSuccess(false);
     fetch(`/api/reviews?productId=${selectedProduct.id}`)
       .then((r) => r.json())
       .then((data) => {
         setProductReviews(data.reviews || []);
         setReviewsAvg(data.avg || 0);
         setReviewsTotal(data.total || 0);
+        setCanReview(data.canReview || false);
+        setEligibleOrderId(data.eligibleOrderId || null);
+        setUserReview(data.userReview || null);
         setReviewsLoading(false);
       })
       .catch(() => setReviewsLoading(false));
   }, [selectedProduct?.id]);
+
+  async function submitReview() {
+    if (!selectedProduct || !eligibleOrderId || reviewRating === 0) return;
+    setReviewSubmitting(true);
+    setReviewError("");
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: selectedProduct.id, orderId: eligibleOrderId, rating: reviewRating, comment: reviewComment.trim() || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setReviewError(data.error || "No se pudo enviar la reseña");
+      } else {
+        setReviewSuccess(true);
+        setCanReview(false);
+        setUserReview({ id: data.id, rating: reviewRating, comment: reviewComment.trim() || null });
+        setProductReviews((prev) => [data, ...prev]);
+        setReviewsTotal((prev) => prev + 1);
+        setReviewsAvg((prev) => {
+          const newTotal = reviewsTotal + 1;
+          return Math.round(((prev * reviewsTotal + reviewRating) / newTotal) * 10) / 10;
+        });
+      }
+    } catch {
+      setReviewError("No se pudo enviar la reseña");
+    } finally {
+      setReviewSubmitting(false);
+    }
+  }
 
   useEffect(() => {
     if (!initialProductId) return;
@@ -1136,6 +1185,52 @@ export default function StorefrontClient({
                   <span className="ml-2 text-sm font-normal text-gray-400">{reviewsTotal} reseña{reviewsTotal !== 1 ? "s" : ""}</span>
                 )}
               </h3>
+              {/* Formulario de reseña */}
+              {!reviewsLoading && canReview && !reviewSuccess && (
+                <div className="mb-4 rounded-xl bg-indigo-50 p-4">
+                  <p className="mb-2 text-sm font-semibold text-indigo-700">¿Qué te pareció este producto?</p>
+                  <div className="mb-3 flex gap-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <button key={s} type="button" onClick={() => setReviewRating(s)}>
+                        <Star className={`h-7 w-7 transition-colors ${s <= reviewRating ? "fill-yellow-400 text-yellow-400" : "text-gray-300 hover:text-yellow-300"}`} />
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="Contá tu experiencia (opcional)"
+                    rows={3}
+                    maxLength={1000}
+                    className="w-full resize-none rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  {reviewError && <p className="mt-1 text-xs text-red-500">{reviewError}</p>}
+                  <button
+                    type="button"
+                    disabled={reviewRating === 0 || reviewSubmitting}
+                    onClick={submitReview}
+                    className="mt-2 flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
+                  >
+                    {reviewSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Publicar reseña
+                  </button>
+                </div>
+              )}
+              {reviewSuccess && (
+                <div className="mb-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-700">
+                  ¡Gracias! Tu reseña ya está publicada.
+                </div>
+              )}
+              {!reviewsLoading && userReview && !reviewSuccess && (
+                <div className="mb-4 rounded-xl bg-gray-50 p-4">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">Tu reseña</p>
+                  <div className="flex gap-0.5 mb-1">
+                    {[1, 2, 3, 4, 5].map((s) => <Star key={s} className={`h-4 w-4 ${s <= userReview.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />)}
+                  </div>
+                  {userReview.comment && <p className="text-sm text-gray-600">{userReview.comment}</p>}
+                </div>
+              )}
+
               {reviewsLoading ? (
                 <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-gray-300" /></div>
               ) : productReviews.length === 0 ? (
