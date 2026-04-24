@@ -70,6 +70,7 @@ const MAX_UPLOAD_IMAGE_SIZE_BYTES = MAX_UPLOAD_IMAGE_SIZE_MB * 1024 * 1024;
 const MAX_IMAGE_SIDE = 2400;
 const MAX_PRODUCT_IMAGES = 5;
 const DEFAULT_VARIANT: Variant = { name: "Talle", value: "", stock: "0", price: "", sku: "" };
+const SINGLE_VARIANT_FALLBACK_VALUE = "Unico";
 
 function safeJsonArray(value: unknown) {
   if (Array.isArray(value)) return value;
@@ -80,6 +81,27 @@ function safeJsonArray(value: unknown) {
   } catch {
     return [];
   }
+}
+
+function prepareVariantsForSubmit(variants: Variant[]) {
+  const prepared = variants
+    .map((variant) => ({
+      ...variant,
+      name: variant.name.trim(),
+      value: variant.value.trim(),
+      stock: variant.stock.trim(),
+      price: variant.price.trim(),
+      sku: variant.sku.trim(),
+    }))
+    .filter((variant) =>
+      variant.value || variant.stock || variant.price || variant.sku || variant.name
+    );
+
+  if (prepared.length === 1 && !prepared[0].value) {
+    prepared[0] = { ...prepared[0], value: SINGLE_VARIANT_FALLBACK_VALUE };
+  }
+
+  return prepared;
 }
 
 function formatCategoryLabel(value: string) {
@@ -246,7 +268,7 @@ function ProductoFormPage() {
           product.variants?.length
             ? product.variants.map((v: any) => ({
                 name: v.name || "Talle",
-                value: v.value || "",
+                value: v.value || (product.variants.length === 1 ? SINGLE_VARIANT_FALLBACK_VALUE : ""),
                 stock: v.stock?.toString() || "0",
                 price: v.price?.toString() || "",
                 sku: v.sku || "",
@@ -390,8 +412,14 @@ function ProductoFormPage() {
 
     const category = form.category === "otro" ? customCategory.trim() : form.category;
     const subcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
+    const preparedVariants = prepareVariantsForSubmit(variants);
     if (!category) {
       setError("Escribi la categoria personalizada.");
+      setLoading(false);
+      return;
+    }
+    if (preparedVariants.some((variant) => !variant.value)) {
+      setError("Cada variante debe tener un valor. Si es un producto simple, usa una sola variante.");
       setLoading(false);
       return;
     }
@@ -405,7 +433,7 @@ function ProductoFormPage() {
         subcategory,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         images,
-        variants: variants.filter((v) => v.value),
+        variants: preparedVariants,
         attributes: attributes.filter((a) => a.key.trim() && a.value.trim()),
       }),
     });

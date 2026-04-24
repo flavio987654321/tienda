@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 
+const SINGLE_VARIANT_FALLBACK_VALUE = "Unico";
+
+function normalizeVariants(input: unknown) {
+  if (!Array.isArray(input)) return [];
+
+  const variants = input
+    .map((variant) => ({
+      name: typeof variant?.name === "string" ? variant.name.trim() : "",
+      value: typeof variant?.value === "string" ? variant.value.trim() : "",
+      stock: typeof variant?.stock === "string" ? variant.stock.trim() : String(variant?.stock ?? ""),
+      price: typeof variant?.price === "string" ? variant.price.trim() : String(variant?.price ?? ""),
+      sku: typeof variant?.sku === "string" ? variant.sku.trim() : "",
+    }))
+    .filter((variant) => variant.name || variant.value || variant.stock || variant.price || variant.sku);
+
+  if (variants.length === 1 && !variants[0].value) {
+    variants[0].value = SINGLE_VARIANT_FALLBACK_VALUE;
+  }
+
+  return variants;
+}
+
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -31,6 +53,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const { name, description, price, comparePrice, category, subcategory, tags, images, variants, attributes } = body;
+  const normalizedVariants = normalizeVariants(variants);
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     return NextResponse.json({ error: "Nombre requerido (mínimo 2 caracteres)" }, { status: 400 });
@@ -43,8 +66,8 @@ export async function POST(req: NextRequest) {
   if (comparePrice && (isNaN(parsedComparePrice!) || parsedComparePrice! <= 0)) {
     return NextResponse.json({ error: "El precio tachado debe ser un número mayor a 0" }, { status: 400 });
   }
-  if (variants && Array.isArray(variants)) {
-    for (const v of variants) {
+  if (normalizedVariants.length > 0) {
+    for (const v of normalizedVariants) {
       if (!v.name || !v.value) {
         return NextResponse.json({ error: "Cada variante debe tener nombre y valor" }, { status: 400 });
       }
@@ -68,7 +91,7 @@ export async function POST(req: NextRequest) {
       attributes: JSON.stringify(Array.isArray(attributes) ? attributes : []),
       storeId: store.id,
       variants: {
-        create: (variants || []).map((v: any) => ({
+        create: normalizedVariants.map((v) => ({
           name: v.name,
           value: v.value,
           stock: parseInt(v.stock) || 0,
