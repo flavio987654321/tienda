@@ -857,6 +857,36 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
 }) {
   const p = block.props;
   const c = config;
+  const blockWrapRef = useRef<HTMLDivElement>(null);
+  const resizeRef = useRef<{startY: number; startHeight: number} | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    if (!isResizing || !resizeRef.current) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizeRef.current || !blockWrapRef.current) return;
+      const deltaY = e.clientY - resizeRef.current.startY;
+      const newHeight = Math.max(100, resizeRef.current.startHeight + deltaY);
+      blockWrapRef.current.style.minHeight = `${newHeight}px`;
+    };
+
+    const handleMouseUp = () => {
+      if (!resizeRef.current || !blockWrapRef.current) return;
+      const newMinHeight = parseInt(blockWrapRef.current.style.minHeight) || resizeRef.current.startHeight;
+      onChangeProps({ ...p, blockMinHeight: newMinHeight });
+      resizeRef.current = null;
+      setIsResizing(false);
+      document.body.style.cursor = "auto";
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizing, p, onChangeProps]);
 
   const SPACER_H: Record<string,string> = { xs:"8px",sm:"24px",md:"48px",lg:"80px",xl:"120px" };
   const FONT_SIZE: Record<string,string> = { sm:"18px",md:"24px",lg:"32px",xl:"36px" };
@@ -892,6 +922,41 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           Arrastrá los textos
         </div>
       )}
+      {/* Resize handle en la parte inferior */}
+      <div
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          if (!blockWrapRef.current) return;
+          const rect = blockWrapRef.current.getBoundingClientRect();
+          resizeRef.current = {
+            startY: e.clientY,
+            startHeight: rect.height,
+          };
+          setIsResizing(true);
+          document.body.style.cursor = "ns-resize";
+        }}
+        style={{
+          position:"absolute",
+          bottom:"0",
+          left:"0",
+          right:"0",
+          height:"8px",
+          cursor:isResizing?"ns-resize":"ns-resize",
+          background:isResizing?"linear-gradient(to bottom, rgba(99,102,241,0.5), rgba(99,102,241,0.8))":"linear-gradient(to bottom, rgba(99,102,241,0.1), rgba(99,102,241,0.2))",
+          zIndex:5,
+          transition:isResizing?"none":"opacity 0.2s, background 0.2s",
+          opacity:isResizing?1:0.5,
+          borderTop:"1px dashed rgba(99,102,241,0.3)",
+          display:"flex",
+          alignItems:"center",
+          justifyContent:"center",
+        }}
+        title="Arrastra para cambiar la altura del bloque"
+      >
+        {selected && (
+          <div style={{fontSize:"8px",color:"#4f46e5",fontWeight:800,letterSpacing:"0.1em"}}>⋮⋮⋮</div>
+        )}
+      </div>
     </>
   ) : null;
 
@@ -1256,7 +1321,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   }
 
   return (
-    <div data-block-id={block.id} style={wrapStyle} onClick={onSelect}>
+    <div data-block-id={block.id} ref={blockWrapRef} style={{...wrapStyle, minHeight: p.blockMinHeight && p.blockMinHeight > 0 ? `${p.blockMinHeight}px` : "auto"}} onClick={onSelect}>
       {renderContent()}
       {floatingControls}
     </div>
