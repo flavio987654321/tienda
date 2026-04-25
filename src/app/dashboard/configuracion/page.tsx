@@ -44,7 +44,7 @@ const CURRENCIES    = [{id:"ARS",label:"Pesos ARS"},{id:"USD",label:"Dólares US
 type DesignSection = "template"|"colores"|"textos"|"imagenes"|"layout"|"tarjetas"|"anuncio"|"redes"|"footer"|"vendedoras"|"seo";
 
 /* ─── Block types ─── */
-export type BlockType = "hero"|"text"|"products"|"banner"|"cta"|"image-text"|"socials"|"spacer"|"divider";
+export type BlockType = "hero"|"text"|"products"|"banner"|"banner-group"|"cta"|"image-text"|"socials"|"spacer"|"divider";
 export interface Block { id:string; type:BlockType; props:Record<string,any> }
 type PreviewViewport = "desktop"|"tablet"|"mobile";
 type TextPosition = { x: number; y: number };
@@ -76,6 +76,12 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
     defaultProps:{ heading:"Seguinos y contactanos", showHeading:true, layout:"icons", color:"", bgColor:"", showInstagram:true, showFacebook:true, showTiktok:true, showWhatsapp:true, showEmail:true, instagramUrl:"", facebookUrl:"", tiktokUrl:"", whatsappNumber:"", emailAddress:"" } },
   { type:"divider",    emoji:"─", label:"Línea separadora",        desc:"Línea horizontal decorativa",
     defaultProps:{ style:"solid", color:"#e5e7eb" } },
+  { type:"banner-group", emoji:"promo", label:"Grupo de banners",      desc:"Promos o beneficios en varias cards",
+    defaultProps:{ heading:"Promociones destacadas", subheading:"Mostra beneficios, promos o accesos rapidos en una sola seccion.", columns:3, bgColor:"", items:[
+      { title:"Envios a todo el pais", text:"Despachamos rapido y con seguimiento.", buttonText:"Ver mas", bgColor:"#111827", textColor:"#ffffff" },
+      { title:"Hasta 6 cuotas", text:"Paga como te quede mas comodo.", buttonText:"Conocer", bgColor:"#4f46e5", textColor:"#ffffff" },
+      { title:"Atencion personalizada", text:"Te ayudamos a elegir lo ideal.", buttonText:"Contactanos", bgColor:"#f59e0b", textColor:"#111827" },
+    ] } },
 ];
 
 const DEFAULT_CONFIG: StoreConfig = {
@@ -392,6 +398,14 @@ function BlockEditor({
   </div>;
 
   if (block.type==="products") return <div className="space-y-3">
+    <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-3 py-2">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-700">Formato del bloque</p>
+      <p className="mt-1 text-xs text-indigo-600">
+        {p.layoutMode==="carousel"
+          ? "Carrusel: los productos se deslizan hacia los costados y elegis cuantas cards se ven a la vez."
+          : "Grilla: los productos se ordenan en filas y elegis cuantas columnas se ven por fila."}
+      </p>
+    </div>
     <ColorPicker label="Color del bloque (vacío = color principal)" value={p.color||""} onChange={v=>upd("color",v)}/>
     <ColorPicker label="Color de fondo (vacío = fondo normal)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
     <div>
@@ -418,7 +432,9 @@ function BlockEditor({
     <Toggle label="Mostrar título de sección" value={p.showHeading!==false} onChange={v=>upd("showHeading",v)}/>
     {p.showHeading!==false && inp("Título de la sección","heading","Nuestros productos")}
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">Columnas (tamaño de las cards)</label>
+      <label className="block text-xs font-medium text-gray-600 mb-1">
+        {p.layoutMode==="carousel" ? "Productos visibles por deslizamiento" : "Columnas por fila"}
+      </label>
       <div className="grid grid-cols-5 gap-1.5">
         {[1,2,3,4,5].map(n=>(
           <button key={n} onClick={()=>upd("columns",n)}
@@ -428,7 +444,11 @@ function BlockEditor({
           </button>
         ))}
       </div>
-      <p className="text-xs text-gray-400 mt-1.5">Más columnas = tarjetas más pequeñas</p>
+      <p className="text-xs text-gray-400 mt-1.5">
+        {p.layoutMode==="carousel"
+          ? "Cuantos más productos visibles elegís, más chicas se ven las cards dentro del carrusel."
+          : "Cuantas más columnas elegís, más chicas se ven las cards dentro de la grilla."}
+      </p>
     </div>
   </div>;
 
@@ -440,6 +460,42 @@ function BlockEditor({
       <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño</label>
       <Chips options={[{id:"sm",label:"Delgada"},{id:"md",label:"Normal"},{id:"lg",label:"Grande"}]} value={p.size||"md"} onChange={v=>upd("size",v)}/>
     </div>
+  </div>;
+
+  if (block.type==="banner-group") return <div className="space-y-4">
+    <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-3 py-2">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-700">Grupo de banners</p>
+      <p className="mt-1 text-xs text-indigo-600">Ideal para mostrar promos, beneficios o accesos destacados en varias cards.</p>
+    </div>
+    {inp("Titulo de la seccion","heading","Promociones destacadas")}
+    {ta("Texto de apoyo","subheading","Mostra beneficios, promos o accesos rapidos en una sola seccion.")}
+    <ColorPicker label="Color de fondo del bloque" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Cards por fila</label>
+      <Chips options={[{id:"1",label:"1"},{id:"2",label:"2"},{id:"3",label:"3"}]} value={String(p.columns||3)} onChange={v=>upd("columns",Number(v))}/>
+    </div>
+    {((Array.isArray(p.items) ? p.items : []) as Record<string, any>[]).map((item, index) => (
+      <div key={index} className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-3">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Banner {index + 1}</p>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Titulo</label>
+          <input value={item.title||""} onChange={e=>upd("items",(Array.isArray(p.items)?p.items:[]).map((entry:any,i:number)=>i===index?{...entry,title:e.target.value}:entry))}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Texto</label>
+          <textarea value={item.text||""} onChange={e=>upd("items",(Array.isArray(p.items)?p.items:[]).map((entry:any,i:number)=>i===index?{...entry,text:e.target.value}:entry))} rows={2}
+            className="w-full resize-none border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Texto del boton</label>
+          <input value={item.buttonText||""} onChange={e=>upd("items",(Array.isArray(p.items)?p.items:[]).map((entry:any,i:number)=>i===index?{...entry,buttonText:e.target.value}:entry))}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+        </div>
+        <ColorPicker label="Color de fondo" value={item.bgColor||"#111827"} onChange={v=>upd("items",(Array.isArray(p.items)?p.items:[]).map((entry:any,i:number)=>i===index?{...entry,bgColor:v}:entry))}/>
+        <ColorPicker label="Color de texto" value={item.textColor||"#ffffff"} onChange={v=>upd("items",(Array.isArray(p.items)?p.items:[]).map((entry:any,i:number)=>i===index?{...entry,textColor:v}:entry))}/>
+      </div>
+    ))}
   </div>;
 
   if (block.type==="cta") return <div className="space-y-3">
@@ -1022,6 +1078,29 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
               },
             ]}
           />
+        </div>
+      );
+    }
+
+    if (block.type==="banner-group") {
+      const items = (Array.isArray(p.items) ? p.items : []).slice(0, 3);
+      const cols = Math.max(1, Math.min(3, Number(p.columns) || 3));
+      return (
+        <div style={{padding:"24px",background:p.bgColor||"transparent",fontFamily:c.fontFamily}}>
+          {p.heading && <h3 style={{fontSize:"18px",fontWeight:900,color:c.primaryColor,marginBottom:"8px",textAlign:"center"}}>{p.heading}</h3>}
+          {p.subheading && <p style={{fontSize:"12px",color:"#6b7280",textAlign:"center",maxWidth:"520px",margin:"0 auto 18px"}}>{p.subheading}</p>}
+          <div style={{display:"grid",gridTemplateColumns:`repeat(${cols}, minmax(0, 1fr))`,gap:"12px"}}>
+            {items.map((item:any, index:number) => (
+              <div key={index} style={{borderRadius:"20px",padding:"18px",background:item.bgColor||"#111827",color:item.textColor||"#ffffff",minHeight:"180px",display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
+                <div>
+                  <p style={{fontSize:"11px",fontWeight:800,opacity:0.72,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:"10px"}}>Banner {index + 1}</p>
+                  <h4 style={{fontSize:"18px",fontWeight:900,lineHeight:1.15,marginBottom:"10px"}}>{item.title||`Promo ${index + 1}`}</h4>
+                  <p style={{fontSize:"12px",lineHeight:1.6,opacity:0.9}}>{item.text||"Texto descriptivo del banner."}</p>
+                </div>
+                {item.buttonText && <div style={{marginTop:"16px"}}><span style={{display:"inline-flex",padding:"9px 14px",borderRadius:"999px",background:"rgba(255,255,255,0.16)",fontSize:"11px",fontWeight:800}}>{item.buttonText}</span></div>}
+              </div>
+            ))}
+          </div>
         </div>
       );
     }

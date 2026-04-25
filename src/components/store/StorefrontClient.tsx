@@ -992,6 +992,31 @@ export default function StorefrontClient({
               />
             </div>
           );
+          if (block.type === "banner-group") {
+            const items = (Array.isArray(p.items) ? p.items : []).slice(0, 3);
+            const columns = Math.max(1, Math.min(3, Number(p.columns) || 3));
+            const gridClass = columns === 1 ? "grid-cols-1" : columns === 2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-3";
+            return (
+              <section key={block.id} className="px-4 py-8 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
+                <div className="mx-auto max-w-7xl">
+                  {p.heading && <h2 className="text-center text-3xl font-black" style={{ color: store.primaryColor }}>{p.heading}</h2>}
+                  {p.subheading && <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-gray-500">{p.subheading}</p>}
+                  <div className={`mt-6 grid gap-4 ${gridClass}`}>
+                    {items.map((item: any, index: number) => (
+                      <div key={index} className="flex min-h-52 flex-col justify-between rounded-[28px] p-6" style={{ backgroundColor: String(item.bgColor || "#111827"), color: String(item.textColor || "#ffffff") }}>
+                        <div>
+                          <p className="mb-3 text-[11px] font-black uppercase tracking-[0.18em] opacity-70">Banner {index + 1}</p>
+                          <h3 className="mb-3 text-2xl font-black leading-tight">{item.title || `Promo ${index + 1}`}</h3>
+                          <p className="text-sm leading-relaxed opacity-90">{item.text || "Texto descriptivo del banner."}</p>
+                        </div>
+                        {item.buttonText && <span className="mt-5 inline-flex w-fit rounded-full bg-white/15 px-4 py-2 text-xs font-black">{item.buttonText}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            );
+          }
           if (block.type === "cta") return (
             <div key={block.id} className="mx-4 rounded-3xl p-8 sm:mx-6 sm:p-12" style={{ backgroundColor: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily }}>
               <PositionedTextLayer
