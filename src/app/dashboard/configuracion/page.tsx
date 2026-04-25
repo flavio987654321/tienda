@@ -357,6 +357,18 @@ function BlockEditor({
     </div>
   );
 
+  // Altura personalizada para todos los bloques
+  const heightEditorSection = (
+    <div className="space-y-2 rounded-xl border border-amber-100 bg-amber-50 p-3">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-amber-900">Altura mínima del bloque</label>
+        <span className="text-sm font-bold text-amber-700">{p.blockMinHeight||"auto"}px</span>
+      </div>
+      <input type="range" min="0" max="800" step="10" value={p.blockMinHeight||0} onChange={e=>upd("blockMinHeight",parseInt(e.target.value)||0)} className="w-full accent-amber-600"/>
+      <p className="text-xs text-amber-600">0 = altura automática. Arrastrá el slider para ajustar.</p>
+    </div>
+  );
+
   if (block.type==="hero") return <div className="space-y-3">
     {inp("Título","title","¡Bienvenidos!")}
     {inp("Subtítulo","subtitle","Encontrá todo lo que buscás")}
@@ -375,6 +387,7 @@ function BlockEditor({
       <label className="block text-xs font-medium text-gray-600 mb-1">Altura</label>
       <Chips options={[{id:"sm",label:"Compacto"},{id:"md",label:"Normal"},{id:"lg",label:"Grande"},{id:"xl",label:"Pantalla completa"}]} value={p.height||"lg"} onChange={v=>upd("height",v)}/>
     </div>
+    {heightEditorSection}
   </div>;
 
   if (block.type==="text") return <div className="space-y-3">
@@ -395,6 +408,7 @@ function BlockEditor({
       <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
       <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"Extra grande"}]} value={p.fontSize||"md"} onChange={v=>upd("fontSize",v)}/>
     </div>
+    {heightEditorSection}
   </div>;
 
   if (block.type==="products") return <div className="space-y-3">
@@ -460,6 +474,7 @@ function BlockEditor({
       <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño</label>
       <Chips options={[{id:"sm",label:"Delgada"},{id:"md",label:"Normal"},{id:"lg",label:"Grande"}]} value={p.size||"md"} onChange={v=>upd("size",v)}/>
     </div>
+    {heightEditorSection}
   </div>;
 
   if (block.type==="banner-group") return <div className="space-y-4">
@@ -474,6 +489,7 @@ function BlockEditor({
       <label className="block text-xs font-medium text-gray-600 mb-1">Cards por fila</label>
       <Chips options={[{id:"1",label:"1"},{id:"2",label:"2"},{id:"3",label:"3"}]} value={String(p.columns||3)} onChange={v=>upd("columns",Number(v))}/>
     </div>
+    {heightEditorSection}
     {((Array.isArray(p.items) ? p.items : []) as Record<string, any>[]).map((item, index) => (
       <div key={index} className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-3">
         <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Banner {index + 1}</p>
@@ -504,6 +520,7 @@ function BlockEditor({
     {inp("Texto del botón","buttonText","Ver catálogo")}
     <ColorPicker label="Color de fondo" value={p.bgColor||"#0f172a"} onChange={v=>upd("bgColor",v)}/>
     <ColorPicker label="Color de texto" value={p.textColor||"#ffffff"} onChange={v=>upd("textColor",v)}/>
+    {heightEditorSection}
   </div>;
 
   if (block.type==="image-text") return <div className="space-y-3">
@@ -582,6 +599,7 @@ function BlockEditor({
         ))}
       </div>
     </div>
+    {heightEditorSection}
   </div>;
 
   if (block.type==="socials") return <div className="space-y-3">
@@ -612,6 +630,7 @@ function BlockEditor({
       ))}
     </div>
     <p className="text-xs text-gray-400">Los logos mantienen sus colores reales. Estos colores cambian el fondo, el titulo, bordes y botones del bloque.</p>
+    {heightEditorSection}
   </div>;
 
   if (block.type==="spacer") return <div className="space-y-2">
@@ -877,12 +896,15 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   ) : null;
 
   function renderContent() {
+    // Aplicar altura personalizada a todos los bloques
+    const customMinHeight = p.blockMinHeight && p.blockMinHeight > 0 ? `${p.blockMinHeight}px` : undefined;
+
     if (block.type==="hero") {
       const hh = HERO_H[p.height||"lg"] || "180px";
       const layout = p.layout || "center";
       const baseX = layout === "left" ? 8 : layout === "right" ? 54 : 28;
       return (
-        <div style={{ background:p.bgColor||c.primaryColor, color:p.textColor||"#fff", fontFamily:c.fontFamily, minHeight:hh, padding:"24px 32px" }}>
+        <div style={{ background:p.bgColor||c.primaryColor, color:p.textColor||"#fff", fontFamily:c.fontFamily, minHeight:customMinHeight || hh, padding:"24px 32px" }}>
           <MovableTextStage
             key={`hero-${viewport}-${Boolean(p.title)}-${Boolean(p.subtitle)}-${Boolean(p.buttonText)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
             blockProps={p}
@@ -920,7 +942,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const align = p.align || "center";
       const baseX = align === "left" ? 8 : align === "right" ? 42 : 20;
       return (
-        <div style={{padding:"32px 24px",fontFamily:c.fontFamily,background:blockBg}}>
+        <div style={{padding:"32px 24px",fontFamily:c.fontFamily,background:blockBg,minHeight:customMinHeight}}>
           <MovableTextStage
             key={`text-${viewport}-${Boolean(p.heading)}-${Boolean(p.body)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
             blockProps={p}
@@ -964,7 +986,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
         .slice(0, layoutMode === "carousel" ? Math.max(cols * 3, 6) : Math.max(cols * 2, 4));
 
       return (
-        <div style={{padding:"24px 16px",fontFamily:c.fontFamily,background:blockBg}}>
+        <div style={{padding:"24px 16px",fontFamily:c.fontFamily,background:blockBg,minHeight:customMinHeight}}>
           {p.showHeading!==false && p.heading && (
             <MovableTextStage
               key={`products-${viewport}-${Boolean(p.heading)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
@@ -1062,7 +1084,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     if (block.type==="banner") {
       const padH = p.size==="sm" ? "8px" : p.size==="lg" ? "16px" : "12px";
       return (
-        <div style={{background:p.bgColor||"#f59e0b",color:p.textColor||"#000",padding:`${padH} 24px`,fontFamily:c.fontFamily}}>
+        <div style={{background:p.bgColor||"#f59e0b",color:p.textColor||"#000",padding:`${padH} 24px`,fontFamily:c.fontFamily,minHeight:customMinHeight}}>
           <MovableTextStage
             key={`banner-${viewport}-${Boolean(p.text)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
             blockProps={p}
@@ -1086,7 +1108,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const items = (Array.isArray(p.items) ? p.items : []).slice(0, 3);
       const cols = Math.max(1, Math.min(3, Number(p.columns) || 3));
       return (
-        <div style={{padding:"24px",background:p.bgColor||"transparent",fontFamily:c.fontFamily}}>
+        <div style={{padding:"24px",background:p.bgColor||"transparent",fontFamily:c.fontFamily,minHeight:customMinHeight}}>
           {p.heading && <h3 style={{fontSize:"18px",fontWeight:900,color:c.primaryColor,marginBottom:"8px",textAlign:"center"}}>{p.heading}</h3>}
           {p.subheading && <p style={{fontSize:"12px",color:"#6b7280",textAlign:"center",maxWidth:"520px",margin:"0 auto 18px"}}>{p.subheading}</p>}
           <div style={{display:"grid",gridTemplateColumns:`repeat(${cols}, minmax(0, 1fr))`,gap:"12px"}}>
@@ -1107,7 +1129,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
 
     if (block.type==="cta") {
       return (
-        <div style={{background:p.bgColor||"#0f172a",color:p.textColor||"#fff",padding:"40px 24px",fontFamily:c.fontFamily}}>
+        <div style={{background:p.bgColor||"#0f172a",color:p.textColor||"#fff",padding:"40px 24px",fontFamily:c.fontFamily,minHeight:customMinHeight}}>
           <MovableTextStage
             key={`cta-${viewport}-${Boolean(p.heading)}-${Boolean(p.sub)}-${Boolean(p.buttonText)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
             blockProps={p}
@@ -1145,7 +1167,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const textColor = p.textColor || "#6b7280";
       const stackedImageText = viewport !== "desktop";
       return (
-        <div style={{display:"flex",gap:"20px",padding:"24px",background:p.bgColor||"transparent",fontFamily:c.fontFamily,alignItems:"stretch",flexDirection:stackedImageText ? "column" : p.imagePosition === "right" ? "row-reverse" : "row"}}>
+        <div style={{display:"flex",gap:"20px",padding:"24px",background:p.bgColor||"transparent",fontFamily:c.fontFamily,alignItems:"stretch",flexDirection:stackedImageText ? "column" : p.imagePosition === "right" ? "row-reverse" : "row",minHeight:customMinHeight}}>
           <div style={{flex:stackedImageText ? "1 1 auto" : `0 0 ${imageWidth}%`,width:stackedImageText ? "100%" : undefined,minHeight:`${imageHeight}px`,borderRadius:"18px",overflow:"hidden",background:p.imageBgColor||"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center"}}>
             {p.image ? (
               <img src={p.image} alt={p.heading || "Imagen del bloque"} style={{width:"100%",height:"100%",objectFit:p.imageFit||"cover",objectPosition:p.imageFocus||"center"}} />
@@ -1183,7 +1205,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     if (block.type==="socials") {
       const columns = Math.max(2, Math.min(4, socialItems.length || 2));
       return (
-        <div style={{padding:"28px 24px",fontFamily:c.fontFamily,background:p.bgColor||"transparent"}}>
+        <div style={{padding:"28px 24px",fontFamily:c.fontFamily,background:p.bgColor||"transparent",minHeight:customMinHeight}}>
           {p.heading && (
             <MovableTextStage
               key={`socials-${viewport}-${Boolean(p.heading)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
@@ -1219,12 +1241,12 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     }
 
     if (block.type==="spacer") {
-      return <div style={{height:SPACER_H[p.height as keyof typeof SPACER_H||"md"]||"48px",background:"repeating-linear-gradient(45deg,#f9fafb,#f9fafb 10px,#f3f4f6 10px,#f3f4f6 20px)"}}/>;
+      return <div style={{height:customMinHeight || SPACER_H[p.height as keyof typeof SPACER_H||"md"]||"48px",background:"repeating-linear-gradient(45deg,#f9fafb,#f9fafb 10px,#f3f4f6 10px,#f3f4f6 20px)"}}/>;
     }
 
     if (block.type==="divider") {
       return (
-        <div style={{padding:"8px 24px"}}>
+        <div style={{padding:"8px 24px",minHeight:customMinHeight}}>
           <hr style={{border:"none",borderTop:`2px ${p.style||"solid"} ${p.color||"#e5e7eb"}`}}/>
         </div>
       );
@@ -1378,10 +1400,22 @@ export default function ConfiguracionPage() {
   async function handleSave() {
     setSaving(true); setSaved(false);
     try {
+      // Asegurar que todas las posiciones de texto se sincronicen antes de guardar
+      const processedBlocks = blocks.map(block => ({
+        ...block,
+        props: {
+          ...block.props,
+          // Garantizar que textPositions sea un objeto válido
+          textPositions: block.props.textPositions && typeof block.props.textPositions === 'object' 
+            ? block.props.textPositions 
+            : {}
+        }
+      }));
+
       const res = await fetch("/api/configuracion",{
         method:"PUT",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({...config, pageBlocks:JSON.stringify(blocks)})
+        body:JSON.stringify({...config, pageBlocks:JSON.stringify(processedBlocks)})
       });
       if (!res.ok) throw new Error("Error al guardar");
       setSaved(true);
@@ -1444,6 +1478,13 @@ export default function ConfiguracionPage() {
     if (!target) return;
     target.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [activeTab, selectedBlockId]);
+
+  // Sincronizar cambios de bloques a isDirty
+  useEffect(() => {
+    if (loadedRef.current && blocks.length > 0) {
+      setIsDirty(true);
+    }
+  }, [blocks.length]);
 
   if(loading) return <DashboardLayout><div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin text-indigo-600"/></div></DashboardLayout>;
 
@@ -1727,7 +1768,29 @@ export default function ConfiguracionPage() {
                     const lib = BLOCK_LIBRARY.find(x=>x.type===b.type);
                     const isSel = selectedBlockId===b.id;
                     return (
-                      <div key={b.id} className={`rounded-2xl overflow-hidden transition-all ${isSel ? "bg-white border-2 border-indigo-300 shadow-lg shadow-indigo-100/70" : "bg-white border border-gray-100"}`}>
+                      <div 
+                        key={b.id} 
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = "move";
+                          e.dataTransfer.setData("blockIndex", String(idx));
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = "move";
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const sourceIdx = Number(e.dataTransfer.getData("blockIndex"));
+                          if (sourceIdx !== idx && sourceIdx >= 0 && sourceIdx < blocks.length) {
+                            const newBlocks = [...blocks];
+                            const [movedBlock] = newBlocks.splice(sourceIdx, 1);
+                            newBlocks.splice(idx, 0, movedBlock);
+                            setBlocks(newBlocks);
+                            setIsDirty(true);
+                          }
+                        }}
+                        className={`rounded-2xl overflow-hidden transition-all cursor-grab active:cursor-grabbing ${isSel ? "bg-white border-2 border-indigo-300 shadow-lg shadow-indigo-100/70" : "bg-white border border-gray-100 hover:border-gray-200"}`}>
                         <div
                           onClick={()=>setSelectedBlockId(isSel?null:b.id)}
                           className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${isSel?"bg-gradient-to-r from-indigo-50 to-violet-50":"hover:bg-gray-50"}`}
@@ -1741,19 +1804,23 @@ export default function ConfiguracionPage() {
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <button onClick={e=>{e.stopPropagation();moveBlock(b.id,-1);}} disabled={idx===0}
-                              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-30 transition-colors">
+                              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-30 transition-colors"
+                              title="Mover arriba">
                               <ChevronUp className="h-3 w-3"/>
                             </button>
                             <button onClick={e=>{e.stopPropagation();moveBlock(b.id,1);}} disabled={idx===blocks.length-1}
-                              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-30 transition-colors">
+                              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-30 transition-colors"
+                              title="Mover abajo">
                               <ChevronDown className="h-3 w-3"/>
                             </button>
                             <button onClick={e=>{e.stopPropagation();duplicateBlock(b.id);}}
-                              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors">
+                              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors"
+                              title="Duplicar">
                               <Copy className="h-3 w-3"/>
                             </button>
                             <button onClick={e=>{e.stopPropagation();deleteBlock(b.id);}}
-                              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors">
+                              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"
+                              title="Eliminar">
                               <Trash2 className="h-3 w-3"/>
                             </button>
                           </div>
