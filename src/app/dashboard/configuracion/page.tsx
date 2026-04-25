@@ -840,8 +840,8 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   const c = config;
 
   const SPACER_H: Record<string,string> = { xs:"8px",sm:"24px",md:"48px",lg:"80px",xl:"120px" };
-  const FONT_SIZE: Record<string,string> = { sm:"16px",md:"20px",lg:"28px",xl:"36px" };
-  const HERO_H: Record<string,string> = { sm:"80px",md:"120px",lg:"180px",xl:"240px" };
+  const FONT_SIZE: Record<string,string> = { sm:"18px",md:"24px",lg:"32px",xl:"36px" };
+  const HERO_H: Record<string,string> = { sm:"180px",md:"260px",lg:"360px",xl:"480px" };
   const socialItems = [
     { key:"showInstagram", label:"Instagram", bg:"linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" },
     { key:"showFacebook", label:"Facebook", bg:"#1877F2" },
@@ -894,18 +894,18 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 id: "title",
                 defaultPos: { x: baseX, y: 18 },
                 style: { width: "min(72%, 520px)", textAlign: layout as "left" | "center" | "right" },
-                content: <h2 style={{fontSize:FONT_SIZE[p.fontSize||"xl"]||"36px",fontWeight:900,lineHeight:1.1}}>{p.title}</h2>,
+                content: <h2 style={{fontSize:FONT_SIZE[p.fontSize||"xl"]||"36px",fontWeight:900,lineHeight:1.1,marginBottom:"12px",textShadow:"0 1px 2px rgba(0,0,0,0.12)"}}>{p.title}</h2>,
               }] : []),
               ...(p.subtitle ? [{
                 id: "subtitle",
                 defaultPos: { x: baseX, y: 40 },
                 style: { width: "min(72%, 520px)", textAlign: layout as "left" | "center" | "right" },
-                content: <p style={{fontSize:"13px",opacity:0.88,lineHeight:1.6}}>{p.subtitle}</p>,
+                content: <p style={{fontSize:"16px",opacity:0.8,lineHeight:1.6,maxWidth:"520px"}}>{p.subtitle}</p>,
               }] : []),
               ...(p.buttonText ? [{
                 id: "buttonText",
                 defaultPos: { x: baseX + (layout === "center" ? 10 : 0), y: 65 },
-                content: <button style={{background:"rgba(255,255,255,0.18)",border:"1px solid rgba(255,255,255,0.48)",color:"inherit",padding:"10px 18px",borderRadius:"12px",fontSize:"12px",fontWeight:700,cursor:"inherit"}}>{p.buttonText}</button>,
+                content: <button style={{background:"#ffffff",border:"none",color:p.bgColor||c.primaryColor,padding:"12px 32px",borderRadius:"999px",fontSize:"14px",fontWeight:900,cursor:"inherit"}}>{p.buttonText}</button>,
               }] : []),
             ]}
           />
@@ -1165,13 +1165,13 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                   id: "heading",
                   defaultPos: { x: 6, y: 28 },
                   style: { width: "min(90%, 420px)", textAlign: "left" as const },
-                  content: <h3 style={{fontSize:"16px",fontWeight:800,color:blockColor}}>{p.heading}</h3>,
+                  content: <h3 style={{fontSize:"30px",fontWeight:900,color:blockColor,marginBottom:"16px",lineHeight:1.2}}>{p.heading}</h3>,
                 }] : []),
                 ...(p.body ? [{
                   id: "body",
                   defaultPos: { x: 6, y: 44 },
                   style: { width: "min(92%, 460px)", textAlign: "left" as const },
-                  content: <p style={{fontSize:"12px",color:textColor,lineHeight:1.7}}>{p.body}</p>,
+                  content: <p style={{fontSize:"16px",color:textColor,lineHeight:1.7}}>{p.body}</p>,
                 }] : []),
               ]}
             />
