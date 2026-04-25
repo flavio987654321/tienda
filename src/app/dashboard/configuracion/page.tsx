@@ -63,7 +63,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"text",       emoji:"📝", label:"Bloque de texto",        desc:"Título y párrafo de texto libre",
     defaultProps:{ heading:"Sobre nosotros", body:"Somos una tienda con años de experiencia...", align:"center", fontSize:"md", color:"", textColor:"", bgColor:"" } },
   { type:"products",   emoji:"🛍️", label:"Grilla de productos",    desc:"Muestra tu catálogo con columnas configurables",
-    defaultProps:{ heading:"Nuestros productos", columns:3, showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:true, color:"", bgColor:"" } },
+    defaultProps:{ heading:"Nuestros productos", columns:3, layoutMode:"grid", showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:true, color:"", bgColor:"" } },
   { type:"banner",     emoji:"📢", label:"Banda de anuncio",       desc:"Franja de color con texto destacado",
     defaultProps:{ text:"🔥 ¡Oferta especial! Envío gratis hoy", bgColor:"#f59e0b", textColor:"#000000", size:"md" } },
   { type:"cta",        emoji:"🚀", label:"Llamada a la acción",    desc:"Sección oscura con botón grande destacado",
@@ -395,6 +395,10 @@ function BlockEditor({
     <ColorPicker label="Color del bloque (vacío = color principal)" value={p.color||""} onChange={v=>upd("color",v)}/>
     <ColorPicker label="Color de fondo (vacío = fondo normal)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
     <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Formato</label>
+      <Chips options={[{id:"grid",label:"Grilla"},{id:"carousel",label:"Carrusel"}]} value={p.layoutMode||"grid"} onChange={v=>upd("layoutMode",v)}/>
+    </div>
+    <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Categoria a mostrar</label>
       <select value={p.categoryFilter||"all"} onChange={e=>upd("categoryFilter",e.target.value)}
         className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
@@ -415,12 +419,12 @@ function BlockEditor({
     {p.showHeading!==false && inp("Título de la sección","heading","Nuestros productos")}
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Columnas (tamaño de las cards)</label>
-      <div className="grid grid-cols-4 gap-1.5">
-        {[2,3,4,5].map(n=>(
+      <div className="grid grid-cols-5 gap-1.5">
+        {[1,2,3,4,5].map(n=>(
           <button key={n} onClick={()=>upd("columns",n)}
             className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 transition-all ${p.columns===n?"border-indigo-500 bg-indigo-50":"border-gray-200 hover:border-gray-300"}`}>
             <span className={`text-xs font-bold ${p.columns===n?"text-indigo-700":"text-gray-600"}`}>{n}</span>
-            <div className={`flex gap-0.5`}>{Array.from({length:Math.min(n,4)}).map((_,i)=><div key={i} className={`h-3 rounded-sm ${p.columns===n?"bg-indigo-400":"bg-gray-300"}`} style={{width:`${16/n*1.5}px`}}/>)}</div>
+            <div className={`flex gap-0.5`}>{Array.from({length:Math.min(n,5)}).map((_,i)=><div key={i} className={`h-3 rounded-sm ${p.columns===n?"bg-indigo-400":"bg-gray-300"}`} style={{width:`${Math.max(3,16/n*1.5)}px`}}/>)}</div>
           </button>
         ))}
       </div>
@@ -606,9 +610,76 @@ function MovableTextStage({
   const latestRef = useRef<Record<string, TextPosition>>(draftPositions);
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
+  function normalizePositions(source: Record<string, TextPosition>) {
+    if (!stageRef.current) return source;
+    const stageRect = stageRef.current.getBoundingClientRect();
+    let changed = false;
+    const next = { ...source };
+
+    items.forEach((item) => {
+      const itemNode = itemRefs.current[item.id];
+      if (!itemNode) return;
+      const itemRect = itemNode.getBoundingClientRect();
+      const maxX = Math.max(0, stageRect.width - itemRect.width);
+      const maxY = Math.max(0, stageRect.height - itemRect.height);
+      const current = source[item.id] ?? item.defaultPos;
+      const pixelX = clamp((current.x / 100) * Math.max(stageRect.width, 1), 0, maxX);
+      const pixelY = clamp((current.y / 100) * Math.max(stageRect.height, 1), 0, maxY);
+      const normalized = {
+        x: Number(((pixelX / Math.max(stageRect.width, 1)) * 100).toFixed(2)),
+        y: Number(((pixelY / Math.max(stageRect.height, 1)) * 100).toFixed(2)),
+      };
+
+      if (normalized.x !== current.x || normalized.y !== current.y) {
+        next[item.id] = normalized;
+        changed = true;
+      }
+    });
+
+    return changed ? next : source;
+  }
+
+  function persistPositions(source: Record<string, TextPosition>) {
+    let nextProps = blockProps;
+    items.forEach((item) => {
+      const position = source[item.id];
+      if (position) {
+        nextProps = updateViewportTextPosition(nextProps, viewport, item.id, position);
+      }
+    });
+    onChange(nextProps);
+  }
+
   useEffect(() => {
     latestRef.current = draftPositions;
   }, [draftPositions]);
+
+  useEffect(() => {
+    setDraftPositions((current) => {
+      const normalized = normalizePositions(current);
+      latestRef.current = normalized;
+      if (normalized !== current && !dragRef.current) {
+        persistPositions(normalized);
+      }
+      return normalized;
+    });
+  }, [items, viewport, style]);
+
+  useEffect(() => {
+    if (!stageRef.current || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      setDraftPositions((current) => {
+        const normalized = normalizePositions(current);
+        latestRef.current = normalized;
+        if (normalized !== current && !dragRef.current) {
+          persistPositions(normalized);
+        }
+        return normalized;
+      });
+    });
+    observer.observe(stageRef.current);
+    return () => observer.disconnect();
+  }, [items, viewport]);
 
   useEffect(() => {
     function handleMouseMove(event: MouseEvent) {
@@ -820,7 +891,8 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     }
 
     if (block.type==="products") {
-      const cols = p.columns||3;
+      const cols = Math.max(1, Number(p.columns) || 3);
+      const layoutMode = p.layoutMode || "grid";
       const blockColor = p.color || c.primaryColor;
       const blockBg = p.bgColor || "transparent";
       const categoryFilter = String(p.categoryFilter || "all");
@@ -833,7 +905,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           if (subcategoryFilter !== "all" && product.subcategory !== subcategoryFilter) return false;
           return true;
         })
-        .slice(0, Math.max(cols * 2, 4));
+        .slice(0, layoutMode === "carousel" ? Math.max(cols * 3, 6) : Math.max(cols * 2, 4));
 
       return (
         <div style={{padding:"24px 16px",fontFamily:c.fontFamily,background:blockBg}}>
@@ -883,6 +955,27 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           {visibleProducts.length === 0 ? (
             <div style={{padding:"20px 12px",border:"1px dashed #d1d5db",borderRadius:"14px",textAlign:"center",color:"#9ca3af",fontSize:"12px"}}>
               No hay productos para esa categoría o subcategoría.
+            </div>
+          ) : layoutMode === "carousel" ? (
+            <div style={{display:"flex",gap:"10px",overflowX:"auto",paddingBottom:"6px",scrollSnapType:"x mandatory"}}>
+              {visibleProducts.map((product)=> {
+                const image = parsePreviewImages(product.images || "")[0];
+                return (
+                  <div key={product.id} style={{flex:`0 0 calc((100% - ${(cols - 1) * 10}px) / ${cols})`,minWidth:cols===1?"100%":undefined,scrollSnapAlign:"start",borderRadius:"12px",overflow:"hidden",background:"#fff",border:"1px solid #e5e7eb"}}>
+                    <div style={{aspectRatio:"1",background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+                      {image ? (
+                        <img src={image} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                      ) : (
+                        <span style={{fontSize:"20px",opacity:0.35}}>IMG</span>
+                      )}
+                    </div>
+                    <div style={{padding:"12px"}}>
+                      <p style={{fontSize:"12px",fontWeight:700,color:"#111827",marginBottom:"4px",lineHeight:1.4}}>{product.name}</p>
+                      <p style={{fontSize:"11px",color:"#10b981",fontWeight:800}}>${Number(product.price || 0).toLocaleString("es-AR")}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:"10px"}}>
@@ -971,16 +1064,17 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const imageHeight = Number(p.imageHeight || 320);
       const blockColor = p.color || c.primaryColor;
       const textColor = p.textColor || "#6b7280";
+      const stackedImageText = viewport !== "desktop";
       return (
-        <div style={{display:"flex",gap:"20px",padding:"24px",background:p.bgColor||"transparent",fontFamily:c.fontFamily,alignItems:"stretch",flexDirection:p.imagePosition === "right" ? "row-reverse" : "row"}}>
-          <div style={{flex:`0 0 ${imageWidth}%`,minHeight:`${imageHeight}px`,borderRadius:"18px",overflow:"hidden",background:p.imageBgColor||"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <div style={{display:"flex",gap:"20px",padding:"24px",background:p.bgColor||"transparent",fontFamily:c.fontFamily,alignItems:"stretch",flexDirection:stackedImageText ? "column" : p.imagePosition === "right" ? "row-reverse" : "row"}}>
+          <div style={{flex:stackedImageText ? "1 1 auto" : `0 0 ${imageWidth}%`,width:stackedImageText ? "100%" : undefined,minHeight:`${imageHeight}px`,borderRadius:"18px",overflow:"hidden",background:p.imageBgColor||"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center"}}>
             {p.image ? (
               <img src={p.image} alt={p.heading || "Imagen del bloque"} style={{width:"100%",height:"100%",objectFit:p.imageFit||"cover",objectPosition:p.imageFocus||"center"}} />
             ) : (
               <div style={{color:"#9ca3af",fontSize:"12px",fontWeight:700}}>Sin imagen</div>
             )}
           </div>
-          <div style={{flex:`1 1 ${100-imageWidth}%`,display:"flex",flexDirection:"column",justifyContent:"center"}}>
+          <div style={{flex:stackedImageText ? "1 1 auto" : `1 1 ${100-imageWidth}%`,width:stackedImageText ? "100%" : undefined,display:"flex",flexDirection:"column",justifyContent:"center"}}>
             <MovableTextStage
               key={`image-text-${viewport}-${Boolean(p.heading)}-${Boolean(p.body)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
               blockProps={p}

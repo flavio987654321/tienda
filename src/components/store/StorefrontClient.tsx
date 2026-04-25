@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 const SOCIAL_ICONS: Record<string, { path: string; color: string; gradient?: string }> = {
   instagram: { path: "M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z", color: "#E1306C", gradient: "linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)" },
@@ -101,6 +101,16 @@ type CartItem = {
   quantity: number;
   maxStock: number | null;
   image: string | null;
+};
+
+type PreviewViewport = "desktop" | "tablet" | "mobile";
+type TextPosition = { x: number; y: number };
+type PositionedTextItem = {
+  id: string;
+  content: ReactNode;
+  defaultPos: TextPosition;
+  className?: string;
+  style?: CSSProperties;
 };
 
 type Customer = {
@@ -221,6 +231,57 @@ function parseBlocks(pageBlocks: string): PageBlock[] {
   }
 }
 
+function getViewportFromWidth(width: number): PreviewViewport {
+  if (width < 640) return "mobile";
+  if (width < 1024) return "tablet";
+  return "desktop";
+}
+
+function getViewportTextPositions(props: Record<string, any>, viewport: PreviewViewport): Record<string, TextPosition> {
+  const all = props.textPositions;
+  if (!all || typeof all !== "object") return {};
+  const current = all[viewport];
+  return current && typeof current === "object" ? current : {};
+}
+
+function PositionedTextLayer({
+  blockProps,
+  viewport,
+  items,
+  style,
+  className = "",
+}: {
+  blockProps: Record<string, any>;
+  viewport: PreviewViewport;
+  items: PositionedTextItem[];
+  style?: CSSProperties;
+  className?: string;
+}) {
+  const stored = getViewportTextPositions(blockProps, viewport);
+
+  return (
+    <div className={`relative overflow-hidden ${className}`} style={style}>
+      {items.map((item) => {
+        const pos = stored[item.id] ?? item.defaultPos;
+        return (
+          <div
+            key={item.id}
+            className={item.className}
+            style={{
+              position: "absolute",
+              left: `${pos.x}%`,
+              top: `${pos.y}%`,
+              ...item.style,
+            }}
+          >
+            {item.content}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function isStarterBlocks(blocks: PageBlock[]) {
   if (blocks.length !== 3) return false;
   const [hero, text, products] = blocks;
@@ -259,6 +320,7 @@ export default function StorefrontClient({
   const [eligibleOrderId, setEligibleOrderId] = useState<string | null>(null);
   const [userReview, setUserReview] = useState<{ id: string; rating: number; comment: string | null } | null>(null);
   const [reviewRating, setReviewRating] = useState(0);
+  const [viewport, setViewport] = useState<PreviewViewport>("desktop");
   const [reviewComment, setReviewComment] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewError, setReviewError] = useState("");
@@ -329,6 +391,13 @@ export default function StorefrontClient({
   const cardShadow = SHADOW[store.cardShadow] ?? SHADOW.sm;
   const buttonRadius = buttonClass(store.buttonStyle);
   const productGrid = GRID[store.productLayout] ?? GRID.grid3;
+
+  useEffect(() => {
+    const handleResize = () => setViewport(getViewportFromWidth(window.innerWidth));
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   function openProduct(product: Product) {
     setSelectedProduct(product);
@@ -803,11 +872,14 @@ export default function StorefrontClient({
                     if (product.category !== categoryFilter) return false;
                     return subcategoryFilter === "all" || product.subcategory === subcategoryFilter;
                   });
-            const columns = Number(p.columns || 3);
+            const columns = Math.max(1, Number(p.columns) || 3);
+            const layoutMode = String(p.layoutMode || "grid");
             const gridClass = columns >= 5
               ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
               : columns === 4
                 ? "grid-cols-2 lg:grid-cols-4"
+                : columns === 1
+                  ? "grid-cols-1"
                 : columns === 2
                   ? "grid-cols-1 sm:grid-cols-2"
                   : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
@@ -815,9 +887,21 @@ export default function StorefrontClient({
             return (
               <section key={block.id} id="productos" className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
                 {p.showHeading !== false && (
-                  <div className="mb-7 text-center">
-                    <h2 className="text-3xl font-black" style={{ color: String(p.color || store.primaryColor) }}>{p.heading || "Nuestros productos"}</h2>
-                    {categoryFilter !== "all" && <p className={`mt-2 text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>{formatCategoryLabel(categoryFilter)}{subcategoryFilter !== "all" ? ` / ${formatCategoryLabel(subcategoryFilter)}` : ""}</p>}
+                  <div className="mb-7">
+                    <PositionedTextLayer
+                      blockProps={p}
+                      viewport={viewport}
+                      style={{ minHeight: "56px" }}
+                      items={[
+                        {
+                          id: "heading",
+                          defaultPos: { x: 34, y: 10 },
+                          style: { width: "min(70%, 420px)", textAlign: "center" as const },
+                          content: <h2 className="text-3xl font-black" style={{ color: String(p.color || store.primaryColor) }}>{p.heading || "Nuestros productos"}</h2>,
+                        },
+                      ]}
+                    />
+                    {categoryFilter !== "all" && <p className={`mt-2 text-center text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>{formatCategoryLabel(categoryFilter)}{subcategoryFilter !== "all" ? ` / ${formatCategoryLabel(subcategoryFilter)}` : ""}</p>}
                   </div>
                 )}
 
@@ -840,7 +924,25 @@ export default function StorefrontClient({
                 )}
 
                 {blockProducts.length ? (
-                  <div className={`grid gap-5 ${gridClass}`}>{blockProducts.map(renderProductCard)}</div>
+                  layoutMode === "carousel" ? (
+                    <div className="flex gap-5 overflow-x-auto pb-3" style={{ scrollSnapType: "x mandatory" }}>
+                      {blockProducts.map((product, index) => (
+                        <div
+                          key={product.id}
+                          className="shrink-0"
+                          style={{
+                            width: `calc((100% - ${(columns - 1) * 20}px) / ${columns})`,
+                            minWidth: columns === 1 ? "100%" : undefined,
+                            scrollSnapAlign: "start",
+                          }}
+                        >
+                          {renderProductCard(product, index)}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={`grid gap-5 ${gridClass}`}>{blockProducts.map(renderProductCard)}</div>
+                  )
                 ) : (
                   <div className={`py-16 text-center ${isDark ? "text-gray-400" : "text-gray-400"}`}>
                     <Package className="mx-auto mb-3 h-10 w-10 opacity-40" />
@@ -851,23 +953,75 @@ export default function StorefrontClient({
             );
           }
           if (block.type === "text") return (
-            <div key={block.id} className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ textAlign: (p.align || "center") as "left" | "center" | "right", fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
-              {p.heading && <h2 className="font-black text-3xl md:text-4xl mb-4" style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>}
-              {p.body && <p className="max-w-2xl mx-auto text-base leading-relaxed" style={{ color: String(p.textColor || "#6b7280") }}>{p.body}</p>}
+            <div key={block.id} className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
+              <PositionedTextLayer
+                blockProps={p}
+                viewport={viewport}
+                style={{ minHeight: "170px" }}
+                items={[
+                  ...(p.heading ? [{
+                    id: "heading",
+                    defaultPos: { x: p.align === "left" ? 8 : p.align === "right" ? 42 : 20, y: 18 },
+                    style: { width: "min(76%, 560px)", textAlign: (p.align || "center") as "left" | "center" | "right" },
+                    content: <h2 className="mb-4 text-3xl font-black md:text-4xl" style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>,
+                  }] : []),
+                  ...(p.body ? [{
+                    id: "body",
+                    defaultPos: { x: p.align === "left" ? 8 : p.align === "right" ? 42 : 20, y: 46 },
+                    style: { width: "min(82%, 640px)", textAlign: (p.align || "center") as "left" | "center" | "right" },
+                    content: <p className="text-base leading-relaxed" style={{ color: String(p.textColor || "#6b7280") }}>{p.body}</p>,
+                  }] : []),
+                ]}
+              />
             </div>
           );
           if (block.type === "banner") return (
-            <div key={block.id} className="py-3 px-6 text-center font-bold text-sm rounded-2xl" style={{ backgroundColor: p.bgColor || store.accentColor, color: p.textColor || "#fff" }}>
-              {p.text || "📢 Anuncio"}
+            <div key={block.id} className="rounded-2xl px-6 py-3" style={{ backgroundColor: p.bgColor || store.accentColor, color: p.textColor || "#fff" }}>
+              <PositionedTextLayer
+                blockProps={p}
+                viewport={viewport}
+                style={{ minHeight: "32px" }}
+                items={[
+                  {
+                    id: "text",
+                    defaultPos: { x: 26, y: 18 },
+                    style: { width: "min(72%, 520px)", textAlign: "center" as const },
+                    content: <p className="text-center text-sm font-bold">{p.text || "Anuncio"}</p>,
+                  },
+                ]}
+              />
             </div>
           );
           if (block.type === "cta") return (
-            <div key={block.id} className="mx-4 rounded-3xl p-8 text-center sm:mx-6 sm:p-12" style={{ backgroundColor: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily }}>
-              <h2 className="font-black text-3xl md:text-4xl mb-3">{p.heading || "¿Lista para comprar?"}</h2>
-              {p.sub && <p className="opacity-75 mb-6 max-w-xl mx-auto">{p.sub}</p>}
-              <a href="#productos" className="inline-block bg-white font-black px-8 py-3 rounded-full text-sm" style={{ color: p.bgColor || store.primaryColor }}>
-                {p.buttonText || "Ver catálogo"}
-              </a>
+            <div key={block.id} className="mx-4 rounded-3xl p-8 sm:mx-6 sm:p-12" style={{ backgroundColor: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily }}>
+              <PositionedTextLayer
+                blockProps={p}
+                viewport={viewport}
+                style={{ minHeight: "180px" }}
+                items={[
+                  {
+                    id: "heading",
+                    defaultPos: { x: 28, y: 16 },
+                    style: { width: "min(72%, 520px)", textAlign: "center" as const },
+                    content: <h2 className="text-3xl font-black md:text-4xl">{p.heading || "¿Lista para comprar?"}</h2>,
+                  },
+                  ...(p.sub ? [{
+                    id: "sub",
+                    defaultPos: { x: 27, y: 40 },
+                    style: { width: "min(72%, 520px)", textAlign: "center" as const },
+                    content: <p className="opacity-75">{p.sub}</p>,
+                  }] : []),
+                  {
+                    id: "buttonText",
+                    defaultPos: { x: 36, y: 66 },
+                    content: (
+                      <a href="#productos" className="inline-block rounded-full bg-white px-8 py-3 text-sm font-black" style={{ color: p.bgColor || store.primaryColor }}>
+                        {p.buttonText || "Ver catálogo"}
+                      </a>
+                    ),
+                  },
+                ]}
+              />
             </div>
           );
           if (block.type === "image-text") {
@@ -876,17 +1030,40 @@ export default function StorefrontClient({
             const imageFocus = String(p.imageFocus || "center");
             const imageWidth = Math.min(70, Math.max(30, Number(p.imageWidth) || 50));
             const imageHeight = Math.min(520, Math.max(180, Number(p.imageHeight) || 320));
+            const stackedImageText = viewport !== "desktop";
             return (
               <div key={block.id} className={`mx-auto flex max-w-7xl flex-col ${isRight ? "md:flex-row-reverse" : "md:flex-row"} gap-8 items-center px-4 py-8 sm:px-6`} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
                 <div
                   className="w-full rounded-3xl overflow-hidden flex items-center justify-center md:w-auto"
-                  style={{ backgroundColor: String(p.imageBgColor || "#f3f4f6"), height: `${imageHeight}px`, flex: `0 0 ${imageWidth}%` }}
+                  style={{
+                    backgroundColor: String(p.imageBgColor || "#f3f4f6"),
+                    height: `${imageHeight}px`,
+                    width: stackedImageText ? "100%" : undefined,
+                    flex: stackedImageText ? "1 1 auto" : `0 0 ${imageWidth}%`,
+                  }}
                 >
                   {p.image ? <img src={p.image} alt="" className={`w-full h-full ${imageFit === "contain" ? "object-contain" : "object-cover"}`} style={{ objectPosition: imageFocus }} /> : <Package className="h-12 w-12 text-gray-300" />}
                 </div>
-                <div className="flex-1" style={{ flexBasis: `${100 - imageWidth}%` }}>
-                  {p.heading && <h2 className="font-black text-3xl mb-4" style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>}
-                  {p.body && <p className="leading-relaxed" style={{ color: String(p.textColor || "#6b7280") }}>{p.body}</p>}
+                <div className="w-full flex-1" style={{ flexBasis: stackedImageText ? "auto" : `${100 - imageWidth}%` }}>
+                  <PositionedTextLayer
+                    blockProps={p}
+                    viewport={viewport}
+                    style={{ minHeight: `${imageHeight}px` }}
+                    items={[
+                      ...(p.heading ? [{
+                        id: "heading",
+                        defaultPos: { x: 6, y: 28 },
+                        style: { width: "min(90%, 420px)", textAlign: "left" as const },
+                        content: <h2 className="mb-4 text-3xl font-black" style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>,
+                      }] : []),
+                      ...(p.body ? [{
+                        id: "body",
+                        defaultPos: { x: 6, y: 44 },
+                        style: { width: "min(92%, 460px)", textAlign: "left" as const },
+                        content: <p className="leading-relaxed" style={{ color: String(p.textColor || "#6b7280") }}>{p.body}</p>,
+                      }] : []),
+                    ]}
+                  />
                 </div>
               </div>
             );
@@ -912,7 +1089,23 @@ export default function StorefrontClient({
               return (
                 <section key={block.id} className="px-4 py-8 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: blockBg }}>
                   <div className={`mx-auto max-w-xl border p-6 text-center ${cardRadius} ${cardShadow}`} style={{ borderColor: `${blockColor}22`, backgroundColor: blockBg }}>
-                    {p.showHeading !== false && <h2 className="mb-5 text-2xl font-black" style={{ color: blockColor }}>{heading}</h2>}
+                    {p.showHeading !== false && (
+                      <div className="mb-5">
+                        <PositionedTextLayer
+                          blockProps={p}
+                          viewport={viewport}
+                          style={{ minHeight: "54px" }}
+                          items={[
+                            {
+                              id: "heading",
+                              defaultPos: { x: 32, y: 14 },
+                              style: { width: "min(72%, 440px)", textAlign: "center" as const },
+                              content: <h2 className="text-2xl font-black" style={{ color: blockColor }}>{heading}</h2>,
+                            },
+                          ]}
+                        />
+                      </div>
+                    )}
                     <div className="grid gap-3 sm:grid-cols-2">
                       {visibleItems.map((item) => (
                         <a
@@ -935,7 +1128,23 @@ export default function StorefrontClient({
 
             return (
               <section key={block.id} className="px-4 py-8 text-center sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: blockBg }}>
-                {p.showHeading !== false && <h2 className="mb-5 text-2xl font-black" style={{ color: blockColor }}>{heading}</h2>}
+                {p.showHeading !== false && (
+                  <div className="mb-5">
+                    <PositionedTextLayer
+                      blockProps={p}
+                      viewport={viewport}
+                      style={{ minHeight: "54px" }}
+                      items={[
+                        {
+                          id: "heading",
+                          defaultPos: { x: 32, y: 14 },
+                          style: { width: "min(72%, 440px)", textAlign: "center" as const },
+                          content: <h2 className="text-2xl font-black" style={{ color: blockColor }}>{heading}</h2>,
+                        },
+                      ]}
+                    />
+                  </div>
+                )}
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   {visibleItems.map((item) => (
                     <a
@@ -960,13 +1169,32 @@ export default function StorefrontClient({
             );
           }
           if (block.type === "hero") return (
-            <div key={block.id} className="overflow-hidden flex items-center justify-center text-center text-white px-6 py-14 sm:px-8 sm:py-16"
+            <div key={block.id} className="overflow-hidden px-6 py-14 text-white sm:px-8 sm:py-16"
               style={{ background: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily, minHeight: p.height === "xl" ? "480px" : p.height === "lg" ? "360px" : p.height === "sm" ? "180px" : "260px" }}>
-              <div>
-                <h2 className="font-black text-4xl mb-3 drop-shadow">{p.title || store.name}</h2>
-                {p.subtitle && <p className="opacity-80 mb-6 max-w-xl mx-auto">{p.subtitle}</p>}
-                {p.buttonText && <a href="#productos" className="inline-block bg-white font-black px-8 py-3 rounded-full text-sm" style={{ color: p.bgColor || store.primaryColor }}>{p.buttonText}</a>}
-              </div>
+              <PositionedTextLayer
+                blockProps={p}
+                viewport={viewport}
+                style={{ minHeight: p.height === "xl" ? "480px" : p.height === "lg" ? "360px" : p.height === "sm" ? "180px" : "260px" }}
+                items={[
+                  {
+                    id: "title",
+                    defaultPos: { x: p.layout === "left" ? 8 : p.layout === "right" ? 54 : 28, y: 18 },
+                    style: { width: "min(72%, 520px)", textAlign: (p.layout || "center") as "left" | "center" | "right" },
+                    content: <h2 className="mb-3 text-4xl font-black drop-shadow">{p.title || store.name}</h2>,
+                  },
+                  ...(p.subtitle ? [{
+                    id: "subtitle",
+                    defaultPos: { x: p.layout === "left" ? 8 : p.layout === "right" ? 54 : 28, y: 40 },
+                    style: { width: "min(72%, 520px)", textAlign: (p.layout || "center") as "left" | "center" | "right" },
+                    content: <p className="max-w-xl opacity-80">{p.subtitle}</p>,
+                  }] : []),
+                  ...(p.buttonText ? [{
+                    id: "buttonText",
+                    defaultPos: { x: (p.layout === "left" ? 8 : p.layout === "right" ? 54 : 28) + (p.layout === "center" ? 10 : 0), y: 65 },
+                    content: <a href="#productos" className="inline-block rounded-full bg-white px-8 py-3 text-sm font-black" style={{ color: p.bgColor || store.primaryColor }}>{p.buttonText}</a>,
+                  }] : []),
+                ]}
+              />
             </div>
           );
           if (block.type === "spacer") {
