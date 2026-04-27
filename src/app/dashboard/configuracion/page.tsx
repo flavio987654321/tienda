@@ -821,8 +821,8 @@ function MovableTextStage({
   return (
     <div
       ref={stageRef}
-      className={`relative overflow-hidden ${className}`}
-      style={style}
+      className={`relative ${className}`}
+      style={{overflow: "visible", ...style}}
     >
       {items.map((item) => {
         const pos = draftPositions[item.id] ?? item.defaultPos;
@@ -836,6 +836,7 @@ function MovableTextStage({
               position: "absolute",
               left: `${pos.x}%`,
               top: `${pos.y}%`,
+              transform: "translate(-50%, -50%)",
               ...item.style,
             }}
           >
@@ -867,7 +868,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     const handleMouseMove = (e: MouseEvent) => {
       if (!resizeRef.current || !blockWrapRef.current) return;
       const deltaY = e.clientY - resizeRef.current.startY;
-      const newHeight = Math.max(100, resizeRef.current.startHeight + deltaY);
+      const newHeight = Math.max(0, resizeRef.current.startHeight + deltaY);
       blockWrapRef.current.style.minHeight = `${newHeight}px`;
     };
 
@@ -980,13 +981,13 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
               ...(p.title ? [{
                 id: "title",
                 defaultPos: { x: baseX, y: 18 },
-                style: { width: "min(72%, 520px)", textAlign: layout as "left" | "center" | "right" },
+                style: { width: "min(100%, 520px)", textAlign: layout as "left" | "center" | "right" },
                 content: <h2 style={{fontSize:FONT_SIZE[p.fontSize||"xl"]||"36px",fontWeight:900,lineHeight:1.1,marginBottom:"12px",textShadow:"0 1px 2px rgba(0,0,0,0.12)"}}>{p.title}</h2>,
               }] : []),
               ...(p.subtitle ? [{
                 id: "subtitle",
                 defaultPos: { x: baseX, y: 40 },
-                style: { width: "min(72%, 520px)", textAlign: layout as "left" | "center" | "right" },
+                style: { width: "min(100%, 520px)", textAlign: layout as "left" | "center" | "right" },
                 content: <p style={{fontSize:"16px",opacity:0.8,lineHeight:1.6,maxWidth:"520px"}}>{p.subtitle}</p>,
               }] : []),
               ...(p.buttonText ? [{
@@ -1018,13 +1019,13 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
               ...(p.heading ? [{
                 id: "heading",
                 defaultPos: { x: baseX, y: 18 },
-                style: { width: "min(76%, 560px)", textAlign: align as "left" | "center" | "right" },
+                style: { width: "min(100%, 560px)", textAlign: align as "left" | "center" | "right" },
                 content: <h3 style={{fontSize:FONT_SIZE[p.fontSize||"md"]||"20px",fontWeight:800,color:blockColor}}>{p.heading}</h3>,
               }] : []),
               ...(p.body ? [{
                 id: "body",
                 defaultPos: { x: baseX, y: 46 },
-                style: { width: "min(82%, 640px)", textAlign: align as "left" | "center" | "right" },
+                style: { width: "min(100%, 640px)", textAlign: align as "left" | "center" | "right" },
                 content: <p style={{fontSize:"13px",color:textColor,lineHeight:1.7}}>{p.body}</p>,
               }] : []),
             ]}
@@ -1063,7 +1064,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 {
                   id: "heading",
                   defaultPos: { x: 34, y: 10 },
-                  style: { width: "min(70%, 420px)", textAlign: "center" as const },
+                  style: { width: "min(100%, 420px)", textAlign: "center" as const },
                   content: <h3 style={{fontSize:"16px",fontWeight:800,color:blockColor}}>{p.heading}</h3>,
                 },
               ]}
@@ -1160,8 +1161,8 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
               {
                 id: "text",
                 defaultPos: { x: 26, y: 18 },
-                style: { width: "min(72%, 520px)", textAlign: "center" as const },
-                content: <p style={{fontSize:"13px",fontWeight:800,letterSpacing:"0.01em"}}>{p.text||"Oferta especial"}</p>,
+                style: { width: "min(100%, 520px)", textAlign: "center" as const },
+                content: <p style={{fontSize:"13px",fontWeight:800,letterSpacing:"0.01em",margin:0}}>{p.text||"Oferta especial"}</p>,
               },
             ]}
           />
@@ -1205,14 +1206,14 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
               {
                 id: "heading",
                 defaultPos: { x: 28, y: 16 },
-                style: { width: "min(72%, 520px)", textAlign: "center" as const },
-                content: <h3 style={{fontSize:"20px",fontWeight:900}}>{p.heading||"Lista para comprar?"}</h3>,
+                style: { width: "min(100%, 520px)", textAlign: "center" as const },
+                content: <h3 style={{fontSize:"20px",fontWeight:900,margin:0}}>{p.heading||"Lista para comprar?"}</h3>,
               },
               ...(p.sub ? [{
                 id: "sub",
                 defaultPos: { x: 27, y: 40 },
-                style: { width: "min(72%, 520px)", textAlign: "center" as const },
-                content: <p style={{fontSize:"12px",opacity:0.78,lineHeight:1.6}}>{p.sub}</p>,
+                style: { width: "min(100%, 520px)", textAlign: "center" as const },
+                content: <p style={{fontSize:"12px",opacity:0.78,lineHeight:1.6,margin:0}}>{p.sub}</p>,
               }] : []),
               {
                 id: "buttonText",
@@ -1251,13 +1252,13 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 ...(p.heading ? [{
                   id: "heading",
                   defaultPos: { x: 6, y: 28 },
-                  style: { width: "min(90%, 420px)", textAlign: "left" as const },
+                  style: { width: "min(100%, 420px)", textAlign: "left" as const },
                   content: <h3 style={{fontSize:"30px",fontWeight:900,color:blockColor,marginBottom:"16px",lineHeight:1.2}}>{p.heading}</h3>,
                 }] : []),
                 ...(p.body ? [{
                   id: "body",
                   defaultPos: { x: 6, y: 44 },
-                  style: { width: "min(92%, 460px)", textAlign: "left" as const },
+                  style: { width: "min(100%, 460px)", textAlign: "left" as const },
                   content: <p style={{fontSize:"16px",color:textColor,lineHeight:1.7}}>{p.body}</p>,
                 }] : []),
               ]}
@@ -1282,8 +1283,8 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 {
                   id: "heading",
                   defaultPos: { x: 32, y: 14 },
-                  style: { width: "min(72%, 440px)", textAlign: "center" as const },
-                  content: <h3 style={{fontSize:"16px",fontWeight:800,color:p.color || c.primaryColor}}>{p.heading}</h3>,
+                  style: { width: "min(100%, 440px)", textAlign: "center" as const },
+                  content: <h3 style={{fontSize:"16px",fontWeight:800,color:p.color || c.primaryColor,margin:0}}>{p.heading}</h3>,
                 },
               ]}
             />
