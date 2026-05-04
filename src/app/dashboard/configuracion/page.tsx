@@ -52,9 +52,13 @@ type PreviewProduct = {
   id: string;
   name: string;
   price?: number | null;
+  comparePrice?: number | null;
+  description?: string | null;
   images?: string | null;
   category?: string | null;
   subcategory?: string | null;
+  variants?: { name: string; value: string; stock: number; price?: number | null }[];
+  attributes?: Record<string, string> | null;
 }
 
 const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; defaultProps:Record<string,any> }[] = [
@@ -923,12 +927,13 @@ function MovableTextStage({
 }
 
 /* ─── Block renderer for preview ─── */
-function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown, onDuplicate, onDelete, onChangeProps, isFirst, isLast, previewProducts = [], viewport }: {
+function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown, onDuplicate, onDelete, onChangeProps, isFirst, isLast, previewProducts = [], viewport, onProductClick }: {
   block:Block; config:StoreConfig; selected:boolean;
   onSelect:()=>void; onMoveUp:()=>void; onMoveDown:()=>void; onDuplicate:()=>void; onDelete:()=>void; onChangeProps:(props:Record<string,any>)=>void;
   isFirst:boolean; isLast:boolean;
   previewProducts?: PreviewProduct[];
   viewport: PreviewViewport;
+  onProductClick?: (product: PreviewProduct) => void;
 }) {
   const p = block.props;
   const c = config;
@@ -1199,7 +1204,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 const isPlaceholder = product.id.startsWith("__placeholder_");
                 const image = parsePreviewImages(product.images || "")[0];
                 return (
-                  <div key={product.id} style={{flex:`0 0 calc((100% - ${(cols - 1) * 10}px) / ${cols})`,minWidth:cols===1?"100%":undefined,scrollSnapAlign:"start",borderRadius:"12px",overflow:"hidden",background:"#fff",border:isPlaceholder?"1px dashed #d1d5db":"1px solid #e5e7eb",opacity:isPlaceholder?0.5:1}}>
+                  <div key={product.id} onClick={!isPlaceholder ? ()=>onProductClick?.(product) : undefined} style={{flex:`0 0 calc((100% - ${(cols - 1) * 10}px) / ${cols})`,minWidth:cols===1?"100%":undefined,scrollSnapAlign:"start",borderRadius:"12px",overflow:"hidden",background:"#fff",border:isPlaceholder?"1px dashed #d1d5db":"1px solid #e5e7eb",opacity:isPlaceholder?0.5:1,cursor:isPlaceholder?"default":"pointer"}}>
                     <div style={{aspectRatio:"1",background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
                       {image ? (
                         <img src={image} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
@@ -1221,7 +1226,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 const isPlaceholder = product.id.startsWith("__placeholder_");
                 const image = parsePreviewImages(product.images || "")[0];
                 return (
-                  <div key={product.id} style={{borderRadius:"12px",overflow:"hidden",background:"#fff",border:isPlaceholder?"1px dashed #d1d5db":"1px solid #e5e7eb",opacity:isPlaceholder?0.5:1}}>
+                  <div key={product.id} onClick={!isPlaceholder ? ()=>onProductClick?.(product) : undefined} style={{borderRadius:"12px",overflow:"hidden",background:"#fff",border:isPlaceholder?"1px dashed #d1d5db":"1px solid #e5e7eb",opacity:isPlaceholder?0.5:1,cursor:isPlaceholder?"default":"pointer"}}>
                     <div style={{aspectRatio:"1",background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
                       {image ? (
                         <img src={image} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
@@ -1471,6 +1476,7 @@ export default function ConfiguracionPage() {
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [productSubcategories, setProductSubcategories] = useState<Record<string,string[]>>({});
   const [previewProducts, setPreviewProducts] = useState<PreviewProduct[]>([]);
+  const [previewModalProduct, setPreviewModalProduct] = useState<PreviewProduct | null>(null);
 
   // Blocks state
   const [activeTab, setActiveTab]         = useState<"diseño"|"bloques">("diseño");
@@ -2095,6 +2101,7 @@ export default function ConfiguracionPage() {
                           onChangeProps={(props)=>updateBlock(b.id,props)}
                           isFirst={idx===0}
                           isLast={idx===blocks.length-1}
+                          onProductClick={setPreviewModalProduct}
                         />
                       ))
                     )}
@@ -2114,6 +2121,58 @@ export default function ConfiguracionPage() {
                     <div style={{background:"#f9fafb",borderTop:"1px solid #e5e7eb",padding:"12px 16px",textAlign:"center"}}>
                       <p style={{fontSize:"11px",color:"#9ca3af"}}>{config.footerText||`© 2025 ${config.name||"Mi Tienda"}`}</p>
                     </div>
+
+                    {/* Product preview modal */}
+                    {previewModalProduct && (() => {
+                      const imgs = parsePreviewImages(previewModalProduct.images || "");
+                      const img = imgs[0];
+                      const variants = previewModalProduct.variants || [];
+                      const hasVariants = variants.length > 0 && !(variants.length === 1 && variants[0].value === "default");
+                      return (
+                        <div
+                          style={{position:"sticky",bottom:0,left:0,right:0,top:0,zIndex:50,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",minHeight:"100%",marginTop:"-100%"}}
+                          onClick={()=>setPreviewModalProduct(null)}
+                        >
+                          <div
+                            style={{background:"#fff",borderRadius:"16px 16px 0 0",width:"100%",maxHeight:"85vh",overflowY:"auto",padding:"20px 16px 32px"}}
+                            onClick={e=>e.stopPropagation()}
+                          >
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}}>
+                              <span style={{fontSize:"11px",fontWeight:700,color:"#6366f1",textTransform:"uppercase",letterSpacing:"0.05em"}}>Vista previa del modal</span>
+                              <button onClick={()=>setPreviewModalProduct(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:"18px",color:"#6b7280",lineHeight:1}}>×</button>
+                            </div>
+                            {img ? (
+                              <div style={{aspectRatio:"4/3",borderRadius:"12px",overflow:"hidden",marginBottom:"16px",background:"#f3f4f6"}}>
+                                <img src={img} alt={previewModalProduct.name} style={{width:"100%",height:"100%",objectFit:"contain"}} />
+                              </div>
+                            ) : (
+                              <div style={{aspectRatio:"4/3",borderRadius:"12px",marginBottom:"16px",background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",color:"#d1d5db",fontSize:"13px"}}>Sin imagen</div>
+                            )}
+                            <h3 style={{fontSize:"16px",fontWeight:800,color:"#111827",marginBottom:"4px"}}>{previewModalProduct.name}</h3>
+                            {previewModalProduct.description && <p style={{fontSize:"12px",color:"#6b7280",marginBottom:"10px",lineHeight:1.5}}>{previewModalProduct.description}</p>}
+                            <div style={{display:"flex",alignItems:"baseline",gap:"8px",marginBottom:"14px"}}>
+                              <span style={{fontSize:"20px",fontWeight:800,color:config.primaryColor}}>${Number(previewModalProduct.price||0).toLocaleString("es-AR")}</span>
+                              {previewModalProduct.comparePrice && previewModalProduct.comparePrice > (previewModalProduct.price||0) && (
+                                <span style={{fontSize:"13px",color:"#9ca3af",textDecoration:"line-through"}}>${Number(previewModalProduct.comparePrice).toLocaleString("es-AR")}</span>
+                              )}
+                            </div>
+                            {hasVariants && (
+                              <div style={{marginBottom:"16px"}}>
+                                <p style={{fontSize:"11px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"8px"}}>Variantes disponibles</p>
+                                <div style={{display:"flex",flexWrap:"wrap",gap:"6px"}}>
+                                  {variants.map((v,i)=>(
+                                    <span key={i} style={{padding:"4px 10px",borderRadius:"999px",border:"1px solid #e5e7eb",fontSize:"11px",fontWeight:600,color:"#374151",background:"#f9fafb"}}>{v.name}{v.value&&v.value!=="default"?` - ${v.value}`:""}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            <button style={{width:"100%",padding:"12px",borderRadius:"10px",background:config.primaryColor,color:"#fff",fontWeight:700,fontSize:"13px",border:"none",cursor:"pointer"}}>
+                              Agregar al carrito
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
                 {activeTab==="bloques" && config.showWhatsappButton && config.whatsappNumber && (
