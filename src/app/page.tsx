@@ -212,6 +212,8 @@ export default function Home() {
         }
         .glow-border { box-shadow: 0 0 0 1px rgba(99,102,241,.3), 0 0 30px rgba(99,102,241,.15); }
         .grid-bg { background-image: linear-gradient(rgba(99,102,241,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,.06) 1px, transparent 1px); background-size: 48px 48px; }
+        @keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+        .marquee { animation: marquee 30s linear infinite; display: flex; width: max-content; }
       `}</style>
 
       {/* ── NAVBAR ── */}
@@ -427,6 +429,36 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── MARQUEE STRIP ── */}
+      <div className="bg-indigo-600 py-3.5 overflow-hidden border-y border-indigo-500/40">
+        <div className="marquee gap-10 items-center">
+          {[
+            "✦ Tienda personalizable",
+            "✦ Afiliados automáticos",
+            "✦ Comisiones al instante",
+            "✦ Envíos integrados",
+            "✦ Mercado Pago",
+            "✦ Billetera digital",
+            "✦ Andreani & OCA",
+            "✦ Panel en tiempo real",
+            "✦ 100% argentino",
+            "✦ Gratis para empezar",
+            "✦ Tienda personalizable",
+            "✦ Afiliados automáticos",
+            "✦ Comisiones al instante",
+            "✦ Envíos integrados",
+            "✦ Mercado Pago",
+            "✦ Billetera digital",
+            "✦ Andreani & OCA",
+            "✦ Panel en tiempo real",
+            "✦ 100% argentino",
+            "✦ Gratis para empezar",
+          ].map((item, i) => (
+            <span key={i} className="text-white/90 text-sm font-semibold whitespace-nowrap px-5">{item}</span>
+          ))}
+        </div>
+      </div>
+
       {/* ── FEATURES ── */}
       <section id="como-funciona" className="relative py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6">
@@ -454,6 +486,73 @@ export default function Home() {
               </motion.div>
             ))}
           </motion.div>
+        </div>
+      </section>
+
+      {/* ── SHOWCASE VISUAL ── */}
+      <section className="py-24 bg-gray-950 overflow-hidden relative">
+        <div className="absolute inset-0 grid-bg opacity-30" />
+        <div className="absolute -top-40 left-1/4 w-[500px] h-[500px] bg-purple-900/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative max-w-7xl mx-auto px-6">
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
+            <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">En acción</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-4">Tu tienda, en cualquier pantalla</motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-400 text-lg max-w-xl mx-auto">Diseñada para mobile, perfecta en desktop. Tus clientes compran desde donde quieran.</motion.p>
+          </motion.div>
+
+          <div className="grid grid-cols-12 gap-4">
+            {/* Imagen principal grande */}
+            <motion.div
+              initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
+              className="col-span-12 lg:col-span-7 relative"
+            >
+              <div className="relative rounded-3xl overflow-hidden h-[440px] glow-border">
+                <img
+                  src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=80"
+                  alt="Compradora online"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-transparent to-transparent" />
+                {/* Floating card sobre imagen */}
+                <motion.div
+                  animate={{ y: [-4, 4, -4] }} transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute bottom-6 left-6 bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex items-center gap-3 shadow-2xl"
+                >
+                  <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                    <ShoppingCart className="h-5 w-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-sm">Pedido confirmado</p>
+                    <p className="text-gray-400 text-xs">Remera oversize · $8.500</p>
+                  </div>
+                  <div className="ml-2 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                </motion.div>
+              </div>
+            </motion.div>
+
+            {/* Grid de 4 imágenes más chicas */}
+            <motion.div
+              initial={{ opacity: 0, x: 40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.15 }}
+              className="col-span-12 lg:col-span-5 grid grid-cols-2 gap-4"
+            >
+              {[
+                { src: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=600&q=80", label: "Desde el celular" },
+                { src: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=600&q=80", label: "Envíos rápidos" },
+                { src: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=600&q=80", label: "Pagos seguros" },
+                { src: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=600&q=80", label: "Tu tienda online" },
+              ].map(({ src, label }, i) => (
+                <motion.div
+                  key={label}
+                  initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }}
+                  className="relative rounded-2xl overflow-hidden h-[206px] group"
+                >
+                  <img src={src} alt={label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <span className="absolute bottom-3 left-3 text-white text-xs font-semibold">{label}</span>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
         </div>
       </section>
 
@@ -565,16 +664,17 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── DOS CAMINOS ── */}
+      {/* ── TRES CAMINOS ── */}
       <section className="py-24 bg-gray-950 relative">
         <div className="absolute inset-0 grid-bg opacity-30" />
-        <div className="relative max-w-6xl mx-auto px-6">
+        <div className="relative max-w-7xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-4">Dos caminos, una plataforma</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-400 text-lg">¿Tenes tienda o sos afiliado? Cada perfil tiene su panel propio.</motion.p>
+            <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">Para todos</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-4">Tres caminos, una plataforma</motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-400 text-lg">¿Tenés tienda, sos afiliada o querés comprar? Cada perfil tiene su panel propio.</motion.p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
                 icon: Store, color: "#6366f1", gradient: "from-indigo-600/20 to-purple-600/10", border: "border-indigo-500/20",
@@ -584,19 +684,25 @@ export default function Home() {
               },
               {
                 icon: Users, color: "#a855f7", gradient: "from-purple-600/20 to-pink-600/10", border: "border-purple-500/20",
-                title: "Para afiliados", sub: "Ganas sin tener tienda propia",
-                items: ["Postulate a tiendas activas", "Link de afiliado con tracking propio", "Billetera digital con historial", "Retira tus ganancias cuando quieras", "Panel simple desde el celular"],
-                cta: "Quiero ser afiliado", href: "/vendedoras",
+                title: "Para afiliadas", sub: "Ganás sin tener tienda propia",
+                items: ["Postulate a tiendas activas", "Link de afiliado con tracking propio", "Billetera digital con historial", "Retirá tus ganancias cuando quieras", "Panel simple desde el celular"],
+                cta: "Quiero ser afiliada", href: "/vendedoras",
+              },
+              {
+                icon: ShoppingCart, color: "#10b981", gradient: "from-emerald-600/20 to-teal-600/10", border: "border-emerald-500/20",
+                title: "Para compradores", sub: "Comprá en tiendas argentinas",
+                items: ["Encontrá tiendas locales verificadas", "Comprá con Mercado Pago seguro", "Seguí tus envíos en tiempo real", "Guardá favoritos y dejá reseñas", "Panel de pedidos desde el celular"],
+                cta: "Ver tiendas", href: "/tiendas",
               },
             ].map(({ icon: Icon, color, gradient, border, title, sub, items, cta, href }) => (
               <motion.div key={title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
-                <div className={`h-full bg-gradient-to-br ${gradient} border ${border} rounded-3xl p-8`}>
+                <div className={`h-full bg-gradient-to-br ${gradient} border ${border} rounded-3xl p-8 flex flex-col`}>
                   <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6" style={{ backgroundColor: color + "20" }}>
                     <Icon className="h-7 w-7" style={{ color }} />
                   </div>
                   <h3 className="text-2xl font-black text-white mb-1">{title}</h3>
                   <p className="text-gray-400 text-sm mb-6">{sub}</p>
-                  <ul className="space-y-3 mb-8">
+                  <ul className="space-y-3 mb-8 flex-1">
                     {items.map((item) => (
                       <li key={item} className="flex items-start gap-3 text-sm text-gray-300">
                         <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color }} />
