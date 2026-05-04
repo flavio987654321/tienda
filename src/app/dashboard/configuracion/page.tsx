@@ -695,11 +695,12 @@ function MovableTextStage({
       const itemNode = itemRefs.current[item.id];
       if (!itemNode) return;
       const itemRect = itemNode.getBoundingClientRect();
-      const maxX = Math.max(0, stageRect.width - itemRect.width);
-      const maxY = Math.max(0, stageRect.height - itemRect.height);
+      const halfW = itemRect.width / 2;
+      const halfH = itemRect.height / 2;
       const current = source[item.id] ?? item.defaultPos;
-      const pixelX = clamp((current.x / 100) * Math.max(stageRect.width, 1), 0, maxX);
-      const pixelY = clamp((current.y / 100) * Math.max(stageRect.height, 1), 0, maxY);
+      // pos is center-percentage; clamp so the element stays within stage bounds
+      const pixelX = clamp((current.x / 100) * Math.max(stageRect.width, 1), halfW, Math.max(halfW, stageRect.width - halfW));
+      const pixelY = clamp((current.y / 100) * Math.max(stageRect.height, 1), halfH, Math.max(halfH, stageRect.height - halfH));
       const normalized = {
         x: Number(((pixelX / Math.max(stageRect.width, 1)) * 100).toFixed(2)),
         y: Number(((pixelY / Math.max(stageRect.height, 1)) * 100).toFixed(2)),
@@ -763,16 +764,26 @@ function MovableTextStage({
       const itemNode = itemRefs.current[dragRef.current.id];
       if (!itemNode) return;
       const itemRect = itemNode.getBoundingClientRect();
-      const maxX = Math.max(0, stageRect.width - itemRect.width);
-      const maxY = Math.max(0, stageRect.height - itemRect.height);
-      const nextX = clamp(event.clientX - stageRect.left - dragRef.current.offsetX, 0, maxX);
-      const nextY = clamp(event.clientY - stageRect.top - dragRef.current.offsetY, 0, maxY);
+      const halfW = itemRect.width / 2;
+      const halfH = itemRect.height / 2;
+      // Elements render with translate(-50%,-50%), so pos.x/y% is the CENTER.
+      // offsetX/Y is measured from the visual left/top edge, so we add half-size to get center.
+      const centerX = clamp(
+        event.clientX - stageRect.left - dragRef.current.offsetX + halfW,
+        halfW,
+        Math.max(halfW, stageRect.width - halfW),
+      );
+      const centerY = clamp(
+        event.clientY - stageRect.top - dragRef.current.offsetY + halfH,
+        halfH,
+        Math.max(halfH, stageRect.height - halfH),
+      );
 
       setDraftPositions((current) => ({
         ...current,
         [dragRef.current!.id]: {
-          x: Number(((nextX / Math.max(stageRect.width, 1)) * 100).toFixed(2)),
-          y: Number(((nextY / Math.max(stageRect.height, 1)) * 100).toFixed(2)),
+          x: Number(((centerX / Math.max(stageRect.width, 1)) * 100).toFixed(2)),
+          y: Number(((centerY / Math.max(stageRect.height, 1)) * 100).toFixed(2)),
         },
       }));
     }
@@ -811,8 +822,8 @@ function MovableTextStage({
       return {
         ...current,
         [id]: {
-          x: Number((((itemRect.left - stageRect.left) / Math.max(stageRect.width, 1)) * 100).toFixed(2)),
-          y: Number((((itemRect.top - stageRect.top) / Math.max(stageRect.height, 1)) * 100).toFixed(2)),
+          x: Number((((itemRect.left - stageRect.left + itemRect.width / 2) / Math.max(stageRect.width, 1)) * 100).toFixed(2)),
+          y: Number((((itemRect.top - stageRect.top + itemRect.height / 2) / Math.max(stageRect.height, 1)) * 100).toFixed(2)),
         },
       };
     });
