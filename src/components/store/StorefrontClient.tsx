@@ -1196,11 +1196,11 @@ export default function StorefrontClient({
           }
           if (block.type === "hero") return (
             <div key={block.id} className="overflow-hidden px-6 py-14 text-white sm:px-8 sm:py-16"
-              style={{ background: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily, minHeight: p.height === "xl" ? "480px" : p.height === "lg" ? "360px" : p.height === "sm" ? "180px" : "260px" }}>
+              style={{ background: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily, minHeight: p.blockMinHeight > 0 ? `${p.blockMinHeight}px` : p.height === "xl" ? "480px" : p.height === "lg" ? "360px" : p.height === "sm" ? "180px" : "260px" }}>
               <PositionedTextLayer
                 blockProps={p}
                 viewport={viewport}
-                style={{ minHeight: p.height === "xl" ? "480px" : p.height === "lg" ? "360px" : p.height === "sm" ? "180px" : "260px" }}
+                style={{ minHeight: p.blockMinHeight > 0 ? `${p.blockMinHeight}px` : p.height === "xl" ? "480px" : p.height === "lg" ? "360px" : p.height === "sm" ? "180px" : "260px" }}
                 items={[
                   {
                     id: "title",
