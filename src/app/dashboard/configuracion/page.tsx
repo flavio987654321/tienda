@@ -1127,13 +1127,22 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const subcategoryFilter = String(p.subcategoryFilter || "all");
       const categories = Array.from(new Set(previewProducts.map((product) => product.category).filter(Boolean))) as string[];
       const subcategories = Array.from(new Set(previewProducts.filter((product) => categoryFilter === "all" || product.category === categoryFilter).map((product) => product.subcategory).filter(Boolean))) as string[];
-      const visibleProducts = previewProducts
-        .filter((product) => {
-          if (categoryFilter !== "all" && product.category !== categoryFilter) return false;
-          if (subcategoryFilter !== "all" && product.subcategory !== subcategoryFilter) return false;
-          return true;
-        })
-        .slice(0, layoutMode === "carousel" ? Math.max(cols * 3, 6) : Math.max(cols * 2, 4));
+      const maxVisible = layoutMode === "carousel" ? Math.max(cols * 3, 6) : Math.max(cols * 2, 4);
+      const filteredProducts = previewProducts.filter((product) => {
+        if (categoryFilter !== "all" && product.category !== categoryFilter) return false;
+        if (subcategoryFilter !== "all" && product.subcategory !== subcategoryFilter) return false;
+        return true;
+      }).slice(0, maxVisible);
+      const placeholderNames = ["Producto ejemplo","Artículo demo","Item de muestra","Producto prueba","Ejemplo tienda","Artículo ejemplo","Muestra gratis","Demo producto"];
+      const placeholders: PreviewProduct[] = Array.from({ length: Math.max(0, maxVisible - filteredProducts.length) }, (_, i) => ({
+        id: `__placeholder_${i}`,
+        name: placeholderNames[i % placeholderNames.length],
+        price: [1999, 3500, 8990, 2499, 5900][i % 5],
+        images: null,
+        category: null,
+        subcategory: null,
+      }));
+      const visibleProducts = [...filteredProducts, ...placeholders];
 
       return (
         <div style={{padding:"24px 16px",fontFamily:c.fontFamily,background:blockBg,minHeight:customMinHeight}}>
@@ -1187,9 +1196,10 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           ) : layoutMode === "carousel" ? (
             <div style={{display:"flex",gap:"10px",overflowX:"auto",paddingBottom:"6px",scrollSnapType:"x mandatory"}}>
               {visibleProducts.map((product)=> {
+                const isPlaceholder = product.id.startsWith("__placeholder_");
                 const image = parsePreviewImages(product.images || "")[0];
                 return (
-                  <div key={product.id} style={{flex:`0 0 calc((100% - ${(cols - 1) * 10}px) / ${cols})`,minWidth:cols===1?"100%":undefined,scrollSnapAlign:"start",borderRadius:"12px",overflow:"hidden",background:"#fff",border:"1px solid #e5e7eb"}}>
+                  <div key={product.id} style={{flex:`0 0 calc((100% - ${(cols - 1) * 10}px) / ${cols})`,minWidth:cols===1?"100%":undefined,scrollSnapAlign:"start",borderRadius:"12px",overflow:"hidden",background:"#fff",border:isPlaceholder?"1px dashed #d1d5db":"1px solid #e5e7eb",opacity:isPlaceholder?0.5:1}}>
                     <div style={{aspectRatio:"1",background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
                       {image ? (
                         <img src={image} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
@@ -1208,9 +1218,10 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           ) : (
             <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:"10px"}}>
               {visibleProducts.map((product)=> {
+                const isPlaceholder = product.id.startsWith("__placeholder_");
                 const image = parsePreviewImages(product.images || "")[0];
                 return (
-                  <div key={product.id} style={{borderRadius:"12px",overflow:"hidden",background:"#fff",border:"1px solid #e5e7eb"}}>
+                  <div key={product.id} style={{borderRadius:"12px",overflow:"hidden",background:"#fff",border:isPlaceholder?"1px dashed #d1d5db":"1px solid #e5e7eb",opacity:isPlaceholder?0.5:1}}>
                     <div style={{aspectRatio:"1",background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
                       {image ? (
                         <img src={image} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />

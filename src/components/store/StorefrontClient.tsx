@@ -1290,64 +1290,6 @@ export default function StorefrontClient({
 
       {renderBlocks()}
 
-      {!hasCustomProductBlock && <main id="productos" className="mx-auto max-w-7xl px-6 py-12">
-        <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em]" style={{ color: store.primaryColor }}>{isKids ? "Todo para jugar" : "Catalogo"}</p>
-            <h2 className="mt-2 text-3xl font-black">{isKids ? "Nuestros favoritos" : "Productos destacados"}</h2>
-          </div>
-          {categories.length > 1 && !isMarket && (
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              <button onClick={() => setCategory("all")} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold ${category === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"} ${isKids ? "border-2 border-white shadow-sm" : ""}`} style={category === "all" ? { backgroundColor: store.primaryColor } : undefined}>Todo{isKids ? " 🎁" : ""}</button>
-              {categories.map((cat) => (
-                <button key={cat} onClick={() => setCategory(cat)} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold capitalize ${category === cat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"} ${isKids ? "border-2 border-white shadow-sm" : ""}`} style={category === cat ? { backgroundColor: store.primaryColor } : undefined}>{cat}</button>
-              ))}
-            </div>
-          )}
-          {subcategories.length > 1 && !isMarket && (
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              <button onClick={() => setSubcategory("all")} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${subcategory === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={subcategory === "all" ? { backgroundColor: store.accentColor } : undefined}>Todas</button>
-              {subcategories.map((subcat) => (
-                <button key={subcat} onClick={() => setSubcategory(subcat)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold capitalize ${subcategory === subcat ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={subcategory === subcat ? { backgroundColor: store.accentColor } : undefined}>{formatCategoryLabel(subcat)}</button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {store.products.length === 0 ? (
-          <div className={`py-20 text-center ${isDark ? "text-gray-400" : "text-gray-400"}`}>
-            <Package className="mx-auto mb-3 h-12 w-12 opacity-40" />
-            <p>Esta tienda aun no tiene productos</p>
-          </div>
-        ) : isMarket ? (
-          <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
-            <aside className={`h-fit rounded-2xl border p-4 ${isDark ? "border-white/10 bg-white/5" : "border-gray-100 bg-white"}`}>
-              <div className={`mb-4 flex items-center gap-2 rounded-xl px-3 py-2 ${isDark ? "bg-white/10" : "bg-gray-50"}`}>
-                <Search className="h-4 w-4 text-gray-400" />
-                <span className="text-sm text-gray-400">Buscar productos</span>
-              </div>
-              <button onClick={() => setCategory("all")} className={`mb-1 block w-full rounded-lg px-3 py-2 text-left text-sm font-bold ${category === "all" ? "text-white" : ""}`} style={category === "all" ? { backgroundColor: store.primaryColor } : undefined}>Todo</button>
-              {categories.map((cat) => (
-                <button key={cat} onClick={() => setCategory(cat)} className={`mb-1 block w-full rounded-lg px-3 py-2 text-left text-sm font-bold capitalize ${category === cat ? "text-white" : ""}`} style={category === cat ? { backgroundColor: store.primaryColor } : undefined}>{cat}</button>
-              ))}
-            </aside>
-            <div className={`grid gap-5 ${productGrid}`}>{products.map(renderProductCard)}</div>
-          </div>
-        ) : (
-          <div className={`grid gap-5 ${productGrid}`}>{products.map(renderProductCard)}</div>
-        )}
-
-        <div className="mt-12 flex flex-col items-center justify-center gap-3 text-center">
-          <div className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${isDark ? "bg-white/10 text-gray-200" : "bg-white text-gray-600"}`}>
-            <Truck className="h-4 w-4" />
-            Envios y pagos a coordinar con la tienda
-          </div>
-          <a href={`mailto:${store.owner.email}?subject=Consulta sobre ${store.name}`} className={`inline-flex items-center gap-2 px-6 py-3 font-bold ${buttonRadius}`} style={{ backgroundColor: store.primaryColor, color: textColor }}>
-            <Mail className="h-4 w-4" />
-            Consultar a la tienda
-          </a>
-        </div>
-      </main>}
 
       <footer className={`${isDark ? "border-t border-white/10 bg-gray-950 text-gray-400" : "border-t border-gray-100 bg-white text-gray-500"} px-6 py-8 text-center text-sm`}>
         {store.footerText || `${store.name} - tienda online`}
