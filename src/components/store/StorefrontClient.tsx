@@ -312,6 +312,9 @@ export default function StorefrontClient({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [imgIndex, setImgIndex] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const panRef = useRef<{ dragging: boolean; startX: number; startY: number; originX: number; originY: number }>({ dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 });
   const touchStartX = useRef(0);
   const [productReviews, setProductReviews] = useState<{ id: string; rating: number; comment: string | null; createdAt: string; user: { name: string | null; image: string | null } }[]>([]);
   const [reviewsAvg, setReviewsAvg] = useState(0);
@@ -415,6 +418,8 @@ export default function StorefrontClient({
   function showImage(index: number) {
     setImgIndex(index);
     setZoomLevel(1);
+    setPanX(0);
+    setPanY(0);
   }
 
   useEffect(() => {
@@ -1344,13 +1349,33 @@ export default function StorefrontClient({
             }}
           >
             {imgs.length > 0 ? (
-              <div className={`h-full w-full ${zoomLevel > 1 ? "overflow-auto cursor-move" : "overflow-hidden"}`}>
+              <div
+                className="h-full w-full overflow-hidden select-none"
+                style={{ cursor: zoomLevel > 1 ? (panRef.current.dragging ? "grabbing" : "grab") : "zoom-in" }}
+                onMouseDown={(e) => {
+                  if (zoomLevel <= 1) return;
+                  panRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, originX: panX, originY: panY };
+                  e.preventDefault();
+                }}
+                onMouseMove={(e) => {
+                  if (!panRef.current.dragging) return;
+                  setPanX(panRef.current.originX + e.clientX - panRef.current.startX);
+                  setPanY(panRef.current.originY + e.clientY - panRef.current.startY);
+                }}
+                onMouseUp={() => { panRef.current.dragging = false; }}
+                onMouseLeave={() => { panRef.current.dragging = false; }}
+                onClick={() => {
+                  if (panRef.current.dragging) return;
+                  if (zoomLevel > 1) { setZoomLevel(1); setPanX(0); setPanY(0); }
+                  else setZoomLevel(2);
+                }}
+              >
                 <img
                   src={imgs[clampedIdx]}
                   alt={selectedProduct.name}
-                  onClick={() => setZoomLevel((current) => (current > 1 ? 1 : 2))}
-                  className={`h-full w-full object-contain transition-transform duration-200 ${zoomLevel > 1 ? "cursor-zoom-out" : "cursor-zoom-in"}`}
-                  style={{ transform: `scale(${zoomLevel})`, transformOrigin: "center center" }}
+                  draggable={false}
+                  className="h-full w-full object-contain transition-transform duration-200"
+                  style={{ transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})`, transformOrigin: "center center" }}
                 />
               </div>
             ) : (
