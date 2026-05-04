@@ -362,7 +362,7 @@ function BlockEditor({
     <div className="space-y-2 rounded-xl border border-amber-100 bg-amber-50 p-3">
       <div className="flex items-center justify-between">
         <label className="text-xs font-medium text-amber-900">Altura mínima del bloque</label>
-        <span className="text-sm font-bold text-amber-700">{p.blockMinHeight||"auto"}px</span>
+        <span className="text-sm font-bold text-amber-700">{p.blockMinHeight > 0 ? `${p.blockMinHeight}px` : "auto"}</span>
       </div>
       <input type="range" min="0" max="800" step="10" value={p.blockMinHeight||0} onChange={e=>upd("blockMinHeight",parseInt(e.target.value)||0)} className="w-full accent-amber-600"/>
       <p className="text-xs text-amber-600">0 = altura automática. Arrastrá el slider para ajustar.</p>
@@ -860,24 +860,29 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   const c = config;
   const blockWrapRef = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<{startY: number; startHeight: number} | null>(null);
+  const draggingHeightRef = useRef<number | null>(null);
   const [isResizing, setIsResizing] = useState(false);
+  const [draggingHeight, setDraggingHeight] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isResizing || !resizeRef.current) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!resizeRef.current || !blockWrapRef.current) return;
+      if (!resizeRef.current) return;
       const deltaY = e.clientY - resizeRef.current.startY;
-      const newHeight = Math.max(0, resizeRef.current.startHeight + deltaY);
-      blockWrapRef.current.style.minHeight = `${newHeight}px`;
+      const newHeight = Math.max(60, resizeRef.current.startHeight + deltaY);
+      draggingHeightRef.current = newHeight;
+      setDraggingHeight(newHeight);
     };
 
     const handleMouseUp = () => {
-      if (!resizeRef.current || !blockWrapRef.current) return;
-      const newMinHeight = parseInt(blockWrapRef.current.style.minHeight) || resizeRef.current.startHeight;
-      onChangeProps({ ...p, blockMinHeight: newMinHeight });
+      if (!resizeRef.current) return;
+      const finalHeight = draggingHeightRef.current ?? resizeRef.current.startHeight;
+      onChangeProps({ ...p, blockMinHeight: finalHeight });
       resizeRef.current = null;
+      draggingHeightRef.current = null;
       setIsResizing(false);
+      setDraggingHeight(null);
       document.body.style.cursor = "auto";
     };
 
@@ -905,6 +910,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     outline: selected ? "2px solid #818cf8" : "1px solid transparent",
     outlineOffset: "-2px",
     cursor: "pointer",
+    minHeight: draggingHeight !== null
+      ? `${draggingHeight}px`
+      : (p.blockMinHeight && p.blockMinHeight > 0 ? `${p.blockMinHeight}px` : "auto"),
   };
 
   const floatingControls = selected ? (
@@ -962,8 +970,10 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   ) : null;
 
   function renderContent() {
-    // Aplicar altura personalizada a todos los bloques
-    const customMinHeight = p.blockMinHeight && p.blockMinHeight > 0 ? `${p.blockMinHeight}px` : undefined;
+    // Aplicar altura personalizada a todos los bloques (dragging tiene prioridad sobre la guardada)
+    const customMinHeight = draggingHeight !== null
+      ? `${draggingHeight}px`
+      : (p.blockMinHeight && p.blockMinHeight > 0 ? `${p.blockMinHeight}px` : undefined);
 
     if (block.type==="hero") {
       const hh = HERO_H[p.height||"lg"] || "180px";
@@ -1322,7 +1332,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   }
 
   return (
-    <div data-block-id={block.id} ref={blockWrapRef} style={{...wrapStyle, minHeight: p.blockMinHeight && p.blockMinHeight > 0 ? `${p.blockMinHeight}px` : "auto"}} onClick={onSelect}>
+    <div data-block-id={block.id} ref={blockWrapRef} style={wrapStyle} onClick={onSelect}>
       {renderContent()}
       {floatingControls}
     </div>
