@@ -976,7 +976,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
             blockProps={p}
             viewport={viewport}
             onChange={onChangeProps}
-            style={{ minHeight: hh }}
+            style={{ minHeight: customMinHeight || hh }}
             items={[
               ...(p.title ? [{
                 id: "title",
@@ -1014,7 +1014,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
             blockProps={p}
             viewport={viewport}
             onChange={onChangeProps}
-            style={{ minHeight: "170px" }}
+            style={{ minHeight: customMinHeight || "170px" }}
             items={[
               ...(p.heading ? [{
                 id: "heading",
@@ -1201,7 +1201,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
             blockProps={p}
             viewport={viewport}
             onChange={onChangeProps}
-            style={{ minHeight: "180px" }}
+            style={{ minHeight: customMinHeight || "180px" }}
             items={[
               {
                 id: "heading",

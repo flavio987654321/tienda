@@ -271,6 +271,7 @@ function PositionedTextLayer({
               position: "absolute",
               left: `${pos.x}%`,
               top: `${pos.y}%`,
+              transform: "translate(-50%, -50%)",
               ...item.style,
             }}
           >
