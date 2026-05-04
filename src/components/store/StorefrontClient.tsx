@@ -886,7 +886,7 @@ export default function StorefrontClient({
                   : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
 
             return (
-              <section key={block.id} id="productos" className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
+              <section key={block.id} id="productos" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}><div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
                 {p.showHeading !== false && (
                   <div className="mb-7">
                     <PositionedTextLayer
@@ -950,11 +950,11 @@ export default function StorefrontClient({
                     <p>No hay productos en esta categoria</p>
                   </div>
                 )}
-              </section>
+              </div></section>
             );
           }
           if (block.type === "text") return (
-            <div key={block.id} className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
+            <div key={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}><div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
               <PositionedTextLayer
                 blockProps={p}
                 viewport={viewport}
@@ -974,7 +974,7 @@ export default function StorefrontClient({
                   }] : []),
                 ]}
               />
-            </div>
+            </div></div>
           );
           if (block.type === "banner") return (
             <div key={block.id} className="rounded-2xl px-6 py-3" style={{ backgroundColor: p.bgColor || store.accentColor, color: p.textColor || "#fff" }}>
@@ -1058,7 +1058,7 @@ export default function StorefrontClient({
             const imageHeight = Math.min(520, Math.max(180, Number(p.imageHeight) || 320));
             const stackedImageText = viewport !== "desktop";
             return (
-              <div key={block.id} className={`mx-auto flex max-w-7xl flex-col ${isRight ? "md:flex-row-reverse" : "md:flex-row"} gap-8 items-center px-4 py-8 sm:px-6`} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
+              <div key={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}><div className={`mx-auto flex max-w-7xl flex-col ${isRight ? "md:flex-row-reverse" : "md:flex-row"} gap-8 items-center px-4 py-8 sm:px-6`}>
                 <div
                   className="w-full rounded-3xl overflow-hidden flex items-center justify-center md:w-auto"
                   style={{
@@ -1091,7 +1091,7 @@ export default function StorefrontClient({
                     ]}
                   />
                 </div>
-              </div>
+              </div></div>
             );
           }
           if (block.type === "socials") {
