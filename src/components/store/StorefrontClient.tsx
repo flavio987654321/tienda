@@ -314,7 +314,8 @@ export default function StorefrontClient({
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
-  const panRef = useRef<{ dragging: boolean; startX: number; startY: number; originX: number; originY: number }>({ dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const panRef = useRef<{ active: boolean; moved: boolean; startX: number; startY: number; originX: number; originY: number }>({ active: false, moved: false, startX: 0, startY: 0, originX: 0, originY: 0 });
   const touchStartX = useRef(0);
   const [productReviews, setProductReviews] = useState<{ id: string; rating: number; comment: string | null; createdAt: string; user: { name: string | null; image: string | null } }[]>([]);
   const [reviewsAvg, setReviewsAvg] = useState(0);
@@ -1351,21 +1352,23 @@ export default function StorefrontClient({
             {imgs.length > 0 ? (
               <div
                 className="h-full w-full overflow-hidden select-none"
-                style={{ cursor: zoomLevel > 1 ? (panRef.current.dragging ? "grabbing" : "grab") : "zoom-in" }}
+                style={{ cursor: zoomLevel > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in" }}
                 onMouseDown={(e) => {
                   if (zoomLevel <= 1) return;
-                  panRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, originX: panX, originY: panY };
+                  panRef.current = { active: true, moved: false, startX: e.clientX, startY: e.clientY, originX: panX, originY: panY };
+                  setIsDragging(true);
                   e.preventDefault();
                 }}
                 onMouseMove={(e) => {
-                  if (!panRef.current.dragging) return;
+                  if (!panRef.current.active) return;
+                  panRef.current.moved = true;
                   setPanX(panRef.current.originX + e.clientX - panRef.current.startX);
                   setPanY(panRef.current.originY + e.clientY - panRef.current.startY);
                 }}
-                onMouseUp={() => { panRef.current.dragging = false; }}
-                onMouseLeave={() => { panRef.current.dragging = false; }}
+                onMouseUp={() => { panRef.current.active = false; setIsDragging(false); }}
+                onMouseLeave={() => { panRef.current.active = false; setIsDragging(false); }}
                 onClick={() => {
-                  if (panRef.current.dragging) return;
+                  if (panRef.current.moved) { panRef.current.moved = false; return; }
                   if (zoomLevel > 1) { setZoomLevel(1); setPanX(0); setPanY(0); }
                   else setZoomLevel(2);
                 }}
