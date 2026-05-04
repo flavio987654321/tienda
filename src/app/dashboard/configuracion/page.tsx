@@ -675,6 +675,8 @@ function MovableTextStage({
   const stageRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const dragRef = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  const itemsRef = useRef(items);
+  useEffect(() => { itemsRef.current = items; }, [items]);
   const [draftPositions, setDraftPositions] = useState<Record<string, TextPosition>>(() => {
     const stored = getViewportTextPositions(blockProps, viewport);
     return items.reduce<Record<string, TextPosition>>((acc, item) => {
@@ -684,6 +686,8 @@ function MovableTextStage({
   });
   const latestRef = useRef<Record<string, TextPosition>>(draftPositions);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  type Guide = { axis: "x" | "y"; pct: number };
+  const [activeGuides, setActiveGuides] = useState<Guide[]>([]);
 
   function normalizePositions(source: Record<string, TextPosition>) {
     if (!stageRef.current) return source;
@@ -766,18 +770,46 @@ function MovableTextStage({
       const itemRect = itemNode.getBoundingClientRect();
       const halfW = itemRect.width / 2;
       const halfH = itemRect.height / 2;
-      // Elements render with translate(-50%,-50%), so pos.x/y% is the CENTER.
-      // offsetX/Y is measured from the visual left/top edge, so we add half-size to get center.
-      const centerX = clamp(
+      const SNAP = 8;
+
+      let centerX = clamp(
         event.clientX - stageRect.left - dragRef.current.offsetX + halfW,
         halfW,
         Math.max(halfW, stageRect.width - halfW),
       );
-      const centerY = clamp(
+      let centerY = clamp(
         event.clientY - stageRect.top - dragRef.current.offsetY + halfH,
         halfH,
         Math.max(halfH, stageRect.height - halfH),
       );
+
+      // Build guide candidates: stage center + other elements' centers
+      const guides: { axis: "x" | "y"; px: number }[] = [
+        { axis: "x", px: stageRect.width / 2 },
+        { axis: "y", px: stageRect.height / 2 },
+      ];
+      itemsRef.current.forEach((other) => {
+        if (other.id === dragRef.current!.id) return;
+        const node = itemRefs.current[other.id];
+        if (!node) return;
+        const r = node.getBoundingClientRect();
+        guides.push({ axis: "x", px: r.left - stageRect.left + r.width / 2 });
+        guides.push({ axis: "y", px: r.top - stageRect.top + r.height / 2 });
+      });
+
+      const activeX: { axis: "x" | "y"; pct: number }[] = [];
+      const activeY: { axis: "x" | "y"; pct: number }[] = [];
+      guides.forEach(({ axis, px }) => {
+        if (axis === "x" && Math.abs(centerX - px) < SNAP) {
+          centerX = px;
+          activeX.push({ axis: "x", pct: (px / Math.max(stageRect.width, 1)) * 100 });
+        }
+        if (axis === "y" && Math.abs(centerY - px) < SNAP) {
+          centerY = px;
+          activeY.push({ axis: "y", pct: (px / Math.max(stageRect.height, 1)) * 100 });
+        }
+      });
+      setActiveGuides([...activeX, ...activeY]);
 
       setDraftPositions((current) => ({
         ...current,
@@ -793,6 +825,7 @@ function MovableTextStage({
       const currentDrag = dragRef.current;
       dragRef.current = null;
       setDraggingId(null);
+      setActiveGuides([]);
       onChange(updateViewportTextPosition(blockProps, viewport, currentDrag.id, latestRef.current[currentDrag.id]));
     }
 
@@ -835,6 +868,36 @@ function MovableTextStage({
       className={`relative ${className}`}
       style={{overflow: "visible", ...style}}
     >
+      {/* Alignment guides — visible only while dragging */}
+      {activeGuides.map((guide, i) =>
+        guide.axis === "x" ? (
+          <div
+            key={`gx-${i}`}
+            style={{
+              position: "absolute", top: 0, bottom: 0,
+              left: `${guide.pct}%`,
+              width: "1px",
+              background: "#818cf8",
+              pointerEvents: "none",
+              zIndex: 20,
+              boxShadow: "0 0 4px rgba(129,140,248,0.6)",
+            }}
+          />
+        ) : (
+          <div
+            key={`gy-${i}`}
+            style={{
+              position: "absolute", left: 0, right: 0,
+              top: `${guide.pct}%`,
+              height: "1px",
+              background: "#818cf8",
+              pointerEvents: "none",
+              zIndex: 20,
+              boxShadow: "0 0 4px rgba(129,140,248,0.6)",
+            }}
+          />
+        )
+      )}
       {items.map((item) => {
         const pos = draftPositions[item.id] ?? item.defaultPos;
         return (
