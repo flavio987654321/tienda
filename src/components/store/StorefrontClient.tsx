@@ -337,6 +337,8 @@ export default function StorefrontClient({
   const [isDragging, setIsDragging] = useState(false);
   const panRef = useRef<{ active: boolean; moved: boolean; startX: number; startY: number; originX: number; originY: number }>({ active: false, moved: false, startX: 0, startY: 0, originX: 0, originY: 0 });
   const touchStartX = useRef(0);
+  const reelsRef = useRef<HTMLDivElement>(null);
+  const reelsDrag = useRef({ isDown: false, startX: 0, scrollLeft: 0, hasMoved: false });
   const [productReviews, setProductReviews] = useState<{ id: string; rating: number; comment: string | null; createdAt: string; user: { name: string | null; image: string | null } }[]>([]);
   const [reviewsAvg, setReviewsAvg] = useState(0);
   const [reviewsTotal, setReviewsTotal] = useState(0);
@@ -1555,7 +1557,42 @@ export default function StorefrontClient({
               {modalCfg.showReels && modalCfg.reelUrls.length > 0 && (
                 <div className="mt-5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Videos</p>
-                  <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                  <div
+                    ref={reelsRef}
+                    className="flex gap-3 overflow-x-auto pb-1"
+                    style={{ scrollbarWidth: "none", cursor: "grab", touchAction: "pan-x", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+                    onPointerDown={(e) => {
+                      const el = reelsRef.current;
+                      if (!el) return;
+                      reelsDrag.current = { isDown: true, startX: e.pageX, scrollLeft: el.scrollLeft, hasMoved: false };
+                      el.style.cursor = "grabbing";
+                    }}
+                    onPointerMove={(e) => {
+                      const drag = reelsDrag.current;
+                      if (!drag.isDown) return;
+                      const dx = e.pageX - drag.startX;
+                      if (!drag.hasMoved && Math.abs(dx) < 5) return;
+                      drag.hasMoved = true;
+                      const el = reelsRef.current;
+                      if (!el) return;
+                      el.scrollLeft = drag.scrollLeft - dx;
+                      el.querySelectorAll("video").forEach((v) => ((v as HTMLElement).style.pointerEvents = "none"));
+                    }}
+                    onPointerUp={() => {
+                      reelsDrag.current.isDown = false;
+                      const el = reelsRef.current;
+                      if (!el) return;
+                      el.style.cursor = "grab";
+                      el.querySelectorAll("video").forEach((v) => ((v as HTMLElement).style.pointerEvents = ""));
+                    }}
+                    onPointerLeave={() => {
+                      reelsDrag.current.isDown = false;
+                      const el = reelsRef.current;
+                      if (!el) return;
+                      el.style.cursor = "grab";
+                      el.querySelectorAll("video").forEach((v) => ((v as HTMLElement).style.pointerEvents = ""));
+                    }}
+                  >
                     {modalCfg.reelUrls.map((url, i) => (
                       <video
                         key={i}
