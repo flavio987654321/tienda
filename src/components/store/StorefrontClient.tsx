@@ -1363,7 +1363,6 @@ export default function StorefrontClient({
       {selectedProduct && (() => {
         const imgs = parseImages(selectedProduct.images);
         const productReels = parseReelUrls(selectedProduct.reelUrls);
-        const visibleReels = productReels.length > 0 ? productReels : modalCfg.reelUrls;
         const hasMany = imgs.length > 1;
         const clampedIdx = Math.min(imgIndex, imgs.length - 1);
         const totalStock = selectedProduct.variants.reduce((s, v) => s + v.stock, 0);
@@ -1566,7 +1565,7 @@ export default function StorefrontClient({
               })()}
 
               {/* Carrusel de reels */}
-              {modalCfg.showReels && visibleReels.length > 0 && (
+              {modalCfg.showReels && productReels.length > 0 && (
                 <div className="mt-5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Videos</p>
                   <div
@@ -1605,7 +1604,7 @@ export default function StorefrontClient({
                       el.querySelectorAll("video").forEach((v) => ((v as HTMLElement).style.pointerEvents = ""));
                     }}
                   >
-                    {visibleReels.map((url, i) => (
+                    {productReels.map((url, i) => (
                       <video
                         key={i}
                         src={url}

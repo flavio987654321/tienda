@@ -55,6 +55,7 @@ type PreviewProduct = {
   comparePrice?: number | null;
   description?: string | null;
   images?: string | null;
+  reelUrls?: string | null;
   category?: string | null;
   subcategory?: string | null;
   variants?: { name: string; value: string; stock: number; price?: number | null }[];
@@ -2183,8 +2184,7 @@ export default function ConfiguracionPage() {
         const img = imgs[0];
         const variants = prod.variants || [];
         const hasVariants = variants.length > 0 && !(variants.length === 1 && variants[0].value === "default");
-        let reelList: string[] = [];
-        try { reelList = JSON.parse(config.productModalReelUrls || "[]"); } catch {}
+        const reelList = parsePreviewImages(prod.reelUrls || "");
 
         // Auto-generate size chart from product variants
         const sizeVariants = variants.filter(v =>
@@ -2195,16 +2195,6 @@ export default function ConfiguracionPage() {
         const sizeChartVariants = sizeVariants.length > 0
           ? sizeVariants
           : variants.filter(v => v.value && v.value !== "default");
-
-        async function uploadReelVideo(file: File) {
-          setUploadingReel(true);
-          try {
-            const fd = new FormData(); fd.append("file", file);
-            const r = await fetch("/api/upload", { method:"POST", body:fd });
-            const d = await r.json();
-            if (d.url) { set("productModalReelUrls", JSON.stringify([...reelList, d.url])); setIsDirty(true); }
-          } finally { setUploadingReel(false); }
-        }
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={()=>setPreviewModalProduct(null)}>

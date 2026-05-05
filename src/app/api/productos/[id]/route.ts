@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 
 type ProductRouteContext = RouteContext<"/api/productos/[id]">;
 const SINGLE_VARIANT_FALLBACK_VALUE = "Unico";
+const MAX_PRODUCT_REELS = 3;
 
 function normalizeVariants(input: unknown) {
   if (!Array.isArray(input)) return [];
@@ -90,6 +91,9 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
       }
     }
   }
+  if (Array.isArray(reelUrls) && reelUrls.length > MAX_PRODUCT_REELS) {
+    return NextResponse.json({ error: `Podes subir hasta ${MAX_PRODUCT_REELS} reels por producto` }, { status: 400 });
+  }
 
   const product = await prisma.$transaction(async (tx) => {
     await tx.productVariant.deleteMany({ where: { productId: id } });
@@ -105,7 +109,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         subcategory: subcategory || null,
         tags: JSON.stringify(Array.isArray(tags) ? tags : []),
         images: JSON.stringify(Array.isArray(images) ? images : []),
-        reelUrls: JSON.stringify(Array.isArray(reelUrls) ? reelUrls : []),
+        reelUrls: JSON.stringify(Array.isArray(reelUrls) ? reelUrls.slice(0, MAX_PRODUCT_REELS) : []),
         attributes: JSON.stringify(Array.isArray(attributes) ? attributes : []),
         variants: {
           create: normalizedVariants.map((v) => ({

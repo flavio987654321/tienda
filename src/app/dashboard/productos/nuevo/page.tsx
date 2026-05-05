@@ -69,6 +69,7 @@ const MAX_UPLOAD_IMAGE_SIZE_MB = 4;
 const MAX_UPLOAD_IMAGE_SIZE_BYTES = MAX_UPLOAD_IMAGE_SIZE_MB * 1024 * 1024;
 const MAX_IMAGE_SIDE = 2400;
 const MAX_PRODUCT_IMAGES = 5;
+const MAX_PRODUCT_REELS = 3;
 const DEFAULT_VARIANT: Variant = { name: "Talle", value: "", stock: "0", price: "", sku: "" };
 const SINGLE_VARIANT_FALLBACK_VALUE = "Unico";
 
@@ -412,8 +413,7 @@ function ProductoFormPage() {
   async function handleReelUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []);
     e.target.value = "";
-    const MAX_REELS = 5;
-    const validFiles = files.filter((f) => f.type.startsWith("video/")).slice(0, Math.max(0, MAX_REELS - reelUrls.length));
+    const validFiles = files.filter((f) => f.type.startsWith("video/")).slice(0, Math.max(0, MAX_PRODUCT_REELS - reelUrls.length));
     if (!validFiles.length) return;
     setUploadingReel(true);
     setIsDirty(true);
@@ -590,7 +590,7 @@ function ProductoFormPage() {
                   <h2 className="font-semibold text-gray-900">Videos del producto</h2>
                   <p className="text-xs text-gray-400 mt-0.5">Se muestran en el modal del producto</p>
                 </div>
-                <span className="text-xs text-gray-400">{reelUrls.length}/5</span>
+                <span className="text-xs text-gray-400">{reelUrls.length}/{MAX_PRODUCT_REELS}</span>
               </div>
               <div
                 onClick={() => reelInputRef.current?.click()}

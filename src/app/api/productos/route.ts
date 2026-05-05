@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 
 const SINGLE_VARIANT_FALLBACK_VALUE = "Unico";
+const MAX_PRODUCT_REELS = 3;
 
 function normalizeVariants(input: unknown) {
   if (!Array.isArray(input)) return [];
@@ -77,6 +78,9 @@ export async function POST(req: NextRequest) {
       }
     }
   }
+  if (Array.isArray(reelUrls) && reelUrls.length > MAX_PRODUCT_REELS) {
+    return NextResponse.json({ error: `Podes subir hasta ${MAX_PRODUCT_REELS} reels por producto` }, { status: 400 });
+  }
 
   const product = await prisma.product.create({
     data: {
@@ -88,7 +92,7 @@ export async function POST(req: NextRequest) {
       subcategory: subcategory || null,
       tags: JSON.stringify(Array.isArray(tags) ? tags : []),
       images: JSON.stringify(Array.isArray(images) ? images : []),
-      reelUrls: JSON.stringify(Array.isArray(reelUrls) ? reelUrls : []),
+      reelUrls: JSON.stringify(Array.isArray(reelUrls) ? reelUrls.slice(0, MAX_PRODUCT_REELS) : []),
       attributes: JSON.stringify(Array.isArray(attributes) ? attributes : []),
       storeId: store.id,
       variants: {
