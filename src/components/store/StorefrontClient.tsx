@@ -233,6 +233,21 @@ function parseBlocks(pageBlocks: string): PageBlock[] {
   }
 }
 
+function parseModalConfig(pageBlocks: string): { sizeChart: boolean; sizeChartTitle: string; showReels: boolean; reelUrls: string[] } {
+  try {
+    const parsed = JSON.parse(pageBlocks || "[]");
+    const mc = parsed?.modalConfig || {};
+    return {
+      sizeChart: Boolean(mc.sizeChart),
+      sizeChartTitle: mc.sizeChartTitle || "Tabla de talles",
+      showReels: Boolean(mc.showReels),
+      reelUrls: (() => { try { const u = JSON.parse(mc.reelUrls || "[]"); return Array.isArray(u) ? u : []; } catch { return []; } })(),
+    };
+  } catch {
+    return { sizeChart: false, sizeChartTitle: "Tabla de talles", showReels: false, reelUrls: [] };
+  }
+}
+
 function getViewportFromWidth(width: number): PreviewViewport {
   if (width < 640) return "mobile";
   if (width < 1024) return "tablet";
@@ -391,6 +406,7 @@ export default function StorefrontClient({
   const isMarket = store.templateId === "market";
   const isColorful = store.templateId === "colorful" || store.templateId === "kids";
   const pageBlocks = useMemo(() => parseBlocks(store.pageBlocks), [store.pageBlocks]);
+  const modalCfg = useMemo(() => parseModalConfig(store.pageBlocks), [store.pageBlocks]);
   const contentBlocks = isStarterBlocks(pageBlocks) ? [] : pageBlocks;
   const hasCustomHeroBlock = contentBlocks.some((block) => block.type === "hero");
   const hasCustomProductBlock = contentBlocks.some((block) => block.type === "products");
@@ -1487,6 +1503,68 @@ export default function StorefrontClient({
                 <ShoppingBag className="h-4 w-4" />
                 {available ? "Agregar al carrito" : "Sin stock"}
               </button>
+
+              {/* Tabla de talles auto-generada */}
+              {modalCfg.sizeChart && (() => {
+                const sizeVariants = selectedProduct.variants.filter(v =>
+                  v.name?.toLowerCase().includes("tall") ||
+                  v.name?.toLowerCase().includes("size") ||
+                  v.name?.toLowerCase().includes("talla")
+                );
+                const rows = sizeVariants.length > 0
+                  ? sizeVariants
+                  : selectedProduct.variants.filter(v => v.value && v.value !== "default");
+                if (rows.length === 0) return null;
+                return (
+                  <div className="mt-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{modalCfg.sizeChartTitle}</p>
+                    <div className="overflow-hidden rounded-xl border border-gray-100">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr style={{ backgroundColor: store.primaryColor + "15" }}>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-700 text-xs">Talle</th>
+                            <th className="px-3 py-2 text-center font-semibold text-gray-700 text-xs">Disponible</th>
+                            <th className="px-3 py-2 text-center font-semibold text-gray-700 text-xs">Stock</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((v, i) => (
+                            <tr key={v.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                              <td className="px-3 py-2 font-bold text-gray-900">{v.value}</td>
+                              <td className="px-3 py-2 text-center">
+                                {v.stock > 0
+                                  ? <span className="font-bold text-emerald-500">✓</span>
+                                  : <span className="font-bold text-red-400">✗</span>}
+                              </td>
+                              <td className="px-3 py-2 text-center text-xs text-gray-500">
+                                {v.stock > 0 ? `${v.stock} u.` : "Sin stock"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Carrusel de reels */}
+              {modalCfg.showReels && modalCfg.reelUrls.length > 0 && (
+                <div className="mt-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Videos</p>
+                  <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                    {modalCfg.reelUrls.map((url, i) => (
+                      <video
+                        key={i}
+                        src={url}
+                        controls
+                        className="h-48 w-28 shrink-0 rounded-xl object-cover bg-black"
+                        style={{ minWidth: "7rem" }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-gray-100 p-5 pb-8">
