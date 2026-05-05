@@ -28,6 +28,9 @@ export interface StoreConfig {
   productModalSizeChartData?: string;
   productModalShowReels?: boolean;
   productModalReelUrls?: string;
+  productModalButtonText?: string;
+  productModalAccentColor?: string;
+  productModalShowDescription?: boolean;
 }
 
 const DEMO = [

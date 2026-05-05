@@ -104,6 +104,7 @@ const DEFAULT_CONFIG: StoreConfig = {
   productModalSizeChart:false, productModalSizeChartTitle:"Tabla de talles",
   productModalSizeChartData:'{"columns":["Talle","Pecho","Cintura","Cadera"],"rows":[]}',
   productModalShowReels:false, productModalReelUrls:"[]",
+  productModalButtonText:"Agregar al carrito", productModalAccentColor:"", productModalShowDescription:true,
 };
 
 const CONFIG_TAB_KEY = "mitienda_config_editor_tab";
@@ -1534,6 +1535,9 @@ export default function ConfiguracionPage() {
               productModalSizeChartData: pmc.sizeChartData || '{"columns":["Talle","Pecho","Cintura","Cadera"],"rows":[]}',
               productModalShowReels: Boolean(pmc.showReels),
               productModalReelUrls: pmc.reelUrls || "[]",
+              productModalButtonText: pmc.buttonText || "Agregar al carrito",
+              productModalAccentColor: pmc.accentColor || "",
+              productModalShowDescription: pmc.showDescription !== false,
             }));
           }
 
@@ -1601,6 +1605,9 @@ export default function ConfiguracionPage() {
         sizeChartData: config.productModalSizeChartData,
         showReels: config.productModalShowReels,
         reelUrls: config.productModalReelUrls,
+        buttonText: config.productModalButtonText || "Agregar al carrito",
+        accentColor: config.productModalAccentColor || "",
+        showDescription: config.productModalShowDescription !== false,
       };
       const pageBlocksPayload = JSON.stringify({ blocks: processedBlocks, modalConfig });
       const res = await fetch("/api/configuracion",{
@@ -2389,6 +2396,55 @@ export default function ConfiguracionPage() {
                         <p className="text-xs text-gray-400 text-center">MP4, WebM · máx. 50 MB</p>
                       </div>
                     )}
+                  </div>
+
+                  {/* Botón y estilo */}
+                  <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3.5 flex items-center gap-2.5">
+                      <div className="p-1.5 bg-violet-50 rounded-lg"><span className="text-sm">🎨</span></div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">Texto y colores</p>
+                        <p className="text-xs text-gray-400">Personalizá el botón y el acento del modal</p>
+                      </div>
+                    </div>
+                    <div className="px-4 pb-4 border-t border-gray-50 space-y-3 pt-3">
+                      {/* Texto del botón */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1.5">Texto del botón</label>
+                        <input type="text" value={config.productModalButtonText||"Agregar al carrito"}
+                          onChange={e=>set("productModalButtonText",e.target.value)}
+                          placeholder="Agregar al carrito"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+                      </div>
+                      {/* Color de acento */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1.5">Color de acento <span className="text-gray-400 font-normal">(precio, tabla)</span></label>
+                        <div className="flex items-center gap-2">
+                          <input type="color" value={config.productModalAccentColor||config.primaryColor}
+                            onChange={e=>set("productModalAccentColor",e.target.value)}
+                            className="h-8 w-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"/>
+                          <input type="text" value={config.productModalAccentColor||""}
+                            onChange={e=>set("productModalAccentColor",e.target.value)}
+                            placeholder={config.primaryColor+" (color principal)"}
+                            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+                          {config.productModalAccentColor && (
+                            <button onClick={()=>set("productModalAccentColor","")}
+                              className="text-xs text-gray-400 hover:text-red-500 transition-colors whitespace-nowrap">Limpiar</button>
+                          )}
+                        </div>
+                      </div>
+                      {/* Mostrar descripción */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-700">Mostrar descripción</p>
+                          <p className="text-xs text-gray-400">Texto descriptivo del producto</p>
+                        </div>
+                        <button onClick={()=>set("productModalShowDescription",!config.productModalShowDescription)}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${config.productModalShowDescription!==false?"bg-indigo-600":"bg-gray-300"}`}>
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${config.productModalShowDescription!==false?"translate-x-4":"translate-x-0.5"}`}/>
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="pt-1">

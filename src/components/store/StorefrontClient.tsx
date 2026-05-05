@@ -233,7 +233,7 @@ function parseBlocks(pageBlocks: string): PageBlock[] {
   }
 }
 
-function parseModalConfig(pageBlocks: string): { sizeChart: boolean; sizeChartTitle: string; showReels: boolean; reelUrls: string[] } {
+function parseModalConfig(pageBlocks: string): { sizeChart: boolean; sizeChartTitle: string; showReels: boolean; reelUrls: string[]; buttonText: string; accentColor: string; showDescription: boolean } {
   try {
     const parsed = JSON.parse(pageBlocks || "[]");
     const mc = parsed?.modalConfig || {};
@@ -242,9 +242,12 @@ function parseModalConfig(pageBlocks: string): { sizeChart: boolean; sizeChartTi
       sizeChartTitle: mc.sizeChartTitle || "Tabla de talles",
       showReels: Boolean(mc.showReels),
       reelUrls: (() => { try { const u = JSON.parse(mc.reelUrls || "[]"); return Array.isArray(u) ? u : []; } catch { return []; } })(),
+      buttonText: mc.buttonText || "Agregar al carrito",
+      accentColor: mc.accentColor || "",
+      showDescription: mc.showDescription !== false,
     };
   } catch {
-    return { sizeChart: false, sizeChartTitle: "Tabla de talles", showReels: false, reelUrls: [] };
+    return { sizeChart: false, sizeChartTitle: "Tabla de talles", showReels: false, reelUrls: [], buttonText: "Agregar al carrito", accentColor: "", showDescription: true };
   }
 }
 
@@ -1465,13 +1468,13 @@ export default function StorefrontClient({
                 </button>
               </div>
 
-              {selectedProduct.description && (
+              {selectedProduct.description && modalCfg.showDescription && (
                 <p className="mt-2 text-sm leading-relaxed text-gray-500">{selectedProduct.description}</p>
               )}
 
               {store.showPrices && (
                 <div className="mt-3 flex items-center gap-2">
-                  <span className="text-2xl font-black" style={{ color: store.primaryColor }}>
+                  <span className="text-2xl font-black" style={{ color: modalCfg.accentColor || store.primaryColor }}>
                     {money(selectedProduct.price, store.currency)}
                   </span>
                   {selectedProduct.comparePrice && selectedProduct.comparePrice > selectedProduct.price && (
@@ -1498,10 +1501,10 @@ export default function StorefrontClient({
                 disabled={!available}
                 onClick={() => { addToCart(selectedProduct); closeProduct(); }}
                 className={`mt-5 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
-                style={{ backgroundColor: store.primaryColor, color: textColor }}
+                style={{ backgroundColor: modalCfg.accentColor || store.primaryColor, color: textColor }}
               >
                 <ShoppingBag className="h-4 w-4" />
-                {available ? "Agregar al carrito" : "Sin stock"}
+                {available ? (modalCfg.buttonText || "Agregar al carrito") : "Sin stock"}
               </button>
 
               {/* Tabla de talles auto-generada */}
@@ -1521,7 +1524,7 @@ export default function StorefrontClient({
                     <div className="overflow-hidden rounded-xl border border-gray-100">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr style={{ backgroundColor: store.primaryColor + "15" }}>
+                          <tr style={{ backgroundColor: (modalCfg.accentColor || store.primaryColor) + "15" }}>
                             <th className="px-3 py-2 text-left font-semibold text-gray-700 text-xs">Talle</th>
                             <th className="px-3 py-2 text-center font-semibold text-gray-700 text-xs">Disponible</th>
                             <th className="px-3 py-2 text-center font-semibold text-gray-700 text-xs">Stock</th>
