@@ -2229,14 +2229,14 @@ export default function ConfiguracionPage() {
                   )}
                   <div style={{padding:"16px 14px 24px"}}>
                     <h3 style={{fontSize:"15px",fontWeight:800,color:"#111827",marginBottom:"4px"}}>{prod.name}</h3>
-                    {prod.description && <p style={{fontSize:"11px",color:"#6b7280",marginBottom:"10px",lineHeight:1.5}}>{prod.description}</p>}
+                    {prod.description && config.productModalShowDescription!==false && <p style={{fontSize:"11px",color:"#6b7280",marginBottom:"10px",lineHeight:1.5}}>{prod.description}</p>}
                     <div style={{display:"flex",alignItems:"baseline",gap:"8px",marginBottom:"14px"}}>
-                      <span style={{fontSize:"18px",fontWeight:800,color:config.primaryColor}}>${Number(prod.price||0).toLocaleString("es-AR")}</span>
+                      <span style={{fontSize:"18px",fontWeight:800,color:config.productModalAccentColor||config.primaryColor}}>${Number(prod.price||0).toLocaleString("es-AR")}</span>
                       {prod.comparePrice && prod.comparePrice>(prod.price||0) && (
                         <span style={{fontSize:"12px",color:"#9ca3af",textDecoration:"line-through"}}>${Number(prod.comparePrice).toLocaleString("es-AR")}</span>
                       )}
                     </div>
-                    {hasVariants && (
+                    {hasVariants && !config.productModalSizeChart && (
                       <div style={{marginBottom:"14px"}}>
                         <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"6px"}}>Variantes</p>
                         <div style={{display:"flex",flexWrap:"wrap",gap:"5px"}}>
@@ -2256,7 +2256,7 @@ export default function ConfiguracionPage() {
                         {sizeChartVariants.length > 0 ? (
                           <table style={{width:"100%",borderCollapse:"collapse",fontSize:"10px"}}>
                             <thead>
-                              <tr style={{background:"#e2e8f0"}}>
+                              <tr style={{background:(config.productModalAccentColor||config.primaryColor)+"22"}}>
                                 <th style={{padding:"4px 8px",textAlign:"left",fontWeight:700,color:"#374151"}}>Talle</th>
                                 <th style={{padding:"4px 8px",textAlign:"center",fontWeight:700,color:"#374151"}}>Disponible</th>
                                 <th style={{padding:"4px 8px",textAlign:"center",fontWeight:700,color:"#374151"}}>Stock</th>
@@ -2304,8 +2304,8 @@ export default function ConfiguracionPage() {
                       </div>
                     )}
 
-                    <button style={{width:"100%",padding:"11px",borderRadius:"8px",background:config.primaryColor,color:"#fff",fontWeight:700,fontSize:"12px",border:"none",cursor:"pointer"}}>
-                      Agregar al carrito
+                    <button style={{width:"100%",padding:"11px",borderRadius:"8px",background:config.productModalAccentColor||config.primaryColor,color:"#fff",fontWeight:700,fontSize:"12px",border:"none",cursor:"pointer"}}>
+                      {config.productModalButtonText||"Agregar al carrito"}
                     </button>
                   </div>
                 </div>
