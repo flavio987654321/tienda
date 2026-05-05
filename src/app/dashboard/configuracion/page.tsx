@@ -2186,8 +2186,80 @@ export default function ConfiguracionPage() {
         const hasVariants = variants.length > 0 && !(variants.length === 1 && variants[0].value === "default");
         const reelList = parsePreviewImages(prod.reelUrls || "");
 
-        function uploadReelVideo(_file: File) {
-          return;
+        async function saveProductReels(nextReels: string[]) {
+          const detailRes = await fetch(`/api/productos/${prod.id}`);
+          const detailData = await detailRes.json();
+          if (!detailRes.ok || !detailData.product) {
+            throw new Error(detailData.error || "No se pudo cargar el producto");
+          }
+
+          const current = detailData.product;
+          const patchRes = await fetch(`/api/productos/${prod.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: current.name,
+              description: current.description || "",
+              price: String(current.price ?? ""),
+              comparePrice: current.comparePrice != null ? String(current.comparePrice) : "",
+              category: current.category || "general",
+              subcategory: current.subcategory || "",
+              tags: (() => { try { return JSON.parse(current.tags || "[]"); } catch { return []; } })(),
+              images: (() => { try { return JSON.parse(current.images || "[]"); } catch { return []; } })(),
+              reelUrls: nextReels,
+              variants: (current.variants || []).map((variant: any) => ({
+                name: variant.name || "Talle",
+                value: variant.value || "",
+                stock: String(variant.stock ?? 0),
+                price: variant.price != null ? String(variant.price) : "",
+                sku: variant.sku || "",
+              })),
+              attributes: (() => { try { return JSON.parse(current.attributes || "[]"); } catch { return []; } })(),
+            }),
+          });
+          const patchData = await patchRes.json();
+          if (!patchRes.ok) {
+            throw new Error(patchData.error || "No se pudieron guardar los reels");
+          }
+
+          const serializedReels = JSON.stringify(nextReels);
+          setPreviewProducts((prev) => prev.map((item) => item.id === prod.id ? { ...item, reelUrls: serializedReels } : item));
+          setPreviewModalProduct((prev) => prev && prev.id === prod.id ? { ...prev, reelUrls: serializedReels } : prev);
+        }
+
+        async function uploadReelVideo(file: File) {
+          if (reelList.length >= 3) {
+            window.alert("Solo podes cargar hasta 3 reels por producto.");
+            return;
+          }
+
+          setUploadingReel(true);
+          try {
+            const fd = new FormData();
+            fd.append("file", file);
+            const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
+            const uploadData = await uploadRes.json();
+            if (!uploadRes.ok || !uploadData.url) {
+              throw new Error(uploadData.error || "No se pudo subir el video");
+            }
+
+            await saveProductReels([...reelList, uploadData.url].slice(0, 3));
+          } catch (error) {
+            window.alert(error instanceof Error ? error.message : "No se pudo guardar el reel");
+          } finally {
+            setUploadingReel(false);
+          }
+        }
+
+        async function removeReelAt(index: number) {
+          setUploadingReel(true);
+          try {
+            await saveProductReels(reelList.filter((_, currentIndex) => currentIndex !== index));
+          } catch (error) {
+            window.alert(error instanceof Error ? error.message : "No se pudo eliminar el reel");
+          } finally {
+            setUploadingReel(false);
+          }
         }
 
         // Auto-generate size chart from product variants
@@ -2318,7 +2390,7 @@ export default function ConfiguracionPage() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  <p className="text-xs text-gray-400 px-1">Los cambios aplican a todos los productos de tu tienda</p>
+                  <p className="text-xs text-gray-400 px-1">Los estilos aplican a toda la tienda. Los reels se guardan en este producto.</p>
 
                   {/* Size chart section */}
                   <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
@@ -2376,7 +2448,7 @@ export default function ConfiguracionPage() {
                           <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
                             <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0 text-xs text-white font-bold">▶</div>
                             <span className="flex-1 text-xs text-gray-500 truncate">Video {i+1}</span>
-                            <button onClick={()=>{ const next=reelList.filter((_,j)=>j!==i); set("productModalReelUrls",JSON.stringify(next)); }}
+                            <button onClick={()=>removeReelAt(i)}
                               className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors flex-shrink-0">
                               <Trash2 className="h-3 w-3"/>
                             </button>
