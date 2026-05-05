@@ -2186,6 +2186,10 @@ export default function ConfiguracionPage() {
         const hasVariants = variants.length > 0 && !(variants.length === 1 && variants[0].value === "default");
         const reelList = parsePreviewImages(prod.reelUrls || "");
 
+        function uploadReelVideo(_file: File) {
+          return;
+        }
+
         // Auto-generate size chart from product variants
         const sizeVariants = variants.filter(v =>
           v.name?.toLowerCase().includes("tall") ||

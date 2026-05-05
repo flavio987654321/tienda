@@ -120,7 +120,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
             sku: v.sku || null,
           })),
         },
-      },
+      } as any,
       include: { variants: true },
     });
   });

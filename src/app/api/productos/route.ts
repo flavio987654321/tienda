@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
           sku: v.sku || null,
         })),
       },
-    },
+    } as any,
     include: { variants: true },
   });
 
