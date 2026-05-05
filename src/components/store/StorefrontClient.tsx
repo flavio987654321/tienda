@@ -167,6 +167,15 @@ function parseImages(images: string) {
   }
 }
 
+function parseReelUrls(reelUrls: string | null | undefined) {
+  try {
+    const parsed = JSON.parse(reelUrls || "[]");
+    return Array.isArray(parsed) ? parsed.filter((url): url is string => typeof url === "string" && url.trim().length > 0) : [];
+  } catch {
+    return [];
+  }
+}
+
 function money(value: number, currency = "ARS") {
   if (currency === "USD") return `U$D ${value.toLocaleString("es-AR")}`;
   return `$${value.toLocaleString("es-AR")}`;
@@ -242,7 +251,7 @@ function parseModalConfig(pageBlocks: string): { sizeChart: boolean; sizeChartTi
       sizeChart: Boolean(mc.sizeChart),
       sizeChartTitle: mc.sizeChartTitle || "Tabla de talles",
       showReels: Boolean(mc.showReels),
-      reelUrls: (() => { try { const u = JSON.parse(mc.reelUrls || "[]"); return Array.isArray(u) ? u : []; } catch { return []; } })(),
+      reelUrls: parseReelUrls(mc.reelUrls),
       buttonText: mc.buttonText || "Agregar al carrito",
       accentColor: mc.accentColor || "",
       showDescription: mc.showDescription !== false,
@@ -771,7 +780,7 @@ export default function StorefrontClient({
         <article
           id={`producto-${product.id}`}
           key={product.id}
-          className={`flex flex-col relative overflow-hidden rounded-[28px] border-2 border-white bg-white text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg ${
+          className={`relative flex h-full flex-col overflow-hidden rounded-[28px] border-2 border-white bg-white text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg ${
             highlightProductId === product.id ? "ring-4 ring-indigo-400 ring-offset-4" : ""
           }`}
         >
@@ -817,7 +826,7 @@ export default function StorefrontClient({
       <article
         id={`producto-${product.id}`}
         key={product.id}
-        className={`flex flex-col ${featured ? "sm:col-span-2 sm:row-span-2" : ""} ${list ? "grid grid-cols-[150px_1fr] md:grid-cols-[220px_1fr]" : ""} overflow-hidden border transition duration-300 hover:-translate-y-0.5 ${cardRadius} ${cardShadow} ${
+        className={`flex h-full flex-col ${featured ? "sm:col-span-2 sm:row-span-2" : ""} ${list ? "grid grid-cols-[150px_1fr] md:grid-cols-[220px_1fr]" : ""} overflow-hidden border transition duration-300 hover:-translate-y-0.5 ${cardRadius} ${cardShadow} ${
           isDark ? "border-white/10 bg-white/5 text-white" : "border-gray-100 bg-white text-gray-950"
         } ${highlightProductId === product.id ? "ring-4 ring-indigo-400 ring-offset-4 ring-offset-white" : ""}`}
       >
@@ -972,7 +981,7 @@ export default function StorefrontClient({
                       ))}
                     </div>
                   ) : (
-                    <div className={`grid gap-5 ${gridClass}`}>{blockProducts.map(renderProductCard)}</div>
+                    <div className={`grid items-stretch gap-5 ${gridClass}`}>{blockProducts.map(renderProductCard)}</div>
                   )
                 ) : (
                   <div className={`py-16 text-center ${isDark ? "text-gray-400" : "text-gray-400"}`}>
@@ -1353,6 +1362,7 @@ export default function StorefrontClient({
 
       {selectedProduct && (() => {
         const imgs = parseImages(selectedProduct.images);
+        const productReels = parseReelUrls(selectedProduct.reelUrls);
         const hasMany = imgs.length > 1;
         const clampedIdx = Math.min(imgIndex, imgs.length - 1);
         const totalStock = selectedProduct.variants.reduce((s, v) => s + v.stock, 0);
@@ -1555,7 +1565,7 @@ export default function StorefrontClient({
               })()}
 
               {/* Carrusel de reels */}
-              {modalCfg.showReels && (() => { try { const u = JSON.parse(selectedProduct.reelUrls || "[]"); return Array.isArray(u) && u.length > 0 ? u : null; } catch { return null; } })() && (
+              {modalCfg.showReels && productReels.length > 0 && (
                 <div className="mt-5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Videos</p>
                   <div
@@ -1594,7 +1604,7 @@ export default function StorefrontClient({
                       el.querySelectorAll("video").forEach((v) => ((v as HTMLElement).style.pointerEvents = ""));
                     }}
                   >
-                    {((): string[] => { try { const u = JSON.parse(selectedProduct.reelUrls || "[]"); return Array.isArray(u) ? u : []; } catch { return []; } })().map((url, i) => (
+                    {productReels.map((url, i) => (
                       <video
                         key={i}
                         src={url}
