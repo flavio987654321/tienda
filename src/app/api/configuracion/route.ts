@@ -32,8 +32,9 @@ export async function PUT(req: NextRequest) {
   }
   if (b.pageBlocks && b.pageBlocks !== "[]") {
     try {
-      const blocks = JSON.parse(b.pageBlocks);
-      if (!Array.isArray(blocks)) throw new Error();
+      const parsed = JSON.parse(b.pageBlocks);
+      // Accept both old format (array) and new format ({ blocks, modalConfig })
+      if (!Array.isArray(parsed) && !Array.isArray(parsed?.blocks)) throw new Error();
     } catch {
       return NextResponse.json({ error: "Bloques de página inválidos" }, { status: 400 });
     }
@@ -77,7 +78,6 @@ export async function PUT(req: NextRequest) {
       affiliatesEnabled:  Boolean(b.affiliatesEnabled),
       commissionRate:     isNaN(commissionRate) ? 10 : commissionRate,
       pageBlocks:         b.pageBlocks || "[]",
-      productModalConfig: b.productModalConfig || "{}",
     },
   });
 

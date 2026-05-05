@@ -1526,11 +1526,22 @@ export default function ConfiguracionPage() {
           productModalReelUrls: pmc.reelUrls || "[]",
         }));
         try {
-          const parsedBlocks = JSON.parse(store.pageBlocks||"[]");
-          const loadedBlocks = Array.isArray(parsedBlocks) ? parsedBlocks : [];
+          const parsedRaw = JSON.parse(store.pageBlocks||"[]");
+          // Support both old format (array) and new format ({ blocks, modalConfig })
+          const loadedBlocks: Block[] = Array.isArray(parsedRaw) ? parsedRaw : (Array.isArray(parsedRaw?.blocks) ? parsedRaw.blocks : []);
+          const pmc = parsedRaw?.modalConfig || {};
           const savedTab = window.localStorage.getItem(CONFIG_TAB_KEY);
 
           setBlocks(loadedBlocks);
+          if (pmc && typeof pmc === "object") {
+            setConfig(p=>({...p,
+              productModalSizeChart: Boolean(pmc.sizeChart),
+              productModalSizeChartTitle: pmc.sizeChartTitle || "Tabla de talles",
+              productModalSizeChartImage: pmc.sizeChartImage || "",
+              productModalShowReels: Boolean(pmc.showReels),
+              productModalReelUrls: pmc.reelUrls || "[]",
+            }));
+          }
 
           if (loadedBlocks.length > 0 && !isStarterConfigBlocks(loadedBlocks)) {
             setActiveTab("bloques");
@@ -1590,17 +1601,18 @@ export default function ConfiguracionPage() {
         }
       }));
 
-      const productModalConfig = JSON.stringify({
+      const modalConfig = {
         sizeChart: config.productModalSizeChart,
         sizeChartTitle: config.productModalSizeChartTitle,
         sizeChartImage: config.productModalSizeChartImage,
         showReels: config.productModalShowReels,
         reelUrls: config.productModalReelUrls,
-      });
+      };
+      const pageBlocksPayload = JSON.stringify({ blocks: processedBlocks, modalConfig });
       const res = await fetch("/api/configuracion",{
         method:"PUT",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({...config, pageBlocks:JSON.stringify(processedBlocks), productModalConfig})
+        body:JSON.stringify({...config, pageBlocks: pageBlocksPayload})
       });
       if (!res.ok) throw new Error("Error al guardar");
       setSaved(true);
