@@ -69,7 +69,6 @@ const MAX_UPLOAD_IMAGE_SIZE_MB = 4;
 const MAX_UPLOAD_IMAGE_SIZE_BYTES = MAX_UPLOAD_IMAGE_SIZE_MB * 1024 * 1024;
 const MAX_IMAGE_SIDE = 2400;
 const MAX_PRODUCT_IMAGES = 5;
-const MAX_PRODUCT_REELS = 3;
 const DEFAULT_VARIANT: Variant = { name: "Talle", value: "", stock: "0", price: "", sku: "" };
 const SINGLE_VARIANT_FALLBACK_VALUE = "Unico";
 
@@ -211,8 +210,6 @@ function ProductoFormPage() {
   const [uploadingImg, setUploadingImg] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [reelUrls, setReelUrls] = useState<string[]>([]);
-  const [uploadingReel, setUploadingReel] = useState(false);
-  const reelInputRef = useRef<HTMLInputElement>(null);
   const [isDirty, setIsDirty] = useState(false);
   const loadedRef = useRef(false);
 
@@ -410,23 +407,6 @@ function ProductoFormPage() {
     setCarouselIdx((c) => (c + 1) % images.length);
   }
 
-  async function handleReelUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || []);
-    e.target.value = "";
-    const validFiles = files.filter((f) => f.type.startsWith("video/")).slice(0, Math.max(0, MAX_PRODUCT_REELS - reelUrls.length));
-    if (!validFiles.length) return;
-    setUploadingReel(true);
-    setIsDirty(true);
-    for (const file of validFiles) {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      if (data.url) setReelUrls((prev) => [...prev, data.url]);
-    }
-    setUploadingReel(false);
-  }
-
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     setLoading(true);
@@ -583,43 +563,15 @@ function ProductoFormPage() {
               )}
             </div>
 
-            {/* Video reels */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-semibold text-gray-900">Videos del producto</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Se muestran en el modal del producto</p>
-                </div>
-                <span className="text-xs text-gray-400">{reelUrls.length}/{MAX_PRODUCT_REELS}</span>
-              </div>
-              <div
-                onClick={() => reelInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-200 rounded-xl p-5 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group"
-              >
-                {uploadingReel ? (
-                  <Loader2 className="h-7 w-7 text-indigo-400 animate-spin mx-auto mb-1.5" />
-                ) : (
-                  <Upload className="h-7 w-7 text-gray-300 group-hover:text-indigo-400 mx-auto mb-1.5 transition-colors" />
-                )}
-                <p className="text-sm text-gray-500">{uploadingReel ? "Subiendo..." : "Clic para subir videos"}</p>
-                <p className="text-xs text-gray-400 mt-0.5">MP4, WebM — hasta 50 MB c/u</p>
-                <input ref={reelInputRef} type="file" accept="video/*" multiple className="hidden" onChange={handleReelUpload} />
-              </div>
+            <div className="bg-white rounded-2xl border border-gray-100 p-6">
+              <h2 className="font-semibold text-gray-900">Reels del modal</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Los reels se cargan unicamente desde el modal de producto en configuracion. Si este producto ya tiene reels guardados, se conservan aunque no se editen desde aca.
+              </p>
               {reelUrls.length > 0 && (
-                <div className="flex gap-2 flex-wrap">
-                  {reelUrls.map((url, i) => (
-                    <div key={url + i} className="group relative w-16 h-24 rounded-lg border-2 border-transparent hover:border-gray-300 flex-shrink-0 overflow-hidden bg-black">
-                      <video src={url} className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => { setReelUrls((p) => p.filter((_, idx) => idx !== i)); setIsDirty(true); }}
-                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <p className="mt-3 text-xs text-gray-400">
+                  Este producto ya tiene {reelUrls.length} reel{reelUrls.length === 1 ? "" : "s"} guardado{reelUrls.length === 1 ? "" : "s"} desde el modal de configuracion.
+                </p>
               )}
             </div>
 
