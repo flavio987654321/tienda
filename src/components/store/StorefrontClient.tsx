@@ -1480,7 +1480,7 @@ export default function StorefrontClient({
                 </div>
               )}
 
-              {selectedProduct.variants.length > 0 && (
+              {selectedProduct.variants.length > 0 && !modalCfg.sizeChart && (
                 <div className="mt-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Variantes disponibles</p>
                   <div className="flex flex-wrap gap-2">
