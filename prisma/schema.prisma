@@ -106,7 +106,8 @@ model Store {
   isActive       Boolean  @default(true)
   affiliatesEnabled Boolean @default(false)
   commissionRate Float    @default(10)
-  pageBlocks     String   @default("[]")
+  pageBlocks          String   @default("[]")
+  productModalConfig  String   @default("{}")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

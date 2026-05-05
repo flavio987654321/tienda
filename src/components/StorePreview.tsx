@@ -23,6 +23,11 @@ export interface StoreConfig {
   footerText: string; currency: string;
   affiliatesEnabled?: boolean; commissionRate?: string | number;
   seoTitle?: string; seoDescription?: string;
+  productModalSizeChart?: boolean;
+  productModalSizeChartTitle?: string;
+  productModalSizeChartImage?: string;
+  productModalShowReels?: boolean;
+  productModalReelUrls?: string;
 }
 
 const DEMO = [

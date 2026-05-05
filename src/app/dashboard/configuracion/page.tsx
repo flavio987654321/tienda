@@ -101,6 +101,8 @@ const DEFAULT_CONFIG: StoreConfig = {
   instagramUrl:"", facebookUrl:"", tiktokUrl:"",
   whatsappNumber:"", showWhatsappButton:false,
   footerText:"", currency:"ARS",
+  productModalSizeChart:false, productModalSizeChartTitle:"Tabla de talles",
+  productModalSizeChartImage:"", productModalShowReels:false, productModalReelUrls:"[]",
 };
 
 const CONFIG_TAB_KEY = "mitienda_config_editor_tab";
@@ -1469,6 +1471,8 @@ export default function ConfiguracionPage() {
   const logoRef   = useRef<HTMLInputElement>(null);
   const bannerRef = useRef<HTMLInputElement>(null);
   const blockImageRef = useRef<HTMLInputElement>(null);
+  const sizeChartImageRef = useRef<HTMLInputElement>(null);
+  const [uploadingSizeChart, setUploadingSizeChart] = useState(false);
   const [config, setConfig]       = useState<StoreConfig>(DEFAULT_CONFIG);
   const [isDirty, setIsDirty]     = useState(false);
   const loadedRef                 = useRef(false);
@@ -1504,6 +1508,8 @@ export default function ConfiguracionPage() {
     fetch("/api/configuracion").then(r=>r.json()).then(({store})=>{
       if(store) {
         setStoreSlug(store.slug || "");
+        let pmc: Record<string,any> = {};
+        try { pmc = JSON.parse(store.productModalConfig || "{}"); } catch {}
         setConfig(p=>({...p,...store,
           commissionRate:String(store.commissionRate||10),
           announcementBar:store.announcementBar||"",
@@ -1513,6 +1519,11 @@ export default function ConfiguracionPage() {
           tiktokUrl:store.tiktokUrl||"",
           whatsappNumber:store.whatsappNumber||"",
           footerText:store.footerText||"",
+          productModalSizeChart: Boolean(pmc.sizeChart),
+          productModalSizeChartTitle: pmc.sizeChartTitle || "Tabla de talles",
+          productModalSizeChartImage: pmc.sizeChartImage || "",
+          productModalShowReels: Boolean(pmc.showReels),
+          productModalReelUrls: pmc.reelUrls || "[]",
         }));
         try {
           const parsedBlocks = JSON.parse(store.pageBlocks||"[]");
@@ -1579,10 +1590,17 @@ export default function ConfiguracionPage() {
         }
       }));
 
+      const productModalConfig = JSON.stringify({
+        sizeChart: config.productModalSizeChart,
+        sizeChartTitle: config.productModalSizeChartTitle,
+        sizeChartImage: config.productModalSizeChartImage,
+        showReels: config.productModalShowReels,
+        reelUrls: config.productModalReelUrls,
+      });
       const res = await fetch("/api/configuracion",{
         method:"PUT",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({...config, pageBlocks:JSON.stringify(processedBlocks)})
+        body:JSON.stringify({...config, pageBlocks:JSON.stringify(processedBlocks), productModalConfig})
       });
       if (!res.ok) throw new Error("Error al guardar");
       setSaved(true);
@@ -2122,57 +2140,6 @@ export default function ConfiguracionPage() {
                       <p style={{fontSize:"11px",color:"#9ca3af"}}>{config.footerText||`© 2025 ${config.name||"Mi Tienda"}`}</p>
                     </div>
 
-                    {/* Product preview modal */}
-                    {previewModalProduct && (() => {
-                      const imgs = parsePreviewImages(previewModalProduct.images || "");
-                      const img = imgs[0];
-                      const variants = previewModalProduct.variants || [];
-                      const hasVariants = variants.length > 0 && !(variants.length === 1 && variants[0].value === "default");
-                      return (
-                        <div
-                          style={{position:"sticky",bottom:0,left:0,right:0,top:0,zIndex:50,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",minHeight:"100%",marginTop:"-100%"}}
-                          onClick={()=>setPreviewModalProduct(null)}
-                        >
-                          <div
-                            style={{background:"#fff",borderRadius:"16px 16px 0 0",width:"100%",maxHeight:"85vh",overflowY:"auto",padding:"20px 16px 32px"}}
-                            onClick={e=>e.stopPropagation()}
-                          >
-                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}}>
-                              <span style={{fontSize:"11px",fontWeight:700,color:"#6366f1",textTransform:"uppercase",letterSpacing:"0.05em"}}>Vista previa del modal</span>
-                              <button onClick={()=>setPreviewModalProduct(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:"18px",color:"#6b7280",lineHeight:1}}>×</button>
-                            </div>
-                            {img ? (
-                              <div style={{aspectRatio:"4/3",borderRadius:"12px",overflow:"hidden",marginBottom:"16px",background:"#f3f4f6"}}>
-                                <img src={img} alt={previewModalProduct.name} style={{width:"100%",height:"100%",objectFit:"contain"}} />
-                              </div>
-                            ) : (
-                              <div style={{aspectRatio:"4/3",borderRadius:"12px",marginBottom:"16px",background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",color:"#d1d5db",fontSize:"13px"}}>Sin imagen</div>
-                            )}
-                            <h3 style={{fontSize:"16px",fontWeight:800,color:"#111827",marginBottom:"4px"}}>{previewModalProduct.name}</h3>
-                            {previewModalProduct.description && <p style={{fontSize:"12px",color:"#6b7280",marginBottom:"10px",lineHeight:1.5}}>{previewModalProduct.description}</p>}
-                            <div style={{display:"flex",alignItems:"baseline",gap:"8px",marginBottom:"14px"}}>
-                              <span style={{fontSize:"20px",fontWeight:800,color:config.primaryColor}}>${Number(previewModalProduct.price||0).toLocaleString("es-AR")}</span>
-                              {previewModalProduct.comparePrice && previewModalProduct.comparePrice > (previewModalProduct.price||0) && (
-                                <span style={{fontSize:"13px",color:"#9ca3af",textDecoration:"line-through"}}>${Number(previewModalProduct.comparePrice).toLocaleString("es-AR")}</span>
-                              )}
-                            </div>
-                            {hasVariants && (
-                              <div style={{marginBottom:"16px"}}>
-                                <p style={{fontSize:"11px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"8px"}}>Variantes disponibles</p>
-                                <div style={{display:"flex",flexWrap:"wrap",gap:"6px"}}>
-                                  {variants.map((v,i)=>(
-                                    <span key={i} style={{padding:"4px 10px",borderRadius:"999px",border:"1px solid #e5e7eb",fontSize:"11px",fontWeight:600,color:"#374151",background:"#f9fafb"}}>{v.name}{v.value&&v.value!=="default"?` - ${v.value}`:""}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            <button style={{width:"100%",padding:"12px",borderRadius:"10px",background:config.primaryColor,color:"#fff",fontWeight:700,fontSize:"13px",border:"none",cursor:"pointer"}}>
-                              Agregar al carrito
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })()}
                   </div>
                 )}
                 {activeTab==="bloques" && config.showWhatsappButton && config.whatsappNumber && (
@@ -2195,6 +2162,221 @@ export default function ConfiguracionPage() {
 
       {/* Block library modal */}
       {showBlockLibrary&&<BlockLibraryModal onAdd={addBlock} onClose={()=>setShowBlockLibrary(false)}/>}
+
+      {/* Product modal editor */}
+      {previewModalProduct && (() => {
+        const prod = previewModalProduct;
+        const imgs = parsePreviewImages(prod.images || "");
+        const img = imgs[0];
+        const variants = prod.variants || [];
+        const hasVariants = variants.length > 0 && !(variants.length === 1 && variants[0].value === "default");
+        let reelList: string[] = [];
+        try { reelList = JSON.parse(config.productModalReelUrls || "[]"); } catch {}
+
+        async function uploadSizeChartImage(file: File) {
+          setUploadingSizeChart(true);
+          try {
+            const fd = new FormData(); fd.append("file", file);
+            const r = await fetch("/api/upload", { method:"POST", body:fd });
+            const d = await r.json();
+            if (d.url) { set("productModalSizeChartImage", d.url); setIsDirty(true); }
+          } finally { setUploadingSizeChart(false); }
+        }
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={()=>setPreviewModalProduct(null)}>
+            <div className="flex w-full max-w-4xl max-h-[90vh] rounded-2xl overflow-hidden shadow-2xl bg-white" onClick={e=>e.stopPropagation()}>
+
+              {/* Left: phone preview */}
+              <div className="w-[340px] shrink-0 bg-gray-900 flex flex-col">
+                <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-300 uppercase tracking-wide">Vista previa</span>
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 rounded-full bg-red-500"/><div className="w-2 h-2 rounded-full bg-yellow-500"/><div className="w-2 h-2 rounded-full bg-green-500"/>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto bg-white" style={{fontFamily:config.fontFamily}}>
+                  {/* Product image */}
+                  {img ? (
+                    <div style={{aspectRatio:"1",background:"#f3f4f6",overflow:"hidden"}}>
+                      <img src={img} alt={prod.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                    </div>
+                  ) : (
+                    <div style={{aspectRatio:"1",background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",color:"#d1d5db",fontSize:"13px"}}>Sin imagen</div>
+                  )}
+                  <div style={{padding:"16px 14px 24px"}}>
+                    <h3 style={{fontSize:"15px",fontWeight:800,color:"#111827",marginBottom:"4px"}}>{prod.name}</h3>
+                    {prod.description && <p style={{fontSize:"11px",color:"#6b7280",marginBottom:"10px",lineHeight:1.5}}>{prod.description}</p>}
+                    <div style={{display:"flex",alignItems:"baseline",gap:"8px",marginBottom:"14px"}}>
+                      <span style={{fontSize:"18px",fontWeight:800,color:config.primaryColor}}>${Number(prod.price||0).toLocaleString("es-AR")}</span>
+                      {prod.comparePrice && prod.comparePrice>(prod.price||0) && (
+                        <span style={{fontSize:"12px",color:"#9ca3af",textDecoration:"line-through"}}>${Number(prod.comparePrice).toLocaleString("es-AR")}</span>
+                      )}
+                    </div>
+                    {hasVariants && (
+                      <div style={{marginBottom:"14px"}}>
+                        <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"6px"}}>Variantes</p>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:"5px"}}>
+                          {variants.map((v,i)=>(
+                            <span key={i} style={{padding:"3px 8px",borderRadius:"999px",border:"1px solid #e5e7eb",fontSize:"10px",fontWeight:600,color:"#374151",background:"#f9fafb"}}>{v.value&&v.value!=="default"?v.value:v.name}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Size chart preview */}
+                    {config.productModalSizeChart && (
+                      <div style={{marginBottom:"14px",padding:"10px",background:"#f8fafc",borderRadius:"10px",border:"1px solid #e2e8f0"}}>
+                        <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"8px"}}>
+                          📏 {config.productModalSizeChartTitle||"Tabla de talles"}
+                        </p>
+                        {config.productModalSizeChartImage ? (
+                          <img src={config.productModalSizeChartImage} alt="Tabla de talles" style={{width:"100%",borderRadius:"6px",objectFit:"contain"}}/>
+                        ) : (
+                          <div style={{height:"60px",background:"#e2e8f0",borderRadius:"6px",display:"flex",alignItems:"center",justifyContent:"center",color:"#94a3b8",fontSize:"10px"}}>Subí una imagen</div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Reels preview */}
+                    {config.productModalShowReels && reelList.length > 0 && (
+                      <div style={{marginBottom:"14px"}}>
+                        <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"6px"}}>🎬 Videos / Reels</p>
+                        <div style={{display:"flex",gap:"6px",overflowX:"auto",paddingBottom:"4px"}}>
+                          {reelList.map((url,i)=>(
+                            <div key={i} style={{width:"70px",height:"120px",background:"#1f2937",borderRadius:"8px",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"4px"}}>
+                              <div style={{fontSize:"18px"}}>▶</div>
+                              <div style={{fontSize:"8px",color:"#9ca3af",textAlign:"center",padding:"0 4px",wordBreak:"break-all"}}>Reel {i+1}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {config.productModalShowReels && reelList.length === 0 && (
+                      <div style={{marginBottom:"14px",padding:"8px",background:"#fef9c3",borderRadius:"8px",fontSize:"10px",color:"#92400e"}}>
+                        Agregá URLs de reels en el panel →
+                      </div>
+                    )}
+
+                    <button style={{width:"100%",padding:"11px",borderRadius:"8px",background:config.primaryColor,color:"#fff",fontWeight:700,fontSize:"12px",border:"none",cursor:"pointer"}}>
+                      Agregar al carrito
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: editor */}
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-white">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">Editar modal de producto</p>
+                    <p className="text-xs text-gray-400 truncate max-w-[240px]">{prod.name}</p>
+                  </div>
+                  <button onClick={()=>setPreviewModalProduct(null)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                    <X className="h-4 w-4 text-gray-500"/>
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  <p className="text-xs text-gray-400 px-1">Los cambios aplican a todos los productos de tu tienda</p>
+
+                  {/* Size chart section */}
+                  <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 bg-blue-50 rounded-lg"><span className="text-sm">📏</span></div>
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm">Tabla de talles</p>
+                          <p className="text-xs text-gray-400">Mostrá una guía de medidas en el modal</p>
+                        </div>
+                      </div>
+                      <button onClick={()=>set("productModalSizeChart",!config.productModalSizeChart)}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${config.productModalSizeChart?"bg-indigo-600":"bg-gray-300"}`}>
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${config.productModalSizeChart?"translate-x-4":"translate-x-0.5"}`}/>
+                      </button>
+                    </div>
+                    {config.productModalSizeChart && (
+                      <div className="px-4 pb-4 border-t border-gray-50 space-y-3 pt-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1.5">Título de la sección</label>
+                          <input type="text" value={config.productModalSizeChartTitle||"Tabla de talles"}
+                            onChange={e=>set("productModalSizeChartTitle",e.target.value)}
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1.5">Imagen de la tabla</label>
+                          <input ref={sizeChartImageRef} type="file" accept="image/*" className="hidden"
+                            onChange={e=>{ const f=e.target.files?.[0]; if(f) uploadSizeChartImage(f); e.target.value=""; }}/>
+                          {config.productModalSizeChartImage ? (
+                            <div className="relative">
+                              <img src={config.productModalSizeChartImage} alt="Tabla" className="w-full rounded-xl object-contain max-h-32 border border-gray-200"/>
+                              <button onClick={()=>set("productModalSizeChartImage","")}
+                                className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600">×</button>
+                            </div>
+                          ) : (
+                            <button onClick={()=>sizeChartImageRef.current?.click()} disabled={uploadingSizeChart}
+                              className="w-full h-16 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-indigo-300 hover:text-indigo-400 transition-colors">
+                              {uploadingSizeChart ? <Loader2 className="h-4 w-4 animate-spin"/> : <ImageIcon className="h-4 w-4"/>}
+                              <span className="text-xs">{uploadingSizeChart?"Subiendo...":"Subir imagen"}</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Reels section */}
+                  <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 bg-pink-50 rounded-lg"><span className="text-sm">🎬</span></div>
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm">Carrusel de reels</p>
+                          <p className="text-xs text-gray-400">Agregá videos de Instagram o YouTube</p>
+                        </div>
+                      </div>
+                      <button onClick={()=>set("productModalShowReels",!config.productModalShowReels)}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${config.productModalShowReels?"bg-indigo-600":"bg-gray-300"}`}>
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${config.productModalShowReels?"translate-x-4":"translate-x-0.5"}`}/>
+                      </button>
+                    </div>
+                    {config.productModalShowReels && (
+                      <div className="px-4 pb-4 border-t border-gray-50 space-y-2 pt-3">
+                        <p className="text-xs text-gray-500">Pegá la URL de cada reel (Instagram, YouTube, TikTok)</p>
+                        {reelList.map((url,i)=>(
+                          <div key={i} className="flex gap-2 items-center">
+                            <input type="text" value={url}
+                              onChange={e=>{ const next=[...reelList]; next[i]=e.target.value; set("productModalReelUrls",JSON.stringify(next)); }}
+                              placeholder="https://www.instagram.com/reel/..."
+                              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+                            <button onClick={()=>{ const next=reelList.filter((_,j)=>j!==i); set("productModalReelUrls",JSON.stringify(next)); }}
+                              className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors flex-shrink-0">
+                              <Trash2 className="h-3.5 w-3.5"/>
+                            </button>
+                          </div>
+                        ))}
+                        <button onClick={()=>set("productModalReelUrls",JSON.stringify([...reelList,""]))}
+                          className="w-full flex items-center justify-center gap-1.5 border-2 border-dashed border-gray-200 rounded-xl py-2 text-xs font-medium text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors">
+                          <Plus className="h-3.5 w-3.5"/> Agregar reel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-1">
+                    <button onClick={()=>{ setPreviewModalProduct(null); handleSave(); }}
+                      className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-2xl text-sm font-semibold transition-colors shadow-lg shadow-indigo-200">
+                      <Save className="h-4 w-4"/> Guardar cambios
+                    </button>
+
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
 
       <UnsavedChangesGuard isDirty={isDirty} />
     </DashboardLayout>
