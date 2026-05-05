@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
   const body = await req.json();
-  const { name, description, price, comparePrice, category, subcategory, tags, images, variants, attributes } = body;
+  const { name, description, price, comparePrice, category, subcategory, tags, images, reelUrls, variants, attributes } = body;
   const normalizedVariants = normalizeVariants(variants);
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
       subcategory: subcategory || null,
       tags: JSON.stringify(Array.isArray(tags) ? tags : []),
       images: JSON.stringify(Array.isArray(images) ? images : []),
+      reelUrls: JSON.stringify(Array.isArray(reelUrls) ? reelUrls : []),
       attributes: JSON.stringify(Array.isArray(attributes) ? attributes : []),
       storeId: store.id,
       variants: {

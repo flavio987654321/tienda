@@ -50,6 +50,7 @@ type Product = {
   price: number;
   comparePrice: number | null;
   images: string;
+  reelUrls: string;
   category: string;
   subcategory: string | null;
   variants: Variant[];
@@ -770,11 +771,11 @@ export default function StorefrontClient({
         <article
           id={`producto-${product.id}`}
           key={product.id}
-          className={`relative overflow-hidden rounded-[28px] border-2 border-white bg-white text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg ${
+          className={`flex flex-col relative overflow-hidden rounded-[28px] border-2 border-white bg-white text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg ${
             highlightProductId === product.id ? "ring-4 ring-indigo-400 ring-offset-4" : ""
           }`}
         >
-          <div className="relative aspect-square p-3" style={{ backgroundColor: bg }}>
+          <div className="relative aspect-square p-3 shrink-0" style={{ backgroundColor: bg }}>
             <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-20">{emoji}</div>
             <div className="relative h-full overflow-hidden rounded-[22px] cursor-pointer" onClick={() => openProduct(product)}>
               <ProductImage image={image} name={product.name} className="transition duration-500 hover:scale-105" />
@@ -792,7 +793,7 @@ export default function StorefrontClient({
               </div>
             )}
           </div>
-          <div className="p-4">
+          <div className="p-4 flex flex-col flex-1">
             <p className="text-base font-black leading-tight text-gray-950">{product.name}</p>
             {product.description && <p className="mt-1 line-clamp-2 text-sm text-gray-500">{product.description}</p>}
             {store.showPrices && <p className="mt-2 text-lg font-black" style={{ color: store.primaryColor }}>{money(product.price, store.currency)}</p>}
@@ -801,7 +802,7 @@ export default function StorefrontClient({
               type="button"
               disabled={!available}
               onClick={() => addToCart(product)}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-black text-white transition disabled:opacity-40"
+              className="mt-auto flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-black text-white transition disabled:opacity-40"
               style={{ backgroundColor: store.primaryColor }}
             >
               <ShoppingBag className="h-4 w-4" />
@@ -816,11 +817,11 @@ export default function StorefrontClient({
       <article
         id={`producto-${product.id}`}
         key={product.id}
-        className={`${featured ? "sm:col-span-2 sm:row-span-2" : ""} ${list ? "grid grid-cols-[150px_1fr] md:grid-cols-[220px_1fr]" : ""} overflow-hidden border transition duration-300 hover:-translate-y-0.5 ${cardRadius} ${cardShadow} ${
+        className={`flex flex-col ${featured ? "sm:col-span-2 sm:row-span-2" : ""} ${list ? "grid grid-cols-[150px_1fr] md:grid-cols-[220px_1fr]" : ""} overflow-hidden border transition duration-300 hover:-translate-y-0.5 ${cardRadius} ${cardShadow} ${
           isDark ? "border-white/10 bg-white/5 text-white" : "border-gray-100 bg-white text-gray-950"
         } ${highlightProductId === product.id ? "ring-4 ring-indigo-400 ring-offset-4 ring-offset-white" : ""}`}
       >
-        <div className={`${list ? "h-full min-h-40" : featured ? "aspect-[4/3]" : "aspect-square"} relative overflow-hidden ${isColorful ? "p-2" : ""}`} style={{ backgroundColor: store.secondaryColor }}>
+        <div className={`${list ? "h-full min-h-40" : featured ? "aspect-[4/3]" : "aspect-square"} relative overflow-hidden shrink-0 ${isColorful ? "p-2" : ""}`} style={{ backgroundColor: store.secondaryColor }}>
           <div className={`h-full w-full overflow-hidden cursor-pointer ${isColorful ? "rounded-2xl" : ""}`} onClick={() => openProduct(product)}>
             <ProductImage image={image} name={product.name} className="transition duration-500 hover:scale-105" />
           </div>
@@ -837,7 +838,7 @@ export default function StorefrontClient({
             </div>
           )}
         </div>
-        <div className={`${featured ? "p-6" : "p-4"}`}>
+        <div className={`${featured ? "p-6" : "p-4"} flex flex-col flex-1`}>
           <div className="mb-2 flex items-start justify-between gap-3">
             <div>
               <p className={`${featured ? "text-2xl" : "text-base"} font-black leading-tight`}>{product.name}</p>
@@ -863,7 +864,7 @@ export default function StorefrontClient({
             type="button"
             disabled={!available}
             onClick={() => addToCart(product)}
-            className={`mt-4 flex w-full items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
+            className={`mt-auto flex w-full items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
             style={{
               backgroundColor: store.buttonStyle === "outline" ? "transparent" : store.primaryColor,
               borderColor: store.primaryColor,
@@ -1554,7 +1555,7 @@ export default function StorefrontClient({
               })()}
 
               {/* Carrusel de reels */}
-              {modalCfg.showReels && modalCfg.reelUrls.length > 0 && (
+              {modalCfg.showReels && (() => { try { const u = JSON.parse(selectedProduct.reelUrls || "[]"); return Array.isArray(u) && u.length > 0 ? u : null; } catch { return null; } })() && (
                 <div className="mt-5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Videos</p>
                   <div
@@ -1593,7 +1594,7 @@ export default function StorefrontClient({
                       el.querySelectorAll("video").forEach((v) => ((v as HTMLElement).style.pointerEvents = ""));
                     }}
                   >
-                    {modalCfg.reelUrls.map((url, i) => (
+                    {((): string[] => { try { const u = JSON.parse(selectedProduct.reelUrls || "[]"); return Array.isArray(u) ? u : []; } catch { return []; } })().map((url, i) => (
                       <video
                         key={i}
                         src={url}
