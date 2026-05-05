@@ -102,7 +102,8 @@ const DEFAULT_CONFIG: StoreConfig = {
   whatsappNumber:"", showWhatsappButton:false,
   footerText:"", currency:"ARS",
   productModalSizeChart:false, productModalSizeChartTitle:"Tabla de talles",
-  productModalSizeChartImage:"", productModalShowReels:false, productModalReelUrls:"[]",
+  productModalSizeChartData:'{"columns":["Talle","Pecho","Cintura","Cadera"],"rows":[]}',
+  productModalShowReels:false, productModalReelUrls:"[]",
 };
 
 const CONFIG_TAB_KEY = "mitienda_config_editor_tab";
@@ -1471,8 +1472,8 @@ export default function ConfiguracionPage() {
   const logoRef   = useRef<HTMLInputElement>(null);
   const bannerRef = useRef<HTMLInputElement>(null);
   const blockImageRef = useRef<HTMLInputElement>(null);
-  const sizeChartImageRef = useRef<HTMLInputElement>(null);
-  const [uploadingSizeChart, setUploadingSizeChart] = useState(false);
+  const reelVideoRef = useRef<HTMLInputElement>(null);
+  const [uploadingReel, setUploadingReel] = useState(false);
   const [config, setConfig]       = useState<StoreConfig>(DEFAULT_CONFIG);
   const [isDirty, setIsDirty]     = useState(false);
   const loadedRef                 = useRef(false);
@@ -1508,8 +1509,6 @@ export default function ConfiguracionPage() {
     fetch("/api/configuracion").then(r=>r.json()).then(({store})=>{
       if(store) {
         setStoreSlug(store.slug || "");
-        let pmc: Record<string,any> = {};
-        try { pmc = JSON.parse(store.productModalConfig || "{}"); } catch {}
         setConfig(p=>({...p,...store,
           commissionRate:String(store.commissionRate||10),
           announcementBar:store.announcementBar||"",
@@ -1519,11 +1518,6 @@ export default function ConfiguracionPage() {
           tiktokUrl:store.tiktokUrl||"",
           whatsappNumber:store.whatsappNumber||"",
           footerText:store.footerText||"",
-          productModalSizeChart: Boolean(pmc.sizeChart),
-          productModalSizeChartTitle: pmc.sizeChartTitle || "Tabla de talles",
-          productModalSizeChartImage: pmc.sizeChartImage || "",
-          productModalShowReels: Boolean(pmc.showReels),
-          productModalReelUrls: pmc.reelUrls || "[]",
         }));
         try {
           const parsedRaw = JSON.parse(store.pageBlocks||"[]");
@@ -1537,7 +1531,7 @@ export default function ConfiguracionPage() {
             setConfig(p=>({...p,
               productModalSizeChart: Boolean(pmc.sizeChart),
               productModalSizeChartTitle: pmc.sizeChartTitle || "Tabla de talles",
-              productModalSizeChartImage: pmc.sizeChartImage || "",
+              productModalSizeChartData: pmc.sizeChartData || '{"columns":["Talle","Pecho","Cintura","Cadera"],"rows":[]}',
               productModalShowReels: Boolean(pmc.showReels),
               productModalReelUrls: pmc.reelUrls || "[]",
             }));
@@ -1604,7 +1598,7 @@ export default function ConfiguracionPage() {
       const modalConfig = {
         sizeChart: config.productModalSizeChart,
         sizeChartTitle: config.productModalSizeChartTitle,
-        sizeChartImage: config.productModalSizeChartImage,
+        sizeChartData: config.productModalSizeChartData,
         showReels: config.productModalShowReels,
         reelUrls: config.productModalReelUrls,
       };
@@ -2184,15 +2178,24 @@ export default function ConfiguracionPage() {
         const hasVariants = variants.length > 0 && !(variants.length === 1 && variants[0].value === "default");
         let reelList: string[] = [];
         try { reelList = JSON.parse(config.productModalReelUrls || "[]"); } catch {}
+        let sizeChartData: { columns: string[]; rows: string[][] } = { columns: ["Talle","Pecho","Cintura","Cadera"], rows: [] };
+        try { sizeChartData = JSON.parse(config.productModalSizeChartData || "{}"); } catch {}
+        if (!Array.isArray(sizeChartData.columns)) sizeChartData.columns = ["Talle","Pecho","Cintura","Cadera"];
+        if (!Array.isArray(sizeChartData.rows)) sizeChartData.rows = [];
 
-        async function uploadSizeChartImage(file: File) {
-          setUploadingSizeChart(true);
+        function updateSizeChart(next: { columns: string[]; rows: string[][] }) {
+          set("productModalSizeChartData", JSON.stringify(next));
+          setIsDirty(true);
+        }
+
+        async function uploadReelVideo(file: File) {
+          setUploadingReel(true);
           try {
             const fd = new FormData(); fd.append("file", file);
             const r = await fetch("/api/upload", { method:"POST", body:fd });
             const d = await r.json();
-            if (d.url) { set("productModalSizeChartImage", d.url); setIsDirty(true); }
-          } finally { setUploadingSizeChart(false); }
+            if (d.url) { set("productModalReelUrls", JSON.stringify([...reelList, d.url])); setIsDirty(true); }
+          } finally { setUploadingReel(false); }
         }
 
         return (
@@ -2242,10 +2245,29 @@ export default function ConfiguracionPage() {
                         <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"8px"}}>
                           📏 {config.productModalSizeChartTitle||"Tabla de talles"}
                         </p>
-                        {config.productModalSizeChartImage ? (
-                          <img src={config.productModalSizeChartImage} alt="Tabla de talles" style={{width:"100%",borderRadius:"6px",objectFit:"contain"}}/>
+                        {sizeChartData.rows.length > 0 ? (
+                          <div style={{overflowX:"auto"}}>
+                            <table style={{width:"100%",borderCollapse:"collapse",fontSize:"9px"}}>
+                              <thead>
+                                <tr style={{background:"#e2e8f0"}}>
+                                  {sizeChartData.columns.map((col,ci)=>(
+                                    <th key={ci} style={{padding:"4px 6px",textAlign:"left",fontWeight:700,color:"#374151",whiteSpace:"nowrap"}}>{col}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {sizeChartData.rows.map((row,ri)=>(
+                                  <tr key={ri} style={{background:ri%2===0?"#fff":"#f8fafc"}}>
+                                    {sizeChartData.columns.map((_,ci)=>(
+                                      <td key={ci} style={{padding:"3px 6px",color:"#4b5563",borderBottom:"1px solid #e2e8f0"}}>{row[ci]||""}</td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         ) : (
-                          <div style={{height:"60px",background:"#e2e8f0",borderRadius:"6px",display:"flex",alignItems:"center",justifyContent:"center",color:"#94a3b8",fontSize:"10px"}}>Subí una imagen</div>
+                          <div style={{height:"40px",background:"#e2e8f0",borderRadius:"6px",display:"flex",alignItems:"center",justifyContent:"center",color:"#94a3b8",fontSize:"10px"}}>Agregá filas en el panel →</div>
                         )}
                       </div>
                     )}
@@ -2253,12 +2275,12 @@ export default function ConfiguracionPage() {
                     {/* Reels preview */}
                     {config.productModalShowReels && reelList.length > 0 && (
                       <div style={{marginBottom:"14px"}}>
-                        <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"6px"}}>🎬 Videos / Reels</p>
+                        <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"6px"}}>🎬 Videos</p>
                         <div style={{display:"flex",gap:"6px",overflowX:"auto",paddingBottom:"4px"}}>
                           {reelList.map((url,i)=>(
-                            <div key={i} style={{width:"70px",height:"120px",background:"#1f2937",borderRadius:"8px",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"4px"}}>
-                              <div style={{fontSize:"18px"}}>▶</div>
-                              <div style={{fontSize:"8px",color:"#9ca3af",textAlign:"center",padding:"0 4px",wordBreak:"break-all"}}>Reel {i+1}</div>
+                            <div key={i} style={{width:"70px",height:"120px",background:"#000",borderRadius:"8px",flexShrink:0,overflow:"hidden",position:"relative"}}>
+                              <video src={url} style={{width:"100%",height:"100%",objectFit:"cover"}} muted playsInline/>
+                              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",pointerEvents:"none"}}>▶</div>
                             </div>
                           ))}
                         </div>
@@ -2266,7 +2288,7 @@ export default function ConfiguracionPage() {
                     )}
                     {config.productModalShowReels && reelList.length === 0 && (
                       <div style={{marginBottom:"14px",padding:"8px",background:"#fef9c3",borderRadius:"8px",fontSize:"10px",color:"#92400e"}}>
-                        Agregá URLs de reels en el panel →
+                        Subí videos en el panel →
                       </div>
                     )}
 
@@ -2315,23 +2337,60 @@ export default function ConfiguracionPage() {
                             onChange={e=>set("productModalSizeChartTitle",e.target.value)}
                             className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
                         </div>
+                        {/* Table editor */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1.5">Imagen de la tabla</label>
-                          <input ref={sizeChartImageRef} type="file" accept="image/*" className="hidden"
-                            onChange={e=>{ const f=e.target.files?.[0]; if(f) uploadSizeChartImage(f); e.target.value=""; }}/>
-                          {config.productModalSizeChartImage ? (
-                            <div className="relative">
-                              <img src={config.productModalSizeChartImage} alt="Tabla" className="w-full rounded-xl object-contain max-h-32 border border-gray-200"/>
-                              <button onClick={()=>set("productModalSizeChartImage","")}
-                                className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600">×</button>
-                            </div>
-                          ) : (
-                            <button onClick={()=>sizeChartImageRef.current?.click()} disabled={uploadingSizeChart}
-                              className="w-full h-16 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-indigo-300 hover:text-indigo-400 transition-colors">
-                              {uploadingSizeChart ? <Loader2 className="h-4 w-4 animate-spin"/> : <ImageIcon className="h-4 w-4"/>}
-                              <span className="text-xs">{uploadingSizeChart?"Subiendo...":"Subir imagen"}</span>
-                            </button>
-                          )}
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs font-medium text-gray-600">Medidas</label>
+                            <button onClick={()=>updateSizeChart({
+                              columns:[...sizeChartData.columns,"Nueva col"],
+                              rows:sizeChartData.rows.map(r=>[...r,""])
+                            })} className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">+ columna</button>
+                          </div>
+                          <div className="overflow-x-auto rounded-xl border border-gray-200">
+                            <table className="w-full text-xs border-collapse">
+                              <thead>
+                                <tr className="bg-gray-50">
+                                  {sizeChartData.columns.map((col,ci)=>(
+                                    <th key={ci} className="border-b border-gray-200 p-0 relative">
+                                      <div className="flex items-center">
+                                        <input value={col}
+                                          onChange={e=>{ const cols=[...sizeChartData.columns]; cols[ci]=e.target.value; updateSizeChart({...sizeChartData,columns:cols}); }}
+                                          className="w-full bg-transparent px-2 py-1.5 font-semibold text-gray-700 focus:outline-none focus:bg-indigo-50 min-w-[60px]"/>
+                                        {ci>0 && (
+                                          <button onClick={()=>updateSizeChart({
+                                            columns:sizeChartData.columns.filter((_,i)=>i!==ci),
+                                            rows:sizeChartData.rows.map(r=>r.filter((_,i)=>i!==ci))
+                                          })} className="pr-1 text-gray-300 hover:text-red-400 flex-shrink-0">×</button>
+                                        )}
+                                      </div>
+                                    </th>
+                                  ))}
+                                  <th className="w-6 bg-gray-50 border-b border-gray-200"/>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {sizeChartData.rows.map((row,ri)=>(
+                                  <tr key={ri} className="hover:bg-gray-50">
+                                    {sizeChartData.columns.map((_,ci)=>(
+                                      <td key={ci} className="border-b border-gray-100 p-0">
+                                        <input value={row[ci]||""}
+                                          onChange={e=>{ const rows=sizeChartData.rows.map((r,i)=>i===ri?r.map((c,j)=>j===ci?e.target.value:c):r); updateSizeChart({...sizeChartData,rows}); }}
+                                          className="w-full bg-transparent px-2 py-1.5 text-gray-600 focus:outline-none focus:bg-indigo-50 min-w-[50px]"/>
+                                      </td>
+                                    ))}
+                                    <td className="border-b border-gray-100 w-6 text-center">
+                                      <button onClick={()=>updateSizeChart({...sizeChartData,rows:sizeChartData.rows.filter((_,i)=>i!==ri)})}
+                                        className="text-gray-300 hover:text-red-400 text-xs leading-none">×</button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          <button onClick={()=>updateSizeChart({...sizeChartData,rows:[...sizeChartData.rows,sizeChartData.columns.map(()=>"")]})}
+                            className="mt-2 w-full flex items-center justify-center gap-1 border-2 border-dashed border-gray-200 rounded-xl py-1.5 text-xs font-medium text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors">
+                            <Plus className="h-3 w-3"/> Agregar talle
+                          </button>
                         </div>
                       </div>
                     )}
@@ -2343,8 +2402,8 @@ export default function ConfiguracionPage() {
                       <div className="flex items-center gap-2.5">
                         <div className="p-1.5 bg-pink-50 rounded-lg"><span className="text-sm">🎬</span></div>
                         <div>
-                          <p className="font-semibold text-gray-900 text-sm">Carrusel de reels</p>
-                          <p className="text-xs text-gray-400">Agregá videos de Instagram o YouTube</p>
+                          <p className="font-semibold text-gray-900 text-sm">Carrusel de videos</p>
+                          <p className="text-xs text-gray-400">Subí videos del producto desde tu dispositivo</p>
                         </div>
                       </div>
                       <button onClick={()=>set("productModalShowReels",!config.productModalShowReels)}
@@ -2354,23 +2413,24 @@ export default function ConfiguracionPage() {
                     </div>
                     {config.productModalShowReels && (
                       <div className="px-4 pb-4 border-t border-gray-50 space-y-2 pt-3">
-                        <p className="text-xs text-gray-500">Pegá la URL de cada reel (Instagram, YouTube, TikTok)</p>
+                        <input ref={reelVideoRef} type="file" accept="video/*" className="hidden"
+                          onChange={e=>{ const f=e.target.files?.[0]; if(f) uploadReelVideo(f); e.target.value=""; }}/>
                         {reelList.map((url,i)=>(
-                          <div key={i} className="flex gap-2 items-center">
-                            <input type="text" value={url}
-                              onChange={e=>{ const next=[...reelList]; next[i]=e.target.value; set("productModalReelUrls",JSON.stringify(next)); }}
-                              placeholder="https://www.instagram.com/reel/..."
-                              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+                          <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+                            <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0 text-xs text-white font-bold">▶</div>
+                            <span className="flex-1 text-xs text-gray-500 truncate">Video {i+1}</span>
                             <button onClick={()=>{ const next=reelList.filter((_,j)=>j!==i); set("productModalReelUrls",JSON.stringify(next)); }}
-                              className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors flex-shrink-0">
-                              <Trash2 className="h-3.5 w-3.5"/>
+                              className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors flex-shrink-0">
+                              <Trash2 className="h-3 w-3"/>
                             </button>
                           </div>
                         ))}
-                        <button onClick={()=>set("productModalReelUrls",JSON.stringify([...reelList,""]))}
-                          className="w-full flex items-center justify-center gap-1.5 border-2 border-dashed border-gray-200 rounded-xl py-2 text-xs font-medium text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors">
-                          <Plus className="h-3.5 w-3.5"/> Agregar reel
+                        <button onClick={()=>reelVideoRef.current?.click()} disabled={uploadingReel}
+                          className="w-full flex items-center justify-center gap-1.5 border-2 border-dashed border-gray-200 rounded-xl py-2.5 text-xs font-medium text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors disabled:opacity-50">
+                          {uploadingReel ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <Plus className="h-3.5 w-3.5"/>}
+                          {uploadingReel ? "Subiendo..." : "Subir video"}
                         </button>
+                        <p className="text-xs text-gray-400 text-center">MP4, WebM · máx. 50 MB</p>
                       </div>
                     )}
                   </div>

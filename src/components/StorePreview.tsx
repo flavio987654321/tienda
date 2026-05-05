@@ -25,7 +25,7 @@ export interface StoreConfig {
   seoTitle?: string; seoDescription?: string;
   productModalSizeChart?: boolean;
   productModalSizeChartTitle?: string;
-  productModalSizeChartImage?: string;
+  productModalSizeChartData?: string;
   productModalShowReels?: boolean;
   productModalReelUrls?: string;
 }

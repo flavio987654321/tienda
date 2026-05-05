@@ -9,7 +9,10 @@ const MAX_FILE_SIZE_MB = 4;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const MAX_DOCUMENT_SIZE_MB = 15;
 const MAX_DOCUMENT_SIZE_BYTES = MAX_DOCUMENT_SIZE_MB * 1024 * 1024;
+const MAX_VIDEO_SIZE_MB = 50;
+const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/ogg"]);
 const ALLOWED_DOCUMENT_TYPES = new Set([
   "application/pdf",
   "application/msword",
@@ -100,6 +103,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File;
     const purpose = String(formData.get("purpose") || "image");
     const isDocument = purpose === "affiliate-doc";
+    const isVideo = ALLOWED_VIDEO_TYPES.has(file?.type);
     if (!file) return NextResponse.json({ error: "No se recibio archivo" }, { status: 400 });
     if (isDocument) {
       if (!ALLOWED_DOCUMENT_TYPES.has(file.type)) {
@@ -108,17 +112,21 @@ export async function POST(req: NextRequest) {
       if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
         return NextResponse.json({ error: `El archivo no puede superar ${MAX_DOCUMENT_SIZE_MB} MB` }, { status: 413 });
       }
+    } else if (isVideo) {
+      if (file.size > MAX_VIDEO_SIZE_BYTES) {
+        return NextResponse.json({ error: `El video no puede superar ${MAX_VIDEO_SIZE_MB} MB` }, { status: 413 });
+      }
     } else if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
       return NextResponse.json({ error: "Solo se permiten imagenes JPG, PNG, WEBP o GIF" }, { status: 400 });
-    }
-    if (!isDocument && file.size > MAX_FILE_SIZE_BYTES) {
+    } else if (file.size > MAX_FILE_SIZE_BYTES) {
       return NextResponse.json({ error: `La imagen no puede superar ${MAX_FILE_SIZE_MB} MB` }, { status: 413 });
     }
 
     const bytes = await file.arrayBuffer();
 
     if (getSupabaseStorageConfig()) {
-      const url = await uploadToSupabaseStorage(file, bytes, isDocument ? "affiliate-docs" : "products");
+      const folder = isDocument ? "affiliate-docs" : isVideo ? "store-videos" : "products";
+      const url = await uploadToSupabaseStorage(file, bytes, folder);
       return NextResponse.json({ url });
     }
 
