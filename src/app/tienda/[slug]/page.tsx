@@ -5,6 +5,8 @@ import { unstable_noStore as noStore } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-session";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 type TiendaPageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ ref?: string; producto?: string }>;

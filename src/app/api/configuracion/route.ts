@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { revalidatePath } from "next/cache";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -81,5 +82,6 @@ export async function PUT(req: NextRequest) {
     },
   });
 
+  revalidatePath(`/tienda/${store.slug}`);
   return NextResponse.json({ store });
 }
