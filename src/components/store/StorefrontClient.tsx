@@ -224,8 +224,10 @@ type PageBlock = { id: string; type: string; props: Record<string, string | numb
 
 function parseBlocks(pageBlocks: string): PageBlock[] {
   try {
-    const blocks = JSON.parse(pageBlocks || "[]");
-    return Array.isArray(blocks) ? blocks : [];
+    const parsed = JSON.parse(pageBlocks || "[]");
+    if (Array.isArray(parsed)) return parsed;
+    if (Array.isArray(parsed?.blocks)) return parsed.blocks;
+    return [];
   } catch {
     return [];
   }
