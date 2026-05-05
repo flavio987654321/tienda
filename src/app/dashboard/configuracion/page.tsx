@@ -2178,15 +2178,16 @@ export default function ConfiguracionPage() {
         const hasVariants = variants.length > 0 && !(variants.length === 1 && variants[0].value === "default");
         let reelList: string[] = [];
         try { reelList = JSON.parse(config.productModalReelUrls || "[]"); } catch {}
-        let sizeChartData: { columns: string[]; rows: string[][] } = { columns: ["Talle","Pecho","Cintura","Cadera"], rows: [] };
-        try { sizeChartData = JSON.parse(config.productModalSizeChartData || "{}"); } catch {}
-        if (!Array.isArray(sizeChartData.columns)) sizeChartData.columns = ["Talle","Pecho","Cintura","Cadera"];
-        if (!Array.isArray(sizeChartData.rows)) sizeChartData.rows = [];
 
-        function updateSizeChart(next: { columns: string[]; rows: string[][] }) {
-          set("productModalSizeChartData", JSON.stringify(next));
-          setIsDirty(true);
-        }
+        // Auto-generate size chart from product variants
+        const sizeVariants = variants.filter(v =>
+          v.name?.toLowerCase().includes("tall") ||
+          v.name?.toLowerCase().includes("size") ||
+          v.name?.toLowerCase().includes("talla")
+        );
+        const sizeChartVariants = sizeVariants.length > 0
+          ? sizeVariants
+          : variants.filter(v => v.value && v.value !== "default");
 
         async function uploadReelVideo(file: File) {
           setUploadingReel(true);
@@ -2239,35 +2240,39 @@ export default function ConfiguracionPage() {
                       </div>
                     )}
 
-                    {/* Size chart preview */}
+                    {/* Size chart preview — auto from variants */}
                     {config.productModalSizeChart && (
                       <div style={{marginBottom:"14px",padding:"10px",background:"#f8fafc",borderRadius:"10px",border:"1px solid #e2e8f0"}}>
                         <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"8px"}}>
                           📏 {config.productModalSizeChartTitle||"Tabla de talles"}
                         </p>
-                        {sizeChartData.rows.length > 0 ? (
-                          <div style={{overflowX:"auto"}}>
-                            <table style={{width:"100%",borderCollapse:"collapse",fontSize:"9px"}}>
-                              <thead>
-                                <tr style={{background:"#e2e8f0"}}>
-                                  {sizeChartData.columns.map((col,ci)=>(
-                                    <th key={ci} style={{padding:"4px 6px",textAlign:"left",fontWeight:700,color:"#374151",whiteSpace:"nowrap"}}>{col}</th>
-                                  ))}
+                        {sizeChartVariants.length > 0 ? (
+                          <table style={{width:"100%",borderCollapse:"collapse",fontSize:"10px"}}>
+                            <thead>
+                              <tr style={{background:"#e2e8f0"}}>
+                                <th style={{padding:"4px 8px",textAlign:"left",fontWeight:700,color:"#374151"}}>Talle</th>
+                                <th style={{padding:"4px 8px",textAlign:"center",fontWeight:700,color:"#374151"}}>Disponible</th>
+                                <th style={{padding:"4px 8px",textAlign:"center",fontWeight:700,color:"#374151"}}>Stock</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sizeChartVariants.map((v,i)=>(
+                                <tr key={i} style={{background:i%2===0?"#fff":"#f8fafc",borderBottom:"1px solid #e2e8f0"}}>
+                                  <td style={{padding:"4px 8px",fontWeight:700,color:"#111827"}}>{v.value}</td>
+                                  <td style={{padding:"4px 8px",textAlign:"center"}}>
+                                    {v.stock>0
+                                      ? <span style={{color:"#10b981",fontWeight:700}}>✓</span>
+                                      : <span style={{color:"#ef4444"}}>✗</span>}
+                                  </td>
+                                  <td style={{padding:"4px 8px",textAlign:"center",color:"#6b7280",fontSize:"9px"}}>{v.stock>0?`${v.stock} u.`:"Sin stock"}</td>
                                 </tr>
-                              </thead>
-                              <tbody>
-                                {sizeChartData.rows.map((row,ri)=>(
-                                  <tr key={ri} style={{background:ri%2===0?"#fff":"#f8fafc"}}>
-                                    {sizeChartData.columns.map((_,ci)=>(
-                                      <td key={ci} style={{padding:"3px 6px",color:"#4b5563",borderBottom:"1px solid #e2e8f0"}}>{row[ci]||""}</td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                              ))}
+                            </tbody>
+                          </table>
                         ) : (
-                          <div style={{height:"40px",background:"#e2e8f0",borderRadius:"6px",display:"flex",alignItems:"center",justifyContent:"center",color:"#94a3b8",fontSize:"10px"}}>Agregá filas en el panel →</div>
+                          <div style={{padding:"8px",color:"#94a3b8",fontSize:"10px",textAlign:"center"}}>
+                            Agregá variantes al producto para ver la tabla
+                          </div>
                         )}
                       </div>
                     )}
@@ -2337,60 +2342,11 @@ export default function ConfiguracionPage() {
                             onChange={e=>set("productModalSizeChartTitle",e.target.value)}
                             className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
                         </div>
-                        {/* Table editor */}
-                        <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <label className="text-xs font-medium text-gray-600">Medidas</label>
-                            <button onClick={()=>updateSizeChart({
-                              columns:[...sizeChartData.columns,"Nueva col"],
-                              rows:sizeChartData.rows.map(r=>[...r,""])
-                            })} className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">+ columna</button>
-                          </div>
-                          <div className="overflow-x-auto rounded-xl border border-gray-200">
-                            <table className="w-full text-xs border-collapse">
-                              <thead>
-                                <tr className="bg-gray-50">
-                                  {sizeChartData.columns.map((col,ci)=>(
-                                    <th key={ci} className="border-b border-gray-200 p-0 relative">
-                                      <div className="flex items-center">
-                                        <input value={col}
-                                          onChange={e=>{ const cols=[...sizeChartData.columns]; cols[ci]=e.target.value; updateSizeChart({...sizeChartData,columns:cols}); }}
-                                          className="w-full bg-transparent px-2 py-1.5 font-semibold text-gray-700 focus:outline-none focus:bg-indigo-50 min-w-[60px]"/>
-                                        {ci>0 && (
-                                          <button onClick={()=>updateSizeChart({
-                                            columns:sizeChartData.columns.filter((_,i)=>i!==ci),
-                                            rows:sizeChartData.rows.map(r=>r.filter((_,i)=>i!==ci))
-                                          })} className="pr-1 text-gray-300 hover:text-red-400 flex-shrink-0">×</button>
-                                        )}
-                                      </div>
-                                    </th>
-                                  ))}
-                                  <th className="w-6 bg-gray-50 border-b border-gray-200"/>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {sizeChartData.rows.map((row,ri)=>(
-                                  <tr key={ri} className="hover:bg-gray-50">
-                                    {sizeChartData.columns.map((_,ci)=>(
-                                      <td key={ci} className="border-b border-gray-100 p-0">
-                                        <input value={row[ci]||""}
-                                          onChange={e=>{ const rows=sizeChartData.rows.map((r,i)=>i===ri?r.map((c,j)=>j===ci?e.target.value:c):r); updateSizeChart({...sizeChartData,rows}); }}
-                                          className="w-full bg-transparent px-2 py-1.5 text-gray-600 focus:outline-none focus:bg-indigo-50 min-w-[50px]"/>
-                                      </td>
-                                    ))}
-                                    <td className="border-b border-gray-100 w-6 text-center">
-                                      <button onClick={()=>updateSizeChart({...sizeChartData,rows:sizeChartData.rows.filter((_,i)=>i!==ri)})}
-                                        className="text-gray-300 hover:text-red-400 text-xs leading-none">×</button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                          <button onClick={()=>updateSizeChart({...sizeChartData,rows:[...sizeChartData.rows,sizeChartData.columns.map(()=>"")]})}
-                            className="mt-2 w-full flex items-center justify-center gap-1 border-2 border-dashed border-gray-200 rounded-xl py-1.5 text-xs font-medium text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors">
-                            <Plus className="h-3 w-3"/> Agregar talle
-                          </button>
+                        <div className="flex items-start gap-2 bg-blue-50 rounded-xl px-3 py-2.5">
+                          <span className="text-sm mt-0.5">ℹ️</span>
+                          <p className="text-xs text-blue-700 leading-relaxed">
+                            La tabla se genera automáticamente con los talles que cargaste en cada producto (variantes). Si un talle tiene stock aparece con ✓, si no tiene aparece con ✗.
+                          </p>
                         </div>
                       </div>
                     )}
