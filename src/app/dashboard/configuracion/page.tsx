@@ -14,16 +14,16 @@ import {
 
 /* ─── Templates ─── */
 const TEMPLATES = [
-  { id:"default",  name:"Minimal",   emoji:"⬜", desc:"Hero centrado y grilla limpia" },
-  { id:"fashion",  name:"Editorial", emoji:"👗", desc:"Texto lateral + portada grande" },
-  { id:"boutique", name:"Boutique",  emoji:"🛍️", desc:"Mosaico con fotos chicas" },
-  { id:"colorful", name:"Color Pop", emoji:"🎨", desc:"Bloques de color y categorias" },
-  { id:"luxury",   name:"Luxury",    emoji:"✨", desc:"Portada premium dividida" },
-  { id:"vintage",  name:"Vintage",   emoji:"🌸", desc:"Banner clasico y marco retro" },
-  { id:"sport",    name:"Sport",     emoji:"⚡", desc:"Hero diagonal y cards fuertes" },
-  { id:"tech",     name:"Tech",      emoji:"🖥️", desc:"Dark con neon y grilla compacta" },
-  { id:"kids",     name:"Kids",      emoji:"🎀", desc:"Redondeado, ludico y suave" },
-  { id:"market",   name:"Market",    emoji:"🏪", desc:"Buscador + menu lateral" },
+  { id:"default",  name:"Clean",     emoji:"⬜", desc:"Blanco, aireado, fotos grandes — estilo Zara" },
+  { id:"fashion",  name:"Editorial", emoji:"👗", desc:"Revista de moda, grid portrait, tipografía bold" },
+  { id:"boutique", name:"Boutique",  emoji:"🛍️", desc:"Elegante y cálido, cards premium con sombra" },
+  { id:"colorful", name:"Vívido",    emoji:"🎨", desc:"Colores fuertes, moderno y energético" },
+  { id:"luxury",   name:"Luxury",    emoji:"✨", desc:"Dark premium, catálogo numerado, acento dorado" },
+  { id:"vintage",  name:"Clásico",   emoji:"🏛️", desc:"Tipografía serif, estilo heritage profesional" },
+  { id:"sport",    name:"Sport",     emoji:"⚡", desc:"Dark + neón, cards horizontales, muy energético" },
+  { id:"tech",     name:"Moderno",   emoji:"🖥️", desc:"Gris claro, split hero, grid limpio y profesional" },
+  { id:"kids",     name:"Colorful",  emoji:"🎀", desc:"Colores vivos, redondeado, divertido pero prolijo" },
+  { id:"market",   name:"Market",    emoji:"🏪", desc:"Sidebar de filtros, grid denso, estilo marketplace" },
 ];
 
 const FUENTES = ["Inter","Poppins","Playfair Display","Roboto","Montserrat","Lato","Raleway","Oswald","Nunito","DM Sans"];
