@@ -108,6 +108,7 @@ model Store {
   commissionRate Float    @default(10)
   pageBlocks          String   @default("[]")
   tipoTienda          String   @default("ROPA")
+  tipoTiendaConfigurado Boolean @default(false)
   tieneVentaMayorista Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

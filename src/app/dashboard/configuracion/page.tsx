@@ -116,7 +116,7 @@ const DEFAULT_CONFIG: StoreConfig = {
   instagramUrl:"", facebookUrl:"", tiktokUrl:"",
   whatsappNumber:"", showWhatsappButton:false,
   footerText:"", currency:"ARS",
-  tipoTienda:"ROPA", tieneVentaMayorista:false,
+  tipoTienda:"ROPA", tipoTiendaConfigurado:false, tieneVentaMayorista:false,
   productModalSizeChart:false, productModalSizeChartTitle:"Tabla de talles",
   productModalSizeChartData:'{"columns":["Talle","Pecho","Cintura","Cadera"],"rows":[]}',
   productModalShowReels:false, productModalReelUrls:"[]",
