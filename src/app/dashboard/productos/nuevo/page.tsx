@@ -9,18 +9,24 @@ import {
   Upload, X, Star, ShoppingCart, Heart, Tag, Package,
 } from "lucide-react";
 import Link from "next/link";
+import { getStoreType } from "@/lib/storeTypes";
 
-const BASE_CATEGORIAS = ["ropa", "joyas", "accesorios", "calzado", "bolsos", "hogar", "belleza", "deporte"];
-const BASE_SUBCATEGORIAS: Record<string, string[]> = {
-  ropa: ["remeras", "pantalones", "camperas", "vestidos", "buzos", "shorts"],
-  joyas: ["collares", "anillos", "pulseras", "aros"],
-  accesorios: ["cinturones", "lentes", "panuelos", "gorros"],
-  calzado: ["zapatillas", "sandalias", "botas", "zapatos"],
-  bolsos: ["carteras", "mochilas", "riñoneras", "bolsos"],
-  hogar: ["decoracion", "cocina", "textiles"],
-  belleza: ["maquillaje", "skincare", "perfumes"],
-  deporte: ["calzas", "tops", "camisetas", "accesorios"],
-};
+function getVariantOptions(storeType: string): string[] {
+  const map: Record<string, string[]> = {
+    ROPA:      ["Talle", "Color", "Material"],
+    AUTOS:     ["Color", "Versión"],
+    TECH:      ["Almacenamiento", "Color", "RAM"],
+    HOGAR:     ["Tamaño", "Color", "Material"],
+    ALIMENTOS: ["Peso/Tamaño", "Sabor"],
+    BELLEZA:   ["Tono", "Tamaño"],
+    DEPORTE:   ["Talle", "Color"],
+    MASCOTAS:  ["Tamaño", "Sabor"],
+    LIBROS:    ["Formato"],
+    GENERAL:   ["Variante", "Color", "Tamaño"],
+  };
+  const options = map[storeType] || ["Variante"];
+  return [...new Set([...options, "Otro"])];
+}
 
 interface Variant {
   name: string;
@@ -46,6 +52,8 @@ interface StoreConfig {
   showPrices: boolean;
   showRatings: boolean;
   currency: string;
+  tipoTienda?: string;
+  tieneVentaMayorista?: boolean;
 }
 
 const SHADOW_MAP: Record<string, string> = {
@@ -199,12 +207,14 @@ function ProductoFormPage() {
     subcategory: "",
     tags: "",
   });
-  const [productCategories, setProductCategories] = useState<string[]>(BASE_CATEGORIAS);
-  const [productSubcategories, setProductSubcategories] = useState<Record<string, string[]>>(BASE_SUBCATEGORIAS);
+  const [productCategories, setProductCategories] = useState<string[]>([]);
+  const [productSubcategories, setProductSubcategories] = useState<Record<string, string[]>>({});
   const [customCategory, setCustomCategory] = useState("");
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [variants, setVariants] = useState<Variant[]>([DEFAULT_VARIANT]);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [precioMayorista, setPrecioMayorista] = useState("");
+  const [cantMinMayorista, setCantMinMayorista] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [uploadingImg, setUploadingImg] = useState(false);
@@ -216,28 +226,41 @@ function ProductoFormPage() {
   useEffect(() => {
     fetch("/api/configuracion")
       .then((r) => r.json())
-      .then((d) => d.store && setStore((p) => ({ ...p, ...d.store })))
+      .then((d) => {
+        if (!d.store) return;
+        setStore((p) => ({ ...p, ...d.store }));
+        const typeConfig = getStoreType(d.store.tipoTienda || "ROPA");
+        setProductCategories(typeConfig.categorias);
+        setProductSubcategories(typeConfig.subcategorias);
+        if (!editingId) {
+          setForm((p) => ({ ...p, category: typeConfig.categorias[0] || "general" }));
+          if (typeConfig.extraFields.length > 0) {
+            setAttributes(typeConfig.extraFields.map((f) => ({ key: f.label, value: "" })));
+          }
+        }
+      })
       .catch(() => {});
 
     fetch("/api/productos")
       .then((r) => r.json())
       .then((d) => {
-        const categories = Array.from(
-          new Set([
-            ...BASE_CATEGORIAS,
-            ...((d.products || []).map((product: any) => product.category).filter(Boolean) as string[]),
-          ])
-        );
-        setProductCategories(categories);
+        const extraCats = (d.products || []).map((p: any) => p.category).filter(Boolean) as string[];
+        setProductCategories((prev) => Array.from(new Set([...prev, ...extraCats])));
         const grouped = (d.products || []).reduce((acc: Record<string, string[]>, product: any) => {
           if (!product.category || !product.subcategory) return acc;
           acc[product.category] = Array.from(new Set([...(acc[product.category] || []), product.subcategory]));
           return acc;
-        }, { ...BASE_SUBCATEGORIAS });
-        setProductSubcategories(grouped);
+        }, {});
+        setProductSubcategories((prev) => {
+          const merged = { ...prev };
+          for (const [cat, subs] of Object.entries(grouped)) {
+            merged[cat] = Array.from(new Set([...(merged[cat] || []), ...(subs as string[])]));
+          }
+          return merged;
+        });
       })
       .catch(() => {});
-  }, []);
+  }, [editingId]);
 
   useEffect(() => {
     if (!editingId) return;
@@ -280,6 +303,8 @@ function ProductoFormPage() {
         setAttributes(safeJsonArray(product.attributes).filter(
           (a: any) => a && typeof a.key === "string" && typeof a.value === "string"
         ) as Attribute[]);
+        setPrecioMayorista(product.precioMayorista?.toString() || "");
+        setCantMinMayorista(product.cantMinMayorista?.toString() || "");
       })
       .catch((err) => setError(err instanceof Error ? err.message : "No se pudo cargar el producto"))
       .finally(() => { setLoadingProduct(false); loadedRef.current = true; });
@@ -301,7 +326,8 @@ function ProductoFormPage() {
   }
 
   function addVariant() {
-    setVariants((p) => [...p, { name: "Talle", value: "", stock: "0", price: "", sku: "" }]);
+    const defaultName = getStoreType(store.tipoTienda || "ROPA").defaultVariantName;
+    setVariants((p) => [...p, { name: defaultName, value: "", stock: "0", price: "", sku: "" }]);
     markDirty();
   }
 
@@ -438,6 +464,8 @@ function ProductoFormPage() {
         reelUrls,
         variants: preparedVariants,
         attributes: attributes.filter((a) => a.key.trim() && a.value.trim()),
+        precioMayorista: precioMayorista || null,
+        cantMinMayorista: cantMinMayorista || null,
       }),
     });
 
@@ -457,6 +485,8 @@ function ProductoFormPage() {
 
   const cardRadius = RADIUS_MAP[store.cardRadius] || "rounded-xl";
   const cardShadow = SHADOW_MAP[store.cardShadow] || "shadow-sm";
+  const storeTypeConfig = getStoreType(store.tipoTienda || "ROPA");
+  const variantOptions = getVariantOptions(store.tipoTienda || "ROPA");
   const previewCategory = form.category === "otro" ? customCategory.trim() || "otro" : form.category;
   const previewSubcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
   const availableSubcategories = form.category === "otro" ? [] : productSubcategories[form.category] || [];
@@ -702,12 +732,47 @@ function ProductoFormPage() {
               )}
             </div>
 
+            {/* Precio mayorista */}
+            {store.tieneVentaMayorista && (
+              <div className="bg-white rounded-2xl border border-indigo-100 p-6 space-y-4">
+                <div>
+                  <h2 className="font-semibold text-gray-900">Precio mayorista</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Solo visible para compradores que cumplan la cantidad mínima</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Precio por mayor *</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+                      <input
+                        type="number"
+                        value={precioMayorista}
+                        onChange={(e) => { setPrecioMayorista(e.target.value); markDirty(); }}
+                        min="0" step="0.01" placeholder="0"
+                        className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Cantidad mínima</label>
+                    <input
+                      type="number"
+                      value={cantMinMayorista}
+                      onChange={(e) => { setCantMinMayorista(e.target.value); markDirty(); }}
+                      min="1" placeholder="Ej: 10"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Variantes */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-semibold text-gray-900">Variantes y stock</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Talles, colores, materiales, etc.</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{storeTypeConfig.defaultVariantName}, color, etc.</p>
                 </div>
                 <button
                   type="button"
@@ -728,10 +793,9 @@ function ProductoFormPage() {
                       onChange={(e) => updateVariant(idx, "name", e.target.value)}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                     >
-                      <option>Talle</option>
-                      <option>Color</option>
-                      <option>Material</option>
-                      <option>Otro</option>
+                      {variantOptions.map((opt) => (
+                        <option key={opt}>{opt}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="col-span-3">
@@ -784,8 +848,12 @@ function ProductoFormPage() {
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="font-semibold text-gray-900">Atributos adicionales</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Número de serie, peso, material, dimensiones, etc.</p>
+                  <h2 className="font-semibold text-gray-900">Atributos del producto</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {storeTypeConfig.extraFields.length > 0
+                      ? storeTypeConfig.extraFields.map((f) => f.label).join(", ")
+                      : "Número de serie, peso, material, dimensiones, etc."}
+                  </p>
                 </div>
                 <button
                   type="button"

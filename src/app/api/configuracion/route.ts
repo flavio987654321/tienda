@@ -79,6 +79,8 @@ export async function PUT(req: NextRequest) {
       affiliatesEnabled:  Boolean(b.affiliatesEnabled),
       commissionRate:     isNaN(commissionRate) ? 10 : commissionRate,
       pageBlocks:         b.pageBlocks || "[]",
+      tipoTienda:         b.tipoTienda || "ROPA",
+      tieneVentaMayorista: Boolean(b.tieneVentaMayorista),
     },
   });
 

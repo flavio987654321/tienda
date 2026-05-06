@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
   const body = await req.json();
-  const { name, description, price, comparePrice, category, subcategory, tags, images, reelUrls, variants, attributes } = body;
+  const { name, description, price, comparePrice, category, subcategory, tags, images, reelUrls, variants, attributes, precioMayorista, cantMinMayorista } = body;
   const normalizedVariants = normalizeVariants(variants);
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
@@ -94,6 +94,8 @@ export async function POST(req: NextRequest) {
       images: JSON.stringify(Array.isArray(images) ? images : []),
       reelUrls: JSON.stringify(Array.isArray(reelUrls) ? reelUrls.slice(0, MAX_PRODUCT_REELS) : []),
       attributes: JSON.stringify(Array.isArray(attributes) ? attributes : []),
+      precioMayorista: precioMayorista ? parseFloat(precioMayorista) : null,
+      cantMinMayorista: cantMinMayorista ? parseInt(cantMinMayorista) : null,
       storeId: store.id,
       variants: {
         create: normalizedVariants.map((v) => ({

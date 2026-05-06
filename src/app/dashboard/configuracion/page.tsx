@@ -4,12 +4,13 @@ import { useEffect, useState, useRef, type CSSProperties, type MouseEvent as Rea
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import DashboardLayout from "@/components/DashboardLayout";
 import StorePreview, { StoreConfig } from "@/components/StorePreview";
+import { STORE_TYPES } from "@/lib/storeTypes";
 import {
   Loader2, Save, Users, Palette, Layout, Type,
   Image as ImageIcon, Monitor, Smartphone, Tablet, LayoutGrid,
   List, Grid2X2, ChevronDown, ChevronUp, Megaphone, Share2,
   MousePointer2, CreditCard, Search, ExternalLink,
-  Plus, Trash2, Layers, X, Copy,
+  Plus, Trash2, Layers, X, Copy, Package,
 } from "lucide-react";
 
 /* ─── Templates ─── */
@@ -54,7 +55,7 @@ const CARD_SHADOW   = [{id:"none",label:"Sin sombra"},{id:"sm",label:"Suave"},{i
 const BG_STYLES     = [{id:"plain",label:"Liso"},{id:"gradient",label:"Degradado"},{id:"pattern",label:"Patrón"}];
 const CURRENCIES    = [{id:"ARS",label:"Pesos ARS"},{id:"USD",label:"Dólares USD"}];
 
-type DesignSection = "template"|"colores"|"textos"|"imagenes"|"layout"|"tarjetas"|"anuncio"|"redes"|"footer"|"vendedoras"|"seo";
+type DesignSection = "template"|"colores"|"textos"|"imagenes"|"layout"|"tarjetas"|"anuncio"|"redes"|"footer"|"vendedoras"|"seo"|"tienda";
 
 /* ─── Block types ─── */
 export type BlockType = "hero"|"text"|"products"|"banner"|"banner-group"|"cta"|"image-text"|"socials"|"spacer"|"divider";
@@ -115,6 +116,7 @@ const DEFAULT_CONFIG: StoreConfig = {
   instagramUrl:"", facebookUrl:"", tiktokUrl:"",
   whatsappNumber:"", showWhatsappButton:false,
   footerText:"", currency:"ARS",
+  tipoTienda:"ROPA", tieneVentaMayorista:false,
   productModalSizeChart:false, productModalSizeChartTitle:"Tabla de talles",
   productModalSizeChartData:'{"columns":["Talle","Pecho","Cintura","Cadera"],"rows":[]}',
   productModalShowReels:false, productModalReelUrls:"[]",
@@ -1947,6 +1949,27 @@ export default function ConfiguracionPage() {
                     placeholder="© 2025 Mi Tienda · Buenos Aires, Argentina"
                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
                 </div>
+              </Accordion>
+
+              <Accordion label="Tipo de tienda" icon={Package} id="tienda" open={open.includes("tienda")} toggle={toggle}>
+                <p className="text-xs text-gray-500 mb-3">Define qué vendés para que el formulario de productos muestre los campos correctos.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {STORE_TYPES.map(t=>{
+                    const active = (config.tipoTienda||"ROPA")===t.id;
+                    return (
+                      <button key={t.id} onClick={()=>set("tipoTienda",t.id)}
+                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${active?"border-indigo-500 bg-indigo-50":"border-gray-100 hover:border-gray-300 bg-white"}`}>
+                        <span className="text-lg leading-none">{t.emoji}</span>
+                        <span className={`text-xs font-medium ${active?"text-indigo-700":"text-gray-700"}`}>{t.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {STORE_TYPES.find(t=>t.id===(config.tipoTienda||"ROPA"))?.supportsWholesale&&(
+                  <div className="border-t border-gray-100 pt-3">
+                    <Toggle label="Venta por mayor" sub="Activa campos de precio mayorista en tus productos" value={Boolean(config.tieneVentaMayorista)} onChange={v=>set("tieneVentaMayorista",v)}/>
+                  </div>
+                )}
               </Accordion>
 
               <Accordion label="Afiliados" icon={Users} id="vendedoras" open={open.includes("vendedoras")} toggle={toggle}>
