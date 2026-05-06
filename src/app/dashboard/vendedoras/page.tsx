@@ -12,7 +12,6 @@ import {
   Link2,
   Mail,
   MapPin,
-  Settings,
   TrendingUp,
   UserCheck,
   Users,
@@ -97,16 +96,14 @@ export default async function VendedorasPage() {
             Revisá solicitudes, aprobá permisos y controlá comisiones.
           </p>
         </div>
-        <Link href="/dashboard/configuracion#vendedoras" className="flex items-center gap-2 border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition-colors text-sm">
-          <Settings className="h-4 w-4" />
-          Configurar comisiones
-        </Link>
       </div>
 
       <AffiliateToggle
         enabled={Boolean(store?.affiliatesEnabled)}
         commissionRate={store?.commissionRate ?? 10}
       />
+
+      <div className={`transition-opacity ${store?.affiliatesEnabled ? "opacity-100" : "opacity-30 pointer-events-none select-none"}`}>
 
       <div className="grid grid-cols-4 gap-4 mb-8">
         {[
@@ -365,6 +362,7 @@ export default async function VendedorasPage() {
           </div>
         )}
       </section>
+      </div>
     </DashboardLayout>
   );
 }
