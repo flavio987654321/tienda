@@ -154,7 +154,7 @@ const SHADOW: Record<string, string> = {
 const GRID: Record<string, string> = {
   grid2: "grid-cols-1 sm:grid-cols-2",
   grid3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-  grid4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+  grid4: "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
   list: "grid-cols-1",
 };
 
@@ -849,8 +849,8 @@ export default function StorefrontClient({
         </div>
         <div className={`${featured ? "p-6" : "p-4"} flex flex-col flex-1`}>
           <div className="mb-2 flex items-start justify-between gap-3">
-            <div>
-              <p className={`${featured ? "text-2xl" : "text-base"} font-black leading-tight`}>{product.name}</p>
+            <div className="min-w-0">
+              <p className={`${featured ? "text-2xl" : "text-base"} font-black leading-tight break-words`}>{product.name}</p>
               {product.description && <p className={`mt-1 line-clamp-2 text-sm ${isDark ? "text-gray-300" : "text-gray-500"}`}>{product.description}</p>}
             </div>
             {store.showRatings && (
@@ -917,7 +917,7 @@ export default function StorefrontClient({
             const gridClass = columns >= 5
               ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
               : columns === 4
-                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+                ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
                 : columns === 1
                   ? "grid-cols-1"
                 : columns === 2
