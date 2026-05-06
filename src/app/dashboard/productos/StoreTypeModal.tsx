@@ -5,13 +5,26 @@ import { useRouter } from "next/navigation";
 import { STORE_TYPES } from "@/lib/storeTypes";
 import { Loader2, X, ArrowLeft } from "lucide-react";
 
-export default function StoreTypeModal() {
+export default function StoreTypeModal({
+  isEditing = false,
+  currentType,
+  onClose,
+}: {
+  isEditing?: boolean;
+  currentType?: string;
+  onClose?: () => void;
+}) {
   const router = useRouter();
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(currentType ?? null);
   const [wholesale, setWholesale] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const selectedConfig = STORE_TYPES.find((t) => t.id === selected);
+
+  function handleClose() {
+    if (isEditing) onClose?.();
+    else router.back();
+  }
 
   async function confirm() {
     if (!selected) return;
@@ -28,11 +41,12 @@ export default function StoreTypeModal() {
         name: current.name || "Mi Tienda",
         tipoTienda: selected,
         tipoTiendaConfigurado: true,
-        tieneVentaMayorista: wholesale,
+        tieneVentaMayorista: isEditing ? (current.tieneVentaMayorista ?? false) : wholesale,
       }),
     });
 
     router.refresh();
+    if (isEditing) onClose?.();
   }
 
   return (
@@ -42,15 +56,17 @@ export default function StoreTypeModal() {
         {/* Header */}
         <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 px-8 py-7 text-white relative">
           <button
-            onClick={() => router.back()}
-            title="Volver"
+            onClick={handleClose}
+            title="Cerrar"
             className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-white/20 transition-colors"
           >
             <X className="h-4 w-4 text-white/80" />
           </button>
           <h2 className="text-2xl font-bold mb-1">¿Qué vendés?</h2>
           <p className="text-indigo-200 text-sm">
-            Elegí el tipo de tienda para que el formulario de productos muestre los campos correctos.
+            {isEditing
+              ? "Cambiá el tipo de tienda. Tus productos existentes no se modifican."
+              : "Elegí el tipo de tienda para que el formulario de productos muestre los campos correctos."}
           </p>
         </div>
 
@@ -86,8 +102,8 @@ export default function StoreTypeModal() {
             </div>
           )}
 
-          {/* Toggle mayorista — solo si el tipo lo soporta */}
-          {selectedConfig?.supportsWholesale && (
+          {/* Toggle mayorista — solo si el tipo lo soporta y es la primera vez */}
+          {!isEditing && selectedConfig?.supportsWholesale && (
             <div className="flex items-center justify-between bg-gray-50 rounded-2xl px-4 py-3.5 border border-gray-100">
               <div>
                 <p className="text-sm font-semibold text-gray-800">Venta por mayor</p>

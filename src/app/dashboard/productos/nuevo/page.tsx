@@ -213,6 +213,7 @@ function ProductoFormPage() {
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [variants, setVariants] = useState<Variant[]>([DEFAULT_VARIANT]);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [condicion, setCondicion] = useState<"Nuevo" | "Usado">("Usado");
   const [precioMayorista, setPrecioMayorista] = useState("");
   const [cantMinMayorista, setCantMinMayorista] = useState("");
   const [images, setImages] = useState<string[]>([]);
@@ -300,9 +301,12 @@ function ProductoFormPage() {
               }))
             : [DEFAULT_VARIANT]
         );
-        setAttributes(safeJsonArray(product.attributes).filter(
+        const allAttrs = safeJsonArray(product.attributes).filter(
           (a: any) => a && typeof a.key === "string" && typeof a.value === "string"
-        ) as Attribute[]);
+        ) as Attribute[];
+        const condAttr = allAttrs.find((a) => a.key === "Condición");
+        if (condAttr) setCondicion(condAttr.value as "Nuevo" | "Usado");
+        setAttributes(allAttrs.filter((a) => a.key !== "Condición"));
         setPrecioMayorista(product.precioMayorista?.toString() || "");
         setCantMinMayorista(product.cantMinMayorista?.toString() || "");
       })
@@ -440,17 +444,25 @@ function ProductoFormPage() {
 
     const category = form.category === "otro" ? customCategory.trim() : form.category;
     const subcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
-    const preparedVariants = prepareVariantsForSubmit(variants);
+    const isHideVariants = storeTypeConfig.hideVariants;
+    const preparedVariants = isHideVariants
+      ? [{ name: "Unidad", value: "Único", stock: "1", price: "", sku: "" }]
+      : prepareVariantsForSubmit(variants);
     if (!category) {
       setError("Escribi la categoria personalizada.");
       setLoading(false);
       return;
     }
-    if (preparedVariants.some((variant) => !variant.value)) {
+    if (!isHideVariants && preparedVariants.some((variant) => !variant.value)) {
       setError("Cada variante debe tener un valor. Si es un producto simple, usa una sola variante.");
       setLoading(false);
       return;
     }
+
+    const baseAttrs = attributes.filter((a) => a.key.trim() && a.value.trim());
+    const finalAttrs = storeTypeConfig.supportsCondicion
+      ? [{ key: "Condición", value: condicion }, ...baseAttrs]
+      : baseAttrs;
 
     const res = await fetch(isEditing ? `/api/productos/${editingId}` : "/api/productos", {
       method: isEditing ? "PATCH" : "POST",
@@ -463,7 +475,7 @@ function ProductoFormPage() {
         images,
         reelUrls,
         variants: preparedVariants,
-        attributes: attributes.filter((a) => a.key.trim() && a.value.trim()),
+        attributes: finalAttrs,
         precioMayorista: precioMayorista || null,
         cantMinMayorista: cantMinMayorista || null,
       }),
@@ -675,18 +687,43 @@ function ProductoFormPage() {
                     />
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tags (separados por coma)</label>
-                  <input
-                    type="text"
-                    value={form.tags}
-                    onChange={(e) => updateForm("tags", e.target.value)}
-                    placeholder="negro, oversize, algodon"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
+                {!storeTypeConfig.hideTags && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Tags (separados por coma)</label>
+                    <input
+                      type="text"
+                      value={form.tags}
+                      onChange={(e) => updateForm("tags", e.target.value)}
+                      placeholder="negro, oversize, algodon"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Condición — solo para tipos que lo soportan (AUTOS, TECH) */}
+            {storeTypeConfig.supportsCondicion && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-6">
+                <h2 className="font-semibold text-gray-900 mb-3">Condición</h2>
+                <div className="flex gap-3">
+                  {(["Nuevo", "Usado"] as const).map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => { setCondicion(opt); markDirty(); }}
+                      className={`flex-1 py-3 rounded-xl text-sm font-semibold border-2 transition-all ${
+                        condicion === opt
+                          ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                          : "border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-300"
+                      }`}
+                    >
+                      {opt === "Nuevo" ? "✨ Nuevo" : "🔄 Usado"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Precio */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
@@ -767,8 +804,8 @@ function ProductoFormPage() {
               </div>
             )}
 
-            {/* Variantes */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+            {/* Variantes — ocultas para tiendas como AUTOS donde no aplica */}
+            {!storeTypeConfig.hideVariants && <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-semibold text-gray-900">Variantes y stock</h2>
@@ -842,7 +879,7 @@ function ProductoFormPage() {
                   </div>
                 </div>
               ))}
-            </div>
+            </div>}
 
             {/* Atributos adicionales */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
@@ -1063,8 +1100,31 @@ function ProductoFormPage() {
                     </div>
                   )}
 
-                  {/* Variants preview */}
-                  {variants.filter((v) => v.value).length > 0 && (
+                  {/* Condición badge — solo para tipos que lo soportan */}
+                  {storeTypeConfig.supportsCondicion && (
+                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full w-fit ${
+                      condicion === "Nuevo"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}>
+                      {condicion === "Nuevo" ? "✨ Nuevo" : "🔄 Usado"}
+                    </span>
+                  )}
+
+                  {/* Attributes preview — para hideVariants (AUTOS), mostrar fichas */}
+                  {storeTypeConfig.hideVariants && attributes.filter((a) => a.key && a.value).length > 0 && (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {attributes.filter((a) => a.key && a.value).slice(0, 6).map((a, i) => (
+                        <div key={i} className="bg-gray-50 rounded-lg px-2.5 py-1.5">
+                          <p className="text-xs text-gray-400">{a.key}</p>
+                          <p className="text-xs font-semibold text-gray-700">{a.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Variants preview — solo cuando hay variantes */}
+                  {!storeTypeConfig.hideVariants && variants.filter((v) => v.value).length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {variants.filter((v) => v.value).slice(0, 4).map((v, i) => (
                         <span
@@ -1081,8 +1141,8 @@ function ProductoFormPage() {
                     </div>
                   )}
 
-                  {/* Stock indicator */}
-                  {totalStock > 0 && totalStock <= 5 && (
+                  {/* Stock indicator — solo cuando no es hideVariants */}
+                  {!storeTypeConfig.hideVariants && totalStock > 0 && totalStock <= 5 && (
                     <p className="text-xs text-orange-500 font-medium">Ultimas {totalStock} unidades!</p>
                   )}
 
@@ -1116,14 +1176,23 @@ function ProductoFormPage() {
                   <span>Imagenes</span>
                   <span>{images.length} subidas</span>
                 </div>
-                <div className="flex justify-between text-xs text-indigo-600">
-                  <span>Variantes</span>
-                  <span>{variants.filter((v) => v.value).length} cargadas</span>
-                </div>
-                <div className="flex justify-between text-xs text-indigo-600">
-                  <span>Stock total</span>
-                  <span>{totalStock} unidades</span>
-                </div>
+                {storeTypeConfig.hideVariants ? (
+                  <div className="flex justify-between text-xs text-indigo-600">
+                    <span>Atributos</span>
+                    <span>{attributes.filter((a) => a.key && a.value).length} cargados</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-xs text-indigo-600">
+                      <span>Variantes</span>
+                      <span>{variants.filter((v) => v.value).length} cargadas</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-indigo-600">
+                      <span>Stock total</span>
+                      <span>{totalStock} unidades</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

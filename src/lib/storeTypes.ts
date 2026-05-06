@@ -22,6 +22,9 @@ export interface StoreTypeConfig {
   label: string;
   emoji: string;
   supportsWholesale: boolean;
+  supportsCondicion: boolean;
+  hideVariants: boolean;
+  hideTags: boolean;
   defaultVariantName: string;
   categorias: string[];
   subcategorias: Record<string, string[]>;
@@ -34,6 +37,9 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     label: "Ropa y moda",
     emoji: "👗",
     supportsWholesale: true,
+    supportsCondicion: false,
+    hideVariants: false,
+    hideTags: false,
     defaultVariantName: "Talle",
     categorias: ["remeras", "pantalones", "vestidos", "camperas", "buzos", "calzado", "joyas", "accesorios", "bolsos", "ropa-interior"],
     subcategorias: {
@@ -58,6 +64,9 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     label: "Autos y motos",
     emoji: "🚗",
     supportsWholesale: false,
+    supportsCondicion: true,
+    hideVariants: true,
+    hideTags: true,
     defaultVariantName: "Color",
     categorias: ["autos", "motos", "camionetas", "repuestos", "accesorios"],
     subcategorias: {
@@ -81,6 +90,9 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     label: "Tecnología",
     emoji: "💻",
     supportsWholesale: false,
+    supportsCondicion: true,
+    hideVariants: false,
+    hideTags: false,
     defaultVariantName: "Almacenamiento",
     categorias: ["celulares", "laptops", "tablets", "audio", "gaming", "wearables", "fotografia", "accesorios"],
     subcategorias: {
@@ -103,6 +115,9 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     label: "Hogar y muebles",
     emoji: "🏠",
     supportsWholesale: true,
+    supportsCondicion: false,
+    hideVariants: false,
+    hideTags: false,
     defaultVariantName: "Tamaño",
     categorias: ["muebles", "decoracion", "cocina", "baño", "jardin", "textiles", "iluminacion", "organizacion"],
     subcategorias: {
@@ -125,6 +140,9 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     label: "Alimentos",
     emoji: "🥗",
     supportsWholesale: true,
+    supportsCondicion: false,
+    hideVariants: false,
+    hideTags: false,
     defaultVariantName: "Peso/Tamaño",
     categorias: ["frutas-verduras", "lacteos", "carnes", "panaderia", "bebidas", "snacks", "congelados", "organicos"],
     subcategorias: {
@@ -147,6 +165,9 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     label: "Belleza y cuidado",
     emoji: "💄",
     supportsWholesale: true,
+    supportsCondicion: false,
+    hideVariants: false,
+    hideTags: false,
     defaultVariantName: "Tono",
     categorias: ["maquillaje", "skincare", "perfumes", "cabello", "uñas", "higiene", "suplementos"],
     subcategorias: {
@@ -168,6 +189,9 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     label: "Deporte y fitness",
     emoji: "⚽",
     supportsWholesale: true,
+    supportsCondicion: false,
+    hideVariants: false,
+    hideTags: false,
     defaultVariantName: "Talle",
     categorias: ["ropa-deportiva", "calzado", "equipamiento", "suplementos", "accesorios", "camping"],
     subcategorias: {
@@ -188,6 +212,9 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     label: "Mascotas",
     emoji: "🐾",
     supportsWholesale: true,
+    supportsCondicion: false,
+    hideVariants: false,
+    hideTags: false,
     defaultVariantName: "Tamaño",
     categorias: ["alimentos", "accesorios", "juguetes", "higiene", "ropa-mascotas", "salud"],
     subcategorias: {
@@ -207,6 +234,9 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     label: "Libros y arte",
     emoji: "📚",
     supportsWholesale: false,
+    supportsCondicion: false,
+    hideVariants: false,
+    hideTags: false,
     defaultVariantName: "Formato",
     categorias: ["libros", "arte", "manualidades", "musica", "juegos", "papeleria"],
     subcategorias: {
@@ -227,6 +257,9 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     label: "General",
     emoji: "🏪",
     supportsWholesale: true,
+    supportsCondicion: false,
+    hideVariants: false,
+    hideTags: false,
     defaultVariantName: "Variante",
     categorias: ["general", "otros"],
     subcategorias: {

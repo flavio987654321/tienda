@@ -6,6 +6,8 @@ import { Plus, Package } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import ProductsTable from "./ProductsTable";
 import StoreTypeModal from "./StoreTypeModal";
+import ChangeStoreTypeButton from "./ChangeStoreTypeButton";
+import { STORE_TYPES } from "@/lib/storeTypes";
 
 export default async function ProductosPage() {
   const user = await getCurrentUser();
@@ -34,13 +36,25 @@ export default async function ProductosPage() {
           <h1 className="text-2xl font-bold text-gray-900">Productos</h1>
           <p className="text-gray-500 mt-1">{products.length} producto{products.length !== 1 ? "s" : ""} en tu tienda</p>
         </div>
-        <Link
-          href="/dashboard/productos/nuevo"
-          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
-        >
-          <Plus className="h-4 w-4" />
-          Agregar producto
-        </Link>
+        <div className="flex items-center gap-3">
+          {store?.tipoTiendaConfigurado && (() => {
+            const typeConfig = STORE_TYPES.find((t) => t.id === (store.tipoTienda || "ROPA"));
+            return typeConfig ? (
+              <ChangeStoreTypeButton
+                currentType={typeConfig.id}
+                currentLabel={typeConfig.label}
+                currentEmoji={typeConfig.emoji}
+              />
+            ) : null;
+          })()}
+          <Link
+            href="/dashboard/productos/nuevo"
+            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+          >
+            <Plus className="h-4 w-4" />
+            Agregar producto
+          </Link>
+        </div>
       </div>
 
       {products.length === 0 ? (
