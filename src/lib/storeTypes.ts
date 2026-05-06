@@ -91,8 +91,8 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     emoji: "💻",
     supportsWholesale: false,
     supportsCondicion: true,
-    hideVariants: false,
-    hideTags: false,
+    hideVariants: true,
+    hideTags: true,
     defaultVariantName: "Almacenamiento",
     categorias: ["celulares", "laptops", "tablets", "audio", "gaming", "wearables", "fotografia", "accesorios"],
     subcategorias: {
