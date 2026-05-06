@@ -154,7 +154,7 @@ const SHADOW: Record<string, string> = {
 const GRID: Record<string, string> = {
   grid2: "grid-cols-1 sm:grid-cols-2",
   grid3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-  grid4: "grid-cols-2 lg:grid-cols-4",
+  grid4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
   list: "grid-cols-1",
 };
 
@@ -1348,10 +1348,15 @@ export default function StorefrontClient({
       <button
         type="button"
         onClick={() => setOpenCart(true)}
-        className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-gray-950 px-5 py-3 text-sm font-semibold text-white shadow-xl"
+        className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-gray-950 px-4 py-3 text-sm font-semibold text-white shadow-xl sm:px-5"
       >
-        <ShoppingBag className="h-4 w-4" />
-        Carrito ({cartCount})
+        <ShoppingBag className="h-5 w-5" />
+        <span className="hidden sm:inline">Carrito ({cartCount})</span>
+        {cartCount > 0 && (
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-gray-950 sm:hidden">
+            {cartCount}
+          </span>
+        )}
       </button>
 
       {affiliateId && (
