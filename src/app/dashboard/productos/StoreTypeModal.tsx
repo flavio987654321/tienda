@@ -3,12 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { STORE_TYPES } from "@/lib/storeTypes";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 
 export default function StoreTypeModal() {
   const router = useRouter();
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  if (dismissed) return null;
 
   async function confirm() {
     if (!selected) return;
@@ -37,7 +40,13 @@ export default function StoreTypeModal() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
-        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 px-8 py-7 text-white">
+        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 px-8 py-7 text-white relative">
+          <button
+            onClick={() => setDismissed(true)}
+            className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+          >
+            <X className="h-4 w-4 text-white/80" />
+          </button>
           <h2 className="text-2xl font-bold mb-1">¿Qué vendés?</h2>
           <p className="text-indigo-200 text-sm">
             Elegí el tipo de tienda para que el formulario de productos muestre los campos correctos.

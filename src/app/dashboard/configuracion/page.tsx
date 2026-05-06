@@ -4,13 +4,12 @@ import { useEffect, useState, useRef, type CSSProperties, type MouseEvent as Rea
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import DashboardLayout from "@/components/DashboardLayout";
 import StorePreview, { StoreConfig } from "@/components/StorePreview";
-import { STORE_TYPES } from "@/lib/storeTypes";
 import {
   Loader2, Save, Users, Palette, Layout, Type,
   Image as ImageIcon, Monitor, Smartphone, Tablet, LayoutGrid,
   List, Grid2X2, ChevronDown, ChevronUp, Megaphone, Share2,
   MousePointer2, CreditCard, Search, ExternalLink,
-  Plus, Trash2, Layers, X, Copy, Package,
+  Plus, Trash2, Layers, X, Copy,
 } from "lucide-react";
 
 /* ─── Templates ─── */
@@ -1951,28 +1950,9 @@ export default function ConfiguracionPage() {
                 </div>
               </Accordion>
 
-              <Accordion label="Tipo de tienda" icon={Package} id="tienda" open={open.includes("tienda")} toggle={toggle}>
-                <p className="text-xs text-gray-500 mb-3">Define qué vendés para que el formulario de productos muestre los campos correctos.</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {STORE_TYPES.map(t=>{
-                    const active = (config.tipoTienda||"ROPA")===t.id;
-                    return (
-                      <button key={t.id} onClick={()=>set("tipoTienda",t.id)}
-                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${active?"border-indigo-500 bg-indigo-50":"border-gray-100 hover:border-gray-300 bg-white"}`}>
-                        <span className="text-lg leading-none">{t.emoji}</span>
-                        <span className={`text-xs font-medium ${active?"text-indigo-700":"text-gray-700"}`}>{t.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {STORE_TYPES.find(t=>t.id===(config.tipoTienda||"ROPA"))?.supportsWholesale&&(
-                  <div className="border-t border-gray-100 pt-3">
-                    <Toggle label="Venta por mayor" sub="Activa campos de precio mayorista en tus productos" value={Boolean(config.tieneVentaMayorista)} onChange={v=>set("tieneVentaMayorista",v)}/>
-                  </div>
-                )}
-              </Accordion>
-
-              <Accordion label="Afiliados" icon={Users} id="vendedoras" open={open.includes("vendedoras")} toggle={toggle}>
+              <Accordion label="Afiliados y ventas" icon={Users} id="vendedoras" open={open.includes("vendedoras")} toggle={toggle}>
+                <Toggle label="Venta por mayor" sub="Muestra campos de precio mayorista en productos" value={Boolean(config.tieneVentaMayorista)} onChange={v=>set("tieneVentaMayorista",v)}/>
+                <div className="border-t border-gray-100 pt-3">
                 <Toggle label="Activar sistema de afiliados" sub="Otros pueden vender en tu tienda" value={Boolean(config.affiliatesEnabled)} onChange={v=>set("affiliatesEnabled",v)}/>
                 {config.affiliatesEnabled&&(
                   <div>
@@ -1986,6 +1966,7 @@ export default function ConfiguracionPage() {
                     </p>
                   </div>
                 )}
+                </div>
               </Accordion>
 
               <Accordion label="SEO / Google" icon={Search} id="seo" open={open.includes("seo")} toggle={toggle}>
