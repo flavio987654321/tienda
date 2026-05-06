@@ -26,6 +26,7 @@ export interface StoreTypeConfig {
   hideVariants: boolean;
   hideTags: boolean;
   defaultVariantName: string;
+  namePlaceholder: string;
   variantValuePlaceholder: string;
   tagsPlaceholder: string;
   categorias: string[];
@@ -44,6 +45,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideTags: false,
     defaultVariantName: "Talle",
     variantValuePlaceholder: "S, M, L, XL",
+    namePlaceholder: "Ej: Remera oversize negra talle M",
     tagsPlaceholder: "negro, oversize, algodon",
     categorias: ["remeras", "pantalones", "vestidos", "camperas", "buzos", "calzado", "joyas", "accesorios", "bolsos", "ropa-interior"],
     subcategorias: {
@@ -73,6 +75,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideTags: true,
     defaultVariantName: "Color",
     variantValuePlaceholder: "Rojo, Blanco, Negro",
+    namePlaceholder: "Ej: Toyota Corolla 2022 automático",
     tagsPlaceholder: "sedan, automatico, nafta",
     categorias: ["autos", "motos", "camionetas", "repuestos", "accesorios"],
     subcategorias: {
@@ -101,6 +104,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideTags: true,
     defaultVariantName: "Almacenamiento",
     variantValuePlaceholder: "128GB, 256GB, 512GB",
+    namePlaceholder: "Ej: iPhone 15 Pro 256GB",
     tagsPlaceholder: "iphone, liberado, sin uso",
     categorias: ["celulares", "laptops", "tablets", "audio", "gaming", "wearables", "fotografia", "accesorios"],
     subcategorias: {
@@ -128,6 +132,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideTags: false,
     defaultVariantName: "Tamaño",
     variantValuePlaceholder: "Chico, Mediano, Grande",
+    namePlaceholder: "Ej: Mesa de madera escandinava 120cm",
     tagsPlaceholder: "madera, moderno, escandinavo",
     categorias: ["muebles", "decoracion", "cocina", "baño", "jardin", "textiles", "iluminacion", "organizacion"],
     subcategorias: {
@@ -155,6 +160,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideTags: false,
     defaultVariantName: "Peso/Tamaño",
     variantValuePlaceholder: "500g, 1kg, 2kg",
+    namePlaceholder: "Ej: Granola artesanal con frutas 500g",
     tagsPlaceholder: "organico, sin-tacc, vegano",
     categorias: ["frutas-verduras", "lacteos", "carnes", "panaderia", "bebidas", "snacks", "congelados", "organicos"],
     subcategorias: {
@@ -182,6 +188,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideTags: false,
     defaultVariantName: "Tono",
     variantValuePlaceholder: "Claro, Medio, Oscuro",
+    namePlaceholder: "Ej: Sérum vitamina C antiedad 30ml",
     tagsPlaceholder: "natural, vegano, sin-parabenos",
     categorias: ["maquillaje", "skincare", "perfumes", "cabello", "uñas", "higiene", "suplementos"],
     subcategorias: {
@@ -208,6 +215,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideTags: false,
     defaultVariantName: "Talle",
     variantValuePlaceholder: "S, M, L, XL",
+    namePlaceholder: "Ej: Zapatillas running Nike Air talle 42",
     tagsPlaceholder: "running, gym, futbol",
     categorias: ["ropa-deportiva", "calzado", "equipamiento", "suplementos", "accesorios", "camping"],
     subcategorias: {
@@ -233,6 +241,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideTags: false,
     defaultVariantName: "Tamaño",
     variantValuePlaceholder: "Pequeño, Mediano, Grande",
+    namePlaceholder: "Ej: Collar acolchado para perro mediano",
     tagsPlaceholder: "perro, gato, natural",
     categorias: ["alimentos", "accesorios", "juguetes", "higiene", "ropa-mascotas", "salud"],
     subcategorias: {
@@ -257,6 +266,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideTags: false,
     defaultVariantName: "Formato",
     variantValuePlaceholder: "Físico, Digital, Tapa dura",
+    namePlaceholder: "Ej: Cien años de soledad - Gabriel García Márquez",
     tagsPlaceholder: "ficcion, bestseller, regalo",
     categorias: ["libros", "arte", "manualidades", "musica", "juegos", "papeleria"],
     subcategorias: {
@@ -282,6 +292,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideTags: false,
     defaultVariantName: "Variante",
     variantValuePlaceholder: "Opción 1, Opción 2",
+    namePlaceholder: "Ej: Nombre del producto",
     tagsPlaceholder: "oferta, nuevo, popular",
     categorias: ["general", "otros"],
     subcategorias: {
