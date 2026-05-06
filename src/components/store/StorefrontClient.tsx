@@ -914,15 +914,8 @@ export default function StorefrontClient({
                   });
             const columns = Math.max(1, Number(p.columns) || 3);
             const layoutMode = String(p.layoutMode || "grid");
-            const gridClass = columns >= 5
-              ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
-              : columns === 4
-                ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
-                : columns === 1
-                  ? "grid-cols-1"
-                : columns === 2
-                  ? "grid-cols-1 sm:grid-cols-2"
-                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+            const effectiveCols = viewport === "mobile" ? 1 : viewport === "tablet" ? Math.min(columns, 2) : columns;
+            const gridClass = effectiveCols === 1 ? "grid-cols-1" : effectiveCols === 2 ? "grid-cols-2" : effectiveCols === 3 ? "grid-cols-3" : effectiveCols === 4 ? "grid-cols-4" : "grid-cols-5";
 
             return (
               <section key={block.id} id="productos" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}><div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
