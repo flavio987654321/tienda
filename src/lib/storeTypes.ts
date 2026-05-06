@@ -26,6 +26,8 @@ export interface StoreTypeConfig {
   hideVariants: boolean;
   hideTags: boolean;
   defaultVariantName: string;
+  variantValuePlaceholder: string;
+  tagsPlaceholder: string;
   categorias: string[];
   subcategorias: Record<string, string[]>;
   extraFields: ExtraField[];
@@ -41,6 +43,8 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     defaultVariantName: "Talle",
+    variantValuePlaceholder: "S, M, L, XL",
+    tagsPlaceholder: "negro, oversize, algodon",
     categorias: ["remeras", "pantalones", "vestidos", "camperas", "buzos", "calzado", "joyas", "accesorios", "bolsos", "ropa-interior"],
     subcategorias: {
       remeras: ["básica", "oversize", "estampada", "manga-larga"],
@@ -68,6 +72,8 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: true,
     hideTags: true,
     defaultVariantName: "Color",
+    variantValuePlaceholder: "Rojo, Blanco, Negro",
+    tagsPlaceholder: "sedan, automatico, nafta",
     categorias: ["autos", "motos", "camionetas", "repuestos", "accesorios"],
     subcategorias: {
       autos: ["sedán", "suv", "hatchback", "coupé", "convertible"],
@@ -94,6 +100,8 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: true,
     hideTags: true,
     defaultVariantName: "Almacenamiento",
+    variantValuePlaceholder: "128GB, 256GB, 512GB",
+    tagsPlaceholder: "iphone, liberado, sin uso",
     categorias: ["celulares", "laptops", "tablets", "audio", "gaming", "wearables", "fotografia", "accesorios"],
     subcategorias: {
       celulares: ["iphone", "samsung", "motorola", "xiaomi", "otro"],
@@ -119,6 +127,8 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     defaultVariantName: "Tamaño",
+    variantValuePlaceholder: "Chico, Mediano, Grande",
+    tagsPlaceholder: "madera, moderno, escandinavo",
     categorias: ["muebles", "decoracion", "cocina", "baño", "jardin", "textiles", "iluminacion", "organizacion"],
     subcategorias: {
       muebles: ["sillas", "mesas", "camas", "sofás", "escritorios", "estantes"],
@@ -144,6 +154,8 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     defaultVariantName: "Peso/Tamaño",
+    variantValuePlaceholder: "500g, 1kg, 2kg",
+    tagsPlaceholder: "organico, sin-tacc, vegano",
     categorias: ["frutas-verduras", "lacteos", "carnes", "panaderia", "bebidas", "snacks", "congelados", "organicos"],
     subcategorias: {
       "frutas-verduras": ["frutas", "verduras", "hierbas"],
@@ -169,6 +181,8 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     defaultVariantName: "Tono",
+    variantValuePlaceholder: "Claro, Medio, Oscuro",
+    tagsPlaceholder: "natural, vegano, sin-parabenos",
     categorias: ["maquillaje", "skincare", "perfumes", "cabello", "uñas", "higiene", "suplementos"],
     subcategorias: {
       maquillaje: ["labios", "ojos", "rostro", "bases", "contorno"],
@@ -193,6 +207,8 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     defaultVariantName: "Talle",
+    variantValuePlaceholder: "S, M, L, XL",
+    tagsPlaceholder: "running, gym, futbol",
     categorias: ["ropa-deportiva", "calzado", "equipamiento", "suplementos", "accesorios", "camping"],
     subcategorias: {
       "ropa-deportiva": ["remeras", "calzas", "shorts", "camperas", "medias"],
@@ -216,6 +232,8 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     defaultVariantName: "Tamaño",
+    variantValuePlaceholder: "Pequeño, Mediano, Grande",
+    tagsPlaceholder: "perro, gato, natural",
     categorias: ["alimentos", "accesorios", "juguetes", "higiene", "ropa-mascotas", "salud"],
     subcategorias: {
       alimentos: ["perros", "gatos", "aves", "peces", "roedores"],
@@ -238,6 +256,8 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     defaultVariantName: "Formato",
+    variantValuePlaceholder: "Físico, Digital, Tapa dura",
+    tagsPlaceholder: "ficcion, bestseller, regalo",
     categorias: ["libros", "arte", "manualidades", "musica", "juegos", "papeleria"],
     subcategorias: {
       libros: ["ficción", "no-ficción", "infantil", "comics", "educación", "autoayuda"],
@@ -261,6 +281,8 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     defaultVariantName: "Variante",
+    variantValuePlaceholder: "Opción 1, Opción 2",
+    tagsPlaceholder: "oferta, nuevo, popular",
     categorias: ["general", "otros"],
     subcategorias: {
       general: ["varios"],

@@ -694,7 +694,7 @@ function ProductoFormPage() {
                       type="text"
                       value={form.tags}
                       onChange={(e) => updateForm("tags", e.target.value)}
-                      placeholder="negro, oversize, algodon"
+                      placeholder={storeTypeConfig.tagsPlaceholder}
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
@@ -841,7 +841,7 @@ function ProductoFormPage() {
                       type="text"
                       value={variant.value}
                       onChange={(e) => updateVariant(idx, "value", e.target.value)}
-                      placeholder="Ej: S, M, L"
+                      placeholder={storeTypeConfig.variantValuePlaceholder}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
