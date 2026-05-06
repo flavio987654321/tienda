@@ -185,6 +185,7 @@ function ProductoFormPage() {
   const isEditing = Boolean(editingId);
   const [loading, setLoading] = useState(false);
   const [loadingProduct, setLoadingProduct] = useState(false);
+  const [storeLoaded, setStoreLoaded] = useState(false);
   const [error, setError] = useState("");
   const [store, setStore] = useState<StoreConfig>({
     primaryColor: "#6366f1",
@@ -230,6 +231,7 @@ function ProductoFormPage() {
       .then((d) => {
         if (!d.store) return;
         setStore((p) => ({ ...p, ...d.store }));
+        setStoreLoaded(true);
         const typeConfig = getStoreType(d.store.tipoTienda || "ROPA");
         setProductCategories(typeConfig.categorias);
         setProductSubcategories(typeConfig.subcategorias);
@@ -627,7 +629,7 @@ function ProductoFormPage() {
                   value={form.name}
                   onChange={(e) => updateForm("name", e.target.value)}
                   required
-                  placeholder={storeTypeConfig.namePlaceholder}
+                  placeholder={storeLoaded ? storeTypeConfig.namePlaceholder : ""}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
