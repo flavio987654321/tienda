@@ -27,6 +27,19 @@ const TEMPLATES = [
 ];
 
 const FUENTES = ["Inter","Poppins","Playfair Display","Roboto","Montserrat","Lato","Raleway","Oswald","Nunito","DM Sans"];
+
+const PALETTES = [
+  { name:"Índigo",    primary:"#6366f1", secondary:"#f1f5f9", accent:"#f59e0b" },
+  { name:"Rosa",      primary:"#ec4899", secondary:"#fdf2f8", accent:"#8b5cf6" },
+  { name:"Esmeralda", primary:"#059669", secondary:"#f0fdf4", accent:"#f59e0b" },
+  { name:"Océano",    primary:"#0284c7", secondary:"#f0f9ff", accent:"#6366f1" },
+  { name:"Coral",     primary:"#f97316", secondary:"#fff7ed", accent:"#14b8a6" },
+  { name:"Negro",     primary:"#111827", secondary:"#f9fafb", accent:"#6366f1" },
+  { name:"Vino",      primary:"#9f1239", secondary:"#fff1f2", accent:"#d97706" },
+  { name:"Oliva",     primary:"#4d7c0f", secondary:"#f7fee7", accent:"#ca8a04" },
+  { name:"Violeta",   primary:"#7c3aed", secondary:"#f5f3ff", accent:"#ec4899" },
+  { name:"Pizarra",   primary:"#475569", secondary:"#f8fafc", accent:"#0ea5e9" },
+];
 const LAYOUTS = [
   { id:"grid2",label:"2 col",icon:Grid2X2 },
   { id:"grid3",label:"3 col",icon:LayoutGrid },
@@ -1764,9 +1777,31 @@ export default function ConfiguracionPage() {
               </Accordion>
 
               <Accordion label="Colores y fuente" icon={Palette} id="colores" open={open.includes("colores")} toggle={toggle}>
-                <ColorPicker label="Color principal" value={config.primaryColor} onChange={v=>set("primaryColor",v)}/>
-                <ColorPicker label="Color secundario (fondo)" value={config.secondaryColor} onChange={v=>set("secondaryColor",v)}/>
-                <ColorPicker label="Color de acento (badges)" value={config.accentColor} onChange={v=>set("accentColor",v)}/>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">Paletas listas</label>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {PALETTES.map(pal=>{
+                      const active = config.primaryColor===pal.primary && config.accentColor===pal.accent;
+                      return (
+                        <button key={pal.name} title={pal.name}
+                          onClick={()=>{set("primaryColor",pal.primary);set("secondaryColor",pal.secondary);set("accentColor",pal.accent);}}
+                          className={`flex flex-col items-center gap-1 p-1.5 rounded-xl border-2 transition-all ${active?"border-indigo-500 bg-indigo-50":"border-gray-100 hover:border-gray-300"}`}>
+                          <div className="flex gap-0.5">
+                            <div className="w-3 h-3 rounded-full" style={{backgroundColor:pal.primary}}/>
+                            <div className="w-3 h-3 rounded-full" style={{backgroundColor:pal.accent}}/>
+                          </div>
+                          <span className="text-gray-500 leading-none text-center" style={{fontSize:"8px"}}>{pal.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="border-t border-gray-100 pt-3">
+                  <label className="block text-xs font-medium text-gray-600 mb-2">Personalizar</label>
+                  <ColorPicker label="Color principal" value={config.primaryColor} onChange={v=>set("primaryColor",v)}/>
+                  <ColorPicker label="Color secundario (fondo)" value={config.secondaryColor} onChange={v=>set("secondaryColor",v)}/>
+                  <ColorPicker label="Color de acento (badges)" value={config.accentColor} onChange={v=>set("accentColor",v)}/>
+                </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1.5">Tipografía</label>
                   <select value={config.fontFamily} onChange={e=>set("fontFamily",e.target.value)}

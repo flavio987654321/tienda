@@ -34,12 +34,12 @@ export interface StoreConfig {
 }
 
 const DEMO = [
-  { name: "Remera oversize", price: 8500, old: 12000, tag: "OFERTA", stock: 5, rating: 4.5, cat: "Ropa" },
-  { name: "Jeans wide leg", price: 15900, old: null, tag: null, stock: 3, rating: 4.2, cat: "Ropa" },
-  { name: "Collar dorado", price: 4200, old: null, tag: "NUEVO", stock: 10, rating: 5, cat: "Joyas" },
-  { name: "Vestido floral", price: 22000, old: 28000, tag: "OFERTA", stock: 0, rating: 4.8, cat: "Ropa" },
-  { name: "Pulsera plata", price: 3800, old: null, tag: null, stock: 7, rating: 4.3, cat: "Joyas" },
-  { name: "Bolso bucket", price: 18500, old: null, tag: "NUEVO", stock: 2, rating: 4.7, cat: "Accesorios" },
+  { name: "Remera oversize", price: 8500, old: 12000, tag: "OFERTA", stock: 5, rating: 4.5, cat: "Ropa", img: "https://picsum.photos/seed/moda11/400/400" },
+  { name: "Jeans wide leg", price: 15900, old: null, tag: null, stock: 3, rating: 4.2, cat: "Ropa", img: "https://picsum.photos/seed/moda22/400/400" },
+  { name: "Collar dorado", price: 4200, old: null, tag: "NUEVO", stock: 10, rating: 5, cat: "Joyas", img: "https://picsum.photos/seed/moda33/400/400" },
+  { name: "Vestido floral", price: 22000, old: 28000, tag: "OFERTA", stock: 0, rating: 4.8, cat: "Ropa", img: "https://picsum.photos/seed/moda44/400/400" },
+  { name: "Pulsera plata", price: 3800, old: null, tag: null, stock: 7, rating: 4.3, cat: "Joyas", img: "https://picsum.photos/seed/moda55/400/400" },
+  { name: "Bolso bucket", price: 18500, old: null, tag: "NUEVO", stock: 2, rating: 4.7, cat: "Accesorios", img: "https://picsum.photos/seed/moda66/400/400" },
 ];
 
 const RADIUS: Record<string, string> = { none: "0px", sm: "6px", md: "12px", lg: "16px", xl: "24px" };
@@ -124,8 +124,8 @@ function CleanTemplate({ config }: { config: StoreConfig }) {
         </div>
         <div className="grid grid-cols-2 gap-2 mb-2">
           <div className="col-span-2 relative overflow-hidden bg-gray-50 flex items-center justify-center" style={{ height: "140px", borderRadius: r, boxShadow: sh }}>
-            <Package className="h-12 w-12 text-gray-200" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            <img src={DEMO[0].img} className="absolute inset-0 w-full h-full object-cover" alt={DEMO[0].name} />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
             <div className="absolute bottom-0 left-0 p-3">
               <p className="text-white text-xs font-bold">{DEMO[0].name}</p>
               {config.showPrices && <p className="text-white/80 text-xs mt-0.5">{fmt(DEMO[0].price, config.currency)}</p>}
@@ -136,8 +136,8 @@ function CleanTemplate({ config }: { config: StoreConfig }) {
         <div className="grid grid-cols-3 gap-2">
           {DEMO.slice(1, 4).map(item => (
             <div key={item.name} className="bg-white border border-gray-100 overflow-hidden" style={{ borderRadius: r, boxShadow: sh }}>
-              <div className="aspect-square bg-gray-50 flex items-center justify-center relative">
-                <Package className="h-6 w-6 text-gray-200" />
+              <div className="aspect-square bg-gray-50 overflow-hidden relative">
+                <img src={item.img} className="w-full h-full object-cover" alt={item.name} />
                 {item.tag && <span className="absolute top-1 left-1 text-white font-bold px-1.5 py-0.5 rounded-full" style={{ fontSize: "8px", backgroundColor: item.tag === "OFERTA" ? "#ef4444" : config.accentColor }}>{item.tag}</span>}
               </div>
               <div className="p-2">
@@ -212,9 +212,7 @@ function EditorialTemplate({ config }: { config: StoreConfig }) {
         {DEMO.slice(0, 4).map((item, i) => (
           <div key={item.name} className={`relative overflow-hidden bg-white ${i === 0 ? "row-span-2" : ""}`}
             style={{ height: i === 0 ? "200px" : "98px" }}>
-            <div className="absolute inset-0 bg-gray-50 flex items-center justify-center">
-              <Package className={`${i === 0 ? "h-12 w-12" : "h-6 w-6"} text-gray-200`} />
-            </div>
+            <img src={item.img} className="absolute inset-0 w-full h-full object-cover" alt={item.name} />
             {item.tag && <span className="absolute top-2 left-2 text-white font-black px-2 py-0.5"
               style={{ backgroundColor: item.tag === "OFERTA" ? "#ef4444" : config.accentColor, fontSize: "9px", borderRadius: r }}>
               {item.tag}
@@ -292,8 +290,8 @@ function BoutiqueTemplate({ config }: { config: StoreConfig }) {
         <div className="grid grid-cols-2 gap-3">
           {DEMO.slice(0, 4).map(item => (
             <div key={item.name} className="bg-white overflow-hidden" style={{ borderRadius: r, boxShadow: sh }}>
-              <div className="relative aspect-square bg-gray-50 flex items-center justify-center">
-                <Package className="h-8 w-8 text-gray-200" />
+              <div className="relative aspect-square bg-gray-50 overflow-hidden">
+                <img src={item.img} className="w-full h-full object-cover" alt={item.name} />
                 {item.tag && <span className="absolute top-2 left-2 text-white font-bold px-2 py-0.5"
                   style={{ backgroundColor: item.tag === "OFERTA" ? "#ef4444" : accent, fontSize: "9px", borderRadius: "4px" }}>
                   {item.tag}
@@ -453,8 +451,8 @@ function LuxuryTemplate({ config }: { config: StoreConfig }) {
         {DEMO.map((item, i) => (
           <div key={item.name} className="flex items-center gap-4 py-3.5" style={{ borderBottom: `1px solid ${gold}10` }}>
             <span className="text-xs font-light w-5 shrink-0 tabular-nums" style={{ color: gold + "50" }}>0{i + 1}</span>
-            <div className="w-10 h-10 flex items-center justify-center shrink-0" style={{ backgroundColor: "#141414", borderRadius: r }}>
-              <Package className="h-4 w-4 text-white/8" />
+            <div className="w-10 h-10 shrink-0 overflow-hidden" style={{ backgroundColor: "#141414", borderRadius: r }}>
+              <img src={item.img} className="w-full h-full object-cover opacity-70" alt={item.name} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-light text-white/80 tracking-wider uppercase truncate">{item.name}</p>
@@ -533,8 +531,8 @@ function ClasicoTemplate({ config }: { config: StoreConfig }) {
         <div className="grid grid-cols-3 gap-3">
           {DEMO.slice(0, 6).map(item => (
             <div key={item.name} className="bg-white overflow-hidden" style={{ borderRadius: r, boxShadow: sh }}>
-              <div className="aspect-square bg-amber-50 flex items-center justify-center relative">
-                <Package className="h-6 w-6 text-amber-200" />
+              <div className="aspect-square bg-amber-50 overflow-hidden relative">
+                <img src={item.img} className="w-full h-full object-cover" alt={item.name} />
                 {item.tag && <span className="absolute top-1 left-1 font-bold text-white px-1.5 py-0.5"
                   style={{ fontSize: "8px", backgroundColor: item.tag === "OFERTA" ? "#ef4444" : config.accentColor, borderRadius: "3px" }}>
                   {item.tag}
@@ -606,8 +604,8 @@ function SportTemplate({ config }: { config: StoreConfig }) {
       <div className="p-3 space-y-2">
         {DEMO.map((item, i) => (
           <div key={item.name} className="flex gap-3 overflow-hidden" style={{ backgroundColor: "#111", borderRadius: r, border: `1px solid ${neon}18` }}>
-            <div className="w-16 h-16 shrink-0 flex items-center justify-center relative" style={{ backgroundColor: "#1a1a1a" }}>
-              <Package className="h-5 w-5 text-white/10" />
+            <div className="w-16 h-16 shrink-0 relative overflow-hidden" style={{ backgroundColor: "#1a1a1a" }}>
+              <img src={item.img} className="w-full h-full object-cover opacity-60" alt={item.name} />
               <span className="absolute top-1 left-1 font-black tabular-nums" style={{ color: neon, fontSize: "8px" }}>#{String(i + 1).padStart(2, "0")}</span>
             </div>
             <div className="flex-1 py-2.5 pr-3 flex items-center justify-between min-w-0">
@@ -668,9 +666,9 @@ function ModernoTemplate({ config }: { config: StoreConfig }) {
               Explorar →
             </button>
           </div>
-          <div className="col-span-2 relative flex items-center justify-center"
+          <div className="col-span-2 relative overflow-hidden"
             style={{ background: config.banner ? `url(${config.banner}) center/cover` : `linear-gradient(135deg,${p},${accent})` }}>
-            <Package className="h-14 w-14 text-white/15" />
+            <img src={DEMO[0].img} className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay" alt="" />
           </div>
         </section>
       )}
@@ -683,8 +681,8 @@ function ModernoTemplate({ config }: { config: StoreConfig }) {
         <div className="grid grid-cols-3 gap-2.5">
           {DEMO.map(item => (
             <div key={item.name} className="bg-white overflow-hidden" style={{ borderRadius: r, boxShadow: sh }}>
-              <div className="relative aspect-square bg-gray-50 flex items-center justify-center">
-                <Package className="h-7 w-7 text-gray-200" />
+              <div className="relative aspect-square bg-gray-50 overflow-hidden">
+                <img src={item.img} className="w-full h-full object-cover" alt={item.name} />
                 {item.tag && <span className="absolute top-1.5 left-1.5 text-white font-bold px-1.5 py-0.5"
                   style={{ fontSize: "8px", backgroundColor: item.tag === "OFERTA" ? "#ef4444" : accent, borderRadius: "4px" }}>
                   {item.tag}
@@ -721,8 +719,7 @@ function ColorfulTemplate({ config }: { config: StoreConfig }) {
   const r = RADIUS[config.cardRadius] ?? "20px";
   const sh = SHADOW[config.cardShadow] ?? SHADOW.md;
   const heroH = config.heroStyle === "full" ? "160px" : config.heroStyle === "compact" ? "90px" : "0px";
-  const CARD_BG = [`${p}18`, `${accent}18`, "#fce7f318", "#ede9fe18", "#dcfce718", "#fff7ed18"];
-  const CARD_BORDER = [p, accent, "#ec4899", "#8b5cf6", "#22c55e", "#f97316"];
+const CARD_BORDER = [p, accent, "#ec4899", "#8b5cf6", "#22c55e", "#f97316"];
   return (
     <div className="min-h-full relative" style={{ fontFamily: config.fontFamily, background: `linear-gradient(160deg,${p}12,${accent}10,#fff)` }}>
       <AnnouncementBar text={config.announcementBar} color={config.announcementBarColor || p} />
@@ -767,8 +764,8 @@ function ColorfulTemplate({ config }: { config: StoreConfig }) {
       <div className="grid grid-cols-2 gap-3 p-4">
         {DEMO.map((item, i) => (
           <div key={item.name} className="bg-white overflow-hidden relative" style={{ borderRadius: r, boxShadow: sh, borderTop: `3px solid ${CARD_BORDER[i % CARD_BORDER.length]}` }}>
-            <div className="aspect-square flex items-center justify-center" style={{ backgroundColor: CARD_BG[i % CARD_BG.length] }}>
-              <Package className="h-8 w-8 text-gray-300" />
+            <div className="aspect-square overflow-hidden relative">
+              <img src={item.img} className="w-full h-full object-cover" alt={item.name} />
               {item.tag && <span className="absolute top-2 left-2 text-white font-black px-2 py-0.5"
                 style={{ fontSize: "9px", backgroundColor: item.tag === "OFERTA" ? "#ef4444" : accent, borderRadius: "8px" }}>
                 {item.tag}
@@ -849,8 +846,8 @@ function MarketTemplate({ config }: { config: StoreConfig }) {
           <div className="grid grid-cols-2 gap-1.5">
             {DEMO.map(item => (
               <div key={item.name} className="bg-white overflow-hidden border border-gray-100" style={{ borderRadius: r, boxShadow: sh }}>
-                <div className="aspect-square bg-gray-50 flex items-center justify-center relative">
-                  <Package className="h-5 w-5 text-gray-200" />
+                <div className="aspect-square overflow-hidden relative">
+                  <img src={item.img} className="w-full h-full object-cover" alt={item.name} />
                   {item.tag && <span className="absolute top-1 left-1 text-white font-bold px-1.5 py-0.5"
                     style={{ fontSize: "8px", backgroundColor: item.tag === "OFERTA" ? "#ef4444" : config.accentColor, borderRadius: "4px" }}>
                     {item.tag}
