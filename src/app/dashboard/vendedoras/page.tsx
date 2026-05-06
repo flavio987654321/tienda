@@ -19,6 +19,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
+import AffiliateToggle from "./AffiliateToggle";
 
 function statusClass(status: string) {
   if (status === "APPROVED") return "bg-green-100 text-green-700";
@@ -102,25 +103,10 @@ export default async function VendedorasPage() {
         </Link>
       </div>
 
-      <div className={`rounded-2xl border p-5 mb-6 flex items-center justify-between ${
-        store?.affiliatesEnabled ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"
-      }`}>
-        <div>
-          <p className={`font-semibold ${store?.affiliatesEnabled ? "text-green-800" : "text-yellow-800"}`}>
-            {store?.affiliatesEnabled ? "Sistema de afiliados activo" : "Sistema de afiliados desactivado"}
-          </p>
-          <p className={`text-sm mt-0.5 ${store?.affiliatesEnabled ? "text-green-600" : "text-yellow-600"}`}>
-            {store?.affiliatesEnabled
-              ? `Comision configurada: ${store.commissionRate}% por venta aprobada`
-              : "Activalo en Configuracion para que otras personas puedan postularse"}
-          </p>
-        </div>
-        <Link href="/dashboard/configuracion" className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
-          store?.affiliatesEnabled ? "bg-green-200 text-green-800 hover:bg-green-300" : "bg-yellow-200 text-yellow-800 hover:bg-yellow-300"
-        }`}>
-          {store?.affiliatesEnabled ? "Modificar" : "Activar ahora"}
-        </Link>
-      </div>
+      <AffiliateToggle
+        enabled={Boolean(store?.affiliatesEnabled)}
+        commissionRate={store?.commissionRate ?? 10}
+      />
 
       <div className="grid grid-cols-4 gap-4 mb-8">
         {[

@@ -1950,22 +1950,17 @@ export default function ConfiguracionPage() {
                 </div>
               </Accordion>
 
-              <Accordion label="Afiliados y ventas" icon={Users} id="vendedoras" open={open.includes("vendedoras")} toggle={toggle}>
-                <Toggle label="Venta por mayor" sub="Muestra campos de precio mayorista en productos" value={Boolean(config.tieneVentaMayorista)} onChange={v=>set("tieneVentaMayorista",v)}/>
+              <Accordion label="Afiliados" icon={Users} id="vendedoras" open={open.includes("vendedoras")} toggle={toggle}>
+                <p className="text-xs text-gray-500">Activá el sistema de afiliados desde la sección <strong>Afiliados</strong> del menú.</p>
                 <div className="border-t border-gray-100 pt-3">
-                <Toggle label="Activar sistema de afiliados" sub="Otros pueden vender en tu tienda" value={Boolean(config.affiliatesEnabled)} onChange={v=>set("affiliatesEnabled",v)}/>
-                {config.affiliatesEnabled&&(
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-gray-700">Comisión por venta</label>
-                      <span className="text-sm font-bold text-indigo-600">{config.commissionRate||10}%</span>
-                    </div>
-                    <input type="range" min="1" max="50" value={config.commissionRate||10} onChange={e=>set("commissionRate",e.target.value)} className="w-full accent-indigo-600"/>
-                    <p className="text-gray-400 mt-1" style={{fontSize:"10px"}}>
-                      Venta $10.000 → afiliado gana ${(10000*parseFloat(String(config.commissionRate||"0"))/100).toLocaleString("es-AR")}
-                    </p>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-gray-700">Comisión por venta</label>
+                    <span className="text-sm font-bold text-indigo-600">{config.commissionRate||10}%</span>
                   </div>
-                )}
+                  <input type="range" min="1" max="50" value={config.commissionRate||10} onChange={e=>set("commissionRate",e.target.value)} className="w-full accent-indigo-600"/>
+                  <p className="text-gray-400 mt-1" style={{fontSize:"10px"}}>
+                    Venta $10.000 → afiliado gana ${(10000*parseFloat(String(config.commissionRate||"0"))/100).toLocaleString("es-AR")}
+                  </p>
                 </div>
               </Accordion>
 
