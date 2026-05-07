@@ -565,9 +565,15 @@ function BlockEditor({
       {/* General */}
       <div className="space-y-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Alto del banner</label>
-          <Chips options={[{id:"sm",label:"300px"},{id:"md",label:"420px"},{id:"lg",label:"560px"},{id:"xl",label:"700px"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Ajuste de imagen</label>
+          <Chips options={[{id:"cover",label:"Cubrir (recorta)"},{id:"contain",label:"Completa (sin recorte)"}]} value={p.imageFit||"cover"} onChange={v=>upd("imageFit",v)}/>
         </div>
+        {(p.imageFit||"cover")==="cover" && (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Alto del banner</label>
+            <Chips options={[{id:"sm",label:"300px"},{id:"md",label:"420px"},{id:"lg",label:"560px"},{id:"xl",label:"700px"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-2">
           <Toggle label="Autoplay" value={p.autoplay!==false} onChange={v=>upd("autoplay",v)}/>
           <Toggle label="Puntos" value={p.showDots!==false} onChange={v=>upd("showDots",v)}/>
@@ -1473,7 +1479,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     if (block.type==="banner-group") {
       const slides: any[] = Array.isArray(p.slides) ? p.slides : [];
       const HEIGHTS: Record<string,number> = { sm:300, md:420, lg:560, xl:700 };
-      const h = customMinHeight || `${HEIGHTS[String(p.height||"md")]||420}px`;
+      const imageFit = String(p.imageFit || "cover");
+      const isContain = imageFit === "contain";
+      const h = isContain ? "auto" : (customMinHeight || `${HEIGHTS[String(p.height||"md")]||420}px`);
       const idx = slides.length > 0 ? carouselIdx % slides.length : 0;
       const slide = slides[idx] || {};
       const overlayOpacity = Number(p.overlayOpacity ?? 35) / 100;
@@ -1484,7 +1492,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
 
       const handleFocalClick = (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
-        if (!slide.image) return;
+        if (!slide.image || isContain) return;
         const rect = e.currentTarget.getBoundingClientRect();
         const newFx = Math.round(((e.clientX - rect.left) / rect.width) * 100);
         const newFy = Math.round(((e.clientY - rect.top) / rect.height) * 100);
@@ -1493,15 +1501,22 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       };
 
       return (
-        <div style={{position:"relative",height:h,overflow:"hidden",fontFamily:c.fontFamily,background:"#1f2937",userSelect:"none"}}>
-          {slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:`${fx}% ${fy}%`,transition:"object-position 0.15s"}}/>}
-          {!slide.image && <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>}
-          <div style={{position:"absolute",inset:0,background:p.overlayColor||"#000000",opacity:overlayOpacity}}/>
-          <div style={{position:"relative",height:"100%",display:"flex",flexDirection:"column",alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start",justifyContent:"center",padding:"24px 32px",textAlign:textAlign as React.CSSProperties["textAlign"],gap:"10px"}}>
-            {slide.title && <h2 style={{fontSize:"28px",fontWeight:900,color:textColor,lineHeight:1.15,margin:0}}>{slide.title}</h2>}
-            {slide.subtitle && <p style={{fontSize:"14px",color:textColor,opacity:0.9,margin:0,maxWidth:"480px"}}>{slide.subtitle}</p>}
-            {slide.buttonText && <button style={{background:c.primaryColor,color:"#fff",padding:"9px 20px",borderRadius:"999px",fontSize:"12px",fontWeight:800,border:"none",cursor:"inherit",marginTop:"4px"}}>{slide.buttonText}</button>}
-          </div>
+        <div style={{position:"relative", height: isContain ? undefined : h, overflow:"hidden", fontFamily:c.fontFamily, background:"#1f2937", userSelect:"none"}}>
+          {/* Modo "Completa": imagen ocupa su altura natural, sin recorte */}
+          {isContain && slide.image && (
+            <img src={slide.image} alt="" style={{display:"block",width:"100%",height:"auto"}}/>
+          )}
+          {/* Modo "Cubrir": imagen de fondo recortada */}
+          {!isContain && slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:`${fx}% ${fy}%`,transition:"object-position 0.15s"}}/>}
+          {!slide.image && <div style={{position:isContain?"relative":"absolute",inset:isContain?undefined:0,height:isContain?"240px":undefined,background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>}
+          {!isContain && <div style={{position:"absolute",inset:0,background:p.overlayColor||"#000000",opacity:overlayOpacity}}/>}
+          {!isContain && (
+            <div style={{position:"relative",height:"100%",display:"flex",flexDirection:"column",alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start",justifyContent:"center",padding:"24px 32px",textAlign:textAlign as React.CSSProperties["textAlign"],gap:"10px"}}>
+              {slide.title && <h2 style={{fontSize:"28px",fontWeight:900,color:textColor,lineHeight:1.15,margin:0}}>{slide.title}</h2>}
+              {slide.subtitle && <p style={{fontSize:"14px",color:textColor,opacity:0.9,margin:0,maxWidth:"480px"}}>{slide.subtitle}</p>}
+              {slide.buttonText && <button style={{background:c.primaryColor,color:"#fff",padding:"9px 20px",borderRadius:"999px",fontSize:"12px",fontWeight:800,border:"none",cursor:"inherit",marginTop:"4px"}}>{slide.buttonText}</button>}
+            </div>
+          )}
 
           {/* Focal mode overlay — solo activo cuando el usuario lo habilitó */}
           {focalMode && slide.image && (

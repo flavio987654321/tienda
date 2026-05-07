@@ -27,6 +27,8 @@ function BannerCarouselBlock({ block, primaryColor, fontFamily }: { block: any; 
   const baseH = p.blockMinHeight && Number(p.blockMinHeight) > 0
     ? Number(p.blockMinHeight)
     : (HEIGHTS[String(p.height||"md")] || 420);
+  const imageFit = String(p.imageFit || "cover");
+  const isContain = imageFit === "contain";
   const cur = slides[idx % Math.max(1, slides.length)] || {};
   const overlayOpacity = Number(p.overlayOpacity ?? 35) / 100;
   const textColor = String(p.textColor || "#ffffff");
@@ -37,6 +39,30 @@ function BannerCarouselBlock({ block, primaryColor, fontFamily }: { block: any; 
     const t = setInterval(() => setIdx(i => (i + 1) % slides.length), (Number(p.speed) || 4) * 1000);
     return () => clearInterval(t);
   }, [p.autoplay, p.speed, slides.length]);
+
+  if (isContain) {
+    return (
+      <div style={{ position:"relative", width:"100%", fontFamily, background:"#1f2937", userSelect:"none" }}>
+        {cur.image
+          ? <img src={cur.image} alt="" style={{ display:"block", width:"100%", height:"auto" }}/>
+          : <div style={{ height:"240px", background:"linear-gradient(135deg,#4f46e5,#7c3aed)", display:"flex", alignItems:"center", justifyContent:"center" }}><span style={{ color:"rgba(255,255,255,0.3)", fontSize:"48px" }}>🖼️</span></div>
+        }
+        {p.showDots!==false && slides.length > 1 && (
+          <div style={{ position:"absolute", bottom:"14px", left:0, right:0, display:"flex", justifyContent:"center", gap:"6px" }}>
+            {slides.map((_:any,i:number)=>(
+              <button key={i} onClick={()=>setIdx(i)} style={{ width:i===idx?"22px":"8px", height:"8px", borderRadius:"4px", background:i===idx?"#fff":"rgba(255,255,255,0.45)", border:"none", cursor:"pointer", padding:0, transition:"width 0.25s" }}/>
+            ))}
+          </div>
+        )}
+        {p.showArrows!==false && slides.length > 1 && (
+          <>
+            <button onClick={()=>setIdx(i=>(i-1+slides.length)%slides.length)} style={{ position:"absolute", left:"12px", top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.35)", border:"none", borderRadius:"50%", width:"36px", height:"36px", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:"20px" }}>‹</button>
+            <button onClick={()=>setIdx(i=>(i+1)%slides.length)} style={{ position:"absolute", right:"12px", top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.35)", border:"none", borderRadius:"50%", width:"36px", height:"36px", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:"20px" }}>›</button>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div style={{ position:"relative", width:"100%", height:`${baseH}px`, overflow:"hidden", fontFamily, background:"#1f2937", userSelect:"none" }}>
