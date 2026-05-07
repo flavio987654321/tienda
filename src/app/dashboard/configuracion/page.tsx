@@ -930,54 +930,6 @@ function MovableTextStage({
 }
 
 /* ─── Block renderer for preview ─── */
-function DesignZone({ zone, onClick }: {
-  zone: { label: string; emoji: string; color: string; top: number; height: number };
-  onClick: () => void;
-}) {
-  const [hov, setHov] = useState(false);
-  return (
-    <div
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        position: "absolute",
-        top: zone.top,
-        left: 0,
-        right: 0,
-        height: zone.height,
-        cursor: "pointer",
-        border: hov ? `2px solid ${zone.color}` : "2px solid transparent",
-        background: hov ? `${zone.color}14` : "transparent",
-        transition: "all 0.15s ease",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 10,
-      }}
-    >
-      {hov && (
-        <div style={{
-          padding: "4px 12px",
-          borderRadius: "999px",
-          background: zone.color,
-          color: "white",
-          fontSize: "11px",
-          fontWeight: 700,
-          display: "flex",
-          alignItems: "center",
-          gap: "5px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-          pointerEvents: "none",
-        }}>
-          <span>{zone.emoji}</span>
-          <span>{zone.label}</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{width:"10px",height:"10px"}}><path d="m11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 2 2L12 13H9v-3z"/></svg>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown, onDuplicate, onDelete, onChangeProps, isFirst, isLast, previewProducts = [], viewport, onProductClick }: {
   block:Block; config:StoreConfig; selected:boolean;
@@ -2184,27 +2136,30 @@ export default function ConfiguracionPage() {
                 {activeTab==="diseño" ? (
                   <div className="relative group/preview">
                     <StorePreview config={config}/>
-                    {/* Overlay interactivo por secciones */}
-                    {(() => {
-                      const annH = config.announcementBar ? 32 : 0;
-                      const navH = 50;
-                      const heroH = config.heroStyle === "full" ? 340 : config.heroStyle === "compact" ? 190 : 0;
-                      const zones: { section: DesignSection; label: string; emoji: string; color: string; top: number; height: number }[] = [
-                        ...(config.announcementBar ? [{ section: "anuncio" as DesignSection, label: "Barra de anuncio", emoji: "📣", color: "#f59e0b", top: 0, height: annH }] : []),
-                        { section: "template", label: "Template & Navbar", emoji: "🎨", color: "#6366f1", top: annH, height: navH },
-                        ...(heroH > 0 ? [{ section: "imagenes" as DesignSection, label: "Banner / Hero", emoji: "🖼️", color: "#ec4899", top: annH + navH, height: heroH }] : []),
-                        { section: "textos", label: "Textos", emoji: "✏️", color: "#8b5cf6", top: annH + navH + heroH, height: 60 },
-                        { section: "layout", label: "Productos", emoji: "🛍️", color: "#10b981", top: annH + navH + heroH + 60, height: 260 },
-                        { section: "footer", label: "Footer", emoji: "📄", color: "#6b7280", top: annH + navH + heroH + 60 + 260, height: 50 },
-                      ];
-                      return (
-                        <div className="absolute inset-0 opacity-0 group-hover/preview:opacity-100 transition-opacity duration-200 pointer-events-none group-hover/preview:pointer-events-auto">
-                          {zones.map(z => (
-                            <DesignZone key={z.section} zone={z} onClick={() => focusSection(z.section)} />
-                          ))}
-                        </div>
-                      );
-                    })()}
+                    {/* Panel flotante de secciones editables */}
+                    <div className="absolute top-3 right-3 flex flex-col gap-1.5 opacity-0 group-hover/preview:opacity-100 transition-opacity duration-200">
+                      {[
+                        ...(config.announcementBar ? [{ section: "anuncio" as DesignSection, label: "Anuncio", emoji: "📣", color: "#f59e0b" }] : []),
+                        { section: "template" as DesignSection, label: "Template", emoji: "🎨", color: "#6366f1" },
+                        { section: "colores" as DesignSection, label: "Colores", emoji: "🎨", color: "#8b5cf6" },
+                        { section: "imagenes" as DesignSection, label: "Imágenes", emoji: "🖼️", color: "#ec4899" },
+                        { section: "textos" as DesignSection, label: "Textos", emoji: "✏️", color: "#0ea5e9" },
+                        { section: "layout" as DesignSection, label: "Productos", emoji: "🛍️", color: "#10b981" },
+                        { section: "tarjetas" as DesignSection, label: "Tarjetas", emoji: "🃏", color: "#f97316" },
+                        { section: "footer" as DesignSection, label: "Footer", emoji: "📄", color: "#6b7280" },
+                      ].map(z => (
+                        <button
+                          key={z.section}
+                          onClick={() => focusSection(z.section)}
+                          title={`Editar ${z.label}`}
+                          style={{ background: z.color }}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-white text-[11px] font-bold shadow-lg hover:scale-105 active:scale-95 transition-transform whitespace-nowrap"
+                        >
+                          <span>{z.emoji}</span>
+                          <span>{z.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   /* Blocks preview */
