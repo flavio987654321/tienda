@@ -87,7 +87,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"cta",        emoji:"🚀", label:"Llamada a la acción",    desc:"Sección oscura con botón grande destacado",
     defaultProps:{ heading:"¿Lista para comprar?", sub:"Envíos a todo el país", buttonText:"Ver catálogo", bgColor:"#0f172a", textColor:"#ffffff" } },
   { type:"image-text", emoji:"🖼️", label:"Imagen + Texto",         desc:"Foto al lado de texto descriptivo (split)",
-    defaultProps:{ heading:"¿Por qué elegirnos?", body:"Calidad y atención garantizada en cada compra.", image:"", imagePosition:"left", imageFit:"cover", imageFocus:"center", color:"", textColor:"", bgColor:"", imageBgColor:"" } },
+    defaultProps:{ heading:"¿Por qué elegirnos?", body:"Calidad y atención garantizada en cada compra.", image:"", imagePosition:"left", imageFit:"cover", imageFocus:"center", color:"", textColor:"", bgColor:"", imageBgColor:"", imageRadius:"redondeada" } },
   { type:"spacer",     emoji:"⬜", label:"Espacio en blanco",      desc:"Separador de altura personalizable",
     defaultProps:{ height:"md" } },
   { type:"socials",    emoji:"link", label:"Redes / Contacto",       desc:"Iconos, botones o tarjeta con tus canales",
@@ -656,27 +656,41 @@ function BlockEditor({
       <Chips options={[{id:"center",label:"Centro"},{id:"top",label:"Arriba"},{id:"bottom",label:"Abajo"}]} value={p.imageFocus||"center"} onChange={v=>upd("imageFocus",v)}/>
     </div>
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">Posición de la imagen</label>
-      <div className="mb-3 space-y-3">
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <label className="block text-xs font-medium text-gray-600">Ancho del cuadro de imagen</label>
-            <span className="text-xs font-semibold text-indigo-600">{p.imageWidth||50}%</span>
-          </div>
-          <input type="range" min="30" max="70" step="5" value={p.imageWidth||50} onChange={e=>upd("imageWidth",parseInt(e.target.value))} className="w-full accent-indigo-600"/>
-        </div>
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <label className="block text-xs font-medium text-gray-600">Alto del cuadro de imagen</label>
-            <span className="text-xs font-semibold text-indigo-600">{p.imageHeight||320}px</span>
-          </div>
-          <input type="range" min="180" max="520" step="20" value={p.imageHeight||320} onChange={e=>upd("imageHeight",parseInt(e.target.value))} className="w-full accent-indigo-600"/>
-        </div>
-      </div>
-      <div className="flex gap-2">
-        {[["left","Izquierda"],["right","Derecha"]].map(([v,l])=>(
-          <button key={v} onClick={()=>upd("imagePosition",v)} className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${p.imagePosition===v?"border-indigo-500 bg-indigo-50 text-indigo-700":"border-gray-200 text-gray-500 hover:border-gray-300"}`}>{l}</button>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Forma de la imagen</label>
+      <Chips options={[{id:"redondeada",label:"Redondeada"},{id:"cuadrada",label:"Cuadrada"},{id:"circulo",label:"Círculo"},{id:"ovalada",label:"Ovalada"}]} value={p.imageRadius||"redondeada"} onChange={v=>upd("imageRadius",v)}/>
+    </div>
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1.5">Posición de la imagen</label>
+      <div className="grid grid-cols-2 gap-1.5 mb-3">
+        {([["left","← Izquierda"],["right","Derecha →"],["top","↑ Arriba"],["bottom","↓ Abajo"]] as const).map(([v,l])=>(
+          <button key={v} onClick={()=>upd("imagePosition",v)} className={`py-1.5 rounded-lg text-xs font-medium border transition-colors ${p.imagePosition===v||(!p.imagePosition&&v==="left")?"border-indigo-500 bg-indigo-50 text-indigo-700":"border-gray-200 text-gray-500 hover:border-gray-300"}`}>{l}</button>
         ))}
+      </div>
+      {(p.imagePosition==="left"||p.imagePosition==="right"||!p.imagePosition) && (
+        <div className="space-y-3">
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <label className="block text-xs font-medium text-gray-600">Ancho del cuadro de imagen</label>
+              <span className="text-xs font-semibold text-indigo-600">{p.imageWidth||50}%</span>
+            </div>
+            <input type="range" min="30" max="70" step="5" value={p.imageWidth||50}
+              onChange={e=>upd("imageWidth",parseInt(e.target.value))}
+              onMouseDown={e=>e.stopPropagation()}
+              onPointerDown={e=>e.stopPropagation()}
+              className="w-full accent-indigo-600 cursor-ew-resize"/>
+          </div>
+        </div>
+      )}
+      <div className="mt-3">
+        <div className="mb-1 flex items-center justify-between">
+          <label className="block text-xs font-medium text-gray-600">Alto del cuadro de imagen</label>
+          <span className="text-xs font-semibold text-indigo-600">{p.imageHeight||320}px</span>
+        </div>
+        <input type="range" min="180" max="520" step="20" value={p.imageHeight||320}
+          onChange={e=>upd("imageHeight",parseInt(e.target.value))}
+          onMouseDown={e=>e.stopPropagation()}
+          onPointerDown={e=>e.stopPropagation()}
+          className="w-full accent-indigo-600 cursor-ns-resize"/>
       </div>
     </div>
     {heightEditorSection}
@@ -1417,17 +1431,24 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const imageHeight = Number(p.imageHeight || 320);
       const blockColor = p.color || c.primaryColor;
       const textColor = p.textColor || "#6b7280";
-      const stackedImageText = viewport !== "desktop";
+      const pos = p.imagePosition || "left";
+      const isVertical = pos === "top" || pos === "bottom";
+      const stackedImageText = viewport !== "desktop" || isVertical;
+      const radiusMap: Record<string,string> = { redondeada:"18px", cuadrada:"0px", circulo:"50%", ovalada:"50px" };
+      const imageRadius = radiusMap[p.imageRadius||"redondeada"] || "18px";
+      const flexDir = isVertical
+        ? (pos === "bottom" ? "column-reverse" : "column")
+        : (pos === "right" ? "row-reverse" : "row");
       return (
-        <div style={{display:"flex",gap:"20px",padding:"24px",background:p.bgColor||"transparent",fontFamily:c.fontFamily,alignItems:"stretch",flexDirection:stackedImageText ? "column" : p.imagePosition === "right" ? "row-reverse" : "row",minHeight:customMinHeight}}>
-          <div style={{flex:stackedImageText ? "1 1 auto" : `0 0 ${imageWidth}%`,width:stackedImageText ? "100%" : undefined,minHeight:`${imageHeight}px`,borderRadius:"18px",overflow:"hidden",background:p.imageBgColor||"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <div style={{display:"flex",gap:"20px",padding:"24px",background:p.bgColor||"transparent",fontFamily:c.fontFamily,alignItems:"stretch",flexDirection:stackedImageText ? flexDir as React.CSSProperties["flexDirection"] : flexDir as React.CSSProperties["flexDirection"],minHeight:customMinHeight}}>
+          <div style={{flex:stackedImageText ? "1 1 auto" : `0 0 ${imageWidth}%`,width:stackedImageText&&!isVertical ? "100%" : undefined,minHeight:`${imageHeight}px`,borderRadius:imageRadius,overflow:"hidden",background:p.imageBgColor||"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center"}}>
             {p.image ? (
               <img src={p.image} alt={p.heading || "Imagen del bloque"} style={{width:"100%",height:"100%",objectFit:p.imageFit||"cover",objectPosition:p.imageFocus||"center"}} />
             ) : (
               <div style={{color:"#9ca3af",fontSize:"12px",fontWeight:700}}>Sin imagen</div>
             )}
           </div>
-          <div style={{flex:stackedImageText ? "1 1 auto" : `1 1 ${100-imageWidth}%`,width:stackedImageText ? "100%" : undefined,display:"flex",flexDirection:"column",justifyContent:"center"}}>
+          <div style={{flex:stackedImageText&&!isVertical ? "1 1 auto" : `1 1 ${100-imageWidth}%`,width:stackedImageText&&!isVertical ? "100%" : undefined,display:"flex",flexDirection:"column",justifyContent:"center"}}>
             <MovableTextStage
               key={`image-text-${viewport}-${Boolean(p.heading)}-${Boolean(p.body)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
               blockProps={p}
