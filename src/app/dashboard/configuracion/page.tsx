@@ -88,8 +88,8 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
     defaultProps:{ heading:"¿Lista para comprar?", sub:"Envíos a todo el país", buttonText:"Ver catálogo", bgColor:"#0f172a", textColor:"#ffffff" } },
   { type:"image-text", emoji:"🖼️", label:"Imagen + Texto",         desc:"Foto al lado de texto descriptivo (split)",
     defaultProps:{ heading:"¿Por qué elegirnos?", body:"Calidad y atención garantizada en cada compra.", image:"", imagePosition:"left", imageFit:"cover", imageFocus:"center", color:"", textColor:"", bgColor:"", imageBgColor:"", imageRadius:"redondeada" } },
-  { type:"spacer",     emoji:"⬜", label:"Espacio en blanco",      desc:"Separador de altura personalizable",
-    defaultProps:{ height:"md" } },
+  { type:"spacer",     emoji:"⬜", label:"Espacio en blanco",      desc:"Separador con texto, emoji y color opcionales",
+    defaultProps:{ height:"md", text:"", emoji:"", bgColor:"", textColor:"", lineStyle:"none", lineColor:"#e5e7eb" } },
   { type:"socials",    emoji:"link", label:"Redes / Contacto",       desc:"Iconos, botones o tarjeta con tus canales",
     defaultProps:{ heading:"Seguinos y contactanos", showHeading:true, layout:"icons", color:"", bgColor:"", showInstagram:true, showFacebook:true, showTiktok:true, showWhatsapp:true, showEmail:true, instagramUrl:"", facebookUrl:"", tiktokUrl:"", whatsappNumber:"", emailAddress:"" } },
   { type:"divider",    emoji:"─", label:"Línea separadora",        desc:"Línea horizontal decorativa",
@@ -723,9 +723,35 @@ function BlockEditor({
     {heightEditorSection}
   </div>;
 
-  if (block.type==="spacer") return <div className="space-y-2">
-    <label className="block text-xs font-medium text-gray-600">Altura del espacio</label>
-    <Chips options={[{id:"xs",label:"8px"},{id:"sm",label:"24px"},{id:"md",label:"48px"},{id:"lg",label:"80px"},{id:"xl",label:"120px"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
+  if (block.type==="spacer") return <div className="space-y-3">
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Altura</label>
+      <Chips options={[{id:"xs",label:"8px"},{id:"sm",label:"24px"},{id:"md",label:"48px"},{id:"lg",label:"80px"},{id:"xl",label:"120px"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
+    </div>
+    <div className="border-t border-gray-100 pt-3 space-y-3">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Contenido opcional</p>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Emoji / ícono</label>
+        <input type="text" value={p.emoji||""} onChange={e=>upd("emoji",e.target.value)} placeholder="ej: ✨ 🌟 →" maxLength={4}
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Texto</label>
+        <input type="text" value={p.text||""} onChange={e=>upd("text",e.target.value)} placeholder="ej: Nueva colección 2025"
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Línea decorativa</label>
+        <Chips options={[{id:"none",label:"Ninguna"},{id:"solid",label:"Sólida"},{id:"dashed",label:"Guiones"},{id:"dotted",label:"Puntos"}]} value={p.lineStyle||"none"} onChange={v=>upd("lineStyle",v)}/>
+      </div>
+      {p.lineStyle && p.lineStyle !== "none" && (
+        <ColorPicker label="Color de línea" value={p.lineColor||"#e5e7eb"} onChange={v=>upd("lineColor",v)}/>
+      )}
+      <ColorPicker label="Color de fondo (vacío = transparente)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
+      {(p.text||p.emoji) && (
+        <ColorPicker label="Color del texto" value={p.textColor||"#374151"} onChange={v=>upd("textColor",v)}/>
+      )}
+    </div>
   </div>;
 
   if (block.type==="divider") return <div className="space-y-3">
@@ -1529,7 +1555,31 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     }
 
     if (block.type==="spacer") {
-      return <div style={{height:customMinHeight || SPACER_H[p.height as keyof typeof SPACER_H||"md"]||"48px",background:"repeating-linear-gradient(45deg,#f9fafb,#f9fafb 10px,#f3f4f6 10px,#f3f4f6 20px)"}}/>;
+      const h = customMinHeight || SPACER_H[p.height as keyof typeof SPACER_H||"md"] || "48px";
+      const hasContent = p.text || p.emoji;
+      const lineStyle = p.lineStyle || "none";
+      const lineColor = p.lineColor || "#e5e7eb";
+      const line = lineStyle !== "none" ? <div style={{flex:1,borderTop:`1.5px ${lineStyle} ${lineColor}`}}/> : null;
+      return (
+        <div style={{
+          minHeight: h,
+          background: p.bgColor || (hasContent || lineStyle !== "none" ? "transparent" : "repeating-linear-gradient(45deg,#f9fafb,#f9fafb 10px,#f3f4f6 10px,#f3f4f6 20px)"),
+          display:"flex", alignItems:"center", justifyContent:"center", padding: hasContent || lineStyle !== "none" ? "0 24px" : "0",
+        }}>
+          {(hasContent || lineStyle !== "none") ? (
+            <div style={{display:"flex",alignItems:"center",gap:"12px",width:"100%"}}>
+              {line}
+              {hasContent && (
+                <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"2px",flexShrink:0}}>
+                  {p.emoji && <span style={{fontSize:"22px",lineHeight:1}}>{p.emoji}</span>}
+                  {p.text && <span style={{fontSize:"13px",fontWeight:600,color:p.textColor||"#374151",whiteSpace:"nowrap"}}>{p.text}</span>}
+                </div>
+              )}
+              {line}
+            </div>
+          ) : null}
+        </div>
+      );
     }
 
     if (block.type==="divider") {

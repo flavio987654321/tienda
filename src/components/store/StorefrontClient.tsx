@@ -1321,7 +1321,32 @@ export default function StorefrontClient({
           );
           if (block.type === "spacer") {
             const heights: Record<string,string> = { xs:"20px",sm:"40px",md:"80px",lg:"120px",xl:"180px" };
-            return <div key={block.id} style={{ height: heights[p.height||"md"] || "80px" }} />;
+            const h = heights[String(p.height||"md")] || "80px";
+            const hasContent = p.text || p.emoji;
+            const lineStyle = String(p.lineStyle || "none");
+            const lineColor = String(p.lineColor || "#e5e7eb");
+            const line = lineStyle !== "none" ? <div style={{flex:1,borderTop:`1.5px ${lineStyle} ${lineColor}`}}/> : null;
+            return (
+              <div key={block.id} style={{
+                minHeight: h,
+                background: String(p.bgColor || "transparent"),
+                display:"flex", alignItems:"center", justifyContent:"center",
+                padding: hasContent || lineStyle !== "none" ? "0 32px" : "0",
+              }}>
+                {(hasContent || lineStyle !== "none") ? (
+                  <div style={{display:"flex",alignItems:"center",gap:"16px",width:"100%"}}>
+                    {line}
+                    {hasContent && (
+                      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"3px",flexShrink:0}}>
+                        {p.emoji && <span style={{fontSize:"24px",lineHeight:1}}>{String(p.emoji)}</span>}
+                        {p.text && <span style={{fontSize:"14px",fontWeight:600,color:String(p.textColor||"#374151"),whiteSpace:"nowrap"}}>{String(p.text)}</span>}
+                      </div>
+                    )}
+                    {line}
+                  </div>
+                ) : null}
+              </div>
+            );
           }
           if (block.type === "divider") return (
             <div key={block.id} className="py-2">
