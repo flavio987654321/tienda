@@ -1128,47 +1128,66 @@ export default function StorefrontClient({
             </div>
           );
           if (block.type === "image-text") {
-            const isRight = p.imagePosition === "right";
+            const pos = String(p.imagePosition || "left");
+            const isVertical = pos === "top" || pos === "bottom";
             const imageFit = String(p.imageFit || "cover") as "cover" | "contain";
-            const imageFocus = String(p.imageFocus || "center");
             const imageWidth = Math.min(70, Math.max(30, Number(p.imageWidth) || 50));
             const imageHeight = Math.min(520, Math.max(180, Number(p.imageHeight) || 320));
-            const stackedImageText = viewport !== "desktop";
+            const stackedImageText = viewport !== "desktop" || isVertical;
+            const radiusMap: Record<string,string> = { redondeada:"18px", cuadrada:"0px", circulo:"50%", ovalada:"50px" };
+            const imageRadius = radiusMap[String(p.imageRadius || "redondeada")] || "18px";
+            const isRound = p.imageRadius === "circulo" || p.imageRadius === "ovalada";
+            const flexDir = isVertical
+              ? (pos === "bottom" ? "column-reverse" : "column")
+              : (pos === "right" ? "row-reverse" : "row");
+            const imgContainerStyle: React.CSSProperties = isRound ? {
+              flex: "0 0 auto",
+              alignSelf: "center",
+              aspectRatio: p.imageRadius === "circulo" ? "1 / 1" : "3 / 4",
+              borderRadius: imageRadius,
+              overflow: "hidden",
+              backgroundColor: String(p.imageBgColor || "#f3f4f6"),
+              width: stackedImageText ? "60%" : `${imageWidth}%`,
+            } : {
+              flex: stackedImageText ? "1 1 auto" : `0 0 ${imageWidth}%`,
+              width: stackedImageText && !isVertical ? "100%" : undefined,
+              minHeight: `${imageHeight}px`,
+              borderRadius: imageRadius,
+              overflow: "hidden",
+              backgroundColor: String(p.imageBgColor || "#f3f4f6"),
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            };
             return (
-              <div key={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}><div className={`mx-auto flex max-w-7xl flex-col ${isRight ? "md:flex-row-reverse" : "md:flex-row"} gap-8 items-center px-4 py-8 sm:px-6`}>
-                <div
-                  className="w-full rounded-3xl overflow-hidden flex items-center justify-center md:w-auto"
-                  style={{
-                    backgroundColor: String(p.imageBgColor || "#f3f4f6"),
-                    height: `${imageHeight}px`,
-                    width: stackedImageText ? "100%" : undefined,
-                    flex: stackedImageText ? "1 1 auto" : `0 0 ${imageWidth}%`,
-                  }}
-                >
-                  {p.image ? <img src={p.image} alt="" className={`w-full h-full ${imageFit === "contain" ? "object-contain" : "object-cover"}`} style={{ objectPosition: imageFocus }} /> : <Package className="h-12 w-12 text-gray-300" />}
+              <div key={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
+                <div style={{ display:"flex", flexDirection: flexDir as React.CSSProperties["flexDirection"], gap:"32px", alignItems: isRound ? "center" : "stretch", padding:"32px 24px", maxWidth:"1280px", margin:"0 auto" }}>
+                  <div style={imgContainerStyle}>
+                    {p.image ? <img src={String(p.image)} alt="" style={{ width:"100%", height:"100%", objectFit: imageFit, objectPosition: "center", display:"block" }} /> : <Package className="h-12 w-12 text-gray-300" />}
+                  </div>
+                  <div style={{ flex:`1 1 ${100-imageWidth}%`, width: stackedImageText && !isVertical ? "100%" : undefined, display:"flex", flexDirection:"column", justifyContent:"center" }}>
+                    <PositionedTextLayer
+                      blockProps={p}
+                      viewport={viewport}
+                      style={{ minHeight: `${imageHeight}px` }}
+                      items={[
+                        ...(p.heading ? [{
+                          id: "heading",
+                          defaultPos: { x: 6, y: 28 },
+                          style: { width: "min(90%, 420px)", textAlign: "left" as const },
+                          content: <h2 className="mb-4 text-3xl font-black" style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>,
+                        }] : []),
+                        ...(p.body ? [{
+                          id: "body",
+                          defaultPos: { x: 6, y: 44 },
+                          style: { width: "min(92%, 460px)", textAlign: "left" as const },
+                          content: <p className="leading-relaxed" style={{ color: String(p.textColor || "#6b7280") }}>{p.body}</p>,
+                        }] : []),
+                      ]}
+                    />
+                  </div>
                 </div>
-                <div className="w-full flex-1" style={{ flexBasis: stackedImageText ? "auto" : `${100 - imageWidth}%` }}>
-                  <PositionedTextLayer
-                    blockProps={p}
-                    viewport={viewport}
-                    style={{ minHeight: `${imageHeight}px` }}
-                    items={[
-                      ...(p.heading ? [{
-                        id: "heading",
-                        defaultPos: { x: 6, y: 28 },
-                        style: { width: "min(90%, 420px)", textAlign: "left" as const },
-                        content: <h2 className="mb-4 text-3xl font-black" style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>,
-                      }] : []),
-                      ...(p.body ? [{
-                        id: "body",
-                        defaultPos: { x: 6, y: 44 },
-                        style: { width: "min(92%, 460px)", textAlign: "left" as const },
-                        content: <p className="leading-relaxed" style={{ color: String(p.textColor || "#6b7280") }}>{p.body}</p>,
-                      }] : []),
-                    ]}
-                  />
-                </div>
-              </div></div>
+              </div>
             );
           }
           if (block.type === "socials") {

@@ -652,10 +652,6 @@ function BlockEditor({
       <Chips options={[{id:"cover",label:"Recortar"},{id:"contain",label:"Completa"}]} value={p.imageFit||"cover"} onChange={v=>upd("imageFit",v)}/>
     </div>
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">Posición de la foto</label>
-      <Chips options={[{id:"center",label:"Centro"},{id:"top",label:"Arriba"},{id:"bottom",label:"Abajo"}]} value={p.imageFocus||"center"} onChange={v=>upd("imageFocus",v)}/>
-    </div>
-    <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Forma de la imagen</label>
       <Chips options={[{id:"redondeada",label:"Redondeada"},{id:"cuadrada",label:"Cuadrada"},{id:"circulo",label:"Círculo"},{id:"ovalada",label:"Ovalada"}]} value={p.imageRadius||"redondeada"} onChange={v=>upd("imageRadius",v)}/>
     </div>
