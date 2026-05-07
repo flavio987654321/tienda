@@ -196,7 +196,6 @@ const DEFAULT_CONFIG: StoreConfig = {
   productModalButtonText:"Agregar al carrito", productModalAccentColor:"", productModalShowDescription:true,
 };
 
-const CONFIG_TAB_KEY = "mitienda_config_editor_tab";
 
 function isStarterConfigBlocks(blocks: Block[]) {
   if (blocks.length !== 3) return false;
@@ -1576,7 +1575,6 @@ export default function ConfiguracionPage() {
   const [previewModalProduct, setPreviewModalProduct] = useState<PreviewProduct | null>(null);
 
   // Blocks state
-  const [activeTab, setActiveTab]         = useState<"diseño"|"bloques">("diseño");
   const [blocks, setBlocks]               = useState<Block[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string|null>(null);
   const [showBlockLibrary, setShowBlockLibrary] = useState(false);
@@ -1618,8 +1616,6 @@ export default function ConfiguracionPage() {
           // Support both old format (array) and new format ({ blocks, modalConfig })
           const loadedBlocks: Block[] = Array.isArray(parsedRaw) ? parsedRaw : (Array.isArray(parsedRaw?.blocks) ? parsedRaw.blocks : []);
           const pmc = parsedRaw?.modalConfig || {};
-          const savedTab = window.localStorage.getItem(CONFIG_TAB_KEY);
-
           setBlocks(loadedBlocks);
           if (pmc && typeof pmc === "object") {
             setConfig(p=>({...p,
@@ -1633,12 +1629,6 @@ export default function ConfiguracionPage() {
               productModalShowDescription: pmc.showDescription !== false,
             }));
           }
-
-          if (loadedBlocks.length > 0 && !isStarterConfigBlocks(loadedBlocks)) {
-            setActiveTab("bloques");
-          } else if (savedTab === "bloques" && loadedBlocks.length > 0) {
-            setActiveTab("bloques");
-          }
         } catch {}
       }
       setLoading(false);
@@ -1651,14 +1641,6 @@ export default function ConfiguracionPage() {
     const el = blockItemRefs.current.get(selectedBlockId);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [selectedBlockId]);
-
-  function focusSection(section: DesignSection) {
-    setOpen(p => p.includes(section) ? p : [...p, section]);
-    requestAnimationFrame(() => {
-      const el = editorPanelRef.current?.querySelector(`[data-section="${section}"]`);
-      el?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
 
   const set = <K extends keyof StoreConfig>(k:K,v:StoreConfig[K]) => {
     setConfig(p=>({...p,[k]:v}));
@@ -1784,13 +1766,13 @@ export default function ConfiguracionPage() {
   const hasCustomBlocks = blocks.length > 0 && !isStarterConfigBlocks(blocks);
 
   useEffect(() => {
-    if (activeTab !== "bloques" || !selectedBlockId) return;
+    if (!selectedBlockId) return;
     const viewport = previewScrollRef.current;
     if (!viewport) return;
     const target = viewport.querySelector<HTMLElement>(`[data-block-id="${selectedBlockId}"]`);
     if (!target) return;
     target.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [activeTab, selectedBlockId]);
+  }, [selectedBlockId]);
 
   // Sincronizar cambios de bloques a isDirty
   useEffect(() => {
@@ -1830,151 +1812,7 @@ export default function ConfiguracionPage() {
         {/* ── EDITOR PANEL ── */}
         <div ref={editorPanelRef} className="w-72 shrink-0 space-y-2 max-h-[calc(100vh-130px)] overflow-y-auto pr-1 pb-4">
 
-          {/* Tab switcher */}
-          <div className="flex bg-gray-100 rounded-xl p-1 mb-2">
-            {([["diseño","🎨 Diseño"],["bloques","📐 Contenido"]] as const).map(([t,l])=>(
-              <button key={t} onClick={()=>{
-                setActiveTab(t);
-                window.localStorage.setItem(CONFIG_TAB_KEY, t);
-              }}
-                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${activeTab===t?"bg-white shadow text-indigo-700":"text-gray-500 hover:text-gray-700"}`}>
-                {l}
-              </button>
-            ))}
-          </div>
-
-          {activeTab==="diseño" ? (
-            <>
-              {/* ── Modo editor de bloque (cuando se selecciona desde el preview) ── */}
-              {selectedBlockId !== null ? (() => {
-                const selBlock = blocks.find(b => b.id === selectedBlockId);
-                const lib = selBlock ? BLOCK_LIBRARY.find(x => x.type === selBlock.type) : null;
-                if (!selBlock) return null;
-                const selIdx = blocks.findIndex(b => b.id === selectedBlockId);
-                return (
-                  <div className="space-y-3">
-                    <button onClick={() => setSelectedBlockId(null)}
-                      className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-indigo-600 transition-colors">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                      Volver al diseño
-                    </button>
-                    <div className="bg-white rounded-2xl border border-indigo-200 overflow-hidden">
-                      <div className="px-4 py-3 bg-gradient-to-r from-indigo-50 to-violet-50 border-b border-indigo-100 flex items-center gap-2">
-                        <span className="text-xl">{lib?.emoji}</span>
-                        <div>
-                          <p className="text-xs font-bold text-indigo-700">{lib?.label}</p>
-                          <p className="text-[10px] text-indigo-400 uppercase tracking-wider">Editando bloque</p>
-                        </div>
-                      </div>
-                      <div className="px-3 py-3 space-y-3">
-                        <BlockEditor
-                          block={selBlock}
-                          onChange={props => updateBlock(selBlock.id, props)}
-                          config={config}
-                          categories={productCategories}
-                          subcategoriesByCategory={productSubcategories}
-                          uploadingImage={uploadingBlockImage && selectedBlockId === selBlock.id}
-                          onPickImage={() => { blockImageRef.current?.click(); }}
-                        />
-                        {blockSupportsMovableText(selBlock.type) && (
-                          <button type="button"
-                            onClick={() => updateBlock(selBlock.id, clearViewportTextPositions(selBlock.props, preview))}
-                            className="w-full rounded-xl border border-dashed border-indigo-200 bg-white px-3 py-2 text-xs font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">
-                            Resetear posiciones de texto
-                          </button>
-                        )}
-                        <div className="flex gap-2 border-t border-dashed border-indigo-100 pt-2">
-                          <button onClick={() => moveBlock(selBlock.id, -1)} disabled={selIdx === 0}
-                            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors">
-                            <ChevronUp className="h-3 w-3"/> Subir
-                          </button>
-                          <button onClick={() => moveBlock(selBlock.id, 1)} disabled={selIdx === blocks.length - 1}
-                            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors">
-                            <ChevronDown className="h-3 w-3"/> Bajar
-                          </button>
-                        </div>
-                        <div className="flex gap-2">
-                          <button onClick={() => { duplicateBlock(selBlock.id); }}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                            <Copy className="h-3 w-3"/> Duplicar
-                          </button>
-                          <button onClick={() => { deleteBlock(selBlock.id); }}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-red-100 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors">
-                            <Trash2 className="h-3 w-3"/> Eliminar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })() : (
-                /* ── Modo diseño (template + colores) ── */
-                <>
-                  <Accordion label="Template" icon={Layout} id="template" open={open.includes("template")} toggle={toggle}>
-                    <div className="grid grid-cols-2 gap-2">
-                      {TEMPLATES.map(t=>(
-                        <button key={t.id} onClick={()=>{ set("templateId",t.id); if(blocks.length===0) loadTemplateBlocks(t.id); }}
-                          className={`relative rounded-xl border-2 p-3 text-left transition-all ${config.templateId===t.id?"border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100":"border-gray-200 hover:border-gray-300"}`}>
-                          <div className="text-2xl mb-1">{t.emoji}</div>
-                          <p className={`font-semibold text-xs ${config.templateId===t.id?"text-indigo-700":"text-gray-900"}`}>{t.name}</p>
-                          <p className="text-gray-400 leading-tight" style={{fontSize:"10px"}}>{t.desc}</p>
-                          {config.templateId===t.id&&(
-                            <div className="absolute top-2 right-2 bg-indigo-500 rounded-full p-0.5">
-                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
-                            </div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                    <button onClick={() => loadTemplateBlocks(config.templateId)}
-                      className="w-full mt-1 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-200 py-2.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors">
-                      <Layers className="h-3.5 w-3.5"/> Cargar bloques de este template
-                    </button>
-                  </Accordion>
-
-                  <Accordion label="Colores y fuente" icon={Palette} id="colores" open={open.includes("colores")} toggle={toggle}>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-2">Paletas listas</label>
-                      <div className="grid grid-cols-5 gap-1.5">
-                        {PALETTES.map(pal=>{
-                          const active = config.primaryColor===pal.primary && config.accentColor===pal.accent;
-                          return (
-                            <button key={pal.name} title={pal.name}
-                              onClick={()=>{set("primaryColor",pal.primary);set("secondaryColor",pal.secondary);set("accentColor",pal.accent);}}
-                              className={`flex flex-col items-center gap-1 p-1.5 rounded-xl border-2 transition-all ${active?"border-indigo-500 bg-indigo-50":"border-gray-100 hover:border-gray-300"}`}>
-                              <div className="flex gap-0.5">
-                                <div className="w-3 h-3 rounded-full" style={{backgroundColor:pal.primary}}/>
-                                <div className="w-3 h-3 rounded-full" style={{backgroundColor:pal.accent}}/>
-                              </div>
-                              <span className="text-gray-500 leading-none text-center" style={{fontSize:"8px"}}>{pal.name}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="border-t border-gray-100 pt-3">
-                      <label className="block text-xs font-medium text-gray-600 mb-2">Personalizar</label>
-                      <ColorPicker label="Color principal" value={config.primaryColor} onChange={v=>set("primaryColor",v)}/>
-                      <ColorPicker label="Color secundario (fondo)" value={config.secondaryColor} onChange={v=>set("secondaryColor",v)}/>
-                      <ColorPicker label="Color de acento (badges)" value={config.accentColor} onChange={v=>set("accentColor",v)}/>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1.5">Tipografía</label>
-                      <select value={config.fontFamily} onChange={e=>set("fontFamily",e.target.value)}
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-                        {FUENTES.map(f=><option key={f} value={f} style={{fontFamily:f}}>{f}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1.5">Fondo</label>
-                      <Chips options={BG_STYLES} value={config.backgroundStyle} onChange={v=>set("backgroundStyle",v)}/>
-                    </div>
-                  </Accordion>
-                </>
-              )}
-            </>
-          ) : (
-            /* ── BLOQUES TAB ── */
+          {/* ── BLOQUES ── */}
             <div className="space-y-3">
               {/* Add block button */}
               <button onClick={()=>setShowBlockLibrary(true)}
@@ -2098,7 +1936,6 @@ export default function ConfiguracionPage() {
                 Hacé clic en un bloque para editarlo · Los cambios se ven en tiempo real en la preview →
               </p>
             </div>
-          )}
         </div>
 
         {/* ── PREVIEW PANEL ── */}
@@ -2123,10 +1960,7 @@ export default function ConfiguracionPage() {
 
             <div className="bg-gray-900 flex items-start justify-center p-4 overflow-auto" style={{minHeight:"620px"}}>
               <div ref={previewScrollRef} className={`${previewW} relative transition-all duration-300 bg-white rounded-lg overflow-hidden shadow-2xl`} style={{maxHeight:"620px",overflowY:"auto"}}>
-                {/* Blocks preview — shared between Diseño and Contenido tabs */}
-                {true ? (
-                  /* Blocks preview */
-                  <div style={{fontFamily:config.fontFamily,minHeight:"400px"}}>
+                <div style={{fontFamily:config.fontFamily,minHeight:"400px"}}>
                     {/* Mini navbar */}
                     <div style={{background:config.navbarStyle==="solid"?config.primaryColor:"white",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid rgba(0,0,0,0.1)"}}>
                       <div style={{fontWeight:800,fontSize:"14px",color:config.navbarStyle==="solid"?"white":config.primaryColor}}>{config.name||"Mi Tienda"}</div>
@@ -2183,7 +2017,6 @@ export default function ConfiguracionPage() {
                     </div>
 
                   </div>
-                ) : null}
                 {config.showWhatsappButton && config.whatsappNumber && (
                   <a
                     href={`https://wa.me/${config.whatsappNumber.replace(/\D/g, "")}`}
@@ -2197,7 +2030,7 @@ export default function ConfiguracionPage() {
             </div>
           </div>
           <p className="text-xs text-gray-400 mt-2 text-center">
-            {activeTab==="bloques" ? "Hacé clic en un bloque de la preview para seleccionarlo y editarlo" : "Preview con productos de ejemplo · Los cambios se guardan con el botón"}
+            {"Hacé clic en un bloque de la preview para seleccionarlo y editarlo"}
           </p>
         </div>
       </div>
