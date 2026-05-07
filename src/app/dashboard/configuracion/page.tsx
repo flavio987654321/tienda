@@ -945,6 +945,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   const draggingHeightRef = useRef<number | null>(null);
   const [isResizing, setIsResizing] = useState(false);
   const [draggingHeight, setDraggingHeight] = useState<number | null>(null);
+  const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
     if (!isResizing || !resizeRef.current) return;
@@ -989,9 +990,10 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
 
   const wrapStyle: CSSProperties = {
     position: "relative",
-    outline: selected ? "2px solid #818cf8" : "1px solid transparent",
+    outline: selected ? "2.5px solid #818cf8" : hovered ? "1.5px dashed #a5b4fc" : "1px solid transparent",
     outlineOffset: "-2px",
     cursor: "pointer",
+    transition: "outline 0.12s ease",
     minHeight: draggingHeight !== null
       ? `${draggingHeight}px`
       : (p.blockMinHeight && p.blockMinHeight > 0 ? `${p.blockMinHeight}px` : "auto"),
@@ -1049,6 +1051,13 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
         )}
       </div>
     </>
+  ) : null;
+
+  const hoverBadge = !selected && hovered ? (
+    <div style={{position:"absolute",top:"8px",left:"8px",zIndex:3,padding:"3px 9px",borderRadius:"999px",background:"rgba(79,70,229,0.82)",color:"white",fontSize:"10px",fontWeight:700,pointerEvents:"none",backdropFilter:"blur(4px)",letterSpacing:"0.03em",display:"flex",alignItems:"center",gap:"4px"}}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{width:"10px",height:"10px"}}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 2 2L12 13H9v-3z"/></svg>
+      Editar
+    </div>
   ) : null;
 
   function renderContent() {
@@ -1425,8 +1434,16 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   }
 
   return (
-    <div data-block-id={block.id} ref={blockWrapRef} style={wrapStyle} onClick={onSelect}>
+    <div
+      data-block-id={block.id}
+      ref={blockWrapRef}
+      style={wrapStyle}
+      onClick={onSelect}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       {renderContent()}
+      {hoverBadge}
       {floatingControls}
     </div>
   );
@@ -1489,6 +1506,7 @@ export default function ConfiguracionPage() {
   const [selectedBlockId, setSelectedBlockId] = useState<string|null>(null);
   const [showBlockLibrary, setShowBlockLibrary] = useState(false);
   const previewScrollRef = useRef<HTMLDivElement>(null);
+  const blockItemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   useEffect(()=>{
     fetch("/api/productos")
@@ -1551,6 +1569,12 @@ export default function ConfiguracionPage() {
       loadedRef.current = true;
     });
   },[]);
+
+  useEffect(() => {
+    if (!selectedBlockId) return;
+    const el = blockItemRefs.current.get(selectedBlockId);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [selectedBlockId]);
 
   const set = <K extends keyof StoreConfig>(k:K,v:StoreConfig[K]) => {
     setConfig(p=>({...p,[k]:v}));
@@ -1971,8 +1995,9 @@ export default function ConfiguracionPage() {
                     const lib = BLOCK_LIBRARY.find(x=>x.type===b.type);
                     const isSel = selectedBlockId===b.id;
                     return (
-                      <div 
-                        key={b.id} 
+                      <div
+                        key={b.id}
+                        ref={(el) => { if (el) blockItemRefs.current.set(b.id, el); else blockItemRefs.current.delete(b.id); }}
                         draggable
                         onDragStart={(e) => {
                           e.dataTransfer.effectAllowed = "move";
