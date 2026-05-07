@@ -102,6 +102,80 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
     ] } },
 ];
 
+/* ─── Bloques prediseñados por template ─── */
+const TEMPLATE_BLOCKS: Record<string, Omit<Block,"id">[]> = {
+  default:  [ // Clean
+    { type:"hero",        props:{ title:"¡Bienvenidos a mi tienda!", subtitle:"Encontrá todo lo que buscás", buttonText:"Ver colección", layout:"center", height:"lg" } },
+    { type:"products",   props:{ heading:"Nuestros productos", columns:3, layoutMode:"grid", showHeading:true } },
+    { type:"text",        props:{ heading:"Sobre nosotros", body:"Contá de qué se trata tu tienda y qué te hace especial.", align:"center", fontSize:"md" } },
+    { type:"socials",     props:{ heading:"Seguinos en redes", showInstagram:true, showWhatsapp:true, showFacebook:true, columns:3 } },
+  ],
+  fashion:  [ // Editorial
+    { type:"banner",      props:{ text:"✨ NUEVA TEMPORADA — EXPLORÁ LA COLECCIÓN", bgColor:"#111827", textColor:"#f9fafb" } },
+    { type:"hero",        props:{ title:"La nueva colección llegó", subtitle:"Moda que te expresa. Piezas únicas para cada momento.", buttonText:"Ver lookbook", layout:"left", height:"xl" } },
+    { type:"products",   props:{ heading:"Destacados de temporada", columns:2, layoutMode:"grid", showHeading:true } },
+    { type:"image-text",  props:{ heading:"Nuestra historia", body:"Contá el origen y la visión de tu marca.", imagePosition:"right" } },
+    { type:"socials",     props:{ heading:"Seguinos", showInstagram:true, showTiktok:true, columns:2 } },
+  ],
+  boutique: [ // Boutique
+    { type:"hero",        props:{ title:"Bienvenida a nuestra boutique", subtitle:"Piezas únicas seleccionadas para vos", buttonText:"Explorar colección", layout:"center", height:"lg" } },
+    { type:"banner-group",props:{ cards:[{title:"Novedades",text:"Últimas llegadas",buttonText:"Ver todo",bgColor:"#6366f1",textColor:"#ffffff"},{title:"Ofertas",text:"Hasta 40% off",buttonText:"Aprovechar",bgColor:"#ec4899",textColor:"#ffffff"},{title:"Envíos",text:"A todo el país",buttonText:"Info",bgColor:"#f59e0b",textColor:"#111827"}] } },
+    { type:"products",   props:{ heading:"Nueva colección", columns:3, layoutMode:"grid", showHeading:true } },
+    { type:"text",        props:{ heading:"Por qué elegirnos", body:"Calidad, atención personalizada y diseño exclusivo.", align:"center", fontSize:"md" } },
+    { type:"socials",     props:{ heading:"Encontranos en", showInstagram:true, showWhatsapp:true, columns:2 } },
+  ],
+  colorful: [ // Vívido
+    { type:"hero",        props:{ title:"¡Todo lo que buscás está acá!", subtitle:"Colores, estilo y calidad en un solo lugar", buttonText:"¡Ver ahora!", layout:"center", height:"md" } },
+    { type:"products",   props:{ heading:"🔥 Lo más vendido", columns:4, layoutMode:"grid", showHeading:true } },
+    { type:"cta",         props:{ heading:"¡No te quedes sin los tuyos!", body:"Comprá hoy y recibí en 24hs", buttonText:"Comprar ya", bgColor:"#111827" } },
+    { type:"products",   props:{ heading:"🆕 Novedades", columns:3, layoutMode:"carousel", showHeading:true } },
+    { type:"socials",     props:{ heading:"Seguinos y enterate de todo", showInstagram:true, showTiktok:true, showWhatsapp:true, columns:3 } },
+  ],
+  luxury:   [ // Luxury
+    { type:"hero",        props:{ title:"Excelencia en cada detalle", subtitle:"Una experiencia de compra sin igual", buttonText:"Explorar", layout:"center", height:"xl", bgColor:"#0f0f0f", textColor:"#f5f0e8" } },
+    { type:"divider",     props:{ style:"solid", color:"#c9a84c" } },
+    { type:"products",   props:{ heading:"Colección Premium", columns:3, layoutMode:"grid", showHeading:true } },
+    { type:"divider",     props:{ style:"solid", color:"#c9a84c" } },
+    { type:"text",        props:{ heading:"Nuestra propuesta", body:"Artículos de alta gama seleccionados con criterio exclusivo.", align:"center", fontSize:"lg" } },
+    { type:"socials",     props:{ heading:"Conectate con nosotros", showInstagram:true, showWhatsapp:true, columns:2 } },
+  ],
+  vintage:  [ // Clásico
+    { type:"banner",      props:{ text:"Bienvenidos — Calidad artesanal y atención personalizada", bgColor:"#f5f0e8", textColor:"#44403c" } },
+    { type:"hero",        props:{ title:"Tradición y calidad", subtitle:"Productos con historia y carácter propio", buttonText:"Descubrir", layout:"center", height:"lg" } },
+    { type:"products",   props:{ heading:"Nuestra selección", columns:3, layoutMode:"grid", showHeading:true } },
+    { type:"image-text",  props:{ heading:"Quiénes somos", body:"Una empresa con décadas de experiencia y pasión por la calidad.", imagePosition:"left" } },
+    { type:"socials",     props:{ heading:"Seguinos", showInstagram:true, showFacebook:true, columns:2 } },
+  ],
+  sport:    [ // Sport
+    { type:"hero",        props:{ title:"SUPERÁ TUS LÍMITES", subtitle:"Equipamiento para quienes no se detienen", buttonText:"VER COLECCIÓN", layout:"center", height:"xl", bgColor:"#0f0f0f", textColor:"#ffffff" } },
+    { type:"products",   props:{ heading:"⚡ TOP VENTAS", columns:3, layoutMode:"carousel", showHeading:true } },
+    { type:"cta",         props:{ heading:"Nuevo lanzamiento", body:"Sé el primero en tenerlo", buttonText:"QUIERO UNO", bgColor:"#111827" } },
+    { type:"products",   props:{ heading:"TODA LA COLECCIÓN", columns:4, layoutMode:"grid", showHeading:true } },
+    { type:"socials",     props:{ heading:"Seguinos", showInstagram:true, showTiktok:true, columns:2 } },
+  ],
+  tech:     [ // Moderno
+    { type:"hero",        props:{ title:"Tecnología que transforma", subtitle:"Los mejores productos al mejor precio", buttonText:"Ver catálogo", layout:"left", height:"md" } },
+    { type:"products",   props:{ heading:"Productos destacados", columns:4, layoutMode:"grid", showHeading:true } },
+    { type:"text",        props:{ heading:"¿Por qué elegirnos?", body:"Garantía, soporte técnico y los mejores precios del mercado.", align:"center", fontSize:"md" } },
+    { type:"products",   props:{ heading:"Más vendidos", columns:3, layoutMode:"carousel", showHeading:true } },
+    { type:"socials",     props:{ heading:"Contacto y redes", showInstagram:true, showWhatsapp:true, showFacebook:true, columns:3 } },
+  ],
+  kids:     [ // Colorful
+    { type:"hero",        props:{ title:"🎉 ¡Bienvenidos!", subtitle:"Los mejores productos para los más pequeños", buttonText:"¡A explorar!", layout:"center", height:"md" } },
+    { type:"products",   props:{ heading:"🎁 Para ellos", columns:3, layoutMode:"grid", showHeading:true } },
+    { type:"banner-group",props:{ cards:[{title:"🚀 Novedades",text:"Lo último llegó",buttonText:"Ver",bgColor:"#6366f1",textColor:"#ffffff"},{title:"⭐ Ofertas",text:"Hasta 50% off",buttonText:"Aprovechar",bgColor:"#ec4899",textColor:"#ffffff"},{title:"🎈 Envíos",text:"Rápido y seguro",buttonText:"Info",bgColor:"#f59e0b",textColor:"#111827"}] } },
+    { type:"socials",     props:{ heading:"Seguinos", showInstagram:true, showWhatsapp:true, showFacebook:true, columns:3 } },
+  ],
+  market:   [ // Market
+    { type:"hero",        props:{ title:"Todo en un solo lugar", subtitle:"Miles de productos al mejor precio", buttonText:"Explorar", layout:"center", height:"compact" } },
+    { type:"products",   props:{ heading:"Ofertas del día", columns:4, layoutMode:"grid", showHeading:true } },
+    { type:"divider",     props:{ style:"solid" } },
+    { type:"products",   props:{ heading:"Más vendidos", columns:4, layoutMode:"grid", showHeading:true } },
+    { type:"cta",         props:{ heading:"¿Querés vender con nosotros?", body:"Unite a nuestra plataforma", buttonText:"Contactanos", bgColor:"#1e3a5f" } },
+    { type:"socials",     props:{ heading:"Seguinos y contactanos", showInstagram:true, showWhatsapp:true, showFacebook:true, columns:3 } },
+  ],
+};
+
 const DEFAULT_CONFIG: StoreConfig = {
   name:"", tagline:"", description:"",
   primaryColor:"#6366f1", secondaryColor:"#f1f5f9", accentColor:"#f59e0b",
@@ -1689,6 +1763,14 @@ export default function ConfiguracionPage() {
     setIsDirty(true);
   }
 
+  function loadTemplateBlocks(templateId: string) {
+    const defs = TEMPLATE_BLOCKS[templateId] ?? TEMPLATE_BLOCKS["default"];
+    const newBlocks: Block[] = defs.map(b => ({ ...b, id: `${b.type}-${Date.now()}-${Math.random().toString(36).slice(2,6)}` }));
+    setBlocks(newBlocks);
+    setSelectedBlockId(null);
+    setIsDirty(true);
+  }
+
   function moveBlock(id:string, dir:-1|1) {
     setBlocks(p=>{
       const idx=p.findIndex(b=>b.id===id); if(idx<0) return p;
@@ -1763,225 +1845,133 @@ export default function ConfiguracionPage() {
 
           {activeTab==="diseño" ? (
             <>
-              {hasCustomBlocks && (
-                <button
-                  type="button"
-                  onClick={()=>{
-                    setActiveTab("bloques");
-                    window.localStorage.setItem(CONFIG_TAB_KEY, "bloques");
-                  }}
-                  className="w-full rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-left text-xs text-indigo-700 transition-colors hover:bg-indigo-100"
-                >
-                  <span className="font-bold">Tenes contenido personalizado guardado.</span>
-                  <span className="mt-1 block text-indigo-500">Toca aca para editar el diseño armado por bloques.</span>
-                </button>
-              )}
-
-              <Accordion label="Template" icon={Layout} id="template" open={open.includes("template")} toggle={toggle}>
-                <div className="grid grid-cols-2 gap-2">
-                  {TEMPLATES.map(t=>(
-                    <button key={t.id} onClick={()=>set("templateId",t.id)}
-                      className={`relative rounded-xl border-2 p-3 text-left transition-all ${config.templateId===t.id?"border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100":"border-gray-200 hover:border-gray-300"}`}>
-                      <div className="text-2xl mb-1">{t.emoji}</div>
-                      <p className={`font-semibold text-xs ${config.templateId===t.id?"text-indigo-700":"text-gray-900"}`}>{t.name}</p>
-                      <p className="text-gray-400 leading-tight" style={{fontSize:"10px"}}>{t.desc}</p>
-                      {config.templateId===t.id&&(
-                        <div className="absolute top-2 right-2 bg-indigo-500 rounded-full p-0.5">
-                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
-                        </div>
-                      )}
+              {/* ── Modo editor de bloque (cuando se selecciona desde el preview) ── */}
+              {selectedBlockId !== null ? (() => {
+                const selBlock = blocks.find(b => b.id === selectedBlockId);
+                const lib = selBlock ? BLOCK_LIBRARY.find(x => x.type === selBlock.type) : null;
+                if (!selBlock) return null;
+                const selIdx = blocks.findIndex(b => b.id === selectedBlockId);
+                return (
+                  <div className="space-y-3">
+                    <button onClick={() => setSelectedBlockId(null)}
+                      className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-indigo-600 transition-colors">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                      Volver al diseño
                     </button>
-                  ))}
-                </div>
-              </Accordion>
-
-              <Accordion label="Colores y fuente" icon={Palette} id="colores" open={open.includes("colores")} toggle={toggle}>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">Paletas listas</label>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {PALETTES.map(pal=>{
-                      const active = config.primaryColor===pal.primary && config.accentColor===pal.accent;
-                      return (
-                        <button key={pal.name} title={pal.name}
-                          onClick={()=>{set("primaryColor",pal.primary);set("secondaryColor",pal.secondary);set("accentColor",pal.accent);}}
-                          className={`flex flex-col items-center gap-1 p-1.5 rounded-xl border-2 transition-all ${active?"border-indigo-500 bg-indigo-50":"border-gray-100 hover:border-gray-300"}`}>
-                          <div className="flex gap-0.5">
-                            <div className="w-3 h-3 rounded-full" style={{backgroundColor:pal.primary}}/>
-                            <div className="w-3 h-3 rounded-full" style={{backgroundColor:pal.accent}}/>
-                          </div>
-                          <span className="text-gray-500 leading-none text-center" style={{fontSize:"8px"}}>{pal.name}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="border-t border-gray-100 pt-3">
-                  <label className="block text-xs font-medium text-gray-600 mb-2">Personalizar</label>
-                  <ColorPicker label="Color principal" value={config.primaryColor} onChange={v=>set("primaryColor",v)}/>
-                  <ColorPicker label="Color secundario (fondo)" value={config.secondaryColor} onChange={v=>set("secondaryColor",v)}/>
-                  <ColorPicker label="Color de acento (badges)" value={config.accentColor} onChange={v=>set("accentColor",v)}/>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Tipografía</label>
-                  <select value={config.fontFamily} onChange={e=>set("fontFamily",e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-                    {FUENTES.map(f=><option key={f} value={f} style={{fontFamily:f}}>{f}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Fondo</label>
-                  <Chips options={BG_STYLES} value={config.backgroundStyle} onChange={v=>set("backgroundStyle",v)}/>
-                </div>
-              </Accordion>
-
-              <Accordion label="Textos" icon={Type} id="textos" open={open.includes("textos")} toggle={toggle}>
-                {([{label:"Nombre de la tienda",field:"name" as const,ph:"Mi Tienda"},{label:"Eslogan / Tagline",field:"tagline" as const,ph:"¡Moda que te expresa!"}] as const).map(({label,field,ph})=>(
-                  <div key={field}>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">{label}</label>
-                    <input type="text" value={config[field]||""} onChange={e=>set(field,e.target.value)} placeholder={ph}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-                  </div>
-                ))}
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Descripción</label>
-                  <textarea value={config.description} onChange={e=>set("description",e.target.value)} rows={3}
-                    placeholder="Contá de qué se trata tu tienda..."
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Banner principal</label>
-                  <Chips options={HERO_STYLES} value={config.heroStyle} onChange={v=>set("heroStyle",v)}/>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Navbar</label>
-                  <Chips options={NAVBAR_STYLES} value={config.navbarStyle} onChange={v=>set("navbarStyle",v)}/>
-                </div>
-              </Accordion>
-
-              <Accordion label="Imágenes" icon={ImageIcon} id="imagenes" open={open.includes("imagenes")} toggle={toggle}>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">Logo</label>
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50 shrink-0">
-                      {config.logo?<img src={config.logo} className="w-full h-full object-cover" alt=""/>:<ImageIcon className="h-4 w-4 text-gray-300"/>}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <button onClick={()=>logoRef.current?.click()} disabled={uploadingLogo}
-                        className="w-full py-2 border border-gray-200 rounded-xl text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5">
-                        {uploadingLogo?<Loader2 className="h-3 w-3 animate-spin"/>:null}{uploadingLogo?"Subiendo...":"Subir logo"}
-                      </button>
-                      {config.logo&&<button onClick={()=>set("logo","")} className="w-full py-1 text-xs text-red-400 hover:text-red-600 transition-colors">Quitar</button>}
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">Banner / Fondo del hero</label>
-                  {config.banner?(
-                    <div className="relative rounded-xl overflow-hidden">
-                      <img src={config.banner} className="w-full h-20 object-cover" alt=""/>
-                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center gap-2">
-                        <button onClick={()=>bannerRef.current?.click()} className="bg-white text-gray-700 text-xs px-2 py-1 rounded-lg font-medium">Cambiar</button>
-                        <button onClick={()=>set("banner","")} className="bg-red-500 text-white text-xs px-2 py-1 rounded-lg font-medium">Quitar</button>
+                    <div className="bg-white rounded-2xl border border-indigo-200 overflow-hidden">
+                      <div className="px-4 py-3 bg-gradient-to-r from-indigo-50 to-violet-50 border-b border-indigo-100 flex items-center gap-2">
+                        <span className="text-xl">{lib?.emoji}</span>
+                        <div>
+                          <p className="text-xs font-bold text-indigo-700">{lib?.label}</p>
+                          <p className="text-[10px] text-indigo-400 uppercase tracking-wider">Editando bloque</p>
+                        </div>
+                      </div>
+                      <div className="px-3 py-3 space-y-3">
+                        <BlockEditor
+                          block={selBlock}
+                          onChange={props => updateBlock(selBlock.id, props)}
+                          config={config}
+                          categories={productCategories}
+                          subcategoriesByCategory={productSubcategories}
+                          uploadingImage={uploadingBlockImage && selectedBlockId === selBlock.id}
+                          onPickImage={() => { blockImageRef.current?.click(); }}
+                        />
+                        {blockSupportsMovableText(selBlock.type) && (
+                          <button type="button"
+                            onClick={() => updateBlock(selBlock.id, clearViewportTextPositions(selBlock.props, preview))}
+                            className="w-full rounded-xl border border-dashed border-indigo-200 bg-white px-3 py-2 text-xs font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">
+                            Resetear posiciones de texto
+                          </button>
+                        )}
+                        <div className="flex gap-2 border-t border-dashed border-indigo-100 pt-2">
+                          <button onClick={() => moveBlock(selBlock.id, -1)} disabled={selIdx === 0}
+                            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors">
+                            <ChevronUp className="h-3 w-3"/> Subir
+                          </button>
+                          <button onClick={() => moveBlock(selBlock.id, 1)} disabled={selIdx === blocks.length - 1}
+                            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors">
+                            <ChevronDown className="h-3 w-3"/> Bajar
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => { duplicateBlock(selBlock.id); }}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                            <Copy className="h-3 w-3"/> Duplicar
+                          </button>
+                          <button onClick={() => { deleteBlock(selBlock.id); }}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-red-100 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors">
+                            <Trash2 className="h-3 w-3"/> Eliminar
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  ):(
-                    <button onClick={()=>bannerRef.current?.click()} disabled={uploadingBanner}
-                      className="w-full h-20 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-indigo-300 hover:text-indigo-400 transition-colors">
-                      {uploadingBanner?<Loader2 className="h-4 w-4 animate-spin"/>:<ImageIcon className="h-4 w-4"/>}
-                      <span className="text-xs">{uploadingBanner?"Subiendo...":"Subir banner"}</span>
-                    </button>
-                  )}
-                </div>
-              </Accordion>
-
-              <Accordion label="Layout de productos" icon={LayoutGrid} id="layout" open={open.includes("layout")} toggle={toggle}>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">Disposición</label>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {LAYOUTS.map(({id,label,icon:Icon})=>(
-                      <button key={id} onClick={()=>set("productLayout",id)}
-                        className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 transition-all ${config.productLayout===id?"border-indigo-500 bg-indigo-50":"border-gray-200 hover:border-gray-300"}`}>
-                        <Icon className={`h-4 w-4 ${config.productLayout===id?"text-indigo-600":"text-gray-400"}`}/>
-                        <span className={`font-medium ${config.productLayout===id?"text-indigo-700":"text-gray-500"}`} style={{fontSize:"9px"}}>{label}</span>
-                      </button>
-                    ))}
                   </div>
-                </div>
-                <Toggle label="Mostrar precios" value={config.showPrices} onChange={v=>set("showPrices",v)}/>
-                <Toggle label="Mostrar stock" value={config.showStock} onChange={v=>set("showStock",v)}/>
-                <Toggle label="Mostrar estrellas" sub="Rating de productos" value={config.showRatings} onChange={v=>set("showRatings",v)}/>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Moneda</label>
-                  <Chips options={CURRENCIES} value={config.currency} onChange={v=>set("currency",v)}/>
-                </div>
-              </Accordion>
-
-              <Accordion label="Estilo de tarjetas" icon={MousePointer2} id="tarjetas" open={open.includes("tarjetas")} toggle={toggle}>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Bordes</label>
-                  <Chips options={CARD_RADIUS} value={config.cardRadius} onChange={v=>set("cardRadius",v)}/>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Sombra</label>
-                  <Chips options={CARD_SHADOW} value={config.cardShadow} onChange={v=>set("cardShadow",v)}/>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Botones</label>
-                  <Chips options={BTN_STYLES} value={config.buttonStyle} onChange={v=>set("buttonStyle",v)}/>
-                </div>
-              </Accordion>
-
-              <Accordion label="Barra de anuncio" icon={Megaphone} id="anuncio" open={open.includes("anuncio")} toggle={toggle}>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Texto del anuncio</label>
-                  <input type="text" value={config.announcementBar} onChange={e=>set("announcementBar",e.target.value)}
-                    placeholder='🚚 Envío gratis en compras +$50.000'
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-                  <p className="text-gray-400 mt-1" style={{fontSize:"10px"}}>Dejalo vacío para ocultarla</p>
-                </div>
-                <ColorPicker label="Color de la barra" value={config.announcementBarColor} onChange={v=>set("announcementBarColor",v)}/>
-              </Accordion>
-
-              <Accordion label="WhatsApp flotante" icon={Share2} id="redes" open={open.includes("redes")} toggle={toggle}>
-                <p className="text-xs text-gray-500">
-                  Los links de redes del bloque se cargan dentro de cada bloque &quot;Redes / Contacto&quot;. Este ajuste global queda solo para el boton flotante.
-                </p>
-                <div className="border-t border-gray-100 pt-3">
-                  <Toggle label="Botón flotante de WhatsApp" sub="Aparece en el margen de la tienda" value={config.showWhatsappButton} onChange={v=>set("showWhatsappButton",v)}/>
-                  {config.showWhatsappButton&&(
-                    <div className="mt-2">
-                      <label className="block text-xs font-medium text-gray-600 mb-1.5">💬 Número de WhatsApp</label>
-                      <input type="text" value={config.whatsappNumber} onChange={e=>set("whatsappNumber",e.target.value)}
-                        placeholder="5491112345678"
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+                );
+              })() : (
+                /* ── Modo diseño (template + colores) ── */
+                <>
+                  <Accordion label="Template" icon={Layout} id="template" open={open.includes("template")} toggle={toggle}>
+                    <div className="grid grid-cols-2 gap-2">
+                      {TEMPLATES.map(t=>(
+                        <button key={t.id} onClick={()=>{ set("templateId",t.id); if(blocks.length===0) loadTemplateBlocks(t.id); }}
+                          className={`relative rounded-xl border-2 p-3 text-left transition-all ${config.templateId===t.id?"border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100":"border-gray-200 hover:border-gray-300"}`}>
+                          <div className="text-2xl mb-1">{t.emoji}</div>
+                          <p className={`font-semibold text-xs ${config.templateId===t.id?"text-indigo-700":"text-gray-900"}`}>{t.name}</p>
+                          <p className="text-gray-400 leading-tight" style={{fontSize:"10px"}}>{t.desc}</p>
+                          {config.templateId===t.id&&(
+                            <div className="absolute top-2 right-2 bg-indigo-500 rounded-full p-0.5">
+                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            </div>
+                          )}
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
-              </Accordion>
+                    <button onClick={() => loadTemplateBlocks(config.templateId)}
+                      className="w-full mt-1 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-200 py-2.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors">
+                      <Layers className="h-3.5 w-3.5"/> Cargar bloques de este template
+                    </button>
+                  </Accordion>
 
-              <Accordion label="Footer" icon={CreditCard} id="footer" open={open.includes("footer")} toggle={toggle}>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Texto del footer</label>
-                  <textarea value={config.footerText} onChange={e=>set("footerText",e.target.value)} rows={3}
-                    placeholder="© 2025 Mi Tienda · Buenos Aires, Argentina"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
-                </div>
-              </Accordion>
-
-              <Accordion label="SEO / Google" icon={Search} id="seo" open={open.includes("seo")} toggle={toggle}>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Título para Google</label>
-                  <input type="text" value={config.seoTitle||""} onChange={e=>set("seoTitle",e.target.value)}
-                    placeholder="Mi Tienda - Ropa y joyas online"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Descripción para Google</label>
-                  <textarea value={config.seoDescription||""} onChange={e=>set("seoDescription",e.target.value)} rows={3}
-                    placeholder="Encontrá las mejores prendas y accesorios."
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
-                </div>
-              </Accordion>
+                  <Accordion label="Colores y fuente" icon={Palette} id="colores" open={open.includes("colores")} toggle={toggle}>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">Paletas listas</label>
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {PALETTES.map(pal=>{
+                          const active = config.primaryColor===pal.primary && config.accentColor===pal.accent;
+                          return (
+                            <button key={pal.name} title={pal.name}
+                              onClick={()=>{set("primaryColor",pal.primary);set("secondaryColor",pal.secondary);set("accentColor",pal.accent);}}
+                              className={`flex flex-col items-center gap-1 p-1.5 rounded-xl border-2 transition-all ${active?"border-indigo-500 bg-indigo-50":"border-gray-100 hover:border-gray-300"}`}>
+                              <div className="flex gap-0.5">
+                                <div className="w-3 h-3 rounded-full" style={{backgroundColor:pal.primary}}/>
+                                <div className="w-3 h-3 rounded-full" style={{backgroundColor:pal.accent}}/>
+                              </div>
+                              <span className="text-gray-500 leading-none text-center" style={{fontSize:"8px"}}>{pal.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="border-t border-gray-100 pt-3">
+                      <label className="block text-xs font-medium text-gray-600 mb-2">Personalizar</label>
+                      <ColorPicker label="Color principal" value={config.primaryColor} onChange={v=>set("primaryColor",v)}/>
+                      <ColorPicker label="Color secundario (fondo)" value={config.secondaryColor} onChange={v=>set("secondaryColor",v)}/>
+                      <ColorPicker label="Color de acento (badges)" value={config.accentColor} onChange={v=>set("accentColor",v)}/>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1.5">Tipografía</label>
+                      <select value={config.fontFamily} onChange={e=>set("fontFamily",e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                        {FUENTES.map(f=><option key={f} value={f} style={{fontFamily:f}}>{f}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1.5">Fondo</label>
+                      <Chips options={BG_STYLES} value={config.backgroundStyle} onChange={v=>set("backgroundStyle",v)}/>
+                    </div>
+                  </Accordion>
+                </>
+              )}
             </>
           ) : (
             /* ── BLOQUES TAB ── */
@@ -2133,35 +2123,8 @@ export default function ConfiguracionPage() {
 
             <div className="bg-gray-900 flex items-start justify-center p-4 overflow-auto" style={{minHeight:"620px"}}>
               <div ref={previewScrollRef} className={`${previewW} relative transition-all duration-300 bg-white rounded-lg overflow-hidden shadow-2xl`} style={{maxHeight:"620px",overflowY:"auto"}}>
-                {activeTab==="diseño" ? (
-                  <div className="relative group/preview">
-                    <StorePreview config={config}/>
-                    {/* Panel flotante de secciones editables */}
-                    <div className="absolute top-3 right-3 flex flex-col gap-1.5 opacity-0 group-hover/preview:opacity-100 transition-opacity duration-200">
-                      {[
-                        ...(config.announcementBar ? [{ section: "anuncio" as DesignSection, label: "Anuncio", emoji: "📣", color: "#f59e0b" }] : []),
-                        { section: "template" as DesignSection, label: "Template", emoji: "🎨", color: "#6366f1" },
-                        { section: "colores" as DesignSection, label: "Colores", emoji: "🎨", color: "#8b5cf6" },
-                        { section: "imagenes" as DesignSection, label: "Imágenes", emoji: "🖼️", color: "#ec4899" },
-                        { section: "textos" as DesignSection, label: "Textos", emoji: "✏️", color: "#0ea5e9" },
-                        { section: "layout" as DesignSection, label: "Productos", emoji: "🛍️", color: "#10b981" },
-                        { section: "tarjetas" as DesignSection, label: "Tarjetas", emoji: "🃏", color: "#f97316" },
-                        { section: "footer" as DesignSection, label: "Footer", emoji: "📄", color: "#6b7280" },
-                      ].map(z => (
-                        <button
-                          key={z.section}
-                          onClick={() => focusSection(z.section)}
-                          title={`Editar ${z.label}`}
-                          style={{ background: z.color }}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-white text-[11px] font-bold shadow-lg hover:scale-105 active:scale-95 transition-transform whitespace-nowrap"
-                        >
-                          <span>{z.emoji}</span>
-                          <span>{z.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
+                {/* Blocks preview — shared between Diseño and Contenido tabs */}
+                {true ? (
                   /* Blocks preview */
                   <div style={{fontFamily:config.fontFamily,minHeight:"400px"}}>
                     {/* Mini navbar */}
@@ -2220,8 +2183,8 @@ export default function ConfiguracionPage() {
                     </div>
 
                   </div>
-                )}
-                {activeTab==="bloques" && config.showWhatsappButton && config.whatsappNumber && (
+                ) : null}
+                {config.showWhatsappButton && config.whatsappNumber && (
                   <a
                     href={`https://wa.me/${config.whatsappNumber.replace(/\D/g, "")}`}
                     className="sticky bottom-4 ml-auto mr-4 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg"
