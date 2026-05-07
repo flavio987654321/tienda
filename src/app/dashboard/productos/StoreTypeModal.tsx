@@ -18,6 +18,7 @@ export default function StoreTypeModal({
   const [selected, setSelected] = useState<string | null>(currentType ?? null);
   const [wholesale, setWholesale] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const selectedConfig = STORE_TYPES.find((t) => t.id === selected);
 
@@ -45,6 +46,9 @@ export default function StoreTypeModal({
       }),
     });
 
+    setSaving(false);
+    setSaved(true);
+    await new Promise((r) => setTimeout(r, 700));
     router.refresh();
     if (isEditing) onClose?.();
   }
@@ -81,7 +85,9 @@ export default function StoreTypeModal({
                   key={t.id}
                   onClick={() => { setSelected(t.id); setWholesale(false); }}
                   className={`relative flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 text-left transition-all duration-200 ${
-                    active
+                    active && saved
+                      ? "border-green-500 bg-green-50 shadow-md scale-[1.03] animate-success-flash"
+                      : active
                       ? "border-indigo-500 bg-indigo-50 shadow-md scale-[1.03]"
                       : "border-gray-100 hover:border-gray-300 bg-gray-50 hover:scale-[1.01]"
                   }`}
@@ -130,10 +136,16 @@ export default function StoreTypeModal({
           {/* Confirmar */}
           <button
             onClick={confirm}
-            disabled={!selected || saving}
-            className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-semibold hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            disabled={!selected || saving || saved}
+            className={`w-full py-3.5 rounded-2xl font-semibold disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2 ${
+              saved
+                ? "bg-green-500 text-white scale-[1.02] shadow-lg"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40"
+            }`}
           >
-            {saving ? (
+            {saved ? (
+              <><Check className="h-4 w-4" /> ¡Guardado!</>
+            ) : saving ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
             ) : (
               "Confirmar y continuar →"
