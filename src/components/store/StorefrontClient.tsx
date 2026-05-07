@@ -24,7 +24,9 @@ function BannerCarouselBlock({ block, primaryColor, fontFamily }: { block: any; 
   const slides: any[] = Array.isArray(p.slides) ? p.slides : [];
   const [idx, setIdx] = useState(0);
   const HEIGHTS: Record<string,number> = { sm:300, md:420, lg:560, xl:700 };
-  const h = HEIGHTS[String(p.height||"md")] || 420;
+  const baseH = p.blockMinHeight && Number(p.blockMinHeight) > 0
+    ? Number(p.blockMinHeight)
+    : (HEIGHTS[String(p.height||"md")] || 420);
   const cur = slides[idx % Math.max(1, slides.length)] || {};
   const overlayOpacity = Number(p.overlayOpacity ?? 35) / 100;
   const textColor = String(p.textColor || "#ffffff");
@@ -37,7 +39,7 @@ function BannerCarouselBlock({ block, primaryColor, fontFamily }: { block: any; 
   }, [p.autoplay, p.speed, slides.length]);
 
   return (
-    <div style={{ position:"relative", height:`${h}px`, overflow:"hidden", fontFamily, background:"#1f2937", userSelect:"none" }}>
+    <div style={{ position:"relative", width:"100%", height:`${baseH}px`, overflow:"hidden", fontFamily, background:"#1f2937", userSelect:"none" }}>
       {cur.image && <img src={cur.image} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:`${cur.focalX??50}% ${cur.focalY??50}%`, transition:"opacity 0.4s" }}/>}
       {!cur.image && <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,#4f46e5,#7c3aed)" }}/>}
       <div style={{ position:"absolute", inset:0, background:String(p.overlayColor||"#000000"), opacity:overlayOpacity }}/>
