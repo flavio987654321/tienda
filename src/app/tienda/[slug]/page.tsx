@@ -143,6 +143,7 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
         showWhatsappButton: store.showWhatsappButton,
         footerText: store.footerText,
         currency: store.currency,
+        tipoTienda: (store as any).tipoTienda ?? null,
         owner: store.owner,
         products: store.products.map((product) => ({
           id: product.id,

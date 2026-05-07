@@ -26,6 +26,7 @@ export interface StoreTypeConfig {
   hideVariants: boolean;
   hideTags: boolean;
   defaultVariantName: string;
+  checkoutMode: "cart" | "inquiry";
   namePlaceholder: string;
   variantValuePlaceholder: string;
   tagsPlaceholder: string;
@@ -43,6 +44,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     supportsCondicion: false,
     hideVariants: false,
     hideTags: false,
+    checkoutMode: "cart" as const,
     defaultVariantName: "Talle",
     variantValuePlaceholder: "S, M, L, XL",
     namePlaceholder: "Ej: Remera oversize negra talle M",
@@ -73,6 +75,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     supportsCondicion: true,
     hideVariants: true,
     hideTags: true,
+    checkoutMode: "inquiry" as const,
     defaultVariantName: "Color",
     variantValuePlaceholder: "Rojo, Blanco, Negro",
     namePlaceholder: "Ej: Toyota Corolla 2022 automático",
@@ -102,6 +105,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     supportsCondicion: true,
     hideVariants: true,
     hideTags: true,
+    checkoutMode: "cart" as const,
     defaultVariantName: "Almacenamiento",
     variantValuePlaceholder: "128GB, 256GB, 512GB",
     namePlaceholder: "Ej: iPhone 15 Pro 256GB",
@@ -130,6 +134,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     supportsCondicion: false,
     hideVariants: false,
     hideTags: false,
+    checkoutMode: "cart" as const,
     defaultVariantName: "Tamaño",
     variantValuePlaceholder: "Chico, Mediano, Grande",
     namePlaceholder: "Ej: Mesa de madera escandinava 120cm",
@@ -158,6 +163,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     supportsCondicion: false,
     hideVariants: false,
     hideTags: false,
+    checkoutMode: "cart" as const,
     defaultVariantName: "Peso/Tamaño",
     variantValuePlaceholder: "500g, 1kg, 2kg",
     namePlaceholder: "Ej: Granola artesanal con frutas 500g",
@@ -186,6 +192,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     supportsCondicion: false,
     hideVariants: false,
     hideTags: false,
+    checkoutMode: "cart" as const,
     defaultVariantName: "Tono",
     variantValuePlaceholder: "Claro, Medio, Oscuro",
     namePlaceholder: "Ej: Sérum vitamina C antiedad 30ml",
@@ -213,6 +220,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     supportsCondicion: false,
     hideVariants: false,
     hideTags: false,
+    checkoutMode: "cart" as const,
     defaultVariantName: "Talle",
     variantValuePlaceholder: "S, M, L, XL",
     namePlaceholder: "Ej: Zapatillas running Nike Air talle 42",
@@ -239,6 +247,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     supportsCondicion: false,
     hideVariants: false,
     hideTags: false,
+    checkoutMode: "cart" as const,
     defaultVariantName: "Tamaño",
     variantValuePlaceholder: "Pequeño, Mediano, Grande",
     namePlaceholder: "Ej: Collar acolchado para perro mediano",
@@ -264,6 +273,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     supportsCondicion: false,
     hideVariants: false,
     hideTags: false,
+    checkoutMode: "cart" as const,
     defaultVariantName: "Formato",
     variantValuePlaceholder: "Físico, Digital, Tapa dura",
     namePlaceholder: "Ej: Cien años de soledad - Gabriel García Márquez",
@@ -290,6 +300,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     supportsCondicion: false,
     hideVariants: false,
     hideTags: false,
+    checkoutMode: "cart" as const,
     defaultVariantName: "Variante",
     variantValuePlaceholder: "Opción 1, Opción 2",
     namePlaceholder: "Ej: Nombre del producto",

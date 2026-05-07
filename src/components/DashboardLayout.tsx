@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag } from "lucide-react";
+import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 
 const navItems = [
@@ -142,9 +142,14 @@ export default function DashboardLayout({
             <LogOut className="h-4 w-4" />
             Cerrar sesión
           </button>
-          <div className="px-3 pt-2">
-            <p className="text-xs font-medium text-gray-700 truncate">{userName}</p>
-            <p className="text-xs text-gray-400 truncate">{userEmail}</p>
+          <div className="px-3 pt-2 flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-gray-700 truncate">{userName}</p>
+              <p className="text-xs text-gray-400 truncate">{userEmail}</p>
+            </div>
+            <Link href="/dashboard/perfil" title="Mi perfil" className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors">
+              <UserCircle className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </aside>

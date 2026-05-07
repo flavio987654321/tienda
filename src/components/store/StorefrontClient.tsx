@@ -23,6 +23,7 @@ import {
   Heart,
   Loader2,
   Mail,
+  MessageCircle,
   Minus,
   Package,
   Plus,
@@ -34,6 +35,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import { getStoreType } from "@/lib/storeTypes";
 
 type Variant = {
   id: string;
@@ -86,6 +88,7 @@ type Store = {
   tiktokUrl: string | null;
   whatsappNumber: string | null;
   showWhatsappButton: boolean;
+  tipoTienda: string | null;
   footerText: string | null;
   currency: string;
   pageBlocks: string;
@@ -415,6 +418,15 @@ export default function StorefrontClient({
   const firstProducts = store.products.slice(0, 3).map((product) => ({ product, image: parseImages(product.images)[0] ?? null }));
   const heroImage = store.banner || firstProducts[0]?.image || null;
   const textColor = readableText(store.primaryColor);
+  const isInquiry = getStoreType(store.tipoTienda || "GENERAL").checkoutMode === "inquiry";
+
+  function consultarWhatsApp(product: Product) {
+    const num = (store.whatsappNumber || "").replace(/\D/g, "");
+    if (!num) return;
+    const precio = money(product.price, store.currency);
+    const msg = encodeURIComponent(`Hola! Me interesa: ${product.name} - ${precio}. ¿Está disponible?`);
+    window.open(`https://wa.me/${num}?text=${msg}`, "_blank");
+  }
   const isDark = store.templateId === "tech";
   const isKids = store.templateId === "kids";
   const isSplit = ["fashion", "luxury", "boutique"].includes(store.templateId);
@@ -807,16 +819,29 @@ export default function StorefrontClient({
             {product.description && <p className="mt-1 line-clamp-2 text-sm text-gray-500">{product.description}</p>}
             {store.showPrices && <p className="mt-2 text-lg font-black" style={{ color: store.primaryColor }}>{money(product.price, store.currency)}</p>}
             {store.showStock && product.variants.length > 0 && <p className={`mt-1 text-xs font-semibold ${available ? "text-emerald-600" : "text-red-500"}`}>{available ? `${totalStock} disponibles` : "Sin stock"}</p>}
-            <button
-              type="button"
-              disabled={!available}
-              onClick={() => addToCart(product)}
-              className="mt-auto flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-black text-white transition disabled:opacity-40"
-              style={{ backgroundColor: store.primaryColor }}
-            >
-              <ShoppingBag className="h-4 w-4" />
-              {!available ? "Sin stock" : "¡Lo quiero!"}
-            </button>
+            {isInquiry ? (
+              <button
+                type="button"
+                onClick={() => consultarWhatsApp(product)}
+                disabled={!store.whatsappNumber}
+                className="mt-auto flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-black text-white transition disabled:opacity-40"
+                style={{ backgroundColor: "#25D366" }}
+              >
+                <MessageCircle className="h-4 w-4" />
+                Consultar
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={!available}
+                onClick={() => addToCart(product)}
+                className="mt-auto flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-black text-white transition disabled:opacity-40"
+                style={{ backgroundColor: store.primaryColor }}
+              >
+                <ShoppingBag className="h-4 w-4" />
+                {!available ? "Sin stock" : "¡Lo quiero!"}
+              </button>
+            )}
           </div>
         </article>
       );
@@ -869,20 +894,33 @@ export default function StorefrontClient({
             <p className={`mt-1 text-xs font-semibold ${available ? "text-emerald-600" : "text-red-500"}`}>{available ? `${totalStock} disponibles` : "Sin stock"}</p>
           )}
           {product.variants.length > 0 && <p className={`mt-1 text-xs ${isDark ? "text-gray-400" : "text-gray-400"}`}>{product.variants.map((v) => v.value).join(", ")}</p>}
-          <button
-            type="button"
-            disabled={!available}
-            onClick={() => addToCart(product)}
-            className={`mt-auto flex w-full items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
-            style={{
-              backgroundColor: store.buttonStyle === "outline" ? "transparent" : store.primaryColor,
-              borderColor: store.primaryColor,
-              color: store.buttonStyle === "outline" ? store.primaryColor : textColor,
-            }}
-          >
-            <ShoppingBag className="h-4 w-4" />
-            {!available ? "Sin stock" : "Agregar"}
-          </button>
+          {isInquiry ? (
+            <button
+              type="button"
+              onClick={() => consultarWhatsApp(product)}
+              disabled={!store.whatsappNumber}
+              className={`mt-auto flex w-full items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
+              style={{ backgroundColor: "#25D366", color: "#fff" }}
+            >
+              <MessageCircle className="h-4 w-4" />
+              Consultar
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={!available}
+              onClick={() => addToCart(product)}
+              className={`mt-auto flex w-full items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
+              style={{
+                backgroundColor: store.buttonStyle === "outline" ? "transparent" : store.primaryColor,
+                borderColor: store.primaryColor,
+                color: store.buttonStyle === "outline" ? store.primaryColor : textColor,
+              }}
+            >
+              <ShoppingBag className="h-4 w-4" />
+              {!available ? "Sin stock" : "Agregar"}
+            </button>
+          )}
         </div>
       </article>
     );
@@ -1312,15 +1350,17 @@ export default function StorefrontClient({
               {store.facebookUrl && <a href={socialUrl("facebook", store.facebookUrl)} target="_blank" rel="noreferrer" className="font-bold">Facebook</a>}
               {store.tiktokUrl && <a href={socialUrl("tiktok", store.tiktokUrl)} target="_blank" rel="noreferrer" className="font-bold">TikTok</a>}
             </div>
-            <button
-              type="button"
-              onClick={() => setOpenCart(true)}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-bold ${buttonRadius}`}
-              style={{ backgroundColor: store.primaryColor, color: textColor }}
-            >
-              <ShoppingBag className="h-4 w-4" />
-              {cartCount}
-            </button>
+            {!isInquiry && (
+              <button
+                type="button"
+                onClick={() => setOpenCart(true)}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-bold ${buttonRadius}`}
+                style={{ backgroundColor: store.primaryColor, color: textColor }}
+              >
+                <ShoppingBag className="h-4 w-4" />
+                {cartCount}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -1345,19 +1385,21 @@ export default function StorefrontClient({
         </a>
       )}
 
-      <button
-        type="button"
-        onClick={() => setOpenCart(true)}
-        className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-gray-950 px-4 py-3 text-sm font-semibold text-white shadow-xl sm:px-5"
-      >
-        <ShoppingBag className="h-5 w-5" />
-        <span className="hidden sm:inline">Carrito ({cartCount})</span>
-        {cartCount > 0 && (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-gray-950 sm:hidden">
-            {cartCount}
-          </span>
-        )}
-      </button>
+      {!isInquiry && (
+        <button
+          type="button"
+          onClick={() => setOpenCart(true)}
+          className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-gray-950 px-4 py-3 text-sm font-semibold text-white shadow-xl sm:px-5"
+        >
+          <ShoppingBag className="h-5 w-5" />
+          <span className="hidden sm:inline">Carrito ({cartCount})</span>
+          {cartCount > 0 && (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-gray-950 sm:hidden">
+              {cartCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {affiliateId && (
         <div className="fixed bottom-5 left-5 z-20 rounded-full bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 shadow-sm">
@@ -1514,16 +1556,29 @@ export default function StorefrontClient({
                 </div>
               )}
 
-              <button
-                type="button"
-                disabled={!available}
-                onClick={() => { addToCart(selectedProduct); closeProduct(); }}
-                className={`mt-5 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
-                style={{ backgroundColor: modalCfg.accentColor || store.primaryColor, color: textColor }}
-              >
-                <ShoppingBag className="h-4 w-4" />
-                {available ? (modalCfg.buttonText || "Agregar al carrito") : "Sin stock"}
-              </button>
+              {isInquiry ? (
+                <button
+                  type="button"
+                  onClick={() => { consultarWhatsApp(selectedProduct); closeProduct(); }}
+                  disabled={!store.whatsappNumber}
+                  className={`mt-5 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
+                  style={{ backgroundColor: "#25D366", color: "#fff" }}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Consultar por WhatsApp
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!available}
+                  onClick={() => { addToCart(selectedProduct); closeProduct(); }}
+                  className={`mt-5 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
+                  style={{ backgroundColor: modalCfg.accentColor || store.primaryColor, color: textColor }}
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  {available ? (modalCfg.buttonText || "Agregar al carrito") : "Sin stock"}
+                </button>
+              )}
 
               {/* Tabla de talles auto-generada */}
               {modalCfg.sizeChart && (() => {
@@ -1732,7 +1787,7 @@ export default function StorefrontClient({
         );
       })()}
 
-      {openCart && (
+      {openCart && !isInquiry && (
         <div className="fixed inset-0 z-40">
           <button type="button" className="absolute inset-0 bg-black/40" onClick={() => setOpenCart(false)} />
           <aside className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white text-gray-950 shadow-2xl">
