@@ -1857,8 +1857,9 @@ export default function ConfiguracionPage() {
                       <div
                         key={b.id}
                         ref={(el) => { if (el) blockItemRefs.current.set(b.id, el); else blockItemRefs.current.delete(b.id); }}
-                        draggable
+                        draggable={!isSel}
                         onDragStart={(e) => {
+                          if (isSel) { e.preventDefault(); return; }
                           e.dataTransfer.effectAllowed = "move";
                           e.dataTransfer.setData("blockIndex", String(idx));
                         }}
