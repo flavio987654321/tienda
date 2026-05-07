@@ -142,7 +142,7 @@ function Accordion({ label, icon:Icon, id, open, toggle, children }: {
   label:string; icon:React.ComponentType<{className?:string}>; id:DesignSection; open:boolean; toggle:(id:DesignSection)=>void; children:React.ReactNode
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+    <div data-section={id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
       <button onClick={()=>toggle(id)} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 bg-indigo-50 rounded-lg"><Icon className="h-3.5 w-3.5 text-indigo-600"/></div>
@@ -930,6 +930,55 @@ function MovableTextStage({
 }
 
 /* ─── Block renderer for preview ─── */
+function DesignZone({ zone, onClick }: {
+  zone: { label: string; emoji: string; color: string; top: number; height: number };
+  onClick: () => void;
+}) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        position: "absolute",
+        top: zone.top,
+        left: 0,
+        right: 0,
+        height: zone.height,
+        cursor: "pointer",
+        border: hov ? `2px solid ${zone.color}` : "2px solid transparent",
+        background: hov ? `${zone.color}14` : "transparent",
+        transition: "all 0.15s ease",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 10,
+      }}
+    >
+      {hov && (
+        <div style={{
+          padding: "4px 12px",
+          borderRadius: "999px",
+          background: zone.color,
+          color: "white",
+          fontSize: "11px",
+          fontWeight: 700,
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+          pointerEvents: "none",
+        }}>
+          <span>{zone.emoji}</span>
+          <span>{zone.label}</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{width:"10px",height:"10px"}}><path d="m11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 2 2L12 13H9v-3z"/></svg>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown, onDuplicate, onDelete, onChangeProps, isFirst, isLast, previewProducts = [], viewport, onProductClick }: {
   block:Block; config:StoreConfig; selected:boolean;
   onSelect:()=>void; onMoveUp:()=>void; onMoveDown:()=>void; onDuplicate:()=>void; onDelete:()=>void; onChangeProps:(props:Record<string,any>)=>void;
@@ -1507,6 +1556,7 @@ export default function ConfiguracionPage() {
   const [showBlockLibrary, setShowBlockLibrary] = useState(false);
   const previewScrollRef = useRef<HTMLDivElement>(null);
   const blockItemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const editorPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(()=>{
     fetch("/api/productos")
@@ -1575,6 +1625,14 @@ export default function ConfiguracionPage() {
     const el = blockItemRefs.current.get(selectedBlockId);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [selectedBlockId]);
+
+  function focusSection(section: DesignSection) {
+    setOpen(p => p.includes(section) ? p : [...p, section]);
+    requestAnimationFrame(() => {
+      const el = editorPanelRef.current?.querySelector(`[data-section="${section}"]`);
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   const set = <K extends keyof StoreConfig>(k:K,v:StoreConfig[K]) => {
     setConfig(p=>({...p,[k]:v}));
@@ -1736,7 +1794,7 @@ export default function ConfiguracionPage() {
 
       <div className="flex gap-5 items-start">
         {/* ── EDITOR PANEL ── */}
-        <div className="w-72 shrink-0 space-y-2 max-h-[calc(100vh-130px)] overflow-y-auto pr-1 pb-4">
+        <div ref={editorPanelRef} className="w-72 shrink-0 space-y-2 max-h-[calc(100vh-130px)] overflow-y-auto pr-1 pb-4">
 
           {/* Tab switcher */}
           <div className="flex bg-gray-100 rounded-xl p-1 mb-2">
@@ -2124,7 +2182,30 @@ export default function ConfiguracionPage() {
             <div className="bg-gray-900 flex items-start justify-center p-4 overflow-auto" style={{minHeight:"620px"}}>
               <div ref={previewScrollRef} className={`${previewW} relative transition-all duration-300 bg-white rounded-lg overflow-hidden shadow-2xl`} style={{maxHeight:"620px",overflowY:"auto"}}>
                 {activeTab==="diseño" ? (
-                  <StorePreview config={config}/>
+                  <div className="relative group/preview">
+                    <StorePreview config={config}/>
+                    {/* Overlay interactivo por secciones */}
+                    {(() => {
+                      const annH = config.announcementBar ? 32 : 0;
+                      const navH = 50;
+                      const heroH = config.heroStyle === "full" ? 340 : config.heroStyle === "compact" ? 190 : 0;
+                      const zones: { section: DesignSection; label: string; emoji: string; color: string; top: number; height: number }[] = [
+                        ...(config.announcementBar ? [{ section: "anuncio" as DesignSection, label: "Barra de anuncio", emoji: "📣", color: "#f59e0b", top: 0, height: annH }] : []),
+                        { section: "template", label: "Template & Navbar", emoji: "🎨", color: "#6366f1", top: annH, height: navH },
+                        ...(heroH > 0 ? [{ section: "imagenes" as DesignSection, label: "Banner / Hero", emoji: "🖼️", color: "#ec4899", top: annH + navH, height: heroH }] : []),
+                        { section: "textos", label: "Textos", emoji: "✏️", color: "#8b5cf6", top: annH + navH + heroH, height: 60 },
+                        { section: "layout", label: "Productos", emoji: "🛍️", color: "#10b981", top: annH + navH + heroH + 60, height: 260 },
+                        { section: "footer", label: "Footer", emoji: "📄", color: "#6b7280", top: annH + navH + heroH + 60 + 260, height: 50 },
+                      ];
+                      return (
+                        <div className="absolute inset-0 opacity-0 group-hover/preview:opacity-100 transition-opacity duration-200 pointer-events-none group-hover/preview:pointer-events-auto">
+                          {zones.map(z => (
+                            <DesignZone key={z.section} zone={z} onClick={() => focusSection(z.section)} />
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 ) : (
                   /* Blocks preview */
                   <div style={{fontFamily:config.fontFamily,minHeight:"400px"}}>
