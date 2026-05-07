@@ -561,14 +561,14 @@ function BlockEditor({
   if (block.type==="banner-group") {
     const slides: any[] = Array.isArray(p.slides) ? p.slides : [];
     const updSlide = (idx:number, key:string, val:any) => upd("slides", slides.map((s:any,i:number)=>i===idx?{...s,[key]:val}:s));
-    return <div className="space-y-4">
+    return <div className="space-y-4 w-full min-w-0">
       {/* General */}
       <div className="space-y-3">
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Alto del banner</label>
           <Chips options={[{id:"sm",label:"300px"},{id:"md",label:"420px"},{id:"lg",label:"560px"},{id:"xl",label:"700px"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
         </div>
-        <div className="flex gap-3">
+        <div className="grid grid-cols-3 gap-2">
           <Toggle label="Autoplay" value={p.autoplay!==false} onChange={v=>upd("autoplay",v)}/>
           <Toggle label="Puntos" value={p.showDots!==false} onChange={v=>upd("showDots",v)}/>
           <Toggle label="Flechas" value={p.showArrows!==false} onChange={v=>upd("showArrows",v)}/>
@@ -1127,11 +1127,12 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
 
   useEffect(() => {
     if (block.type !== "banner-group") return;
+    if (selected) return; // pausar cuando está siendo editado
     const slides = Array.isArray(block.props.slides) ? block.props.slides : [];
     if (block.props.autoplay === false || slides.length <= 1) return;
     const t = setInterval(() => setCarouselIdx(i => (i + 1) % slides.length), (Number(block.props.speed) || 4) * 1000);
     return () => clearInterval(t);
-  }, [block.type, block.props.autoplay, block.props.speed, (block.props.slides as any[])?.length]);
+  }, [block.type, block.props.autoplay, block.props.speed, (block.props.slides as any[])?.length, selected]);
 
   useEffect(() => {
     if (!isResizing || !resizeRef.current) return;
@@ -1481,7 +1482,8 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const fy = slide.focalY ?? 50;
 
       const handleFocalClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!selected || !slide.image) return;
+        e.stopPropagation();
+        if (!slide.image) return;
         const rect = e.currentTarget.getBoundingClientRect();
         const newFx = Math.round(((e.clientX - rect.left) / rect.width) * 100);
         const newFy = Math.round(((e.clientY - rect.top) / rect.height) * 100);
