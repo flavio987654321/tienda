@@ -627,7 +627,7 @@ function BlockEditor({
             {/* Focal point hint */}
             {slide.image && (
               <p className="text-[11px] text-indigo-500 font-medium bg-indigo-50 rounded-xl px-3 py-2">
-                Hacé clic en la imagen de la preview para mover el foco de la foto
+                Usá el botón <strong>📷 Mover foto</strong> en la preview para reposicionar la imagen
               </p>
             )}
             <div>
@@ -1124,6 +1124,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   const [draggingHeight, setDraggingHeight] = useState<number | null>(null);
   const [hovered, setHovered] = useState(false);
   const [carouselIdx, setCarouselIdx] = useState(0);
+  const [focalMode, setFocalMode] = useState(false);
 
   useEffect(() => {
     if (block.type !== "banner-group") return;
@@ -1493,7 +1494,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
 
       return (
         <div style={{position:"relative",height:h,overflow:"hidden",fontFamily:c.fontFamily,background:"#1f2937",userSelect:"none"}}>
-          {slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:`${fx}% ${fy}%`,transition:"opacity 0.4s"}}/>}
+          {slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:`${fx}% ${fy}%`,transition:"object-position 0.15s"}}/>}
           {!slide.image && <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>}
           <div style={{position:"absolute",inset:0,background:p.overlayColor||"#000000",opacity:overlayOpacity}}/>
           <div style={{position:"relative",height:"100%",display:"flex",flexDirection:"column",alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start",justifyContent:"center",padding:"24px 32px",textAlign:textAlign as React.CSSProperties["textAlign"],gap:"10px"}}>
@@ -1501,19 +1502,26 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
             {slide.subtitle && <p style={{fontSize:"14px",color:textColor,opacity:0.9,margin:0,maxWidth:"480px"}}>{slide.subtitle}</p>}
             {slide.buttonText && <button style={{background:c.primaryColor,color:"#fff",padding:"9px 20px",borderRadius:"999px",fontSize:"12px",fontWeight:800,border:"none",cursor:"inherit",marginTop:"4px"}}>{slide.buttonText}</button>}
           </div>
-          {/* Focal point interactive overlay — only when selected and image present */}
-          {selected && slide.image && (
-            <div onClick={handleFocalClick} style={{position:"absolute",inset:0,cursor:"crosshair",zIndex:5}}>
-              {/* crosshair lines */}
+
+          {/* Focal mode overlay — solo activo cuando el usuario lo habilitó */}
+          {focalMode && slide.image && (
+            <div onClick={handleFocalClick} style={{position:"absolute",inset:0,cursor:"crosshair",zIndex:8}}>
               <div style={{position:"absolute",left:`${fx}%`,top:0,bottom:0,width:"1px",background:"rgba(255,255,255,0.5)",pointerEvents:"none"}}/>
               <div style={{position:"absolute",top:`${fy}%`,left:0,right:0,height:"1px",background:"rgba(255,255,255,0.5)",pointerEvents:"none"}}/>
-              {/* focal dot */}
-              <div style={{position:"absolute",left:`${fx}%`,top:`${fy}%`,transform:"translate(-50%,-50%)",width:"18px",height:"18px",borderRadius:"50%",border:"2.5px solid #fff",boxShadow:"0 0 0 2px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)",pointerEvents:"none",background:"rgba(99,102,241,0.6)"}}/>
-              {/* hint */}
-              <div style={{position:"absolute",top:"8px",left:0,right:0,display:"flex",justifyContent:"center",pointerEvents:"none"}}>
-                <span style={{background:"rgba(0,0,0,0.55)",color:"#fff",fontSize:"10px",fontWeight:600,padding:"3px 10px",borderRadius:"999px",backdropFilter:"blur(4px)"}}>Hacé clic para mover el foco de la foto</span>
+              <div style={{position:"absolute",left:`${fx}%`,top:`${fy}%`,transform:"translate(-50%,-50%)",width:"18px",height:"18px",borderRadius:"50%",border:"2.5px solid #fff",boxShadow:"0 0 0 2px rgba(0,0,0,0.6)",pointerEvents:"none",background:"rgba(99,102,241,0.7)"}}/>
+              <div style={{position:"absolute",bottom:"14px",left:0,right:0,display:"flex",justifyContent:"center",gap:"8px",pointerEvents:"none"}}>
+                <span style={{background:"rgba(0,0,0,0.6)",color:"#fff",fontSize:"10px",fontWeight:600,padding:"4px 12px",borderRadius:"999px"}}>Hacé clic donde querés centrar la foto</span>
               </div>
             </div>
+          )}
+
+          {/* Botón "Mover foto" — visible solo cuando está seleccionado y hay imagen */}
+          {selected && slide.image && (
+            <button
+              onClick={(e)=>{e.stopPropagation();setFocalMode(f=>!f);}}
+              style={{position:"absolute",bottom:"8px",right:"8px",zIndex:9,background:focalMode?"#6366f1":"rgba(0,0,0,0.55)",color:"#fff",border:"none",borderRadius:"999px",padding:"5px 12px",fontSize:"11px",fontWeight:700,cursor:"pointer",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",gap:"5px"}}>
+              {focalMode ? "✓ Listo" : "📷 Mover foto"}
+            </button>
           )}
           {/* Dots */}
           {p.showDots!==false && slides.length > 1 && (
