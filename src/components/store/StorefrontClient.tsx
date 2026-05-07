@@ -1518,7 +1518,7 @@ export default function StorefrontClient({
         );
 
         const content = (
-          <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
+          <div className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
             <div className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <h2 className="text-xl font-black text-gray-950">{selectedProduct.name}</h2>
