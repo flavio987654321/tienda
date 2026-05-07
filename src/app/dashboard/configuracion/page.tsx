@@ -1436,16 +1436,35 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const stackedImageText = viewport !== "desktop" || isVertical;
       const radiusMap: Record<string,string> = { redondeada:"18px", cuadrada:"0px", circulo:"50%", ovalada:"50px" };
       const imageRadius = radiusMap[p.imageRadius||"redondeada"] || "18px";
+      const isRound = p.imageRadius === "circulo" || p.imageRadius === "ovalada";
       const flexDir = isVertical
         ? (pos === "bottom" ? "column-reverse" : "column")
         : (pos === "right" ? "row-reverse" : "row");
+      const imgContainerStyle: React.CSSProperties = isRound ? {
+        flex: stackedImageText ? "0 0 auto" : `0 0 ${imageWidth}%`,
+        alignSelf: "center",
+        aspectRatio: p.imageRadius === "circulo" ? "1 / 1" : "3 / 4",
+        borderRadius: imageRadius,
+        overflow: "hidden",
+        background: p.imageBgColor || "#f3f4f6",
+      } : {
+        flex: stackedImageText ? "1 1 auto" : `0 0 ${imageWidth}%`,
+        width: stackedImageText && !isVertical ? "100%" : undefined,
+        minHeight: `${imageHeight}px`,
+        borderRadius: imageRadius,
+        overflow: "hidden",
+        background: p.imageBgColor || "#f3f4f6",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      };
       return (
-        <div style={{display:"flex",gap:"20px",padding:"24px",background:p.bgColor||"transparent",fontFamily:c.fontFamily,alignItems:"stretch",flexDirection:stackedImageText ? flexDir as React.CSSProperties["flexDirection"] : flexDir as React.CSSProperties["flexDirection"],minHeight:customMinHeight}}>
-          <div style={{flex:stackedImageText ? "1 1 auto" : `0 0 ${imageWidth}%`,width:stackedImageText&&!isVertical ? "100%" : undefined,minHeight:`${imageHeight}px`,borderRadius:imageRadius,overflow:"hidden",background:p.imageBgColor||"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <div style={{display:"flex",gap:"20px",padding:"24px",background:p.bgColor||"transparent",fontFamily:c.fontFamily,alignItems:isRound?"center":"stretch",flexDirection:flexDir as React.CSSProperties["flexDirection"],minHeight:customMinHeight}}>
+          <div style={imgContainerStyle}>
             {p.image ? (
-              <img src={p.image} alt={p.heading || "Imagen del bloque"} style={{width:"100%",height:"100%",objectFit:p.imageFit||"cover",objectPosition:p.imageFocus||"center"}} />
+              <img src={p.image} alt={p.heading || "Imagen del bloque"} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:p.imageFocus||"center"}} />
             ) : (
-              <div style={{color:"#9ca3af",fontSize:"12px",fontWeight:700}}>Sin imagen</div>
+              <div style={{color:"#9ca3af",fontSize:"12px",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",height:"100%"}}>Sin imagen</div>
             )}
           </div>
           <div style={{flex:stackedImageText&&!isVertical ? "1 1 auto" : `1 1 ${100-imageWidth}%`,width:stackedImageText&&!isVertical ? "100%" : undefined,display:"flex",flexDirection:"column",justifyContent:"center"}}>
