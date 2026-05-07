@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { STORE_TYPES } from "@/lib/storeTypes";
-import { Loader2, X, ArrowLeft } from "lucide-react";
+import { Loader2, X, ArrowLeft, Check } from "lucide-react";
 
 export default function StoreTypeModal({
   isEditing = false,
@@ -80,16 +80,21 @@ export default function StoreTypeModal({
                 <button
                   key={t.id}
                   onClick={() => { setSelected(t.id); setWholesale(false); }}
-                  className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 text-left transition-all ${
+                  className={`relative flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 text-left transition-all duration-200 ${
                     active
-                      ? "border-indigo-500 bg-indigo-50 shadow-sm"
-                      : "border-gray-100 hover:border-gray-300 bg-gray-50"
+                      ? "border-indigo-500 bg-indigo-50 shadow-md scale-[1.03]"
+                      : "border-gray-100 hover:border-gray-300 bg-gray-50 hover:scale-[1.01]"
                   }`}
                 >
                   <span className="text-2xl leading-none">{t.emoji}</span>
                   <p className={`text-sm font-semibold leading-tight ${active ? "text-indigo-700" : "text-gray-800"}`}>
                     {t.label}
                   </p>
+                  {active && (
+                    <span key={t.id} className="absolute top-2 right-2 animate-pop-in">
+                      <Check className="h-3.5 w-3.5 text-white bg-indigo-500 rounded-full p-0.5" />
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -97,7 +102,7 @@ export default function StoreTypeModal({
 
           {/* Info del tipo seleccionado */}
           {selectedConfig && (
-            <div className="bg-indigo-50 rounded-2xl px-4 py-3 text-sm text-indigo-700">
+            <div key={selectedConfig.id} className="animate-fade-slide bg-indigo-50 rounded-2xl px-4 py-3 text-sm text-indigo-700">
               Categorías: {selectedConfig.categorias.slice(0, 4).join(", ")}...
             </div>
           )}
