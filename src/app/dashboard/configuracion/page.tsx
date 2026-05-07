@@ -561,8 +561,6 @@ function BlockEditor({
   if (block.type==="banner-group") {
     const slides: any[] = Array.isArray(p.slides) ? p.slides : [];
     const updSlide = (idx:number, key:string, val:any) => upd("slides", slides.map((s:any,i:number)=>i===idx?{...s,[key]:val}:s));
-    const focalPoints = [[0,0],[50,0],[100,0],[0,50],[50,50],[100,50],[0,100],[50,100],[100,100]];
-    const focalLabels = ["↖","↑","↗","←","●","→","↙","↓","↘"];
     return <div className="space-y-4">
       {/* General */}
       <div className="space-y-3">
@@ -626,19 +624,11 @@ function BlockEditor({
                 </label>
               )}
             </div>
-            {/* Focal point */}
+            {/* Focal point hint */}
             {slide.image && (
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">Posición de la foto</label>
-                <div className="grid grid-cols-3 gap-1 w-24">
-                  {focalPoints.map(([fx,fy],pi)=>(
-                    <button key={pi} onClick={()=>{updSlide(idx,"focalX",fx);updSlide(idx,"focalY",fy);}}
-                      className={`h-7 w-7 rounded-md text-sm flex items-center justify-center transition-colors ${slide.focalX===fx&&slide.focalY===fy?"bg-indigo-500 text-white":"bg-gray-100 hover:bg-indigo-100 text-gray-500"}`}>
-                      {focalLabels[pi]}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <p className="text-[11px] text-indigo-500 font-medium bg-indigo-50 rounded-xl px-3 py-2">
+                Hacé clic en la imagen de la preview para mover el foco de la foto
+              </p>
             )}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Título</label>
@@ -1487,9 +1477,21 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const overlayOpacity = Number(p.overlayOpacity ?? 35) / 100;
       const textColor = String(p.textColor || "#ffffff");
       const textAlign = String(p.textAlign || "center");
+      const fx = slide.focalX ?? 50;
+      const fy = slide.focalY ?? 50;
+
+      const handleFocalClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!selected || !slide.image) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const newFx = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+        const newFy = Math.round(((e.clientY - rect.top) / rect.height) * 100);
+        const newSlides = slides.map((s: any, i: number) => i === idx ? {...s, focalX: newFx, focalY: newFy} : s);
+        onChangeProps({...p, slides: newSlides});
+      };
+
       return (
         <div style={{position:"relative",height:h,overflow:"hidden",fontFamily:c.fontFamily,background:"#1f2937",userSelect:"none"}}>
-          {slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:`${slide.focalX??50}% ${slide.focalY??50}%`,transition:"opacity 0.4s"}}/>}
+          {slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:`${fx}% ${fy}%`,transition:"opacity 0.4s"}}/>}
           {!slide.image && <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>}
           <div style={{position:"absolute",inset:0,background:p.overlayColor||"#000000",opacity:overlayOpacity}}/>
           <div style={{position:"relative",height:"100%",display:"flex",flexDirection:"column",alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start",justifyContent:"center",padding:"24px 32px",textAlign:textAlign as React.CSSProperties["textAlign"],gap:"10px"}}>
@@ -1497,9 +1499,23 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
             {slide.subtitle && <p style={{fontSize:"14px",color:textColor,opacity:0.9,margin:0,maxWidth:"480px"}}>{slide.subtitle}</p>}
             {slide.buttonText && <button style={{background:c.primaryColor,color:"#fff",padding:"9px 20px",borderRadius:"999px",fontSize:"12px",fontWeight:800,border:"none",cursor:"inherit",marginTop:"4px"}}>{slide.buttonText}</button>}
           </div>
+          {/* Focal point interactive overlay — only when selected and image present */}
+          {selected && slide.image && (
+            <div onClick={handleFocalClick} style={{position:"absolute",inset:0,cursor:"crosshair",zIndex:5}}>
+              {/* crosshair lines */}
+              <div style={{position:"absolute",left:`${fx}%`,top:0,bottom:0,width:"1px",background:"rgba(255,255,255,0.5)",pointerEvents:"none"}}/>
+              <div style={{position:"absolute",top:`${fy}%`,left:0,right:0,height:"1px",background:"rgba(255,255,255,0.5)",pointerEvents:"none"}}/>
+              {/* focal dot */}
+              <div style={{position:"absolute",left:`${fx}%`,top:`${fy}%`,transform:"translate(-50%,-50%)",width:"18px",height:"18px",borderRadius:"50%",border:"2.5px solid #fff",boxShadow:"0 0 0 2px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)",pointerEvents:"none",background:"rgba(99,102,241,0.6)"}}/>
+              {/* hint */}
+              <div style={{position:"absolute",top:"8px",left:0,right:0,display:"flex",justifyContent:"center",pointerEvents:"none"}}>
+                <span style={{background:"rgba(0,0,0,0.55)",color:"#fff",fontSize:"10px",fontWeight:600,padding:"3px 10px",borderRadius:"999px",backdropFilter:"blur(4px)"}}>Hacé clic para mover el foco de la foto</span>
+              </div>
+            </div>
+          )}
           {/* Dots */}
           {p.showDots!==false && slides.length > 1 && (
-            <div style={{position:"absolute",bottom:"10px",left:0,right:0,display:"flex",justifyContent:"center",gap:"5px"}}>
+            <div style={{position:"absolute",bottom:"10px",left:0,right:0,display:"flex",justifyContent:"center",gap:"5px",zIndex:6}}>
               {slides.map((_:any,i:number)=>(
                 <button key={i} onClick={(e)=>{e.stopPropagation();setCarouselIdx(i);}} style={{width:i===idx?"20px":"8px",height:"8px",borderRadius:"4px",background:i===idx?"#fff":"rgba(255,255,255,0.45)",border:"none",cursor:"pointer",padding:0,transition:"width 0.25s"}}/>
               ))}
@@ -1508,8 +1524,8 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           {/* Arrows */}
           {p.showArrows!==false && slides.length > 1 && (
             <>
-              <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i-1+slides.length)%slides.length);}} style={{position:"absolute",left:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1}}>‹</button>
-              <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i+1)%slides.length);}} style={{position:"absolute",right:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1}}>›</button>
+              <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i-1+slides.length)%slides.length);}} style={{position:"absolute",left:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1,zIndex:6}}>‹</button>
+              <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i+1)%slides.length);}} style={{position:"absolute",right:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1,zIndex:6}}>›</button>
             </>
           )}
         </div>
