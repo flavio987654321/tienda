@@ -94,12 +94,11 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
     defaultProps:{ heading:"Seguinos y contactanos", showHeading:true, layout:"icons", color:"", bgColor:"", showInstagram:true, showFacebook:true, showTiktok:true, showWhatsapp:true, showEmail:true, instagramUrl:"", facebookUrl:"", tiktokUrl:"", whatsappNumber:"", emailAddress:"" } },
   { type:"divider",    emoji:"─", label:"Línea separadora",        desc:"Línea horizontal decorativa",
     defaultProps:{ style:"solid", color:"#e5e7eb" } },
-  { type:"banner-group", emoji:"promo", label:"Grupo de banners",      desc:"Promos o beneficios en varias cards",
-    defaultProps:{ heading:"Promociones destacadas", subheading:"Mostra beneficios, promos o accesos rapidos en una sola seccion.", columns:3, bgColor:"", items:[
-      { title:"Envios a todo el pais", text:"Despachamos rapido y con seguimiento.", buttonText:"Ver mas", bgColor:"#111827", textColor:"#ffffff" },
-      { title:"Hasta 6 cuotas", text:"Paga como te quede mas comodo.", buttonText:"Conocer", bgColor:"#4f46e5", textColor:"#ffffff" },
-      { title:"Atencion personalizada", text:"Te ayudamos a elegir lo ideal.", buttonText:"Contactanos", bgColor:"#f59e0b", textColor:"#111827" },
-    ] } },
+  { type:"banner-group", emoji:"🎠", label:"Carrusel de banners",     desc:"Imágenes full-width que pasan automáticamente",
+    defaultProps:{ slides:[
+      { image:"", title:"Bienvenidos", subtitle:"Descubrí nuestra colección", buttonText:"Ver productos", buttonUrl:"", focalX:50, focalY:50 },
+      { image:"", title:"Envíos gratis", subtitle:"En compras mayores a $X", buttonText:"Aprovechar", buttonUrl:"", focalX:50, focalY:50 },
+    ], height:"md", autoplay:true, speed:4, showDots:true, showArrows:true, overlayColor:"#000000", overlayOpacity:35, textColor:"#ffffff", textAlign:"center" } },
 ];
 
 /* ─── Bloques prediseñados por template ─── */
@@ -407,6 +406,7 @@ function BlockEditor({
   subcategoriesByCategory = {},
   uploadingImage = false,
   onPickImage,
+  onUploadFile,
 }: {
   block:Block;
   onChange:(props:Record<string,any>)=>void;
@@ -415,6 +415,7 @@ function BlockEditor({
   subcategoriesByCategory?:Record<string,string[]>;
   uploadingImage?: boolean;
   onPickImage?: () => void;
+  onUploadFile?: (file:File) => Promise<string|undefined>;
 }) {
   const p = block.props;
   const upd = (k:string,v:any) => onChange({...p,[k]:v});
@@ -557,42 +558,118 @@ function BlockEditor({
     {heightEditorSection}
   </div>;
 
-  if (block.type==="banner-group") return <div className="space-y-4">
-    <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-3 py-2">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-700">Grupo de banners</p>
-      <p className="mt-1 text-xs text-indigo-600">Ideal para mostrar promos, beneficios o accesos destacados en varias cards.</p>
-    </div>
-    {inp("Titulo de la seccion","heading","Promociones destacadas")}
-    {ta("Texto de apoyo","subheading","Mostra beneficios, promos o accesos rapidos en una sola seccion.")}
-    <ColorPicker label="Color de fondo del bloque" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">Cards por fila</label>
-      <Chips options={[{id:"1",label:"1"},{id:"2",label:"2"},{id:"3",label:"3"}]} value={String(p.columns||3)} onChange={v=>upd("columns",Number(v))}/>
-    </div>
-    {heightEditorSection}
-    {((Array.isArray(p.items) ? p.items : []) as Record<string, any>[]).map((item, index) => (
-      <div key={index} className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-3">
-        <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Banner {index + 1}</p>
+  if (block.type==="banner-group") {
+    const slides: any[] = Array.isArray(p.slides) ? p.slides : [];
+    const updSlide = (idx:number, key:string, val:any) => upd("slides", slides.map((s:any,i:number)=>i===idx?{...s,[key]:val}:s));
+    const focalPoints = [[0,0],[50,0],[100,0],[0,50],[50,50],[100,50],[0,100],[50,100],[100,100]];
+    const focalLabels = ["↖","↑","↗","←","●","→","↙","↓","↘"];
+    return <div className="space-y-4">
+      {/* General */}
+      <div className="space-y-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Titulo</label>
-          <input value={item.title||""} onChange={e=>upd("items",(Array.isArray(p.items)?p.items:[]).map((entry:any,i:number)=>i===index?{...entry,title:e.target.value}:entry))}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Alto del banner</label>
+          <Chips options={[{id:"sm",label:"300px"},{id:"md",label:"420px"},{id:"lg",label:"560px"},{id:"xl",label:"700px"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
         </div>
+        <div className="flex gap-3">
+          <Toggle label="Autoplay" value={p.autoplay!==false} onChange={v=>upd("autoplay",v)}/>
+          <Toggle label="Puntos" value={p.showDots!==false} onChange={v=>upd("showDots",v)}/>
+          <Toggle label="Flechas" value={p.showArrows!==false} onChange={v=>upd("showArrows",v)}/>
+        </div>
+        {p.autoplay!==false && (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Velocidad</label>
+            <Chips options={[{id:"3",label:"3s"},{id:"4",label:"4s"},{id:"5",label:"5s"},{id:"6",label:"6s"},{id:"8",label:"8s"}]} value={String(p.speed||4)} onChange={v=>upd("speed",Number(v))}/>
+          </div>
+        )}
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Texto</label>
-          <textarea value={item.text||""} onChange={e=>upd("items",(Array.isArray(p.items)?p.items:[]).map((entry:any,i:number)=>i===index?{...entry,text:e.target.value}:entry))} rows={2}
-            className="w-full resize-none border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Alineación del texto</label>
+          <Chips options={[{id:"left",label:"Izquierda"},{id:"center",label:"Centro"},{id:"right",label:"Derecha"}]} value={p.textAlign||"center"} onChange={v=>upd("textAlign",v)}/>
         </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Texto del boton</label>
-          <input value={item.buttonText||""} onChange={e=>upd("items",(Array.isArray(p.items)?p.items:[]).map((entry:any,i:number)=>i===index?{...entry,buttonText:e.target.value}:entry))}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+        <ColorPicker label="Color del texto" value={p.textColor||"#ffffff"} onChange={v=>upd("textColor",v)}/>
+        <div className="space-y-1">
+          <ColorPicker label="Color del overlay" value={p.overlayColor||"#000000"} onChange={v=>upd("overlayColor",v)}/>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-gray-600">Opacidad del overlay</label>
+            <span className="text-xs font-semibold text-indigo-600">{p.overlayOpacity||35}%</span>
+          </div>
+          <input type="range" min="0" max="80" step="5" value={p.overlayOpacity||35} onChange={e=>upd("overlayOpacity",parseInt(e.target.value))} onMouseDown={e=>e.stopPropagation()} onPointerDown={e=>e.stopPropagation()} className="w-full accent-indigo-600"/>
         </div>
-        <ColorPicker label="Color de fondo" value={item.bgColor||"#111827"} onChange={v=>upd("items",(Array.isArray(p.items)?p.items:[]).map((entry:any,i:number)=>i===index?{...entry,bgColor:v}:entry))}/>
-        <ColorPicker label="Color de texto" value={item.textColor||"#ffffff"} onChange={v=>upd("items",(Array.isArray(p.items)?p.items:[]).map((entry:any,i:number)=>i===index?{...entry,textColor:v}:entry))}/>
       </div>
-    ))}
-  </div>;
+
+      {/* Slides */}
+      <div className="space-y-3">
+        {slides.map((slide:any, idx:number)=>(
+          <div key={idx} className="rounded-2xl border border-gray-200 bg-gray-50 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Slide {idx+1}</p>
+              {slides.length > 1 && (
+                <button onClick={()=>upd("slides",slides.filter((_:any,i:number)=>i!==idx))} className="text-xs text-red-400 hover:text-red-600 transition-colors">Eliminar</button>
+              )}
+            </div>
+            {/* Image */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Imagen</label>
+              {slide.image ? (
+                <div className="relative">
+                  <img src={slide.image} alt="" className="w-full h-20 object-cover rounded-xl"/>
+                  <button onClick={()=>updSlide(idx,"image","")} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
+                </div>
+              ) : (
+                <label className="flex h-16 w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors">
+                  <ImageIcon className="h-4 w-4"/>
+                  <span className="text-xs font-medium">Subir imagen</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                    const file = e.target.files?.[0]; if(!file||!onUploadFile) return;
+                    const url = await onUploadFile(file);
+                    if(url) updSlide(idx,"image",url);
+                  }}/>
+                </label>
+              )}
+            </div>
+            {/* Focal point */}
+            {slide.image && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">Posición de la foto</label>
+                <div className="grid grid-cols-3 gap-1 w-24">
+                  {focalPoints.map(([fx,fy],pi)=>(
+                    <button key={pi} onClick={()=>{updSlide(idx,"focalX",fx);updSlide(idx,"focalY",fy);}}
+                      className={`h-7 w-7 rounded-md text-sm flex items-center justify-center transition-colors ${slide.focalX===fx&&slide.focalY===fy?"bg-indigo-500 text-white":"bg-gray-100 hover:bg-indigo-100 text-gray-500"}`}>
+                      {focalLabels[pi]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Título</label>
+              <input value={slide.title||""} onChange={e=>updSlide(idx,"title",e.target.value)} placeholder="Título del slide" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Subtítulo</label>
+              <input value={slide.subtitle||""} onChange={e=>updSlide(idx,"subtitle",e.target.value)} placeholder="Texto debajo del título" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Texto botón</label>
+                <input value={slide.buttonText||""} onChange={e=>updSlide(idx,"buttonText",e.target.value)} placeholder="Ver más" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">URL botón</label>
+                <input value={slide.buttonUrl||""} onChange={e=>updSlide(idx,"buttonUrl",e.target.value)} placeholder="/productos" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+              </div>
+            </div>
+          </div>
+        ))}
+        {slides.length < 5 && (
+          <button onClick={()=>upd("slides",[...slides,{image:"",title:"",subtitle:"",buttonText:"",buttonUrl:"",focalX:50,focalY:50}])}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-indigo-200 py-2.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors">
+            <Plus className="h-3.5 w-3.5"/> Agregar slide
+          </button>
+        )}
+      </div>
+      {heightEditorSection}
+    </div>;
+  }
 
   if (block.type==="cta") return <div className="space-y-3">
     {inp("Título","heading","¿Lista para comprar?")}
@@ -1056,6 +1133,15 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   const [isResizing, setIsResizing] = useState(false);
   const [draggingHeight, setDraggingHeight] = useState<number | null>(null);
   const [hovered, setHovered] = useState(false);
+  const [carouselIdx, setCarouselIdx] = useState(0);
+
+  useEffect(() => {
+    if (block.type !== "banner-group") return;
+    const slides = Array.isArray(block.props.slides) ? block.props.slides : [];
+    if (block.props.autoplay === false || slides.length <= 1) return;
+    const t = setInterval(() => setCarouselIdx(i => (i + 1) % slides.length), (Number(block.props.speed) || 4) * 1000);
+    return () => clearInterval(t);
+  }, [block.type, block.props.autoplay, block.props.speed, (block.props.slides as any[])?.length]);
 
   useEffect(() => {
     if (!isResizing || !resizeRef.current) return;
@@ -1393,24 +1479,39 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     }
 
     if (block.type==="banner-group") {
-      const items = (Array.isArray(p.items) ? p.items : []).slice(0, 3);
-      const cols = Math.max(1, Math.min(3, Number(p.columns) || 3));
+      const slides: any[] = Array.isArray(p.slides) ? p.slides : [];
+      const HEIGHTS: Record<string,number> = { sm:300, md:420, lg:560, xl:700 };
+      const h = customMinHeight || `${HEIGHTS[String(p.height||"md")]||420}px`;
+      const idx = slides.length > 0 ? carouselIdx % slides.length : 0;
+      const slide = slides[idx] || {};
+      const overlayOpacity = Number(p.overlayOpacity ?? 35) / 100;
+      const textColor = String(p.textColor || "#ffffff");
+      const textAlign = String(p.textAlign || "center");
       return (
-        <div style={{padding:"24px",background:p.bgColor||"transparent",fontFamily:c.fontFamily,minHeight:customMinHeight}}>
-          {p.heading && <h3 style={{fontSize:"18px",fontWeight:900,color:c.primaryColor,marginBottom:"8px",textAlign:"center"}}>{p.heading}</h3>}
-          {p.subheading && <p style={{fontSize:"12px",color:"#6b7280",textAlign:"center",maxWidth:"520px",margin:"0 auto 18px"}}>{p.subheading}</p>}
-          <div style={{display:"grid",gridTemplateColumns:`repeat(${cols}, minmax(0, 1fr))`,gap:"12px"}}>
-            {items.map((item:any, index:number) => (
-              <div key={index} style={{borderRadius:"20px",padding:"18px",background:item.bgColor||"#111827",color:item.textColor||"#ffffff",minHeight:"180px",display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
-                <div>
-                  <p style={{fontSize:"11px",fontWeight:800,opacity:0.72,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:"10px"}}>Banner {index + 1}</p>
-                  <h4 style={{fontSize:"18px",fontWeight:900,lineHeight:1.15,marginBottom:"10px"}}>{item.title||`Promo ${index + 1}`}</h4>
-                  <p style={{fontSize:"12px",lineHeight:1.6,opacity:0.9}}>{item.text||"Texto descriptivo del banner."}</p>
-                </div>
-                {item.buttonText && <div style={{marginTop:"16px"}}><span style={{display:"inline-flex",padding:"9px 14px",borderRadius:"999px",background:"rgba(255,255,255,0.16)",fontSize:"11px",fontWeight:800}}>{item.buttonText}</span></div>}
-              </div>
-            ))}
+        <div style={{position:"relative",height:h,overflow:"hidden",fontFamily:c.fontFamily,background:"#1f2937",userSelect:"none"}}>
+          {slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:`${slide.focalX??50}% ${slide.focalY??50}%`,transition:"opacity 0.4s"}}/>}
+          {!slide.image && <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>}
+          <div style={{position:"absolute",inset:0,background:p.overlayColor||"#000000",opacity:overlayOpacity}}/>
+          <div style={{position:"relative",height:"100%",display:"flex",flexDirection:"column",alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start",justifyContent:"center",padding:"24px 32px",textAlign:textAlign as React.CSSProperties["textAlign"],gap:"10px"}}>
+            {slide.title && <h2 style={{fontSize:"28px",fontWeight:900,color:textColor,lineHeight:1.15,margin:0}}>{slide.title}</h2>}
+            {slide.subtitle && <p style={{fontSize:"14px",color:textColor,opacity:0.9,margin:0,maxWidth:"480px"}}>{slide.subtitle}</p>}
+            {slide.buttonText && <button style={{background:c.primaryColor,color:"#fff",padding:"9px 20px",borderRadius:"999px",fontSize:"12px",fontWeight:800,border:"none",cursor:"inherit",marginTop:"4px"}}>{slide.buttonText}</button>}
           </div>
+          {/* Dots */}
+          {p.showDots!==false && slides.length > 1 && (
+            <div style={{position:"absolute",bottom:"10px",left:0,right:0,display:"flex",justifyContent:"center",gap:"5px"}}>
+              {slides.map((_:any,i:number)=>(
+                <button key={i} onClick={(e)=>{e.stopPropagation();setCarouselIdx(i);}} style={{width:i===idx?"20px":"8px",height:"8px",borderRadius:"4px",background:i===idx?"#fff":"rgba(255,255,255,0.45)",border:"none",cursor:"pointer",padding:0,transition:"width 0.25s"}}/>
+              ))}
+            </div>
+          )}
+          {/* Arrows */}
+          {p.showArrows!==false && slides.length > 1 && (
+            <>
+              <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i-1+slides.length)%slides.length);}} style={{position:"absolute",left:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1}}>‹</button>
+              <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i+1)%slides.length);}} style={{position:"absolute",right:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1}}>›</button>
+            </>
+          )}
         </div>
       );
     }
@@ -1996,6 +2097,7 @@ export default function ConfiguracionPage() {
                                 setSelectedBlockId(b.id);
                                 blockImageRef.current?.click();
                               }}
+                              onUploadFile={uploadAsset}
                             />
                             {blockSupportsMovableText(b.type) && (
                               <button

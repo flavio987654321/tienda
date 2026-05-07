@@ -19,6 +19,54 @@ function SocialIconCircle({ network, size = 40, forButton = false }: { network: 
     </span>
   );
 }
+function BannerCarouselBlock({ block, primaryColor, fontFamily }: { block: any; primaryColor: string; fontFamily: string }) {
+  const p = block.props;
+  const slides: any[] = Array.isArray(p.slides) ? p.slides : [];
+  const [idx, setIdx] = useState(0);
+  const HEIGHTS: Record<string,number> = { sm:300, md:420, lg:560, xl:700 };
+  const h = HEIGHTS[String(p.height||"md")] || 420;
+  const cur = slides[idx % Math.max(1, slides.length)] || {};
+  const overlayOpacity = Number(p.overlayOpacity ?? 35) / 100;
+  const textColor = String(p.textColor || "#ffffff");
+  const textAlign = String(p.textAlign || "center");
+
+  useEffect(() => {
+    if (p.autoplay === false || slides.length <= 1) return;
+    const t = setInterval(() => setIdx(i => (i + 1) % slides.length), (Number(p.speed) || 4) * 1000);
+    return () => clearInterval(t);
+  }, [p.autoplay, p.speed, slides.length]);
+
+  return (
+    <div style={{ position:"relative", height:`${h}px`, overflow:"hidden", fontFamily, background:"#1f2937", userSelect:"none" }}>
+      {cur.image && <img src={cur.image} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:`${cur.focalX??50}% ${cur.focalY??50}%`, transition:"opacity 0.4s" }}/>}
+      {!cur.image && <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,#4f46e5,#7c3aed)" }}/>}
+      <div style={{ position:"absolute", inset:0, background:String(p.overlayColor||"#000000"), opacity:overlayOpacity }}/>
+      <div style={{ position:"relative", height:"100%", display:"flex", flexDirection:"column", alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start", justifyContent:"center", padding:"32px 48px", textAlign:textAlign as React.CSSProperties["textAlign"], gap:"12px" }}>
+        {cur.title && <h2 style={{ fontSize:"clamp(24px,4vw,48px)", fontWeight:900, color:textColor, lineHeight:1.1, margin:0 }}>{cur.title}</h2>}
+        {cur.subtitle && <p style={{ fontSize:"clamp(14px,1.5vw,18px)", color:textColor, opacity:0.9, margin:0, maxWidth:"560px" }}>{cur.subtitle}</p>}
+        {cur.buttonText && (
+          <a href={cur.buttonUrl||"#"} style={{ display:"inline-block", background:primaryColor, color:"#fff", padding:"12px 28px", borderRadius:"999px", fontSize:"14px", fontWeight:800, textDecoration:"none", marginTop:"4px" }}>
+            {cur.buttonText}
+          </a>
+        )}
+      </div>
+      {p.showDots!==false && slides.length > 1 && (
+        <div style={{ position:"absolute", bottom:"14px", left:0, right:0, display:"flex", justifyContent:"center", gap:"6px" }}>
+          {slides.map((_:any,i:number)=>(
+            <button key={i} onClick={()=>setIdx(i)} style={{ width:i===idx?"22px":"8px", height:"8px", borderRadius:"4px", background:i===idx?"#fff":"rgba(255,255,255,0.45)", border:"none", cursor:"pointer", padding:0, transition:"width 0.25s" }}/>
+          ))}
+        </div>
+      )}
+      {p.showArrows!==false && slides.length > 1 && (
+        <>
+          <button onClick={()=>setIdx(i=>(i-1+slides.length)%slides.length)} style={{ position:"absolute", left:"12px", top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.35)", border:"none", borderRadius:"50%", width:"36px", height:"36px", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:"20px" }}>‹</button>
+          <button onClick={()=>setIdx(i=>(i+1)%slides.length)} style={{ position:"absolute", right:"12px", top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.35)", border:"none", borderRadius:"50%", width:"36px", height:"36px", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:"20px" }}>›</button>
+        </>
+      )}
+    </div>
+  );
+}
+
 import {
   Heart,
   Loader2,
@@ -1071,29 +1119,7 @@ export default function StorefrontClient({
             </div>
           );
           if (block.type === "banner-group") {
-            const items = (Array.isArray(p.items) ? p.items : []).slice(0, 3);
-            const columns = Math.max(1, Math.min(3, Number(p.columns) || 3));
-            const gridClass = columns === 1 ? "grid-cols-1" : columns === 2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-3";
-            return (
-              <section key={block.id} className="px-4 py-8 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
-                <div className="mx-auto max-w-7xl">
-                  {p.heading && <h2 className="text-center text-3xl font-black" style={{ color: store.primaryColor }}>{p.heading}</h2>}
-                  {p.subheading && <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-gray-500">{p.subheading}</p>}
-                  <div className={`mt-6 grid gap-4 ${gridClass}`}>
-                    {items.map((item: any, index: number) => (
-                      <div key={index} className="flex min-h-52 flex-col justify-between rounded-[28px] p-6" style={{ backgroundColor: String(item.bgColor || "#111827"), color: String(item.textColor || "#ffffff") }}>
-                        <div>
-                          <p className="mb-3 text-[11px] font-black uppercase tracking-[0.18em] opacity-70">Banner {index + 1}</p>
-                          <h3 className="mb-3 text-2xl font-black leading-tight">{item.title || `Promo ${index + 1}`}</h3>
-                          <p className="text-sm leading-relaxed opacity-90">{item.text || "Texto descriptivo del banner."}</p>
-                        </div>
-                        {item.buttonText && <span className="mt-5 inline-flex w-fit rounded-full bg-white/15 px-4 py-2 text-xs font-black">{item.buttonText}</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-            );
+            return <BannerCarouselBlock key={block.id} block={block} primaryColor={store.primaryColor} fontFamily={store.fontFamily} />;
           }
           if (block.type === "cta") return (
             <div key={block.id} className="mx-4 rounded-3xl p-8 sm:mx-6 sm:p-12" style={{ backgroundColor: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily }}>
