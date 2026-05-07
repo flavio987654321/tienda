@@ -1498,18 +1498,40 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
         onChangeProps({...p, slides: newSlides});
       };
 
+      if (isContain) {
+        return (
+          <div style={{position:"relative",width:"100%",fontFamily:c.fontFamily,userSelect:"none"}}>
+            {slide.image
+              ? <img src={slide.image} alt="" style={{display:"block",width:"100%",height:"auto"}}/>
+              : <div style={{height:"240px",background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>
+            }
+            {p.showDots!==false && slides.length > 1 && (
+              <div style={{position:"absolute",bottom:"10px",left:0,right:0,display:"flex",justifyContent:"center",gap:"5px",zIndex:6}}>
+                {slides.map((_:any,i:number)=>(
+                  <button key={i} onClick={(e)=>{e.stopPropagation();setCarouselIdx(i);}} style={{width:i===idx?"20px":"8px",height:"8px",borderRadius:"4px",background:i===idx?"#fff":"rgba(255,255,255,0.45)",border:"none",cursor:"pointer",padding:0,transition:"width 0.25s"}}/>
+                ))}
+              </div>
+            )}
+            {p.showArrows!==false && slides.length > 1 && (
+              <>
+                <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i-1+slides.length)%slides.length);}} style={{position:"absolute",left:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1,zIndex:6}}>‹</button>
+                <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i+1)%slides.length);}} style={{position:"absolute",right:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1,zIndex:6}}>›</button>
+              </>
+            )}
+          </div>
+        );
+      }
+
       return (
         <div style={{position:"relative", height:h, overflow:"hidden", fontFamily:c.fontFamily, background:"#1f2937", userSelect:"none"}}>
-          {slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:isContain?"contain":"cover",objectPosition:`${fx}% ${fy}%`,transition:"object-position 0.15s"}}/>}
+          {slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:`${fx}% ${fy}%`,transition:"object-position 0.15s"}}/>}
           {!slide.image && <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>}
-          {!isContain && <div style={{position:"absolute",inset:0,background:p.overlayColor||"#000000",opacity:overlayOpacity}}/>}
-          {!isContain && (
-            <div style={{position:"relative",height:"100%",display:"flex",flexDirection:"column",alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start",justifyContent:"center",padding:"24px 32px",textAlign:textAlign as React.CSSProperties["textAlign"],gap:"10px"}}>
-              {slide.title && <h2 style={{fontSize:"28px",fontWeight:900,color:textColor,lineHeight:1.15,margin:0}}>{slide.title}</h2>}
-              {slide.subtitle && <p style={{fontSize:"14px",color:textColor,opacity:0.9,margin:0,maxWidth:"480px"}}>{slide.subtitle}</p>}
-              {slide.buttonText && <button style={{background:c.primaryColor,color:"#fff",padding:"9px 20px",borderRadius:"999px",fontSize:"12px",fontWeight:800,border:"none",cursor:"inherit",marginTop:"4px"}}>{slide.buttonText}</button>}
-            </div>
-          )}
+          <div style={{position:"absolute",inset:0,background:p.overlayColor||"#000000",opacity:overlayOpacity}}/>
+          <div style={{position:"relative",height:"100%",display:"flex",flexDirection:"column",alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start",justifyContent:"center",padding:"24px 32px",textAlign:textAlign as React.CSSProperties["textAlign"],gap:"10px"}}>
+            {slide.title && <h2 style={{fontSize:"28px",fontWeight:900,color:textColor,lineHeight:1.15,margin:0}}>{slide.title}</h2>}
+            {slide.subtitle && <p style={{fontSize:"14px",color:textColor,opacity:0.9,margin:0,maxWidth:"480px"}}>{slide.subtitle}</p>}
+            {slide.buttonText && <button style={{background:c.primaryColor,color:"#fff",padding:"9px 20px",borderRadius:"999px",fontSize:"12px",fontWeight:800,border:"none",cursor:"inherit",marginTop:"4px"}}>{slide.buttonText}</button>}
+          </div>
 
           {/* Focal mode overlay — solo activo cuando el usuario lo habilitó */}
           {focalMode && slide.image && (
