@@ -568,12 +568,10 @@ function BlockEditor({
           <label className="block text-xs font-medium text-gray-600 mb-1">Ajuste de imagen</label>
           <Chips options={[{id:"cover",label:"Cubrir (recorta)"},{id:"contain",label:"Completa (sin recorte)"}]} value={p.imageFit||"cover"} onChange={v=>upd("imageFit",v)}/>
         </div>
-        {(p.imageFit||"cover")==="cover" && (
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Alto del banner</label>
-            <Chips options={[{id:"sm",label:"300px"},{id:"md",label:"420px"},{id:"lg",label:"560px"},{id:"xl",label:"700px"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
-          </div>
-        )}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Alto del banner</label>
+          <Chips options={[{id:"sm",label:"300px"},{id:"md",label:"420px"},{id:"lg",label:"560px"},{id:"xl",label:"700px"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
+        </div>
         <div className="grid grid-cols-3 gap-2">
           <Toggle label="Autoplay" value={p.autoplay!==false} onChange={v=>upd("autoplay",v)}/>
           <Toggle label="Puntos" value={p.showDots!==false} onChange={v=>upd("showDots",v)}/>
@@ -1501,14 +1499,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       };
 
       return (
-        <div style={{position:"relative", height: isContain ? undefined : h, overflow:"hidden", fontFamily:c.fontFamily, background:"#1f2937", userSelect:"none"}}>
-          {/* Modo "Completa": imagen ocupa su altura natural, sin recorte */}
-          {isContain && slide.image && (
-            <img src={slide.image} alt="" style={{display:"block",width:"100%",height:"auto"}}/>
-          )}
-          {/* Modo "Cubrir": imagen de fondo recortada */}
-          {!isContain && slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:`${fx}% ${fy}%`,transition:"object-position 0.15s"}}/>}
-          {!slide.image && <div style={{position:isContain?"relative":"absolute",inset:isContain?undefined:0,height:isContain?"240px":undefined,background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>}
+        <div style={{position:"relative", height:h, overflow:"hidden", fontFamily:c.fontFamily, background:"#1f2937", userSelect:"none"}}>
+          {slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:isContain?"contain":"cover",objectPosition:`${fx}% ${fy}%`,transition:"object-position 0.15s"}}/>}
+          {!slide.image && <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>}
           {!isContain && <div style={{position:"absolute",inset:0,background:p.overlayColor||"#000000",opacity:overlayOpacity}}/>}
           {!isContain && (
             <div style={{position:"relative",height:"100%",display:"flex",flexDirection:"column",alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start",justifyContent:"center",padding:"24px 32px",textAlign:textAlign as React.CSSProperties["textAlign"],gap:"10px"}}>
