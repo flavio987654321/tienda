@@ -1652,28 +1652,66 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     }
 
     if (block.type==="socials") {
-      const columns = Math.max(2, Math.min(4, socialItems.length || 2));
+      const layout = String(p.layout || "icons");
+      const blockColor = p.color || c.primaryColor;
+      const visibleItems = socialItems;
+
+      const headingNode = p.showHeading !== false && p.heading ? (
+        <MovableTextStage
+          key={`socials-${viewport}-${Boolean(p.heading)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
+          blockProps={p}
+          viewport={viewport}
+          onChange={onChangeProps}
+          style={{ minHeight: "40px", marginBottom: "14px", textAlign: "center" }}
+          items={[{
+            id: "heading",
+            defaultPos: { x: 32, y: 10 },
+            style: { width: "min(100%, 440px)", textAlign: "center" as const },
+            content: <h3 style={{fontSize:"16px",fontWeight:800,color:blockColor,margin:0}}>{p.heading}</h3>,
+          }]}
+        />
+      ) : null;
+
+      if (layout === "icons") {
+        return (
+          <div style={{padding:"24px",fontFamily:c.fontFamily,background:p.bgColor||"transparent",textAlign:"center",minHeight:customMinHeight}}>
+            {headingNode}
+            <div style={{display:"flex",flexWrap:"wrap",gap:"12px",justifyContent:"center"}}>
+              {visibleItems.map(item=>(
+                <div key={item.label} title={item.label} style={{width:"48px",height:"48px",borderRadius:"999px",display:"grid",placeItems:"center",background:item.bg,boxShadow:"0 2px 8px rgba(0,0,0,.15)"}}>
+                  <span style={{color:"#fff",fontSize:"10px",fontWeight:800,letterSpacing:"0.05em"}}>{item.label.slice(0,2).toUpperCase()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      if (layout === "buttons") {
+        return (
+          <div style={{padding:"24px",fontFamily:c.fontFamily,background:p.bgColor||"transparent",textAlign:"center",minHeight:customMinHeight}}>
+            {headingNode}
+            <div style={{display:"flex",flexWrap:"wrap",gap:"10px",justifyContent:"center"}}>
+              {visibleItems.map(item=>(
+                <div key={item.label} style={{background:blockColor,color:"#fff",borderRadius:"10px",padding:"10px 18px",fontSize:"12px",fontWeight:700,display:"flex",alignItems:"center",gap:"8px"}}>
+                  <div style={{width:"22px",height:"22px",borderRadius:"999px",background:"rgba(255,255,255,0.25)",display:"grid",placeItems:"center",fontSize:"9px",fontWeight:800}}>
+                    {item.label.slice(0,2).toUpperCase()}
+                  </div>
+                  {item.label}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      // card layout
+      const columns = Math.max(2, Math.min(4, visibleItems.length || 2));
       return (
         <div style={{padding:"28px 24px",fontFamily:c.fontFamily,background:p.bgColor||"transparent",minHeight:customMinHeight}}>
-          {p.heading && (
-            <MovableTextStage
-              key={`socials-${viewport}-${Boolean(p.heading)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
-              blockProps={p}
-              viewport={viewport}
-              onChange={onChangeProps}
-              style={{ minHeight: "54px", marginBottom: "14px" }}
-              items={[
-                {
-                  id: "heading",
-                  defaultPos: { x: 32, y: 14 },
-                  style: { width: "min(100%, 440px)", textAlign: "center" as const },
-                  content: <h3 style={{fontSize:"16px",fontWeight:800,color:p.color || c.primaryColor,margin:0}}>{p.heading}</h3>,
-                },
-              ]}
-            />
-          )}
+          {headingNode}
           <div style={{display:"grid",gridTemplateColumns:`repeat(${columns}, minmax(0, 1fr))`,gap:"12px"}}>
-            {socialItems.map((item) => (
+            {visibleItems.map(item=>(
               <div key={item.label} style={{border:"1px solid #e5e7eb",borderRadius:"16px",padding:"14px 12px",display:"flex",alignItems:"center",gap:"10px",background:"#fff"}}>
                 <div style={{width:"36px",height:"36px",borderRadius:"999px",display:"grid",placeItems:"center",background:item.bg,color:"#fff",fontSize:"11px",fontWeight:800}}>
                   {item.label.slice(0,2).toUpperCase()}
