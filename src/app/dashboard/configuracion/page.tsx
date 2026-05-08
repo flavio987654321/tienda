@@ -568,7 +568,11 @@ function BlockEditor({
         <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Tamaño y texto</p>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1.5">Proporción del banner</label>
-          <Chips options={[{id:"sm",label:"Compacto"},{id:"md",label:"Normal"},{id:"lg",label:"Alto"},{id:"xl",label:"Pantalla"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
+          <div className="grid grid-cols-2 gap-1.5">
+            {([["sm","Compacto"],["md","Normal"],["lg","Alto"],["xl","Pantalla"]] as const).map(([id,label])=>(
+              <button key={id} onClick={()=>upd("height",id)} className={`py-1.5 rounded-lg text-xs font-medium border transition-colors ${(p.height||"md")===id?"border-indigo-500 bg-indigo-50 text-indigo-700":"border-gray-200 bg-white text-gray-500 hover:border-gray-300"}`}>{label}</button>
+            ))}
+          </div>
           <p className="text-[10px] text-gray-400 mt-1">Se mantiene igual en cualquier pantalla</p>
         </div>
         <div>
@@ -578,15 +582,13 @@ function BlockEditor({
       </div>
 
       {/* Animación */}
-      <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-3">
+      <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-2">
         <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Animación</p>
-        <div className="flex gap-4">
-          <Toggle label="Autoplay" value={p.autoplay!==false} onChange={v=>upd("autoplay",v)}/>
-          <Toggle label="Puntos" value={p.showDots!==false} onChange={v=>upd("showDots",v)}/>
-          <Toggle label="Flechas" value={p.showArrows!==false} onChange={v=>upd("showArrows",v)}/>
-        </div>
+        <Toggle label="Autoplay" value={p.autoplay!==false} onChange={v=>upd("autoplay",v)}/>
+        <Toggle label="Mostrar puntos" value={p.showDots!==false} onChange={v=>upd("showDots",v)}/>
+        <Toggle label="Mostrar flechas" value={p.showArrows!==false} onChange={v=>upd("showArrows",v)}/>
         {p.autoplay!==false && (
-          <div>
+          <div className="pt-1">
             <label className="block text-xs font-medium text-gray-600 mb-1.5">Velocidad</label>
             <Chips options={[{id:"3",label:"3s"},{id:"4",label:"4s"},{id:"5",label:"5s"},{id:"6",label:"6s"},{id:"8",label:"8s"}]} value={String(p.speed||4)} onChange={v=>upd("speed",Number(v))}/>
           </div>
