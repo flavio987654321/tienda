@@ -311,7 +311,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function blockSupportsMovableText(type: BlockType) {
-  return ["hero", "text", "products", "banner", "cta", "image-text", "socials"].includes(type);
+  return ["hero", "text", "products", "banner", "cta", "image-text"].includes(type);
 }
 
 function getViewportTextPositions(props: Record<string, any>, viewport: PreviewViewport): Record<string, TextPosition> {
@@ -1152,6 +1152,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   const [hovered, setHovered] = useState(false);
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [focalMode, setFocalMode] = useState(false);
+  const [socialDragFrom, setSocialDragFrom] = useState<number|null>(null);
+  const [socialDragOver, setSocialDragOver] = useState<number|null>(null);
+  const socialIconRefs = useRef<(HTMLDivElement|null)[]>([]);
 
   useEffect(() => {
     if (block.type !== "banner-group") return;
@@ -1272,6 +1275,36 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       Editar
     </div>
   ) : null;
+
+  function startSocialDrag(e: React.MouseEvent, idx: number, visKeys: string[], allKeys: string[], currentP: Record<string,any>) {
+    e.stopPropagation();
+    e.preventDefault();
+    let currentOver = idx;
+    setSocialDragFrom(idx);
+    setSocialDragOver(idx);
+    const onMove = (ev: MouseEvent) => {
+      const hovIdx = socialIconRefs.current.findIndex(r => {
+        if (!r) return false;
+        const rect = r.getBoundingClientRect();
+        return ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom;
+      });
+      if (hovIdx >= 0) { currentOver = hovIdx; setSocialDragOver(hovIdx); }
+    };
+    const onUp = () => {
+      if (idx !== currentOver) {
+        const newOrder = [...allKeys];
+        const fromKey = visKeys[idx]; const toKey = visKeys[currentOver];
+        const fi = newOrder.indexOf(fromKey); const ti = newOrder.indexOf(toKey);
+        if (fi >= 0 && ti >= 0) { newOrder.splice(fi, 1); newOrder.splice(ti, 0, fromKey); }
+        onChangeProps({...currentP, channelOrder: newOrder});
+      }
+      setSocialDragFrom(null); setSocialDragOver(null);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
 
   function renderContent() {
     // Aplicar altura personalizada a todos los bloques (dragging tiene prioridad sobre la guardada)
@@ -1669,19 +1702,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const visibleItems = socialItems;
 
       const headingNode = p.showHeading !== false && p.heading ? (
-        <MovableTextStage
-          key={`socials-${viewport}-${Boolean(p.heading)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
-          blockProps={p}
-          viewport={viewport}
-          onChange={onChangeProps}
-          style={{ minHeight: "40px", marginBottom: "14px", textAlign: "center" }}
-          items={[{
-            id: "heading",
-            defaultPos: { x: 32, y: 10 },
-            style: { width: "min(100%, 440px)", textAlign: "center" as const },
-            content: <h3 style={{fontSize:"16px",fontWeight:800,color:blockColor,margin:0}}>{p.heading}</h3>,
-          }]}
-        />
+        <div style={{textAlign:"center",marginBottom:"14px"}}>
+          <h3 style={{fontSize:"16px",fontWeight:800,color:blockColor,margin:0}}>{p.heading}</h3>
+        </div>
       ) : null;
 
       const SvgIcon = ({ path, bg, size }: { path:string; bg:string; size:number }) => (
@@ -1691,6 +1714,8 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       );
 
       const iconSize = visibleItems.length <= 2 ? 64 : visibleItems.length <= 3 ? 56 : 48;
+      const socAllKeys = channelOrder.length===ALL_CHANNELS.length?[...channelOrder]:ALL_CHANNELS.map(ch=>ch.key);
+      const socVisKeys = visibleItems.map(v=>v.key);
 
       if (layout === "icons") {
         return (
@@ -1699,21 +1724,15 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
             <div style={{display:"flex",flexWrap:"wrap",gap:visibleItems.length<=2?"20px":"12px",justifyContent:"center",alignItems:"flex-end"}}>
               {visibleItems.map((item,i)=>(
                 <div key={item.label}
-                  draggable
-                  onDragStart={e=>{e.dataTransfer.setData("text/plain",String(i)); e.dataTransfer.effectAllowed="move";}}
-                  onDragOver={e=>e.preventDefault()}
-                  onDrop={e=>{
-                    e.preventDefault();
-                    const from=parseInt(e.dataTransfer.getData("text/plain"));
-                    const allKeys=channelOrder.length===ALL_CHANNELS.length?channelOrder:ALL_CHANNELS.map(c=>c.key);
-                    const visKeys=visibleItems.map(vi=>vi.key);
-                    const newOrder=[...allKeys];
-                    const fromKey=visKeys[from]; const toKey=visKeys[i];
-                    const fi=newOrder.indexOf(fromKey); const ti=newOrder.indexOf(toKey);
-                    if(fi>=0&&ti>=0){newOrder.splice(fi,1);newOrder.splice(ti,0,fromKey);}
-                    onChangeProps({...p,channelOrder:newOrder});
-                  }}
-                  style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"6px",cursor:"grab"}}
+                  ref={el=>{ socialIconRefs.current[i]=el; }}
+                  onMouseDown={e=>startSocialDrag(e,i,socVisKeys,socAllKeys,p)}
+                  onClick={e=>e.stopPropagation()}
+                  style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"6px",
+                    cursor:socialDragFrom===i?"grabbing":"grab",
+                    opacity:socialDragFrom===i?0.4:1,
+                    outline:socialDragOver===i&&socialDragFrom!==i?"3px solid #6366f1":"none",
+                    outlineOffset:"4px",borderRadius:"999px",
+                    transition:"opacity 0.1s",userSelect:"none"}}
                   title={`Arrastrá para reordenar — ${item.label}`}
                 >
                   <SvgIcon path={item.path} bg={item.bg} size={iconSize}/>
@@ -1735,21 +1754,14 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
             <div style={{display:"flex",flexDirection:"column",gap:"10px",maxWidth:"320px",margin:"0 auto"}}>
               {visibleItems.map((item,i)=>(
                 <div key={item.label}
-                  draggable
-                  onDragStart={e=>{e.dataTransfer.setData("text/plain",String(i)); e.dataTransfer.effectAllowed="move";}}
-                  onDragOver={e=>e.preventDefault()}
-                  onDrop={e=>{
-                    e.preventDefault();
-                    const from=parseInt(e.dataTransfer.getData("text/plain"));
-                    const allKeys=channelOrder.length===ALL_CHANNELS.length?channelOrder:ALL_CHANNELS.map(c=>c.key);
-                    const visKeys=visibleItems.map(vi=>vi.key);
-                    const newOrder=[...allKeys];
-                    const fromKey=visKeys[from]; const toKey=visKeys[i];
-                    const fi=newOrder.indexOf(fromKey); const ti=newOrder.indexOf(toKey);
-                    if(fi>=0&&ti>=0){newOrder.splice(fi,1);newOrder.splice(ti,0,fromKey);}
-                    onChangeProps({...p,channelOrder:newOrder});
-                  }}
-                  style={{background:blockColor,color:"#fff",borderRadius:"12px",padding:"12px 20px",fontSize:"13px",fontWeight:700,display:"flex",alignItems:"center",gap:"12px",cursor:"grab"}}
+                  ref={el=>{ socialIconRefs.current[i]=el; }}
+                  onMouseDown={e=>startSocialDrag(e,i,socVisKeys,socAllKeys,p)}
+                  onClick={e=>e.stopPropagation()}
+                  style={{background:blockColor,color:"#fff",borderRadius:"12px",padding:"12px 20px",fontSize:"13px",fontWeight:700,display:"flex",alignItems:"center",gap:"12px",
+                    cursor:socialDragFrom===i?"grabbing":"grab",
+                    opacity:socialDragFrom===i?0.4:1,
+                    outline:socialDragOver===i&&socialDragFrom!==i?"3px solid #6366f1":"none",
+                    outlineOffset:"2px",userSelect:"none"}}
                 >
                   <SvgIcon path={item.path} bg="rgba(255,255,255,0.2)" size={32}/>
                   {item.label}
@@ -1768,21 +1780,13 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           <div style={{display:"grid",gridTemplateColumns:visibleItems.length===1?"1fr":`repeat(${columns}, minmax(0, 1fr))`,gap:"12px",maxWidth:visibleItems.length===1?"260px":"none",margin:visibleItems.length===1?"0 auto":"0"}}>
             {visibleItems.map((item,i)=>(
               <div key={item.label}
-                draggable
-                onDragStart={e=>{e.dataTransfer.setData("text/plain",String(i)); e.dataTransfer.effectAllowed="move";}}
-                onDragOver={e=>e.preventDefault()}
-                onDrop={e=>{
-                  e.preventDefault();
-                  const from=parseInt(e.dataTransfer.getData("text/plain"));
-                  const allKeys=channelOrder.length===ALL_CHANNELS.length?channelOrder:ALL_CHANNELS.map(c=>c.key);
-                  const visKeys=visibleItems.map(vi=>vi.key);
-                  const newOrder=[...allKeys];
-                  const fromKey=visKeys[from]; const toKey=visKeys[i];
-                  const fi=newOrder.indexOf(fromKey); const ti=newOrder.indexOf(toKey);
-                  if(fi>=0&&ti>=0){newOrder.splice(fi,1);newOrder.splice(ti,0,fromKey);}
-                  onChangeProps({...p,channelOrder:newOrder});
-                }}
-                style={{border:"1px solid #e5e7eb",borderRadius:"16px",padding:"14px 12px",display:"flex",alignItems:"center",gap:"10px",background:"#fff",cursor:"grab"}}
+                ref={el=>{ socialIconRefs.current[i]=el; }}
+                onMouseDown={e=>startSocialDrag(e,i,socVisKeys,socAllKeys,p)}
+                onClick={e=>e.stopPropagation()}
+                style={{border:socialDragOver===i&&socialDragFrom!==i?"2px solid #6366f1":"1px solid #e5e7eb",borderRadius:"16px",padding:"14px 12px",display:"flex",alignItems:"center",gap:"10px",background:"#fff",
+                  cursor:socialDragFrom===i?"grabbing":"grab",
+                  opacity:socialDragFrom===i?0.4:1,
+                  userSelect:"none"}}
               >
                 <SvgIcon path={item.path} bg={item.bg} size={36}/>
                 <div>
