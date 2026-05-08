@@ -561,33 +561,45 @@ function BlockEditor({
   if (block.type==="banner-group") {
     const slides: any[] = Array.isArray(p.slides) ? p.slides : [];
     const updSlide = (idx:number, key:string, val:any) => upd("slides", slides.map((s:any,i:number)=>i===idx?{...s,[key]:val}:s));
-    return <div className="space-y-4 w-full min-w-0">
-      {/* General */}
-      <div className="space-y-3">
+    return <div className="space-y-3 w-full min-w-0">
+
+      {/* Tamaño y texto */}
+      <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-3">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Tamaño y texto</p>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Proporción del banner</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1.5">Proporción del banner</label>
           <Chips options={[{id:"sm",label:"Compacto"},{id:"md",label:"Normal"},{id:"lg",label:"Alto"},{id:"xl",label:"Pantalla"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
-          <p className="text-[10px] text-gray-400 mt-1">La proporción se mantiene igual en cualquier pantalla</p>
+          <p className="text-[10px] text-gray-400 mt-1">Se mantiene igual en cualquier pantalla</p>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1.5">Alineación del texto</label>
+          <Chips options={[{id:"left",label:"Izquierda"},{id:"center",label:"Centro"},{id:"right",label:"Derecha"}]} value={p.textAlign||"center"} onChange={v=>upd("textAlign",v)}/>
+        </div>
+      </div>
+
+      {/* Animación */}
+      <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-3">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Animación</p>
+        <div className="flex gap-4">
           <Toggle label="Autoplay" value={p.autoplay!==false} onChange={v=>upd("autoplay",v)}/>
           <Toggle label="Puntos" value={p.showDots!==false} onChange={v=>upd("showDots",v)}/>
           <Toggle label="Flechas" value={p.showArrows!==false} onChange={v=>upd("showArrows",v)}/>
         </div>
         {p.autoplay!==false && (
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Velocidad</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Velocidad</label>
             <Chips options={[{id:"3",label:"3s"},{id:"4",label:"4s"},{id:"5",label:"5s"},{id:"6",label:"6s"},{id:"8",label:"8s"}]} value={String(p.speed||4)} onChange={v=>upd("speed",Number(v))}/>
           </div>
         )}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Alineación del texto</label>
-          <Chips options={[{id:"left",label:"Izquierda"},{id:"center",label:"Centro"},{id:"right",label:"Derecha"}]} value={p.textAlign||"center"} onChange={v=>upd("textAlign",v)}/>
-        </div>
+      </div>
+
+      {/* Colores */}
+      <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 space-y-3">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Colores</p>
         <ColorPicker label="Color del texto" value={p.textColor||"#ffffff"} onChange={v=>upd("textColor",v)}/>
-        <div className="space-y-1">
-          <ColorPicker label="Color del overlay" value={p.overlayColor||"#000000"} onChange={v=>upd("overlayColor",v)}/>
-          <div className="flex items-center justify-between">
+        <ColorPicker label="Color del overlay" value={p.overlayColor||"#000000"} onChange={v=>upd("overlayColor",v)}/>
+        <div>
+          <div className="flex items-center justify-between mb-1">
             <label className="text-xs font-medium text-gray-600">Opacidad del overlay</label>
             <span className="text-xs font-semibold text-indigo-600">{p.overlayOpacity||35}%</span>
           </div>
@@ -596,16 +608,16 @@ function BlockEditor({
       </div>
 
       {/* Slides */}
-      <div className="space-y-3">
+      <div className="space-y-2">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-0.5">Imágenes del carrusel</p>
         {slides.map((slide:any, idx:number)=>(
-          <div key={idx} className="rounded-2xl border border-gray-200 bg-gray-50 p-3 space-y-3">
+          <div key={idx} className="rounded-2xl border border-gray-200 bg-white p-3 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Slide {idx+1}</p>
               {slides.length > 1 && (
                 <button onClick={()=>upd("slides",slides.filter((_:any,i:number)=>i!==idx))} className="text-xs text-red-400 hover:text-red-600 transition-colors">Eliminar</button>
               )}
             </div>
-            {/* Image */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Imagen</label>
               {slide.image ? (
@@ -625,7 +637,6 @@ function BlockEditor({
                 </label>
               )}
             </div>
-            {/* Focal point hint */}
             {slide.image && (
               <p className="text-[11px] text-indigo-500 font-medium bg-indigo-50 rounded-xl px-3 py-2">
                 Usá el botón <strong>📷 Mover foto</strong> en la preview para reposicionar la imagen
