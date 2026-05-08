@@ -565,8 +565,9 @@ function BlockEditor({
       {/* General */}
       <div className="space-y-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Alto del banner</label>
-          <Chips options={[{id:"sm",label:"300px"},{id:"md",label:"420px"},{id:"lg",label:"560px"},{id:"xl",label:"700px"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Proporción del banner</label>
+          <Chips options={[{id:"sm",label:"Compacto"},{id:"md",label:"Normal"},{id:"lg",label:"Alto"},{id:"xl",label:"Pantalla"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
+          <p className="text-[10px] text-gray-400 mt-1">La proporción se mantiene igual en cualquier pantalla</p>
         </div>
         <div className="grid grid-cols-3 gap-2">
           <Toggle label="Autoplay" value={p.autoplay!==false} onChange={v=>upd("autoplay",v)}/>
@@ -657,7 +658,6 @@ function BlockEditor({
           </button>
         )}
       </div>
-      {heightEditorSection}
     </div>;
   }
 
@@ -1472,8 +1472,8 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
 
     if (block.type==="banner-group") {
       const slides: any[] = Array.isArray(p.slides) ? p.slides : [];
-      const HEIGHTS: Record<string,number> = { sm:300, md:420, lg:560, xl:700 };
-      const h = customMinHeight || `${HEIGHTS[String(p.height||"md")]||420}px`;
+      const RATIOS: Record<string,string> = { sm:"25%", md:"35%", lg:"47%", xl:"56.25%" };
+      const paddingBottom = RATIOS[String(p.height||"md")] || "35%";
       const idx = slides.length > 0 ? carouselIdx % slides.length : 0;
       const slide = slides[idx] || {};
       const overlayOpacity = Number(p.overlayOpacity ?? 35) / 100;
@@ -1493,51 +1493,46 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       };
 
       return (
-        <div style={{position:"relative", height:h, overflow:"hidden", fontFamily:c.fontFamily, background:"#1f2937", userSelect:"none"}}>
-          {slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:`${fx}% ${fy}%`,transition:"object-position 0.15s"}}/>}
-          {!slide.image && <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>}
-          <div style={{position:"absolute",inset:0,background:p.overlayColor||"#000000",opacity:overlayOpacity}}/>
-          <div style={{position:"relative",height:"100%",display:"flex",flexDirection:"column",alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start",justifyContent:"center",padding:"24px 32px",textAlign:textAlign as React.CSSProperties["textAlign"],gap:"10px"}}>
-            {slide.title && <h2 style={{fontSize:"28px",fontWeight:900,color:textColor,lineHeight:1.15,margin:0}}>{slide.title}</h2>}
-            {slide.subtitle && <p style={{fontSize:"14px",color:textColor,opacity:0.9,margin:0,maxWidth:"480px"}}>{slide.subtitle}</p>}
-            {slide.buttonText && <button style={{background:c.primaryColor,color:"#fff",padding:"9px 20px",borderRadius:"999px",fontSize:"12px",fontWeight:800,border:"none",cursor:"inherit",marginTop:"4px"}}>{slide.buttonText}</button>}
-          </div>
+        <div style={{position:"relative", width:"100%", paddingBottom, overflow:"hidden", fontFamily:c.fontFamily, background:"#1f2937", userSelect:"none"}}>
+          <div style={{position:"absolute", inset:0}}>
+            {slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:`${fx}% ${fy}%`,transition:"object-position 0.15s"}}/>}
+            {!slide.image && <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>}
+            <div style={{position:"absolute",inset:0,background:p.overlayColor||"#000000",opacity:overlayOpacity}}/>
+            <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start",justifyContent:"center",padding:"24px 32px",textAlign:textAlign as React.CSSProperties["textAlign"],gap:"10px"}}>
+              {slide.title && <h2 style={{fontSize:"clamp(16px,3vw,28px)",fontWeight:900,color:textColor,lineHeight:1.15,margin:0}}>{slide.title}</h2>}
+              {slide.subtitle && <p style={{fontSize:"clamp(11px,1.2vw,14px)",color:textColor,opacity:0.9,margin:0,maxWidth:"480px"}}>{slide.subtitle}</p>}
+              {slide.buttonText && <button style={{background:c.primaryColor,color:"#fff",padding:"9px 20px",borderRadius:"999px",fontSize:"12px",fontWeight:800,border:"none",cursor:"inherit",marginTop:"4px"}}>{slide.buttonText}</button>}
+            </div>
 
-          {/* Focal mode overlay — solo activo cuando el usuario lo habilitó */}
-          {focalMode && slide.image && (
-            <div onClick={handleFocalClick} style={{position:"absolute",inset:0,cursor:"crosshair",zIndex:8}}>
-              <div style={{position:"absolute",left:`${fx}%`,top:0,bottom:0,width:"1px",background:"rgba(255,255,255,0.5)",pointerEvents:"none"}}/>
-              <div style={{position:"absolute",top:`${fy}%`,left:0,right:0,height:"1px",background:"rgba(255,255,255,0.5)",pointerEvents:"none"}}/>
-              <div style={{position:"absolute",left:`${fx}%`,top:`${fy}%`,transform:"translate(-50%,-50%)",width:"18px",height:"18px",borderRadius:"50%",border:"2.5px solid #fff",boxShadow:"0 0 0 2px rgba(0,0,0,0.6)",pointerEvents:"none",background:"rgba(99,102,241,0.7)"}}/>
-              <div style={{position:"absolute",bottom:"14px",left:0,right:0,display:"flex",justifyContent:"center",gap:"8px",pointerEvents:"none"}}>
-                <span style={{background:"rgba(0,0,0,0.6)",color:"#fff",fontSize:"10px",fontWeight:600,padding:"4px 12px",borderRadius:"999px"}}>Hacé clic donde querés centrar la foto</span>
+            {focalMode && slide.image && (
+              <div onClick={handleFocalClick} style={{position:"absolute",inset:0,cursor:"crosshair",zIndex:8}}>
+                <div style={{position:"absolute",left:`${fx}%`,top:0,bottom:0,width:"1px",background:"rgba(255,255,255,0.5)",pointerEvents:"none"}}/>
+                <div style={{position:"absolute",top:`${fy}%`,left:0,right:0,height:"1px",background:"rgba(255,255,255,0.5)",pointerEvents:"none"}}/>
+                <div style={{position:"absolute",left:`${fx}%`,top:`${fy}%`,transform:"translate(-50%,-50%)",width:"18px",height:"18px",borderRadius:"50%",border:"2.5px solid #fff",boxShadow:"0 0 0 2px rgba(0,0,0,0.6)",pointerEvents:"none",background:"rgba(99,102,241,0.7)"}}/>
+                <div style={{position:"absolute",bottom:"14px",left:0,right:0,display:"flex",justifyContent:"center",gap:"8px",pointerEvents:"none"}}>
+                  <span style={{background:"rgba(0,0,0,0.6)",color:"#fff",fontSize:"10px",fontWeight:600,padding:"4px 12px",borderRadius:"999px"}}>Hacé clic donde querés centrar la foto</span>
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Botón "Mover foto" — visible solo cuando está seleccionado y hay imagen */}
-          {selected && slide.image && (
-            <button
-              onClick={(e)=>{e.stopPropagation();setFocalMode(f=>!f);}}
-              style={{position:"absolute",bottom:"8px",right:"8px",zIndex:9,background:focalMode?"#6366f1":"rgba(0,0,0,0.55)",color:"#fff",border:"none",borderRadius:"999px",padding:"5px 12px",fontSize:"11px",fontWeight:700,cursor:"pointer",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",gap:"5px"}}>
-              {focalMode ? "✓ Listo" : "📷 Mover foto"}
-            </button>
-          )}
-          {/* Dots */}
-          {p.showDots!==false && slides.length > 1 && (
-            <div style={{position:"absolute",bottom:"10px",left:0,right:0,display:"flex",justifyContent:"center",gap:"5px",zIndex:6}}>
-              {slides.map((_:any,i:number)=>(
-                <button key={i} onClick={(e)=>{e.stopPropagation();setCarouselIdx(i);}} style={{width:i===idx?"20px":"8px",height:"8px",borderRadius:"4px",background:i===idx?"#fff":"rgba(255,255,255,0.45)",border:"none",cursor:"pointer",padding:0,transition:"width 0.25s"}}/>
-              ))}
-            </div>
-          )}
-          {/* Arrows */}
-          {p.showArrows!==false && slides.length > 1 && (
-            <>
-              <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i-1+slides.length)%slides.length);}} style={{position:"absolute",left:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1,zIndex:6}}>‹</button>
-              <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i+1)%slides.length);}} style={{position:"absolute",right:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1,zIndex:6}}>›</button>
-            </>
-          )}
+            )}
+            {selected && slide.image && (
+              <button onClick={(e)=>{e.stopPropagation();setFocalMode(f=>!f);}} style={{position:"absolute",bottom:"8px",right:"8px",zIndex:9,background:focalMode?"#6366f1":"rgba(0,0,0,0.55)",color:"#fff",border:"none",borderRadius:"999px",padding:"5px 12px",fontSize:"11px",fontWeight:700,cursor:"pointer",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",gap:"5px"}}>
+                {focalMode ? "✓ Listo" : "📷 Mover foto"}
+              </button>
+            )}
+            {p.showDots!==false && slides.length > 1 && (
+              <div style={{position:"absolute",bottom:"10px",left:0,right:0,display:"flex",justifyContent:"center",gap:"5px",zIndex:6}}>
+                {slides.map((_:any,i:number)=>(
+                  <button key={i} onClick={(e)=>{e.stopPropagation();setCarouselIdx(i);}} style={{width:i===idx?"20px":"8px",height:"8px",borderRadius:"4px",background:i===idx?"#fff":"rgba(255,255,255,0.45)",border:"none",cursor:"pointer",padding:0,transition:"width 0.25s"}}/>
+                ))}
+              </div>
+            )}
+            {p.showArrows!==false && slides.length > 1 && (
+              <>
+                <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i-1+slides.length)%slides.length);}} style={{position:"absolute",left:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1,zIndex:6}}>‹</button>
+                <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i+1)%slides.length);}} style={{position:"absolute",right:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1,zIndex:6}}>›</button>
+              </>
+            )}
+          </div>
         </div>
       );
     }

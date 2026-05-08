@@ -23,10 +23,9 @@ function BannerCarouselBlock({ block, primaryColor, fontFamily }: { block: any; 
   const p = block.props;
   const slides: any[] = Array.isArray(p.slides) ? p.slides : [];
   const [idx, setIdx] = useState(0);
-  const HEIGHTS: Record<string,number> = { sm:300, md:420, lg:560, xl:700 };
-  const baseH = p.blockMinHeight && Number(p.blockMinHeight) > 0
-    ? Number(p.blockMinHeight)
-    : (HEIGHTS[String(p.height||"md")] || 420);
+  // Porcentaje de alto relativo al ancho — igual en cualquier pantalla
+  const RATIOS: Record<string,string> = { sm:"25%", md:"35%", lg:"47%", xl:"56.25%" };
+  const paddingBottom = RATIOS[String(p.height||"md")] || "35%";
   const cur = slides[idx % Math.max(1, slides.length)] || {};
   const overlayOpacity = Number(p.overlayOpacity ?? 35) / 100;
   const textColor = String(p.textColor || "#ffffff");
@@ -39,32 +38,34 @@ function BannerCarouselBlock({ block, primaryColor, fontFamily }: { block: any; 
   }, [p.autoplay, p.speed, slides.length]);
 
   return (
-    <div style={{ position:"relative", width:"100%", height:`${baseH}px`, overflow:"hidden", fontFamily, background:"#1f2937", userSelect:"none" }}>
-      {cur.image && <img src={cur.image} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:`${cur.focalX??50}% ${cur.focalY??50}%`, transition:"opacity 0.4s" }}/>}
-      {!cur.image && <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,#4f46e5,#7c3aed)" }}/>}
-      <div style={{ position:"absolute", inset:0, background:String(p.overlayColor||"#000000"), opacity:overlayOpacity }}/>
-      <div style={{ position:"relative", height:"100%", display:"flex", flexDirection:"column", alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start", justifyContent:"center", padding:"32px 48px", textAlign:textAlign as React.CSSProperties["textAlign"], gap:"12px" }}>
-        {cur.title && <h2 style={{ fontSize:"clamp(24px,4vw,48px)", fontWeight:900, color:textColor, lineHeight:1.1, margin:0 }}>{cur.title}</h2>}
-        {cur.subtitle && <p style={{ fontSize:"clamp(14px,1.5vw,18px)", color:textColor, opacity:0.9, margin:0, maxWidth:"560px" }}>{cur.subtitle}</p>}
-        {cur.buttonText && (
-          <a href={cur.buttonUrl||"#"} style={{ display:"inline-block", background:primaryColor, color:"#fff", padding:"12px 28px", borderRadius:"999px", fontSize:"14px", fontWeight:800, textDecoration:"none", marginTop:"4px" }}>
-            {cur.buttonText}
-          </a>
+    <div style={{ position:"relative", width:"100%", paddingBottom, overflow:"hidden", fontFamily, background:"#1f2937", userSelect:"none" }}>
+      <div style={{ position:"absolute", inset:0 }}>
+        {cur.image && <img src={cur.image} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:`${cur.focalX??50}% ${cur.focalY??50}%`, transition:"opacity 0.4s" }}/>}
+        {!cur.image && <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,#4f46e5,#7c3aed)" }}/>}
+        <div style={{ position:"absolute", inset:0, background:String(p.overlayColor||"#000000"), opacity:overlayOpacity }}/>
+        <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start", justifyContent:"center", padding:"32px 48px", textAlign:textAlign as React.CSSProperties["textAlign"], gap:"12px" }}>
+          {cur.title && <h2 style={{ fontSize:"clamp(24px,4vw,48px)", fontWeight:900, color:textColor, lineHeight:1.1, margin:0 }}>{cur.title}</h2>}
+          {cur.subtitle && <p style={{ fontSize:"clamp(14px,1.5vw,18px)", color:textColor, opacity:0.9, margin:0, maxWidth:"560px" }}>{cur.subtitle}</p>}
+          {cur.buttonText && (
+            <a href={cur.buttonUrl||"#"} style={{ display:"inline-block", background:primaryColor, color:"#fff", padding:"12px 28px", borderRadius:"999px", fontSize:"14px", fontWeight:800, textDecoration:"none", marginTop:"4px" }}>
+              {cur.buttonText}
+            </a>
+          )}
+        </div>
+        {p.showDots!==false && slides.length > 1 && (
+          <div style={{ position:"absolute", bottom:"14px", left:0, right:0, display:"flex", justifyContent:"center", gap:"6px" }}>
+            {slides.map((_:any,i:number)=>(
+              <button key={i} onClick={()=>setIdx(i)} style={{ width:i===idx?"22px":"8px", height:"8px", borderRadius:"4px", background:i===idx?"#fff":"rgba(255,255,255,0.45)", border:"none", cursor:"pointer", padding:0, transition:"width 0.25s" }}/>
+            ))}
+          </div>
+        )}
+        {p.showArrows!==false && slides.length > 1 && (
+          <>
+            <button onClick={()=>setIdx(i=>(i-1+slides.length)%slides.length)} style={{ position:"absolute", left:"12px", top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.35)", border:"none", borderRadius:"50%", width:"36px", height:"36px", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:"20px" }}>‹</button>
+            <button onClick={()=>setIdx(i=>(i+1)%slides.length)} style={{ position:"absolute", right:"12px", top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.35)", border:"none", borderRadius:"50%", width:"36px", height:"36px", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:"20px" }}>›</button>
+          </>
         )}
       </div>
-      {p.showDots!==false && slides.length > 1 && (
-        <div style={{ position:"absolute", bottom:"14px", left:0, right:0, display:"flex", justifyContent:"center", gap:"6px" }}>
-          {slides.map((_:any,i:number)=>(
-            <button key={i} onClick={()=>setIdx(i)} style={{ width:i===idx?"22px":"8px", height:"8px", borderRadius:"4px", background:i===idx?"#fff":"rgba(255,255,255,0.45)", border:"none", cursor:"pointer", padding:0, transition:"width 0.25s" }}/>
-          ))}
-        </div>
-      )}
-      {p.showArrows!==false && slides.length > 1 && (
-        <>
-          <button onClick={()=>setIdx(i=>(i-1+slides.length)%slides.length)} style={{ position:"absolute", left:"12px", top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.35)", border:"none", borderRadius:"50%", width:"36px", height:"36px", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:"20px" }}>‹</button>
-          <button onClick={()=>setIdx(i=>(i+1)%slides.length)} style={{ position:"absolute", right:"12px", top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.35)", border:"none", borderRadius:"50%", width:"36px", height:"36px", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:"20px" }}>›</button>
-        </>
-      )}
     </div>
   );
 }
