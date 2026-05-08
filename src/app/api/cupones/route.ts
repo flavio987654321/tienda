@@ -4,19 +4,28 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { isValidCouponCode, normalizeCouponCode } from "@/lib/coupons";
 
 // GET - listar cupones de la tienda
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } });
-  if (!store) return NextResponse.json({ coupons: [] });
+  if (!store) return NextResponse.json({ coupons: [], total: 0 });
 
-  const coupons = await prisma.coupon.findMany({
-    where: { storeId: store.id },
-    orderBy: { createdAt: "desc" },
-  });
+  const { searchParams } = new URL(req.url);
+  const take = Math.min(parseInt(searchParams.get("take") ?? "50"), 100);
+  const skip = Math.max(parseInt(searchParams.get("skip") ?? "0"), 0);
 
-  return NextResponse.json({ coupons });
+  const [coupons, total] = await prisma.$transaction([
+    prisma.coupon.findMany({
+      where: { storeId: store.id },
+      orderBy: { createdAt: "desc" },
+      take,
+      skip,
+    }),
+    prisma.coupon.count({ where: { storeId: store.id } }),
+  ]);
+
+  return NextResponse.json({ coupons, total, take, skip });
 }
 
 // POST - crear cupón

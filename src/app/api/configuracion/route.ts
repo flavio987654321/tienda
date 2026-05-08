@@ -14,6 +14,57 @@ function isValidHex(color: string): boolean {
   return /^#[0-9A-Fa-f]{6}$/.test(color);
 }
 
+function isSafeUrl(url: unknown): boolean {
+  if (!url || typeof url !== "string") return true;
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "https:" || protocol === "http:";
+  } catch {
+    return url.startsWith("/") || url === "#"; // rutas relativas ok
+  }
+}
+
+// Limpia protocolos peligrosos (javascript:, data:) de todos los campos URL de un bloque
+function sanitizeBlockProps(props: Record<string, unknown>): Record<string, unknown> {
+  const URL_FIELDS = ["buttonUrl", "url", "href", "link", "image", "bgImage"];
+  const clean: Record<string, unknown> = { ...props };
+  for (const field of URL_FIELDS) {
+    if (field in clean && !isSafeUrl(clean[field])) {
+      clean[field] = "#";
+    }
+  }
+  // Slides de banner-group tienen sus propias URLs
+  if (Array.isArray(clean.slides)) {
+    clean.slides = (clean.slides as Record<string, unknown>[]).map((s) => ({
+      ...s,
+      buttonUrl: isSafeUrl(s.buttonUrl) ? s.buttonUrl : "#",
+      image: isSafeUrl(s.image) ? s.image : "",
+    }));
+  }
+  if (Array.isArray(clean.cards)) {
+    clean.cards = (clean.cards as Record<string, unknown>[]).map((c) => ({
+      ...c,
+      buttonUrl: isSafeUrl(c.buttonUrl) ? c.buttonUrl : "#",
+    }));
+  }
+  return clean;
+}
+
+function sanitizePageBlocks(raw: string): string {
+  try {
+    const parsed = JSON.parse(raw);
+    const blocks = Array.isArray(parsed) ? parsed : (parsed?.blocks ?? []);
+    const sanitized = blocks.map((b: { props?: Record<string, unknown> } & Record<string, unknown>) => ({
+      ...b,
+      props: b.props ? sanitizeBlockProps(b.props) : {},
+    }));
+    if (Array.isArray(parsed)) return JSON.stringify(sanitized);
+    return JSON.stringify({ ...parsed, blocks: sanitized });
+  } catch {
+    return "[]";
+  }
+}
+
 export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -34,11 +85,18 @@ export async function PUT(req: NextRequest) {
   if (b.pageBlocks && b.pageBlocks !== "[]") {
     try {
       const parsed = JSON.parse(b.pageBlocks);
-      // Accept both old format (array) and new format ({ blocks, modalConfig })
       if (!Array.isArray(parsed) && !Array.isArray(parsed?.blocks)) throw new Error();
     } catch {
       return NextResponse.json({ error: "Bloques de página inválidos" }, { status: 400 });
     }
+  }
+
+  // Validar URLs de logo y banner (SEC-04)
+  if (b.logo && !isSafeUrl(b.logo)) {
+    return NextResponse.json({ error: "URL de logo inválida" }, { status: 400 });
+  }
+  if (b.banner && !isSafeUrl(b.banner)) {
+    return NextResponse.json({ error: "URL de banner inválida" }, { status: 400 });
   }
 
   const store = await prisma.store.update({
@@ -78,13 +136,13 @@ export async function PUT(req: NextRequest) {
       seoDescription:     b.seoDescription || null,
       affiliatesEnabled:  Boolean(b.affiliatesEnabled),
       commissionRate:     isNaN(commissionRate) ? 10 : commissionRate,
-      pageBlocks:         b.pageBlocks || "[]",
+      pageBlocks:         sanitizePageBlocks(b.pageBlocks || "[]"),
       tipoTienda:           b.tipoTienda || "ROPA",
       tipoTiendaConfigurado: Boolean(b.tipoTiendaConfigurado),
       tieneVentaMayorista:  Boolean(b.tieneVentaMayorista),
     },
   });
 
-  revalidatePath(`/tienda/${store.slug}`);
+  revalidatePath(`/tienda/${store.slug}`, "layout");
   return NextResponse.json({ store });
 }

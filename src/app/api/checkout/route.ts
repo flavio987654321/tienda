@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 type CheckoutItem = {
   productId: string;
@@ -33,6 +34,11 @@ const SHIPPING_COSTS: Record<string, { label: string; cost: number }> = {
 };
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  if (!checkRateLimit(`checkout:${ip}`, 10, 60_000)) {
+    return NextResponse.json({ error: "Demasiados pedidos. Esperá un momento." }, { status: 429 });
+  }
+
   const body = (await req.json()) as CheckoutBody;
   const { storeId, affiliateId, couponId, items, customer, shippingMethod, paymentProvider } = body;
 
@@ -73,11 +79,12 @@ export async function POST(req: NextRequest) {
         validAffiliateId = affiliate?.id ?? null;
       }
 
+      const MAX_QUANTITY_PER_ITEM = 99;
       const normalizedItems = items
         .map((item) => ({
           productId: item.productId,
           variantId: item.variantId ?? null,
-          quantity: Math.max(1, Math.floor(Number(item.quantity) || 1)),
+          quantity: Math.min(Math.max(1, Math.floor(Number(item.quantity) || 1)), MAX_QUANTITY_PER_ITEM),
         }))
         .filter((item) => item.productId);
 
@@ -87,21 +94,36 @@ export async function POST(req: NextRequest) {
         include: { variants: true },
       });
 
-      const orderItems = normalizedItems.map((item) => {
+      const orderItems: { productId: string; variantId: string | null; quantity: number; price: number }[] = [];
+      for (const item of normalizedItems) {
         const product = products.find((p) => p.id === item.productId);
         if (!product) throw new Error("Producto no disponible");
 
         const variant = item.variantId ? product.variants.find((v) => v.id === item.variantId) : null;
         if (item.variantId && !variant) throw new Error("Variante no disponible");
-        if (variant && variant.stock < item.quantity) throw new Error(`No hay stock suficiente de ${product.name}`);
 
-        return {
+        if (variant) {
+          // Decrementa stock atómicamente — si no hay suficiente, count=0 y lanzamos error
+          const decremented = await tx.productVariant.updateMany({
+            where: { id: variant.id, stock: { gte: item.quantity } },
+            data: { stock: { decrement: item.quantity } },
+          });
+          if (decremented.count === 0) {
+            const fresh = await tx.productVariant.findUnique({ where: { id: variant.id } });
+            throw new Error(
+              `Sin stock suficiente de ${product.name}` +
+              (fresh ? ` (disponible: ${fresh.stock}, pedido: ${item.quantity})` : "")
+            );
+          }
+        }
+
+        orderItems.push({
           productId: product.id,
           variantId: variant?.id ?? null,
           quantity: item.quantity,
           price: variant?.price ?? product.price,
-        };
-      });
+        });
+      }
 
       const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -116,8 +138,9 @@ export async function POST(req: NextRequest) {
           const expired = coupon.expiresAt && coupon.expiresAt < now;
           const exhausted = coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses;
           if (!expired && !exhausted && subtotal >= coupon.minOrderAmount) {
+            const MAX_COUPON_DISCOUNT = 50_000;
             discountAmount = coupon.discountType === "percentage"
-              ? Math.round((subtotal * coupon.discountValue) / 100)
+              ? Math.min(Math.round((subtotal * coupon.discountValue) / 100), MAX_COUPON_DISCOUNT)
               : Math.min(coupon.discountValue, subtotal);
             validCouponId = coupon.id;
             await tx.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } });
@@ -127,11 +150,10 @@ export async function POST(req: NextRequest) {
 
       const total = subtotal - discountAmount + shipping.cost;
 
-      const buyer = await tx.user.upsert({
-        where: { email: emailNorm },
-        update: { name: customer.name.trim() },
-        create: { email: emailNorm, name: customer.name.trim(), role: "BUYER" },
-      });
+      // Nunca actualizar un usuario existente desde checkout — podría sobreescribir datos de dueñas u otros roles
+      const buyer =
+        (await tx.user.findUnique({ where: { email: emailNorm } })) ??
+        (await tx.user.create({ data: { email: emailNorm, name: customer.name.trim(), role: "BUYER" } }));
 
       return tx.order.create({
         data: {

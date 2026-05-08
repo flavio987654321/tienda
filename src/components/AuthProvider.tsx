@@ -25,18 +25,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthState["status"]>("loading");
 
-  async function refresh() {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) {
+  async function loadUser(hasSession: boolean) {
+    if (!hasSession) {
       setUser(null);
       setStatus("unauthenticated");
       return;
     }
-
     const res = await fetch("/api/auth/me", { cache: "no-store" });
     const payload = await res.json();
     setUser(payload.user ?? null);
     setStatus(payload.user ? "authenticated" : "unauthenticated");
+  }
+
+  async function refresh() {
+    const { data } = await supabase.auth.getSession();
+    await loadUser(!!data.session);
   }
 
   async function signOut(callbackUrl = "/") {
@@ -46,9 +49,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    refresh();
-    const { data } = supabase.auth.onAuthStateChange(() => {
-      refresh();
+    // Initial load: one getSession call
+    supabase.auth.getSession().then(({ data }) => loadUser(!!data.session));
+
+    // Subsequent auth changes: session provided by the event, no extra getSession call
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      loadUser(!!session);
     });
     return () => data.subscription.unsubscribe();
   }, []);

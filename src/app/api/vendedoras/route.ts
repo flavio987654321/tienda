@@ -16,13 +16,16 @@ export async function GET(req: NextRequest) {
     const affiliates = await prisma.affiliate.findMany({
       where: { userId },
       include: {
-        commissions: { select: { amount: true, status: true } },
-        orders: { select: { id: true, total: true, createdAt: true } },
+        // Solo últimas 100 comisiones — suficiente para calcular pendientes sin cargar miles de registros
+        commissions: { select: { amount: true, status: true }, orderBy: { createdAt: "desc" }, take: 100 },
+        // Solo últimas 100 órdenes para el conteo
+        orders: { select: { id: true, total: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 100 },
         wallet: { select: { balance: true, totalEarned: true } },
         store: { select: { name: true, slug: true } },
       },
     });
 
+    // Los totales reales vienen del wallet (fuente de verdad), no de sumar registros truncados
     const totalOrders = affiliates.reduce((s, a) => s + a.orders.length, 0);
     const totalEarned = affiliates.reduce((s, a) => s + (a.wallet?.totalEarned ?? 0), 0);
     const pendingBalance = affiliates.reduce((s, a) => s + (a.wallet?.balance ?? 0), 0);
@@ -156,11 +159,6 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Actualizar rol del usuario
-  await prisma.user.update({
-    where: { id: userId },
-    data: { role: "SELLER" },
-  });
-
+  // El rol se asigna solo cuando la dueña aprueba, no al postular
   return NextResponse.json({ affiliate, message: "Solicitud enviada" });
 }

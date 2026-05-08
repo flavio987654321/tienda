@@ -32,26 +32,31 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
       if (!order) throw new Error("Pedido no encontrado");
 
+      // Máquina de estados: validar que la transición sea legal
+      const VALID_TRANSITIONS: Record<string, string[]> = {
+        confirmPayment: ["PENDING"],
+        markShipped:    ["CONFIRMED"],
+        markDelivered:  ["SHIPPED"],
+        cancel:         ["PENDING", "CONFIRMED"],
+      };
+      if (!VALID_TRANSITIONS[action]) throw new Error("Accion no valida");
+      if (!VALID_TRANSITIONS[action].includes(order.status)) {
+        throw new Error(
+          `No se puede ejecutar '${action}' sobre un pedido en estado ${order.status}`
+        );
+      }
+
       if (action === "confirmPayment") {
         if (["CONFIRMED", "SHIPPED", "DELIVERED"].includes(order.status)) {
           return order;
         }
 
+        // El stock ya fue decrementado al crear el pedido en checkout.
+        // Aquí solo revisamos si alguna variante quedó con stock bajo para alertar.
         const stockAlerts: { name: string; variant: string; stock: number }[] = [];
 
         for (const item of order.items) {
           if (!item.variantId) continue;
-          const updated = await tx.productVariant.updateMany({
-            where: { id: item.variantId, stock: { gte: item.quantity } },
-            data: { stock: { decrement: item.quantity } },
-          });
-          if (updated.count === 0) {
-            const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } });
-            throw new Error(
-              `No hay stock suficiente para ${item.product.name}` +
-              (variant ? ` (disponible: ${variant.stock}, pedido: ${item.quantity})` : "")
-            );
-          }
           const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } });
           if (variant && variant.stock <= 4) {
             stockAlerts.push({
@@ -78,7 +83,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         }
 
         if (order.affiliateId && order.store.affiliatesEnabled && !order.commission) {
-          const amount = Math.round((order.total * order.store.commissionRate) / 100);
+          // Base = subtotal menos descuento (nunca sobre envío)
+          const commissionBase = (order.subtotal ?? order.total) - (order.discountAmount ?? 0);
+          const amount = Math.round((Math.max(0, commissionBase) * order.store.commissionRate) / 100);
           await tx.commission.create({
             data: {
               orderId: order.id,
@@ -89,16 +96,20 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             },
           });
 
-          const wallet = await tx.wallet.findUnique({ where: { affiliateId: order.affiliateId } });
-          if (wallet) {
-            await tx.wallet.update({
-              where: { id: wallet.id },
-              data: {
-                balance: { increment: amount },
-                totalEarned: { increment: amount },
-              },
-            });
-          }
+          // upsert: si la wallet no existe la crea en lugar de silenciar el incremento
+          await tx.wallet.upsert({
+            where: { affiliateId: order.affiliateId! },
+            update: {
+              balance: { increment: amount },
+              totalEarned: { increment: amount },
+            },
+            create: {
+              affiliateId: order.affiliateId!,
+              balance: amount,
+              totalEarned: amount,
+              withdrawn: 0,
+            },
+          });
         }
 
         await tx.payment.updateMany({
@@ -146,6 +157,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
 
       if (action === "cancel") {
+        // Devolver stock reservado al momento del checkout
+        for (const item of order.items) {
+          if (!item.variantId) continue;
+          await tx.productVariant.update({
+            where: { id: item.variantId },
+            data: { stock: { increment: item.quantity } },
+          });
+        }
         await tx.payment.updateMany({
           where: { orderId: order.id },
           data: { status: "CANCELLED" },
@@ -157,6 +176,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         });
       }
 
+      // No debería llegar acá — el guard de arriba cubre todos los casos
       throw new Error("Accion no valida");
     });
 

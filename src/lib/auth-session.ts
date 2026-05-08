@@ -32,8 +32,11 @@ export async function getCurrentUser(): Promise<AppSessionUser | null> {
 
   if (profile) return profile;
 
-  return prisma.user.create({
-    data: {
+  // upsert evita crash por unique constraint si dos requests llegan simultáneamente para el mismo usuario nuevo
+  return prisma.user.upsert({
+    where: { id: data.user.id },
+    update: {},
+    create: {
       id: data.user.id,
       email: data.user.email,
       name: data.user.user_metadata?.name ?? null,

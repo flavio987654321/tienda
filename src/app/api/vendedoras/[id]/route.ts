@@ -43,6 +43,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       include: { wallet: true },
     });
 
+    // Rol SELLER se asigna aquí, cuando realmente se aprueba
+    await prisma.user.update({
+      where: { id: affiliate.userId },
+      data: { role: "SELLER" },
+    });
+
     await sendAffiliateStatusEmail({
       affiliateEmail: affiliate.user.email,
       affiliateName: affiliate.user.name || "",

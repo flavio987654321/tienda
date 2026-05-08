@@ -16,20 +16,23 @@ export default function AffiliateActions({ affiliateId, status }: { affiliateId:
 
     setLoading(action);
     setError("");
-    const res = await fetch(`/api/vendedoras/${affiliateId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
-    const data = await res.json();
-    setLoading(null);
-
-    if (!res.ok) {
-      setError(data.error || "No se pudo actualizar la solicitud");
-      return;
+    try {
+      const res = await fetch(`/api/vendedoras/${affiliateId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "No se pudo actualizar la solicitud");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Error de conexión. Verificá tu internet e intentá de nuevo.");
+    } finally {
+      setLoading(null);
     }
-
-    router.refresh();
   }
 
   return (

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { fileTypeFromBuffer } from "file-type";
 import { getCurrentUser } from "@/lib/auth-session";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -26,21 +28,8 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
 ]);
 const DEFAULT_BUCKET = "product-images";
 
-const uploadRateMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW_MS = 60_000;
-
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const entry = uploadRateMap.get(userId);
-  if (!entry || now > entry.resetAt) {
-    uploadRateMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
-}
 
 function getSupabaseStorageConfig() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
@@ -92,7 +81,7 @@ export async function POST(req: NextRequest) {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-    if (!checkRateLimit(user.id)) {
+    if (!checkRateLimit(`upload:${user.id}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)) {
       return NextResponse.json(
         { error: "Demasiadas subidas en poco tiempo. Esperá un momento." },
         { status: 429 }
@@ -123,6 +112,18 @@ export async function POST(req: NextRequest) {
     }
 
     const bytes = await file.arrayBuffer();
+
+    // Validar tipo real por magic bytes — no confiar en Content-Type del cliente
+    if (!isDocument) {
+      const detected = await fileTypeFromBuffer(Buffer.from(bytes));
+      const allowedSet = isVideo ? ALLOWED_VIDEO_TYPES : ALLOWED_IMAGE_TYPES;
+      if (!detected || !allowedSet.has(detected.mime)) {
+        return NextResponse.json(
+          { error: isVideo ? "El archivo no es un video válido" : "El archivo no es una imagen válida" },
+          { status: 400 }
+        );
+      }
+    }
 
     if (getSupabaseStorageConfig()) {
       const folder = isDocument ? "affiliate-docs" : isVideo ? "store-videos" : "products";

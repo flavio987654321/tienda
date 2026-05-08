@@ -13,22 +13,24 @@ export default function OrderActions({ orderId, status }: { orderId: string; sta
   async function run(action: string) {
     setLoading(action);
     setError("");
+    try {
+      const res = await fetch(`/api/pedidos/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, trackingCode }),
+      });
 
-    const res = await fetch(`/api/pedidos/${orderId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, trackingCode }),
-    });
-
-    const data = await res.json();
-    setLoading(null);
-
-    if (!res.ok) {
-      setError(data.error || "No se pudo actualizar");
-      return;
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "No se pudo actualizar");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Error de conexión. Verificá tu internet e intentá de nuevo.");
+    } finally {
+      setLoading(null);
     }
-
-    router.refresh();
   }
 
   return (

@@ -10,6 +10,18 @@ const SOCIAL_ICONS: Record<string, { path: string; color: string; gradient?: str
   email:     { path: "M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z", color: "#6366f1" },
 };
 
+// Previene href con javascript: o data: — segunda línea de defensa
+function safeHref(url: unknown): string {
+  if (!url || typeof url !== "string") return "#";
+  try {
+    const { protocol } = new URL(url);
+    if (protocol !== "https:" && protocol !== "http:") return "#";
+  } catch {
+    if (!url.startsWith("/") && url !== "#") return "#";
+  }
+  return url;
+}
+
 function SocialIconCircle({ network, size = 40, forButton = false }: { network: string; size?: number; forButton?: boolean }) {
   const meta = SOCIAL_ICONS[network.toLowerCase()] ?? SOCIAL_ICONS.email;
   const bg = meta.gradient ?? meta.color;
@@ -47,7 +59,7 @@ function BannerCarouselBlock({ block, primaryColor, fontFamily }: { block: any; 
           {cur.title && <h2 style={{ fontSize:"clamp(24px,4vw,48px)", fontWeight:900, color:textColor, lineHeight:1.1, margin:0 }}>{cur.title}</h2>}
           {cur.subtitle && <p style={{ fontSize:"clamp(14px,1.5vw,18px)", color:textColor, opacity:0.9, margin:0, maxWidth:"560px" }}>{cur.subtitle}</p>}
           {cur.buttonText && (
-            <a href={cur.buttonUrl||"#"} style={{ display:"inline-block", background:primaryColor, color:"#fff", padding:"12px 28px", borderRadius:"999px", fontSize:"14px", fontWeight:800, textDecoration:"none", marginTop:"4px" }}>
+            <a href={safeHref(cur.buttonUrl)} style={{ display:"inline-block", background:primaryColor, color:"#fff", padding:"12px 28px", borderRadius:"999px", fontSize:"14px", fontWeight:800, textDecoration:"none", marginTop:"4px" }}>
               {cur.buttonText}
             </a>
           )}

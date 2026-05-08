@@ -2031,17 +2031,51 @@ export default function ConfiguracionPage() {
         showDescription: config.productModalShowDescription !== false,
       };
       const pageBlocksPayload = JSON.stringify({ blocks: processedBlocks, modalConfig });
+      // UX-04: Validate social URL format
+      const urlFields = [
+        { key: "instagramUrl", label: "Instagram" },
+        { key: "facebookUrl",  label: "Facebook" },
+        { key: "tiktokUrl",    label: "TikTok" },
+      ] as const;
+      for (const { key, label } of urlFields) {
+        const val = (config as Record<string, unknown>)[key];
+        if (val && typeof val === "string") {
+          const v = val.trim();
+          if (v && !v.startsWith("@") && !v.startsWith("http://") && !v.startsWith("https://")) {
+            setSaving(false);
+            alert(`URL de ${label} inválida. Usá una URL completa (https://...) o un @usuario.`);
+            return;
+          }
+        }
+      }
+
+      // UX-05: Validate WhatsApp international format
+      const wa = (config as Record<string, unknown>).whatsappNumber;
+      if (wa && typeof wa === "string" && wa.trim()) {
+        const waClean = wa.trim().replace(/[\s\-()]/g, "");
+        if (!/^\+?\d{7,15}$/.test(waClean)) {
+          setSaving(false);
+          alert("Número de WhatsApp inválido. Usá formato internacional: 5491112345678 (sin espacios ni guiones).");
+          return;
+        }
+      }
+
       const res = await fetch("/api/configuracion",{
         method:"PUT",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({...config, pageBlocks: pageBlocksPayload})
       });
-      if (!res.ok) throw new Error("Error al guardar");
+      if (!res.ok) {
+        let msg = "Error al guardar";
+        try { const d = await res.json(); if (d?.error) msg = d.error; } catch {}
+        throw new Error(msg);
+      }
       setSaved(true);
       setIsDirty(false);
       setTimeout(()=>setSaved(false),3000);
-    } catch {
-      alert("Hubo un error al guardar. Intentá de nuevo.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      alert(`No se pudo guardar: ${msg}. Verificá tu conexión e intentá de nuevo.`);
     } finally {
       setSaving(false);
     }
@@ -2112,6 +2146,17 @@ export default function ConfiguracionPage() {
       setIsDirty(true);
     }
   }, [blocks.length]);
+
+  // Advertir al cerrar la pestaña o el navegador con cambios sin guardar
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   if(loading) return <DashboardLayout><div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin text-indigo-600"/></div></DashboardLayout>;
 

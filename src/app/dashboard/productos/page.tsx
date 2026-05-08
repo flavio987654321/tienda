@@ -15,15 +15,17 @@ export default async function ProductosPage() {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    include: {
-      products: {
-        include: { variants: true },
-        orderBy: { createdAt: "desc" },
-      },
-    },
   });
 
-  const products = store?.products ?? [];
+  // Máximo 200 productos por carga — suficiente para cualquier tienda real
+  const products = store
+    ? await prisma.product.findMany({
+        where: { storeId: store.id },
+        include: { variants: true },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+      })
+    : [];
   const pendingAffiliateCount = store
     ? await prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } })
     : 0;
