@@ -52,8 +52,13 @@ function BannerCarouselBlock({ block, primaryColor, fontFamily }: { block: any; 
   return (
     <div style={{ position:"relative", width:"100%", paddingBottom, overflow:"hidden", fontFamily, background:"#1f2937", userSelect:"none" }}>
       <div style={{ position:"absolute", inset:0 }}>
-        {cur.image && <img src={cur.image} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:`${cur.focalX??50}% ${cur.focalY??50}%`, transition:"opacity 0.4s" }}/>}
-        {!cur.image && <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,#4f46e5,#7c3aed)" }}/>}
+        {/* Todas las imágenes apiladas — solo la activa tiene opacity:1, el resto opacity:0 */}
+        {slides.length === 0 && <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,#4f46e5,#7c3aed)" }}/>}
+        {slides.map((slide, i) => (
+          slide.image
+            ? <img key={i} src={slide.image} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:`${slide.focalX??50}% ${slide.focalY??50}%`, opacity: i === idx ? 1 : 0, transition:"opacity 0.6s ease" }}/>
+            : <div key={i} style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,#4f46e5,#7c3aed)", opacity: i === idx ? 1 : 0, transition:"opacity 0.6s ease" }}/>
+        ))}
         <div style={{ position:"absolute", inset:0, background:String(p.overlayColor||"#000000"), opacity:overlayOpacity }}/>
         <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start", justifyContent:"center", padding:"32px 48px", textAlign:textAlign as React.CSSProperties["textAlign"], gap:"12px" }}>
           {cur.title && <h2 style={{ fontSize:"clamp(24px,4vw,48px)", fontWeight:900, color:textColor, lineHeight:1.1, margin:0 }}>{cur.title}</h2>}
