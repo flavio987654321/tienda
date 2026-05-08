@@ -107,7 +107,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
               affiliateId: order.affiliateId!,
               balance: amount,
               totalEarned: amount,
-              withdrawn: 0,
+              totalWithdrawn: 0,
             },
           });
         }
