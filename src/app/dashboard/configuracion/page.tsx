@@ -2032,13 +2032,12 @@ export default function ConfiguracionPage() {
       };
       const pageBlocksPayload = JSON.stringify({ blocks: processedBlocks, modalConfig });
       // UX-04: Validate social URL format
-      const urlFields = [
-        { key: "instagramUrl", label: "Instagram" },
-        { key: "facebookUrl",  label: "Facebook" },
-        { key: "tiktokUrl",    label: "TikTok" },
-      ] as const;
-      for (const { key, label } of urlFields) {
-        const val = (config as Record<string, unknown>)[key];
+      const socialUrlFields: { val: string | undefined | null; label: string }[] = [
+        { val: config.instagramUrl, label: "Instagram" },
+        { val: config.facebookUrl,  label: "Facebook" },
+        { val: config.tiktokUrl,    label: "TikTok" },
+      ];
+      for (const { val, label } of socialUrlFields) {
         if (val && typeof val === "string") {
           const v = val.trim();
           if (v && !v.startsWith("@") && !v.startsWith("http://") && !v.startsWith("https://")) {
@@ -2050,10 +2049,9 @@ export default function ConfiguracionPage() {
       }
 
       // UX-05: Validate WhatsApp international format
-      const wa = (config as Record<string, unknown>).whatsappNumber;
-      if (wa && typeof wa === "string" && wa.trim()) {
-        const waClean = wa.trim().replace(/[\s\-()]/g, "");
-        if (!/^\+?\d{7,15}$/.test(waClean)) {
+      if (config.whatsappNumber && config.whatsappNumber.trim()) {
+        const waClean = config.whatsappNumber.trim().replace(/[\s\-()+]/g, "");
+        if (!/^\d{7,15}$/.test(waClean)) {
           setSaving(false);
           alert("Número de WhatsApp inválido. Usá formato internacional: 5491112345678 (sin espacios ni guiones).");
           return;
