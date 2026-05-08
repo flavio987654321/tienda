@@ -1226,13 +1226,16 @@ export default function StorefrontClient({
             const blockTextColor = readableText(blockColor);
             const blockBg = String(p.bgColor || (isDark ? "rgba(255,255,255,.03)" : "#ffffff"));
             // Build items from block-level URLs, fall back to store-level
+            const channelOrder: string[] = Array.isArray(p.channelOrder) ? p.channelOrder : ["showInstagram","showFacebook","showTiktok","showWhatsapp","showEmail"];
             const blockItems = [
               { key:"showInstagram", label:"Instagram", network:"instagram", href: p.instagramUrl ? socialUrl("instagram", p.instagramUrl) : store.instagramUrl ? socialUrl("instagram", store.instagramUrl) : null },
               { key:"showFacebook",  label:"Facebook",  network:"facebook",  href: p.facebookUrl  ? socialUrl("facebook",  p.facebookUrl)  : store.facebookUrl  ? socialUrl("facebook",  store.facebookUrl)  : null },
               { key:"showTiktok",    label:"TikTok",    network:"tiktok",    href: p.tiktokUrl    ? socialUrl("tiktok",    p.tiktokUrl)    : store.tiktokUrl    ? socialUrl("tiktok",    store.tiktokUrl)    : null },
               { key:"showWhatsapp",  label:"WhatsApp",  network:"whatsapp",  href: p.whatsappNumber ? socialUrl("whatsapp", p.whatsappNumber) : store.whatsappNumber ? socialUrl("whatsapp", store.whatsappNumber) : null },
               { key:"showEmail",     label:"Email",     network:"email",     href: p.emailAddress ? `mailto:${p.emailAddress}` : store.owner.email ? `mailto:${store.owner.email}` : null },
-            ].filter((item) => p[item.key] !== false && item.href) as { key:string; label:string; network:string; href:string }[];
+            ]
+              .sort((a,b) => channelOrder.indexOf(a.key) - channelOrder.indexOf(b.key))
+              .filter((item) => p[item.key] !== false && item.href) as { key:string; label:string; network:string; href:string }[];
             const visibleItems = blockItems;
             if (!visibleItems.length) return null;
 
