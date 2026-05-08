@@ -565,10 +565,6 @@ function BlockEditor({
       {/* General */}
       <div className="space-y-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Ajuste de imagen</label>
-          <Chips options={[{id:"cover",label:"Cubrir (recorta)"},{id:"contain",label:"Completa (sin recorte)"}]} value={p.imageFit||"cover"} onChange={v=>upd("imageFit",v)}/>
-        </div>
-        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Alto del banner</label>
           <Chips options={[{id:"sm",label:"300px"},{id:"md",label:"420px"},{id:"lg",label:"560px"},{id:"xl",label:"700px"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
         </div>
@@ -1477,9 +1473,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     if (block.type==="banner-group") {
       const slides: any[] = Array.isArray(p.slides) ? p.slides : [];
       const HEIGHTS: Record<string,number> = { sm:300, md:420, lg:560, xl:700 };
-      const imageFit = String(p.imageFit || "cover");
-      const isContain = imageFit === "contain";
-      const h = isContain ? "auto" : (customMinHeight || `${HEIGHTS[String(p.height||"md")]||420}px`);
+      const h = customMinHeight || `${HEIGHTS[String(p.height||"md")]||420}px`;
       const idx = slides.length > 0 ? carouselIdx % slides.length : 0;
       const slide = slides[idx] || {};
       const overlayOpacity = Number(p.overlayOpacity ?? 35) / 100;
@@ -1490,37 +1484,13 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
 
       const handleFocalClick = (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
-        if (!slide.image || isContain) return;
+        if (!slide.image) return;
         const rect = e.currentTarget.getBoundingClientRect();
         const newFx = Math.round(((e.clientX - rect.left) / rect.width) * 100);
         const newFy = Math.round(((e.clientY - rect.top) / rect.height) * 100);
         const newSlides = slides.map((s: any, i: number) => i === idx ? {...s, focalX: newFx, focalY: newFy} : s);
         onChangeProps({...p, slides: newSlides});
       };
-
-      if (isContain) {
-        return (
-          <div style={{position:"relative",width:"100%",fontFamily:c.fontFamily,userSelect:"none"}}>
-            {slide.image
-              ? <img src={slide.image} alt="" style={{display:"block",width:"100%",height:"auto"}}/>
-              : <div style={{height:"240px",background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>
-            }
-            {p.showDots!==false && slides.length > 1 && (
-              <div style={{position:"absolute",bottom:"10px",left:0,right:0,display:"flex",justifyContent:"center",gap:"5px",zIndex:6}}>
-                {slides.map((_:any,i:number)=>(
-                  <button key={i} onClick={(e)=>{e.stopPropagation();setCarouselIdx(i);}} style={{width:i===idx?"20px":"8px",height:"8px",borderRadius:"4px",background:i===idx?"#fff":"rgba(255,255,255,0.45)",border:"none",cursor:"pointer",padding:0,transition:"width 0.25s"}}/>
-                ))}
-              </div>
-            )}
-            {p.showArrows!==false && slides.length > 1 && (
-              <>
-                <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i-1+slides.length)%slides.length);}} style={{position:"absolute",left:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1,zIndex:6}}>‹</button>
-                <button onClick={(e)=>{e.stopPropagation();setCarouselIdx(i=>(i+1)%slides.length);}} style={{position:"absolute",right:"8px",top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,0.35)",border:"none",borderRadius:"50%",width:"28px",height:"28px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#fff",fontSize:"16px",lineHeight:1,zIndex:6}}>›</button>
-              </>
-            )}
-          </div>
-        );
-      }
 
       return (
         <div style={{position:"relative", height:h, overflow:"hidden", fontFamily:c.fontFamily, background:"#1f2937", userSelect:"none"}}>
