@@ -2191,7 +2191,7 @@ export default function ConfiguracionPage() {
 
       <div className="flex gap-3 items-start">
         {/* ── EDITOR PANEL ── */}
-        <div ref={editorPanelRef} className="w-56 shrink-0 space-y-2 max-h-[calc(100vh-130px)] overflow-y-auto pr-1 pb-4">
+        <div ref={editorPanelRef} className="w-64 shrink-0 space-y-2 max-h-[calc(100vh-130px)] overflow-y-auto pr-1 pb-4">
 
           {/* ── BLOQUES ── */}
             <div className="space-y-3">
@@ -2245,7 +2245,7 @@ export default function ConfiguracionPage() {
                         >
                           <span className="text-lg">{lib?.emoji}</span>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-semibold ${isSel?"text-indigo-700":"text-gray-900"}`}>{lib?.label}</p>
+                            <p className={`text-xs font-semibold truncate ${isSel?"text-indigo-700":"text-gray-900"}`}>{lib?.label}</p>
                             <p className="text-xs text-gray-400 truncate">
                               {b.props.title||b.props.heading||b.props.text||"···"}
                             </p>
