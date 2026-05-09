@@ -6,9 +6,9 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 
 const csp = [
   "default-src 'self'",
-  `img-src 'self' data: blob: https://${supabaseHost} https://res.cloudinary.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com`,
+  `img-src 'self' data: blob: https: https://${supabaseHost} https://res.cloudinary.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com`,
   `connect-src 'self' https://${supabaseHost} https://api.mercadopago.com`,
-  "media-src 'self' blob: https://www.youtube.com https://www.instagram.com",
+  "media-src 'self' blob: https: https://res.cloudinary.com https://www.youtube.com https://www.instagram.com https://*.cdninstagram.com",
   "frame-src https://www.youtube.com https://www.instagram.com https://sdk.mercadopago.com",
   `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com`,
   "style-src 'self' 'unsafe-inline'",

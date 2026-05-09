@@ -2189,9 +2189,9 @@ export default function ConfiguracionPage() {
         </div>
       </div>
 
-      <div className="flex gap-3 xl:gap-5 items-start">
+      <div className="flex gap-3 items-start">
         {/* ── EDITOR PANEL ── */}
-        <div ref={editorPanelRef} className="w-60 xl:w-72 shrink-0 space-y-2 max-h-[calc(100vh-130px)] overflow-y-auto pr-1 pb-4">
+        <div ref={editorPanelRef} className="w-56 shrink-0 space-y-2 max-h-[calc(100vh-130px)] overflow-y-auto pr-1 pb-4">
 
           {/* ── BLOQUES ── */}
             <div className="space-y-3">
