@@ -80,7 +80,7 @@ export default function DashboardLayout({
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="h-screen bg-gray-50 flex overflow-hidden">
       {/* Sidebar — collapsed (w-14) por defecto, se expande al hover (w-60) como overlay */}
       <aside className="group fixed left-0 top-0 h-full w-14 hover:w-60 bg-white border-r border-gray-100 flex flex-col z-40 transition-[width] duration-200 overflow-hidden hover:shadow-xl">
 
@@ -170,7 +170,7 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      <main className="ml-14 flex-1 p-4 overflow-hidden bg-gray-50">{children}</main>
+      <main className="ml-14 flex-1 p-4 bg-gray-50 overflow-y-auto">{children}</main>
     </div>
   );
 }
