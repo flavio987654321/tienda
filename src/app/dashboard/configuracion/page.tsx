@@ -2160,6 +2160,12 @@ export default function ConfiguracionPage() {
 
   return (
     <DashboardLayout>
+      {/* Bloqueo en móvil/tablet — el editor requiere pantalla de PC */}
+      <div className="lg:hidden fixed inset-0 z-50 bg-gray-50 flex flex-col items-center justify-center p-8 text-center">
+        <Monitor className="h-16 w-16 text-gray-300 mb-4"/>
+        <h2 className="text-xl font-bold text-gray-800 mb-3">Editor no disponible</h2>
+        <p className="text-gray-500 text-sm max-w-sm">El editor de la tienda está optimizado para pantallas de PC. Por favor accedé desde una computadora.</p>
+      </div>
       <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&upload(e.target.files[0],"logo")}/>
       <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&upload(e.target.files[0],"banner")}/>
       <input ref={blockImageRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&uploadBlockImage(e.target.files[0])}/>
@@ -2183,9 +2189,9 @@ export default function ConfiguracionPage() {
         </div>
       </div>
 
-      <div className="flex gap-5 items-start">
+      <div className="flex gap-3 xl:gap-5 items-start">
         {/* ── EDITOR PANEL ── */}
-        <div ref={editorPanelRef} className="w-72 shrink-0 space-y-2 max-h-[calc(100vh-130px)] overflow-y-auto pr-1 pb-4">
+        <div ref={editorPanelRef} className="w-60 xl:w-72 shrink-0 space-y-2 max-h-[calc(100vh-130px)] overflow-y-auto pr-1 pb-4">
 
           {/* ── BLOQUES ── */}
             <div className="space-y-3">

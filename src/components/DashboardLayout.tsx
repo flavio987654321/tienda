@@ -154,7 +154,7 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      <main className="ml-60 flex-1 p-8">{children}</main>
+      <main className="ml-60 flex-1 p-4 xl:p-8">{children}</main>
     </div>
   );
 }
