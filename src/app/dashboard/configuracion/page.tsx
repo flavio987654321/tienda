@@ -2322,9 +2322,9 @@ export default function ConfiguracionPage() {
         </div>
 
         {/* ── PREVIEW PANEL ── */}
-        <div className="flex-1 min-w-0 sticky top-4">
-          <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-700">
+        <div className="flex-1 min-w-0 sticky top-4 flex flex-col max-h-[calc(100vh-130px)]">
+          <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col flex-1 min-h-0">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 shrink-0">
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-red-500"/><div className="w-3 h-3 rounded-full bg-yellow-500"/><div className="w-3 h-3 rounded-full bg-green-500"/>
               </div>
@@ -2341,8 +2341,8 @@ export default function ConfiguracionPage() {
               </div>
             </div>
 
-            <div className="bg-gray-900 flex items-start justify-center p-4 overflow-auto" style={{minHeight:"620px"}}>
-              <div ref={previewScrollRef} className={`${previewW} relative transition-all duration-300 bg-white rounded-lg overflow-hidden shadow-2xl`} style={{maxHeight:"620px",overflowY:"auto"}}>
+            <div className="bg-gray-900 flex items-start justify-center p-4 overflow-y-auto flex-1 min-h-0">
+              <div ref={previewScrollRef} className={`${previewW} relative transition-all duration-300 bg-white rounded-lg overflow-hidden shadow-2xl`}>
                 <div style={{fontFamily:config.fontFamily,minHeight:"400px"}}>
                     {/* Mini navbar */}
                     <div style={{background:config.navbarStyle==="solid"?config.primaryColor:"white",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid rgba(0,0,0,0.1)"}}>
