@@ -2170,8 +2170,9 @@ export default function ConfiguracionPage() {
       <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&upload(e.target.files[0],"banner")}/>
       <input ref={blockImageRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&uploadBlockImage(e.target.files[0])}/>
 
+      <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Diseñá tu tienda</h1>
           <p className="text-gray-500 mt-0.5 text-sm">Preview en vivo mientras editás</p>
@@ -2189,7 +2190,7 @@ export default function ConfiguracionPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 grid-cols-[256px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]" style={{height:"calc(100vh - 120px)"}}>
+      <div className="flex-1 min-h-0 grid gap-3 grid-cols-[256px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
         {/* ── EDITOR PANEL ── */}
         <div ref={editorPanelRef} className="h-full space-y-2 overflow-y-auto pr-1 pb-4">
 
@@ -2417,6 +2418,7 @@ export default function ConfiguracionPage() {
           </p>
         </div>
       </div>
+      </div>{/* end flex col h-full */}
 
       {/* Block library modal */}
       {showBlockLibrary&&<BlockLibraryModal onAdd={addBlock} onClose={()=>setShowBlockLibrary(false)}/>}
