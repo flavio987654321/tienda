@@ -2189,9 +2189,9 @@ export default function ConfiguracionPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 items-start grid-cols-[256px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid gap-3 grid-cols-[256px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]" style={{height:"calc(100vh - 120px)"}}>
         {/* ── EDITOR PANEL ── */}
-        <div ref={editorPanelRef} className="w-64 xl:w-80 shrink-0 space-y-2 max-h-[calc(100vh-130px)] overflow-y-auto pr-1 pb-4">
+        <div ref={editorPanelRef} className="h-full space-y-2 overflow-y-auto pr-1 pb-4">
 
           {/* ── BLOQUES ── */}
             <div className="space-y-3">
@@ -2322,7 +2322,7 @@ export default function ConfiguracionPage() {
         </div>
 
         {/* ── PREVIEW PANEL ── */}
-        <div className="flex-1 min-w-0 sticky top-4 flex flex-col max-h-[calc(100vh-130px)] rounded-2xl border-2 border-indigo-100 shadow-xl shadow-indigo-100/40">
+        <div className="h-full flex flex-col rounded-2xl border-2 border-indigo-100 shadow-xl shadow-indigo-100/40">
           <div className="bg-gray-800 rounded-2xl overflow-hidden flex flex-col flex-1 min-h-0">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 shrink-0">
               <div className="flex items-center gap-1.5">
