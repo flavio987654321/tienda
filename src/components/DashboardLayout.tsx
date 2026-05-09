@@ -170,7 +170,7 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      <main className="ml-14 flex-1 p-4 overflow-x-hidden">{children}</main>
+      <main className="ml-14 flex-1 p-4 overflow-x-hidden bg-gray-50 min-h-screen">{children}</main>
     </div>
   );
 }
