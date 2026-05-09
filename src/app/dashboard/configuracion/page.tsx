@@ -2190,7 +2190,7 @@ export default function ConfiguracionPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 grid gap-3 grid-cols-[256px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="flex-1 min-h-0 grid gap-3 auto-rows-fr grid-cols-[256px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
         {/* ── EDITOR PANEL ── */}
         <div ref={editorPanelRef} className="h-full space-y-2 overflow-y-auto pr-1 pb-4">
 
