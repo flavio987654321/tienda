@@ -2189,7 +2189,7 @@ export default function ConfiguracionPage() {
         </div>
       </div>
 
-      <div className="flex gap-3 items-start">
+      <div className="grid gap-3 items-start" style={{gridTemplateColumns:"256px minmax(0,1fr)"}}>
         {/* ── EDITOR PANEL ── */}
         <div ref={editorPanelRef} className="w-64 shrink-0 space-y-2 max-h-[calc(100vh-130px)] overflow-y-auto pr-1 pb-4">
 
