@@ -91,6 +91,7 @@ import {
   Heart,
   Loader2,
   Mail,
+  Menu,
   MessageCircle,
   Minus,
   Package,
@@ -160,6 +161,7 @@ type Store = {
   footerText: string | null;
   currency: string;
   pageBlocks: string;
+  navLinks: string;
   owner: { name: string | null; email: string };
   products: Product[];
 };
@@ -435,6 +437,7 @@ export default function StorefrontClient({
   const [reviewSuccess, setReviewSuccess] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [openCart, setOpenCart] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [category, setCategory] = useState("all");
   const [subcategory, setSubcategory] = useState("all");
   const [shippingMethod, setShippingMethod] = useState(SHIPPING_OPTIONS[0].id);
@@ -459,6 +462,11 @@ export default function StorefrontClient({
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount: number } | null>(null);
+
+  type NavLink = { id: string; label: string; type: "filter" | "url"; value: string };
+  const parsedNavLinks = useMemo<NavLink[]>(() => {
+    try { return JSON.parse(store.navLinks || "[]"); } catch { return []; }
+  }, [store.navLinks]);
 
   const categories = useMemo(() => [...new Set(store.products.map((p) => p.category).filter(Boolean))], [store.products]);
   const subcategories = useMemo(
@@ -1437,12 +1445,44 @@ export default function StorefrontClient({
             {store.logo ? <img src={store.logo} alt={store.name} className="h-10 w-10 rounded-xl object-cover" /> : <ShoppingBag className="h-7 w-7" style={{ color: store.primaryColor }} />}
             <span>{store.name}</span>
           </a>
+
+          {parsedNavLinks.length > 0 && (
+            <nav className={`hidden items-center gap-1 md:flex ${isDark ? "text-gray-200" : "text-gray-700"}`}>
+              {parsedNavLinks.map((link) =>
+                link.type === "filter" ? (
+                  <button
+                    key={link.id}
+                    type="button"
+                    onClick={() => { setCategory(link.value); setSubcategory("all"); }}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${category === link.value ? "text-white" : isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                    style={category === link.value ? { backgroundColor: store.primaryColor } : undefined}
+                  >
+                    {link.label}
+                  </button>
+                ) : (
+                  <a
+                    key={link.id}
+                    href={safeHref(link.value)}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                  >
+                    {link.label}
+                  </a>
+                )
+              )}
+            </nav>
+          )}
+
           <div className="flex items-center gap-3">
-            <div className={`hidden items-center gap-3 text-sm md:flex ${isDark ? "text-gray-300" : "text-gray-500"}`}>
-              {store.instagramUrl && <a href={socialUrl("instagram", store.instagramUrl)} target="_blank" rel="noreferrer" className="font-bold">Instagram</a>}
-              {store.facebookUrl && <a href={socialUrl("facebook", store.facebookUrl)} target="_blank" rel="noreferrer" className="font-bold">Facebook</a>}
-              {store.tiktokUrl && <a href={socialUrl("tiktok", store.tiktokUrl)} target="_blank" rel="noreferrer" className="font-bold">TikTok</a>}
-            </div>
+            {parsedNavLinks.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setMenuOpen(true)}
+                className={`flex items-center justify-center rounded-lg p-2 md:hidden ${isDark ? "text-white hover:bg-white/10" : "text-gray-700 hover:bg-gray-100"}`}
+                aria-label="Menú"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            )}
             {!isInquiry && (
               <button
                 type="button"
@@ -1457,6 +1497,44 @@ export default function StorefrontClient({
           </div>
         </div>
       </header>
+
+      {menuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMenuOpen(false)} />
+          <div className={`absolute left-0 top-0 bottom-0 w-72 shadow-2xl flex flex-col ${isDark ? "bg-gray-900 text-white" : "bg-white text-gray-900"}`} style={{ fontFamily: store.fontFamily }}>
+            <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: isDark ? "rgba(255,255,255,0.1)" : "#f3f4f6" }}>
+              <span className="font-black text-lg">{store.name}</span>
+              <button type="button" onClick={() => setMenuOpen(false)} className={`rounded-lg p-1.5 ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <nav className="flex flex-col gap-1 p-4 flex-1 overflow-y-auto">
+              {parsedNavLinks.map((link) =>
+                link.type === "filter" ? (
+                  <button
+                    key={link.id}
+                    type="button"
+                    onClick={() => { setCategory(link.value); setSubcategory("all"); setMenuOpen(false); }}
+                    className={`flex w-full items-center rounded-xl px-4 py-3 text-left text-sm font-semibold transition-colors ${category === link.value ? "text-white" : isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                    style={category === link.value ? { backgroundColor: store.primaryColor } : undefined}
+                  >
+                    {link.label}
+                  </button>
+                ) : (
+                  <a
+                    key={link.id}
+                    href={safeHref(link.value)}
+                    onClick={() => setMenuOpen(false)}
+                    className={`flex w-full items-center rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                  >
+                    {link.label}
+                  </a>
+                )
+              )}
+            </nav>
+          </div>
+        </div>
+      )}
 
       {hasCustomHeroBlock && renderHero()}
 

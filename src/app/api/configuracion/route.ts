@@ -90,6 +90,22 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Bloques de página inválidos" }, { status: 400 });
     }
   }
+  function sanitizeNavLinks(raw: string): string {
+    try {
+      const links = JSON.parse(raw);
+      if (!Array.isArray(links)) return "[]";
+      return JSON.stringify(
+        links
+          .filter((l): l is Record<string, unknown> => l && typeof l === "object")
+          .map((l) => ({
+            id:    String(l.id    || ""),
+            label: String(l.label || "").slice(0, 60),
+            type:  l.type === "url" ? "url" : "filter",
+            value: l.type === "url" ? (isSafeUrl(l.value) ? String(l.value || "") : "#") : String(l.value || "").slice(0, 80),
+          }))
+      );
+    } catch { return "[]"; }
+  }
 
   // Validar URLs de logo y banner (SEC-04)
   if (b.logo && !isSafeUrl(b.logo)) {
@@ -137,6 +153,7 @@ export async function PUT(req: NextRequest) {
       affiliatesEnabled:  Boolean(b.affiliatesEnabled),
       commissionRate:     isNaN(commissionRate) ? 10 : commissionRate,
       pageBlocks:         sanitizePageBlocks(b.pageBlocks || "[]"),
+      navLinks:           sanitizeNavLinks(b.navLinks || "[]"),
       tipoTienda:           b.tipoTienda || "ROPA",
       tipoTiendaConfigurado: Boolean(b.tipoTiendaConfigurado),
       tieneVentaMayorista:  Boolean(b.tieneVentaMayorista),

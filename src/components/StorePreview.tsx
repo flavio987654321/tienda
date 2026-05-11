@@ -34,6 +34,7 @@ export interface StoreConfig {
   tipoTienda?: string;
   tipoTiendaConfigurado?: boolean;
   tieneVentaMayorista?: boolean;
+  navLinks?: string;
 }
 
 const DEMO = [

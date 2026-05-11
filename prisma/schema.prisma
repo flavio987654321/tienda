@@ -107,6 +107,7 @@ model Store {
   affiliatesEnabled Boolean @default(false)
   commissionRate Float    @default(10)
   pageBlocks          String   @default("[]")
+  navLinks            String   @default("[]")
   tipoTienda          String   @default("ROPA")
   tipoTiendaConfigurado Boolean @default(false)
   tieneVentaMayorista Boolean  @default(false)
