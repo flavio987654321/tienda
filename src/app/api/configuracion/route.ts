@@ -92,19 +92,26 @@ export async function PUT(req: NextRequest) {
   }
   function sanitizeNavLinks(raw: string): string {
     try {
-      const links = JSON.parse(raw);
-      if (!Array.isArray(links)) return "[]";
-      return JSON.stringify(
-        links
-          .filter((l): l is Record<string, unknown> => l && typeof l === "object")
+      const parsed = JSON.parse(raw);
+      function sanitizeLinks(links: unknown[]): Record<string, unknown>[] {
+        return links
+          .filter((l): l is Record<string, unknown> => !!l && typeof l === "object")
           .map((l) => ({
             id:    String(l.id    || ""),
             label: String(l.label || "").slice(0, 60),
             type:  l.type === "url" ? "url" : "filter",
             value: l.type === "url" ? (isSafeUrl(l.value) ? String(l.value || "") : "#") : String(l.value || "").slice(0, 80),
-          }))
-      );
-    } catch { return "[]"; }
+          }));
+      }
+      if (Array.isArray(parsed)) {
+        return JSON.stringify({ layout: "right", showSearch: false, links: sanitizeLinks(parsed) });
+      }
+      return JSON.stringify({
+        layout: parsed.layout === "center" ? "center" : "right",
+        showSearch: Boolean(parsed.showSearch),
+        links: sanitizeLinks(Array.isArray(parsed.links) ? parsed.links : []),
+      });
+    } catch { return JSON.stringify({ layout: "right", showSearch: false, links: [] }); }
   }
 
   // Validar URLs de logo y banner (SEC-04)

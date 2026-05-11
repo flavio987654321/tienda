@@ -438,6 +438,9 @@ export default function StorefrontClient({
   const [cart, setCart] = useState<CartItem[]>([]);
   const [openCart, setOpenCart] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [subcategory, setSubcategory] = useState("all");
   const [shippingMethod, setShippingMethod] = useState(SHIPPING_OPTIONS[0].id);
@@ -464,9 +467,15 @@ export default function StorefrontClient({
   const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount: number } | null>(null);
 
   type NavLink = { id: string; label: string; type: "filter" | "url"; value: string };
-  const parsedNavLinks = useMemo<NavLink[]>(() => {
-    try { return JSON.parse(store.navLinks || "[]"); } catch { return []; }
+  type NavConfig = { layout: "right" | "center"; showSearch: boolean; links: NavLink[] };
+  const navConfig = useMemo<NavConfig>(() => {
+    try {
+      const parsed = JSON.parse(store.navLinks || "[]");
+      if (Array.isArray(parsed)) return { layout: "right", showSearch: false, links: parsed };
+      return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [] };
+    } catch { return { layout: "right", showSearch: false, links: [] }; }
   }, [store.navLinks]);
+  const parsedNavLinks = navConfig.links;
 
   const categories = useMemo(() => [...new Set(store.products.map((p) => p.category).filter(Boolean))], [store.products]);
   const subcategories = useMemo(
@@ -483,8 +492,17 @@ export default function StorefrontClient({
   const products = store.products.filter((product) => {
     if (category !== "all" && product.category !== category) return false;
     if (subcategory !== "all" && product.subcategory !== subcategory) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      if (!product.name.toLowerCase().includes(q) && !(product.description || "").toLowerCase().includes(q)) return false;
+    }
     return true;
   });
+
+  function getSubsForCategory(cat: string): string[] {
+    if (!cat || cat === "all") return [];
+    return [...new Set(store.products.filter(p => p.category === cat).map(p => p.subcategory).filter(Boolean))] as string[];
+  }
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = SHIPPING_OPTIONS.find((option) => option.id === shippingMethod) ?? SHIPPING_OPTIONS[0];
   const couponDiscount = appliedCoupon ? Math.min(appliedCoupon.discount, subtotal) : 0;
@@ -1439,57 +1457,130 @@ export default function StorefrontClient({
         </div>
       )}
 
-      <header className={`${store.navbarStyle === "transparent" ? "absolute left-0 right-0 z-20 bg-transparent" : isDark ? "border-b border-white/10 bg-gray-950/90" : "border-b border-gray-100 bg-white/95"} backdrop-blur`}>
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <a href={`/tienda/${store.slug}`} className="flex items-center gap-3 font-black">
+      <header className={`${store.navbarStyle === "transparent" ? "absolute left-0 right-0 z-20 bg-transparent" : isDark ? "border-b border-white/10 bg-gray-950/90" : "border-b border-gray-100 bg-white/95"} backdrop-blur`} style={{ fontFamily: store.fontFamily }}>
+        <div className="mx-auto flex max-w-7xl items-center gap-4 px-6 py-4">
+          {/* Logo */}
+          <a href={`/tienda/${store.slug}`} className="flex shrink-0 items-center gap-3 font-black">
             {store.logo ? <img src={store.logo} alt={store.name} className="h-10 w-10 rounded-xl object-cover" /> : <ShoppingBag className="h-7 w-7" style={{ color: store.primaryColor }} />}
             <span>{store.name}</span>
           </a>
 
-          {parsedNavLinks.length > 0 && (
-            <nav className={`hidden items-center gap-1 md:flex ${isDark ? "text-gray-200" : "text-gray-700"}`}>
-              {parsedNavLinks.map((link) =>
-                link.type === "filter" ? (
-                  <button
-                    key={link.id}
-                    type="button"
-                    onClick={() => { setCategory(link.value); setSubcategory("all"); }}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${category === link.value ? "text-white" : isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
-                    style={category === link.value ? { backgroundColor: store.primaryColor } : undefined}
-                  >
-                    {link.label}
-                  </button>
-                ) : (
-                  <a
-                    key={link.id}
-                    href={safeHref(link.value)}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
-                  >
-                    {link.label}
-                  </a>
-                )
-              )}
+          {/* Nav links — centered */}
+          {navConfig.layout === "center" && parsedNavLinks.length > 0 && (
+            <nav className={`hidden flex-1 items-center justify-center gap-1 md:flex ${isDark ? "text-gray-200" : "text-gray-700"}`}>
+              {parsedNavLinks.map((link) => {
+                const subs = link.type === "filter" ? getSubsForCategory(link.value) : [];
+                const isActive = link.type === "filter" && category === link.value;
+                return (
+                  <div key={link.id} className="relative" onMouseEnter={() => subs.length > 0 && setOpenDropdown(link.id)} onMouseLeave={() => setOpenDropdown(null)}>
+                    {link.type === "filter" ? (
+                      <button type="button" onClick={() => { setCategory(link.value); setSubcategory("all"); setSearchQuery(""); }}
+                        className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isActive ? "text-white" : isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                        style={isActive ? { backgroundColor: store.primaryColor } : undefined}>
+                        {link.label}
+                        {subs.length > 0 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3 w-3"><path d="M6 9l6 6 6-6"/></svg>}
+                      </button>
+                    ) : (
+                      <a href={safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</a>
+                    )}
+                    {subs.length > 0 && openDropdown === link.id && (
+                      <div className={`absolute left-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-xl border shadow-xl ${isDark ? "border-white/10 bg-gray-900" : "border-gray-100 bg-white"}`}>
+                        {subs.map((sub) => (
+                          <button key={sub} type="button" onClick={() => { setCategory(link.value); setSubcategory(sub); setOpenDropdown(null); setSearchQuery(""); }}
+                            className={`flex w-full items-center px-4 py-2.5 text-left text-sm font-medium capitalize transition-colors ${subcategory === sub ? "font-bold" : ""} ${isDark ? "hover:bg-white/10" : "hover:bg-gray-50"}`}
+                            style={subcategory === sub ? { color: store.primaryColor } : undefined}>
+                            {sub}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </nav>
           )}
 
-          <div className="flex items-center gap-3">
+          {/* Spacer for right layout */}
+          {navConfig.layout !== "center" && <div className="hidden flex-1 md:block" />}
+
+          {/* Nav links — right */}
+          {navConfig.layout !== "center" && parsedNavLinks.length > 0 && (
+            <nav className={`hidden items-center gap-1 md:flex ${isDark ? "text-gray-200" : "text-gray-700"}`}>
+              {parsedNavLinks.map((link) => {
+                const subs = link.type === "filter" ? getSubsForCategory(link.value) : [];
+                const isActive = link.type === "filter" && category === link.value;
+                return (
+                  <div key={link.id} className="relative" onMouseEnter={() => subs.length > 0 && setOpenDropdown(link.id)} onMouseLeave={() => setOpenDropdown(null)}>
+                    {link.type === "filter" ? (
+                      <button type="button" onClick={() => { setCategory(link.value); setSubcategory("all"); setSearchQuery(""); }}
+                        className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isActive ? "text-white" : isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                        style={isActive ? { backgroundColor: store.primaryColor } : undefined}>
+                        {link.label}
+                        {subs.length > 0 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3 w-3"><path d="M6 9l6 6 6-6"/></svg>}
+                      </button>
+                    ) : (
+                      <a href={safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</a>
+                    )}
+                    {subs.length > 0 && openDropdown === link.id && (
+                      <div className={`absolute right-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-xl border shadow-xl ${isDark ? "border-white/10 bg-gray-900" : "border-gray-100 bg-white"}`}>
+                        {subs.map((sub) => (
+                          <button key={sub} type="button" onClick={() => { setCategory(link.value); setSubcategory(sub); setOpenDropdown(null); setSearchQuery(""); }}
+                            className={`flex w-full items-center px-4 py-2.5 text-left text-sm font-medium capitalize transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-50"}`}
+                            style={subcategory === sub ? { color: store.primaryColor } : undefined}>
+                            {sub}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </nav>
+          )}
+
+          {/* Right icons */}
+          <div className="flex shrink-0 items-center gap-2">
+            {/* Search */}
+            {navConfig.showSearch && (
+              <div className="flex items-center">
+                {searchOpen ? (
+                  <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 ${isDark ? "border-white/20 bg-white/10 text-white" : "border-gray-200 bg-gray-50 text-gray-900"}`}>
+                    <Search className="h-4 w-4 shrink-0 opacity-60" />
+                    <input
+                      autoFocus
+                      type="text"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="Buscar productos..."
+                      className="w-40 bg-transparent text-sm outline-none placeholder:opacity-50"
+                      onKeyDown={e => { if (e.key === "Escape") { setSearchOpen(false); setSearchQuery(""); } }}
+                    />
+                    <button type="button" onClick={() => { setSearchOpen(false); setSearchQuery(""); }} className="opacity-50 hover:opacity-100">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setSearchOpen(true)}
+                    className={`rounded-lg p-2 transition-colors ${isDark ? "text-white hover:bg-white/10" : "text-gray-600 hover:bg-gray-100"}`} aria-label="Buscar">
+                    <Search className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Hamburger (mobile) */}
             {parsedNavLinks.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setMenuOpen(true)}
-                className={`flex items-center justify-center rounded-lg p-2 md:hidden ${isDark ? "text-white hover:bg-white/10" : "text-gray-700 hover:bg-gray-100"}`}
-                aria-label="Menú"
-              >
+              <button type="button" onClick={() => setMenuOpen(true)}
+                className={`flex items-center justify-center rounded-lg p-2 md:hidden ${isDark ? "text-white hover:bg-white/10" : "text-gray-700 hover:bg-gray-100"}`} aria-label="Menú">
                 <Menu className="h-5 w-5" />
               </button>
             )}
+
+            {/* Cart */}
             {!isInquiry && (
-              <button
-                type="button"
-                onClick={() => setOpenCart(true)}
+              <button type="button" onClick={() => setOpenCart(true)}
                 className={`flex items-center gap-2 px-4 py-2 text-sm font-bold ${buttonRadius}`}
-                style={{ backgroundColor: store.primaryColor, color: textColor }}
-              >
+                style={{ backgroundColor: store.primaryColor, color: textColor }}>
                 <ShoppingBag className="h-4 w-4" />
                 {cartCount}
               </button>
@@ -1508,29 +1599,47 @@ export default function StorefrontClient({
                 <X className="h-5 w-5" />
               </button>
             </div>
+            {navConfig.showSearch && (
+              <div className={`mx-4 mt-4 flex items-center gap-2 rounded-xl border px-3 py-2 ${isDark ? "border-white/20 bg-white/10" : "border-gray-200 bg-gray-50"}`}>
+                <Search className="h-4 w-4 shrink-0 opacity-50" />
+                <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Buscar productos..."
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:opacity-50" />
+              </div>
+            )}
             <nav className="flex flex-col gap-1 p-4 flex-1 overflow-y-auto">
-              {parsedNavLinks.map((link) =>
-                link.type === "filter" ? (
-                  <button
-                    key={link.id}
-                    type="button"
-                    onClick={() => { setCategory(link.value); setSubcategory("all"); setMenuOpen(false); }}
-                    className={`flex w-full items-center rounded-xl px-4 py-3 text-left text-sm font-semibold transition-colors ${category === link.value ? "text-white" : isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
-                    style={category === link.value ? { backgroundColor: store.primaryColor } : undefined}
-                  >
-                    {link.label}
-                  </button>
-                ) : (
-                  <a
-                    key={link.id}
-                    href={safeHref(link.value)}
-                    onClick={() => setMenuOpen(false)}
-                    className={`flex w-full items-center rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
-                  >
-                    {link.label}
-                  </a>
-                )
-              )}
+              {parsedNavLinks.map((link) => {
+                const subs = link.type === "filter" ? getSubsForCategory(link.value) : [];
+                const isActive = link.type === "filter" && category === link.value;
+                return (
+                  <div key={link.id}>
+                    {link.type === "filter" ? (
+                      <button type="button"
+                        onClick={() => { setCategory(link.value); setSubcategory("all"); setSearchQuery(""); if (subs.length === 0) setMenuOpen(false); }}
+                        className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold transition-colors ${isActive ? "text-white" : isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                        style={isActive ? { backgroundColor: store.primaryColor } : undefined}>
+                        {link.label}
+                        {subs.length > 0 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5 opacity-60"><path d="M6 9l6 6 6-6"/></svg>}
+                      </button>
+                    ) : (
+                      <a href={safeHref(link.value)} onClick={() => setMenuOpen(false)}
+                        className={`flex w-full items-center rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>
+                        {link.label}
+                      </a>
+                    )}
+                    {subs.length > 0 && isActive && (
+                      <div className="ml-4 flex flex-col gap-0.5 pb-1">
+                        {subs.map(sub => (
+                          <button key={sub} type="button" onClick={() => { setSubcategory(sub); setMenuOpen(false); }}
+                            className={`flex w-full items-center rounded-lg px-4 py-2 text-left text-sm capitalize transition-colors ${subcategory === sub ? "font-bold" : "opacity-70"} ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                            style={subcategory === sub ? { color: store.primaryColor } : undefined}>
+                            {sub}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </nav>
           </div>
         </div>

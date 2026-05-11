@@ -355,71 +355,91 @@ function clearViewportTextPositions(props: Record<string, any>, viewport: Previe
   };
 }
 
-function NavLinksEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [links, setLinks] = useState<NavLink[]>(() => { try { return JSON.parse(value); } catch { return []; } });
+type NavConfig = { layout: "right" | "center"; showSearch: boolean; links: NavLink[] };
 
-  function save(updated: NavLink[]) {
-    setLinks(updated);
+function parseNavConfig(value: string): NavConfig {
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return { layout: "right", showSearch: false, links: parsed };
+    return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [] };
+  } catch { return { layout: "right", showSearch: false, links: [] }; }
+}
+
+function NavLinksEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [cfg, setCfg] = useState<NavConfig>(() => parseNavConfig(value));
+
+  function save(updated: NavConfig) {
+    setCfg(updated);
     onChange(JSON.stringify(updated));
   }
 
+  function setLayout(layout: "right" | "center") { save({ ...cfg, layout }); }
+  function setSearch(showSearch: boolean) { save({ ...cfg, showSearch }); }
+
   function addLink() {
-    save([...links, { id: crypto.randomUUID(), label: "Nuevo link", type: "filter", value: "" }]);
+    save({ ...cfg, links: [...cfg.links, { id: crypto.randomUUID(), label: "Nuevo link", type: "filter", value: "" }] });
   }
-
-  function removeLink(id: string) {
-    save(links.filter(l => l.id !== id));
-  }
-
+  function removeLink(id: string) { save({ ...cfg, links: cfg.links.filter(l => l.id !== id) }); }
   function updateLink(id: string, field: keyof NavLink, val: string) {
-    save(links.map(l => l.id === id ? { ...l, [field]: val, ...(field === "type" ? { value: "" } : {}) } : l));
+    save({ ...cfg, links: cfg.links.map(l => l.id === id ? { ...l, [field]: val, ...(field === "type" ? { value: "" } : {}) } : l) });
   }
 
   return (
-    <div className="space-y-2">
-      {links.map((link) => (
+    <div className="space-y-3">
+      {/* Layout */}
+      <div>
+        <p className="text-xs font-medium text-gray-600 mb-1.5">Posición de los links</p>
+        <div className="flex gap-2">
+          {([["right","Derecha"],["center","Centro"]] as const).map(([val, label]) => (
+            <button key={val} type="button" onClick={() => setLayout(val)}
+              className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors ${cfg.layout === val ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Search toggle */}
+      <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+        <div>
+          <p className="text-xs font-semibold text-gray-700">Buscador en navbar</p>
+          <p className="text-xs text-gray-400">Ícono de lupa que filtra productos</p>
+        </div>
+        <button type="button" onClick={() => setSearch(!cfg.showSearch)}
+          className={`relative h-5 w-9 rounded-full transition-colors ${cfg.showSearch ? "bg-indigo-500" : "bg-gray-300"}`}>
+          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${cfg.showSearch ? "translate-x-4" : "translate-x-0.5"}`} />
+        </button>
+      </div>
+
+      {/* Links */}
+      <p className="text-xs font-medium text-gray-600">Links del menú</p>
+      {cfg.links.map((link) => (
         <div key={link.id} className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
           <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={link.label}
-              onChange={e => updateLink(link.id, "label", e.target.value)}
-              placeholder="Etiqueta (ej: Remeras)"
-              className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-            />
+            <input type="text" value={link.label} onChange={e => updateLink(link.id, "label", e.target.value)}
+              placeholder="Ej: Remeras, Inicio, Contacto"
+              className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
             <button type="button" onClick={() => removeLink(link.id)} className="text-gray-400 hover:text-red-500 p-1">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
           <div className="flex gap-2">
-            <select
-              value={link.type}
-              onChange={e => updateLink(link.id, "type", e.target.value)}
-              className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-            >
+            <select value={link.type} onChange={e => updateLink(link.id, "type", e.target.value)}
+              className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
               <option value="filter">Filtrar productos</option>
               <option value="url">Ir a URL</option>
             </select>
-            <input
-              type="text"
-              value={link.value}
-              onChange={e => updateLink(link.id, "value", e.target.value)}
+            <input type="text" value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
               placeholder={link.type === "filter" ? "Categoría exacta (ej: Remeras)" : "https://..."}
-              className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-            />
+              className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
           </div>
-          <p className="text-xs text-gray-400">
-            {link.type === "filter"
-              ? "Escribí la categoría exacta como aparece en tus productos"
-              : "URL completa o ruta relativa como /tienda/mi-slug"}
-          </p>
+          {link.type === "filter" && (
+            <p className="text-xs text-gray-400">Si esa categoría tiene subcategorías, aparece un dropdown automático al hacer hover</p>
+          )}
         </div>
       ))}
-      <button
-        type="button"
-        onClick={addLink}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 py-2.5 text-xs font-semibold text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors"
-      >
+      <button type="button" onClick={addLink}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 py-2.5 text-xs font-semibold text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
         <Plus className="h-3.5 w-3.5" />
         Agregar link
       </button>
