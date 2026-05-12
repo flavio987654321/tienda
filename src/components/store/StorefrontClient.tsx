@@ -1201,21 +1201,10 @@ export default function StorefrontClient({
             return (
               <section key={block.id} id={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}><div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
                 {p.showHeading !== false && (
-                  <div className="mb-7">
-                    <PositionedTextLayer
-                      blockProps={p}
-                      viewport={viewport}
-                      style={{ minHeight: "56px" }}
-                      items={[
-                        {
-                          id: "heading",
-                          defaultPos: { x: 34, y: 10 },
-                          style: { width: "min(70%, 420px)", textAlign: "center" as const },
-                          content: <h2 className="text-3xl font-black" style={{ color: String(p.color || store.primaryColor) }}>{p.heading || "Nuestros productos"}</h2>,
-                        },
-                      ]}
-                    />
-                    {categoryFilter !== "all" && <p className={`mt-2 text-center text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>{formatCategoryLabel(categoryFilter)}{subcategoryFilter !== "all" ? ` / ${formatCategoryLabel(subcategoryFilter)}` : ""}</p>}
+                  <div className="mb-7 text-center">
+                    <h2 className={`font-black break-words ${p.headingSize === "sm" ? "text-xl" : p.headingSize === "md" ? "text-2xl" : p.headingSize === "xl" ? "text-4xl" : "text-3xl"}`} style={{ color: String(p.color || store.primaryColor) }}>{p.heading || "Nuestros productos"}</h2>
+                    {p.subheading && <p className={`mt-2 text-base ${isDark ? "text-gray-400" : "text-gray-500"}`}>{p.subheading}</p>}
+                    {categoryFilter !== "all" && <p className={`mt-2 text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>{formatCategoryLabel(categoryFilter)}{subcategoryFilter !== "all" ? ` / ${formatCategoryLabel(subcategoryFilter)}` : ""}</p>}
                   </div>
                 )}
 

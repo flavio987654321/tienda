@@ -100,7 +100,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"text",       emoji:"📝", label:"Bloque de texto",        desc:"Título y párrafo de texto libre",
     defaultProps:{ heading:"Sobre nosotros", body:"Somos una tienda con años de experiencia...", align:"center", fontSize:"md", color:"", textColor:"", bgColor:"" } },
   { type:"products",   emoji:"🛍️", label:"Grilla de productos",    desc:"Muestra tu catálogo con columnas configurables",
-    defaultProps:{ heading:"Nuestros productos", columns:3, layoutMode:"grid", showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:false, sortBy:"default", color:"", bgColor:"" } },
+    defaultProps:{ heading:"Nuestros productos", subheading:"", headingSize:"lg", columns:3, layoutMode:"grid", showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:false, sortBy:"default", color:"", bgColor:"" } },
   { type:"banner",     emoji:"📢", label:"Banda de anuncio",       desc:"Franja de color con texto destacado",
     defaultProps:{ text:"🔥 ¡Oferta especial! Envío gratis hoy", bgColor:"#f59e0b", textColor:"#000000", size:"md" } },
   { type:"cta",        emoji:"🚀", label:"Llamada a la acción",    desc:"Sección oscura con botón grande destacado",
@@ -738,6 +738,13 @@ function BlockEditor({
     </div>
     <Toggle label="Mostrar título de sección" value={p.showHeading!==false} onChange={v=>upd("showHeading",v)}/>
     {p.showHeading!==false && inp("Título de la sección","heading","Nuestros productos")}
+    {p.showHeading!==false && inp("Subtítulo (opcional)","subheading","")}
+    {p.showHeading!==false && (
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
+        <Chips options={[{id:"sm",label:"S"},{id:"md",label:"M"},{id:"lg",label:"L"},{id:"xl",label:"XL"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
+      </div>
+    )}
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">
         {p.layoutMode==="carousel" ? "Productos visibles por deslizamiento" : "Columnas por fila"}
