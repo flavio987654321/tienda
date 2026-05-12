@@ -1050,36 +1050,49 @@ function BlockEditor({
     </div>
   </div>;
 
-  if (block.type==="contacto") return <div className="space-y-3">
-    {inp("Título del formulario","heading","Contacto")}
-    {inp("Subtítulo","subtitle","¿Tenés alguna pregunta? Escribinos.")}
-    <ColorPicker label="Color de fondo" value={p.bgColor||"#111827"} onChange={v=>upd("bgColor",v)}/>
-    <ColorPicker label="Color de texto" value={p.textColor||"#ffffff"} onChange={v=>upd("textColor",v)}/>
-    <ColorPicker label="Color del botón (vacío = color principal)" value={p.buttonColor||""} onChange={v=>upd("buttonColor",v)}/>
-    {inp("Texto del botón","buttonText","Enviar mensaje")}
-    {onPickImage && (
+  if (block.type==="contacto") {
+    const bgMode = p.bgImage ? "image" : "color";
+    return <div className="space-y-3">
+      {inp("Título del formulario","heading","Contacto")}
+      {inp("Subtítulo","subtitle","¿Tenés alguna pregunta? Escribinos.")}
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Imagen de fondo (opcional)</label>
-        <div className="flex gap-2">
-          <input value={p.bgImage||""} onChange={e=>upd("bgImage",e.target.value)} placeholder="https://..."
-            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-          <button type="button" onClick={() => onPickImage?.("bgImage")} className="rounded-xl border border-gray-200 px-3 py-2 text-xs hover:bg-gray-50">📁</button>
+        <label className="block text-xs font-medium text-gray-600 mb-1.5">Tipo de fondo</label>
+        <div className="flex gap-2 mb-2">
+          {[["color","🎨 Color"],["image","🖼️ Imagen"]].map(([v,l])=>(
+            <button key={v} type="button"
+              onClick={()=>{ if(v==="color") onChange({...p,bgImage:""}); else onChange({...p,bgColor:""}); }}
+              className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors ${bgMode===v?"border-indigo-400 bg-indigo-50 text-indigo-700":"border-gray-200 text-gray-500 hover:border-gray-300"}`}>
+              {l}
+            </button>
+          ))}
         </div>
+        {bgMode==="color" ? (
+          <ColorPicker label="Color de fondo" value={p.bgColor||"#111827"} onChange={v=>upd("bgColor",v)}/>
+        ) : (
+          <div className="flex gap-2">
+            <input value={p.bgImage||""} onChange={e=>upd("bgImage",e.target.value)} placeholder="https://..."
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+            {onPickImage && <button type="button" onClick={() => onPickImage?.("bgImage")} className="rounded-xl border border-gray-200 px-3 py-2 text-xs hover:bg-gray-50">📁</button>}
+          </div>
+        )}
       </div>
-    )}
-    <div className="space-y-1.5 rounded-xl border border-gray-100 bg-gray-50 p-3">
-      <p className="text-xs font-medium text-gray-600 mb-2">Campos del formulario</p>
-      {[["showName","Nombre"],["showEmail","Email"],["showPhone","Teléfono"],["showMessage","Mensaje"]].map(([key,label])=>(
-        <label key={key} className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={p[key]!==false} onChange={e=>upd(key,e.target.checked)} className="rounded"/>
-          <span className="text-xs text-gray-700">{label}</span>
-        </label>
-      ))}
-    </div>
-    <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
-      <p className="text-xs text-blue-700">📧 Los mensajes se envían al email de tu cuenta.</p>
-    </div>
-  </div>;
+      <ColorPicker label="Color de texto" value={p.textColor||"#ffffff"} onChange={v=>upd("textColor",v)}/>
+      <ColorPicker label="Color del botón (vacío = color principal)" value={p.buttonColor||""} onChange={v=>upd("buttonColor",v)}/>
+      {inp("Texto del botón","buttonText","Enviar mensaje")}
+      <div className="space-y-1.5 rounded-xl border border-gray-100 bg-gray-50 p-3">
+        <p className="text-xs font-medium text-gray-600 mb-2">Campos del formulario</p>
+        {[["showName","Nombre"],["showEmail","Email"],["showPhone","Teléfono"],["showMessage","Mensaje"]].map(([key,label])=>(
+          <label key={key} className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={p[key]!==false} onChange={e=>upd(key,e.target.checked)} className="rounded"/>
+            <span className="text-xs text-gray-700">{label}</span>
+          </label>
+        ))}
+      </div>
+      <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
+        <p className="text-xs text-blue-700">📧 Los mensajes se envían al email de tu cuenta.</p>
+      </div>
+    </div>;
+  }
 
   if (block.type==="divider") return <div className="space-y-3">
     <div>

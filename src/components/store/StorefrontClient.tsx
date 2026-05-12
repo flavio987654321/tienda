@@ -1130,6 +1130,37 @@ export default function StorefrontClient({
     const blocks = contentBlocks;
     if (!blocks.length) return null;
 
+    // When a section is open, replace the page with just that block
+    if (openSection && openSectionBlock) {
+      const sb = openSectionBlock;
+      const sp = sb.props as Record<string, any>;
+      return (
+        <div className="space-y-0">
+          {sb.type === "contacto" && (
+            <ContactBlock storeSlug={store.slug} p={sp} primaryColor={store.primaryColor} fontFamily={store.fontFamily} />
+          )}
+          {sb.type === "text" && (
+            <div className="px-6 py-16 mx-auto max-w-3xl" style={{ backgroundColor: String(sp.bgColor || "transparent") }}>
+              {sp.heading && <h2 className="mb-6 text-4xl font-black" style={{ color: String(sp.color || store.primaryColor), textAlign: (sp.align || "center") as any }}>{sp.heading}</h2>}
+              {sp.body && <p className="text-lg leading-relaxed" style={{ color: String(sp.textColor || "#6b7280"), textAlign: (sp.align || "center") as any }}>{sp.body}</p>}
+            </div>
+          )}
+          {sb.type === "image-text" && (
+            <div style={{ backgroundColor: String(sp.bgColor || "transparent") }}>
+              {sp.image && <img src={String(sp.image)} alt="" className="h-72 w-full object-cover" />}
+              <div className="mx-auto max-w-3xl px-6 py-10">
+                {sp.heading && <h2 className="mb-4 text-3xl font-black" style={{ color: String(sp.color || store.primaryColor) }}>{sp.heading}</h2>}
+                {sp.body && <p className="text-lg leading-relaxed text-gray-600">{sp.body}</p>}
+              </div>
+            </div>
+          )}
+          {!["contacto","text","image-text"].includes(sb.type) && (
+            <div className="flex min-h-[40vh] items-center justify-center text-gray-400">Sección sin vista disponible.</div>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-0">
         {blocks.map((block) => {
@@ -1808,7 +1839,7 @@ export default function StorefrontClient({
           </div>
         </div>
 
-      {hasCustomHeroBlock && renderHero()}
+      {hasCustomHeroBlock && !openSection && renderHero()}
 
       {renderBlocks()}
 
@@ -1829,58 +1860,6 @@ export default function StorefrontClient({
       )}
 
 
-      {/* Section drawer — opens when user clicks a section nav link */}
-      {openSection && openSectionBlock && (() => {
-        const sb = openSectionBlock;
-        const sp = sb.props as Record<string, any>;
-        return (
-          <div className="fixed inset-0 z-50 flex">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpenSection(null)} />
-            <div className="relative ml-auto flex h-full w-full max-w-xl flex-col overflow-y-auto bg-white shadow-2xl"
-              style={{ fontFamily: store.fontFamily }}>
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/95 px-6 py-4 backdrop-blur">
-                <p className="text-base font-black text-gray-900">
-                  {sp.heading || sp.title || parsedNavLinks.find(l => l.value === openSection)?.label || ""}
-                </p>
-                <button type="button" onClick={() => setOpenSection(null)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4 w-4"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                </button>
-              </div>
-              <div className="flex-1">
-                {sb.type === "contacto" && (
-                  <ContactBlock storeSlug={store.slug} p={sp} primaryColor={store.primaryColor} fontFamily={store.fontFamily} />
-                )}
-                {sb.type === "text" && (
-                  <div className="px-6 py-10" style={{ backgroundColor: String(sp.bgColor || "transparent") }}>
-                    {sp.heading && <h2 className="mb-4 text-3xl font-black" style={{ color: String(sp.color || store.primaryColor), textAlign: (sp.align || "center") as any }}>{sp.heading}</h2>}
-                    {sp.body && <p className="text-base leading-relaxed" style={{ color: String(sp.textColor || "#6b7280"), textAlign: (sp.align || "center") as any }}>{sp.body}</p>}
-                  </div>
-                )}
-                {sb.type === "image-text" && (
-                  <div style={{ backgroundColor: String(sp.bgColor || "transparent") }}>
-                    {sp.image && <img src={String(sp.image)} alt="" className="h-64 w-full object-cover" />}
-                    <div className="px-6 py-8">
-                      {sp.heading && <h2 className="mb-3 text-2xl font-black" style={{ color: String(sp.color || store.primaryColor) }}>{sp.heading}</h2>}
-                      {sp.body && <p className="leading-relaxed text-gray-600">{sp.body}</p>}
-                    </div>
-                  </div>
-                )}
-                {sb.type === "hero" && (
-                  <div className="flex min-h-[260px] flex-col items-center justify-center px-6 py-12 text-center text-white"
-                    style={{ background: String(sp.bgColor || store.primaryColor) }}>
-                    {sp.title && <h2 className="text-3xl font-black">{sp.title}</h2>}
-                    {sp.subtitle && <p className="mt-2 opacity-80">{sp.subtitle}</p>}
-                  </div>
-                )}
-                {!["contacto","text","image-text","hero"].includes(sb.type) && (
-                  <div className="flex h-40 items-center justify-center text-gray-400 text-sm">Vista previa no disponible para este bloque.</div>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {affiliateId && (
         <div className="fixed bottom-5 left-5 z-20 rounded-full bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 shadow-sm">
