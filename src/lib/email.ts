@@ -10,6 +10,49 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+export async function sendContactFormEmail({
+  ownerEmail,
+  storeName,
+  name,
+  email,
+  phone,
+  message,
+}: {
+  ownerEmail: string;
+  storeName: string;
+  name: string;
+  email: string;
+  phone?: string;
+  message: string;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  await transporter.sendMail({
+    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    to: ownerEmail,
+    replyTo: email,
+    subject: `Nuevo mensaje de contacto de ${name} — ${storeName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+          <p style="color:#e0e7ff;font-size:13px;margin:0 0 4px;">${storeName}</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Nuevo mensaje de contacto</h1>
+        </div>
+        <div style="background:#f9fafb;border-radius:12px;padding:20px;margin-bottom:20px;">
+          <p style="margin:0 0 8px;font-size:14px;"><strong>Nombre:</strong> ${name}</p>
+          <p style="margin:0 0 8px;font-size:14px;"><strong>Email:</strong> <a href="mailto:${email}" style="color:#6366f1;">${email}</a></p>
+          ${phone ? `<p style="margin:0 0 8px;font-size:14px;"><strong>Teléfono:</strong> ${phone}</p>` : ""}
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0;" />
+          <p style="margin:0;font-size:14px;white-space:pre-line;color:#374151;">${message}</p>
+        </div>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
+          Podés responder directamente a este email para contestarle a ${name}.
+        </p>
+      </div>
+    `,
+  });
+}
+
 export async function sendLowStockEmail({
   ownerEmail,
   ownerName,

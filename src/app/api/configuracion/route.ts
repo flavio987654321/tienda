@@ -99,7 +99,7 @@ export async function PUT(req: NextRequest) {
           .map((l) => ({
             id:    String(l.id    || ""),
             label: String(l.label || "").slice(0, 60),
-            type:  l.type === "url" ? "url" : "filter",
+            type:  l.type === "url" ? "url" : l.type === "section" ? "section" : "filter",
             value: l.type === "url" ? (isSafeUrl(l.value) ? String(l.value || "") : "#") : String(l.value || "").slice(0, 80),
           }));
       }

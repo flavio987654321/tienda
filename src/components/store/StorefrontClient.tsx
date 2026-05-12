@@ -386,6 +386,88 @@ function PositionedTextLayer({
   );
 }
 
+function ContactBlock({ storeSlug, p, primaryColor, fontFamily }: { storeSlug: string; p: Record<string, unknown>; primaryColor: string; fontFamily: string }) {
+  const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const heading = String(p.heading || "Contacto");
+  const subtitle = String(p.subtitle || "¿Tenés alguna pregunta? Escribinos.");
+  const bgColor = String(p.bgColor || "#111827");
+  const textColor = String(p.textColor || "#ffffff");
+  const bgImage = String(p.bgImage || "");
+  const btnColor = String(p.buttonColor || primaryColor);
+  const btnText = String(p.buttonText || "Enviar mensaje");
+  const showName = p.showName !== false;
+  const showEmail = p.showEmail !== false;
+  const showPhone = Boolean(p.showPhone);
+  const showMessage = p.showMessage !== false;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("loading");
+    setErrorMsg("");
+    try {
+      const res = await fetch(`/api/public/${storeSlug}/contacto`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Error al enviar");
+      setStatus("success");
+    } catch (err) {
+      setStatus("error");
+      setErrorMsg(err instanceof Error ? err.message : "Error al enviar el mensaje");
+    }
+  }
+
+  const inputCls = "w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/50 focus:border-white/50 focus:outline-none focus:ring-1 focus:ring-white/30 backdrop-blur";
+
+  return (
+    <section style={{ fontFamily, backgroundColor: bgColor, color: textColor, position: "relative" }}>
+      {bgImage && (
+        <img src={bgImage} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.35 }} />
+      )}
+      <div style={{ position: "relative", maxWidth: "640px", margin: "0 auto", padding: "64px 24px" }}>
+        <h2 style={{ fontSize: "clamp(28px,4vw,40px)", fontWeight: 900, color: textColor, margin: "0 0 8px", textAlign: "center" }}>{heading}</h2>
+        {subtitle && <p style={{ textAlign: "center", opacity: 0.75, marginBottom: "32px", fontSize: "15px" }}>{subtitle}</p>}
+
+        {status === "success" ? (
+          <div style={{ textAlign: "center", padding: "40px 0" }}>
+            <div style={{ fontSize: "48px", marginBottom: "12px" }}>✅</div>
+            <p style={{ fontSize: "18px", fontWeight: 700, color: textColor }}>¡Mensaje enviado!</p>
+            <p style={{ opacity: 0.7, marginTop: "6px" }}>Te respondemos a la brevedad.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {showName && (
+              <input className={inputCls} type="text" placeholder="Nombre completo" value={form.name} required
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+            )}
+            {showEmail && (
+              <input className={inputCls} type="email" placeholder="Email" value={form.email} required
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+            )}
+            {showPhone && (
+              <input className={inputCls} type="tel" placeholder="Teléfono" value={form.phone}
+                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+            )}
+            {showMessage && (
+              <textarea className={inputCls} placeholder="Tu mensaje" value={form.message} rows={4} required
+                onChange={e => setForm(f => ({ ...f, message: e.target.value }))} style={{ resize: "none" }} />
+            )}
+            {status === "error" && <p style={{ color: "#fca5a5", fontSize: "13px" }}>{errorMsg}</p>}
+            <button type="submit" disabled={status === "loading"}
+              style={{ marginTop: "4px", backgroundColor: btnColor, color: "#fff", border: "none", borderRadius: "999px", padding: "14px 32px", fontSize: "15px", fontWeight: 800, cursor: "pointer", opacity: status === "loading" ? 0.7 : 1 }}>
+              {status === "loading" ? "Enviando..." : btnText}
+            </button>
+          </form>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function isStarterBlocks(blocks: PageBlock[]) {
   if (blocks.length !== 3) return false;
   const [hero, text, products] = blocks;
@@ -1067,7 +1149,7 @@ export default function StorefrontClient({
                   : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
 
             return (
-              <section key={block.id} id="productos" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}><div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+              <section key={block.id} id={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}><div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
                 {p.showHeading !== false && (
                   <div className="mb-7">
                     <PositionedTextLayer
@@ -1135,7 +1217,7 @@ export default function StorefrontClient({
             );
           }
           if (block.type === "text") return (
-            <div key={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}><div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+            <div key={block.id} id={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}><div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
               <PositionedTextLayer
                 blockProps={p}
                 viewport={viewport}
@@ -1158,7 +1240,7 @@ export default function StorefrontClient({
             </div></div>
           );
           if (block.type === "banner") return (
-            <div key={block.id} className="rounded-2xl px-6 py-3" style={{ backgroundColor: p.bgColor || store.accentColor, color: p.textColor || "#fff" }}>
+            <div key={block.id} id={block.id} className="rounded-2xl px-6 py-3" style={{ backgroundColor: p.bgColor || store.accentColor, color: p.textColor || "#fff" }}>
               <PositionedTextLayer
                 blockProps={p}
                 viewport={viewport}
@@ -1175,10 +1257,10 @@ export default function StorefrontClient({
             </div>
           );
           if (block.type === "banner-group") {
-            return <BannerCarouselBlock key={block.id} block={block} primaryColor={store.primaryColor} fontFamily={store.fontFamily} />;
+            return <div key={block.id} id={block.id}><BannerCarouselBlock block={block} primaryColor={store.primaryColor} fontFamily={store.fontFamily} /></div>;
           }
           if (block.type === "cta") return (
-            <div key={block.id} className="mx-4 rounded-3xl p-8 sm:mx-6 sm:p-12" style={{ backgroundColor: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily }}>
+            <div key={block.id} id={block.id} className="mx-4 rounded-3xl p-8 sm:mx-6 sm:p-12" style={{ backgroundColor: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily }}>
               <PositionedTextLayer
                 blockProps={p}
                 viewport={viewport}
@@ -1242,7 +1324,7 @@ export default function StorefrontClient({
               justifyContent: "center",
             };
             return (
-              <div key={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
+              <div key={block.id} id={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor || "transparent") }}>
                 <div style={{ display:"flex", flexDirection: flexDir as React.CSSProperties["flexDirection"], gap:"32px", alignItems: isRound ? "center" : "stretch", padding:"32px 24px", maxWidth:"1280px", margin:"0 auto" }}>
                   <div style={imgContainerStyle}>
                     {p.image ? <img src={String(p.image)} alt="" style={{ width:"100%", height:"100%", objectFit: imageFit, objectPosition: "center", display:"block" }} /> : <Package className="h-12 w-12 text-gray-300" />}
@@ -1294,7 +1376,7 @@ export default function StorefrontClient({
 
             if (layout === "card") {
               return (
-                <section key={block.id} className="px-4 py-8 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: blockBg }}>
+                <section key={block.id} id={block.id} className="px-4 py-8 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: blockBg }}>
                   <div className={`mx-auto max-w-xl border p-6 text-center ${cardRadius} ${cardShadow}`} style={{ borderColor: `${blockColor}22`, backgroundColor: blockBg }}>
                     {p.showHeading !== false && (
                       <div className="mb-5">
@@ -1334,7 +1416,7 @@ export default function StorefrontClient({
             }
 
             return (
-              <section key={block.id} className="px-4 py-8 text-center sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: blockBg }}>
+              <section key={block.id} id={block.id} className="px-4 py-8 text-center sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: blockBg }}>
                 {p.showHeading !== false && (
                   <div className="mb-5">
                     <PositionedTextLayer
@@ -1376,7 +1458,7 @@ export default function StorefrontClient({
             );
           }
           if (block.type === "hero") return (
-            <div key={block.id} className="overflow-hidden px-6 py-14 text-white sm:px-8 sm:py-16"
+            <div key={block.id} id={block.id} className="overflow-hidden px-6 py-14 text-white sm:px-8 sm:py-16"
               style={{ background: p.bgColor || store.primaryColor, color: p.textColor || "#fff", fontFamily: store.fontFamily, minHeight: p.blockMinHeight > 0 ? `${p.blockMinHeight}px` : p.height === "xl" ? "480px" : p.height === "lg" ? "360px" : p.height === "sm" ? "180px" : "260px" }}>
               <PositionedTextLayer
                 blockProps={p}
@@ -1412,7 +1494,7 @@ export default function StorefrontClient({
             const lineColor = String(p.lineColor || "#e5e7eb");
             const line = lineStyle !== "none" ? <div style={{flex:1,borderTop:`1.5px ${lineStyle} ${lineColor}`}}/> : null;
             return (
-              <div key={block.id} style={{
+              <div key={block.id} id={block.id} style={{
                 minHeight: h,
                 background: String(p.bgColor || "transparent"),
                 display:"flex", alignItems:"center", justifyContent:"center",
@@ -1434,8 +1516,13 @@ export default function StorefrontClient({
             );
           }
           if (block.type === "divider") return (
-            <div key={block.id} className="py-2">
+            <div key={block.id} id={block.id} className="py-2">
               <hr style={{ border: "none", borderTop: `2px ${p.style || "solid"} ${p.color || "#e5e7eb"}` }} />
+            </div>
+          );
+          if (block.type === "contacto") return (
+            <div key={block.id} id={block.id}>
+              <ContactBlock storeSlug={store.slug} p={p} primaryColor={store.primaryColor} fontFamily={store.fontFamily} />
             </div>
           );
           return null;

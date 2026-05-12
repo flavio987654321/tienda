@@ -74,7 +74,7 @@ type DesignSection = "template"|"colores"|"textos"|"imagenes"|"layout"|"tarjetas
 type NavLink = { id: string; label: string; type: "filter" | "url" | "section"; value: string };
 
 /* ─── Block types ─── */
-export type BlockType = "hero"|"text"|"products"|"banner"|"banner-group"|"cta"|"image-text"|"socials"|"spacer"|"divider"|"navbar";
+export type BlockType = "hero"|"text"|"products"|"banner"|"banner-group"|"cta"|"image-text"|"socials"|"spacer"|"divider"|"navbar"|"contacto";
 export interface Block { id:string; type:BlockType; props:Record<string,any> }
 type PreviewViewport = "desktop"|"tablet"|"mobile";
 type TextPosition = { x: number; y: number };
@@ -113,6 +113,8 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
     defaultProps:{ heading:"Seguinos y contactanos", showHeading:true, layout:"icons", color:"", bgColor:"", showInstagram:true, showFacebook:true, showTiktok:true, showWhatsapp:true, showEmail:true, instagramUrl:"", facebookUrl:"", tiktokUrl:"", whatsappNumber:"", emailAddress:"" } },
   { type:"divider",    emoji:"─", label:"Línea separadora",        desc:"Línea horizontal decorativa",
     defaultProps:{ style:"solid", color:"#e5e7eb" } },
+  { type:"contacto",   emoji:"✉️", label:"Formulario de contacto",  desc:"Formulario que envía un email al dueño de la tienda",
+    defaultProps:{ heading:"Contacto", subtitle:"¿Tenés alguna pregunta? Escribinos.", bgColor:"#111827", textColor:"#ffffff", bgImage:"", showName:true, showEmail:true, showPhone:false, showMessage:true, buttonText:"Enviar mensaje", buttonColor:"" } },
   { type:"banner-group", emoji:"🎠", label:"Carrusel de banners",     desc:"Imágenes full-width que pasan automáticamente",
     defaultProps:{ slides:[
       { image:"", title:"Bienvenidos", subtitle:"Descubrí nuestra colección", buttonText:"Ver productos", buttonUrl:"", focalX:50, focalY:50 },
@@ -375,7 +377,7 @@ function parseNavConfig(value: string): NavConfig {
   } catch { return { layout: "right", showSearch: false, links: [] }; }
 }
 
-function NavLinksEditor({ value, onChange, categories = [] }: { value: string; onChange: (v: string) => void; categories?: string[] }) {
+function NavLinksEditor({ value, onChange, categories = [], blocks = [] }: { value: string; onChange: (v: string) => void; categories?: string[]; blocks?: Block[] }) {
   const [cfg, setCfg] = useState<NavConfig>(() => parseNavConfig(value));
   const dragIdx = useRef<number | null>(null);
   const dragOverIdx = useRef<number | null>(null);
@@ -525,9 +527,15 @@ function NavLinksEditor({ value, onChange, categories = [] }: { value: string; o
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             ) : link.type === "section" ? (
-              <input type="text" value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
-                placeholder="ID de sección (ej: nosotros)"
-                className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+              <select value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <option value="">— Elegir bloque de destino —</option>
+                {blocks.filter(b => b.type !== "navbar").map(b => {
+                  const label = b.props.heading || b.props.title || b.props.text || b.type;
+                  const emoji = ({ hero:"🖼️", text:"📝", products:"🛍️", banner:"📢", "banner-group":"🎠", cta:"🚀", "image-text":"🖼️", socials:"🔗", spacer:"⬜", divider:"─", contacto:"✉️", navbar:"🧭" } as Record<string,string>)[b.type] || "📦";
+                  return <option key={b.id} value={b.id}>{emoji} {label}</option>;
+                })}
+              </select>
             ) : (
               <input type="text" value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
                 placeholder="https://... o /ruta"
@@ -615,6 +623,7 @@ function BlockEditor({
   uploadingImage = false,
   onPickImage,
   onUploadFile,
+  blocks = [],
 }: {
   block:Block;
   onChange:(props:Record<string,any>)=>void;
@@ -624,6 +633,7 @@ function BlockEditor({
   uploadingImage?: boolean;
   onPickImage?: () => void;
   onUploadFile?: (file:File) => Promise<string|undefined>;
+  blocks?: Block[];
 }) {
   const p = block.props;
   const upd = (k:string,v:any) => onChange({...p,[k]:v});
@@ -1040,6 +1050,37 @@ function BlockEditor({
     </div>
   </div>;
 
+  if (block.type==="contacto") return <div className="space-y-3">
+    {inp("Título del formulario","heading","Contacto")}
+    {inp("Subtítulo","subtitle","¿Tenés alguna pregunta? Escribinos.")}
+    <ColorPicker label="Color de fondo" value={p.bgColor||"#111827"} onChange={v=>upd("bgColor",v)}/>
+    <ColorPicker label="Color de texto" value={p.textColor||"#ffffff"} onChange={v=>upd("textColor",v)}/>
+    <ColorPicker label="Color del botón (vacío = color principal)" value={p.buttonColor||""} onChange={v=>upd("buttonColor",v)}/>
+    {inp("Texto del botón","buttonText","Enviar mensaje")}
+    {onPickImage && (
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Imagen de fondo (opcional)</label>
+        <div className="flex gap-2">
+          <input value={p.bgImage||""} onChange={e=>upd("bgImage",e.target.value)} placeholder="https://..."
+            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+          <button type="button" onClick={onPickImage} className="rounded-xl border border-gray-200 px-3 py-2 text-xs hover:bg-gray-50">📁</button>
+        </div>
+      </div>
+    )}
+    <div className="space-y-1.5 rounded-xl border border-gray-100 bg-gray-50 p-3">
+      <p className="text-xs font-medium text-gray-600 mb-2">Campos del formulario</p>
+      {[["showName","Nombre"],["showEmail","Email"],["showPhone","Teléfono"],["showMessage","Mensaje"]].map(([key,label])=>(
+        <label key={key} className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={p[key]!==false} onChange={e=>upd(key,e.target.checked)} className="rounded"/>
+          <span className="text-xs text-gray-700">{label}</span>
+        </label>
+      ))}
+    </div>
+    <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
+      <p className="text-xs text-blue-700">📧 Los mensajes se envían al email de tu cuenta.</p>
+    </div>
+  </div>;
+
   if (block.type==="divider") return <div className="space-y-3">
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Estilo</label>
@@ -1065,6 +1106,7 @@ function BlockEditor({
       value={p.navConfig || '{"layout":"right","showSearch":false,"links":[]}'}
       onChange={v => upd("navConfig", v)}
       categories={categories}
+      blocks={blocks}
     />
   </div>;
 
@@ -2048,6 +2090,28 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       );
     }
 
+    if (block.type==="contacto") {
+      const bgCol = String(p.bgColor||"#111827");
+      const txtCol = String(p.textColor||"#ffffff");
+      const bgImg = String(p.bgImage||"");
+      return (
+        <div style={{position:"relative",background:bgCol,color:txtCol,padding:"40px 24px",textAlign:"center",minHeight:customMinHeight}}>
+          {bgImg && <img src={bgImg} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:0.35}}/>}
+          <div style={{position:"relative",maxWidth:"500px",margin:"0 auto"}}>
+            <h2 style={{fontWeight:900,fontSize:"22px",margin:"0 0 6px",color:txtCol}}>{String(p.heading||"Contacto")}</h2>
+            {p.subtitle && <p style={{opacity:0.7,fontSize:"13px",marginBottom:"20px"}}>{String(p.subtitle)}</p>}
+            <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+              {p.showName!==false && <div style={{background:"rgba(255,255,255,0.12)",borderRadius:"10px",padding:"10px 14px",textAlign:"left",fontSize:"12px",color:"rgba(255,255,255,0.5)"}}>Nombre completo</div>}
+              {p.showEmail!==false && <div style={{background:"rgba(255,255,255,0.12)",borderRadius:"10px",padding:"10px 14px",textAlign:"left",fontSize:"12px",color:"rgba(255,255,255,0.5)"}}>Email</div>}
+              {p.showPhone && <div style={{background:"rgba(255,255,255,0.12)",borderRadius:"10px",padding:"10px 14px",textAlign:"left",fontSize:"12px",color:"rgba(255,255,255,0.5)"}}>Teléfono</div>}
+              {p.showMessage!==false && <div style={{background:"rgba(255,255,255,0.12)",borderRadius:"10px",padding:"10px 14px",textAlign:"left",fontSize:"12px",color:"rgba(255,255,255,0.5)",height:"60px"}}>Mensaje</div>}
+              <div style={{background:p.buttonColor||"#6366f1",color:"#fff",borderRadius:"999px",padding:"10px 24px",fontSize:"13px",fontWeight:800,textAlign:"center"}}>{String(p.buttonText||"Enviar mensaje")}</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return null;
   }
 
@@ -2508,6 +2572,7 @@ export default function ConfiguracionPage() {
                                 blockImageRef.current?.click();
                               }}
                               onUploadFile={uploadAsset}
+                              blocks={blocks}
                             />
                             {blockSupportsMovableText(b.type) && (
                               <button
