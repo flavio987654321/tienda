@@ -1779,10 +1779,10 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
         if (subcategoryFilter !== "all" && product.subcategory !== subcategoryFilter) return false;
         return true;
       }).sort((a, b) => {
-        if (previewSortBy === "price_asc") return a.price - b.price;
-        if (previewSortBy === "price_desc") return b.price - a.price;
-        if (previewSortBy === "name_asc") return a.name.localeCompare(b.name);
-        if (previewSortBy === "name_desc") return b.name.localeCompare(a.name);
+        if (previewSortBy === "price_asc") return (a.price ?? 0) - (b.price ?? 0);
+        if (previewSortBy === "price_desc") return (b.price ?? 0) - (a.price ?? 0);
+        if (previewSortBy === "name_asc") return (a.name ?? "").localeCompare(b.name ?? "");
+        if (previewSortBy === "name_desc") return (b.name ?? "").localeCompare(a.name ?? "");
         return 0;
       }).slice(0, maxVisible);
       const placeholderNames = ["Producto ejemplo","Artículo demo","Item de muestra","Producto prueba","Ejemplo tienda","Artículo ejemplo","Muestra gratis","Demo producto"];
