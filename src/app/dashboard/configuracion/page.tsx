@@ -98,15 +98,15 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"hero",       emoji:"🖼️", label:"Hero / Portada",       desc:"Título grande, subtítulo y botón de acción",
     defaultProps:{ title:"¡Bienvenidos a mi tienda!", subtitle:"Encontrá todo lo que buscás", buttonText:"Ver productos", bgColor:"", textColor:"#ffffff", layout:"center", height:"lg" } },
   { type:"text",       emoji:"📝", label:"Bloque de texto",        desc:"Título y párrafo de texto libre",
-    defaultProps:{ heading:"Sobre nosotros", body:"Somos una tienda con años de experiencia...", align:"center", fontSize:"md", color:"", textColor:"", bgColor:"" } },
+    defaultProps:{ heading:"Sobre nosotros", body:"Somos una tienda con años de experiencia...", align:"center", fontSize:"md", headingSize:"lg", color:"", textColor:"", bgColor:"" } },
   { type:"products",   emoji:"🛍️", label:"Grilla de productos",    desc:"Muestra tu catálogo con columnas configurables",
-    defaultProps:{ heading:"Nuestros productos", subheading:"", headingSize:"lg", subheadingSize:"base", columns:3, layoutMode:"grid", showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:false, sortBy:"default", color:"", bgColor:"" } },
+    defaultProps:{ heading:"Nuestros productos", subheading:"", headingSize:"lg", subheadingSize:"base", subheadingColor:"", columns:3, layoutMode:"grid", showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:false, sortBy:"default", color:"", bgColor:"" } },
   { type:"banner",     emoji:"📢", label:"Banda de anuncio",       desc:"Franja de color con texto destacado",
     defaultProps:{ text:"🔥 ¡Oferta especial! Envío gratis hoy", bgColor:"#f59e0b", textColor:"#000000", size:"md" } },
   { type:"cta",        emoji:"🚀", label:"Llamada a la acción",    desc:"Sección oscura con botón grande destacado",
-    defaultProps:{ heading:"¿Lista para comprar?", sub:"Envíos a todo el país", buttonText:"Ver catálogo", bgColor:"#0f172a", textColor:"#ffffff" } },
+    defaultProps:{ heading:"¿Lista para comprar?", sub:"Envíos a todo el país", buttonText:"Ver catálogo", bgColor:"#0f172a", textColor:"#ffffff", headingSize:"xl" } },
   { type:"image-text", emoji:"🖼️", label:"Imagen + Texto",         desc:"Foto al lado de texto descriptivo (split)",
-    defaultProps:{ heading:"¿Por qué elegirnos?", body:"Calidad y atención garantizada en cada compra.", image:"", imagePosition:"left", imageFit:"cover", imageFocus:"center", color:"", textColor:"", bgColor:"", imageBgColor:"", imageRadius:"redondeada" } },
+    defaultProps:{ heading:"¿Por qué elegirnos?", body:"Calidad y atención garantizada en cada compra.", image:"", imagePosition:"left", imageFit:"cover", imageFocus:"center", color:"", textColor:"", bgColor:"", imageBgColor:"", imageRadius:"redondeada", headingSize:"lg" } },
   { type:"spacer",     emoji:"⬜", label:"Espacio en blanco",      desc:"Separador con texto, emoji y color opcionales",
     defaultProps:{ height:"md", text:"", emoji:"", bgColor:"", textColor:"", lineStyle:"none", lineColor:"#e5e7eb" } },
   { type:"socials",    emoji:"link", label:"Redes / Contacto",       desc:"Iconos, botones o tarjeta con tus canales",
@@ -704,6 +704,10 @@ function BlockEditor({
     </div>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
+      <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
+    </div>
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del texto (cuerpo)</label>
       <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"Extra grande"}]} value={p.fontSize||"md"} onChange={v=>upd("fontSize",v)}/>
     </div>
     {heightEditorSection}
@@ -747,8 +751,11 @@ function BlockEditor({
     {p.showHeading!==false && p.subheading && (
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del subtítulo</label>
-        <Chips options={[{id:"sm",label:"Pequeño"},{id:"base",label:"Normal"},{id:"lg",label:"Grande"}]} value={p.subheadingSize||"base"} onChange={v=>upd("subheadingSize",v)}/>
+        <Chips options={[{id:"sm",label:"H4"},{id:"base",label:"H3"},{id:"lg",label:"H2"}]} value={p.subheadingSize||"base"} onChange={v=>upd("subheadingSize",v)}/>
       </div>
+    )}
+    {p.showHeading!==false && p.subheading && (
+      <ColorPicker label="Color del subtítulo (vacío = gris)" value={p.subheadingColor||""} onChange={v=>upd("subheadingColor",v)}/>
     )}
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -900,6 +907,10 @@ function BlockEditor({
 
   if (block.type==="cta") return <div className="space-y-3">
     {inp("Título","heading","¿Lista para comprar?")}
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
+      <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
+    </div>
     {inp("Subtítulo","sub","Envíos a todo el país")}
     {inp("Texto del botón","buttonText","Ver catálogo")}
     <ColorPicker label="Color de fondo" value={p.bgColor||"#0f172a"} onChange={v=>upd("bgColor",v)}/>
@@ -909,6 +920,10 @@ function BlockEditor({
 
   if (block.type==="image-text") return <div className="space-y-3">
     {inp("Título","heading","¿Por qué elegirnos?")}
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
+      <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
+    </div>
     {ta("Descripción","body","Calidad garantizada en cada compra.")}
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Imagen</label>
@@ -1761,7 +1776,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 id: "heading",
                 defaultPos: { x: baseX, y: 18 },
                 style: { width: "min(100%, 560px)", textAlign: align as "left" | "center" | "right" },
-                content: <h3 style={{fontSize:FONT_SIZE[p.fontSize||"md"]||"20px",fontWeight:800,color:blockColor}}>{p.heading}</h3>,
+                content: <h3 style={{fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",fontWeight:800,color:blockColor}}>{p.heading}</h3>,
               }] : []),
               ...(p.body ? [{
                 id: "body",
@@ -1834,7 +1849,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 />
               )}
               {p.subheading && (
-                <p style={{textAlign:"center",color:c.templateId==="tech"?"#9ca3af":"#6b7280",fontSize:p.subheadingSize==="lg"?"13px":p.subheadingSize==="sm"?"10px":"11px",marginTop:"4px"}}>
+                <p style={{textAlign:"center",color:p.subheadingColor||(c.templateId==="tech"?"#9ca3af":"#6b7280"),fontSize:p.subheadingSize==="lg"?"13px":p.subheadingSize==="sm"?"10px":"11px",marginTop:"4px"}}>
                   {p.subheading}
                 </p>
               )}
@@ -2023,7 +2038,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 id: "heading",
                 defaultPos: { x: 28, y: 16 },
                 style: { width: "min(100%, 520px)", textAlign: "center" as const },
-                content: <h3 style={{fontSize:"20px",fontWeight:900,margin:0}}>{p.heading||"Lista para comprar?"}</h3>,
+                content: <h3 style={{fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="lg"?"20px":"26px",fontWeight:900,margin:0}}>{p.heading||"Lista para comprar?"}</h3>,
               },
               ...(p.sub ? [{
                 id: "sub",
@@ -2095,7 +2110,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                   id: "heading",
                   defaultPos: { x: 6, y: 28 },
                   style: { width: "min(100%, 420px)", textAlign: "left" as const },
-                  content: <h3 style={{fontSize:"30px",fontWeight:900,color:blockColor,marginBottom:"16px",lineHeight:1.2}}>{p.heading}</h3>,
+                  content: <h3 style={{fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",fontWeight:900,color:blockColor,marginBottom:"16px",lineHeight:1.2}}>{p.heading}</h3>,
                 }] : []),
                 ...(p.body ? [{
                   id: "body",

@@ -1254,7 +1254,7 @@ export default function StorefrontClient({
                 {p.showHeading !== false && (
                   <div className="mb-7 text-center">
                     <h2 className={`font-black break-words ${p.headingSize === "sm" ? "text-xl" : p.headingSize === "md" ? "text-2xl" : p.headingSize === "xl" ? "text-4xl" : "text-3xl"}`} style={{ color: String(p.color || store.primaryColor) }}>{p.heading || "Nuestros productos"}</h2>
-                    {p.subheading && <p className={`mt-2 ${p.subheadingSize === "sm" ? "text-sm" : p.subheadingSize === "lg" ? "text-lg" : "text-base"} ${isDark ? "text-gray-400" : "text-gray-500"}`}>{p.subheading}</p>}
+                    {p.subheading && <p className={`mt-2 ${p.subheadingSize === "sm" ? "text-sm" : p.subheadingSize === "lg" ? "text-lg" : "text-base"} ${isDark ? "text-gray-400" : "text-gray-500"}`} style={{ color: p.subheadingColor || undefined }}>{p.subheading}</p>}
                     {categoryFilter !== "all" && <p className={`mt-2 text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>{formatCategoryLabel(categoryFilter)}{subcategoryFilter !== "all" ? ` / ${formatCategoryLabel(subcategoryFilter)}` : ""}</p>}
                   </div>
                 )}
@@ -1317,7 +1317,7 @@ export default function StorefrontClient({
                     id: "heading",
                     defaultPos: { x: p.align === "left" ? 8 : p.align === "right" ? 42 : 20, y: 18 },
                     style: { width: "min(76%, 560px)", textAlign: (p.align || "center") as "left" | "center" | "right" },
-                    content: <h2 className="mb-4 text-3xl font-black md:text-4xl" style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>,
+                    content: <h2 className={`mb-4 font-black ${p.headingSize==="sm"?"text-xl":p.headingSize==="md"?"text-2xl":p.headingSize==="xl"?"text-4xl md:text-5xl":"text-3xl md:text-4xl"}`} style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>,
                   }] : []),
                   ...(p.body ? [{
                     id: "body",
@@ -1360,7 +1360,7 @@ export default function StorefrontClient({
                     id: "heading",
                     defaultPos: { x: 28, y: 16 },
                     style: { width: "min(72%, 520px)", textAlign: "center" as const },
-                    content: <h2 className="text-3xl font-black md:text-4xl">{p.heading || "¿Lista para comprar?"}</h2>,
+                    content: <h2 className={`font-black ${p.headingSize==="sm"?"text-2xl":p.headingSize==="md"?"text-3xl":p.headingSize==="lg"?"text-3xl md:text-4xl":"text-4xl md:text-5xl"}`}>{p.heading || "¿Lista para comprar?"}</h2>,
                   },
                   ...(p.sub ? [{
                     id: "sub",
@@ -1429,7 +1429,7 @@ export default function StorefrontClient({
                           id: "heading",
                           defaultPos: { x: 6, y: 28 },
                           style: { width: "min(90%, 420px)", textAlign: "left" as const },
-                          content: <h2 className="mb-4 text-3xl font-black" style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>,
+                          content: <h2 className={`mb-4 font-black ${p.headingSize==="sm"?"text-xl":p.headingSize==="md"?"text-2xl":p.headingSize==="xl"?"text-4xl":"text-3xl"}`} style={{ color: String(p.color || store.primaryColor) }}>{p.heading}</h2>,
                         }] : []),
                         ...(p.body ? [{
                           id: "body",
