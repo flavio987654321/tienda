@@ -403,15 +403,15 @@ function ContactBlock({ storeSlug, p, primaryColor, fontFamily }: { storeSlug: s
   const heading = String(p.heading || "Contacto");
   const subtitle = String(p.subtitle || "¿Tenés alguna pregunta? Escribinos.");
   const bgColor = String(p.bgColor || "#111827");
-  const textColor = String(p.textColor || "#ffffff");
   const bgImage = String(p.bgImage || "");
+  const isLight = !bgImage && isLightHex(bgColor);
+  const textColor = String(p.textColor || (isLight ? "#111827" : "#ffffff"));
   const btnColor = String(p.buttonColor || primaryColor);
   const btnText = String(p.buttonText || "Enviar mensaje");
   const showName = p.showName !== false;
   const showEmail = p.showEmail !== false;
   const showPhone = Boolean(p.showPhone);
   const showMessage = p.showMessage !== false;
-  const isLight = !bgImage && isLightHex(bgColor);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

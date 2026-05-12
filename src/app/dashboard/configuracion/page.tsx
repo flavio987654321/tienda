@@ -114,7 +114,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"divider",    emoji:"─", label:"Línea separadora",        desc:"Línea horizontal decorativa",
     defaultProps:{ style:"solid", color:"#e5e7eb" } },
   { type:"contacto",   emoji:"✉️", label:"Formulario de contacto",  desc:"Formulario que envía un email al dueño de la tienda",
-    defaultProps:{ heading:"Contacto", subtitle:"¿Tenés alguna pregunta? Escribinos.", bgColor:"#111827", textColor:"#ffffff", bgImage:"", showName:true, showEmail:true, showPhone:false, showMessage:true, buttonText:"Enviar mensaje", buttonColor:"" } },
+    defaultProps:{ heading:"Contacto", subtitle:"¿Tenés alguna pregunta? Escribinos.", bgColor:"#111827", textColor:"", bgImage:"", showName:true, showEmail:true, showPhone:false, showMessage:true, buttonText:"Enviar mensaje", buttonColor:"" } },
   { type:"banner-group", emoji:"🎠", label:"Carrusel de banners",     desc:"Imágenes full-width que pasan automáticamente",
     defaultProps:{ slides:[
       { image:"", title:"Bienvenidos", subtitle:"Descubrí nuestra colección", buttonText:"Ver productos", buttonUrl:"", focalX:50, focalY:50 },
@@ -637,6 +637,7 @@ function BlockEditor({
 }) {
   const p = block.props;
   const upd = (k:string,v:any) => onChange({...p,[k]:v});
+  const [contactBgMode, setContactBgMode] = useState<"color"|"image">(() => p.bgImage ? "image" : "color");
   const availableSubcategories = p.categoryFilter && p.categoryFilter !== "all"
     ? subcategoriesByCategory[p.categoryFilter] || []
     : Array.from(new Set(Object.values(subcategoriesByCategory).flat()));
@@ -1051,28 +1052,38 @@ function BlockEditor({
   </div>;
 
   if (block.type==="contacto") {
-    const bgMode = p.bgImage ? "image" : "color";
     return <div className="space-y-3">
       {inp("Título del formulario","heading","Contacto")}
       {inp("Subtítulo","subtitle","¿Tenés alguna pregunta? Escribinos.")}
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1.5">Tipo de fondo</label>
         <div className="flex gap-2 mb-2">
-          {[["color","🎨 Color"],["image","🖼️ Imagen"]].map(([v,l])=>(
+          {([["color","🎨 Color"],["image","🖼️ Imagen"]] as const).map(([v,l])=>(
             <button key={v} type="button"
-              onClick={()=>{ if(v==="color") onChange({...p,bgImage:""}); else onChange({...p,bgColor:""}); }}
-              className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors ${bgMode===v?"border-indigo-400 bg-indigo-50 text-indigo-700":"border-gray-200 text-gray-500 hover:border-gray-300"}`}>
+              onClick={()=>{
+                setContactBgMode(v);
+                if(v==="color") upd("bgImage","");
+                else upd("bgColor","");
+              }}
+              className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors ${contactBgMode===v?"border-indigo-400 bg-indigo-50 text-indigo-700":"border-gray-200 text-gray-500 hover:border-gray-300"}`}>
               {l}
             </button>
           ))}
         </div>
-        {bgMode==="color" ? (
+        {contactBgMode==="color" ? (
           <ColorPicker label="Color de fondo" value={p.bgColor||"#111827"} onChange={v=>upd("bgColor",v)}/>
         ) : (
-          <div className="flex gap-2">
-            <input value={p.bgImage||""} onChange={e=>upd("bgImage",e.target.value)} placeholder="https://..."
-              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-            {onPickImage && <button type="button" onClick={() => onPickImage?.("bgImage")} className="rounded-xl border border-gray-200 px-3 py-2 text-xs hover:bg-gray-50">📁</button>}
+          <div>
+            {p.bgImage && <img src={String(p.bgImage)} alt="" className="mb-2 h-20 w-full rounded-lg object-cover"/>}
+            <div className="flex gap-2">
+              <input value={p.bgImage||""} onChange={e=>upd("bgImage",e.target.value)} placeholder="https://..."
+                className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+              {onPickImage && <button type="button" onClick={() => onPickImage?.("bgImage")}
+                disabled={uploadingImage}
+                className="rounded-xl border border-gray-200 px-3 py-2 text-xs hover:bg-gray-50 disabled:opacity-50">
+                {uploadingImage ? "⏳" : "📁"}
+              </button>}
+            </div>
           </div>
         )}
       </div>
@@ -2105,8 +2116,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
 
     if (block.type==="contacto") {
       const bgCol = String(p.bgColor||"#111827");
-      const txtCol = String(p.textColor||"#ffffff");
       const bgImg = String(p.bgImage||"");
+      const isLightBg = !bgImg && (() => { const h=(bgCol).replace("#",""); if(h.length<6) return false; const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16); return (r*299+g*587+b*114)/1000>160; })();
+      const txtCol = String(p.textColor||(isLightBg?"#111827":"#ffffff"));
       return (
         <div style={{position:"relative",background:bgCol,color:txtCol,padding:"40px 24px",textAlign:"center",minHeight:customMinHeight}}>
           {bgImg && <img src={bgImg} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:0.35}}/>}
