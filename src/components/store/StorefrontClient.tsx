@@ -1558,7 +1558,7 @@ export default function StorefrontClient({
           <div className="flex shrink-0 items-center gap-2">
             {/* Search */}
             {navConfig.showSearch && navConfig.searchStyle === "bar" && (
-              <div className={`hidden items-center gap-2 rounded-xl border px-3 py-1.5 md:flex ${isDark ? "border-white/20 bg-white/10 text-white" : "border-gray-200 bg-gray-50 text-gray-900"}`}
+              <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 ${isDark ? "border-white/20 bg-white/10 text-white" : "border-gray-200 bg-gray-50 text-gray-900"}`}
                 style={navConfig.textColor ? { color: navConfig.textColor, borderColor: `${navConfig.textColor}33` } : undefined}>
                 <Search className="h-4 w-4 shrink-0 opacity-50" />
                 <input

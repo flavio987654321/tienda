@@ -413,11 +413,11 @@ function NavLinksEditor({ value, onChange, categories = [] }: { value: string; o
         <div className="flex gap-2">
           <button type="button" onClick={() => save({ ...cfg, mode: "links" })}
             className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors ${!isHamburger ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
-            Texto (links)
+            Botones visibles
           </button>
           <button type="button" onClick={() => save({ ...cfg, mode: "hamburger" })}
             className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors ${isHamburger ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
-            ☰ Siempre hamburguesa
+            ☰ Menú icono
           </button>
         </div>
       </div>
@@ -493,50 +493,46 @@ function NavLinksEditor({ value, onChange, categories = [] }: { value: string; o
       {/* Botones */}
       <p className="text-xs font-medium text-gray-600">Botones del menú</p>
       {cfg.links.map((link, idx) => (
-        <div key={link.id} className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2"
-          draggable
-          onDragStart={() => onDragStart(idx)}
-          onDragOver={e => onDragOver(e, idx)}
-          onDrop={onDrop}
-          style={{ cursor: "grab" }}>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-300 select-none text-sm leading-none">⠿</span>
+        <div key={link.id} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+          draggable onDragStart={() => onDragStart(idx)} onDragOver={e => onDragOver(e, idx)} onDrop={onDrop}>
+          {/* Header de la card */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-b border-gray-100">
+            <span className="text-gray-300 select-none cursor-grab text-sm leading-none">⠿</span>
             <input type="text" value={link.label} onChange={e => updateLink(link.id, "label", e.target.value)}
-              placeholder="Ej: Inicio, Remeras, Contacto"
-              className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
-            <button type="button" onClick={() => removeLink(link.id)} className="text-gray-400 hover:text-red-500 p-1">
+              placeholder="Nombre del botón (ej: Inicio)"
+              className="flex-1 bg-transparent text-xs font-semibold text-gray-900 placeholder:text-gray-400 outline-none focus:text-indigo-700" />
+            <button type="button" onClick={() => removeLink(link.id)} className="text-gray-300 hover:text-red-400 p-0.5 transition-colors">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="flex gap-2">
-            <select value={link.type} onChange={e => updateLink(link.id, "type", e.target.value)}
-              className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-              <option value="url">🔗 Enlace</option>
-              <option value="section">⚓ Sección página</option>
-              <option value="filter">🏷️ Categoría</option>
-            </select>
+          {/* Tipo + valor */}
+          <div className="px-3 py-2.5 space-y-2">
+            {/* Pills de tipo */}
+            <div className="flex gap-1">
+              {([["url","🔗 Enlace"],["section","⚓ Sección"],["filter","🏷️ Categoría"]] as const).map(([t, l]) => (
+                <button key={t} type="button" onClick={() => updateLink(link.id, "type", t)}
+                  className={`flex-1 rounded-md border py-1 text-[10px] font-semibold transition-colors ${link.type === t ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "border-gray-200 bg-gray-50 text-gray-400 hover:border-gray-300 hover:text-gray-600"}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            {/* Valor según tipo */}
             {link.type === "filter" ? (
               <select value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
-                className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                 <option value="">— Elegir categoría —</option>
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             ) : link.type === "section" ? (
               <input type="text" value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
-                placeholder="ej: nosotros, contacto, ofertas"
-                className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+                placeholder="ID de sección (ej: nosotros)"
+                className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
             ) : (
               <input type="text" value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
                 placeholder="https://... o /ruta"
-                className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+                className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
             )}
           </div>
-          {link.type === "filter" && link.value && (
-            <p className="text-xs text-gray-400">Si hay subcategorías, aparece dropdown al hacer hover</p>
-          )}
-          {link.type === "section" && (
-            <p className="text-xs text-gray-400">Debe haber un bloque con ese ID en la página (ej: id=&quot;nosotros&quot;)</p>
-          )}
         </div>
       ))}
       <button type="button" onClick={addLink}
