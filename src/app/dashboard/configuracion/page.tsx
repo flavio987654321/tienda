@@ -374,7 +374,7 @@ function parseNavConfig(value: string): NavConfig {
   } catch { return { layout: "right", showSearch: false, links: [] }; }
 }
 
-function NavLinksEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function NavLinksEditor({ value, onChange, categories = [] }: { value: string; onChange: (v: string) => void; categories?: string[] }) {
   const [cfg, setCfg] = useState<NavConfig>(() => parseNavConfig(value));
   const dragIdx = useRef<number | null>(null);
   const dragOverIdx = useRef<number | null>(null);
@@ -514,12 +514,20 @@ function NavLinksEditor({ value, onChange }: { value: string; onChange: (v: stri
               <option value="filter">Filtrar productos</option>
               <option value="url">Ir a URL</option>
             </select>
-            <input type="text" value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
-              placeholder={link.type === "filter" ? "Categoría exacta (ej: Remeras)" : "https://..."}
-              className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+            {link.type === "filter" ? (
+              <select value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
+                className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <option value="">— Elegir categoría —</option>
+                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            ) : (
+              <input type="text" value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
+                placeholder="https://..."
+                className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+            )}
           </div>
-          {link.type === "filter" && (
-            <p className="text-xs text-gray-400">Si hay subcategorías, aparece dropdown al hacer hover</p>
+          {link.type === "filter" && link.value && (
+            <p className="text-xs text-gray-400">Si hay subcategorías, aparece dropdown al hacer hover sobre este botón</p>
           )}
         </div>
       ))}
@@ -1039,9 +1047,19 @@ function BlockEditor({
     <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
       Este bloque reemplaza el encabezado por defecto de la tienda. Solo puede haber uno.
     </div>
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-gray-600">Logo / Nombre de la tienda</p>
+      <input value={p.logoText || ""} onChange={e => upd("logoText", e.target.value)}
+        placeholder="Nombre de tu tienda (por defecto usa el nombre configurado)"
+        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+      <input value={p.logoUrl || ""} onChange={e => upd("logoUrl", e.target.value)}
+        placeholder="URL de imagen de logo (opcional)"
+        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+    </div>
     <NavLinksEditor
       value={p.navConfig || '{"layout":"right","showSearch":false,"links":[]}'}
       onChange={v => upd("navConfig", v)}
+      categories={categories}
     />
   </div>;
 
@@ -2564,7 +2582,7 @@ export default function ConfiguracionPage() {
                             )}
                             {isHamb && <div style={{flex:1}}/>}
                             {navCfg.showSearch && !isHamb && <span style={{fontSize:"11px",color:nbLink}}>🔍</span>}
-                            {(isHamb || navCfg.links.length>0) && <span style={{fontSize:"14px",color:nbFg,opacity:0.7}}>☰</span>}
+                            {isHamb && <span style={{fontSize:"14px",color:nbFg,opacity:0.7}}>☰</span>}
                           </div>
                         );
                       }

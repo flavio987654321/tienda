@@ -1469,10 +1469,16 @@ export default function StorefrontClient({
       <header className={`${store.navbarStyle === "transparent" && !navConfig.bgColor ? "absolute left-0 right-0 z-20 bg-transparent" : isDark && !navConfig.bgColor ? "border-b border-white/10 bg-gray-950/90" : "border-b border-gray-100 bg-white/95"} backdrop-blur`} style={{ fontFamily: store.fontFamily, ...(navConfig.bgColor ? { background: navConfig.bgColor, borderColor: "transparent" } : {}) }}>
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-6 py-4">
           {/* Logo */}
-          <a href={`/tienda/${store.slug}`} className="flex shrink-0 items-center gap-3 font-black" style={navConfig.textColor ? { color: navConfig.textColor } : undefined}>
-            {store.logo ? <img src={store.logo} alt={store.name} className="h-10 w-10 rounded-xl object-cover" /> : <ShoppingBag className="h-7 w-7" style={{ color: navConfig.textColor || store.primaryColor }} />}
-            <span>{store.name}</span>
-          </a>
+          {(()=>{
+            const logoText = String(navbarBlock?.props?.logoText || store.name || "");
+            const logoUrl = String(navbarBlock?.props?.logoUrl || store.logo || "") || undefined;
+            return (
+              <a href={`/tienda/${store.slug}`} className="flex shrink-0 items-center gap-3 font-black" style={navConfig.textColor ? { color: navConfig.textColor } : undefined}>
+                {logoUrl ? <img src={logoUrl} alt={logoText} className="h-10 w-10 rounded-xl object-cover" /> : <ShoppingBag className="h-7 w-7" style={{ color: navConfig.textColor || store.primaryColor }} />}
+                <span>{logoText}</span>
+              </a>
+            );
+          })()}
 
           {/* Nav links — centered */}
           {navConfig.layout === "center" && parsedNavLinks.length > 0 && navConfig.mode !== "hamburger" && (
@@ -1621,10 +1627,9 @@ export default function StorefrontClient({
         </div>
       </header>
 
-      {menuOpen && (
-        <div className={`fixed inset-0 z-50 ${navConfig.mode !== "hamburger" ? "md:hidden" : ""}`}>
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMenuOpen(false)} />
-          <div className={`absolute right-0 top-0 bottom-0 w-72 shadow-2xl flex flex-col ${isDark ? "bg-gray-900 text-white" : "bg-white text-gray-900"}`} style={{ fontFamily: store.fontFamily }}>
+      <div className={`fixed inset-0 z-50 ${navConfig.mode !== "hamburger" ? "md:hidden" : ""} ${menuOpen ? "" : "pointer-events-none"}`}>
+          <div className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${menuOpen ? "opacity-100" : "opacity-0"}`} onClick={() => setMenuOpen(false)} />
+          <div className={`absolute right-0 top-0 bottom-0 w-72 shadow-2xl flex flex-col transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "translate-x-full"} ${isDark ? "bg-gray-900 text-white" : "bg-white text-gray-900"}`} style={{ fontFamily: store.fontFamily }}>
             <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: isDark ? "rgba(255,255,255,0.1)" : "#f3f4f6" }}>
               <span className="font-black text-lg">{store.name}</span>
               <button type="button" onClick={() => setMenuOpen(false)} className={`rounded-lg p-1.5 ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>
@@ -1675,7 +1680,6 @@ export default function StorefrontClient({
             </nav>
           </div>
         </div>
-      )}
 
       {hasCustomHeroBlock && renderHero()}
 
