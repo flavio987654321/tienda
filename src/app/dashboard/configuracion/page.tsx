@@ -100,7 +100,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"text",       emoji:"📝", label:"Bloque de texto",        desc:"Título y párrafo de texto libre",
     defaultProps:{ heading:"Sobre nosotros", body:"Somos una tienda con años de experiencia...", align:"center", fontSize:"md", color:"", textColor:"", bgColor:"" } },
   { type:"products",   emoji:"🛍️", label:"Grilla de productos",    desc:"Muestra tu catálogo con columnas configurables",
-    defaultProps:{ heading:"Nuestros productos", columns:3, layoutMode:"grid", showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:true, color:"", bgColor:"" } },
+    defaultProps:{ heading:"Nuestros productos", columns:3, layoutMode:"grid", showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:true, sortBy:"default", color:"", bgColor:"" } },
   { type:"banner",     emoji:"📢", label:"Banda de anuncio",       desc:"Franja de color con texto destacado",
     defaultProps:{ text:"🔥 ¡Oferta especial! Envío gratis hoy", bgColor:"#f59e0b", textColor:"#000000", size:"md" } },
   { type:"cta",        emoji:"🚀", label:"Llamada a la acción",    desc:"Sección oscura con botón grande destacado",
@@ -640,10 +640,6 @@ function BlockEditor({
   const p = block.props;
   const upd = (k:string,v:any) => onChange({...p,[k]:v});
   const [contactBgMode, setContactBgMode] = useState<"color"|"image">(() => p.bgImage ? "image" : "color");
-  const availableSubcategories = p.categoryFilter && p.categoryFilter !== "all"
-    ? subcategoriesByCategory[p.categoryFilter] || []
-    : Array.from(new Set(Object.values(subcategoriesByCategory).flat()));
-
   const inp = (label:string, key:string, ph?:string) => (
     <div key={key}>
       <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
@@ -728,21 +724,16 @@ function BlockEditor({
       <label className="block text-xs font-medium text-gray-600 mb-1">Formato</label>
       <Chips options={[{id:"grid",label:"Grilla"},{id:"carousel",label:"Carrusel"}]} value={p.layoutMode||"grid"} onChange={v=>upd("layoutMode",v)}/>
     </div>
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">Categoria a mostrar</label>
-      <select value={p.categoryFilter||"all"} onChange={e=>upd("categoryFilter",e.target.value)}
-        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-        <option value="all">Todas las categorias</option>
-        {categories.map((category)=><option key={category} value={category}>{formatCategoryLabel(category)}</option>)}
-      </select>
-    </div>
     <Toggle label="Mostrar filtro de categorias" sub="Permite cambiar de categoria en la tienda" value={p.showCategoryTabs!==false} onChange={v=>upd("showCategoryTabs",v)}/>
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">Subcategoria a mostrar</label>
-      <select value={p.subcategoryFilter||"all"} onChange={e=>upd("subcategoryFilter",e.target.value)}
+      <label className="block text-xs font-medium text-gray-600 mb-1">Ordenar por</label>
+      <select value={p.sortBy||"default"} onChange={e=>upd("sortBy",e.target.value)}
         className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-        <option value="all">Todas las subcategorias</option>
-        {availableSubcategories.map((subcat)=><option key={subcat} value={subcat}>{formatCategoryLabel(subcat)}</option>)}
+        <option value="default">Como fueron cargados</option>
+        <option value="price_asc">Precio: menor a mayor</option>
+        <option value="price_desc">Precio: mayor a menor</option>
+        <option value="name_asc">Nombre: A → Z</option>
+        <option value="name_desc">Nombre: Z → A</option>
       </select>
     </div>
     <Toggle label="Mostrar título de sección" value={p.showHeading!==false} onChange={v=>upd("showHeading",v)}/>
@@ -1782,10 +1773,17 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const categories = Array.from(new Set(previewProducts.map((product) => product.category).filter(Boolean))) as string[];
       const subcategories = Array.from(new Set(previewProducts.filter((product) => categoryFilter === "all" || product.category === categoryFilter).map((product) => product.subcategory).filter(Boolean))) as string[];
       const maxVisible = layoutMode === "carousel" ? Math.max(cols * 3, 6) : Math.max(cols * 2, 4);
+      const previewSortBy = String(p.sortBy || "default");
       const filteredProducts = previewProducts.filter((product) => {
         if (categoryFilter !== "all" && product.category !== categoryFilter) return false;
         if (subcategoryFilter !== "all" && product.subcategory !== subcategoryFilter) return false;
         return true;
+      }).sort((a, b) => {
+        if (previewSortBy === "price_asc") return a.price - b.price;
+        if (previewSortBy === "price_desc") return b.price - a.price;
+        if (previewSortBy === "name_asc") return a.name.localeCompare(b.name);
+        if (previewSortBy === "name_desc") return b.name.localeCompare(a.name);
+        return 0;
       }).slice(0, maxVisible);
       const placeholderNames = ["Producto ejemplo","Artículo demo","Item de muestra","Producto prueba","Ejemplo tienda","Artículo ejemplo","Muestra gratis","Demo producto"];
       const placeholders: PreviewProduct[] = Array.from({ length: Math.max(0, maxVisible - filteredProducts.length) }, (_, i) => ({

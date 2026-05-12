@@ -1014,7 +1014,7 @@ export default function StorefrontClient({
             highlightProductId === product.id ? "ring-4 ring-indigo-400 ring-offset-4" : ""
           }`}
         >
-          <div className="relative aspect-square p-3 shrink-0" style={{ backgroundColor: bg }}>
+          <div className="relative aspect-square max-h-72 p-3 shrink-0" style={{ backgroundColor: bg }}>
             <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-20">{emoji}</div>
             <div className="relative h-full overflow-hidden rounded-[22px] cursor-pointer" onClick={() => openProduct(product)}>
               <ProductImage image={image} name={product.name} className="transition duration-500 hover:scale-105" />
@@ -1073,7 +1073,7 @@ export default function StorefrontClient({
           isDark ? "border-white/10 bg-white/5 text-white" : "border-gray-100 bg-white text-gray-950"
         } ${highlightProductId === product.id ? "ring-4 ring-indigo-400 ring-offset-4 ring-offset-white" : ""}`}
       >
-        <div className={`${list ? "h-full min-h-40" : featured ? "aspect-[4/3]" : "aspect-square"} relative overflow-hidden shrink-0 ${isColorful ? "p-2" : ""}`} style={{ backgroundColor: store.secondaryColor }}>
+        <div className={`${list ? "h-full min-h-40" : featured ? "aspect-[4/3]" : "aspect-square max-h-72"} relative overflow-hidden shrink-0 ${isColorful ? "p-2" : ""}`} style={{ backgroundColor: store.secondaryColor }}>
           <div className={`h-full w-full overflow-hidden cursor-pointer ${isColorful ? "rounded-2xl" : ""}`} onClick={() => openProduct(product)}>
             <ProductImage image={image} name={product.name} className="transition duration-500 hover:scale-105" />
           </div>
@@ -1177,6 +1177,14 @@ export default function StorefrontClient({
                     if (product.category !== categoryFilter) return false;
                     return subcategoryFilter === "all" || product.subcategory === subcategoryFilter;
                   });
+            const sortBy = String(p.sortBy || "default");
+            const sortedBlockProducts = [...blockProducts].sort((a, b) => {
+              if (sortBy === "price_asc") return a.price - b.price;
+              if (sortBy === "price_desc") return b.price - a.price;
+              if (sortBy === "name_asc") return a.name.localeCompare(b.name, "es");
+              if (sortBy === "name_desc") return b.name.localeCompare(a.name, "es");
+              return 0;
+            });
             const columns = Math.max(1, Number(p.columns) || 3);
             const layoutMode = String(p.layoutMode || "grid");
             const gridClass = columns >= 5
@@ -1231,7 +1239,7 @@ export default function StorefrontClient({
                 {blockProducts.length ? (
                   layoutMode === "carousel" ? (
                     <div className="flex gap-5 overflow-x-auto pb-3" style={{ scrollSnapType: "x mandatory" }}>
-                      {blockProducts.map((product, index) => (
+                      {sortedBlockProducts.map((product, index) => (
                         <div
                           key={product.id}
                           className="shrink-0"
@@ -1246,7 +1254,7 @@ export default function StorefrontClient({
                       ))}
                     </div>
                   ) : (
-                    <div className={`grid items-stretch gap-5 ${gridClass}`}>{blockProducts.map(renderProductCard)}</div>
+                    <div className={`grid items-stretch gap-5 ${gridClass}${columns === 1 ? " max-w-sm mx-auto w-full" : ""}`}>{sortedBlockProducts.map(renderProductCard)}</div>
                   )
                 ) : (
                   <div className={`py-16 text-center ${isDark ? "text-gray-400" : "text-gray-400"}`}>
