@@ -22,12 +22,14 @@ export default function DashboardLayout({
   userEmail,
   initialPendingAffiliateCount = 0,
   initialLowStockCount = 0,
+  fullHeight = false,
 }: {
   children: React.ReactNode;
   userName?: string | null;
   userEmail?: string | null;
   initialPendingAffiliateCount?: number;
   initialLowStockCount?: number;
+  fullHeight?: boolean;
 }) {
   const pathname = usePathname();
   const { signOut } = useAuth();
@@ -170,7 +172,7 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      <main className="ml-14 flex-1 p-4 bg-gray-50 overflow-y-auto">{children}</main>
+      <main className={`ml-14 flex-1 p-4 bg-gray-50 ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>{children}</main>
     </div>
   );
 }

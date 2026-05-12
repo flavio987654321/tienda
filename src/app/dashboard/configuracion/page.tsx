@@ -2651,7 +2651,7 @@ export default function ConfiguracionPage() {
   if(loading) return <DashboardLayout><div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin text-indigo-600"/></div></DashboardLayout>;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout fullHeight>
       {/* Bloqueo en móvil/tablet — el editor requiere pantalla de PC */}
       <div className="lg:hidden fixed inset-0 z-50 bg-gray-50 flex flex-col items-center justify-center p-8 text-center">
         <Monitor className="h-16 w-16 text-gray-300 mb-4"/>
