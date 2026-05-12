@@ -646,14 +646,14 @@ function BlockEditor({
     <div key={key}>
       <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
       <input value={p[key]||""} onChange={e=>upd(key,e.target.value)} placeholder={ph}
-        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
     </div>
   );
   const ta = (label:string, key:string, ph?:string) => (
     <div key={key}>
       <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
       <textarea value={p[key]||""} onChange={e=>upd(key,e.target.value)} placeholder={ph} rows={3} style={{resize:"none"}}
-        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
     </div>
   );
 
