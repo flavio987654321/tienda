@@ -2579,7 +2579,7 @@ export default function ConfiguracionPage() {
                         const previewSubs: Record<string,string[]> = {};
                         previewProducts.forEach(p=>{ if(p.category&&p.subcategory){ if(!previewSubs[p.category]) previewSubs[p.category]=[]; if(!previewSubs[p.category].includes(p.subcategory!)) previewSubs[p.category].push(p.subcategory!); } });
                         return (
-                          <div style={{position:"relative"}}>
+                          <div>
                             {/* Navbar bar */}
                             <div style={{background:nbBg,padding:"10px 16px",display:"flex",alignItems:"center",gap:"8px",borderBottom:"1px solid rgba(0,0,0,0.1)"}}>
                               <div style={{display:"flex",alignItems:"center",gap:"6px",flexShrink:0}}>
