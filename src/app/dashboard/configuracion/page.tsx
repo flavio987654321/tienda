@@ -2121,6 +2121,8 @@ export default function ConfiguracionPage() {
   const [blocks, setBlocks]               = useState<Block[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string|null>(null);
   const [showBlockLibrary, setShowBlockLibrary] = useState(false);
+  const [previewMenuOpen, setPreviewMenuOpen] = useState(false);
+  const [previewHoverLink, setPreviewHoverLink] = useState<string|null>(null);
   const previewScrollRef = useRef<HTMLDivElement>(null);
   const blockItemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const editorPanelRef = useRef<HTMLDivElement>(null);
@@ -2573,32 +2575,95 @@ export default function ConfiguracionPage() {
                         const nbLogoText = String(navbarBlock.props.logoText || config.name || "Mi Tienda");
                         const nbLogoUrl = String(navbarBlock.props.logoUrl || "");
                         const isSearchBar = navCfg.showSearch && navCfg.searchStyle === "bar";
+                        const previewSubs: Record<string,string[]> = {};
+                        previewProducts.forEach(p=>{ if(p.category&&p.subcategory){ if(!previewSubs[p.category]) previewSubs[p.category]=[]; if(!previewSubs[p.category].includes(p.subcategory!)) previewSubs[p.category].push(p.subcategory!); } });
                         return (
-                          <div style={{background:nbBg,padding:"10px 16px",display:"flex",alignItems:"center",gap:"8px",borderBottom:"1px solid rgba(0,0,0,0.1)",position:"relative"}}>
-                            <div style={{display:"flex",alignItems:"center",gap:"6px",flexShrink:0}}>
-                              {nbLogoUrl && <img src={nbLogoUrl} alt={nbLogoText} style={{height:"20px",width:"20px",borderRadius:"4px",objectFit:"cover"}}/>}
-                              <span style={{fontWeight:800,fontSize:"13px",color:nbFg}}>{nbLogoText}</span>
+                          <div style={{position:"relative"}}>
+                            {/* Navbar bar */}
+                            <div style={{background:nbBg,padding:"10px 16px",display:"flex",alignItems:"center",gap:"8px",borderBottom:"1px solid rgba(0,0,0,0.1)"}}>
+                              <div style={{display:"flex",alignItems:"center",gap:"6px",flexShrink:0}}>
+                                {nbLogoUrl && <img src={nbLogoUrl} alt={nbLogoText} style={{height:"20px",width:"20px",borderRadius:"4px",objectFit:"cover"}}/>}
+                                <span style={{fontWeight:800,fontSize:"13px",color:nbFg}}>{nbLogoText}</span>
+                              </div>
+                              {!isHamb && navCfg.layout==="center" && navCfg.links.length>0 && (
+                                <div style={{display:"flex",gap:"6px",flex:1,justifyContent:"center"}}>
+                                  {navCfg.links.slice(0,6).map(l=>{
+                                    const lsubs = l.type==="filter" ? (previewSubs[l.value]||[]) : [];
+                                    return (
+                                      <div key={l.id} style={{position:"relative"}}
+                                        onMouseEnter={()=>lsubs.length>0&&setPreviewHoverLink(l.id)}
+                                        onMouseLeave={()=>setPreviewHoverLink(null)}>
+                                        <span style={{fontSize:"10px",fontWeight:600,color:nbLink,cursor:"pointer",padding:"2px 4px",borderRadius:"4px",background:previewHoverLink===l.id?"rgba(0,0,0,0.06)":"transparent"}}>{l.label}</span>
+                                        {lsubs.length>0&&previewHoverLink===l.id&&(
+                                          <div style={{position:"absolute",top:"100%",left:0,background:"white",border:"1px solid #e5e7eb",borderRadius:"8px",boxShadow:"0 4px 12px rgba(0,0,0,0.12)",minWidth:"120px",zIndex:99,overflow:"hidden"}}>
+                                            {lsubs.map(s=><div key={s} style={{padding:"6px 12px",fontSize:"10px",color:"#374151",cursor:"pointer"}}>{s}</div>)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              {!isHamb && navCfg.layout!=="center" && <div style={{flex:1}}/>}
+                              {!isHamb && navCfg.layout!=="center" && navCfg.links.length>0 && (
+                                <div style={{display:"flex",gap:"6px"}}>
+                                  {navCfg.links.slice(0,6).map(l=>{
+                                    const lsubs = l.type==="filter" ? (previewSubs[l.value]||[]) : [];
+                                    return (
+                                      <div key={l.id} style={{position:"relative"}}
+                                        onMouseEnter={()=>lsubs.length>0&&setPreviewHoverLink(l.id)}
+                                        onMouseLeave={()=>setPreviewHoverLink(null)}>
+                                        <span style={{fontSize:"10px",fontWeight:600,color:nbLink,cursor:"pointer",padding:"2px 4px",borderRadius:"4px",background:previewHoverLink===l.id?"rgba(0,0,0,0.06)":"transparent"}}>{l.label}</span>
+                                        {lsubs.length>0&&previewHoverLink===l.id&&(
+                                          <div style={{position:"absolute",top:"100%",right:0,background:"white",border:"1px solid #e5e7eb",borderRadius:"8px",boxShadow:"0 4px 12px rgba(0,0,0,0.12)",minWidth:"120px",zIndex:99,overflow:"hidden"}}>
+                                            {lsubs.map(s=><div key={s} style={{padding:"6px 12px",fontSize:"10px",color:"#374151",cursor:"pointer"}}>{s}</div>)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              {isHamb && <div style={{flex:1}}/>}
+                              {navCfg.showSearch && !isHamb && !isSearchBar && <span style={{fontSize:"11px",color:nbLink}}>🔍</span>}
+                              {isSearchBar && !isHamb && (
+                                <div style={{display:"flex",alignItems:"center",gap:"4px",border:`1px solid ${nbLink}33`,borderRadius:"8px",padding:"2px 8px",opacity:0.8}}>
+                                  <span style={{fontSize:"9px",color:nbLink}}>🔍</span>
+                                  <span style={{fontSize:"9px",color:nbLink,opacity:0.6}}>Buscar...</span>
+                                </div>
+                              )}
+                              {(isHamb||navCfg.links.length>0) && (
+                                <span onClick={()=>setPreviewMenuOpen(v=>!v)} style={{fontSize:"16px",color:isHamb?nbFg:nbLink,opacity:isHamb?1:0.5,cursor:"pointer",userSelect:"none",padding:"2px"}} title="Ver menú">{previewMenuOpen?"✕":"☰"}</span>
+                              )}
                             </div>
-                            {!isHamb && navCfg.layout==="center" && navCfg.links.length>0 && (
-                              <div style={{display:"flex",gap:"10px",flex:1,justifyContent:"center"}}>
-                                {navCfg.links.slice(0,5).map(l=>(<span key={l.id} style={{fontSize:"10px",fontWeight:600,color:nbLink}}>{l.label}</span>))}
+                            {/* Preview drawer */}
+                            {previewMenuOpen && navCfg.links.length>0 && (
+                              <div style={{position:"absolute",top:"100%",right:0,width:"200px",background:"white",border:"1px solid #e5e7eb",borderRadius:"0 0 12px 12px",boxShadow:"0 8px 24px rgba(0,0,0,0.15)",zIndex:50,maxHeight:"280px",overflowY:"auto"}}>
+                                <div style={{padding:"12px 16px",borderBottom:"1px solid #f3f4f6",fontWeight:800,fontSize:"12px",color:"#111827"}}>{nbLogoText}</div>
+                                {navCfg.showSearch && (
+                                  <div style={{margin:"8px 12px",border:"1px solid #e5e7eb",borderRadius:"8px",padding:"4px 10px",display:"flex",alignItems:"center",gap:"6px",color:"#9ca3af",fontSize:"11px"}}>
+                                    🔍 <span>Buscar...</span>
+                                  </div>
+                                )}
+                                {navCfg.links.map(l=>{
+                                  const lsubs = l.type==="filter" ? (previewSubs[l.value]||[]) : [];
+                                  return (
+                                    <div key={l.id}>
+                                      <div style={{padding:"10px 16px",fontSize:"12px",fontWeight:600,color:"#111827",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}
+                                        onClick={()=>lsubs.length>0&&setPreviewHoverLink(previewHoverLink===l.id?null:l.id)}>
+                                        {l.label}
+                                        {lsubs.length>0&&<span style={{fontSize:"10px",transform:previewHoverLink===l.id?"rotate(180deg)":"none",display:"inline-block",transition:"transform 0.2s"}}>▾</span>}
+                                      </div>
+                                      {lsubs.length>0&&previewHoverLink===l.id&&(
+                                        <div style={{background:"#f9fafb",paddingLeft:"8px"}}>
+                                          {lsubs.map(s=><div key={s} style={{padding:"7px 16px",fontSize:"11px",color:"#6b7280",cursor:"pointer"}}>{s}</div>)}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
-                            {!isHamb && navCfg.layout!=="center" && <div style={{flex:1}}/>}
-                            {!isHamb && navCfg.layout!=="center" && navCfg.links.length>0 && (
-                              <div style={{display:"flex",gap:"10px"}}>
-                                {navCfg.links.slice(0,5).map(l=>(<span key={l.id} style={{fontSize:"10px",fontWeight:600,color:nbLink}}>{l.label}</span>))}
-                              </div>
-                            )}
-                            {isHamb && <div style={{flex:1}}/>}
-                            {navCfg.showSearch && !isHamb && !isSearchBar && <span style={{fontSize:"11px",color:nbLink}}>🔍</span>}
-                            {isSearchBar && !isHamb && (
-                              <div style={{display:"flex",alignItems:"center",gap:"4px",border:`1px solid ${nbLink}33`,borderRadius:"8px",padding:"2px 8px",opacity:0.8}}>
-                                <span style={{fontSize:"9px",color:nbLink}}>🔍</span>
-                                <span style={{fontSize:"9px",color:nbLink,opacity:0.6}}>Buscar...</span>
-                              </div>
-                            )}
-                            {isHamb && <span style={{fontSize:"14px",color:nbFg,opacity:0.7}}>☰</span>}
                           </div>
                         );
                       }

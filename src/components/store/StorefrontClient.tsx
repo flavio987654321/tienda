@@ -439,6 +439,7 @@ export default function StorefrontClient({
   const [openCart, setOpenCart] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [expandedDrawerItem, setExpandedDrawerItem] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("all");
@@ -1631,7 +1632,7 @@ export default function StorefrontClient({
           <div className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${menuOpen ? "opacity-100" : "opacity-0"}`} onClick={() => setMenuOpen(false)} />
           <div className={`absolute right-0 top-0 bottom-0 w-72 shadow-2xl flex flex-col transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "translate-x-full"} ${isDark ? "bg-gray-900 text-white" : "bg-white text-gray-900"}`} style={{ fontFamily: store.fontFamily }}>
             <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: isDark ? "rgba(255,255,255,0.1)" : "#f3f4f6" }}>
-              <span className="font-black text-lg">{store.name}</span>
+              <span className="font-black text-lg">{String(navbarBlock?.props?.logoText || store.name || "")}</span>
               <button type="button" onClick={() => setMenuOpen(false)} className={`rounded-lg p-1.5 ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>
                 <X className="h-5 w-5" />
               </button>
@@ -1651,11 +1652,23 @@ export default function StorefrontClient({
                   <div key={link.id}>
                     {link.type === "filter" ? (
                       <button type="button"
-                        onClick={() => { setCategory(link.value); setSubcategory("all"); setSearchQuery(""); if (subs.length === 0) setMenuOpen(false); }}
+                        onClick={() => {
+                          setCategory(link.value); setSubcategory("all"); setSearchQuery("");
+                          if (subs.length > 0) {
+                            setExpandedDrawerItem(expandedDrawerItem === link.id ? null : link.id);
+                          } else {
+                            setMenuOpen(false);
+                          }
+                        }}
                         className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold transition-colors ${isActive ? "text-white" : isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
                         style={isActive ? { backgroundColor: store.primaryColor } : undefined}>
                         {link.label}
-                        {subs.length > 0 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5 opacity-60"><path d="M6 9l6 6 6-6"/></svg>}
+                        {subs.length > 0 && (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                            className={`h-3.5 w-3.5 opacity-60 transition-transform ${expandedDrawerItem === link.id ? "rotate-180" : ""}`}>
+                            <path d="M6 9l6 6 6-6"/>
+                          </svg>
+                        )}
                       </button>
                     ) : (
                       <a href={link.type === "section" ? `#${link.value}` : safeHref(link.value)} onClick={() => setMenuOpen(false)}
@@ -1663,10 +1676,10 @@ export default function StorefrontClient({
                         {link.label}
                       </a>
                     )}
-                    {subs.length > 0 && isActive && (
+                    {subs.length > 0 && expandedDrawerItem === link.id && (
                       <div className="ml-4 flex flex-col gap-0.5 pb-1">
                         {subs.map(sub => (
-                          <button key={sub} type="button" onClick={() => { setSubcategory(sub); setMenuOpen(false); }}
+                          <button key={sub} type="button" onClick={() => { setSubcategory(sub); setMenuOpen(false); setExpandedDrawerItem(null); }}
                             className={`flex w-full items-center rounded-lg px-4 py-2 text-left text-sm capitalize transition-colors ${subcategory === sub ? "font-bold" : "opacity-70"} ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
                             style={subcategory === sub ? { color: store.primaryColor } : undefined}>
                             {sub}
