@@ -466,7 +466,7 @@ export default function StorefrontClient({
   const [couponError, setCouponError] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount: number } | null>(null);
 
-  type NavLink = { id: string; label: string; type: "filter" | "url"; value: string };
+  type NavLink = { id: string; label: string; type: "filter" | "url" | "section"; value: string };
   type NavConfig = { layout: "right" | "center"; showSearch: boolean; links: NavLink[]; mode?: "links" | "hamburger"; bgColor?: string; textColor?: string; searchStyle?: "icon" | "bar"; };
 
   const categories = useMemo(() => [...new Set(store.products.map((p) => p.category).filter(Boolean))], [store.products]);
@@ -1496,7 +1496,7 @@ export default function StorefrontClient({
                         {subs.length > 0 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3 w-3"><path d="M6 9l6 6 6-6"/></svg>}
                       </button>
                     ) : (
-                      <a href={safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</a>
+                      <a href={link.type === "section" ? `#${link.value}` : safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</a>
                     )}
                     {subs.length > 0 && openDropdown === link.id && (
                       <div className={`absolute left-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-xl border shadow-xl ${isDark ? "border-white/10 bg-gray-900" : "border-gray-100 bg-white"}`}>
@@ -1535,7 +1535,7 @@ export default function StorefrontClient({
                         {subs.length > 0 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3 w-3"><path d="M6 9l6 6 6-6"/></svg>}
                       </button>
                     ) : (
-                      <a href={safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</a>
+                      <a href={link.type === "section" ? `#${link.value}` : safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</a>
                     )}
                     {subs.length > 0 && openDropdown === link.id && (
                       <div className={`absolute right-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-xl border shadow-xl ${isDark ? "border-white/10 bg-gray-900" : "border-gray-100 bg-white"}`}>
@@ -1658,7 +1658,7 @@ export default function StorefrontClient({
                         {subs.length > 0 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5 opacity-60"><path d="M6 9l6 6 6-6"/></svg>}
                       </button>
                     ) : (
-                      <a href={safeHref(link.value)} onClick={() => setMenuOpen(false)}
+                      <a href={link.type === "section" ? `#${link.value}` : safeHref(link.value)} onClick={() => setMenuOpen(false)}
                         className={`flex w-full items-center rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>
                         {link.label}
                       </a>

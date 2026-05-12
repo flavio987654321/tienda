@@ -71,7 +71,7 @@ const ALL_CHANNELS = [
 ] as const;
 
 type DesignSection = "template"|"colores"|"textos"|"imagenes"|"layout"|"tarjetas"|"anuncio"|"redes"|"footer"|"vendedoras"|"seo"|"tienda";
-type NavLink = { id: string; label: string; type: "filter" | "url"; value: string };
+type NavLink = { id: string; label: string; type: "filter" | "url" | "section"; value: string };
 
 /* ─── Block types ─── */
 export type BlockType = "hero"|"text"|"products"|"banner"|"banner-group"|"cta"|"image-text"|"socials"|"spacer"|"divider"|"navbar";
@@ -382,7 +382,7 @@ function NavLinksEditor({ value, onChange, categories = [] }: { value: string; o
   function save(updated: NavConfig) { setCfg(updated); onChange(JSON.stringify(updated)); }
 
   function addLink() {
-    save({ ...cfg, links: [...cfg.links, { id: crypto.randomUUID(), label: "Nuevo botón", type: "filter", value: "" }] });
+    save({ ...cfg, links: [...cfg.links, { id: crypto.randomUUID(), label: "Nuevo botón", type: "url", value: "" }] });
   }
   function removeLink(id: string) { save({ ...cfg, links: cfg.links.filter(l => l.id !== id) }); }
   function updateLink(id: string, field: keyof NavLink, val: string) {
@@ -511,8 +511,9 @@ function NavLinksEditor({ value, onChange, categories = [] }: { value: string; o
           <div className="flex gap-2">
             <select value={link.type} onChange={e => updateLink(link.id, "type", e.target.value)}
               className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-              <option value="filter">Filtrar productos</option>
-              <option value="url">Ir a URL</option>
+              <option value="url">🔗 Enlace</option>
+              <option value="section">⚓ Sección página</option>
+              <option value="filter">🏷️ Categoría</option>
             </select>
             {link.type === "filter" ? (
               <select value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
@@ -520,14 +521,21 @@ function NavLinksEditor({ value, onChange, categories = [] }: { value: string; o
                 <option value="">— Elegir categoría —</option>
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+            ) : link.type === "section" ? (
+              <input type="text" value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
+                placeholder="ej: nosotros, contacto, ofertas"
+                className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
             ) : (
               <input type="text" value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
-                placeholder="https://..."
+                placeholder="https://... o /ruta"
                 className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
             )}
           </div>
           {link.type === "filter" && link.value && (
-            <p className="text-xs text-gray-400">Si hay subcategorías, aparece dropdown al hacer hover sobre este botón</p>
+            <p className="text-xs text-gray-400">Si hay subcategorías, aparece dropdown al hacer hover</p>
+          )}
+          {link.type === "section" && (
+            <p className="text-xs text-gray-400">Debe haber un bloque con ese ID en la página (ej: id=&quot;nosotros&quot;)</p>
           )}
         </div>
       ))}
@@ -2566,9 +2574,15 @@ export default function ConfiguracionPage() {
                         const nbFg = navCfg.textColor || fgColor;
                         const nbLink = navCfg.textColor || linkColor;
                         const isHamb = navCfg.mode === "hamburger";
+                        const nbLogoText = String(navbarBlock.props.logoText || config.name || "Mi Tienda");
+                        const nbLogoUrl = String(navbarBlock.props.logoUrl || "");
+                        const isSearchBar = navCfg.showSearch && navCfg.searchStyle === "bar";
                         return (
                           <div style={{background:nbBg,padding:"10px 16px",display:"flex",alignItems:"center",gap:"8px",borderBottom:"1px solid rgba(0,0,0,0.1)",position:"relative"}}>
-                            <div style={{fontWeight:800,fontSize:"13px",color:nbFg,flexShrink:0}}>{config.name||"Mi Tienda"}</div>
+                            <div style={{display:"flex",alignItems:"center",gap:"6px",flexShrink:0}}>
+                              {nbLogoUrl && <img src={nbLogoUrl} alt={nbLogoText} style={{height:"20px",width:"20px",borderRadius:"4px",objectFit:"cover"}}/>}
+                              <span style={{fontWeight:800,fontSize:"13px",color:nbFg}}>{nbLogoText}</span>
+                            </div>
                             {!isHamb && navCfg.layout==="center" && navCfg.links.length>0 && (
                               <div style={{display:"flex",gap:"10px",flex:1,justifyContent:"center"}}>
                                 {navCfg.links.slice(0,5).map(l=>(<span key={l.id} style={{fontSize:"10px",fontWeight:600,color:nbLink}}>{l.label}</span>))}
@@ -2581,7 +2595,13 @@ export default function ConfiguracionPage() {
                               </div>
                             )}
                             {isHamb && <div style={{flex:1}}/>}
-                            {navCfg.showSearch && !isHamb && <span style={{fontSize:"11px",color:nbLink}}>🔍</span>}
+                            {navCfg.showSearch && !isHamb && !isSearchBar && <span style={{fontSize:"11px",color:nbLink}}>🔍</span>}
+                            {isSearchBar && !isHamb && (
+                              <div style={{display:"flex",alignItems:"center",gap:"4px",border:`1px solid ${nbLink}33`,borderRadius:"8px",padding:"2px 8px",opacity:0.8}}>
+                                <span style={{fontSize:"9px",color:nbLink}}>🔍</span>
+                                <span style={{fontSize:"9px",color:nbLink,opacity:0.6}}>Buscar...</span>
+                              </div>
+                            )}
                             {isHamb && <span style={{fontSize:"14px",color:nbFg,opacity:0.7}}>☰</span>}
                           </div>
                         );
