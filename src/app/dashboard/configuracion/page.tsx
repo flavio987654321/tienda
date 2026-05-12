@@ -2682,9 +2682,9 @@ export default function ConfiguracionPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 grid gap-3 grid-rows-[minmax(0,1fr)] grid-cols-[256px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="flex-1 min-h-0 grid grid-rows-1 gap-3 grid-cols-[256px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
         {/* ── EDITOR PANEL ── */}
-        <div ref={editorPanelRef} className="h-full space-y-2 overflow-y-auto pr-1 pb-4">
+        <div ref={editorPanelRef} className="min-h-0 overflow-y-auto space-y-2 pr-1 pb-4">
 
           {/* ── BLOQUES ── */}
             <div className="space-y-3">
@@ -2817,7 +2817,7 @@ export default function ConfiguracionPage() {
         </div>
 
         {/* ── PREVIEW PANEL ── */}
-        <div className="h-full flex flex-col rounded-2xl border-2 border-indigo-100 shadow-xl shadow-indigo-100/40">
+        <div className="min-h-0 flex flex-col rounded-2xl border-2 border-indigo-100 shadow-xl shadow-indigo-100/40">
           <div className="bg-gray-800 rounded-2xl overflow-hidden flex flex-col flex-1 min-h-0">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 shrink-0">
               <div className="flex items-center gap-1.5">
