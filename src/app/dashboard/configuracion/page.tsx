@@ -631,7 +631,7 @@ function BlockEditor({
   categories?:string[];
   subcategoriesByCategory?:Record<string,string[]>;
   uploadingImage?: boolean;
-  onPickImage?: () => void;
+  onPickImage?: (field?: string) => void;
   onUploadFile?: (file:File) => Promise<string|undefined>;
   blocks?: Block[];
 }) {
@@ -1063,7 +1063,7 @@ function BlockEditor({
         <div className="flex gap-2">
           <input value={p.bgImage||""} onChange={e=>upd("bgImage",e.target.value)} placeholder="https://..."
             className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-          <button type="button" onClick={onPickImage} className="rounded-xl border border-gray-200 px-3 py-2 text-xs hover:bg-gray-50">📁</button>
+          <button type="button" onClick={() => onPickImage?.("bgImage")} className="rounded-xl border border-gray-200 px-3 py-2 text-xs hover:bg-gray-50">📁</button>
         </div>
       </div>
     )}
@@ -2185,6 +2185,7 @@ export default function ConfiguracionPage() {
   // Blocks state
   const [blocks, setBlocks]               = useState<Block[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string|null>(null);
+  const [selectedImageField, setSelectedImageField] = useState<string>("image");
   const [showBlockLibrary, setShowBlockLibrary] = useState(false);
   const [previewMenuOpen, setPreviewMenuOpen] = useState(false);
   const [previewHoverLink, setPreviewHoverLink] = useState<string|null>(null);
@@ -2279,7 +2280,7 @@ export default function ConfiguracionPage() {
     const url = await uploadAsset(file);
     if (url) {
       const current = blocks.find((block) => block.id === selectedBlockId);
-      if (current) updateBlock(selectedBlockId, { ...current.props, image: url });
+      if (current) updateBlock(selectedBlockId, { ...current.props, [selectedImageField]: url });
     }
     setUploadingBlockImage(false);
   }
@@ -2567,8 +2568,9 @@ export default function ConfiguracionPage() {
                               categories={productCategories}
                               subcategoriesByCategory={productSubcategories}
                               uploadingImage={uploadingBlockImage && selectedBlockId === b.id}
-                              onPickImage={() => {
+                              onPickImage={(field?: string) => {
                                 setSelectedBlockId(b.id);
+                                setSelectedImageField(field || "image");
                                 blockImageRef.current?.click();
                               }}
                               onUploadFile={uploadAsset}

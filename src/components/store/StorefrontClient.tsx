@@ -386,6 +386,15 @@ function PositionedTextLayer({
   );
 }
 
+function isLightHex(hex: string): boolean {
+  const h = hex.replace("#", "");
+  if (h.length < 6) return false;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 160;
+}
+
 function ContactBlock({ storeSlug, p, primaryColor, fontFamily }: { storeSlug: string; p: Record<string, unknown>; primaryColor: string; fontFamily: string }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -402,6 +411,7 @@ function ContactBlock({ storeSlug, p, primaryColor, fontFamily }: { storeSlug: s
   const showEmail = p.showEmail !== false;
   const showPhone = Boolean(p.showPhone);
   const showMessage = p.showMessage !== false;
+  const isLight = !bgImage && isLightHex(bgColor);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -421,7 +431,9 @@ function ContactBlock({ storeSlug, p, primaryColor, fontFamily }: { storeSlug: s
     }
   }
 
-  const inputCls = "w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/50 focus:border-white/50 focus:outline-none focus:ring-1 focus:ring-white/30 backdrop-blur";
+  const inputCls = isLight
+    ? "w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+    : "w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/50 focus:border-white/50 focus:outline-none focus:ring-1 focus:ring-white/30 backdrop-blur";
 
   return (
     <section style={{ fontFamily, backgroundColor: bgColor, color: textColor, position: "relative" }}>
@@ -519,6 +531,7 @@ export default function StorefrontClient({
   const [reviewSuccess, setReviewSuccess] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [openCart, setOpenCart] = useState(false);
+  const [openSection, setOpenSection] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [expandedDrawerItem, setExpandedDrawerItem] = useState<string | null>(null);
@@ -620,6 +633,8 @@ export default function StorefrontClient({
     } catch { return { layout: "right", showSearch: false, links: [] }; }
   }, [navbarBlock, store.navLinks]);
   const parsedNavLinks = navConfig.links;
+  const sectionBlockIds = useMemo(() => new Set(parsedNavLinks.filter(l => l.type === "section").map(l => l.value)), [parsedNavLinks]);
+  const openSectionBlock = useMemo(() => contentBlocks.find(b => b.id === openSection) ?? null, [openSection, contentBlocks]);
   const hasCustomHeroBlock = contentBlocks.some((block) => block.type === "hero");
   const hasCustomProductBlock = contentBlocks.some((block) => block.type === "products");
   const cardRadius = RADIUS[store.cardRadius] ?? RADIUS.md;
@@ -1119,6 +1134,7 @@ export default function StorefrontClient({
       <div className="space-y-0">
         {blocks.map((block) => {
           if (block.type === "navbar") return null;
+          if (sectionBlockIds.has(block.id)) return null;
           const p = block.props as Record<string, any>;
           if (block.type === "products") {
             const categoryFilter = String(p.categoryFilter || "all");
@@ -1583,8 +1599,10 @@ export default function StorefrontClient({
                         {link.label}
                         {subs.length > 0 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3 w-3"><path d="M6 9l6 6 6-6"/></svg>}
                       </button>
+                    ) : link.type === "section" ? (
+                      <button type="button" onClick={() => setOpenSection(link.value)} className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</button>
                     ) : (
-                      <a href={link.type === "section" ? `#${link.value}` : safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</a>
+                      <a href={safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</a>
                     )}
                     {subs.length > 0 && openDropdown === link.id && (
                       <div className={`absolute left-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-xl border shadow-xl ${isDark ? "border-white/10 bg-gray-900" : "border-gray-100 bg-white"}`}>
@@ -1622,8 +1640,10 @@ export default function StorefrontClient({
                         {link.label}
                         {subs.length > 0 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3 w-3"><path d="M6 9l6 6 6-6"/></svg>}
                       </button>
+                    ) : link.type === "section" ? (
+                      <button type="button" onClick={() => setOpenSection(link.value)} className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</button>
                     ) : (
-                      <a href={link.type === "section" ? `#${link.value}` : safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</a>
+                      <a href={safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</a>
                     )}
                     {subs.length > 0 && openDropdown === link.id && (
                       <div className={`absolute right-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-xl border shadow-xl ${isDark ? "border-white/10 bg-gray-900" : "border-gray-100 bg-white"}`}>
@@ -1759,8 +1779,13 @@ export default function StorefrontClient({
                           </svg>
                         )}
                       </button>
+                    ) : link.type === "section" ? (
+                      <button type="button" onClick={() => { setOpenSection(link.value); setMenuOpen(false); }}
+                        className={`flex w-full items-center rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>
+                        {link.label}
+                      </button>
                     ) : (
-                      <a href={link.type === "section" ? `#${link.value}` : safeHref(link.value)} onClick={() => setMenuOpen(false)}
+                      <a href={safeHref(link.value)} onClick={() => setMenuOpen(false)}
                         className={`flex w-full items-center rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>
                         {link.label}
                       </a>
@@ -1803,6 +1828,59 @@ export default function StorefrontClient({
         </a>
       )}
 
+
+      {/* Section drawer — opens when user clicks a section nav link */}
+      {openSection && openSectionBlock && (() => {
+        const sb = openSectionBlock;
+        const sp = sb.props as Record<string, any>;
+        return (
+          <div className="fixed inset-0 z-50 flex">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpenSection(null)} />
+            <div className="relative ml-auto flex h-full w-full max-w-xl flex-col overflow-y-auto bg-white shadow-2xl"
+              style={{ fontFamily: store.fontFamily }}>
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/95 px-6 py-4 backdrop-blur">
+                <p className="text-base font-black text-gray-900">
+                  {sp.heading || sp.title || parsedNavLinks.find(l => l.value === openSection)?.label || ""}
+                </p>
+                <button type="button" onClick={() => setOpenSection(null)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4 w-4"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <div className="flex-1">
+                {sb.type === "contacto" && (
+                  <ContactBlock storeSlug={store.slug} p={sp} primaryColor={store.primaryColor} fontFamily={store.fontFamily} />
+                )}
+                {sb.type === "text" && (
+                  <div className="px-6 py-10" style={{ backgroundColor: String(sp.bgColor || "transparent") }}>
+                    {sp.heading && <h2 className="mb-4 text-3xl font-black" style={{ color: String(sp.color || store.primaryColor), textAlign: (sp.align || "center") as any }}>{sp.heading}</h2>}
+                    {sp.body && <p className="text-base leading-relaxed" style={{ color: String(sp.textColor || "#6b7280"), textAlign: (sp.align || "center") as any }}>{sp.body}</p>}
+                  </div>
+                )}
+                {sb.type === "image-text" && (
+                  <div style={{ backgroundColor: String(sp.bgColor || "transparent") }}>
+                    {sp.image && <img src={String(sp.image)} alt="" className="h-64 w-full object-cover" />}
+                    <div className="px-6 py-8">
+                      {sp.heading && <h2 className="mb-3 text-2xl font-black" style={{ color: String(sp.color || store.primaryColor) }}>{sp.heading}</h2>}
+                      {sp.body && <p className="leading-relaxed text-gray-600">{sp.body}</p>}
+                    </div>
+                  </div>
+                )}
+                {sb.type === "hero" && (
+                  <div className="flex min-h-[260px] flex-col items-center justify-center px-6 py-12 text-center text-white"
+                    style={{ background: String(sp.bgColor || store.primaryColor) }}>
+                    {sp.title && <h2 className="text-3xl font-black">{sp.title}</h2>}
+                    {sp.subtitle && <p className="mt-2 opacity-80">{sp.subtitle}</p>}
+                  </div>
+                )}
+                {!["contacto","text","image-text","hero"].includes(sb.type) && (
+                  <div className="flex h-40 items-center justify-center text-gray-400 text-sm">Vista previa no disponible para este bloque.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {affiliateId && (
         <div className="fixed bottom-5 left-5 z-20 rounded-full bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 shadow-sm">
