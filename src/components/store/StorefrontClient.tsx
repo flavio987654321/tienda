@@ -293,9 +293,9 @@ function readableText(hex: string) {
   return r * 0.299 + g * 0.587 + b * 0.114 > 170 ? "#111827" : "#ffffff";
 }
 
-function ProductImage({ image, name, className = "" }: { image: string | null; name: string; className?: string }) {
+function ProductImage({ image, name, className = "", fit = "cover" }: { image: string | null; name: string; className?: string; fit?: "cover" | "contain" }) {
   return image ? (
-    <img src={image} alt={name} className={`h-full w-full object-cover ${className}`} />
+    <img src={image} alt={name} className={`h-full w-full ${fit === "contain" ? "object-contain" : "object-cover"} ${className}`} />
   ) : (
     <div className="flex h-full w-full items-center justify-center bg-gray-100">
       <Package className="h-10 w-10 text-gray-300" />
@@ -1017,7 +1017,7 @@ export default function StorefrontClient({
           <div className="relative aspect-square max-h-72 p-3 shrink-0" style={{ backgroundColor: bg }}>
             <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-20">{emoji}</div>
             <div className="relative h-full overflow-hidden rounded-[22px] cursor-pointer" onClick={() => openProduct(product)}>
-              <ProductImage image={image} name={product.name} className="transition duration-500 hover:scale-105" />
+              <ProductImage image={image} name={product.name} fit="contain" className="transition duration-500 hover:scale-105" />
             </div>
             {hasDiscount && <span className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-black text-white" style={{ backgroundColor: store.accentColor }}>OFERTA ✨</span>}
             <button
@@ -1075,7 +1075,7 @@ export default function StorefrontClient({
       >
         <div className={`${list ? "h-full min-h-40" : featured ? "aspect-[4/3]" : "aspect-square max-h-72"} relative overflow-hidden shrink-0 ${isColorful ? "p-2" : ""}`} style={{ backgroundColor: store.secondaryColor }}>
           <div className={`h-full w-full overflow-hidden cursor-pointer ${isColorful ? "rounded-2xl" : ""}`} onClick={() => openProduct(product)}>
-            <ProductImage image={image} name={product.name} className="transition duration-500 hover:scale-105" />
+            <ProductImage image={image} name={product.name} fit="contain" className="transition duration-500 hover:scale-105" />
           </div>
           {hasDiscount && <span className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-black text-white" style={{ backgroundColor: store.accentColor }}>OFERTA</span>}
           <button
@@ -1937,7 +1937,7 @@ export default function StorefrontClient({
 
         const gallery = (
           <div
-            className="relative h-56 w-full shrink-0 bg-gray-100 md:h-full md:w-[58%] md:shrink-0"
+            className="relative h-72 w-full shrink-0 bg-gray-100 md:h-full md:w-[58%] md:shrink-0"
             onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={(e) => {
               if (zoomLevel > 1) return;
