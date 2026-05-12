@@ -100,11 +100,7 @@ export async function PUT(req: NextRequest) {
             id:    String(l.id    || ""),
             label: String(l.label || "").slice(0, 60),
             type:  l.type === "url" ? "url" : l.type === "section" ? "section" : "filter",
-            value: l.type === "url"
-              ? (isSafeUrl(l.value) ? String(l.value || "") : "#")
-              : l.type === "section"
-              ? (() => { try { const ids = JSON.parse(String(l.value || "[]")); if (Array.isArray(ids)) return JSON.stringify(ids.filter((x: unknown) => typeof x === "string")); } catch {} return "[]"; })()
-              : String(l.value || "").slice(0, 80),
+            value: l.type === "url" ? (isSafeUrl(l.value) ? String(l.value || "") : "#") : String(l.value || "").slice(0, 80),
           }));
       }
       if (Array.isArray(parsed)) {

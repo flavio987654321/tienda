@@ -1566,6 +1566,62 @@ export default function StorefrontClient({
               <ContactBlock storeSlug={store.slug} p={p} primaryColor={store.primaryColor} fontFamily={store.fontFamily} />
             </div>
           );
+          if (block.type === "nosotros") {
+            const members: {id:string;name:string;role:string;image:string;bio:string}[] = Array.isArray(p.members) ? p.members as any[] : [];
+            const features: {id:string;number:string;title:string;desc:string}[] = Array.isArray(p.features) ? p.features as any[] : [];
+            return (
+              <div key={block.id} id={block.id} style={{ backgroundColor: String(p.bgColor || "#ffffff"), color: String(p.textColor || "#111827") }}>
+                {/* Header */}
+                <div className="mx-auto max-w-4xl px-6 py-16 pb-10">
+                  {p.tag && <span className="mb-4 inline-block rounded-full border border-current px-4 py-1 text-xs font-black tracking-widest opacity-60">{String(p.tag)}</span>}
+                  <h1 className="mb-4 text-4xl font-black leading-tight md:text-5xl" style={{ color: String(p.textColor || "#111827") }}>{String(p.heading || "¿Quiénes somos?")}</h1>
+                  {p.subtitle && <p className="text-lg opacity-65">{String(p.subtitle)}</p>}
+                </div>
+                {/* Members */}
+                {p.showMembers && members.length > 0 && (
+                  <div className="mx-auto max-w-4xl px-6 pb-12 grid grid-cols-1 gap-6 md:grid-cols-2">
+                    {members.map(m => (
+                      <div key={m.id} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                        {m.image && <img src={m.image} alt={m.name} className="h-64 w-full object-cover" />}
+                        <div className="p-6">
+                          {m.name && <h3 className="mb-1 text-xl font-black text-gray-900">{m.name}</h3>}
+                          {m.role && <p className="mb-3 text-sm text-gray-400">{m.role}</p>}
+                          {m.bio && <p className="text-sm leading-relaxed text-gray-600 whitespace-pre-line">{m.bio}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Text section (mission/vision) */}
+                {p.showTextSection && (
+                  <div className="mx-auto max-w-4xl px-6 pb-12">
+                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-8">
+                      {p.textSectionHeading && <h2 className="mb-6 text-center text-2xl font-black text-gray-900">{String(p.textSectionHeading)}</h2>}
+                      {p.textSectionBody && <p className="text-center text-base leading-relaxed text-gray-700 whitespace-pre-line">{String(p.textSectionBody)}</p>}
+                    </div>
+                  </div>
+                )}
+                {/* Features grid */}
+                {p.showFeatures && features.length > 0 && (
+                  <div style={{ backgroundColor: String(p.featuresBgColor || "#1e3a5f") }} className="py-16">
+                    <div className="mx-auto max-w-5xl px-6">
+                      {p.featuresHeading && <h2 className="mb-3 text-center text-3xl font-black text-white">{String(p.featuresHeading)}</h2>}
+                      {p.featuresSubtitle && <p className="mb-10 text-center text-white/65">{String(p.featuresSubtitle)}</p>}
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {features.map(f => (
+                          <div key={f.id} className="rounded-2xl border border-white/10 bg-white/10 p-6">
+                            {f.number && <p className="mb-2 text-4xl font-black text-white/20">{f.number}</p>}
+                            {f.title && <h3 className="mb-2 font-black text-white">{f.title}</h3>}
+                            {f.desc && <p className="text-sm text-white/65">{f.desc}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          }
           return null;
         })}
       </div>

@@ -74,7 +74,7 @@ type DesignSection = "template"|"colores"|"textos"|"imagenes"|"layout"|"tarjetas
 type NavLink = { id: string; label: string; type: "filter" | "url" | "section"; value: string };
 
 /* ─── Block types ─── */
-export type BlockType = "hero"|"text"|"products"|"banner"|"banner-group"|"cta"|"image-text"|"socials"|"spacer"|"divider"|"navbar"|"contacto";
+export type BlockType = "hero"|"text"|"products"|"banner"|"banner-group"|"cta"|"image-text"|"socials"|"spacer"|"divider"|"navbar"|"contacto"|"nosotros";
 export interface Block { id:string; type:BlockType; props:Record<string,any> }
 type PreviewViewport = "desktop"|"tablet"|"mobile";
 type TextPosition = { x: number; y: number };
@@ -115,6 +115,8 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
     defaultProps:{ style:"solid", color:"#e5e7eb" } },
   { type:"contacto",   emoji:"✉️", label:"Formulario de contacto",  desc:"Formulario que envía un email al dueño de la tienda",
     defaultProps:{ heading:"Contacto", subtitle:"¿Tenés alguna pregunta? Escribinos.", bgColor:"#111827", textColor:"", bgImage:"", showName:true, showEmail:true, showPhone:false, showMessage:true, buttonText:"Enviar mensaje", buttonColor:"" } },
+  { type:"nosotros",   emoji:"👥", label:"Página Nosotros",          desc:"Encabezado, equipo, misión/visión y grilla de características",
+    defaultProps:{ tag:"NOSOTROS", heading:"¿Quiénes somos?", subtitle:"Conocé al equipo detrás de la tienda.", bgColor:"#ffffff", textColor:"#111827", showMembers:false, members:[], showTextSection:false, textSectionHeading:"Misión y Visión", textSectionBody:"", showFeatures:false, featuresHeading:"Lo que hacemos", featuresSubtitle:"", featuresBgColor:"#1e3a5f", features:[] } },
   { type:"banner-group", emoji:"🎠", label:"Carrusel de banners",     desc:"Imágenes full-width que pasan automáticamente",
     defaultProps:{ slides:[
       { image:"", title:"Bienvenidos", subtitle:"Descubrí nuestra colección", buttonText:"Ver productos", buttonUrl:"", focalX:50, focalY:50 },
@@ -526,48 +528,17 @@ function NavLinksEditor({ value, onChange, categories = [], blocks = [] }: { val
                 <option value="">— Elegir categoría —</option>
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-            ) : link.type === "section" ? (() => {
-              function parseSectionIds(val: string): string[] {
-                try { const p = JSON.parse(val || "[]"); if (Array.isArray(p)) return p.filter((x: unknown) => typeof x === "string"); } catch {}
-                return val ? [val] : [];
-              }
-              const blockEmoji = ({ hero:"🖼️", text:"📝", products:"🛍️", banner:"📢", "banner-group":"🎠", cta:"🚀", "image-text":"🖼️", socials:"🔗", spacer:"⬜", divider:"─", contacto:"✉️", navbar:"🧭" } as Record<string,string>);
-              const selectedIds = parseSectionIds(link.value);
-              const availableBlocks = blocks.filter(b => b.type !== "navbar" && !selectedIds.includes(b.id));
-              return (
-                <div className="space-y-1.5">
-                  {selectedIds.length === 0 && (
-                    <p className="text-[10px] text-gray-400 italic">Sin bloques — elegí uno abajo</p>
-                  )}
-                  {selectedIds.map(blockId => {
-                    const b = blocks.find(bl => bl.id === blockId);
-                    if (!b) return null;
-                    const label = b.props.heading || b.props.title || b.props.text || b.type;
-                    const em = blockEmoji[b.type] || "📦";
-                    const newIds = selectedIds.filter(id => id !== blockId);
-                    return (
-                      <div key={blockId} className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-2 py-1.5">
-                        <span className="text-xs">{em}</span>
-                        <span className="flex-1 text-xs text-indigo-700 font-medium truncate">{String(label).slice(0,40) || b.type}</span>
-                        <button type="button" onClick={() => updateLink(link.id, "value", JSON.stringify(newIds))}
-                          className="text-indigo-300 hover:text-red-400 leading-none text-base font-bold transition-colors">×</button>
-                      </div>
-                    );
-                  })}
-                  {availableBlocks.length > 0 && (
-                    <select value="" onChange={e => { if (e.target.value) updateLink(link.id, "value", JSON.stringify([...selectedIds, e.target.value])); }}
-                      className="w-full border border-dashed border-indigo-300 rounded-lg px-2.5 py-1.5 text-xs text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-indigo-50">
-                      <option value="">+ Agregar bloque a esta sección</option>
-                      {availableBlocks.map(b => {
-                        const label = b.props.heading || b.props.title || b.props.text || b.type;
-                        const em = blockEmoji[b.type] || "📦";
-                        return <option key={b.id} value={b.id}>{em} {String(label).slice(0,40) || b.type}</option>;
-                      })}
-                    </select>
-                  )}
-                </div>
-              );
-            })() : (
+            ) : link.type === "section" ? (
+              <select value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <option value="">— Elegir bloque de destino —</option>
+                {blocks.filter(b => b.type !== "navbar").map(b => {
+                  const label = b.props.heading || b.props.title || b.props.text || b.type;
+                  const emoji = ({ hero:"🖼️", text:"📝", products:"🛍️", banner:"📢", "banner-group":"🎠", cta:"🚀", "image-text":"🖼️", socials:"🔗", spacer:"⬜", divider:"─", contacto:"✉️", nosotros:"👥", navbar:"🧭" } as Record<string,string>)[b.type] || "📦";
+                  return <option key={b.id} value={b.id}>{emoji} {String(label).slice(0,40) || b.type}</option>;
+                })}
+              </select>
+            ) : (
               <input type="text" value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
                 placeholder="https://... o /ruta"
                 className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
@@ -1132,6 +1103,117 @@ function BlockEditor({
       </div>
       <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
         <p className="text-xs text-blue-700">📧 Los mensajes se envían al email de tu cuenta.</p>
+      </div>
+    </div>;
+  }
+
+  if (block.type==="nosotros") {
+    const members: {id:string;name:string;role:string;image:string;bio:string}[] = Array.isArray(p.members) ? p.members : [];
+    const features: {id:string;number:string;title:string;desc:string}[] = Array.isArray(p.features) ? p.features : [];
+    return <div className="space-y-4">
+      {/* Encabezado */}
+      <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
+        <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Encabezado</p>
+        {inp("Etiqueta (ej: NOSOTROS)","tag","NOSOTROS")}
+        {inp("Título principal","heading","¿Quiénes somos?")}
+        {ta("Subtítulo","subtitle","Conocé al equipo detrás de la tienda.")}
+        <div className="flex gap-2">
+          <div className="flex-1"><ColorPicker label="Fondo" value={p.bgColor||"#ffffff"} onChange={v=>upd("bgColor",v)}/></div>
+          <div className="flex-1"><ColorPicker label="Texto" value={p.textColor||"#111827"} onChange={v=>upd("textColor",v)}/></div>
+        </div>
+      </div>
+
+      {/* Equipo */}
+      <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Equipo</p>
+          <button type="button" onClick={()=>upd("showMembers",!p.showMembers)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${p.showMembers?"bg-indigo-500":"bg-gray-300"}`}>
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${p.showMembers?"translate-x-4":"translate-x-0.5"}`}/>
+          </button>
+        </div>
+        {p.showMembers && <>
+          {members.map((m,mi)=>(
+            <div key={m.id} className="rounded-xl border border-gray-200 bg-white p-3 space-y-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-gray-600">Integrante {mi+1}</span>
+                <button type="button" onClick={()=>upd("members",members.filter(x=>x.id!==m.id))}
+                  className="text-gray-300 hover:text-red-400 transition-colors"><Trash2 className="h-3.5 w-3.5"/></button>
+              </div>
+              <input value={m.name} onChange={e=>upd("members",members.map(x=>x.id===m.id?{...x,name:e.target.value}:x))}
+                placeholder="Nombre" className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+              <input value={m.role} onChange={e=>upd("members",members.map(x=>x.id===m.id?{...x,role:e.target.value}:x))}
+                placeholder="Rol / cargo (opcional)" className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+              <textarea value={m.bio} onChange={e=>upd("members",members.map(x=>x.id===m.id?{...x,bio:e.target.value}:x))}
+                placeholder="Descripción, bullets... (una línea por punto)" rows={3}
+                className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+              <div className="flex gap-2">
+                <input value={m.image} onChange={e=>upd("members",members.map(x=>x.id===m.id?{...x,image:e.target.value}:x))}
+                  placeholder="URL de foto" className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+                {onPickImage && <button type="button"
+                  onClick={()=>onPickImage?.(`member_image_${m.id}`)}
+                  disabled={uploadingImage} className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs hover:bg-gray-50 disabled:opacity-50">{uploadingImage?"⏳":"📁"}</button>}
+              </div>
+              {m.image && <img src={m.image} alt="" className="h-20 w-full rounded-lg object-cover"/>}
+            </div>
+          ))}
+          <button type="button" onClick={()=>upd("members",[...members,{id:crypto.randomUUID(),name:"",role:"",image:"",bio:""}])}
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-300 py-2 text-xs font-semibold text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+            <Plus className="h-3.5 w-3.5"/> Agregar integrante
+          </button>
+        </>}
+      </div>
+
+      {/* Misión / Visión */}
+      <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Misión / Visión</p>
+          <button type="button" onClick={()=>upd("showTextSection",!p.showTextSection)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${p.showTextSection?"bg-indigo-500":"bg-gray-300"}`}>
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${p.showTextSection?"translate-x-4":"translate-x-0.5"}`}/>
+          </button>
+        </div>
+        {p.showTextSection && <>
+          {inp("Título de la sección","textSectionHeading","Misión y Visión")}
+          <textarea value={p.textSectionBody||""} onChange={e=>upd("textSectionBody",e.target.value)}
+            placeholder="Misión: ...\n\nVisión: ..." rows={5}
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+        </>}
+      </div>
+
+      {/* Características / Pasos */}
+      <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Grilla de pasos</p>
+          <button type="button" onClick={()=>upd("showFeatures",!p.showFeatures)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${p.showFeatures?"bg-indigo-500":"bg-gray-300"}`}>
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${p.showFeatures?"translate-x-4":"translate-x-0.5"}`}/>
+          </button>
+        </div>
+        {p.showFeatures && <>
+          {inp("Título","featuresHeading","Lo que hacemos")}
+          {inp("Subtítulo","featuresSubtitle","")}
+          <ColorPicker label="Color de fondo de la grilla" value={p.featuresBgColor||"#1e3a5f"} onChange={v=>upd("featuresBgColor",v)}/>
+          {features.map((f,fi)=>(
+            <div key={f.id} className="rounded-xl border border-gray-200 bg-white p-3 space-y-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-gray-600">Paso {fi+1}</span>
+                <button type="button" onClick={()=>upd("features",features.filter(x=>x.id!==f.id))}
+                  className="text-gray-300 hover:text-red-400 transition-colors"><Trash2 className="h-3.5 w-3.5"/></button>
+              </div>
+              <input value={f.number} onChange={e=>upd("features",features.map(x=>x.id===f.id?{...x,number:e.target.value}:x))}
+                placeholder="Número (ej: 01)" className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+              <input value={f.title} onChange={e=>upd("features",features.map(x=>x.id===f.id?{...x,title:e.target.value}:x))}
+                placeholder="Título del paso" className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+              <textarea value={f.desc} onChange={e=>upd("features",features.map(x=>x.id===f.id?{...x,desc:e.target.value}:x))}
+                placeholder="Descripción" rows={2} className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+            </div>
+          ))}
+          <button type="button" onClick={()=>upd("features",[...features,{id:crypto.randomUUID(),number:String(features.length+1).padStart(2,"0"),title:"",desc:""}])}
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-300 py-2 text-xs font-semibold text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+            <Plus className="h-3.5 w-3.5"/> Agregar paso
+          </button>
+        </>}
       </div>
     </div>;
   }
@@ -2145,6 +2227,63 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       );
     }
 
+    if (block.type==="nosotros") {
+      const members: {id:string;name:string;role:string;image:string;bio:string}[] = Array.isArray(p.members) ? p.members : [];
+      const features: {id:string;number:string;title:string;desc:string}[] = Array.isArray(p.features) ? p.features : [];
+      const bg = String(p.bgColor||"#ffffff");
+      const fg = String(p.textColor||"#111827");
+      return (
+        <div style={{background:bg,color:fg,minHeight:customMinHeight}}>
+          {/* Header */}
+          <div style={{maxWidth:"720px",margin:"0 auto",padding:"48px 24px 32px"}}>
+            {p.tag && <span style={{display:"inline-block",border:`1.5px solid ${fg}`,borderRadius:"999px",padding:"3px 12px",fontSize:"10px",fontWeight:800,letterSpacing:"0.15em",marginBottom:"16px",opacity:0.6}}>{String(p.tag)}</span>}
+            <h1 style={{fontWeight:900,fontSize:"28px",margin:"0 0 10px",lineHeight:1.15}}>{String(p.heading||"¿Quiénes somos?")}</h1>
+            {p.subtitle && <p style={{fontSize:"14px",opacity:0.65,margin:0}}>{String(p.subtitle)}</p>}
+          </div>
+          {/* Members */}
+          {p.showMembers && members.length > 0 && (
+            <div style={{maxWidth:"720px",margin:"0 auto",padding:"0 24px 32px",display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"16px"}}>
+              {members.map(m=>(
+                <div key={m.id} style={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:"16px",overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+                  {m.image && <img src={m.image} alt={m.name} style={{width:"100%",height:"120px",objectFit:"cover"}}/>}
+                  <div style={{padding:"12px 14px"}}>
+                    {m.name && <p style={{fontWeight:800,fontSize:"13px",margin:"0 0 2px",color:"#111827"}}>{m.name}</p>}
+                    {m.role && <p style={{fontSize:"11px",color:"#9ca3af",margin:"0 0 6px"}}>{m.role}</p>}
+                    {m.bio && <p style={{fontSize:"11px",color:"#6b7280",margin:0,whiteSpace:"pre-line"}}>{m.bio}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Text section */}
+          {p.showTextSection && (
+            <div style={{maxWidth:"720px",margin:"0 auto",padding:"0 24px 32px"}}>
+              <div style={{background:"#f9fafb",border:"1px solid #e5e7eb",borderRadius:"16px",padding:"24px"}}>
+                {p.textSectionHeading && <h2 style={{fontWeight:800,fontSize:"16px",textAlign:"center",margin:"0 0 12px",color:fg}}>{String(p.textSectionHeading)}</h2>}
+                {p.textSectionBody && <p style={{fontSize:"12px",color:"#4b5563",lineHeight:1.7,margin:0,whiteSpace:"pre-line",textAlign:"center"}}>{String(p.textSectionBody)}</p>}
+              </div>
+            </div>
+          )}
+          {/* Features */}
+          {p.showFeatures && features.length > 0 && (
+            <div style={{background:p.featuresBgColor||"#1e3a5f",padding:"32px 24px"}}>
+              {p.featuresHeading && <h2 style={{fontWeight:900,fontSize:"18px",color:"#fff",textAlign:"center",margin:"0 0 6px"}}>{String(p.featuresHeading)}</h2>}
+              {p.featuresSubtitle && <p style={{fontSize:"12px",color:"rgba(255,255,255,0.6)",textAlign:"center",margin:"0 0 20px"}}>{String(p.featuresSubtitle)}</p>}
+              <div style={{maxWidth:"720px",margin:"0 auto",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px"}}>
+                {features.map(f=>(
+                  <div key={f.id} style={{background:"rgba(255,255,255,0.1)",borderRadius:"12px",padding:"14px",border:"1px solid rgba(255,255,255,0.1)"}}>
+                    {f.number && <p style={{fontSize:"22px",fontWeight:900,color:"rgba(255,255,255,0.2)",margin:"0 0 4px"}}>{f.number}</p>}
+                    {f.title && <p style={{fontWeight:800,fontSize:"12px",color:"#fff",margin:"0 0 4px"}}>{f.title}</p>}
+                    {f.desc && <p style={{fontSize:"11px",color:"rgba(255,255,255,0.65)",margin:0}}>{f.desc}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     if (block.type==="contacto") {
       const bgCol = String(p.bgColor||"#111827");
       const bgImg = String(p.bgImage||"");
@@ -2336,7 +2475,15 @@ export default function ConfiguracionPage() {
     const url = await uploadAsset(file);
     if (url) {
       const current = blocks.find((block) => block.id === selectedBlockId);
-      if (current) updateBlock(selectedBlockId, { ...current.props, [selectedImageField]: url });
+      if (current) {
+        if (selectedImageField.startsWith("member_image_")) {
+          const memberId = selectedImageField.replace("member_image_", "");
+          const members = Array.isArray(current.props.members) ? current.props.members : [];
+          updateBlock(selectedBlockId, { ...current.props, members: members.map((m: {id:string}) => m.id === memberId ? { ...m, image: url } : m) });
+        } else {
+          updateBlock(selectedBlockId, { ...current.props, [selectedImageField]: url });
+        }
+      }
     }
     setUploadingBlockImage(false);
   }
