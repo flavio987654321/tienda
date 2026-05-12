@@ -2662,7 +2662,7 @@ export default function ConfiguracionPage() {
       <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&upload(e.target.files[0],"banner")}/>
       <input ref={blockImageRef} type="file" accept="image/*" className="hidden" onChange={e=>e.target.files?.[0]&&uploadBlockImage(e.target.files[0])}/>
 
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div>
