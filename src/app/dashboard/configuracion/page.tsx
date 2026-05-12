@@ -2627,7 +2627,10 @@ export default function ConfiguracionPage() {
     if (!viewport) return;
     const target = viewport.querySelector<HTMLElement>(`[data-block-id="${selectedBlockId}"]`);
     if (!target) return;
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    const vRect = viewport.getBoundingClientRect();
+    const tRect = target.getBoundingClientRect();
+    const scrollTo = viewport.scrollTop + tRect.top - vRect.top - vRect.height / 2 + tRect.height / 2;
+    viewport.scrollTo({ top: Math.max(0, scrollTo), behavior: "smooth" });
   }, [selectedBlockId]);
 
   // Sincronizar cambios de bloques a isDirty
