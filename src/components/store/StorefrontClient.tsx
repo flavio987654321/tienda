@@ -633,8 +633,26 @@ export default function StorefrontClient({
     } catch { return { layout: "right", showSearch: false, links: [] }; }
   }, [navbarBlock, store.navLinks]);
   const parsedNavLinks = navConfig.links;
-  const sectionBlockIds = useMemo(() => new Set(parsedNavLinks.filter(l => l.type === "section").map(l => l.value)), [parsedNavLinks]);
-  const openSectionBlock = useMemo(() => contentBlocks.find(b => b.id === openSection) ?? null, [openSection, contentBlocks]);
+  const sectionBlockIds = useMemo(() => {
+    const ids = new Set<string>();
+    parsedNavLinks.filter(l => l.type === "section").forEach(l => {
+      try {
+        const parsed = JSON.parse(l.value || "[]");
+        if (Array.isArray(parsed)) parsed.forEach((id: string) => ids.add(id));
+        else ids.add(l.value);
+      } catch { if (l.value) ids.add(l.value); }
+    });
+    return ids;
+  }, [parsedNavLinks]);
+  const openSectionBlocks = useMemo(() => {
+    if (!openSection) return [];
+    try {
+      const ids = JSON.parse(openSection);
+      if (Array.isArray(ids)) return ids.map((id: string) => contentBlocks.find(b => b.id === id)).filter(Boolean) as typeof contentBlocks;
+    } catch {}
+    const b = contentBlocks.find(b => b.id === openSection);
+    return b ? [b] : [];
+  }, [openSection, contentBlocks]);
   const hasCustomHeroBlock = contentBlocks.some((block) => block.type === "hero");
   const hasCustomProductBlock = contentBlocks.some((block) => block.type === "products");
   const cardRadius = RADIUS[store.cardRadius] ?? RADIUS.md;
@@ -1130,42 +1148,18 @@ export default function StorefrontClient({
     const blocks = contentBlocks;
     if (!blocks.length) return null;
 
-    // When a section is open, replace the page with just that block
-    if (openSection && openSectionBlock) {
-      const sb = openSectionBlock;
-      const sp = sb.props as Record<string, any>;
-      return (
-        <div className="space-y-0">
-          {sb.type === "contacto" && (
-            <ContactBlock storeSlug={store.slug} p={sp} primaryColor={store.primaryColor} fontFamily={store.fontFamily} />
-          )}
-          {sb.type === "text" && (
-            <div className="px-6 py-16 mx-auto max-w-3xl" style={{ backgroundColor: String(sp.bgColor || "transparent") }}>
-              {sp.heading && <h2 className="mb-6 text-4xl font-black" style={{ color: String(sp.color || store.primaryColor), textAlign: (sp.align || "center") as any }}>{sp.heading}</h2>}
-              {sp.body && <p className="text-lg leading-relaxed" style={{ color: String(sp.textColor || "#6b7280"), textAlign: (sp.align || "center") as any }}>{sp.body}</p>}
-            </div>
-          )}
-          {sb.type === "image-text" && (
-            <div style={{ backgroundColor: String(sp.bgColor || "transparent") }}>
-              {sp.image && <img src={String(sp.image)} alt="" className="h-72 w-full object-cover" />}
-              <div className="mx-auto max-w-3xl px-6 py-10">
-                {sp.heading && <h2 className="mb-4 text-3xl font-black" style={{ color: String(sp.color || store.primaryColor) }}>{sp.heading}</h2>}
-                {sp.body && <p className="text-lg leading-relaxed text-gray-600">{sp.body}</p>}
-              </div>
-            </div>
-          )}
-          {!["contacto","text","image-text"].includes(sb.type) && (
-            <div className="flex min-h-[40vh] items-center justify-center text-gray-400">Sección sin vista disponible.</div>
-          )}
-        </div>
-      );
-    }
+    const isInOpenSection = (id: string) => openSectionBlocks.some(b => b.id === id);
 
     return (
       <div className="space-y-0">
         {blocks.map((block) => {
           if (block.type === "navbar") return null;
-          if (sectionBlockIds.has(block.id)) return null;
+          // Section mode: only render blocks belonging to the open section
+          if (openSection) {
+            if (!isInOpenSection(block.id)) return null;
+          } else {
+            if (sectionBlockIds.has(block.id)) return null;
+          }
           const p = block.props as Record<string, any>;
           if (block.type === "products") {
             const categoryFilter = String(p.categoryFilter || "all");

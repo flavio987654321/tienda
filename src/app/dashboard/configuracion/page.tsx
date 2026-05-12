@@ -526,17 +526,48 @@ function NavLinksEditor({ value, onChange, categories = [], blocks = [] }: { val
                 <option value="">— Elegir categoría —</option>
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-            ) : link.type === "section" ? (
-              <select value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-                <option value="">— Elegir bloque de destino —</option>
-                {blocks.filter(b => b.type !== "navbar").map(b => {
-                  const label = b.props.heading || b.props.title || b.props.text || b.type;
-                  const emoji = ({ hero:"🖼️", text:"📝", products:"🛍️", banner:"📢", "banner-group":"🎠", cta:"🚀", "image-text":"🖼️", socials:"🔗", spacer:"⬜", divider:"─", contacto:"✉️", navbar:"🧭" } as Record<string,string>)[b.type] || "📦";
-                  return <option key={b.id} value={b.id}>{emoji} {label}</option>;
-                })}
-              </select>
-            ) : (
+            ) : link.type === "section" ? (() => {
+              function parseSectionIds(val: string): string[] {
+                try { const p = JSON.parse(val || "[]"); if (Array.isArray(p)) return p.filter((x: unknown) => typeof x === "string"); } catch {}
+                return val ? [val] : [];
+              }
+              const blockEmoji = ({ hero:"🖼️", text:"📝", products:"🛍️", banner:"📢", "banner-group":"🎠", cta:"🚀", "image-text":"🖼️", socials:"🔗", spacer:"⬜", divider:"─", contacto:"✉️", navbar:"🧭" } as Record<string,string>);
+              const selectedIds = parseSectionIds(link.value);
+              const availableBlocks = blocks.filter(b => b.type !== "navbar" && !selectedIds.includes(b.id));
+              return (
+                <div className="space-y-1.5">
+                  {selectedIds.length === 0 && (
+                    <p className="text-[10px] text-gray-400 italic">Sin bloques — elegí uno abajo</p>
+                  )}
+                  {selectedIds.map(blockId => {
+                    const b = blocks.find(bl => bl.id === blockId);
+                    if (!b) return null;
+                    const label = b.props.heading || b.props.title || b.props.text || b.type;
+                    const em = blockEmoji[b.type] || "📦";
+                    const newIds = selectedIds.filter(id => id !== blockId);
+                    return (
+                      <div key={blockId} className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-2 py-1.5">
+                        <span className="text-xs">{em}</span>
+                        <span className="flex-1 text-xs text-indigo-700 font-medium truncate">{String(label).slice(0,40) || b.type}</span>
+                        <button type="button" onClick={() => updateLink(link.id, "value", JSON.stringify(newIds))}
+                          className="text-indigo-300 hover:text-red-400 leading-none text-base font-bold transition-colors">×</button>
+                      </div>
+                    );
+                  })}
+                  {availableBlocks.length > 0 && (
+                    <select value="" onChange={e => { if (e.target.value) updateLink(link.id, "value", JSON.stringify([...selectedIds, e.target.value])); }}
+                      className="w-full border border-dashed border-indigo-300 rounded-lg px-2.5 py-1.5 text-xs text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-indigo-50">
+                      <option value="">+ Agregar bloque a esta sección</option>
+                      {availableBlocks.map(b => {
+                        const label = b.props.heading || b.props.title || b.props.text || b.type;
+                        const em = blockEmoji[b.type] || "📦";
+                        return <option key={b.id} value={b.id}>{em} {String(label).slice(0,40) || b.type}</option>;
+                      })}
+                    </select>
+                  )}
+                </div>
+              );
+            })() : (
               <input type="text" value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
                 placeholder="https://... o /ruta"
                 className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
@@ -2789,12 +2820,18 @@ export default function ConfiguracionPage() {
                         if (b.type === "navbar") return null;
                         // hide blocks that are linked as sections in the navbar
                         const navbarBlock = blocks.find(bl => bl.type === "navbar");
-                        let sectionBlockIds: Set<string>;
+                        const sectionBlockIds = new Set<string>();
                         try {
                           const cfg = JSON.parse(navbarBlock?.props?.navConfig || "{}");
                           const links = Array.isArray(cfg.links) ? cfg.links : [];
-                          sectionBlockIds = new Set(links.filter((l: {type:string}) => l.type === "section").map((l: {value:string}) => l.value));
-                        } catch { sectionBlockIds = new Set(); }
+                          links.filter((l: {type:string}) => l.type === "section").forEach((l: {value:string}) => {
+                            try {
+                              const ids = JSON.parse(l.value || "[]");
+                              if (Array.isArray(ids)) ids.forEach((id: string) => sectionBlockIds.add(id));
+                              else sectionBlockIds.add(l.value);
+                            } catch { if (l.value) sectionBlockIds.add(l.value); }
+                          });
+                        } catch {}
                         if (sectionBlockIds.has(b.id)) return null;
                         return (
                         <BlockPreview
