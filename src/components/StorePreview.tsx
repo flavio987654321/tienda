@@ -31,6 +31,7 @@ export interface StoreConfig {
   productModalButtonText?: string;
   productModalAccentColor?: string;
   productModalShowDescription?: boolean;
+  productModalShowColors?: boolean;
   tipoTienda?: string;
   tipoTiendaConfigurado?: boolean;
   tieneVentaMayorista?: boolean;

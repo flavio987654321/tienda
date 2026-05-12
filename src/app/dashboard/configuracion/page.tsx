@@ -741,7 +741,7 @@ function BlockEditor({
     {p.showHeading!==false && (
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
-        <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Normal"},{id:"lg",label:"Grande"},{id:"xl",label:"Enorme"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
+        <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
       </div>
     )}
     {p.showHeading!==false && p.subheading && (
@@ -1810,22 +1810,35 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
 
       return (
         <div style={{padding:"24px 16px",fontFamily:c.fontFamily,background:blockBg,minHeight:customMinHeight}}>
-          {p.showHeading!==false && p.heading && (
-            <MovableTextStage
-              key={`products-${viewport}-${Boolean(p.heading)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
-              blockProps={p}
-              viewport={viewport}
-              onChange={onChangeProps}
-              style={{ minHeight: "52px", marginBottom: "14px" }}
-              items={[
-                {
-                  id: "heading",
-                  defaultPos: { x: 34, y: 10 },
-                  style: { width: "min(100%, 420px)", textAlign: "center" as const },
-                  content: <h3 style={{fontSize:"16px",fontWeight:800,color:blockColor}}>{p.heading}</h3>,
-                },
-              ]}
-            />
+          {p.showHeading!==false && (p.heading || p.subheading) && (
+            <div style={{marginBottom:"14px"}}>
+              {p.heading && (
+                <MovableTextStage
+                  key={`products-${viewport}-${Boolean(p.heading)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
+                  blockProps={p}
+                  viewport={viewport}
+                  onChange={onChangeProps}
+                  style={{ minHeight: "52px" }}
+                  items={[
+                    {
+                      id: "heading",
+                      defaultPos: { x: 34, y: 10 },
+                      style: { width: "min(100%, 420px)", textAlign: "center" as const },
+                      content: <h3 style={{
+                        fontSize: p.headingSize==="xl"?"22px":p.headingSize==="md"?"16px":p.headingSize==="sm"?"13px":"18px",
+                        fontWeight:800,
+                        color:blockColor
+                      }}>{p.heading}</h3>,
+                    },
+                  ]}
+                />
+              )}
+              {p.subheading && (
+                <p style={{textAlign:"center",color:c.templateId==="tech"?"#9ca3af":"#6b7280",fontSize:p.subheadingSize==="lg"?"13px":p.subheadingSize==="sm"?"10px":"11px",marginTop:"4px"}}>
+                  {p.subheading}
+                </p>
+              )}
+            </div>
           )}
           {(p.showCategoryTabs === true || categoryFilter !== "all" || subcategoryFilter !== "all") && (
             <div style={{display:"flex",justifyContent:"center",gap:"8px",flexWrap:"wrap",marginBottom:"14px"}}>
@@ -2453,6 +2466,7 @@ export default function ConfiguracionPage() {
               productModalButtonText: pmc.buttonText || "Agregar al carrito",
               productModalAccentColor: pmc.accentColor || "",
               productModalShowDescription: pmc.showDescription !== false,
+              productModalShowColors: pmc.showColors !== false,
             }));
           }
         } catch {}
@@ -2531,6 +2545,7 @@ export default function ConfiguracionPage() {
         buttonText: config.productModalButtonText || "Agregar al carrito",
         accentColor: config.productModalAccentColor || "",
         showDescription: config.productModalShowDescription !== false,
+        showColors: config.productModalShowColors !== false,
       };
       const pageBlocksPayload = JSON.stringify({ blocks: processedBlocks, modalConfig });
       // UX-04: Validate social URL format
@@ -3192,12 +3207,31 @@ export default function ConfiguracionPage() {
                       <div style={{marginBottom:"14px"}}>
                         <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"6px"}}>Variantes</p>
                         <div style={{display:"flex",flexWrap:"wrap",gap:"5px"}}>
-                          {variants.map((v,i)=>(
+                          {variants.filter(v=>!v.name?.toLowerCase().includes("color")&&!v.name?.toLowerCase().includes("tono")).map((v,i)=>(
                             <span key={i} style={{padding:"3px 8px",borderRadius:"999px",border:"1px solid #e5e7eb",fontSize:"10px",fontWeight:600,color:"#374151",background:"#f9fafb"}}>{v.value&&v.value!=="default"?v.value:v.name}</span>
                           ))}
                         </div>
                       </div>
                     )}
+                    {config.productModalShowColors!==false && (() => {
+                      const colorVs = variants.filter(v => v.name?.toLowerCase().includes("color") || v.name?.toLowerCase().includes("tono"));
+                      const CMAP: Record<string,string> = {rojo:"#ef4444",azul:"#3b82f6",verde:"#22c55e",negro:"#111827",blanco:"#f9fafb",amarillo:"#eab308",naranja:"#f97316",rosa:"#ec4899",violeta:"#8b5cf6",gris:"#9ca3af",marron:"#92400e",beige:"#d4b896",celeste:"#67e8f9",bordo:"#881337",coral:"#fb7185"};
+                      const toColor = (val: string) => /^#[0-9a-fA-F]{3,8}$/.test(val.trim()) ? val.trim() : (CMAP[val.toLowerCase().trim()] ?? null);
+                      if (colorVs.length === 0) return null;
+                      return (
+                        <div style={{marginBottom:"14px"}}>
+                          <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"6px"}}>Colores</p>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:"6px"}}>
+                            {colorVs.map((v,i) => {
+                              const bg = toColor(v.value);
+                              return bg
+                                ? <span key={i} title={v.value} style={{width:"20px",height:"20px",borderRadius:"50%",background:bg,border:"2px solid #e5e7eb",display:"inline-block",opacity:v.stock===0?0.3:1}}/>
+                                : <span key={i} style={{padding:"3px 8px",borderRadius:"999px",border:"1px solid #e5e7eb",fontSize:"10px",fontWeight:600,color:"#374151",background:"#f9fafb"}}>{v.value}</span>;
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Size chart preview — auto from variants */}
                     {config.productModalSizeChart && (
@@ -3346,6 +3380,31 @@ export default function ConfiguracionPage() {
                           {uploadingReel ? "Subiendo..." : "Subir video"}
                         </button>
                         <p className="text-xs text-gray-400 text-center">MP4, WebM · máx. 50 MB</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Paleta de colores */}
+                  <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 bg-orange-50 rounded-lg"><span className="text-sm">🌈</span></div>
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm">Paleta de colores</p>
+                          <p className="text-xs text-gray-400">Mostrá los colores disponibles del producto</p>
+                        </div>
+                      </div>
+                      <button onClick={()=>set("productModalShowColors",config.productModalShowColors===false?true:false)}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${config.productModalShowColors!==false?"bg-indigo-600":"bg-gray-300"}`}>
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${config.productModalShowColors!==false?"translate-x-4":"translate-x-0.5"}`}/>
+                      </button>
+                    </div>
+                    {config.productModalShowColors!==false && (
+                      <div className="px-4 pb-3 border-t border-gray-50 pt-3">
+                        <div className="flex items-start gap-2 bg-orange-50 rounded-xl px-3 py-2.5">
+                          <span className="text-sm mt-0.5">ℹ️</span>
+                          <p className="text-xs text-orange-700 leading-relaxed">Se muestran cuando el producto tiene variantes de tipo "Color" o "Tono" (por ej: rojo, azul, #FF0000).</p>
+                        </div>
                       </div>
                     )}
                   </div>

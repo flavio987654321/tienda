@@ -334,7 +334,7 @@ function parseBlocks(pageBlocks: string): PageBlock[] {
   }
 }
 
-function parseModalConfig(pageBlocks: string): { sizeChart: boolean; sizeChartTitle: string; showReels: boolean; reelUrls: string[]; buttonText: string; accentColor: string; showDescription: boolean } {
+function parseModalConfig(pageBlocks: string): { sizeChart: boolean; sizeChartTitle: string; showReels: boolean; reelUrls: string[]; buttonText: string; accentColor: string; showDescription: boolean; showColors: boolean } {
   try {
     const parsed = JSON.parse(pageBlocks || "[]");
     const mc = parsed?.modalConfig || {};
@@ -345,10 +345,11 @@ function parseModalConfig(pageBlocks: string): { sizeChart: boolean; sizeChartTi
       reelUrls: parseReelUrls(mc.reelUrls),
       buttonText: mc.buttonText || "Agregar al carrito",
       accentColor: mc.accentColor || "",
+      showColors: mc.showColors !== false,
       showDescription: mc.showDescription !== false,
     };
   } catch {
-    return { sizeChart: false, sizeChartTitle: "Tabla de talles", showReels: false, reelUrls: [], buttonText: "Agregar al carrito", accentColor: "", showDescription: true };
+    return { sizeChart: false, sizeChartTitle: "Tabla de talles", showReels: false, reelUrls: [], buttonText: "Agregar al carrito", accentColor: "", showDescription: true, showColors: true };
   }
 }
 
@@ -2112,6 +2113,7 @@ export default function StorefrontClient({
                     }, {} as Record<string, typeof selectedProduct.variants>)
                   ).map(([groupName, groupVs]) => {
                     const isColor = groupName.toLowerCase().includes("color") || groupName.toLowerCase().includes("tono");
+                    if (isColor && !modalCfg.showColors) return null;
                     if (!isColor && modalCfg.sizeChart) return null;
                     return (
                       <div key={groupName}>
