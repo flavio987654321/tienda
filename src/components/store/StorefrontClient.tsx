@@ -467,7 +467,7 @@ export default function StorefrontClient({
   const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount: number } | null>(null);
 
   type NavLink = { id: string; label: string; type: "filter" | "url"; value: string };
-  type NavConfig = { layout: "right" | "center"; showSearch: boolean; links: NavLink[] };
+  type NavConfig = { layout: "right" | "center"; showSearch: boolean; links: NavLink[]; mode?: "links" | "hamburger"; bgColor?: string; textColor?: string; };
 
   const categories = useMemo(() => [...new Set(store.products.map((p) => p.category).filter(Boolean))], [store.products]);
   const subcategories = useMemo(
@@ -527,13 +527,13 @@ export default function StorefrontClient({
       try {
         const parsed = JSON.parse(String(navbarBlock.props.navConfig));
         if (Array.isArray(parsed)) return { layout: "right", showSearch: false, links: parsed };
-        return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [] };
+        return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [], mode: parsed.mode || undefined, bgColor: parsed.bgColor || undefined, textColor: parsed.textColor || undefined };
       } catch {}
     }
     try {
       const parsed = JSON.parse(store.navLinks || "[]");
       if (Array.isArray(parsed)) return { layout: "right", showSearch: false, links: parsed };
-      return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [] };
+      return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [], mode: parsed.mode || undefined, bgColor: parsed.bgColor || undefined, textColor: parsed.textColor || undefined };
     } catch { return { layout: "right", showSearch: false, links: [] }; }
   }, [navbarBlock, store.navLinks]);
   const parsedNavLinks = navConfig.links;
@@ -1466,17 +1466,17 @@ export default function StorefrontClient({
         </div>
       )}
 
-      <header className={`${store.navbarStyle === "transparent" ? "absolute left-0 right-0 z-20 bg-transparent" : isDark ? "border-b border-white/10 bg-gray-950/90" : "border-b border-gray-100 bg-white/95"} backdrop-blur`} style={{ fontFamily: store.fontFamily }}>
+      <header className={`${store.navbarStyle === "transparent" && !navConfig.bgColor ? "absolute left-0 right-0 z-20 bg-transparent" : isDark && !navConfig.bgColor ? "border-b border-white/10 bg-gray-950/90" : "border-b border-gray-100 bg-white/95"} backdrop-blur`} style={{ fontFamily: store.fontFamily, ...(navConfig.bgColor ? { background: navConfig.bgColor, borderColor: "transparent" } : {}) }}>
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-6 py-4">
           {/* Logo */}
-          <a href={`/tienda/${store.slug}`} className="flex shrink-0 items-center gap-3 font-black">
-            {store.logo ? <img src={store.logo} alt={store.name} className="h-10 w-10 rounded-xl object-cover" /> : <ShoppingBag className="h-7 w-7" style={{ color: store.primaryColor }} />}
+          <a href={`/tienda/${store.slug}`} className="flex shrink-0 items-center gap-3 font-black" style={navConfig.textColor ? { color: navConfig.textColor } : undefined}>
+            {store.logo ? <img src={store.logo} alt={store.name} className="h-10 w-10 rounded-xl object-cover" /> : <ShoppingBag className="h-7 w-7" style={{ color: navConfig.textColor || store.primaryColor }} />}
             <span>{store.name}</span>
           </a>
 
           {/* Nav links — centered */}
-          {navConfig.layout === "center" && parsedNavLinks.length > 0 && (
-            <nav className={`hidden flex-1 items-center justify-center gap-1 md:flex ${isDark ? "text-gray-200" : "text-gray-700"}`}>
+          {navConfig.layout === "center" && parsedNavLinks.length > 0 && navConfig.mode !== "hamburger" && (
+            <nav className={`hidden flex-1 items-center justify-center gap-1 md:flex`} style={{ color: navConfig.textColor || (isDark ? "#e5e7eb" : "#374151") }}>
               {parsedNavLinks.map((link) => {
                 const subs = link.type === "filter" ? getSubsForCategory(link.value) : [];
                 const isActive = link.type === "filter" && category === link.value;
@@ -1510,11 +1510,12 @@ export default function StorefrontClient({
           )}
 
           {/* Spacer for right layout */}
-          {navConfig.layout !== "center" && <div className="hidden flex-1 md:block" />}
+          {navConfig.layout !== "center" && navConfig.mode !== "hamburger" && <div className="hidden flex-1 md:block" />}
+          {navConfig.mode === "hamburger" && <div className="flex-1" />}
 
           {/* Nav links — right */}
-          {navConfig.layout !== "center" && parsedNavLinks.length > 0 && (
-            <nav className={`hidden items-center gap-1 md:flex ${isDark ? "text-gray-200" : "text-gray-700"}`}>
+          {navConfig.layout !== "center" && parsedNavLinks.length > 0 && navConfig.mode !== "hamburger" && (
+            <nav className={`hidden items-center gap-1 md:flex`} style={{ color: navConfig.textColor || (isDark ? "#e5e7eb" : "#374151") }}>
               {parsedNavLinks.map((link) => {
                 const subs = link.type === "filter" ? getSubsForCategory(link.value) : [];
                 const isActive = link.type === "filter" && category === link.value;
@@ -1577,10 +1578,12 @@ export default function StorefrontClient({
               </div>
             )}
 
-            {/* Hamburger (mobile) */}
+            {/* Hamburger */}
             {parsedNavLinks.length > 0 && (
               <button type="button" onClick={() => setMenuOpen(true)}
-                className={`flex items-center justify-center rounded-lg p-2 md:hidden ${isDark ? "text-white hover:bg-white/10" : "text-gray-700 hover:bg-gray-100"}`} aria-label="Menú">
+                className={`flex items-center justify-center rounded-lg p-2 ${navConfig.mode === "hamburger" ? "" : "md:hidden"} ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                style={{ color: navConfig.textColor || (isDark ? "white" : "#374151") }}
+                aria-label="Menú">
                 <Menu className="h-5 w-5" />
               </button>
             )}

@@ -357,69 +357,133 @@ function clearViewportTextPositions(props: Record<string, any>, viewport: Previe
   };
 }
 
-type NavConfig = { layout: "right" | "center"; showSearch: boolean; links: NavLink[] };
+type NavConfig = { layout: "right" | "center"; showSearch: boolean; links: NavLink[]; mode?: "links" | "hamburger"; bgColor?: string; textColor?: string; };
 
 function parseNavConfig(value: string): NavConfig {
   try {
     const parsed = JSON.parse(value);
     if (Array.isArray(parsed)) return { layout: "right", showSearch: false, links: parsed };
-    return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [] };
+    return {
+      layout: parsed.layout || "right",
+      showSearch: Boolean(parsed.showSearch),
+      links: Array.isArray(parsed.links) ? parsed.links : [],
+      mode: parsed.mode || undefined,
+      bgColor: parsed.bgColor || undefined,
+      textColor: parsed.textColor || undefined,
+    };
   } catch { return { layout: "right", showSearch: false, links: [] }; }
 }
 
 function NavLinksEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [cfg, setCfg] = useState<NavConfig>(() => parseNavConfig(value));
+  const dragIdx = useRef<number | null>(null);
 
-  function save(updated: NavConfig) {
-    setCfg(updated);
-    onChange(JSON.stringify(updated));
-  }
-
-  function setLayout(layout: "right" | "center") { save({ ...cfg, layout }); }
-  function setSearch(showSearch: boolean) { save({ ...cfg, showSearch }); }
+  function save(updated: NavConfig) { setCfg(updated); onChange(JSON.stringify(updated)); }
 
   function addLink() {
-    save({ ...cfg, links: [...cfg.links, { id: crypto.randomUUID(), label: "Nuevo link", type: "filter", value: "" }] });
+    save({ ...cfg, links: [...cfg.links, { id: crypto.randomUUID(), label: "Nuevo botón", type: "filter", value: "" }] });
   }
   function removeLink(id: string) { save({ ...cfg, links: cfg.links.filter(l => l.id !== id) }); }
   function updateLink(id: string, field: keyof NavLink, val: string) {
     save({ ...cfg, links: cfg.links.map(l => l.id === id ? { ...l, [field]: val, ...(field === "type" ? { value: "" } : {}) } : l) });
   }
 
+  function onDragStart(idx: number) { dragIdx.current = idx; }
+  function onDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault();
+    if (dragIdx.current === null || dragIdx.current === idx) return;
+    const links = [...cfg.links];
+    const [moved] = links.splice(dragIdx.current, 1);
+    links.splice(idx, 0, moved);
+    dragIdx.current = idx;
+    save({ ...cfg, links });
+  }
+
+  const isHamburger = cfg.mode === "hamburger";
+
   return (
     <div className="space-y-3">
-      {/* Layout */}
+      {/* Modo */}
       <div>
-        <p className="text-xs font-medium text-gray-600 mb-1.5">Posición de los links</p>
+        <p className="text-xs font-medium text-gray-600 mb-1.5">Modo del menú</p>
         <div className="flex gap-2">
-          {([["right","Derecha"],["center","Centro"]] as const).map(([val, label]) => (
-            <button key={val} type="button" onClick={() => setLayout(val)}
-              className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors ${cfg.layout === val ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
-              {label}
-            </button>
-          ))}
+          <button type="button" onClick={() => save({ ...cfg, mode: "links" })}
+            className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors ${!isHamburger ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
+            Texto (links)
+          </button>
+          <button type="button" onClick={() => save({ ...cfg, mode: "hamburger" })}
+            className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors ${isHamburger ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
+            ☰ Siempre hamburguesa
+          </button>
         </div>
       </div>
 
-      {/* Search toggle */}
+      {/* Posición (solo en modo links) */}
+      {!isHamburger && (
+        <div>
+          <p className="text-xs font-medium text-gray-600 mb-1.5">Posición de los botones</p>
+          <div className="flex gap-2">
+            {([["right","Derecha"],["center","Centro"]] as const).map(([val, label]) => (
+              <button key={val} type="button" onClick={() => save({ ...cfg, layout: val })}
+                className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors ${cfg.layout === val ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Buscador */}
       <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
         <div>
           <p className="text-xs font-semibold text-gray-700">Buscador en navbar</p>
-          <p className="text-xs text-gray-400">Ícono de lupa que filtra productos</p>
+          <p className="text-xs text-gray-400">Lupa que filtra productos al escribir</p>
         </div>
-        <button type="button" onClick={() => setSearch(!cfg.showSearch)}
+        <button type="button" onClick={() => save({ ...cfg, showSearch: !cfg.showSearch })}
           className={`relative h-5 w-9 rounded-full transition-colors ${cfg.showSearch ? "bg-indigo-500" : "bg-gray-300"}`}>
           <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${cfg.showSearch ? "translate-x-4" : "translate-x-0.5"}`} />
         </button>
       </div>
 
-      {/* Links */}
-      <p className="text-xs font-medium text-gray-600">Links del menú</p>
-      {cfg.links.map((link) => (
-        <div key={link.id} className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2">
+      {/* Colores */}
+      <div>
+        <p className="text-xs font-medium text-gray-600 mb-2">Colores del navbar</p>
+        <div className="flex gap-3">
+          <div className="flex flex-col gap-1 flex-1">
+            <p className="text-xs text-gray-500">Fondo</p>
+            <div className="flex items-center gap-2">
+              <input type="color" value={cfg.bgColor || "#ffffff"} onChange={e => save({ ...cfg, bgColor: e.target.value })}
+                className="h-8 w-10 cursor-pointer rounded border border-gray-200 p-0.5" />
+              {cfg.bgColor && (
+                <button type="button" onClick={() => save({ ...cfg, bgColor: undefined })}
+                  className="text-xs text-gray-400 hover:text-red-500">Auto</button>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1 flex-1">
+            <p className="text-xs text-gray-500">Texto / Links</p>
+            <div className="flex items-center gap-2">
+              <input type="color" value={cfg.textColor || "#111827"} onChange={e => save({ ...cfg, textColor: e.target.value })}
+                className="h-8 w-10 cursor-pointer rounded border border-gray-200 p-0.5" />
+              {cfg.textColor && (
+                <button type="button" onClick={() => save({ ...cfg, textColor: undefined })}
+                  className="text-xs text-gray-400 hover:text-red-500">Auto</button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Botones */}
+      <p className="text-xs font-medium text-gray-600">Botones del menú</p>
+      {cfg.links.map((link, idx) => (
+        <div key={link.id} className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2"
+          draggable onDragStart={() => onDragStart(idx)} onDragOver={e => onDragOver(e, idx)}
+          style={{ cursor: "grab" }}>
           <div className="flex items-center gap-2">
+            <span className="text-gray-300 select-none text-sm leading-none">⠿</span>
             <input type="text" value={link.label} onChange={e => updateLink(link.id, "label", e.target.value)}
-              placeholder="Ej: Remeras, Inicio, Contacto"
+              placeholder="Ej: Inicio, Remeras, Contacto"
               className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
             <button type="button" onClick={() => removeLink(link.id)} className="text-gray-400 hover:text-red-500 p-1">
               <Trash2 className="h-3.5 w-3.5" />
@@ -436,14 +500,14 @@ function NavLinksEditor({ value, onChange }: { value: string; onChange: (v: stri
               className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
           </div>
           {link.type === "filter" && (
-            <p className="text-xs text-gray-400">Si esa categoría tiene subcategorías, aparece un dropdown automático al hacer hover</p>
+            <p className="text-xs text-gray-400">Si hay subcategorías, aparece dropdown al hacer hover</p>
           )}
         </div>
       ))}
       <button type="button" onClick={addLink}
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 py-2.5 text-xs font-semibold text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
         <Plus className="h-3.5 w-3.5" />
-        Agregar link
+        Agregar botón
       </button>
     </div>
   );
@@ -2461,21 +2525,27 @@ export default function ConfiguracionPage() {
                       const linkColor = isSolid ? "rgba(255,255,255,0.85)" : "#374151";
                       if (navbarBlock) {
                         const navCfg = parseNavConfig(String(navbarBlock.props.navConfig || '{"layout":"right","showSearch":false,"links":[]}'));
+                        const nbBg = navCfg.bgColor || bgColor;
+                        const nbFg = navCfg.textColor || fgColor;
+                        const nbLink = navCfg.textColor || linkColor;
+                        const isHamb = navCfg.mode === "hamburger";
                         return (
-                          <div style={{background:bgColor,padding:"10px 16px",display:"flex",alignItems:"center",gap:"8px",borderBottom:"1px solid rgba(0,0,0,0.1)",position:"relative"}}>
-                            <div style={{fontWeight:800,fontSize:"13px",color:fgColor,flexShrink:0}}>{config.name||"Mi Tienda"}</div>
-                            {navCfg.layout==="center" && navCfg.links.length>0 && (
+                          <div style={{background:nbBg,padding:"10px 16px",display:"flex",alignItems:"center",gap:"8px",borderBottom:"1px solid rgba(0,0,0,0.1)",position:"relative"}}>
+                            <div style={{fontWeight:800,fontSize:"13px",color:nbFg,flexShrink:0}}>{config.name||"Mi Tienda"}</div>
+                            {!isHamb && navCfg.layout==="center" && navCfg.links.length>0 && (
                               <div style={{display:"flex",gap:"10px",flex:1,justifyContent:"center"}}>
-                                {navCfg.links.slice(0,5).map(l=>(<span key={l.id} style={{fontSize:"10px",fontWeight:600,color:linkColor}}>{l.label}</span>))}
+                                {navCfg.links.slice(0,5).map(l=>(<span key={l.id} style={{fontSize:"10px",fontWeight:600,color:nbLink}}>{l.label}</span>))}
                               </div>
                             )}
-                            {navCfg.layout!=="center" && <div style={{flex:1}}/>}
-                            {navCfg.layout!=="center" && navCfg.links.length>0 && (
+                            {!isHamb && navCfg.layout!=="center" && <div style={{flex:1}}/>}
+                            {!isHamb && navCfg.layout!=="center" && navCfg.links.length>0 && (
                               <div style={{display:"flex",gap:"10px"}}>
-                                {navCfg.links.slice(0,5).map(l=>(<span key={l.id} style={{fontSize:"10px",fontWeight:600,color:linkColor}}>{l.label}</span>))}
+                                {navCfg.links.slice(0,5).map(l=>(<span key={l.id} style={{fontSize:"10px",fontWeight:600,color:nbLink}}>{l.label}</span>))}
                               </div>
                             )}
-                            {navCfg.showSearch && <span style={{fontSize:"11px",color:isSolid?"rgba(255,255,255,0.7)":"#9ca3af"}}>🔍</span>}
+                            {isHamb && <div style={{flex:1}}/>}
+                            {navCfg.showSearch && !isHamb && <span style={{fontSize:"11px",color:nbLink}}>🔍</span>}
+                            {(isHamb || navCfg.links.length>0) && <span style={{fontSize:"14px",color:nbFg,opacity:0.7}}>☰</span>}
                           </div>
                         );
                       }
