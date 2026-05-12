@@ -116,7 +116,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"contacto",   emoji:"✉️", label:"Formulario de contacto",  desc:"Formulario que envía un email al dueño de la tienda",
     defaultProps:{ heading:"Contacto", subtitle:"¿Tenés alguna pregunta? Escribinos.", bgColor:"#111827", textColor:"", bgImage:"", showName:true, showEmail:true, showPhone:false, showMessage:true, buttonText:"Enviar mensaje", buttonColor:"" } },
   { type:"nosotros",   emoji:"👥", label:"Página Nosotros",          desc:"Encabezado, equipo, misión/visión y grilla de características",
-    defaultProps:{ tag:"NOSOTROS", heading:"¿Quiénes somos?", subtitle:"Conocé al equipo detrás de la tienda.", bgColor:"#ffffff", textColor:"#111827", showMembers:false, members:[], showTextSection:false, textSectionHeading:"Misión y Visión", textSectionBody:"", showFeatures:false, featuresHeading:"Lo que hacemos", featuresSubtitle:"", featuresBgColor:"#1e3a5f", features:[] } },
+    defaultProps:{ tag:"NOSOTROS", heading:"¿Quiénes somos?", subtitle:"Conocé al equipo detrás de la tienda.", bgColor:"#ffffff", textColor:"#111827", showMembers:false, members:[], showTextSection:false, textSectionHeading:"Misión y Visión", textSectionBody:"", showFeatures:false, featuresHeading:"Lo que hacemos", featuresSubtitle:"", featuresBgColor:"#4338ca", features:[] } },
   { type:"banner-group", emoji:"🎠", label:"Carrusel de banners",     desc:"Imágenes full-width que pasan automáticamente",
     defaultProps:{ slides:[
       { image:"", title:"Bienvenidos", subtitle:"Descubrí nuestra colección", buttonText:"Ver productos", buttonUrl:"", focalX:50, focalY:50 },
@@ -2233,7 +2233,12 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const bg = String(p.bgColor||"#ffffff");
       const fg = String(p.textColor||"#111827");
       return (
-        <div style={{background:bg,color:fg,minHeight:customMinHeight}}>
+        <div style={{background:bg,color:fg,minHeight:customMinHeight,position:"relative"}}>
+          {selected && (
+            <div style={{position:"absolute",bottom:"10px",right:"10px",zIndex:4,padding:"5px 10px",borderRadius:"999px",background:"rgba(255,255,255,0.92)",color:"#4f46e5",fontSize:"10px",fontWeight:700,boxShadow:"0 4px 12px rgba(0,0,0,0.1)",pointerEvents:"none"}}>
+              Editá desde el panel izquierdo ←
+            </div>
+          )}
           {/* Header */}
           <div style={{maxWidth:"720px",margin:"0 auto",padding:"48px 24px 32px"}}>
             {p.tag && <span style={{display:"inline-block",border:`1.5px solid ${fg}`,borderRadius:"999px",padding:"3px 12px",fontSize:"10px",fontWeight:800,letterSpacing:"0.15em",marginBottom:"16px",opacity:0.6}}>{String(p.tag)}</span>}
@@ -2265,19 +2270,23 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
             </div>
           )}
           {/* Features */}
-          {p.showFeatures && features.length > 0 && (
-            <div style={{background:p.featuresBgColor||"#1e3a5f",padding:"32px 24px"}}>
+          {p.showFeatures && (
+            <div style={{background:p.featuresBgColor||"#4338ca",padding:"32px 24px"}}>
               {p.featuresHeading && <h2 style={{fontWeight:900,fontSize:"18px",color:"#fff",textAlign:"center",margin:"0 0 6px"}}>{String(p.featuresHeading)}</h2>}
               {p.featuresSubtitle && <p style={{fontSize:"12px",color:"rgba(255,255,255,0.6)",textAlign:"center",margin:"0 0 20px"}}>{String(p.featuresSubtitle)}</p>}
-              <div style={{maxWidth:"720px",margin:"0 auto",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px"}}>
-                {features.map(f=>(
-                  <div key={f.id} style={{background:"rgba(255,255,255,0.1)",borderRadius:"12px",padding:"14px",border:"1px solid rgba(255,255,255,0.1)"}}>
-                    {f.number && <p style={{fontSize:"22px",fontWeight:900,color:"rgba(255,255,255,0.2)",margin:"0 0 4px"}}>{f.number}</p>}
-                    {f.title && <p style={{fontWeight:800,fontSize:"12px",color:"#fff",margin:"0 0 4px"}}>{f.title}</p>}
-                    {f.desc && <p style={{fontSize:"11px",color:"rgba(255,255,255,0.65)",margin:0}}>{f.desc}</p>}
-                  </div>
-                ))}
-              </div>
+              {features.length > 0 ? (
+                <div style={{maxWidth:"720px",margin:"0 auto",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px"}}>
+                  {features.map(f=>(
+                    <div key={f.id} style={{background:"rgba(255,255,255,0.1)",borderRadius:"12px",padding:"14px",border:"1px solid rgba(255,255,255,0.1)"}}>
+                      {f.number && <p style={{fontSize:"22px",fontWeight:900,color:"rgba(255,255,255,0.2)",margin:"0 0 4px"}}>{f.number}</p>}
+                      {f.title && <p style={{fontWeight:800,fontSize:"12px",color:"#fff",margin:"0 0 4px"}}>{f.title}</p>}
+                      {f.desc && <p style={{fontSize:"11px",color:"rgba(255,255,255,0.65)",margin:0}}>{f.desc}</p>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{textAlign:"center",color:"rgba(255,255,255,0.5)",fontSize:"12px",margin:0}}>Agregá pasos desde el panel izquierdo</p>
+              )}
             </div>
           )}
         </div>
