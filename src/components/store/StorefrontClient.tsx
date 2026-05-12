@@ -106,6 +106,24 @@ import {
 } from "lucide-react";
 import { getStoreType } from "@/lib/storeTypes";
 
+const COLOR_NAMES: Record<string, string> = {
+  rojo:"#ef4444", red:"#ef4444", azul:"#3b82f6", blue:"#3b82f6",
+  verde:"#22c55e", green:"#22c55e", negro:"#111827", black:"#111827",
+  blanco:"#f9fafb", white:"#f9fafb", amarillo:"#eab308", yellow:"#eab308",
+  naranja:"#f97316", orange:"#f97316", rosa:"#ec4899", pink:"#ec4899",
+  violeta:"#8b5cf6", purple:"#8b5cf6", lila:"#c084fc",
+  gris:"#9ca3af", gray:"#9ca3af", grey:"#9ca3af",
+  marron:"#92400e", brown:"#92400e", beige:"#d4b896",
+  celeste:"#67e8f9", turquesa:"#2dd4bf", turquoise:"#2dd4bf",
+  dorado:"#d97706", gold:"#d97706", plateado:"#e2e8f0", silver:"#e2e8f0",
+  bordo:"#881337", coral:"#fb7185", mostaza:"#ca8a04", nude:"#f5d5ba",
+};
+function variantToColor(value: string): string | null {
+  const v = value.trim();
+  if (/^#[0-9a-fA-F]{3,8}$/.test(v)) return v;
+  return COLOR_NAMES[v.toLowerCase()] ?? null;
+}
+
 type Variant = {
   id: string;
   name: string;
@@ -1036,6 +1054,20 @@ export default function StorefrontClient({
           <div className="p-4 flex flex-col flex-1">
             <p className="text-base font-black leading-tight text-gray-950">{product.name}</p>
             {product.description && <p className="mt-1 line-clamp-2 text-sm text-gray-500">{product.description}</p>}
+            {(() => {
+              const colorVs = product.variants.filter(v => v.name?.toLowerCase().includes("color") || v.name?.toLowerCase().includes("tono"));
+              if (colorVs.length === 0) return null;
+              return (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {colorVs.slice(0, 8).map((v, i) => {
+                    const bg = variantToColor(v.value);
+                    return bg
+                      ? <span key={i} title={v.value} className={`h-4 w-4 rounded-full border border-white ring-1 ring-gray-200 shrink-0 inline-block ${v.stock === 0 ? "opacity-30" : ""}`} style={{ backgroundColor: bg }} />
+                      : <span key={i} className={`rounded-full border border-gray-200 px-1.5 text-[10px] text-gray-600 ${v.stock === 0 ? "opacity-30 line-through" : ""}`}>{v.value}</span>;
+                  })}
+                </div>
+              );
+            })()}
             {store.showPrices && <p className="mt-2 text-lg font-black" style={{ color: store.primaryColor }}>{money(product.price, store.currency)}</p>}
             {store.showStock && product.variants.length > 0 && <p className={`mt-1 text-xs font-semibold ${available ? "text-emerald-600" : "text-red-500"}`}>{available ? `${totalStock} disponibles` : "Sin stock"}</p>}
             {isInquiry ? (
@@ -1112,7 +1144,25 @@ export default function StorefrontClient({
           {store.showStock && product.variants.length > 0 && (
             <p className={`mt-1 text-xs font-semibold ${available ? "text-emerald-600" : "text-red-500"}`}>{available ? `${totalStock} disponibles` : "Sin stock"}</p>
           )}
-          {product.variants.length > 0 && <p className={`mt-1 text-xs ${isDark ? "text-gray-400" : "text-gray-400"}`}>{product.variants.map((v) => v.value).join(", ")}</p>}
+          {(() => {
+            const colorVs = product.variants.filter(v => v.name?.toLowerCase().includes("color") || v.name?.toLowerCase().includes("tono"));
+            const otherVs = product.variants.filter(v => !v.name?.toLowerCase().includes("color") && !v.name?.toLowerCase().includes("tono"));
+            return (
+              <>
+                {colorVs.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {colorVs.slice(0, 8).map((v, i) => {
+                      const bg = variantToColor(v.value);
+                      return bg
+                        ? <span key={i} title={v.value} className={`h-4 w-4 rounded-full border border-white ring-1 ring-gray-200 shrink-0 inline-block ${v.stock === 0 ? "opacity-30" : ""}`} style={{ backgroundColor: bg }} />
+                        : <span key={i} className={`rounded-full border border-gray-200 px-1.5 text-[10px] text-gray-600 ${v.stock === 0 ? "opacity-30 line-through" : ""}`}>{v.value}</span>;
+                    })}
+                  </div>
+                )}
+                {otherVs.length > 0 && <p className={`mt-1 text-xs ${isDark ? "text-gray-400" : "text-gray-400"}`}>{otherVs.map(v => v.value).join(", ")}</p>}
+              </>
+            );
+          })()}
           {isInquiry ? (
             <button
               type="button"
@@ -1203,7 +1253,7 @@ export default function StorefrontClient({
                 {p.showHeading !== false && (
                   <div className="mb-7 text-center">
                     <h2 className={`font-black break-words ${p.headingSize === "sm" ? "text-xl" : p.headingSize === "md" ? "text-2xl" : p.headingSize === "xl" ? "text-4xl" : "text-3xl"}`} style={{ color: String(p.color || store.primaryColor) }}>{p.heading || "Nuestros productos"}</h2>
-                    {p.subheading && <p className={`mt-2 text-base ${isDark ? "text-gray-400" : "text-gray-500"}`}>{p.subheading}</p>}
+                    {p.subheading && <p className={`mt-2 ${p.subheadingSize === "sm" ? "text-sm" : p.subheadingSize === "lg" ? "text-lg" : "text-base"} ${isDark ? "text-gray-400" : "text-gray-500"}`}>{p.subheading}</p>}
                     {categoryFilter !== "all" && <p className={`mt-2 text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>{formatCategoryLabel(categoryFilter)}{subcategoryFilter !== "all" ? ` / ${formatCategoryLabel(subcategoryFilter)}` : ""}</p>}
                   </div>
                 )}
@@ -2051,16 +2101,45 @@ export default function StorefrontClient({
                 </div>
               )}
 
-              {selectedProduct.variants.length > 0 && !modalCfg.sizeChart && (
-                <div className="mt-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Variantes disponibles</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedProduct.variants.map((v) => (
-                      <span key={v.id} className={`rounded-full border px-3 py-1 text-sm ${v.stock > 0 ? "border-gray-200 text-gray-700" : "border-gray-100 text-gray-300 line-through"}`}>
-                        {v.value}
-                      </span>
-                    ))}
-                  </div>
+              {selectedProduct.variants.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  {Object.entries(
+                    selectedProduct.variants.reduce((acc, v) => {
+                      const k = v.name || "Variante";
+                      if (!acc[k]) acc[k] = [];
+                      acc[k].push(v);
+                      return acc;
+                    }, {} as Record<string, typeof selectedProduct.variants>)
+                  ).map(([groupName, groupVs]) => {
+                    const isColor = groupName.toLowerCase().includes("color") || groupName.toLowerCase().includes("tono");
+                    if (!isColor && modalCfg.sizeChart) return null;
+                    return (
+                      <div key={groupName}>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{groupName}</p>
+                        {isColor ? (
+                          <div className="flex flex-wrap gap-2">
+                            {groupVs.map((v) => {
+                              const bg = variantToColor(v.value);
+                              const ok = v.stock > 0;
+                              return bg ? (
+                                <span key={v.id} title={v.value}
+                                  className={`h-7 w-7 rounded-full border-2 ${ok ? "border-gray-200" : "border-gray-100 opacity-40"}`}
+                                  style={{ backgroundColor: bg }} />
+                              ) : (
+                                <span key={v.id} className={`rounded-full border px-3 py-1 text-sm ${ok ? "border-gray-200 text-gray-700" : "border-gray-100 text-gray-300 line-through"}`}>{v.value}</span>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {groupVs.map((v) => (
+                              <span key={v.id} className={`rounded-full border px-3 py-1 text-sm ${v.stock > 0 ? "border-gray-200 text-gray-700" : "border-gray-100 text-gray-300 line-through"}`}>{v.value}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 

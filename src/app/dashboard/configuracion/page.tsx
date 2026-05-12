@@ -100,7 +100,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"text",       emoji:"📝", label:"Bloque de texto",        desc:"Título y párrafo de texto libre",
     defaultProps:{ heading:"Sobre nosotros", body:"Somos una tienda con años de experiencia...", align:"center", fontSize:"md", color:"", textColor:"", bgColor:"" } },
   { type:"products",   emoji:"🛍️", label:"Grilla de productos",    desc:"Muestra tu catálogo con columnas configurables",
-    defaultProps:{ heading:"Nuestros productos", subheading:"", headingSize:"lg", columns:3, layoutMode:"grid", showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:false, sortBy:"default", color:"", bgColor:"" } },
+    defaultProps:{ heading:"Nuestros productos", subheading:"", headingSize:"lg", subheadingSize:"base", columns:3, layoutMode:"grid", showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:false, sortBy:"default", color:"", bgColor:"" } },
   { type:"banner",     emoji:"📢", label:"Banda de anuncio",       desc:"Franja de color con texto destacado",
     defaultProps:{ text:"🔥 ¡Oferta especial! Envío gratis hoy", bgColor:"#f59e0b", textColor:"#000000", size:"md" } },
   { type:"cta",        emoji:"🚀", label:"Llamada a la acción",    desc:"Sección oscura con botón grande destacado",
@@ -724,7 +724,6 @@ function BlockEditor({
       <label className="block text-xs font-medium text-gray-600 mb-1">Formato</label>
       <Chips options={[{id:"grid",label:"Grilla"},{id:"carousel",label:"Carrusel"}]} value={p.layoutMode||"grid"} onChange={v=>upd("layoutMode",v)}/>
     </div>
-    <Toggle label="Mostrar filtro de categorias" sub="Permite cambiar de categoria en la tienda" value={p.showCategoryTabs===true} onChange={v=>upd("showCategoryTabs",v)}/>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Ordenar por</label>
       <select value={p.sortBy||"default"} onChange={e=>upd("sortBy",e.target.value)}
@@ -742,7 +741,13 @@ function BlockEditor({
     {p.showHeading!==false && (
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
-        <Chips options={[{id:"sm",label:"S"},{id:"md",label:"M"},{id:"lg",label:"L"},{id:"xl",label:"XL"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
+        <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Normal"},{id:"lg",label:"Grande"},{id:"xl",label:"Enorme"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
+      </div>
+    )}
+    {p.showHeading!==false && p.subheading && (
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del subtítulo</label>
+        <Chips options={[{id:"sm",label:"Pequeño"},{id:"base",label:"Normal"},{id:"lg",label:"Grande"}]} value={p.subheadingSize||"base"} onChange={v=>upd("subheadingSize",v)}/>
       </div>
     )}
     <div>
