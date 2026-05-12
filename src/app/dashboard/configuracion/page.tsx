@@ -370,6 +370,7 @@ function parseNavConfig(value: string): NavConfig {
       mode: parsed.mode || undefined,
       bgColor: parsed.bgColor || undefined,
       textColor: parsed.textColor || undefined,
+      searchStyle: parsed.searchStyle || undefined,
     };
   } catch { return { layout: "right", showSearch: false, links: [] }; }
 }
@@ -2636,37 +2637,35 @@ export default function ConfiguracionPage() {
                                 <span onClick={()=>setPreviewMenuOpen(v=>!v)} style={{fontSize:"16px",color:nbFg,cursor:"pointer",userSelect:"none",padding:"2px"}} title="Ver menú">☰</span>
                               )}
                             </div>
-                            {/* Preview drawer — cubre todo el preview igual que el real */}
-                            {previewMenuOpen && isHamb && navCfg.links.length>0 && (
+                            {/* Preview drawer */}
+                            {previewMenuOpen && isHamb && (
                               <div style={{position:"absolute",inset:0,zIndex:50,display:"flex",justifyContent:"flex-end"}}>
-                                {/* backdrop */}
-                                <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)"}} onClick={()=>setPreviewMenuOpen(false)}/>
-                                {/* panel */}
-                                <div style={{position:"relative",width:"65%",background:"white",display:"flex",flexDirection:"column",boxShadow:"-4px 0 24px rgba(0,0,0,0.2)"}}>
-                                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid #f3f4f6",padding:"14px 16px"}}>
-                                    <span style={{fontWeight:800,fontSize:"14px",color:"#111827"}}>{nbLogoText}</span>
-                                    <span onClick={()=>setPreviewMenuOpen(false)} style={{cursor:"pointer",fontSize:"16px",color:"#6b7280",lineHeight:1}}>✕</span>
+                                <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.45)"}} onClick={()=>setPreviewMenuOpen(false)}/>
+                                <div style={{position:"relative",width:"75%",maxWidth:"240px",background:"white",display:"flex",flexDirection:"column",boxShadow:"-4px 0 20px rgba(0,0,0,0.18)",overflowY:"auto"}}>
+                                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid #f3f4f6",padding:"12px 14px",flexShrink:0}}>
+                                    <span style={{fontWeight:800,fontSize:"13px",color:"#111827"}}>{nbLogoText}</span>
+                                    <span onClick={()=>setPreviewMenuOpen(false)} style={{cursor:"pointer",fontSize:"18px",color:"#6b7280",lineHeight:1,padding:"2px"}}>✕</span>
                                   </div>
                                   {navCfg.showSearch && (
-                                    <div style={{margin:"10px 12px",border:"1px solid #e5e7eb",borderRadius:"12px",padding:"6px 12px",display:"flex",alignItems:"center",gap:"6px",background:"#f9fafb"}}>
-                                      <span style={{fontSize:"12px",color:"#9ca3af"}}>🔍</span>
-                                      <span style={{fontSize:"12px",color:"#9ca3af"}}>Buscar productos...</span>
+                                    <div style={{margin:"8px 10px",border:"1px solid #e5e7eb",borderRadius:"10px",padding:"5px 10px",display:"flex",alignItems:"center",gap:"5px",background:"#f9fafb",flexShrink:0}}>
+                                      <span style={{fontSize:"11px",color:"#9ca3af"}}>🔍</span>
+                                      <span style={{fontSize:"11px",color:"#9ca3af"}}>Buscar...</span>
                                     </div>
                                   )}
-                                  <div style={{flex:1,overflowY:"auto",padding:"8px"}}>
+                                  <div style={{padding:"4px 6px"}}>
                                     {navCfg.links.map(l=>{
                                       const lsubs = l.type==="filter" ? (previewSubs[l.value]||[]) : [];
                                       const isExp = previewHoverLink===l.id;
                                       return (
                                         <div key={l.id}>
                                           <div onClick={()=>lsubs.length>0?setPreviewHoverLink(isExp?null:l.id):undefined}
-                                            style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",borderRadius:"10px",cursor:"pointer",fontWeight:600,fontSize:"13px",color:"#111827"}}>
+                                            style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 10px",borderRadius:"8px",cursor:"pointer",fontWeight:600,fontSize:"12px",color:"#111827"}}>
                                             {l.label}
-                                            {lsubs.length>0&&<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{width:"12px",height:"12px",opacity:0.5,transform:isExp?"rotate(180deg)":"none",transition:"transform 0.2s"}}><path d="M6 9l6 6 6-6"/></svg>}
+                                            {lsubs.length>0&&<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{width:"11px",height:"11px",opacity:0.4,transform:isExp?"rotate(180deg)":"none",transition:"transform 0.2s"}}><path d="M6 9l6 6 6-6"/></svg>}
                                           </div>
                                           {lsubs.length>0&&isExp&&(
-                                            <div style={{marginLeft:"8px",marginBottom:"4px",background:"#f9fafb",borderRadius:"8px"}}>
-                                              {lsubs.map(s=><div key={s} style={{padding:"8px 14px",fontSize:"12px",color:"#6b7280",cursor:"pointer"}}>{s}</div>)}
+                                            <div style={{marginLeft:"6px",marginBottom:"2px",background:"#f9fafb",borderRadius:"6px"}}>
+                                              {lsubs.map(s=><div key={s} style={{padding:"6px 12px",fontSize:"11px",color:"#6b7280"}}>{s}</div>)}
                                             </div>
                                           )}
                                         </div>
