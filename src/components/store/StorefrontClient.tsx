@@ -467,7 +467,7 @@ export default function StorefrontClient({
   const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount: number } | null>(null);
 
   type NavLink = { id: string; label: string; type: "filter" | "url"; value: string };
-  type NavConfig = { layout: "right" | "center"; showSearch: boolean; links: NavLink[]; mode?: "links" | "hamburger"; bgColor?: string; textColor?: string; };
+  type NavConfig = { layout: "right" | "center"; showSearch: boolean; links: NavLink[]; mode?: "links" | "hamburger"; bgColor?: string; textColor?: string; searchStyle?: "icon" | "bar"; };
 
   const categories = useMemo(() => [...new Set(store.products.map((p) => p.category).filter(Boolean))], [store.products]);
   const subcategories = useMemo(
@@ -527,13 +527,13 @@ export default function StorefrontClient({
       try {
         const parsed = JSON.parse(String(navbarBlock.props.navConfig));
         if (Array.isArray(parsed)) return { layout: "right", showSearch: false, links: parsed };
-        return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [], mode: parsed.mode || undefined, bgColor: parsed.bgColor || undefined, textColor: parsed.textColor || undefined };
+        return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [], mode: parsed.mode || undefined, bgColor: parsed.bgColor || undefined, textColor: parsed.textColor || undefined, searchStyle: parsed.searchStyle || undefined };
       } catch {}
     }
     try {
       const parsed = JSON.parse(store.navLinks || "[]");
       if (Array.isArray(parsed)) return { layout: "right", showSearch: false, links: parsed };
-      return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [], mode: parsed.mode || undefined, bgColor: parsed.bgColor || undefined, textColor: parsed.textColor || undefined };
+      return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [], mode: parsed.mode || undefined, bgColor: parsed.bgColor || undefined, textColor: parsed.textColor || undefined, searchStyle: parsed.searchStyle || undefined };
     } catch { return { layout: "right", showSearch: false, links: [] }; }
   }, [navbarBlock, store.navLinks]);
   const parsedNavLinks = navConfig.links;
@@ -1551,7 +1551,25 @@ export default function StorefrontClient({
           {/* Right icons */}
           <div className="flex shrink-0 items-center gap-2">
             {/* Search */}
-            {navConfig.showSearch && (
+            {navConfig.showSearch && navConfig.searchStyle === "bar" && (
+              <div className={`hidden items-center gap-2 rounded-xl border px-3 py-1.5 md:flex ${isDark ? "border-white/20 bg-white/10 text-white" : "border-gray-200 bg-gray-50 text-gray-900"}`}
+                style={navConfig.textColor ? { color: navConfig.textColor, borderColor: `${navConfig.textColor}33` } : undefined}>
+                <Search className="h-4 w-4 shrink-0 opacity-50" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Buscar productos..."
+                  className="w-36 bg-transparent text-sm outline-none placeholder:opacity-50"
+                />
+                {searchQuery && (
+                  <button type="button" onClick={() => setSearchQuery("")} className="opacity-50 hover:opacity-100">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+            {navConfig.showSearch && (navConfig.searchStyle ?? "icon") === "icon" && (
               <div className="flex items-center">
                 {searchOpen ? (
                   <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 ${isDark ? "border-white/20 bg-white/10 text-white" : "border-gray-200 bg-gray-50 text-gray-900"}`}>
@@ -1571,7 +1589,9 @@ export default function StorefrontClient({
                   </div>
                 ) : (
                   <button type="button" onClick={() => setSearchOpen(true)}
-                    className={`rounded-lg p-2 transition-colors ${isDark ? "text-white hover:bg-white/10" : "text-gray-600 hover:bg-gray-100"}`} aria-label="Buscar">
+                    className={`rounded-lg p-2 transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                    style={{ color: navConfig.textColor || (isDark ? "white" : "#4b5563") }}
+                    aria-label="Buscar">
                     <Search className="h-5 w-5" />
                   </button>
                 )}
@@ -1602,9 +1622,9 @@ export default function StorefrontClient({
       </header>
 
       {menuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className={`fixed inset-0 z-50 ${navConfig.mode !== "hamburger" ? "md:hidden" : ""}`}>
           <div className="absolute inset-0 bg-black/50" onClick={() => setMenuOpen(false)} />
-          <div className={`absolute left-0 top-0 bottom-0 w-72 shadow-2xl flex flex-col ${isDark ? "bg-gray-900 text-white" : "bg-white text-gray-900"}`} style={{ fontFamily: store.fontFamily }}>
+          <div className={`absolute right-0 top-0 bottom-0 w-72 shadow-2xl flex flex-col ${isDark ? "bg-gray-900 text-white" : "bg-white text-gray-900"}`} style={{ fontFamily: store.fontFamily }}>
             <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: isDark ? "rgba(255,255,255,0.1)" : "#f3f4f6" }}>
               <span className="font-black text-lg">{store.name}</span>
               <button type="button" onClick={() => setMenuOpen(false)} className={`rounded-lg p-1.5 ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>

@@ -357,7 +357,7 @@ function clearViewportTextPositions(props: Record<string, any>, viewport: Previe
   };
 }
 
-type NavConfig = { layout: "right" | "center"; showSearch: boolean; links: NavLink[]; mode?: "links" | "hamburger"; bgColor?: string; textColor?: string; };
+type NavConfig = { layout: "right" | "center"; showSearch: boolean; links: NavLink[]; mode?: "links" | "hamburger"; bgColor?: string; textColor?: string; searchStyle?: "icon" | "bar"; };
 
 function parseNavConfig(value: string): NavConfig {
   try {
@@ -377,6 +377,7 @@ function parseNavConfig(value: string): NavConfig {
 function NavLinksEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [cfg, setCfg] = useState<NavConfig>(() => parseNavConfig(value));
   const dragIdx = useRef<number | null>(null);
+  const dragOverIdx = useRef<number | null>(null);
 
   function save(updated: NavConfig) { setCfg(updated); onChange(JSON.stringify(updated)); }
 
@@ -389,14 +390,17 @@ function NavLinksEditor({ value, onChange }: { value: string; onChange: (v: stri
   }
 
   function onDragStart(idx: number) { dragIdx.current = idx; }
-  function onDragOver(e: React.DragEvent, idx: number) {
-    e.preventDefault();
-    if (dragIdx.current === null || dragIdx.current === idx) return;
+  function onDragOver(e: React.DragEvent, idx: number) { e.preventDefault(); dragOverIdx.current = idx; }
+  function onDrop() {
+    const from = dragIdx.current;
+    const to = dragOverIdx.current;
+    if (from === null || to === null || from === to) return;
     const links = [...cfg.links];
-    const [moved] = links.splice(dragIdx.current, 1);
-    links.splice(idx, 0, moved);
-    dragIdx.current = idx;
+    const [moved] = links.splice(from, 1);
+    links.splice(to, 0, moved);
     save({ ...cfg, links });
+    dragIdx.current = null;
+    dragOverIdx.current = null;
   }
 
   const isHamburger = cfg.mode === "hamburger";
@@ -434,15 +438,27 @@ function NavLinksEditor({ value, onChange }: { value: string; onChange: (v: stri
       )}
 
       {/* Buscador */}
-      <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
-        <div>
-          <p className="text-xs font-semibold text-gray-700">Buscador en navbar</p>
-          <p className="text-xs text-gray-400">Lupa que filtra productos al escribir</p>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+          <div>
+            <p className="text-xs font-semibold text-gray-700">Buscador en navbar</p>
+            <p className="text-xs text-gray-400">Filtra productos al escribir</p>
+          </div>
+          <button type="button" onClick={() => save({ ...cfg, showSearch: !cfg.showSearch })}
+            className={`relative h-5 w-9 rounded-full transition-colors ${cfg.showSearch ? "bg-indigo-500" : "bg-gray-300"}`}>
+            <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${cfg.showSearch ? "translate-x-4" : "translate-x-0.5"}`} />
+          </button>
         </div>
-        <button type="button" onClick={() => save({ ...cfg, showSearch: !cfg.showSearch })}
-          className={`relative h-5 w-9 rounded-full transition-colors ${cfg.showSearch ? "bg-indigo-500" : "bg-gray-300"}`}>
-          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${cfg.showSearch ? "translate-x-4" : "translate-x-0.5"}`} />
-        </button>
+        {cfg.showSearch && (
+          <div className="flex gap-2 pl-1">
+            {([["icon","🔍 Solo lupa"],["bar","▭ Barra visible"]] as const).map(([val, label]) => (
+              <button key={val} type="button" onClick={() => save({ ...cfg, searchStyle: val })}
+                className={`flex-1 rounded-lg border py-1.5 text-xs font-semibold transition-colors ${(cfg.searchStyle ?? "icon") === val ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Colores */}
@@ -478,26 +494,29 @@ function NavLinksEditor({ value, onChange }: { value: string; onChange: (v: stri
       <p className="text-xs font-medium text-gray-600">Botones del menú</p>
       {cfg.links.map((link, idx) => (
         <div key={link.id} className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-2"
-          draggable onDragStart={() => onDragStart(idx)} onDragOver={e => onDragOver(e, idx)}
+          draggable
+          onDragStart={() => onDragStart(idx)}
+          onDragOver={e => onDragOver(e, idx)}
+          onDrop={onDrop}
           style={{ cursor: "grab" }}>
           <div className="flex items-center gap-2">
             <span className="text-gray-300 select-none text-sm leading-none">⠿</span>
             <input type="text" value={link.label} onChange={e => updateLink(link.id, "label", e.target.value)}
               placeholder="Ej: Inicio, Remeras, Contacto"
-              className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+              className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
             <button type="button" onClick={() => removeLink(link.id)} className="text-gray-400 hover:text-red-500 p-1">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
           <div className="flex gap-2">
             <select value={link.type} onChange={e => updateLink(link.id, "type", e.target.value)}
-              className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+              className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
               <option value="filter">Filtrar productos</option>
               <option value="url">Ir a URL</option>
             </select>
             <input type="text" value={link.value} onChange={e => updateLink(link.id, "value", e.target.value)}
               placeholder={link.type === "filter" ? "Categoría exacta (ej: Remeras)" : "https://..."}
-              className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+              className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
           </div>
           {link.type === "filter" && (
             <p className="text-xs text-gray-400">Si hay subcategorías, aparece dropdown al hacer hover</p>
