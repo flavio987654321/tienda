@@ -2785,7 +2785,18 @@ export default function ConfiguracionPage() {
                         <p style={{fontSize:"12px"}}>Usá el botón &quot;Agregar bloque&quot; en el panel izquierdo</p>
                       </div>
                     ) : (
-                      blocks.map((b,idx)=> b.type==="navbar" ? null : (
+                      blocks.map((b,idx)=> {
+                        if (b.type === "navbar") return null;
+                        // hide blocks that are linked as sections in the navbar
+                        const navbarBlock = blocks.find(bl => bl.type === "navbar");
+                        let sectionBlockIds: Set<string>;
+                        try {
+                          const cfg = JSON.parse(navbarBlock?.props?.navConfig || "{}");
+                          const links = Array.isArray(cfg.links) ? cfg.links : [];
+                          sectionBlockIds = new Set(links.filter((l: {type:string}) => l.type === "section").map((l: {value:string}) => l.value));
+                        } catch { sectionBlockIds = new Set(); }
+                        if (sectionBlockIds.has(b.id)) return null;
+                        return (
                         <BlockPreview
                           key={b.id}
                           block={b}
@@ -2803,7 +2814,8 @@ export default function ConfiguracionPage() {
                           isLast={idx===blocks.length-1}
                           onProductClick={setPreviewModalProduct}
                         />
-                      ))
+                        );
+                      })
                     )}
 
                     {/* Add block zone */}
@@ -3112,7 +3124,7 @@ export default function ConfiguracionPage() {
                       <div className="px-4 pb-4 border-t border-gray-50 space-y-2 pt-3">
                         <input ref={reelVideoRef} type="file" accept="video/*" className="hidden"
                           onChange={e=>{ const f=e.target.files?.[0]; if(f) uploadReelVideo(f); e.target.value=""; }}/>
-                        {reelList.map((url,i)=>(
+                        {reelList.map((_url,i)=>(
                           <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
                             <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0 text-xs text-white font-bold">▶</div>
                             <span className="flex-1 text-xs text-gray-500 truncate">Video {i+1}</span>
