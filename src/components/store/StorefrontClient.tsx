@@ -1237,7 +1237,7 @@ export default function StorefrontClient({
                           className="shrink-0"
                           style={{
                             width: `calc((100% - ${(columns - 1) * 20}px) / ${columns})`,
-                            minWidth: columns === 1 ? "100%" : undefined,
+                            minWidth: columns === 1 ? "100%" : "200px",
                             scrollSnapAlign: "start",
                           }}
                         >
