@@ -2625,8 +2625,8 @@ export default function ConfiguracionPage() {
                                 </div>
                               )}
                               {isHamb && <div style={{flex:1}}/>}
-                              {navCfg.showSearch && !isHamb && !isSearchBar && <span style={{fontSize:"11px",color:nbLink}}>🔍</span>}
-                              {isSearchBar && !isHamb && (
+                              {navCfg.showSearch && !isSearchBar && <span style={{fontSize:"11px",color:nbLink}}>🔍</span>}
+                              {isSearchBar && (
                                 <div style={{display:"flex",alignItems:"center",gap:"4px",border:`1px solid ${nbLink}33`,borderRadius:"8px",padding:"2px 8px",opacity:0.8}}>
                                   <span style={{fontSize:"9px",color:nbLink}}>🔍</span>
                                   <span style={{fontSize:"9px",color:nbLink,opacity:0.6}}>Buscar...</span>
