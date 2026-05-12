@@ -468,14 +468,6 @@ export default function StorefrontClient({
 
   type NavLink = { id: string; label: string; type: "filter" | "url"; value: string };
   type NavConfig = { layout: "right" | "center"; showSearch: boolean; links: NavLink[] };
-  const navConfig = useMemo<NavConfig>(() => {
-    try {
-      const parsed = JSON.parse(store.navLinks || "[]");
-      if (Array.isArray(parsed)) return { layout: "right", showSearch: false, links: parsed };
-      return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [] };
-    } catch { return { layout: "right", showSearch: false, links: [] }; }
-  }, [store.navLinks]);
-  const parsedNavLinks = navConfig.links;
 
   const categories = useMemo(() => [...new Set(store.products.map((p) => p.category).filter(Boolean))], [store.products]);
   const subcategories = useMemo(
@@ -529,6 +521,22 @@ export default function StorefrontClient({
   const pageBlocks = useMemo(() => parseBlocks(store.pageBlocks), [store.pageBlocks]);
   const modalCfg = useMemo(() => parseModalConfig(store.pageBlocks), [store.pageBlocks]);
   const contentBlocks = isStarterBlocks(pageBlocks) ? [] : pageBlocks;
+  const navbarBlock = contentBlocks.find(b => b.type === "navbar") ?? null;
+  const navConfig = useMemo<NavConfig>(() => {
+    if (navbarBlock?.props?.navConfig) {
+      try {
+        const parsed = JSON.parse(String(navbarBlock.props.navConfig));
+        if (Array.isArray(parsed)) return { layout: "right", showSearch: false, links: parsed };
+        return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [] };
+      } catch {}
+    }
+    try {
+      const parsed = JSON.parse(store.navLinks || "[]");
+      if (Array.isArray(parsed)) return { layout: "right", showSearch: false, links: parsed };
+      return { layout: parsed.layout || "right", showSearch: Boolean(parsed.showSearch), links: Array.isArray(parsed.links) ? parsed.links : [] };
+    } catch { return { layout: "right", showSearch: false, links: [] }; }
+  }, [navbarBlock, store.navLinks]);
+  const parsedNavLinks = navConfig.links;
   const hasCustomHeroBlock = contentBlocks.some((block) => block.type === "hero");
   const hasCustomProductBlock = contentBlocks.some((block) => block.type === "products");
   const cardRadius = RADIUS[store.cardRadius] ?? RADIUS.md;
@@ -1027,6 +1035,7 @@ export default function StorefrontClient({
     return (
       <div className="space-y-0">
         {blocks.map((block) => {
+          if (block.type === "navbar") return null;
           const p = block.props as Record<string, any>;
           if (block.type === "products") {
             const categoryFilter = String(p.categoryFilter || "all");

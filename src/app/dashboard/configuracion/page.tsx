@@ -70,11 +70,11 @@ const ALL_CHANNELS = [
   { key:"showEmail",     url:"emailAddress",   label:"Email",     network:"email",     ph:"tu@email.com" },
 ] as const;
 
-type DesignSection = "template"|"colores"|"textos"|"imagenes"|"layout"|"tarjetas"|"anuncio"|"redes"|"footer"|"vendedoras"|"seo"|"tienda"|"menu";
+type DesignSection = "template"|"colores"|"textos"|"imagenes"|"layout"|"tarjetas"|"anuncio"|"redes"|"footer"|"vendedoras"|"seo"|"tienda";
 type NavLink = { id: string; label: string; type: "filter" | "url"; value: string };
 
 /* ─── Block types ─── */
-export type BlockType = "hero"|"text"|"products"|"banner"|"banner-group"|"cta"|"image-text"|"socials"|"spacer"|"divider";
+export type BlockType = "hero"|"text"|"products"|"banner"|"banner-group"|"cta"|"image-text"|"socials"|"spacer"|"divider"|"navbar";
 export interface Block { id:string; type:BlockType; props:Record<string,any> }
 type PreviewViewport = "desktop"|"tablet"|"mobile";
 type TextPosition = { x: number; y: number };
@@ -93,6 +93,8 @@ type PreviewProduct = {
 }
 
 const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; defaultProps:Record<string,any> }[] = [
+  { type:"navbar",     emoji:"🧭", label:"Menú de navegación", desc:"Barra superior con links, buscador y menú hamburguesa",
+    defaultProps:{ navConfig:'{"layout":"right","showSearch":false,"links":[]}' } },
   { type:"hero",       emoji:"🖼️", label:"Hero / Portada",       desc:"Título grande, subtítulo y botón de acción",
     defaultProps:{ title:"¡Bienvenidos a mi tienda!", subtitle:"Encontrá todo lo que buscás", buttonText:"Ver productos", bgColor:"", textColor:"#ffffff", layout:"center", height:"lg" } },
   { type:"text",       emoji:"📝", label:"Bloque de texto",        desc:"Título y párrafo de texto libre",
@@ -464,16 +466,6 @@ function ContentGlobalSettings({
   return (
     <div className="space-y-2 border-t border-gray-100 pt-3">
       <p className="px-1 text-xs font-bold uppercase tracking-wide text-gray-400">Ajustes de la tienda</p>
-
-      <Accordion label="Menú de navegación" icon={Menu} id="menu" open={open.includes("menu")} toggle={toggle}>
-        <p className="text-xs text-gray-500 mb-3">
-          Agregá links en la barra de navegación. En celular aparecen en el menú hamburguesa.
-        </p>
-        <NavLinksEditor
-          value={config.navLinks || "[]"}
-          onChange={v => set("navLinks", v)}
-        />
-      </Accordion>
 
       <Accordion label="WhatsApp flotante" icon={Share2} id="redes" open={open.includes("redes")} toggle={toggle}>
         <p className="text-xs text-gray-500">
@@ -958,6 +950,16 @@ function BlockEditor({
       <Chips options={[{id:"solid",label:"Sólida"},{id:"dashed",label:"Guiones"},{id:"dotted",label:"Puntos"}]} value={p.style||"solid"} onChange={v=>upd("style",v)}/>
     </div>
     <ColorPicker label="Color" value={p.color||"#e5e7eb"} onChange={v=>upd("color",v)}/>
+  </div>;
+
+  if (block.type==="navbar") return <div className="space-y-3">
+    <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
+      Este bloque reemplaza el encabezado por defecto de la tienda. Solo puede haber uno.
+    </div>
+    <NavLinksEditor
+      value={p.navConfig || '{"layout":"right","showSearch":false,"links":[]}'}
+      onChange={v => upd("navConfig", v)}
+    />
   </div>;
 
   return null;
@@ -2451,14 +2453,38 @@ export default function ConfiguracionPage() {
               <div ref={previewScrollRef} className={`${previewW} relative transition-all duration-300 bg-white rounded-lg overflow-hidden shadow-2xl`}>
                 <div style={{fontFamily:config.fontFamily,minHeight:"400px"}}>
                     {/* Mini navbar */}
-                    <div style={{background:config.navbarStyle==="solid"?config.primaryColor:"white",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid rgba(0,0,0,0.1)"}}>
-                      <div style={{fontWeight:800,fontSize:"14px",color:config.navbarStyle==="solid"?"white":config.primaryColor}}>{config.name||"Mi Tienda"}</div>
-                      <div style={{display:"flex",gap:"12px"}}>
-                        {["Inicio","Productos","Contacto"].map(l=>(
-                          <span key={l} style={{fontSize:"11px",color:config.navbarStyle==="solid"?"rgba(255,255,255,0.8)":"#6b7280"}}>{l}</span>
-                        ))}
-                      </div>
-                    </div>
+                    {(()=>{
+                      const navbarBlock = blocks.find(b=>b.type==="navbar");
+                      const isSolid = config.navbarStyle==="solid";
+                      const bgColor = isSolid ? config.primaryColor : "white";
+                      const fgColor = isSolid ? "white" : config.primaryColor;
+                      const linkColor = isSolid ? "rgba(255,255,255,0.85)" : "#374151";
+                      if (navbarBlock) {
+                        const navCfg = parseNavConfig(String(navbarBlock.props.navConfig || '{"layout":"right","showSearch":false,"links":[]}'));
+                        return (
+                          <div style={{background:bgColor,padding:"10px 16px",display:"flex",alignItems:"center",gap:"8px",borderBottom:"1px solid rgba(0,0,0,0.1)",position:"relative"}}>
+                            <div style={{fontWeight:800,fontSize:"13px",color:fgColor,flexShrink:0}}>{config.name||"Mi Tienda"}</div>
+                            {navCfg.layout==="center" && navCfg.links.length>0 && (
+                              <div style={{display:"flex",gap:"10px",flex:1,justifyContent:"center"}}>
+                                {navCfg.links.slice(0,5).map(l=>(<span key={l.id} style={{fontSize:"10px",fontWeight:600,color:linkColor}}>{l.label}</span>))}
+                              </div>
+                            )}
+                            {navCfg.layout!=="center" && <div style={{flex:1}}/>}
+                            {navCfg.layout!=="center" && navCfg.links.length>0 && (
+                              <div style={{display:"flex",gap:"10px"}}>
+                                {navCfg.links.slice(0,5).map(l=>(<span key={l.id} style={{fontSize:"10px",fontWeight:600,color:linkColor}}>{l.label}</span>))}
+                              </div>
+                            )}
+                            {navCfg.showSearch && <span style={{fontSize:"11px",color:isSolid?"rgba(255,255,255,0.7)":"#9ca3af"}}>🔍</span>}
+                          </div>
+                        );
+                      }
+                      return (
+                        <div style={{background:bgColor,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid rgba(0,0,0,0.1)"}}>
+                          <div style={{fontWeight:800,fontSize:"14px",color:fgColor}}>{config.name||"Mi Tienda"}</div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Blocks */}
                     {blocks.length===0 ? (
@@ -2468,7 +2494,7 @@ export default function ConfiguracionPage() {
                         <p style={{fontSize:"12px"}}>Usá el botón &quot;Agregar bloque&quot; en el panel izquierdo</p>
                       </div>
                     ) : (
-                      blocks.map((b,idx)=>(
+                      blocks.map((b,idx)=> b.type==="navbar" ? null : (
                         <BlockPreview
                           key={b.id}
                           block={b}
