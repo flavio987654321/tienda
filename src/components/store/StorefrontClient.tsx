@@ -361,11 +361,12 @@ function PositionedTextLayer({
   className?: string;
 }) {
   const stored = getViewportTextPositions(blockProps, viewport);
+  const desktopFallback = viewport !== "desktop" ? getViewportTextPositions(blockProps, "desktop") : {};
 
   return (
     <div className={`relative overflow-hidden ${className}`} style={style}>
       {items.map((item) => {
-        const pos = stored[item.id] ?? item.defaultPos;
+        const pos = stored[item.id] ?? desktopFallback[item.id] ?? item.defaultPos;
         return (
           <div
             key={item.id}
@@ -1167,7 +1168,7 @@ export default function StorefrontClient({
             const blockProducts =
               categoryFilter === "all"
                 ? store.products.filter((product) => {
-                    if (p.showCategoryTabs !== false) {
+                    if (p.showCategoryTabs === true) {
                       if (category !== "all" && product.category !== category) return false;
                       if (subcategory !== "all" && product.subcategory !== subcategory) return false;
                     }
@@ -1218,7 +1219,7 @@ export default function StorefrontClient({
                   </div>
                 )}
 
-                {categoryFilter === "all" && p.showCategoryTabs !== false && categories.length > 1 && (
+                {categoryFilter === "all" && p.showCategoryTabs === true && categories.length > 1 && (
                   <div className="mb-6 flex justify-center gap-2 overflow-x-auto pb-1">
                     <button onClick={() => { setCategory("all"); setSubcategory("all"); }} className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold ${category === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={category === "all" ? { backgroundColor: String(p.color || store.primaryColor) } : undefined}>Todo</button>
                     {categories.map((cat) => (
@@ -1227,7 +1228,7 @@ export default function StorefrontClient({
                   </div>
                 )}
 
-                {categoryFilter === "all" && p.showCategoryTabs !== false && subcategories.length > 1 && (
+                {categoryFilter === "all" && p.showCategoryTabs === true && subcategories.length > 1 && (
                   <div className="mb-6 flex justify-center gap-2 overflow-x-auto pb-1">
                     <button onClick={() => setSubcategory("all")} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${subcategory === "all" ? "text-white" : isDark ? "bg-white/10 text-white" : "bg-white text-gray-600"}`} style={subcategory === "all" ? { backgroundColor: String(p.color || store.accentColor) } : undefined}>Todo {category === "all" ? "" : formatCategoryLabel(category)}</button>
                     {subcategories.map((subcat) => (

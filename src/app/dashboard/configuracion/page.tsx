@@ -100,7 +100,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"text",       emoji:"📝", label:"Bloque de texto",        desc:"Título y párrafo de texto libre",
     defaultProps:{ heading:"Sobre nosotros", body:"Somos una tienda con años de experiencia...", align:"center", fontSize:"md", color:"", textColor:"", bgColor:"" } },
   { type:"products",   emoji:"🛍️", label:"Grilla de productos",    desc:"Muestra tu catálogo con columnas configurables",
-    defaultProps:{ heading:"Nuestros productos", columns:3, layoutMode:"grid", showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:true, sortBy:"default", color:"", bgColor:"" } },
+    defaultProps:{ heading:"Nuestros productos", columns:3, layoutMode:"grid", showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:false, sortBy:"default", color:"", bgColor:"" } },
   { type:"banner",     emoji:"📢", label:"Banda de anuncio",       desc:"Franja de color con texto destacado",
     defaultProps:{ text:"🔥 ¡Oferta especial! Envío gratis hoy", bgColor:"#f59e0b", textColor:"#000000", size:"md" } },
   { type:"cta",        emoji:"🚀", label:"Llamada a la acción",    desc:"Sección oscura con botón grande destacado",
@@ -724,7 +724,7 @@ function BlockEditor({
       <label className="block text-xs font-medium text-gray-600 mb-1">Formato</label>
       <Chips options={[{id:"grid",label:"Grilla"},{id:"carousel",label:"Carrusel"}]} value={p.layoutMode||"grid"} onChange={v=>upd("layoutMode",v)}/>
     </div>
-    <Toggle label="Mostrar filtro de categorias" sub="Permite cambiar de categoria en la tienda" value={p.showCategoryTabs!==false} onChange={v=>upd("showCategoryTabs",v)}/>
+    <Toggle label="Mostrar filtro de categorias" sub="Permite cambiar de categoria en la tienda" value={p.showCategoryTabs===true} onChange={v=>upd("showCategoryTabs",v)}/>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Ordenar por</label>
       <select value={p.sortBy||"default"} onChange={e=>upd("sortBy",e.target.value)}
@@ -1815,9 +1815,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
               ]}
             />
           )}
-          {(p.showCategoryTabs !== false || categoryFilter !== "all" || subcategoryFilter !== "all") && (
+          {(p.showCategoryTabs === true || categoryFilter !== "all" || subcategoryFilter !== "all") && (
             <div style={{display:"flex",justifyContent:"center",gap:"8px",flexWrap:"wrap",marginBottom:"14px"}}>
-              {p.showCategoryTabs !== false && (
+              {p.showCategoryTabs === true && (
                 <>
                   <span style={{padding:"6px 12px",borderRadius:"999px",fontSize:"11px",fontWeight:800,background:blockColor,color:"#fff"}}>
                     {categoryFilter === "all" ? "Todo" : formatCategoryLabel(categoryFilter)}
