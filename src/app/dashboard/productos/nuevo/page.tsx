@@ -80,6 +80,30 @@ const MAX_PRODUCT_IMAGES = 5;
 const DEFAULT_VARIANT: Variant = { name: "Talle", value: "", stock: "0", price: "", sku: "" };
 const SINGLE_VARIANT_FALLBACK_VALUE = "Unico";
 
+const COLOR_PREVIEW: Record<string, string> = {
+  rojo:"#ef4444",red:"#ef4444",azul:"#3b82f6",blue:"#3b82f6",verde:"#22c55e",green:"#22c55e",
+  negro:"#111827",black:"#111827",blanco:"#f9fafb",white:"#f9fafb",amarillo:"#eab308",yellow:"#eab308",
+  naranja:"#f97316",orange:"#f97316",rosa:"#ec4899",pink:"#ec4899",violeta:"#8b5cf6",purple:"#8b5cf6",
+  lila:"#c084fc",gris:"#9ca3af",gray:"#9ca3af",grey:"#9ca3af",marron:"#92400e",brown:"#92400e",
+  beige:"#d4b896",celeste:"#67e8f9",turquesa:"#2dd4bf",dorado:"#d97706",gold:"#d97706",
+  plateado:"#e2e8f0",silver:"#e2e8f0",bordo:"#881337",coral:"#fb7185",mostaza:"#ca8a04",nude:"#f5d5ba",
+};
+function colorPreview(val: string): string | null {
+  const v = val.trim();
+  if (/^#[0-9a-fA-F]{3,8}$/.test(v)) return v;
+  return COLOR_PREVIEW[v.toLowerCase()] ?? null;
+}
+
+function variantPlaceholder(name: string): string {
+  const n = name.toLowerCase();
+  if (n === "color" || n === "tono") return "ej: Rojo o #FF0000";
+  if (n === "talle" || n === "size") return "ej: S";
+  if (n === "material") return "ej: Algodón";
+  if (n === "sabor") return "ej: Vainilla";
+  if (n === "almacenamiento" || n === "ram") return "ej: 128GB";
+  return "ej: Valor";
+}
+
 function safeJsonArray(value: unknown) {
   if (Array.isArray(value)) return value;
   if (typeof value !== "string") return [];
@@ -811,7 +835,7 @@ function ProductoFormPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-semibold text-gray-900">Variantes y stock</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">{storeTypeConfig.defaultVariantName}, color, etc.</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Una fila por valor — ej: Talle S (fila 1), Talle M (fila 2)</p>
                 </div>
                 <button
                   type="button"
@@ -839,13 +863,21 @@ function ProductoFormPage() {
                   </div>
                   <div className="col-span-3">
                     <label className="block text-xs font-medium text-gray-500 mb-1">Valor</label>
-                    <input
-                      type="text"
-                      value={variant.value}
-                      onChange={(e) => updateVariant(idx, "value", e.target.value)}
-                      placeholder={storeTypeConfig.variantValuePlaceholder}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
+                    <div className="relative">
+                      {(variant.name === "Color" || variant.name === "Tono") && colorPreview(variant.value) && (
+                        <span
+                          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border border-gray-300"
+                          style={{ backgroundColor: colorPreview(variant.value)! }}
+                        />
+                      )}
+                      <input
+                        type="text"
+                        value={variant.value}
+                        onChange={(e) => updateVariant(idx, "value", e.target.value)}
+                        placeholder={variantPlaceholder(variant.name)}
+                        className={`w-full border border-gray-200 rounded-lg py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${(variant.name === "Color" || variant.name === "Tono") && colorPreview(variant.value) ? "pl-8 pr-3" : "px-3"}`}
+                      />
+                    </div>
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-500 mb-1">Stock</label>
