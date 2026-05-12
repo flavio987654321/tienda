@@ -1467,7 +1467,7 @@ export default function StorefrontClient({
         </div>
       )}
 
-      <header className={`${store.navbarStyle === "transparent" && !navConfig.bgColor ? "absolute left-0 right-0 z-20 bg-transparent" : isDark && !navConfig.bgColor ? "border-b border-white/10 bg-gray-950/90" : "border-b border-gray-100 bg-white/95"} backdrop-blur`} style={{ fontFamily: store.fontFamily, ...(navConfig.bgColor ? { background: navConfig.bgColor, borderColor: "transparent" } : {}) }}>
+      <header className={`${store.navbarStyle === "transparent" && !navConfig.bgColor ? "absolute left-0 right-0 z-30 bg-transparent" : isDark && !navConfig.bgColor ? "relative z-30 border-b border-white/10 bg-gray-950/90" : "relative z-30 border-b border-gray-100 bg-white/95"} backdrop-blur`} style={{ fontFamily: store.fontFamily, ...(navConfig.bgColor ? { background: navConfig.bgColor, borderColor: "transparent" } : {}) }}>
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-6 py-4">
           {/* Logo */}
           {(()=>{
