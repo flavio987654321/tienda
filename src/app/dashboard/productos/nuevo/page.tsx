@@ -6,7 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import {
   Plus, Trash2, Loader2, ArrowLeft, ChevronLeft, ChevronRight,
-  Upload, X, Star, ShoppingCart, Heart, Tag, Package,
+  Upload, X, Star, ShoppingCart, Heart, Tag, Package, HelpCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { getStoreType } from "@/lib/storeTypes";
@@ -92,6 +92,44 @@ function colorPreview(val: string): string | null {
   const v = val.trim();
   if (/^#[0-9a-fA-F]{3,8}$/.test(v)) return v;
   return COLOR_PREVIEW[v.toLowerCase()] ?? null;
+}
+
+function Tip({ text }: { text: string }) {
+  return (
+    <span className="relative inline-flex group/tip ml-1 cursor-help align-middle">
+      <HelpCircle className="h-3.5 w-3.5 text-gray-300 hover:text-indigo-400 transition-colors" />
+      <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-56 rounded-xl bg-gray-900 px-3 py-2 text-xs text-white opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 leading-relaxed shadow-lg">
+        {text}
+        <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+      </span>
+    </span>
+  );
+}
+
+function variantTip(tipoTienda: string): string {
+  const tips: Record<string, string> = {
+    ROPA:      "Una fila por valor. Ej: Talle S → fila 1, Talle M → fila 2, Color Rojo → fila 3. Cada fila tiene su propio stock.",
+    TECH:      "Una fila por variante. Ej: 128GB → fila 1, 256GB → fila 2. Cada fila tiene su propio stock.",
+    BELLEZA:   "Una fila por tono o tamaño. Ej: Claro → fila 1, Oscuro → fila 2. Cada fila tiene su propio stock.",
+    HOGAR:     "Una fila por tamaño o color. Ej: Chico → fila 1, Grande → fila 2. Cada fila tiene su propio stock.",
+    DEPORTE:   "Una fila por talle o color. Ej: Talle S → fila 1, Color Rojo → fila 2. Cada fila tiene su propio stock.",
+    ALIMENTOS: "Una fila por peso o sabor. Ej: 500g → fila 1, 1kg → fila 2. Cada fila tiene su propio stock.",
+    MASCOTAS:  "Una fila por tamaño o sabor. Ej: Pequeño → fila 1, Grande → fila 2. Cada fila tiene su propio stock.",
+    LIBROS:    "Una fila por formato. Ej: Físico → fila 1, Digital → fila 2. Cada fila tiene su propio stock.",
+  };
+  return tips[tipoTienda] || "Una fila por variante. Cada fila tiene su propio stock.";
+}
+
+function tagsTip(tipoTienda: string): string {
+  const tips: Record<string, string> = {
+    ROPA:      "Palabras clave para búsqueda. Ej: negro, oversize, algodón. No afectan el precio ni el stock.",
+    TECH:      "Palabras clave para búsqueda. Ej: liberado, sin cargador, 5G.",
+    BELLEZA:   "Palabras clave para búsqueda. Ej: vegano, sin parabenos, hidratante.",
+    HOGAR:     "Palabras clave para búsqueda. Ej: madera, escandinavo, moderno.",
+    ALIMENTOS: "Palabras clave para búsqueda. Ej: sin tacc, vegano, artesanal.",
+    DEPORTE:   "Palabras clave para búsqueda. Ej: running, gym, impermeable.",
+  };
+  return tips[tipoTienda] || "Palabras clave separadas por coma para que tus clientes encuentren el producto.";
 }
 
 function variantPlaceholder(name: string): string {
@@ -715,7 +753,10 @@ function ProductoFormPage() {
                 </div>
                 {!storeTypeConfig.hideTags && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Tags (separados por coma)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Tags (separados por coma)
+                      <Tip text={tagsTip(store.tipoTienda || "ROPA")} />
+                    </label>
                     <input
                       type="text"
                       value={form.tags}
@@ -772,7 +813,10 @@ function ProductoFormPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Precio tachado (opcional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Precio tachado (opcional)
+                  <Tip text="Precio original antes del descuento. Se muestra tachado junto al precio de venta y el cliente ve el % de ahorro automáticamente." />
+                </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
                     <input
@@ -834,7 +878,10 @@ function ProductoFormPage() {
             {!storeTypeConfig.hideVariants && <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="font-semibold text-gray-900">Variantes y stock</h2>
+                  <div className="flex items-center gap-1">
+                    <h2 className="font-semibold text-gray-900">Variantes y stock</h2>
+                    <Tip text={variantTip(store.tipoTienda || "ROPA")} />
+                  </div>
                   <p className="text-xs text-gray-400 mt-0.5">Una fila por valor — ej: Talle S (fila 1), Talle M (fila 2)</p>
                 </div>
                 <button
@@ -862,7 +909,12 @@ function ProductoFormPage() {
                     </select>
                   </div>
                   <div className="col-span-3">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Valor</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      Valor
+                      {(variant.name === "Color" || variant.name === "Tono") && (
+                        <Tip text="Escribí el nombre del color (Rojo, Verde, Negro) o un código hex (#FF0000). Se muestra como círculo de color en tu tienda." />
+                      )}
+                    </label>
                     <div className="relative">
                       {(variant.name === "Color" || variant.name === "Tono") && colorPreview(variant.value) && (
                         <span
@@ -919,7 +971,10 @@ function ProductoFormPage() {
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="font-semibold text-gray-900">Atributos del producto</h2>
+                  <div className="flex items-center gap-1">
+                    <h2 className="font-semibold text-gray-900">Atributos del producto</h2>
+                    <Tip text="Información extra sin stock. Ej: Material → Algodón, Género → Unisex, Peso → 250g. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio." />
+                  </div>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {storeTypeConfig.extraFields.length > 0
                       ? storeTypeConfig.extraFields.map((f) => f.label).join(", ")
