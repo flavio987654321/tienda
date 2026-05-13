@@ -325,21 +325,21 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
               </div>
 
               {/* Instagram & TikTok — paso a paso */}
-              <div className="bg-purple-50 dark:bg-gradient-to-br dark:from-purple-950/60 dark:to-pink-950/40 border border-purple-200 dark:border-purple-500/20 rounded-2xl p-4 space-y-3">
+              <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-500/20 rounded-2xl p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <IgIconLg />
-                  <p className="text-sm font-black text-purple-900 dark:text-white">Instagram & TikTok</p>
+                  <p className="text-sm font-black text-purple-900 dark:text-purple-100">Instagram & TikTok</p>
                 </div>
                 <ol className="space-y-2">
                   {["Copiá tu link de afiliado (arriba ↑)", "Abrí Instagram → Stories → sticker de link", "Pegá el link y publicá la historia"].map((step, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-xs text-purple-700 dark:text-gray-400">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-200 dark:bg-purple-600/30 border border-purple-300 dark:border-purple-500/30 text-purple-700 dark:text-purple-300 font-black text-[10px] flex items-center justify-center mt-0.5">{i + 1}</span>
+                    <li key={i} className="flex items-start gap-2.5 text-xs text-purple-700 dark:text-purple-200">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-200 dark:bg-purple-600/40 border border-purple-300 dark:border-purple-400/40 text-purple-700 dark:text-purple-200 font-black text-[10px] flex items-center justify-center mt-0.5">{i + 1}</span>
                       {step}
                     </li>
                   ))}
                 </ol>
                 <button onClick={() => copy(storeUrl, "ig")}
-                  className="w-full flex items-center justify-center gap-2 bg-purple-100 dark:bg-gradient-to-r dark:from-purple-600/25 dark:to-pink-600/25 hover:bg-purple-200 dark:hover:from-purple-600/40 dark:hover:to-pink-600/40 border border-purple-300 dark:border-purple-500/25 text-purple-700 dark:text-purple-300 font-bold py-2.5 rounded-xl text-sm transition-all">
+                  className="w-full flex items-center justify-center gap-2 bg-purple-100 dark:bg-purple-700/30 hover:bg-purple-200 dark:hover:bg-purple-700/50 border border-purple-300 dark:border-purple-500/40 text-purple-700 dark:text-purple-200 font-bold py-2.5 rounded-xl text-sm transition-all">
                   {copied === "ig" ? <Check className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
                   {copied === "ig" ? "¡Link copiado!" : "Copiar link"}
                 </button>
@@ -381,10 +381,10 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                   </div>
 
                   {/* Instagram tip */}
-                  <div className="flex items-start gap-3 bg-purple-950/40 border border-purple-500/15 rounded-2xl px-4 py-3">
+                  <div className="flex items-start gap-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-500/20 rounded-2xl px-4 py-3">
                     <span className="text-lg mt-0.5">💡</span>
-                    <p className="text-xs text-gray-400 leading-relaxed">
-                      <span className="text-purple-300 font-bold">Para Instagram/TikTok:</span> elegí la foto, generá la placa y subila a stories con el sticker de link. También podés descargar las fotos directamente.
+                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                      <span className="text-purple-600 dark:text-purple-300 font-bold">Para Instagram/TikTok:</span> elegí la foto, generá la placa y subila a stories con el sticker de link. También podés descargar las fotos directamente.
                     </p>
                   </div>
 
