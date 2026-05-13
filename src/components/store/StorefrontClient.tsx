@@ -461,7 +461,7 @@ function ContactBlock({ storeSlug, p, primaryColor, fontFamily }: { storeSlug: s
         <img src={bgImage} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.35 }} />
       )}
       <div style={{ position: "relative", maxWidth: "640px", margin: "0 auto", padding: "64px 24px" }}>
-        <h2 style={{ fontSize: "clamp(28px,4vw,40px)", fontWeight: 900, color: textColor, margin: "0 0 8px", textAlign: "center" }}>{heading}</h2>
+        <h2 style={{ fontSize: p.headingSize==="sm"?"22px":p.headingSize==="md"?"28px":p.headingSize==="lg"?"34px":"clamp(28px,4vw,44px)", fontWeight: 900, color: textColor, margin: "0 0 8px", textAlign: "center" }}>{heading}</h2>
         {subtitle && <p style={{ textAlign: "center", opacity: 0.75, marginBottom: "32px", fontSize: "15px" }}>{subtitle}</p>}
 
         {status === "success" ? (
@@ -1340,7 +1340,7 @@ export default function StorefrontClient({
                     id: "text",
                     defaultPos: { x: 26, y: 18 },
                     style: { width: "min(72%, 520px)", textAlign: "center" as const },
-                    content: <p className="text-center text-sm font-bold">{p.text || "Anuncio"}</p>,
+                    content: <p className={`text-center font-bold ${p.textSize==="sm"?"text-xs":p.textSize==="lg"?"text-base":p.textSize==="xl"?"text-xl":"text-sm"}`}>{p.text || "Anuncio"}</p>,
                   },
                 ]}
               />
@@ -1479,7 +1479,7 @@ export default function StorefrontClient({
                               id: "heading",
                               defaultPos: { x: 32, y: 14 },
                               style: { width: "min(72%, 440px)", textAlign: "center" as const },
-                              content: <h2 className="text-2xl font-black" style={{ color: blockColor }}>{heading}</h2>,
+                              content: <h2 className={`font-black ${p.headingSize==="sm"?"text-lg":p.headingSize==="md"?"text-xl":p.headingSize==="xl"?"text-3xl md:text-4xl":"text-2xl"}`} style={{ color: blockColor }}>{heading}</h2>,
                             },
                           ]}
                         />
@@ -1559,7 +1559,7 @@ export default function StorefrontClient({
                     id: "title",
                     defaultPos: { x: p.layout === "left" ? 8 : p.layout === "right" ? 54 : 28, y: 18 },
                     style: { width: "min(72%, 520px)", textAlign: (p.layout || "center") as "left" | "center" | "right" },
-                    content: <h2 className="mb-3 text-4xl font-black drop-shadow">{p.title || store.name}</h2>,
+                    content: <h2 className={`mb-3 font-black drop-shadow ${p.headingSize==="sm"?"text-2xl":p.headingSize==="md"?"text-3xl":p.headingSize==="lg"?"text-3xl md:text-4xl":"text-4xl md:text-5xl"}`}>{p.title || store.name}</h2>,
                   },
                   ...(p.subtitle ? [{
                     id: "subtitle",
@@ -1623,7 +1623,7 @@ export default function StorefrontClient({
                 {/* Header */}
                 <div className="mx-auto max-w-4xl px-6 py-16 pb-10">
                   {p.tag && <span className="mb-4 inline-block rounded-full border border-current px-4 py-1 text-xs font-black tracking-widest opacity-60">{String(p.tag)}</span>}
-                  <h1 className="mb-4 text-4xl font-black leading-tight md:text-5xl" style={{ color: String(p.textColor || "#111827") }}>{String(p.heading || "¿Quiénes somos?")}</h1>
+                  <h1 className={`mb-4 font-black leading-tight ${p.headingSize==="sm"?"text-2xl":p.headingSize==="md"?"text-3xl":p.headingSize==="lg"?"text-3xl md:text-4xl":"text-4xl md:text-5xl"}`} style={{ color: String(p.textColor || "#111827") }}>{String(p.heading || "¿Quiénes somos?")}</h1>
                   {p.subtitle && <p className="text-lg opacity-65">{String(p.subtitle)}</p>}
                 </div>
                 {/* Members */}

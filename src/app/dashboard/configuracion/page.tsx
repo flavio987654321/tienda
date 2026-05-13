@@ -96,13 +96,13 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"navbar",     emoji:"🧭", label:"Menú de navegación", desc:"Barra superior con links, buscador y menú hamburguesa",
     defaultProps:{ navConfig:'{"layout":"right","showSearch":false,"links":[]}' } },
   { type:"hero",       emoji:"🖼️", label:"Hero / Portada",       desc:"Título grande, subtítulo y botón de acción",
-    defaultProps:{ title:"¡Bienvenidos a mi tienda!", subtitle:"Encontrá todo lo que buscás", buttonText:"Ver productos", bgColor:"", textColor:"#ffffff", layout:"center", height:"lg" } },
+    defaultProps:{ title:"¡Bienvenidos a mi tienda!", subtitle:"Encontrá todo lo que buscás", buttonText:"Ver productos", bgColor:"", textColor:"#ffffff", layout:"center", height:"lg", headingSize:"xl" } },
   { type:"text",       emoji:"📝", label:"Bloque de texto",        desc:"Título y párrafo de texto libre",
     defaultProps:{ heading:"Sobre nosotros", body:"Somos una tienda con años de experiencia...", align:"center", fontSize:"md", headingSize:"lg", color:"", textColor:"", bgColor:"" } },
   { type:"products",   emoji:"🛍️", label:"Grilla de productos",    desc:"Muestra tu catálogo con columnas configurables",
     defaultProps:{ heading:"Nuestros productos", subheading:"", headingSize:"lg", subheadingSize:"base", subheadingColor:"", columns:3, layoutMode:"grid", showHeading:true, categoryFilter:"all", subcategoryFilter:"all", showCategoryTabs:false, sortBy:"default", color:"", bgColor:"" } },
   { type:"banner",     emoji:"📢", label:"Banda de anuncio",       desc:"Franja de color con texto destacado",
-    defaultProps:{ text:"🔥 ¡Oferta especial! Envío gratis hoy", bgColor:"#f59e0b", textColor:"#000000", size:"md" } },
+    defaultProps:{ text:"🔥 ¡Oferta especial! Envío gratis hoy", bgColor:"#f59e0b", textColor:"#000000", size:"md", textSize:"md" } },
   { type:"cta",        emoji:"🚀", label:"Llamada a la acción",    desc:"Sección oscura con botón grande destacado",
     defaultProps:{ heading:"¿Lista para comprar?", sub:"Envíos a todo el país", buttonText:"Ver catálogo", bgColor:"#0f172a", textColor:"#ffffff", headingSize:"xl" } },
   { type:"image-text", emoji:"🖼️", label:"Imagen + Texto",         desc:"Foto al lado de texto descriptivo (split)",
@@ -110,13 +110,13 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"spacer",     emoji:"⬜", label:"Espacio en blanco",      desc:"Separador con texto, emoji y color opcionales",
     defaultProps:{ height:"md", text:"", emoji:"", bgColor:"", textColor:"", lineStyle:"none", lineColor:"#e5e7eb" } },
   { type:"socials",    emoji:"link", label:"Redes / Contacto",       desc:"Iconos, botones o tarjeta con tus canales",
-    defaultProps:{ heading:"Seguinos y contactanos", showHeading:true, layout:"icons", color:"", bgColor:"", showInstagram:true, showFacebook:true, showTiktok:true, showWhatsapp:true, showEmail:true, instagramUrl:"", facebookUrl:"", tiktokUrl:"", whatsappNumber:"", emailAddress:"" } },
+    defaultProps:{ heading:"Seguinos y contactanos", showHeading:true, layout:"icons", color:"", bgColor:"", showInstagram:true, showFacebook:true, showTiktok:true, showWhatsapp:true, showEmail:true, instagramUrl:"", facebookUrl:"", tiktokUrl:"", whatsappNumber:"", emailAddress:"", headingSize:"lg" } },
   { type:"divider",    emoji:"─", label:"Línea separadora",        desc:"Línea horizontal decorativa",
     defaultProps:{ style:"solid", color:"#e5e7eb" } },
   { type:"contacto",   emoji:"✉️", label:"Formulario de contacto",  desc:"Formulario que envía un email al dueño de la tienda",
-    defaultProps:{ heading:"Contacto", subtitle:"¿Tenés alguna pregunta? Escribinos.", bgColor:"#111827", textColor:"", bgImage:"", showName:true, showEmail:true, showPhone:false, showMessage:true, buttonText:"Enviar mensaje", buttonColor:"" } },
+    defaultProps:{ heading:"Contacto", subtitle:"¿Tenés alguna pregunta? Escribinos.", bgColor:"#111827", textColor:"", bgImage:"", showName:true, showEmail:true, showPhone:false, showMessage:true, buttonText:"Enviar mensaje", buttonColor:"", headingSize:"xl" } },
   { type:"nosotros",   emoji:"👥", label:"Página Nosotros",          desc:"Encabezado, equipo, misión/visión y grilla de características",
-    defaultProps:{ tag:"NOSOTROS", heading:"¿Quiénes somos?", subtitle:"Conocé al equipo detrás de la tienda.", bgColor:"#ffffff", textColor:"#111827", showMembers:false, members:[], showTextSection:false, textSectionHeading:"Misión y Visión", textSectionBody:"", showFeatures:false, featuresHeading:"Lo que hacemos", featuresSubtitle:"", featuresBgColor:"#4338ca", features:[] } },
+    defaultProps:{ tag:"NOSOTROS", heading:"¿Quiénes somos?", subtitle:"Conocé al equipo detrás de la tienda.", bgColor:"#ffffff", textColor:"#111827", showMembers:false, members:[], showTextSection:false, textSectionHeading:"Misión y Visión", textSectionBody:"", showFeatures:false, featuresHeading:"Lo que hacemos", featuresSubtitle:"", featuresBgColor:"#4338ca", features:[], headingSize:"xl" } },
   { type:"banner-group", emoji:"🎠", label:"Carrusel de banners",     desc:"Imágenes full-width que pasan automáticamente",
     defaultProps:{ slides:[
       { image:"", title:"Bienvenidos", subtitle:"Descubrí nuestra colección", buttonText:"Ver productos", buttonUrl:"", focalX:50, focalY:50 },
@@ -698,6 +698,10 @@ function BlockEditor({
       </div>
     </div>
     <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
+      <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
+    </div>
+    <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Altura</label>
       <Chips options={[{id:"sm",label:"Compacto"},{id:"md",label:"Normal"},{id:"lg",label:"Grande"},{id:"xl",label:"Pantalla completa"}]} value={p.height||"lg"} onChange={v=>upd("height",v)}/>
     </div>
@@ -799,7 +803,11 @@ function BlockEditor({
     <ColorPicker label="Color de fondo" value={p.bgColor||"#f59e0b"} onChange={v=>upd("bgColor",v)}/>
     <ColorPicker label="Color de texto" value={p.textColor||"#000000"} onChange={v=>upd("textColor",v)}/>
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño</label>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del texto</label>
+      <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.textSize||"md"} onChange={v=>upd("textSize",v)}/>
+    </div>
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Altura de la franja</label>
       <Chips options={[{id:"sm",label:"Delgada"},{id:"md",label:"Normal"},{id:"lg",label:"Grande"}]} value={p.size||"md"} onChange={v=>upd("size",v)}/>
     </div>
     {heightEditorSection}
@@ -1030,6 +1038,12 @@ function BlockEditor({
   if (block.type==="socials") return <div className="space-y-3">
     <Toggle label="Mostrar titulo" value={p.showHeading!==false} onChange={v=>upd("showHeading",v)}/>
     {p.showHeading!==false && inp("Titulo","heading","Seguinos y contactanos")}
+    {p.showHeading!==false && (
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
+        <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
+      </div>
+    )}
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Estilo visual</label>
       <Chips options={[{id:"icons",label:"Iconos"},{id:"buttons",label:"Botones"},{id:"card",label:"Tarjeta"}]} value={p.layout||"icons"} onChange={v=>upd("layout",v)}/>
@@ -1092,6 +1106,10 @@ function BlockEditor({
       {inp("Título del formulario","heading","Contacto")}
       {inp("Subtítulo","subtitle","¿Tenés alguna pregunta? Escribinos.")}
       <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
+        <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
+      </div>
+      <div>
         <label className="block text-xs font-medium text-gray-600 mb-1.5">Tipo de fondo</label>
         <div className="flex gap-2 mb-2">
           {([["color","🎨 Color"],["image","🖼️ Imagen"]] as const).map(([v,l])=>(
@@ -1150,6 +1168,10 @@ function BlockEditor({
         <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Encabezado</p>
         {inp("Etiqueta (ej: NOSOTROS)","tag","NOSOTROS")}
         {inp("Título principal","heading","¿Quiénes somos?")}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
+          <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
+        </div>
         {ta("Subtítulo","subtitle","Conocé al equipo detrás de la tienda.")}
         <div className="flex gap-2">
           <div className="flex-1"><ColorPicker label="Fondo" value={p.bgColor||"#ffffff"} onChange={v=>upd("bgColor",v)}/></div>
@@ -1754,7 +1776,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 id: "title",
                 defaultPos: { x: baseX, y: 18 },
                 style: { width: "min(100%, 520px)", textAlign: layout as "left" | "center" | "right" },
-                content: <h2 style={{fontSize:FONT_SIZE[p.fontSize||"xl"]||"36px",fontWeight:900,lineHeight:1.1,marginBottom:"12px",textShadow:"0 1px 2px rgba(0,0,0,0.12)"}}>{p.title}</h2>,
+                content: <h2 style={{fontSize:p.headingSize==="sm"?"18px":p.headingSize==="md"?"22px":p.headingSize==="lg"?"28px":"36px",fontWeight:900,lineHeight:1.1,marginBottom:"12px",textShadow:"0 1px 2px rgba(0,0,0,0.12)"}}>{p.title}</h2>,
               }] : []),
               ...(p.subtitle ? [{
                 id: "subtitle",
@@ -1965,7 +1987,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 id: "text",
                 defaultPos: { x: 26, y: 18 },
                 style: { width: "min(100%, 520px)", textAlign: "center" as const },
-                content: <p style={{fontSize:"13px",fontWeight:800,letterSpacing:"0.01em",margin:0}}>{p.text||"Oferta especial"}</p>,
+                content: <p style={{fontSize:p.textSize==="sm"?"11px":p.textSize==="lg"?"15px":p.textSize==="xl"?"18px":"13px",fontWeight:800,letterSpacing:"0.01em",margin:0}}>{p.text||"Oferta especial"}</p>,
               },
             ]}
           />
@@ -2148,7 +2170,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
 
       const headingNode = p.showHeading !== false && p.heading ? (
         <div style={{textAlign:"center",marginBottom:"14px"}}>
-          <h3 style={{fontSize:"16px",fontWeight:800,color:blockColor,margin:0}}>{p.heading}</h3>
+          <h3 style={{fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"15px":p.headingSize==="xl"?"22px":"18px",fontWeight:800,color:blockColor,margin:0}}>{p.heading}</h3>
         </div>
       ) : null;
 
@@ -2296,7 +2318,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           {/* Header */}
           <div style={{maxWidth:"720px",margin:"0 auto",padding:"48px 24px 32px"}}>
             {p.tag && <span style={{display:"inline-block",border:`1.5px solid ${fg}`,borderRadius:"999px",padding:"3px 12px",fontSize:"10px",fontWeight:800,letterSpacing:"0.15em",marginBottom:"16px",opacity:0.6}}>{String(p.tag)}</span>}
-            <h1 style={{fontWeight:900,fontSize:"28px",margin:"0 0 10px",lineHeight:1.15}}>{String(p.heading||"¿Quiénes somos?")}</h1>
+            <h1 style={{fontWeight:900,fontSize:p.headingSize==="sm"?"16px":p.headingSize==="md"?"20px":p.headingSize==="lg"?"24px":"28px",margin:"0 0 10px",lineHeight:1.15}}>{String(p.heading||"¿Quiénes somos?")}</h1>
             {p.subtitle && <p style={{fontSize:"14px",opacity:0.65,margin:0}}>{String(p.subtitle)}</p>}
           </div>
           {/* Members */}
@@ -2356,7 +2378,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
         <div style={{position:"relative",background:bgCol,color:txtCol,padding:"40px 24px",textAlign:"center",minHeight:customMinHeight}}>
           {bgImg && <img src={bgImg} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:0.35}}/>}
           <div style={{position:"relative",maxWidth:"500px",margin:"0 auto"}}>
-            <h2 style={{fontWeight:900,fontSize:"22px",margin:"0 0 6px",color:txtCol}}>{String(p.heading||"Contacto")}</h2>
+            <h2 style={{fontWeight:900,fontSize:p.headingSize==="sm"?"14px":p.headingSize==="md"?"17px":p.headingSize==="lg"?"20px":"24px",margin:"0 0 6px",color:txtCol}}>{String(p.heading||"Contacto")}</h2>
             {p.subtitle && <p style={{opacity:0.7,fontSize:"13px",marginBottom:"20px"}}>{String(p.subtitle)}</p>}
             <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
               {p.showName!==false && <div style={{background:"rgba(255,255,255,0.12)",borderRadius:"10px",padding:"10px 14px",textAlign:"left",fontSize:"12px",color:"rgba(255,255,255,0.5)"}}>Nombre completo</div>}
