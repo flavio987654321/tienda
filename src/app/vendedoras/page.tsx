@@ -9,7 +9,7 @@ import { useAuth } from "@/components/AuthProvider";
 import {
   CheckCircle, Clock, Loader2, Send, Store, TrendingUp, Users, Wallet,
   XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
-  Star, Package, ArrowRight, Eye, Edit3, MapPin, Phone, Save,
+  Star, Package, ArrowRight, ArrowLeft, Eye, Edit3, MapPin, Phone, Save,
   DollarSign, ShoppingCart, Award, FileText, UploadCloud, Trash2, Download, Search,
   Moon, Sun,
 } from "lucide-react";
@@ -249,31 +249,29 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
 
   return (
     <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex justify-end"
+      initial={{ x: "100%" }}
+      animate={{ x: 0 }}
+      exit={{ x: "100%" }}
+      transition={{ type: "spring", damping: 30, stiffness: 280 }}
+      className="fixed inset-0 z-[100] bg-gray-50 dark:bg-[#080b14] flex flex-col"
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <motion.div
-        initial={{ x: "100%" }}
-        animate={{ x: 0 }}
-        exit={{ x: "100%" }}
-        transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        onClick={(e) => e.stopPropagation()}
-        className="relative bg-white dark:bg-[#0d0f1a] border-l border-gray-200 dark:border-white/8 w-full sm:w-[520px] h-full flex flex-col shadow-2xl shadow-black/20 dark:shadow-black/60"
-      >
         {/* Header */}
-        <div className="px-5 pt-5 pb-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between flex-shrink-0">
-          <div>
-            <h3 className="text-base font-black text-gray-900 dark:text-white">{target.storeName}</h3>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Comisión: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{target.commissionRate}%</span> por venta confirmada</p>
-          </div>
-          <button onClick={onClose} className="w-9 h-9 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-700 dark:hover:text-white transition-all">
-            <XCircle className="h-4 w-4" />
+        <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-gray-200 dark:border-white/8 flex items-center gap-3 flex-shrink-0 bg-white dark:bg-[#0d0f1a]">
+          <button onClick={onClose} className="w-9 h-9 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/15 rounded-xl flex items-center justify-center text-gray-600 dark:text-gray-300 transition-all flex-shrink-0">
+            <ArrowLeft className="h-5 w-5" />
           </button>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-black text-gray-900 dark:text-white truncate">{target.storeName}</h2>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Comisión: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{target.commissionRate}%</span> por venta confirmada</p>
+          </div>
+          <Link href={`/tienda/${target.storeSlug}?ref=${target.affiliateId}`} target="_blank"
+            className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/20 px-3 py-2 rounded-xl transition-all flex-shrink-0">
+            <Eye className="h-3.5 w-3.5" /> Ver tienda
+          </Link>
         </div>
 
         {/* Tabs */}
-        <div className="flex p-3 border-b border-gray-100 dark:border-white/5 gap-2 flex-shrink-0">
+        <div className="flex px-4 sm:px-6 py-3 border-b border-gray-200 dark:border-white/8 gap-2 flex-shrink-0 bg-white dark:bg-[#0d0f1a]">
           {(["tienda", "productos"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === t ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"}`}>
@@ -285,7 +283,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
         {/* Content */}
         <div className="flex-1 overflow-y-auto overscroll-contain">
           {tab === "tienda" ? (
-            <div className="p-5 space-y-4">
+            <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-4">
               {/* Link box */}
               <div className="bg-gray-50 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-2xl p-4">
                 <p className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-2">Tu link de afiliado</p>
@@ -350,43 +348,46 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
               </Link>
             </div>
           ) : (
-            <div className="p-5">
+            <div className="p-4 sm:p-6">
               {loadingProducts ? (
-                <div className="flex items-center justify-center py-16">
-                  <Loader2 className="h-6 w-6 animate-spin text-indigo-400" />
+                <div className="flex items-center justify-center py-24">
+                  <Loader2 className="h-7 w-7 animate-spin text-indigo-400" />
                 </div>
               ) : products.length === 0 ? (
-                <div className="text-center py-16">
-                  <Package className="h-10 w-10 text-gray-800 mx-auto mb-3" />
-                  <p className="text-gray-600 text-sm">Esta tienda aún no tiene productos.</p>
+                <div className="text-center py-24">
+                  <Package className="h-12 w-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                  <p className="text-gray-500 text-sm">Esta tienda aún no tiene productos.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {/* Search */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 dark:text-gray-600 pointer-events-none" />
-                    <input
-                      type="text"
-                      value={productSearch}
-                      onChange={(e) => setProductSearch(e.target.value)}
-                      placeholder="Buscar producto..."
-                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                    />
-                    {productSearch && (
-                      <button onClick={() => setProductSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400">
-                        <XCircle className="h-3.5 w-3.5" />
-                      </button>
-                    )}
+                <div className="space-y-4 max-w-4xl mx-auto">
+                  {/* Search + tip */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-600 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        placeholder="Buscar producto..."
+                        className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      />
+                      {productSearch && (
+                        <button onClick={() => setProductSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Instagram tip */}
                   <div className="flex items-start gap-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-500/20 rounded-2xl px-4 py-3">
-                    <span className="text-lg mt-0.5">💡</span>
+                    <span className="text-base mt-0.5">💡</span>
                     <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
                       <span className="text-purple-600 dark:text-purple-300 font-bold">Para Instagram/TikTok:</span> elegí la foto, generá la placa y subila a stories con el sticker de link. También podés descargar las fotos directamente.
                     </p>
                   </div>
 
+                  {/* Products grid */}
                   {(() => {
                     const filteredProducts = productSearch
                       ? products.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
@@ -394,122 +395,123 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
 
                     if (filteredProducts.length === 0) {
                       return (
-                        <div className="text-center py-10">
-                          <p className="text-gray-600 text-sm">Sin resultados para &quot;{productSearch}&quot;</p>
+                        <div className="text-center py-12">
+                          <p className="text-gray-500 text-sm">Sin resultados para &quot;{productSearch}&quot;</p>
                         </div>
                       );
                     }
 
-                    return filteredProducts.map((p) => {
-                      const pUrl = productUrl(p.id);
-                      const imgs = parseImages(p.images);
-                      const isLoading = cardLoading === p.id;
-                      const selectedIdx = selectedImages[p.id] ?? 0;
-                      return (
-                        <div key={p.id} className="bg-gray-50 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-2xl overflow-hidden">
-                          {/* Product info row */}
-                          <div className="flex items-center gap-4 p-4 pb-3">
-                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-800/60 flex-shrink-0 border border-gray-300 dark:border-white/5">
-                              {imgs[selectedIdx]
-                                ? <img src={imgs[selectedIdx]} alt={p.name} className="w-full h-full object-cover" />
-                                : <div className="w-full h-full flex items-center justify-center"><Package className="h-6 w-6 text-gray-400 dark:text-gray-700" /></div>
-                              }
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-gray-900 dark:text-white text-sm font-bold truncate">{p.name}</p>
-                              {p.description && <p className="text-gray-500 dark:text-gray-600 text-xs mt-0.5 line-clamp-1">{p.description}</p>}
-                              <p className="text-emerald-600 dark:text-emerald-400 text-sm font-black mt-1">{money(p.price)}</p>
-                            </div>
-                          </div>
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {filteredProducts.map((p) => {
+                          const pUrl = productUrl(p.id);
+                          const imgs = parseImages(p.images);
+                          const isLoading = cardLoading === p.id;
+                          const selectedIdx = selectedImages[p.id] ?? 0;
+                          return (
+                            <div key={p.id} className="bg-white dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-2xl overflow-hidden flex flex-col">
+                              {/* Product image — larger */}
+                              <div className="relative w-full aspect-square bg-gray-100 dark:bg-gray-800/60 overflow-hidden">
+                                {imgs[selectedIdx]
+                                  ? <img src={imgs[selectedIdx]} alt={p.name} className="w-full h-full object-cover" />
+                                  : <div className="w-full h-full flex items-center justify-center"><Package className="h-10 w-10 text-gray-400 dark:text-gray-700" /></div>
+                                }
+                              </div>
 
-                          {/* Image selector (multiple photos) */}
-                          {imgs.length > 1 && (
-                            <div className="px-4 pb-3">
-                              <p className="text-[10px] text-gray-600 uppercase tracking-wider font-bold mb-2">
-                                Elegí la foto · {imgs.length} disponibles
-                              </p>
-                              <div className="flex gap-2 flex-wrap">
-                                {imgs.map((imgUrl, i) => (
-                                  <div key={i} className="relative group/thumb">
-                                    <button
-                                      onClick={() => setSelectedImages((prev) => ({ ...prev, [p.id]: i }))}
-                                      className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${
-                                        selectedIdx === i
-                                          ? "border-purple-500 opacity-100 ring-2 ring-purple-500/30"
-                                          : "border-white/10 opacity-50 hover:opacity-80"
-                                      }`}
-                                    >
-                                      <img src={imgUrl} alt="" className="w-full h-full object-cover" />
-                                    </button>
-                                    <button
-                                      onClick={() => downloadWithWatermark(imgUrl, p.name)}
-                                      title="Descargar foto"
-                                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-800 hover:bg-indigo-600 border border-white/20 rounded-full flex items-center justify-center transition-all opacity-0 group-hover/thumb:opacity-100 shadow"
-                                    >
-                                      <Download className="h-2.5 w-2.5 text-white" />
-                                    </button>
+                              <div className="p-4 flex flex-col gap-3 flex-1">
+                                {/* Info */}
+                                <div>
+                                  <p className="text-gray-900 dark:text-white font-bold text-sm leading-snug">{p.name}</p>
+                                  {p.description && <p className="text-gray-500 dark:text-gray-500 text-xs mt-1 line-clamp-2">{p.description}</p>}
+                                  <p className="text-emerald-600 dark:text-emerald-400 font-black text-base mt-2">{money(p.price)}</p>
+                                </div>
+
+                                {/* Image selector */}
+                                {imgs.length > 1 && (
+                                  <div>
+                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1.5">
+                                      Elegí la foto · {imgs.length} disponibles
+                                    </p>
+                                    <div className="flex gap-1.5 flex-wrap">
+                                      {imgs.map((imgUrl, i) => (
+                                        <div key={i} className="relative group/thumb">
+                                          <button
+                                            onClick={() => setSelectedImages((prev) => ({ ...prev, [p.id]: i }))}
+                                            className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
+                                              selectedIdx === i
+                                                ? "border-purple-500 ring-2 ring-purple-500/30"
+                                                : "border-gray-200 dark:border-white/10 opacity-50 hover:opacity-80"
+                                            }`}
+                                          >
+                                            <img src={imgUrl} alt="" className="w-full h-full object-cover" />
+                                          </button>
+                                          <button
+                                            onClick={() => downloadWithWatermark(imgUrl, p.name)}
+                                            title="Descargar foto"
+                                            className="absolute -top-1 -right-1 w-4 h-4 bg-gray-800 hover:bg-indigo-600 border border-white/20 rounded-full flex items-center justify-center transition-all opacity-0 group-hover/thumb:opacity-100"
+                                          >
+                                            <Download className="h-2 w-2 text-white" />
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
-                                ))}
+                                )}
+
+                                {/* Single image download */}
+                                {imgs.length === 1 && imgs[0] && (
+                                  <button
+                                    onClick={() => downloadWithWatermark(imgs[0], p.name)}
+                                    className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+                                  >
+                                    <Download className="h-3.5 w-3.5" /> Descargar foto
+                                  </button>
+                                )}
+
+                                {/* CTA placa */}
+                                <button onClick={() => shareCard(p)} disabled={isLoading}
+                                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-60 text-white font-black py-3 rounded-xl text-sm transition-all shadow-md shadow-purple-500/20 mt-auto">
+                                  {isLoading
+                                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Generando...</>
+                                    : <><Star className="h-4 w-4" /> Generar placa{imgs.length > 1 ? ` · foto ${selectedIdx + 1}` : ""}</>
+                                  }
+                                </button>
+                                {cardError && (
+                                  <p className="text-xs text-red-400 text-center">{cardError}</p>
+                                )}
+
+                                {/* Acciones secundarias */}
+                                <div className="grid grid-cols-4 gap-1.5">
+                                  <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name} — ${money(p.price)}\n${pUrl}`)}`, "_blank")}
+                                    className="flex flex-col items-center gap-1 py-2 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/15 text-[#25D366] rounded-xl text-[9px] font-bold transition-all">
+                                    <WaIcon /> WhatsApp
+                                  </button>
+                                  <button onClick={() => copy(pUrl, p.id)}
+                                    className="flex flex-col items-center gap-1 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl text-[9px] font-bold transition-all">
+                                    {copied === p.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                    {copied === p.id ? "¡Listo!" : "Copiar"}
+                                  </button>
+                                  <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pUrl)}`, "_blank")}
+                                    className="flex flex-col items-center gap-1 py-2 bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/15 text-[#1877F2] rounded-xl text-[9px] font-bold transition-all">
+                                    <FbIcon /> Facebook
+                                  </button>
+                                  <Link href={pUrl} target="_blank"
+                                    className="flex flex-col items-center gap-1 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl text-[9px] font-bold transition-all">
+                                    <ExternalLink className="h-3.5 w-3.5" /> Ver
+                                  </Link>
+                                </div>
                               </div>
                             </div>
-                          )}
-
-                          {/* Single image: download button */}
-                          {imgs.length === 1 && imgs[0] && (
-                            <div className="px-4 pb-2">
-                              <button
-                                onClick={() => downloadWithWatermark(imgs[0], p.name)}
-                                className="flex items-center gap-1.5 text-[11px] text-gray-600 hover:text-indigo-400 transition-colors"
-                              >
-                                <Download className="h-3 w-3" /> Descargar foto
-                              </button>
-                            </div>
-                          )}
-
-                          {/* CTA principal: Placa */}
-                          <div className="px-4 pb-3">
-                            <button onClick={() => shareCard(p)} disabled={isLoading}
-                              className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-60 text-white font-black py-3.5 rounded-xl text-sm transition-all shadow-lg shadow-purple-500/20">
-                              {isLoading
-                                ? <><Loader2 className="h-4 w-4 animate-spin" /> Generando placa...</>
-                                : <><Star className="h-4 w-4" /> Generar placa{imgs.length > 1 ? ` · foto ${selectedIdx + 1}` : ""}</>
-                              }
-                            </button>
-                            {cardError && (
-                              <p className="mt-2 text-xs text-red-400 text-center">{cardError}</p>
-                            )}
-                          </div>
-
-                          {/* Acciones secundarias */}
-                          <div className="px-4 pb-4 grid grid-cols-4 gap-2">
-                            <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name} — ${money(p.price)}\n${pUrl}`)}`, "_blank")}
-                              className="flex flex-col items-center gap-1 py-2.5 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/15 text-[#25D366] rounded-xl text-[10px] font-bold transition-all">
-                              <WaIcon /> WhatsApp
-                            </button>
-                            <button onClick={() => copy(pUrl, p.id)}
-                              className="flex flex-col items-center gap-1 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl text-[10px] font-bold transition-all">
-                              {copied === p.id ? <Check className="h-4 w-4 text-emerald-500 dark:text-emerald-400" /> : <Copy className="h-4 w-4" />}
-                              {copied === p.id ? "¡Listo!" : "Copiar link"}
-                            </button>
-                            <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pUrl)}`, "_blank")}
-                              className="flex flex-col items-center gap-1 py-2.5 bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/15 text-[#1877F2] rounded-xl text-[10px] font-bold transition-all">
-                              <FbIcon /> Facebook
-                            </button>
-                            <Link href={pUrl} target="_blank"
-                              className="flex flex-col items-center gap-1 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl text-[10px] font-bold transition-all">
-                              <ExternalLink className="h-4 w-4" /> Ver
-                            </Link>
-                          </div>
-                        </div>
-                      );
-                    });
+                          );
+                        })}
+                      </div>
+                    );
                   })()}
                 </div>
               )}
             </div>
           )}
         </div>
-      </motion.div>
     </motion.div>
   );
 }
