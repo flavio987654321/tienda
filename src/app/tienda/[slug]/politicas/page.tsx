@@ -53,11 +53,20 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
         {store.logo && <img src={store.logo} alt={store.name} style={{ height: "32px", objectFit: "contain" }} />}
       </header>
 
-      <main style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 24px" }}>
-        <h1 style={{ fontSize: "28px", fontWeight: 900, color: "#111827", marginBottom: "8px" }}>
-          {sections.length === 1 ? sections[0].label : "Información legal"}
-        </h1>
-        <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "40px" }}>{store.name}</p>
+      {/* Banner header con color de la tienda */}
+      <div style={{ background: `linear-gradient(135deg, ${store.primaryColor}22 0%, ${store.primaryColor}0a 100%)`, borderBottom: `3px solid ${store.primaryColor}33`, padding: "40px 24px 32px" }}>
+        <div style={{ maxWidth: "760px", margin: "0 auto" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: store.primaryColor, color: "#fff", borderRadius: "999px", padding: "4px 14px", fontSize: "12px", fontWeight: 700, marginBottom: "14px", letterSpacing: "0.05em" }}>
+            {sections.length === 1 ? sections[0].icon : "📋"} INFORMACIÓN LEGAL
+          </div>
+          <h1 style={{ fontSize: "32px", fontWeight: 900, color: "#111827", marginBottom: "6px", lineHeight: 1.15 }}>
+            {sections.length === 1 ? sections[0].label : "Información legal"}
+          </h1>
+          <p style={{ color: "#6b7280", fontSize: "14px" }}>{store.name}</p>
+        </div>
+      </div>
+
+      <main style={{ maxWidth: "760px", margin: "0 auto", padding: "40px 24px" }}>
 
         {!hasAny && (
           <div style={{ textAlign: "center", padding: "64px 0", color: "#9ca3af" }}>
@@ -75,9 +84,13 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
                 <span>{section.icon}</span> {section.label}
               </h2>
             )}
-            <div style={{ color: "#374151", fontSize: "15px", lineHeight: 1.8, whiteSpace: "pre-line" }}>
-              {section.content}
-            </div>
+            {section.content?.startsWith("<") ? (
+              <div className="policy-content" dangerouslySetInnerHTML={{ __html: section.content }} />
+            ) : (
+              <div style={{ color: "#374151", fontSize: "15px", lineHeight: 1.8, whiteSpace: "pre-line" }}>
+                {section.content}
+              </div>
+            )}
           </section>
         ))}
 

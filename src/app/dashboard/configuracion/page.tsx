@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, type CSSProperties, type MouseEvent as Rea
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import DashboardLayout from "@/components/DashboardLayout";
 import StorePreview, { StoreConfig } from "@/components/StorePreview";
+import PolicyEditor from "@/components/PolicyEditor";
 import {
   Loader2, Save, Users, Palette, Layout, Type,
   Image as ImageIcon, Monitor, Smartphone, Tablet, LayoutGrid,
@@ -3259,27 +3260,17 @@ export default function ConfiguracionPage() {
             </div>
             {/* Editor */}
             <div className="flex-1 overflow-auto px-6 py-8 md:px-12 md:py-10">
-              <div className="mx-auto max-w-3xl h-full flex flex-col gap-4">
-                {/* "Papel" blanco */}
-                <div className="flex-1 flex flex-col rounded-2xl bg-white shadow-xl shadow-indigo-100/60 border border-indigo-100 overflow-hidden">
-                  <div className="flex items-center gap-2 border-b border-gray-100 px-5 py-3 bg-gray-50/60">
-                    <span className="text-base">{m.emoji}</span>
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{m.label}</span>
+              <div className="mx-auto max-w-3xl flex flex-col gap-3">
+                <PolicyEditor
+                  value={(config[policyEditing] as string)||""}
+                  onChange={v => set(policyEditing, v)}
+                  placeholder={m.placeholder}
+                />
+                {(config[policyEditing] as string) && (config[policyEditing] as string) !== "<p></p>" && (
+                  <div className="flex justify-end">
+                    <button type="button" onClick={()=>set(policyEditing,"")} className="text-xs text-red-400 hover:text-red-600 transition-colors">Borrar todo</button>
                   </div>
-                  <textarea
-                    autoFocus
-                    value={(config[policyEditing] as string)||""}
-                    onChange={e=>set(policyEditing, e.target.value)}
-                    placeholder={m.placeholder}
-                    className="flex-1 w-full min-h-[55vh] px-7 py-6 text-[15px] leading-relaxed text-gray-800 placeholder:text-gray-300 focus:outline-none resize-none bg-white"
-                  />
-                  <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 bg-gray-50/60 text-[11px] text-gray-400">
-                    <span>{((config[policyEditing] as string)||"").length} caracteres</span>
-                    {(config[policyEditing] as string) && (
-                      <button type="button" onClick={()=>set(policyEditing,"")} className="text-red-400 hover:text-red-600 transition-colors">Borrar todo</button>
-                    )}
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
