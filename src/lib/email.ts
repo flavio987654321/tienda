@@ -269,3 +269,61 @@ export async function sendAffiliateStatusEmail({
     `,
   });
 }
+
+export async function sendNewAffiliateApplicationEmail({
+  ownerEmail,
+  ownerName,
+  storeName,
+  applicantName,
+  applicantEmail,
+  applicationMessage,
+}: {
+  ownerEmail: string;
+  ownerName: string;
+  storeName: string;
+  applicantName: string;
+  applicantEmail: string;
+  applicationMessage?: string | null;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const dashboardUrl = `${appUrl}/dashboard/vendedoras`;
+
+  await transporter.sendMail({
+    from: `"MiTienda" <${process.env.SMTP_USER}>`,
+    to: ownerEmail,
+    subject: `Nueva solicitud de afiliada en ${storeName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">${storeName}</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Nueva solicitud de afiliada</h1>
+        </div>
+
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${ownerName || "vendedora"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:20px;">
+          <strong>${applicantName}</strong> (${applicantEmail}) se postuló para vender en tu tienda <strong>${storeName}</strong>.
+        </p>
+
+        ${applicationMessage ? `
+        <div style="background:#f3f4f6;border-radius:10px;padding:16px;margin-bottom:20px;">
+          <p style="color:#6b7280;font-size:12px;margin:0 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Su mensaje</p>
+          <p style="color:#374151;font-size:14px;margin:0;">${applicationMessage}</p>
+        </div>
+        ` : ""}
+
+        <div style="text-align:center;">
+          <a href="${dashboardUrl}"
+             style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;">
+            Ver solicitud en mi panel
+          </a>
+        </div>
+
+        <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
+          Panel de afiliados de ${storeName}
+        </p>
+      </div>
+    `,
+  });
+}

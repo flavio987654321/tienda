@@ -919,6 +919,7 @@ export default function VendedorasPage() {
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [loadingStores, setLoadingStores] = useState(true);
   const [applyStore, setApplyStore] = useState<StoreItem | null>(null);
+  const [applySuccessName, setApplySuccessName] = useState<string | null>(null);
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<VendedoraStats | null>(null);
@@ -950,11 +951,13 @@ export default function VendedorasPage() {
   const pendingStores = myAffiliations.filter((s) => s.affiliates[0]?.status === "PENDING");
   const availableStores = stores.filter((s) => s.affiliates.length === 0 || ["REJECTED", "REMOVED"].includes(s.affiliates[0]?.status));
 
-  function handleApplySuccess(storeId: string, affiliateId: string) {
+  function handleApplySuccess(storeId: string, affiliateId: string, storeName: string) {
     setStores((prev) =>
       prev.map((s) => s.id === storeId ? { ...s, affiliates: [{ id: affiliateId, status: "PENDING", isActive: false }] } : s)
     );
     setApplyStore(null);
+    setApplySuccessName(storeName);
+    setTimeout(() => setApplySuccessName(null), 5000);
   }
 
   const userName = user?.name ?? "Afiliado";
@@ -1240,13 +1243,31 @@ export default function VendedorasPage() {
         </>
       )}
 
+      {/* Banner de éxito al postularse */}
+      <AnimatePresence>
+        {applySuccessName && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-2xl shadow-emerald-900/40"
+          >
+            <CheckCircle className="h-5 w-5 flex-shrink-0" />
+            <div>
+              <p className="font-bold text-sm">¡Solicitud enviada!</p>
+              <p className="text-xs text-emerald-200">Tu postulación a <strong>{applySuccessName}</strong> está en revisión.</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Modals */}
       <AnimatePresence>
         {applyStore && (
           <ApplyModal
             store={applyStore}
             onClose={() => setApplyStore(null)}
-            onSuccess={(affiliateId) => handleApplySuccess(applyStore.id, affiliateId)}
+            onSuccess={(affiliateId) => handleApplySuccess(applyStore.id, affiliateId, applyStore.name)}
           />
         )}
         {shareTarget && (

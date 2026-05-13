@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { sendNewAffiliateApplicationEmail } from "@/lib/email";
 
 // GET - afiliado: ver tiendas disponibles / tienda: ver sus afiliados
 export async function GET(req: NextRequest) {
@@ -176,6 +177,22 @@ export async function POST(req: NextRequest) {
       tcAcceptedIp,
     },
   });
+
+  // Notificar a la dueña por email (fire-and-forget)
+  prisma.user.findUnique({ where: { id: store.ownerId }, select: { email: true, name: true } })
+    .then((owner) => {
+      if (owner?.email) {
+        sendNewAffiliateApplicationEmail({
+          ownerEmail: owner.email,
+          ownerName: owner.name || "vendedora",
+          storeName: store.name,
+          applicantName: user.name || "Una usuaria",
+          applicantEmail: user.email,
+          applicationMessage: appMsg,
+        }).catch(() => {});
+      }
+    })
+    .catch(() => {});
 
   // El rol se asigna solo cuando la dueña aprueba, no al postular
   return NextResponse.json({ affiliate, message: "Solicitud enviada" });

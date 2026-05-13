@@ -46,17 +46,20 @@ export default function DashboardLayout({
   }, [initialLowStockCount]);
 
   useEffect(() => {
-    fetch("/api/vendedoras")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        const pendingCount = Array.isArray(data?.affiliates)
-          ? data.affiliates
-              .filter((affiliate: { status?: string }) => affiliate.status === "PENDING")
-              .length
-          : 0;
-        setPendingAffiliateCount(pendingCount);
-      })
-      .catch(() => setPendingAffiliateCount(0));
+    function fetchAffiliateCount() {
+      fetch("/api/vendedoras")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          const pendingCount = Array.isArray(data?.affiliates)
+            ? data.affiliates.filter((a: { status?: string }) => a.status === "PENDING").length
+            : 0;
+          setPendingAffiliateCount(pendingCount);
+        })
+        .catch(() => {});
+    }
+    fetchAffiliateCount();
+    const interval = setInterval(fetchAffiliateCount, 60_000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
