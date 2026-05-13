@@ -104,6 +104,17 @@ export default function AffiliateActions({ affiliateId, status }: { affiliateId:
           </button>
         </div>
       )}
+      {status === "REJECTED" && (
+        <button
+          type="button"
+          onClick={() => run("remove")}
+          disabled={Boolean(loading)}
+          className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-500 disabled:opacity-50"
+        >
+          {loading === "remove" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+          {loading === "remove" ? "Quitando..." : "Quitar de lista"}
+        </button>
+      )}
       {status === "REMOVED" && (
         <button
           type="button"

@@ -71,7 +71,7 @@ export default async function VendedorasPage() {
 
   const affiliates = store?.affiliates ?? [];
   const pending = affiliates.filter((affiliate) => affiliate.status === "PENDING");
-  const teamAffiliates = affiliates.filter((affiliate) => affiliate.status !== "PENDING");
+  const teamAffiliates = affiliates.filter((affiliate) => affiliate.status !== "PENDING" && affiliate.status !== "REMOVED");
   const approved = affiliates.filter((affiliate) => affiliate.status === "APPROVED");
   const active = approved.filter((affiliate) => affiliate.isActive);
   const totalComisionesPagadas = affiliates.reduce(

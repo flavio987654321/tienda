@@ -133,13 +133,16 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       },
     });
 
-    await sendAffiliateStatusEmail({
-      affiliateEmail: affiliate.user.email,
-      affiliateName: affiliate.user.name || "",
-      storeName: affiliate.store.name,
-      storeSlug: affiliate.store.slug,
-      status: "REMOVED",
-    });
+    // Solo avisamos si tenía una relación activa — si era REJECTED nunca fue afiliado/a
+    if (["APPROVED", "PAUSED"].includes(affiliate.status)) {
+      await sendAffiliateStatusEmail({
+        affiliateEmail: affiliate.user.email,
+        affiliateName: affiliate.user.name || "",
+        storeName: affiliate.store.name,
+        storeSlug: affiliate.store.slug,
+        status: "REMOVED",
+      });
+    }
 
     return NextResponse.json({ affiliate: updated });
   }
