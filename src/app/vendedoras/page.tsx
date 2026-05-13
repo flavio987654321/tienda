@@ -71,6 +71,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [tab, setTab] = useState<"tienda" | "productos">("tienda");
   const [cardLoading, setCardLoading] = useState<string | null>(null);
+  const [cardError, setCardError] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
   const [selectedImages, setSelectedImages] = useState<Record<string, number>>({});
 
@@ -221,6 +222,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
 
   async function shareCard(product: ShareProduct) {
     setCardLoading(product.id);
+    setCardError(null);
     try {
       const imageIndex = selectedImages[product.id] ?? 0;
       const blob = await makeProductCard(product, imageIndex);
@@ -236,6 +238,8 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
         link.click();
         URL.revokeObjectURL(link.href);
       }
+    } catch {
+      setCardError("No se pudo generar la placa. Copiá el link y compartilo manualmente.");
     } finally {
       setCardLoading(null);
     }
@@ -470,6 +474,9 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                                 : <><Star className="h-4 w-4" /> Generar placa{imgs.length > 1 ? ` · foto ${selectedIdx + 1}` : ""}</>
                               }
                             </button>
+                            {cardError && (
+                              <p className="mt-2 text-xs text-red-400 text-center">{cardError}</p>
+                            )}
                           </div>
 
                           {/* Acciones secundarias */}
@@ -512,6 +519,7 @@ interface StoreItem { id: string; name: string; slug: string; description: strin
 function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: () => void; onSuccess: (id: string) => void }) {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ applicationMessage: "", experience: "", socialUrl: "", cvUrl: "" });
+  const [tcAccepted, setTcAccepted] = useState(false);
   const [cvUploading, setCvUploading] = useState(false);
   const [cvFileName, setCvFileName] = useState("");
   const [cvError, setCvError] = useState("");
@@ -545,7 +553,7 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
     const res = await fetch("/api/vendedoras", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ storeId: store.id, ...form }),
+      body: JSON.stringify({ storeId: store.id, ...form, tcAccepted }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -650,11 +658,33 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
             {cvError && <p className="mt-2 rounded-xl bg-red-500/10 px-3 py-2 text-xs text-red-300">{cvError}</p>}
           </div>
         </div>
+        <div className="px-6 pb-4">
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <div className="relative mt-0.5 flex-shrink-0">
+              <input
+                type="checkbox"
+                checked={tcAccepted}
+                onChange={(e) => setTcAccepted(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${tcAccepted ? "bg-indigo-600 border-indigo-600" : "border-white/20 bg-white/5 group-hover:border-indigo-400/50"}`}>
+                {tcAccepted && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+              </div>
+            </div>
+            <span className="text-xs text-gray-400 leading-relaxed">
+              Leí y acepto los{" "}
+              <a href="/vendedoras/terminos" target="_blank" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">
+                Términos y Condiciones del Programa de Afiliados
+              </a>
+              {" "}y entiendo cómo funcionan las comisiones y los pagos.
+            </span>
+          </label>
+        </div>
         <div className="p-6 border-t border-white/5 flex gap-3">
           <button type="button" onClick={onClose} className="flex-1 py-3.5 border border-white/10 rounded-2xl text-sm font-semibold text-gray-400 hover:text-white hover:border-white/20 transition-all">
             Cancelar
           </button>
-          <button type="submit" disabled={submitting} className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-2xl font-semibold text-sm disabled:opacity-50 transition-all">
+          <button type="submit" disabled={submitting || !tcAccepted} className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-2xl font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all">
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {submitting ? "Enviando..." : "Enviar solicitud"}
           </button>

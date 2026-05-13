@@ -81,13 +81,25 @@ function isSafeUrl(url: string): boolean {
   }
 }
 
+const TC_VERSION = "1.0";
+
 // POST - afiliado se une a una tienda
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { storeId, applicationMessage, experience, cvUrl, socialUrl } = await req.json();
+  const { storeId, applicationMessage, experience, cvUrl, socialUrl, tcAccepted } = await req.json();
   const userId = user.id;
+
+  if (!tcAccepted) {
+    return NextResponse.json(
+      { error: "Debés aceptar los términos y condiciones para postularte" },
+      { status: 400 }
+    );
+  }
+
+  const tcAcceptedAt = new Date();
+  const tcAcceptedIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip") ?? "unknown";
 
   if (!storeId || typeof storeId !== "string") {
     return NextResponse.json({ error: "ID de tienda inválido" }, { status: 400 });
@@ -132,6 +144,9 @@ export async function POST(req: NextRequest) {
           socialUrl: socialUrl || null,
           requestedAt: new Date(),
           reviewedAt: null,
+          tcAcceptedAt,
+          tcVersion: TC_VERSION,
+          tcAcceptedIp,
         },
       });
 
@@ -156,6 +171,9 @@ export async function POST(req: NextRequest) {
       experience: exp,
       cvUrl: cvUrl || null,
       socialUrl: socialUrl || null,
+      tcAcceptedAt,
+      tcVersion: TC_VERSION,
+      tcAcceptedIp,
     },
   });
 

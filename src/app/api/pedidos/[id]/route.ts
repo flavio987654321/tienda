@@ -165,6 +165,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             data: { stock: { increment: item.quantity } },
           });
         }
+
+        // Revertir comisión si el pedido ya había sido confirmado
+        if (order.commission && order.affiliateId) {
+          const commissionAmount = order.commission.amount;
+          await tx.commission.delete({ where: { id: order.commission.id } });
+          // Descontamos solo lo que haya en balance (podría haber sido retirado parcialmente)
+          const currentBalance = order.affiliate?.wallet?.balance ?? 0;
+          await tx.wallet.update({
+            where: { affiliateId: order.affiliateId },
+            data: {
+              balance: { decrement: Math.min(commissionAmount, currentBalance) },
+              totalEarned: { decrement: commissionAmount },
+            },
+          });
+        }
+
         await tx.payment.updateMany({
           where: { orderId: order.id },
           data: { status: "CANCELLED" },

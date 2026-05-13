@@ -261,6 +261,10 @@ model Affiliate {
   requestedAt DateTime @default(now())
   reviewedAt DateTime?
   createdAt DateTime @default(now())
+  // Aceptación de términos y condiciones
+  tcAcceptedAt DateTime?
+  tcVersion    String?
+  tcAcceptedIp String?
 
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
