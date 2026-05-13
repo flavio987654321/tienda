@@ -544,6 +544,7 @@ export default function StorefrontClient({
   const touchStartX = useRef(0);
   const reelsRef = useRef<HTMLDivElement>(null);
   const reelsDrag = useRef({ isDown: false, startX: 0, scrollLeft: 0, hasMoved: false });
+  const dropdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [productReviews, setProductReviews] = useState<{ id: string; rating: number; comment: string | null; createdAt: string; user: { name: string | null; image: string | null } }[]>([]);
   const [reviewsAvg, setReviewsAvg] = useState(0);
   const [reviewsTotal, setReviewsTotal] = useState(0);
@@ -1084,7 +1085,7 @@ export default function StorefrontClient({
                 type="button"
                 onClick={() => consultarWhatsApp(product)}
                 disabled={!store.whatsappNumber}
-                className="mt-auto flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-black text-white transition disabled:opacity-40"
+                className="mt-auto flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-base font-black text-white transition disabled:opacity-40"
                 style={{ backgroundColor: "#25D366" }}
               >
                 <MessageCircle className="h-4 w-4" />
@@ -1095,7 +1096,7 @@ export default function StorefrontClient({
                 type="button"
                 disabled={!available}
                 onClick={() => addToCart(product)}
-                className="mt-auto flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-black text-white transition disabled:opacity-40"
+                className="mt-auto flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-base font-black text-white transition disabled:opacity-40"
                 style={{ backgroundColor: store.primaryColor }}
               >
                 <ShoppingBag className="h-4 w-4" />
@@ -1177,7 +1178,7 @@ export default function StorefrontClient({
               type="button"
               onClick={() => consultarWhatsApp(product)}
               disabled={!store.whatsappNumber}
-              className={`mt-auto flex w-full items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
+              className={`mt-auto flex w-full items-center justify-center gap-2 px-4 py-2.5 text-base font-bold transition disabled:opacity-40 ${buttonRadius}`}
               style={{ backgroundColor: "#25D366", color: "#fff" }}
             >
               <MessageCircle className="h-4 w-4" />
@@ -1188,7 +1189,7 @@ export default function StorefrontClient({
               type="button"
               disabled={!available}
               onClick={() => addToCart(product)}
-              className={`mt-auto flex w-full items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
+              className={`mt-auto flex w-full items-center justify-center gap-2 px-4 py-2.5 text-base font-bold transition disabled:opacity-40 ${buttonRadius}`}
               style={{
                 backgroundColor: store.buttonStyle === "outline" ? "transparent" : store.primaryColor,
                 borderColor: store.primaryColor,
@@ -1729,7 +1730,7 @@ export default function StorefrontClient({
                 const subs = link.type === "filter" ? getSubsForCategory(link.value) : [];
                 const isActive = link.type === "filter" && category === link.value;
                 return (
-                  <div key={link.id} className="relative" onMouseEnter={() => subs.length > 0 && setOpenDropdown(link.id)} onMouseLeave={() => setOpenDropdown(null)}>
+                  <div key={link.id} className="relative" onMouseEnter={() => { if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current); subs.length > 0 && setOpenDropdown(link.id); }} onMouseLeave={() => { dropdownTimerRef.current = setTimeout(() => setOpenDropdown(null), 150); }}>
                     {link.type === "filter" ? (
                       <button type="button" onClick={() => { setCategory(link.value); setSubcategory("all"); setSearchQuery(""); }}
                         className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isActive ? "text-white" : isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
@@ -1770,7 +1771,7 @@ export default function StorefrontClient({
                 const subs = link.type === "filter" ? getSubsForCategory(link.value) : [];
                 const isActive = link.type === "filter" && category === link.value;
                 return (
-                  <div key={link.id} className="relative" onMouseEnter={() => subs.length > 0 && setOpenDropdown(link.id)} onMouseLeave={() => setOpenDropdown(null)}>
+                  <div key={link.id} className="relative" onMouseEnter={() => { if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current); subs.length > 0 && setOpenDropdown(link.id); }} onMouseLeave={() => { dropdownTimerRef.current = setTimeout(() => setOpenDropdown(null), 150); }}>
                     {link.type === "filter" ? (
                       <button type="button" onClick={() => { setCategory(link.value); setSubcategory("all"); setSearchQuery(""); }}
                         className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${isActive ? "text-white" : isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
