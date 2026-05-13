@@ -116,6 +116,7 @@ function variantTip(tipoTienda: string): string {
     ALIMENTOS: "Una fila por peso o sabor. Ej: 500g → fila 1, 1kg → fila 2. Cada fila tiene su propio stock.",
     MASCOTAS:  "Una fila por tamaño o sabor. Ej: Pequeño → fila 1, Grande → fila 2. Cada fila tiene su propio stock.",
     LIBROS:    "Una fila por formato. Ej: Físico → fila 1, Digital → fila 2. Cada fila tiene su propio stock.",
+    GENERAL:   "Una fila por variante o color. Ej: Color Rojo → fila 1, Tamaño Grande → fila 2. Cada fila tiene su propio stock.",
   };
   return tips[tipoTienda] || "Una fila por variante. Cada fila tiene su propio stock.";
 }
@@ -125,9 +126,12 @@ function tagsTip(tipoTienda: string): string {
     ROPA:      "Palabras clave para búsqueda. Ej: negro, oversize, algodón. No afectan el precio ni el stock.",
     TECH:      "Palabras clave para búsqueda. Ej: liberado, sin cargador, 5G.",
     BELLEZA:   "Palabras clave para búsqueda. Ej: vegano, sin parabenos, hidratante.",
-    HOGAR:     "Palabras clave para búsqueda. Ej: madera, escandinavo, moderno.",
+    HOGAR:     "Palabras clave para búsqueda. Ej: madera, escandinavo, minimalista.",
     ALIMENTOS: "Palabras clave para búsqueda. Ej: sin tacc, vegano, artesanal.",
     DEPORTE:   "Palabras clave para búsqueda. Ej: running, gym, impermeable.",
+    MASCOTAS:  "Palabras clave para búsqueda. Ej: perro, gato, natural, sin conservantes.",
+    LIBROS:    "Palabras clave para búsqueda. Ej: ficción, bestseller, regalo, tapa dura.",
+    GENERAL:   "Palabras clave para búsqueda separadas por coma. Ayudan a tus clientes a encontrar el producto.",
   };
   return tips[tipoTienda] || "Palabras clave separadas por coma para que tus clientes encuentren el producto.";
 }
