@@ -250,25 +250,24 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4"
-      onClick={onClose}
+      className="fixed inset-0 z-[100] flex justify-end"
     >
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-md" />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <motion.div
-        initial={{ y: 40, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 40, opacity: 0 }}
-        transition={{ type: "spring", damping: 28, stiffness: 320 }}
+        initial={{ x: "100%" }}
+        animate={{ x: 0 }}
+        exit={{ x: "100%" }}
+        transition={{ type: "spring", damping: 30, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative bg-white dark:bg-[#0d0f1a] border border-gray-200 dark:border-white/8 rounded-3xl w-full max-w-lg max-h-[92vh] flex flex-col shadow-2xl shadow-black/20 dark:shadow-black/60"
+        className="relative bg-white dark:bg-[#0d0f1a] border-l border-gray-200 dark:border-white/8 w-full sm:w-[520px] h-full flex flex-col shadow-2xl shadow-black/20 dark:shadow-black/60"
       >
         {/* Header */}
-        <div className="px-6 pt-5 pb-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between flex-shrink-0">
+        <div className="px-5 pt-5 pb-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between flex-shrink-0">
           <div>
             <h3 className="text-base font-black text-gray-900 dark:text-white">{target.storeName}</h3>
-            <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">Comisión: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{target.commissionRate}%</span> por venta confirmada</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Comisión: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{target.commissionRate}%</span> por venta confirmada</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-700 dark:hover:text-white transition-all">
+          <button onClick={onClose} className="w-9 h-9 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-700 dark:hover:text-white transition-all">
             <XCircle className="h-4 w-4" />
           </button>
         </div>
@@ -277,14 +276,14 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
         <div className="flex p-3 border-b border-gray-100 dark:border-white/5 gap-2 flex-shrink-0">
           {(["tienda", "productos"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === t ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"}`}>
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === t ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"}`}>
               {t === "tienda" ? "Tienda completa" : "Por producto"}
             </button>
           ))}
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overscroll-contain">
           {tab === "tienda" ? (
             <div className="p-5 space-y-4">
               {/* Link box */}
