@@ -4,12 +4,14 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
 import { useAuth } from "@/components/AuthProvider";
 import {
   CheckCircle, Clock, Loader2, Send, Store, TrendingUp, Users, Wallet,
   XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
   Star, Package, ArrowRight, Eye, Edit3, MapPin, Phone, Save,
   DollarSign, ShoppingCart, Award, FileText, UploadCloud, Trash2, Download, Search,
+  Moon, Sun,
 } from "lucide-react";
 
 const IgIconLg = () => <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>;
@@ -258,24 +260,24 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
         exit={{ y: 40, opacity: 0 }}
         transition={{ type: "spring", damping: 28, stiffness: 320 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative bg-[#0d0f1a] border border-white/8 rounded-3xl w-full max-w-lg max-h-[92vh] flex flex-col shadow-2xl shadow-black/60"
+        className="relative bg-white dark:bg-[#0d0f1a] border border-gray-200 dark:border-white/8 rounded-3xl w-full max-w-lg max-h-[92vh] flex flex-col shadow-2xl shadow-black/20 dark:shadow-black/60"
       >
         {/* Header */}
-        <div className="px-6 pt-5 pb-4 border-b border-white/5 flex items-center justify-between flex-shrink-0">
+        <div className="px-6 pt-5 pb-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between flex-shrink-0">
           <div>
-            <h3 className="text-base font-black text-white">{target.storeName}</h3>
-            <p className="text-xs text-gray-600 mt-0.5">Comisión: <span className="text-emerald-400 font-bold">{target.commissionRate}%</span> por venta confirmada</p>
+            <h3 className="text-base font-black text-gray-900 dark:text-white">{target.storeName}</h3>
+            <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">Comisión: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{target.commissionRate}%</span> por venta confirmada</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-500 hover:text-white transition-all">
+          <button onClick={onClose} className="w-8 h-8 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-700 dark:hover:text-white transition-all">
             <XCircle className="h-4 w-4" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex p-3 border-b border-white/5 gap-2 flex-shrink-0">
+        <div className="flex p-3 border-b border-gray-100 dark:border-white/5 gap-2 flex-shrink-0">
           {(["tienda", "productos"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === t ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-gray-600 hover:text-gray-400 hover:bg-white/5"}`}>
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === t ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"}`}>
               {t === "tienda" ? "Tienda completa" : "Por producto"}
             </button>
           ))}
@@ -286,10 +288,10 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
           {tab === "tienda" ? (
             <div className="p-5 space-y-4">
               {/* Link box */}
-              <div className="bg-white/4 border border-white/8 rounded-2xl p-4">
-                <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-2">Tu link de afiliado</p>
+              <div className="bg-gray-50 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-2xl p-4">
+                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-2">Tu link de afiliado</p>
                 <div className="flex items-center gap-3">
-                  <p className="flex-1 text-xs text-indigo-300 font-mono break-all leading-relaxed">{storeUrl}</p>
+                  <p className="flex-1 text-xs text-indigo-600 dark:text-indigo-300 font-mono break-all leading-relaxed">{storeUrl}</p>
                   <button onClick={() => copy(storeUrl, "store")}
                     className="flex-shrink-0 flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all">
                     {copied === "store" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
@@ -363,13 +365,13 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                 <div className="space-y-4">
                   {/* Search */}
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-600 pointer-events-none" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 dark:text-gray-600 pointer-events-none" />
                     <input
                       type="text"
                       value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
                       placeholder="Buscar producto..."
-                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                     />
                     {productSearch && (
                       <button onClick={() => setProductSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400">
@@ -405,19 +407,19 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                       const isLoading = cardLoading === p.id;
                       const selectedIdx = selectedImages[p.id] ?? 0;
                       return (
-                        <div key={p.id} className="bg-white/4 border border-white/8 rounded-2xl overflow-hidden">
+                        <div key={p.id} className="bg-gray-50 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-2xl overflow-hidden">
                           {/* Product info row */}
                           <div className="flex items-center gap-4 p-4 pb-3">
-                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-800/60 flex-shrink-0 border border-white/5">
+                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-800/60 flex-shrink-0 border border-gray-300 dark:border-white/5">
                               {imgs[selectedIdx]
                                 ? <img src={imgs[selectedIdx]} alt={p.name} className="w-full h-full object-cover" />
-                                : <div className="w-full h-full flex items-center justify-center"><Package className="h-6 w-6 text-gray-700" /></div>
+                                : <div className="w-full h-full flex items-center justify-center"><Package className="h-6 w-6 text-gray-400 dark:text-gray-700" /></div>
                               }
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-white text-sm font-bold truncate">{p.name}</p>
-                              {p.description && <p className="text-gray-600 text-xs mt-0.5 line-clamp-1">{p.description}</p>}
-                              <p className="text-emerald-400 text-sm font-black mt-1">{money(p.price)}</p>
+                              <p className="text-gray-900 dark:text-white text-sm font-bold truncate">{p.name}</p>
+                              {p.description && <p className="text-gray-500 dark:text-gray-600 text-xs mt-0.5 line-clamp-1">{p.description}</p>}
+                              <p className="text-emerald-600 dark:text-emerald-400 text-sm font-black mt-1">{money(p.price)}</p>
                             </div>
                           </div>
 
@@ -575,42 +577,42 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
-        className="relative bg-gray-950 border border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl"
+        className="relative bg-white dark:bg-gray-950 border border-gray-200 dark:border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl"
       >
-        <div className="p-6 border-b border-white/5">
-          <p className="text-indigo-400 text-xs font-bold uppercase tracking-widest mb-1">Solicitud de afiliado</p>
-          <h3 className="text-xl font-black text-white">{store.name}</h3>
-          <p className="text-gray-500 text-sm mt-0.5">Comisión ofrecida: <span className="text-emerald-400 font-semibold">{store.commissionRate}%</span> por venta confirmada</p>
+        <div className="p-6 border-b border-gray-100 dark:border-white/5">
+          <p className="text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-widest mb-1">Solicitud de afiliado</p>
+          <h3 className="text-xl font-black text-gray-900 dark:text-white">{store.name}</h3>
+          <p className="text-gray-500 text-sm mt-0.5">Comisión ofrecida: <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{store.commissionRate}%</span> por venta confirmada</p>
         </div>
         <div className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1.5">¿Por qué querés vender esta tienda? *</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">¿Por qué querés vender esta tienda? *</label>
             <textarea
               required rows={4} value={form.applicationMessage}
               onChange={(e) => setForm((p) => ({ ...p, applicationMessage: e.target.value }))}
               placeholder="Contale al/a la titular tu motivación, tu alcance en redes, cómo vas a vender..."
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-none"
+              className="w-full bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-2xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-none"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1.5">Experiencia vendiendo</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">Experiencia vendiendo</label>
             <textarea
               rows={3} value={form.experience}
               onChange={(e) => setForm((p) => ({ ...p, experience: e.target.value }))}
               placeholder="Redes que manejo, zona donde vendo, disponibilidad horaria..."
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-none"
+              className="w-full bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-2xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-none"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1.5">Instagram / TikTok / Portfolio</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">Instagram / TikTok / Portfolio</label>
             <input
               value={form.socialUrl} onChange={(e) => setForm((p) => ({ ...p, socialUrl: e.target.value }))}
               placeholder="@tuusuario o https://..."
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              className="w-full bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-2xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1.5">CV o presentación (opcional)</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">CV o presentación (opcional)</label>
             <input
               ref={cvInputRef}
               type="file"
@@ -654,7 +656,7 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
                 {cvUploading ? "Subiendo archivo..." : "Subir PDF, Word, Excel o imagen"}
               </button>
             )}
-            <p className="mt-2 text-xs text-gray-600">Hasta 15 MB. Se aceptan PDF, DOC, DOCX, XLS, XLSX, PPT, TXT e imagenes.</p>
+            <p className="mt-2 text-xs text-gray-400 dark:text-gray-600">Hasta 15 MB. Se aceptan PDF, DOC, DOCX, XLS, XLSX, PPT, TXT e imagenes.</p>
             {cvError && <p className="mt-2 rounded-xl bg-red-500/10 px-3 py-2 text-xs text-red-300">{cvError}</p>}
           </div>
         </div>
@@ -671,7 +673,7 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
                 {tcAccepted && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
               </div>
             </div>
-            <span className="text-xs text-gray-400 leading-relaxed">
+            <span className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
               Leí y acepto los{" "}
               <a href="/vendedoras/terminos" target="_blank" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">
                 Términos y Condiciones del Programa de Afiliados
@@ -680,8 +682,8 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
             </span>
           </label>
         </div>
-        <div className="p-6 border-t border-white/5 flex gap-3">
-          <button type="button" onClick={onClose} className="flex-1 py-3.5 border border-white/10 rounded-2xl text-sm font-semibold text-gray-400 hover:text-white hover:border-white/20 transition-all">
+        <div className="p-6 border-t border-gray-100 dark:border-white/5 flex gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-3.5 border border-gray-200 dark:border-white/10 rounded-2xl text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/20 transition-all">
             Cancelar
           </button>
           <button type="submit" disabled={submitting || !tcAccepted} className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-2xl font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all">
@@ -737,9 +739,9 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
     <div>
       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{label}</label>
       <div className="relative">
-        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600">{icon}</div>
+        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-600">{icon}</div>
         <input value={form[key]} onChange={e => upd(key, e.target.value)} placeholder={ph}
-          className="w-full bg-gray-900 border border-white/8 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-700 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/40 text-sm transition-all" />
+          className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-white/8 rounded-xl pl-10 pr-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-700 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/40 text-sm transition-all" />
       </div>
     </div>
   );
@@ -750,12 +752,12 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
       <div className="absolute inset-0 bg-black/75 backdrop-blur-md" />
       <motion.form initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: "spring", damping: 28, stiffness: 320 }}
         onSubmit={submit} onClick={e => e.stopPropagation()}
-        className="relative bg-[#0d0f1a] border border-white/8 rounded-3xl w-full max-w-md shadow-2xl shadow-black/60 overflow-hidden">
+        className="relative bg-white dark:bg-[#0d0f1a] border border-gray-200 dark:border-white/8 rounded-3xl w-full max-w-md shadow-2xl shadow-black/20 dark:shadow-black/60 overflow-hidden">
 
         {/* Header */}
-        <div className="px-6 pt-6 pb-5 border-b border-white/5 flex items-center justify-between">
-          <h3 className="text-lg font-black text-white">Editá tu perfil</h3>
-          <button type="button" onClick={onClose} className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-500 hover:text-white transition-all">
+        <div className="px-6 pt-6 pb-5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
+          <h3 className="text-lg font-black text-gray-900 dark:text-white">Editá tu perfil</h3>
+          <button type="button" onClick={onClose} className="w-8 h-8 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-700 dark:hover:text-white transition-all">
             <XCircle className="h-4 w-4" />
           </button>
         </div>
@@ -789,7 +791,7 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Bio / Presentación</label>
             <textarea value={form.bio} onChange={e => upd("bio", e.target.value)} placeholder="Contá quién sos, qué vendés, cuál es tu zona..." rows={3}
-              className="w-full bg-gray-900 border border-white/8 rounded-xl px-4 py-3 text-white placeholder-gray-700 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/40 text-sm resize-none transition-all" />
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-white/8 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-700 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/40 text-sm resize-none transition-all" />
           </div>
 
           {inp("Ciudad / Zona", "city", "Buenos Aires, Córdoba...", <MapPin className="h-3.5 w-3.5" />)}
@@ -797,8 +799,8 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
           {inp("Teléfono / WhatsApp", "phone", "+54 9 11 ...", <Phone className="h-3.5 w-3.5" />)}
         </div>
 
-        <div className="px-6 pb-6 pt-4 border-t border-white/5 flex gap-3">
-          <button type="button" onClick={onClose} className="flex-1 py-3 border border-white/8 rounded-xl text-sm font-semibold text-gray-500 hover:text-white hover:border-white/20 transition-all">
+        <div className="px-6 pb-6 pt-4 border-t border-gray-100 dark:border-white/5 flex gap-3">
+          <button type="button" onClick={onClose} className="flex-1 py-3 border border-gray-200 dark:border-white/8 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/20 transition-all">
             Cancelar
           </button>
           <button type="submit" disabled={saving || uploading} className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/20">
@@ -817,7 +819,7 @@ function ProfileCard({ profile, stats, onEdit }: { profile: UserProfile; stats: 
   const fmt = (n: number) => n >= 1000 ? `$${(n/1000).toFixed(1)}k` : `$${n.toLocaleString("es-AR")}`;
 
   return (
-    <div className="relative bg-gradient-to-br from-gray-900 via-indigo-950/40 to-gray-900 border border-white/10 rounded-3xl p-6 overflow-hidden">
+    <div className="relative bg-white dark:bg-gradient-to-br dark:from-gray-900 dark:via-indigo-950/40 dark:to-gray-900 border border-gray-200 dark:border-white/10 rounded-3xl p-6 overflow-hidden shadow-sm">
       <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -840,15 +842,15 @@ function ProfileCard({ profile, stats, onEdit }: { profile: UserProfile; stats: 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-xl font-black text-white">{profile.name || "Sin nombre"}</h2>
-              <p className="text-gray-400 text-sm">{profile.email}</p>
+              <h2 className="text-xl font-black text-gray-900 dark:text-white">{profile.name || "Sin nombre"}</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">{profile.email}</p>
             </div>
-            <button onClick={onEdit} className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 px-3 py-1.5 rounded-xl transition-all font-semibold shrink-0">
+            <button onClick={onEdit} className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/20 px-3 py-1.5 rounded-xl transition-all font-semibold shrink-0">
               <Edit3 className="h-3 w-3" /> Editar
             </button>
           </div>
 
-          {profile.bio && <p className="text-gray-400 text-sm mt-2 leading-relaxed line-clamp-2">{profile.bio}</p>}
+          {profile.bio && <p className="text-gray-600 dark:text-gray-400 text-sm mt-2 leading-relaxed line-clamp-2">{profile.bio}</p>}
 
           <div className="flex flex-wrap items-center gap-3 mt-3">
             {profile.city && (
@@ -867,7 +869,7 @@ function ProfileCard({ profile, stats, onEdit }: { profile: UserProfile; stats: 
               </span>
             )}
             {!profile.bio && !profile.city && !profile.instagramHandle && (
-              <button onClick={onEdit} className="text-xs text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition-colors">
+              <button onClick={onEdit} className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 underline underline-offset-2 transition-colors">
                 + Completá tu perfil para generar más confianza
               </button>
             )}
@@ -877,24 +879,24 @@ function ProfileCard({ profile, stats, onEdit }: { profile: UserProfile; stats: 
 
       {/* Stats reales */}
       {stats && (
-        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3 pt-5 border-t border-white/5">
+        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3 pt-5 border-t border-gray-100 dark:border-white/5">
           {[
-            { label: "Pedidos generados", value: stats.totalOrders, icon: ShoppingCart, color: "text-blue-400" },
-            { label: "Total ganado", value: fmt(stats.totalEarned), icon: Award, color: "text-emerald-400" },
-            { label: "Comisiones pend.", value: fmt(stats.pendingCommissions), icon: DollarSign, color: "text-yellow-400" },
-            { label: "Saldo disponible", value: fmt(stats.pendingBalance), icon: Wallet, color: "text-purple-400", link: "/vendedoras/billetera" },
+            { label: "Pedidos generados", value: stats.totalOrders, icon: ShoppingCart, color: "text-blue-500 dark:text-blue-400" },
+            { label: "Total ganado", value: fmt(stats.totalEarned), icon: Award, color: "text-emerald-600 dark:text-emerald-400" },
+            { label: "Comisiones pend.", value: fmt(stats.pendingCommissions), icon: DollarSign, color: "text-yellow-600 dark:text-yellow-400" },
+            { label: "Saldo disponible", value: fmt(stats.pendingBalance), icon: Wallet, color: "text-purple-600 dark:text-purple-400", link: "/vendedoras/billetera" },
           ].map(({ label, value, icon: Icon, color, link }) =>
             link ? (
-              <a key={label} href={link} className="bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl p-3 transition-all group cursor-pointer">
+              <a key={label} href={link} className="bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/5 rounded-2xl p-3 transition-all group cursor-pointer">
                 <Icon className={`h-4 w-4 ${color} mb-2`} />
                 <p className={`text-lg font-black ${color}`}>{value}</p>
-                <p className="text-gray-600 text-xs mt-0.5 group-hover:text-gray-400 transition-colors">{label} →</p>
+                <p className="text-gray-400 dark:text-gray-600 text-xs mt-0.5 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors">{label} →</p>
               </a>
             ) : (
-              <div key={label} className="bg-white/5 border border-white/5 rounded-2xl p-3">
+              <div key={label} className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-2xl p-3">
                 <Icon className={`h-4 w-4 ${color} mb-2`} />
                 <p className={`text-lg font-black ${color}`}>{value}</p>
-                <p className="text-gray-600 text-xs mt-0.5">{label}</p>
+                <p className="text-gray-400 dark:text-gray-600 text-xs mt-0.5">{label}</p>
               </div>
             )
           )}
@@ -916,6 +918,8 @@ const STATUS: Record<string, { label: string; cls: string; dot: string }> = {
 export default function VendedorasPage() {
   const { user, status: sessionStatus, signOut } = useAuth();
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [loadingStores, setLoadingStores] = useState(true);
   const [applyStore, setApplyStore] = useState<StoreItem | null>(null);
@@ -924,6 +928,8 @@ export default function VendedorasPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<VendedoraStats | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     function fetchStores() {
@@ -950,9 +956,11 @@ export default function VendedorasPage() {
     return () => clearInterval(id);
   }, [sessionStatus]);
 
+  const isDark = theme === "dark";
+
   if (sessionStatus === "loading") {
     return (
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#030712] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
       </div>
     );
@@ -977,38 +985,50 @@ export default function VendedorasPage() {
   const userInitial = userName.charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen bg-[#030712]">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#030712]">
       <style>{`
-        .grid-bg { background-image: linear-gradient(rgba(99,102,241,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,.05) 1px,transparent 1px); background-size: 48px 48px; }
+        .grid-bg { background-image: linear-gradient(rgba(99,102,241,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,.08) 1px,transparent 1px); background-size: 48px 48px; }
         @keyframes gs { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
         .gt { background: linear-gradient(135deg,#818cf8,#a78bfa,#f472b6,#818cf8); background-size:300% 300%; animation:gs 4s ease infinite; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
       `}</style>
 
       {/* ── NAVBAR ── */}
-      <nav className="sticky top-0 z-40 bg-gray-950/90 backdrop-blur-xl border-b border-white/5">
+      <nav className="sticky top-0 z-40 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
               <ShoppingBag className="h-4 w-4 text-white" />
             </div>
-            <span className="text-lg font-bold text-white">MiTienda</span>
+            <span className="text-lg font-bold text-gray-900 dark:text-white">MiTienda</span>
           </Link>
 
           <div className="flex items-center gap-3">
+            {/* Theme toggle */}
+            {mounted && (
+              <button
+                type="button"
+                onClick={() => setTheme(isDark ? "light" : "dark")}
+                title={isDark ? "Modo claro" : "Modo oscuro"}
+                className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
+              >
+                {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
+              </button>
+            )}
+
             {isLoggedIn ? (
               <>
-                <Link href="/vendedoras/billetera" className="flex items-center gap-2 text-gray-400 hover:text-white text-sm font-medium transition-colors px-3 py-2">
+                <Link href="/vendedoras/billetera" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
                   <Wallet className="h-4 w-4" /> Mi billetera
                 </Link>
-                <div className="flex items-center gap-2.5 px-3 py-2 bg-white/5 border border-white/10 rounded-xl">
+                <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl">
                   <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-xs font-bold text-white">
                     {userInitial}
                   </div>
-                  <span className="text-sm text-gray-300 font-medium hidden sm:block">{userName}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300 font-medium hidden sm:block">{userName}</span>
                 </div>
                 <button
                   onClick={() => signOut("/")}
-                  className="flex items-center gap-2 text-gray-500 hover:text-red-400 text-sm px-3 py-2 rounded-xl hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
+                  className="flex items-center gap-2 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 text-sm px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 transition-all border border-transparent hover:border-red-200 dark:hover:border-red-500/20"
                   title="Cerrar sesión"
                 >
                   <LogOut className="h-4 w-4" />
@@ -1017,7 +1037,7 @@ export default function VendedorasPage() {
               </>
             ) : (
               <>
-                <Link href="/login" className="text-gray-400 hover:text-white text-sm font-medium px-4 py-2 border border-white/10 rounded-xl hover:border-white/20 transition-all">
+                <Link href="/login" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium px-4 py-2 border border-gray-200 dark:border-white/10 rounded-xl hover:border-gray-300 dark:hover:border-white/20 transition-all">
                   Iniciar sesión
                 </Link>
                 <Link href="/registro?tipo=vendedora" className="bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-purple-500/20">
@@ -1047,13 +1067,13 @@ export default function VendedorasPage() {
                 { label: "Mi billetera", value: "Ver →", icon: Wallet, color: "text-purple-400", link: "/vendedoras/billetera" },
               ].map(({ label, value, icon: Icon, color, link }) => (
                 link ? (
-                  <Link key={label} href={link} className="bg-gray-900/80 hover:bg-gray-900 border border-white/10 rounded-2xl p-4 transition-all group">
+                  <Link key={label} href={link} className="bg-white dark:bg-gray-900/80 hover:bg-gray-50 dark:hover:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-2xl p-4 transition-all group shadow-sm">
                     <Icon className={`h-5 w-5 ${color} mb-3`} />
                     <p className={`text-lg font-black ${color} group-hover:underline`}>{value}</p>
                     <p className="text-gray-500 text-xs mt-0.5">{label}</p>
                   </Link>
                 ) : (
-                  <div key={label} className="bg-gray-900/80 border border-white/10 rounded-2xl p-4">
+                  <div key={label} className="bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-white/10 rounded-2xl p-4 shadow-sm">
                     <Icon className={`h-5 w-5 ${color} mb-3`} />
                     <p className={`text-2xl font-black ${color}`}>{value}</p>
                     <p className="text-gray-500 text-xs mt-0.5">{label}</p>
@@ -1068,32 +1088,32 @@ export default function VendedorasPage() {
             <section>
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                <h2 className="text-lg font-bold text-white">Mis tiendas activas</h2>
-                <span className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">{approvedStores.length} activas</span>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Mis tiendas activas</h2>
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2 py-0.5 rounded-full">{approvedStores.length} activas</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {approvedStores.map((store) => {
                   const aff = store.affiliates[0];
                   return (
-                    <motion.div key={store.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-gray-900/80 border border-white/10 rounded-3xl overflow-hidden">
-                      <div className="h-20 relative flex items-center px-5 gap-3" style={{ backgroundColor: store.primaryColor + "30", borderBottom: `1px solid ${store.primaryColor}30` }}>
+                    <motion.div key={store.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-white/10 rounded-3xl overflow-hidden shadow-sm">
+                      <div className="h-20 relative flex items-center px-5 gap-3" style={{ backgroundColor: store.primaryColor + "20", borderBottom: `1px solid ${store.primaryColor}25` }}>
                         <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ backgroundColor: store.primaryColor }}>
                           <Store className="h-5 w-5 text-white" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-white">{store.name}</h3>
-                          <p className="text-xs text-gray-400">por {store.owner.name ?? "Anónimo"}</p>
+                          <h3 className="font-bold text-gray-900 dark:text-white">{store.name}</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">por {store.owner.name ?? "Anónimo"}</p>
                         </div>
                         <div className="ml-auto flex items-center gap-2">
-                          <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-full font-bold">
+                          <span className="text-xs bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 px-2.5 py-1 rounded-full font-bold">
                             {store.commissionRate}% comisión
                           </span>
                         </div>
                       </div>
                       <div className="p-5 space-y-4">
-                        <div className="bg-white/5 border border-white/8 rounded-2xl p-3">
+                        <div className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/8 rounded-2xl p-3">
                           <p className="text-xs text-gray-500 mb-1">Tu link de venta</p>
-                          <p className="text-xs text-indigo-300 font-mono break-all">
+                          <p className="text-xs text-indigo-600 dark:text-indigo-300 font-mono break-all">
                             {typeof window !== "undefined" ? window.location.origin : ""}/tienda/{store.slug}?ref={aff.id}
                           </p>
                         </div>
@@ -1107,12 +1127,12 @@ export default function VendedorasPage() {
                           <Link
                             href={`/tienda/${store.slug}?ref=${aff.id}`}
                             target="_blank"
-                            className="flex items-center justify-center gap-2 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white px-4 py-3 rounded-2xl text-sm transition-all hover:bg-white/5"
+                            className="flex items-center justify-center gap-2 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-4 py-3 rounded-2xl text-sm transition-all hover:bg-gray-50 dark:hover:bg-white/5"
                           >
                             <ExternalLink className="h-4 w-4" />
                           </Link>
                         </div>
-                        <p className="text-xs text-gray-600 text-center">
+                        <p className="text-xs text-gray-400 dark:text-gray-600 text-center">
                           {store._count.products} productos disponibles para compartir
                         </p>
                       </div>
@@ -1128,23 +1148,23 @@ export default function VendedorasPage() {
             <section>
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-2 h-2 bg-yellow-400 rounded-full" />
-                <h2 className="text-lg font-bold text-white">Solicitudes en revisión</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Solicitudes en revisión</h2>
               </div>
               <div className="space-y-3">
                 {pendingStores.map((store) => (
-                  <div key={store.id} className="bg-gray-900/60 border border-yellow-500/10 rounded-2xl p-5 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: store.primaryColor + "30" }}>
+                  <div key={store.id} className="bg-white dark:bg-gray-900/60 border border-yellow-200 dark:border-yellow-500/10 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: store.primaryColor + "20" }}>
                       <Store className="h-5 w-5" style={{ color: store.primaryColor }} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-white text-sm">{store.name}</h3>
+                      <h3 className="font-bold text-gray-900 dark:text-white text-sm">{store.name}</h3>
                       <p className="text-gray-500 text-xs mt-0.5">Comisión ofrecida: {store.commissionRate}%</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                      <div className="bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5" /> Pendiente
                       </div>
-                      <Link href={`/tienda/${store.slug}`} target="_blank" className="w-8 h-8 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all">
+                      <Link href={`/tienda/${store.slug}`} target="_blank" className="w-8 h-8 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all">
                         <Eye className="h-4 w-4" />
                       </Link>
                     </div>
@@ -1157,16 +1177,16 @@ export default function VendedorasPage() {
           {/* Available stores */}
           <section>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-white">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                 {availableStores.length > 0 ? "Descubrí más tiendas" : "Tiendas disponibles"}
               </h2>
               <span className="text-sm text-gray-500">{availableStores.length} para postularte</span>
             </div>
             {availableStores.length === 0 ? (
-              <div className="bg-gray-900/50 border border-white/5 rounded-3xl p-12 text-center">
-                <CheckCircle className="h-10 w-10 text-indigo-400/30 mx-auto mb-3" />
-                <p className="text-gray-400">Ya te postulaste a todas las tiendas disponibles.</p>
-                <p className="text-gray-600 text-sm mt-1">Volvé más tarde para ver nuevas oportunidades.</p>
+              <div className="bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-white/5 rounded-3xl p-12 text-center shadow-sm">
+                <CheckCircle className="h-10 w-10 text-indigo-300 dark:text-indigo-400/30 mx-auto mb-3" />
+                <p className="text-gray-500 dark:text-gray-400">Ya te postulaste a todas las tiendas disponibles.</p>
+                <p className="text-gray-400 dark:text-gray-600 text-sm mt-1">Volvé más tarde para ver nuevas oportunidades.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1191,7 +1211,7 @@ export default function VendedorasPage() {
                 <h1 className="text-5xl lg:text-7xl font-black mb-6 leading-tight">
                   Postulate como<br /><span className="gt">afiliado</span>
                 </h1>
-                <p className="text-gray-400 text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-400 text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
                   Elegí tiendas, mandá tu presentación y esperá la aprobación del titular. Cuando te acepten, vas a tener tu link propio y cobrar comisiones automáticas.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center mb-14">
@@ -1204,8 +1224,8 @@ export default function VendedorasPage() {
                 </div>
                 <div className="grid grid-cols-3 gap-6 max-w-sm mx-auto">
                   {[["$0", "Inversión inicial"], ["10-25%", "Comisión por venta"], ["24hs", "Primer pago"]].map(([v, l]) => (
-                    <div key={l} className="border-l border-purple-500/30 pl-4 text-left">
-                      <p className="text-2xl font-black text-purple-400">{v}</p>
+                    <div key={l} className="border-l border-purple-400/40 dark:border-purple-500/30 pl-4 text-left">
+                      <p className="text-2xl font-black text-purple-600 dark:text-purple-400">{v}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{l}</p>
                     </div>
                   ))}
@@ -1215,18 +1235,18 @@ export default function VendedorasPage() {
           </section>
 
           {/* How it works */}
-          <section className="bg-gray-900/50 py-16">
+          <section className="bg-gray-100 dark:bg-gray-900/50 py-16">
             <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
                 { icon: Users, label: "Solicitudes con aprobación", desc: "El/la titular revisa tu perfil antes de darte permiso. Así sabés que trabajás con marcas serias.", color: "#6366f1" },
                 { icon: Share2, label: "Compartí por redes", desc: "WhatsApp, Facebook, Instagram. Compartís tu link y cada venta te genera comisión automática.", color: "#a855f7" },
                 { icon: Wallet, label: "Cobrás cuando querés", desc: "Tu billetera acumula tus ganancias y pedís el retiro cuando lo necesitás.", color: "#10b981" },
               ].map(({ icon: Icon, label, desc, color }) => (
-                <div key={label} className="bg-gray-900 border border-white/5 rounded-3xl p-7">
+                <div key={label} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/5 rounded-3xl p-7 shadow-sm">
                   <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5" style={{ backgroundColor: color + "20" }}>
                     <Icon className="h-6 w-6" style={{ color }} />
                   </div>
-                  <h3 className="font-bold text-white mb-2">{label}</h3>
+                  <h3 className="font-bold text-gray-900 dark:text-white mb-2">{label}</h3>
                   <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
                 </div>
               ))}
@@ -1236,12 +1256,12 @@ export default function VendedorasPage() {
           {/* Available stores preview */}
           <section className="py-16">
             <div className="max-w-6xl mx-auto px-6">
-              <h2 className="text-2xl font-black text-white mb-8">Tiendas que buscan afiliados</h2>
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-8">Tiendas que buscan afiliados</h2>
               {loadingStores ? (
                 <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-indigo-400" /></div>
               ) : stores.length === 0 ? (
-                <div className="bg-gray-900/50 border border-white/5 rounded-3xl p-16 text-center">
-                  <Store className="h-10 w-10 text-gray-700 mx-auto mb-3" />
+                <div className="bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-white/5 rounded-3xl p-16 text-center shadow-sm">
+                  <Store className="h-10 w-10 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
                   <p className="text-gray-500">No hay tiendas disponibles por ahora.</p>
                 </div>
               ) : (
@@ -1305,19 +1325,19 @@ function StoreCard({ store, onApply, requiresLogin }: { store: StoreItem; onAppl
   const canApply = !aff || ["REJECTED", "REMOVED"].includes(aff.status);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-gray-900/80 border border-white/8 rounded-3xl overflow-hidden hover:border-white/15 transition-all group">
-      <div className="h-20 flex items-center justify-center relative" style={{ backgroundColor: store.primaryColor + "25" }}>
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-white/8 rounded-3xl overflow-hidden hover:border-gray-300 dark:hover:border-white/15 transition-all group shadow-sm">
+      <div className="h-20 flex items-center justify-center relative" style={{ backgroundColor: store.primaryColor + "20" }}>
         <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: store.primaryColor }}>
           <Store className="h-6 w-6 text-white" />
         </div>
         <div className="absolute top-3 right-3">
-          <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-full font-bold">{store.commissionRate}%</span>
+          <span className="text-xs bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 px-2.5 py-1 rounded-full font-bold">{store.commissionRate}%</span>
         </div>
       </div>
       <div className="p-5">
-        <h3 className="font-bold text-white mb-0.5">{store.name}</h3>
+        <h3 className="font-bold text-gray-900 dark:text-white mb-0.5">{store.name}</h3>
         <p className="text-xs text-gray-500 mb-3">por {store.owner.name ?? "Anónimo"} · {store._count.products} productos</p>
-        {store.description && <p className="text-xs text-gray-400 line-clamp-2 mb-4">{store.description}</p>}
+        {store.description && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-4">{store.description}</p>}
 
         {status && (
           <div className={`mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border ${status.cls}`}>
@@ -1327,7 +1347,7 @@ function StoreCard({ store, onApply, requiresLogin }: { store: StoreItem; onAppl
         )}
 
         <div className="flex gap-2">
-          <Link href={`/tienda/${store.slug}`} target="_blank" className="flex-1 text-center py-2.5 border border-white/10 hover:border-white/20 rounded-xl text-xs text-gray-400 hover:text-white transition-all font-medium">
+          <Link href={`/tienda/${store.slug}`} target="_blank" className="flex-1 text-center py-2.5 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 rounded-xl text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all font-medium">
             Ver tienda
           </Link>
           {canApply && (

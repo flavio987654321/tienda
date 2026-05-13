@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
 import {
   Wallet, ArrowDownLeft, Clock, CheckCircle, Loader2,
   ArrowLeft, ShieldAlert, AlertTriangle, Pencil, X, Info,
   Copy, Check, Share2, TrendingUp, ShoppingBag, ExternalLink,
+  Moon, Sun,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
@@ -153,47 +155,47 @@ function BankForm({ walletId, onClose, onSaved }: { walletId: string; onClose: (
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-2xl w-full max-w-md shadow-xl"
+        className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-xl border border-gray-100 dark:border-white/10"
       >
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h3 className="font-bold text-gray-900">Datos bancarios</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/10">
+          <h3 className="font-bold text-gray-900 dark:text-white">Datos bancarios</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X className="h-5 w-5" /></button>
         </div>
         <div className="p-6 space-y-4">
-          <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
+          <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-500/30 rounded-xl p-3 text-xs text-blue-700 dark:text-blue-300">
             <Info className="h-4 w-4 shrink-0 mt-0.5" />
             <p>Por seguridad, después de guardar nuevos datos bancarios los retiros quedan bloqueados 72hs.</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               Nombre del titular <span className="text-red-500">*</span>
             </label>
             <input value={bankHolder} onChange={(e) => setBankHolder(e.target.value)}
               placeholder="Nombre y apellido"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               CBU / CVU <span className="text-gray-400 font-normal">(22 dígitos)</span>
             </label>
             <input value={cbu} onChange={(e) => setCbu(e.target.value.replace(/\D/g, "").slice(0, 22))}
               placeholder="0000000000000000000000" inputMode="numeric"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-gray-200" /><span className="text-xs text-gray-400">o</span><div className="flex-1 h-px bg-gray-200" />
+            <div className="flex-1 h-px bg-gray-200 dark:bg-white/10" /><span className="text-xs text-gray-400">o</span><div className="flex-1 h-px bg-gray-200 dark:bg-white/10" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Alias</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Alias</label>
             <input value={alias} onChange={(e) => setAlias(e.target.value)} placeholder="tu.alias.aqui"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               CUIL <span className="text-gray-400 font-normal">(recomendado)</span>
             </label>
             <input value={cuil} onChange={(e) => setCuil(e.target.value)} placeholder="20-12345678-9" inputMode="numeric"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           {error && (
             <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-xl px-4 py-3 text-sm">
@@ -202,7 +204,7 @@ function BankForm({ walletId, onClose, onSaved }: { walletId: string; onClose: (
           )}
         </div>
         <div className="flex gap-3 p-6 pt-0">
-          <button onClick={onClose} className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancelar</button>
+          <button onClick={onClose} className="flex-1 py-3 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Cancelar</button>
           <button onClick={handleSave} disabled={saving}
             className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -248,25 +250,25 @@ function WithdrawModal({ affiliates, onClose, onSuccess }: { affiliates: Affilia
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-2xl w-full max-w-md shadow-xl">
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h3 className="font-bold text-gray-900">Solicitar retiro</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+        className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-xl border border-gray-100 dark:border-white/10">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/10">
+          <h3 className="font-bold text-gray-900 dark:text-white">Solicitar retiro</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X className="h-5 w-5" /></button>
         </div>
         <div className="p-6 space-y-4">
           {eligible.length === 0 ? (
             <div className="text-center py-4">
               <AlertTriangle className="h-8 w-8 text-amber-400 mx-auto mb-2" />
-              <p className="text-gray-600 text-sm">No hay billeteras disponibles para retirar.</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">No hay billeteras disponibles para retirar.</p>
               <p className="text-gray-400 text-xs mt-1">Asegurate de tener saldo, datos bancarios cargados y sin bloqueo de 72hs.</p>
             </div>
           ) : (
             <>
               {eligible.length > 1 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tienda</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Tienda</label>
                   <select value={selectedWalletId} onChange={(e) => { setSelectedWalletId(e.target.value); setAmount(""); }}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     {eligible.map((a) => (
                       <option key={a.id} value={a.wallet!.id}>
                         {a.store.name} — ${(a.wallet!.balance).toLocaleString("es-AR")} disponible
@@ -276,14 +278,14 @@ function WithdrawModal({ affiliates, onClose, onSuccess }: { affiliates: Affilia
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Monto <span className="text-gray-400 font-normal">(mín. $500)</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
                   <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
                     min="500" max={maxAmount} placeholder="0"
-                    className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl pl-8 pr-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 </div>
                 <div className="flex justify-between mt-1">
                   <span className="text-xs text-gray-400">Disponible: ${maxAmount.toLocaleString("es-AR")}</span>
@@ -300,7 +302,7 @@ function WithdrawModal({ affiliates, onClose, onSuccess }: { affiliates: Affilia
           )}
         </div>
         <div className="flex gap-3 p-6 pt-0">
-          <button onClick={onClose} className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancelar</button>
+          <button onClick={onClose} className="flex-1 py-3 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Cancelar</button>
           {eligible.length > 0 && (
             <button onClick={handleSubmit} disabled={submitting || !amount}
               className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50">
@@ -378,10 +380,14 @@ function StarterGuide({ url, storeName, walletId, onAddBank }: { url: string; st
 
 export default function BilleteraPage() {
   const { status: sessionStatus } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBankForm, setShowBankForm] = useState<string | null>(null);
   const [showWithdraw, setShowWithdraw] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   function loadData() {
     fetch("/api/vendedoras/wallet")
@@ -396,7 +402,7 @@ export default function BilleteraPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#030712] flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
       </div>
     );
@@ -407,15 +413,24 @@ export default function BilleteraPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#030712]">
       <div className="max-w-3xl mx-auto px-6 py-8">
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
-          <Link href="/vendedoras" className="text-gray-400 hover:text-gray-600 transition-colors">
+          <Link href="/vendedoras" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Mi billetera</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex-1">Mi billetera</h1>
+          {mounted && (
+            <button
+              type="button"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
+            </button>
+          )}
         </div>
 
         {/* Resumen total */}
@@ -451,19 +466,19 @@ export default function BilleteraPage() {
 
           return (
             <motion.div key={affiliate.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl border border-gray-100 p-6 mb-4 space-y-4">
+              className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-white/10 p-6 mb-4 space-y-4 shadow-sm">
 
               {/* Cabecera tienda */}
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-gray-900">{affiliate.store.name}</h3>
+                  <h3 className="font-bold text-gray-900 dark:text-white">{affiliate.store.name}</h3>
                   <a href={`/tienda/${affiliate.store.slug}`} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 transition-colors mt-0.5">
+                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mt-0.5">
                     Ver tienda <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-extrabold text-indigo-600">
+                  <p className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">
                     ${(affiliate.wallet?.balance ?? 0).toLocaleString("es-AR")}
                   </p>
                   <p className="text-xs text-gray-400">disponible</p>
@@ -472,22 +487,22 @@ export default function BilleteraPage() {
 
               {/* Stats de actividad */}
               <div className="grid grid-cols-3 gap-2">
-                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <ShoppingBag className="h-3.5 w-3.5 text-indigo-400" />
                   </div>
-                  <p className="text-base font-bold text-gray-900">{affiliate.totalOrders}</p>
+                  <p className="text-base font-bold text-gray-900 dark:text-white">{affiliate.totalOrders}</p>
                   <p className="text-xs text-gray-400">ventas</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <TrendingUp className="h-3.5 w-3.5 text-green-400" />
                   </div>
-                  <p className="text-base font-bold text-gray-900">{affiliate.totalCommissions}</p>
+                  <p className="text-base font-bold text-gray-900 dark:text-white">{affiliate.totalCommissions}</p>
                   <p className="text-xs text-gray-400">comisiones</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-3 text-center">
-                  <p className="text-base font-bold text-gray-900">
+                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center">
+                  <p className="text-base font-bold text-gray-900 dark:text-white">
                     ${(affiliate.wallet?.totalEarned ?? 0).toLocaleString("es-AR")}
                   </p>
                   <p className="text-xs text-gray-400">ganado total</p>
@@ -496,9 +511,9 @@ export default function BilleteraPage() {
 
               {/* Link de venta */}
               {isActive ? (
-                <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-4">
-                  <p className="text-xs font-semibold text-indigo-700 mb-2">Tu link de venta</p>
-                  <p className="break-all text-xs text-indigo-500 font-mono mb-3">
+                <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-500/20 p-4">
+                  <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 mb-2">Tu link de venta</p>
+                  <p className="break-all text-xs text-indigo-500 dark:text-indigo-300 font-mono mb-3">
                     /tienda/{affiliate.store.slug}?ref={affiliate.id}
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -524,13 +539,13 @@ export default function BilleteraPage() {
 
               {/* Cuenta bancaria */}
               {affiliate.wallet && (
-                <div className={`rounded-xl p-4 border ${affiliate.wallet.hasBankData ? "border-gray-100 bg-white" : "border-amber-200 bg-amber-50"}`}>
+                <div className={`rounded-xl p-4 border ${affiliate.wallet.hasBankData ? "border-gray-100 dark:border-white/10 bg-white dark:bg-white/5" : "border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-500/30"}`}>
                   <div className="flex items-center justify-between mb-3">
-                    <p className={`text-xs font-semibold uppercase tracking-wider ${affiliate.wallet.hasBankData ? "text-gray-400" : "text-amber-700"}`}>
+                    <p className={`text-xs font-semibold uppercase tracking-wider ${affiliate.wallet.hasBankData ? "text-gray-400" : "text-amber-700 dark:text-amber-400"}`}>
                       Cuenta bancaria para retiros
                     </p>
                     <button onClick={() => setShowBankForm(affiliate.wallet!.id)}
-                      className={`flex items-center gap-1 text-xs font-medium transition-colors ${affiliate.wallet.hasBankData ? "text-indigo-600 hover:text-indigo-800" : "text-amber-700 hover:text-amber-900"}`}>
+                      className={`flex items-center gap-1 text-xs font-medium transition-colors ${affiliate.wallet.hasBankData ? "text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300" : "text-amber-700 hover:text-amber-900 dark:text-amber-400"}`}>
                       <Pencil className="h-3 w-3" />
                       {affiliate.wallet.hasBankData ? "Editar" : "Agregar cuenta"}
                     </button>
@@ -538,9 +553,9 @@ export default function BilleteraPage() {
 
                   {affiliate.wallet.hasBankData ? (
                     <div className="space-y-1 text-sm">
-                      {affiliate.wallet.cbu && <p className="font-mono text-gray-700">CBU: {affiliate.wallet.cbu}</p>}
-                      {affiliate.wallet.alias && <p className="text-gray-700">Alias: <span className="font-mono">{affiliate.wallet.alias}</span></p>}
-                      {affiliate.wallet.bankHolder && <p className="text-gray-500 text-xs">Titular: {affiliate.wallet.bankHolder}</p>}
+                      {affiliate.wallet.cbu && <p className="font-mono text-gray-700 dark:text-gray-300">CBU: {affiliate.wallet.cbu}</p>}
+                      {affiliate.wallet.alias && <p className="text-gray-700 dark:text-gray-300">Alias: <span className="font-mono">{affiliate.wallet.alias}</span></p>}
+                      {affiliate.wallet.bankHolder && <p className="text-gray-500 dark:text-gray-400 text-xs">Titular: {affiliate.wallet.bankHolder}</p>}
                     </div>
                   ) : (
                     <div className="flex items-start gap-2">
@@ -564,13 +579,13 @@ export default function BilleteraPage() {
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Últimas comisiones</p>
                   <div className="space-y-2">
                     {affiliate.commissions.slice(0, 5).map((c) => (
-                      <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                      <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/5 last:border-0">
                         <div className="flex items-center gap-2">
                           {c.status === "PAID"
                             ? <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
                             : <Clock className="h-4 w-4 text-yellow-400 shrink-0" />}
                           <div>
-                            <p className="text-sm text-gray-700">
+                            <p className="text-sm text-gray-700 dark:text-gray-300">
                               Venta ${c.order.total.toLocaleString("es-AR")} — {c.rate}% comisión
                             </p>
                             <p className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString("es-AR")}</p>
@@ -591,9 +606,9 @@ export default function BilleteraPage() {
                     {affiliate.wallet!.withdrawals.map((w) => {
                       const s = statusLabel[w.status] ?? { label: w.status, color: "text-gray-600 bg-gray-50" };
                       return (
-                        <div key={w.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                        <div key={w.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/5 last:border-0">
                           <div>
-                            <p className="text-sm text-gray-700">${w.amount.toLocaleString("es-AR")}</p>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">${w.amount.toLocaleString("es-AR")}</p>
                             <p className="text-xs text-gray-400">{new Date(w.createdAt).toLocaleDateString("es-AR")}</p>
                           </div>
                           <span className={`text-xs font-semibold px-2 py-1 rounded-full ${s.color}`}>{s.label}</span>
@@ -609,8 +624,8 @@ export default function BilleteraPage() {
 
         {/* Empty state */}
         {data?.affiliates.length === 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
-            <Wallet className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+          <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-white/10 p-12 text-center shadow-sm">
+            <Wallet className="h-10 w-10 text-gray-200 dark:text-gray-700 mx-auto mb-3" />
             <p className="text-gray-500 font-medium mb-1">Aún no te uniste a ninguna tienda</p>
             <p className="text-gray-400 text-sm mb-4">Unite a una tienda para empezar a ganar comisiones.</p>
             <Link href="/vendedoras"
