@@ -926,15 +926,26 @@ export default function VendedorasPage() {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
 
   useEffect(() => {
-    fetch("/api/vendedoras?mode=tiendas-disponibles")
-      .then((r) => r.json())
-      .then(({ stores }) => { setStores(stores ?? []); setLoadingStores(false); });
+    function fetchStores() {
+      fetch("/api/vendedoras?mode=tiendas-disponibles")
+        .then((r) => r.json())
+        .then(({ stores }) => { setStores(stores ?? []); setLoadingStores(false); })
+        .catch(() => setLoadingStores(false));
+    }
+    fetchStores();
+    const id = setInterval(fetchStores, 30_000);
+    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
     if (sessionStatus !== "authenticated") return;
-    fetch("/api/vendedoras/perfil").then(r => r.json()).then(d => { if (d.user) setProfile(d.user); });
-    fetch("/api/vendedoras?mode=stats").then(r => r.json()).then(d => { setStats(d); });
+    function fetchUserData() {
+      fetch("/api/vendedoras/perfil").then(r => r.json()).then(d => { if (d.user) setProfile(d.user); }).catch(() => {});
+      fetch("/api/vendedoras?mode=stats").then(r => r.json()).then(d => { setStats(d); }).catch(() => {});
+    }
+    fetchUserData();
+    const id = setInterval(fetchUserData, 30_000);
+    return () => clearInterval(id);
   }, [sessionStatus]);
 
   if (sessionStatus === "loading") {

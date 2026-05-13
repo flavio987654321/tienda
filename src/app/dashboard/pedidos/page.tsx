@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import OrderActions from "@/components/orders/OrderActions";

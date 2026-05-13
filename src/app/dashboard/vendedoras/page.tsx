@@ -1,7 +1,10 @@
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import AffiliateActions from "@/components/affiliates/AffiliateActions";
 import CopyLinkButton from "@/components/CopyLinkButton";
+import AutoRefresh from "@/components/AutoRefresh";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import {
@@ -89,6 +92,7 @@ export default async function VendedorasPage() {
 
   return (
     <DashboardLayout userName={user.name} userEmail={user.email} initialPendingAffiliateCount={pending.length}>
+      <AutoRefresh intervalMs={30_000} />
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Afiliados</h1>
