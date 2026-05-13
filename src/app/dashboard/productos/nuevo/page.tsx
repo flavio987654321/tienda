@@ -1157,21 +1157,45 @@ function ProductoFormPage() {
                     </div>
                   )}
 
-                  {/* Variants preview — solo cuando hay variantes */}
+                  {/* Variants preview — colores como círculos, talles como chips */}
                   {!storeTypeConfig.hideVariants && variants.filter((v) => v.value).length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {variants.filter((v) => v.value).slice(0, 4).map((v, i) => (
-                        <span
-                          key={i}
-                          className="text-xs border px-2 py-0.5 rounded-md"
-                          style={{ borderColor: store.primaryColor + "40", color: store.primaryColor }}
-                        >
-                          {v.value}
-                        </span>
-                      ))}
-                      {variants.filter((v) => v.value).length > 4 && (
-                        <span className="text-xs text-gray-400">+{variants.filter((v) => v.value).length - 4}</span>
-                      )}
+                    <div className="space-y-1.5">
+                      {Object.entries(
+                        variants.filter((v) => v.value).reduce((acc, v) => {
+                          const k = v.name || "Variante";
+                          if (!acc[k]) acc[k] = [];
+                          acc[k].push(v);
+                          return acc;
+                        }, {} as Record<string, typeof variants>)
+                      ).map(([groupName, groupVs]) => {
+                        const isColor = groupName === "Color" || groupName === "Tono";
+                        return (
+                          <div key={groupName} className="flex flex-wrap gap-1 items-center">
+                            {isColor ? (
+                              groupVs.slice(0, 8).map((v, i) => {
+                                const bg = colorPreview(v.value);
+                                return bg ? (
+                                  <span key={i} title={v.value}
+                                    className="h-5 w-5 rounded-full border-2 border-gray-200"
+                                    style={{ backgroundColor: bg }} />
+                                ) : (
+                                  <span key={i} className="text-xs border px-2 py-0.5 rounded-md"
+                                    style={{ borderColor: store.primaryColor + "40", color: store.primaryColor }}>
+                                    {v.value}
+                                  </span>
+                                );
+                              })
+                            ) : (
+                              groupVs.slice(0, 4).map((v, i) => (
+                                <span key={i} className="text-xs border px-2 py-0.5 rounded-md"
+                                  style={{ borderColor: store.primaryColor + "40", color: store.primaryColor }}>
+                                  {v.value}
+                                </span>
+                              ))
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
