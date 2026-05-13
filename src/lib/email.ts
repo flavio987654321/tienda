@@ -301,7 +301,7 @@ export async function sendNewAffiliateApplicationEmail({
           <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Nueva solicitud de afiliada</h1>
         </div>
 
-        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${ownerName || "vendedora"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${ownerName || "titular"}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:20px;">
           <strong>${applicantName}</strong> (${applicantEmail}) se postuló para vender en tu tienda <strong>${storeName}</strong>.
         </p>

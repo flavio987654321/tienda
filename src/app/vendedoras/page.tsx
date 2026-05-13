@@ -588,7 +588,7 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
             <textarea
               required rows={4} value={form.applicationMessage}
               onChange={(e) => setForm((p) => ({ ...p, applicationMessage: e.target.value }))}
-              placeholder="Contale a la dueña tu motivación, tu alcance en redes, cómo vas a vender..."
+              placeholder="Contale al/a la titular tu motivación, tu alcance en redes, cómo vas a vender..."
               className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-none"
             />
           </div>
@@ -1179,7 +1179,7 @@ export default function VendedorasPage() {
                   Postulate como<br /><span className="gt">afiliado</span>
                 </h1>
                 <p className="text-gray-400 text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-                  Elegí tiendas, mandá tu presentación y esperá la aprobación de la dueña. Cuando te acepten, vas a tener tu link propio y cobrar comisiones automáticas.
+                  Elegí tiendas, mandá tu presentación y esperá la aprobación del titular. Cuando te acepten, vas a tener tu link propio y cobrar comisiones automáticas.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center mb-14">
                   <Link href="/registro" className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-xl shadow-purple-500/25 hover:scale-105">
@@ -1205,7 +1205,7 @@ export default function VendedorasPage() {
           <section className="bg-gray-900/50 py-16">
             <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                { icon: Users, label: "Solicitudes con aprobación", desc: "La dueña revisa tu perfil antes de darte permiso. Así sabés que trabajás con marcas serias.", color: "#6366f1" },
+                { icon: Users, label: "Solicitudes con aprobación", desc: "El/la titular revisa tu perfil antes de darte permiso. Así sabés que trabajás con marcas serias.", color: "#6366f1" },
                 { icon: Share2, label: "Compartí por redes", desc: "WhatsApp, Facebook, Instagram. Compartís tu link y cada venta te genera comisión automática.", color: "#a855f7" },
                 { icon: Wallet, label: "Cobrás cuando querés", desc: "Tu billetera acumula tus ganancias y pedís el retiro cuando lo necesitás.", color: "#10b981" },
               ].map(({ icon: Icon, label, desc, color }) => (
