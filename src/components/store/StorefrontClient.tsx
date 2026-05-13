@@ -1039,8 +1039,8 @@ export default function StorefrontClient({
         <article
           id={`producto-${product.id}`}
           key={product.id}
-          className={`relative flex h-full flex-col overflow-hidden rounded-[28px] border-2 border-white bg-white text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg ${
-            highlightProductId === product.id ? "ring-4 ring-indigo-400 ring-offset-4" : ""
+          className={`relative flex h-full flex-col overflow-hidden rounded-[28px] border-2 text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg ${
+            highlightProductId === product.id ? "border-indigo-400 ring-4 ring-indigo-400/30" : "border-white bg-white"
           }`}
         >
           <div className="relative aspect-square max-h-72 p-3 shrink-0" style={{ backgroundColor: bg }}>
@@ -1114,7 +1114,7 @@ export default function StorefrontClient({
         key={product.id}
         className={`flex h-full flex-col ${featured ? "sm:col-span-2 sm:row-span-2" : ""} ${list ? "grid grid-cols-[150px_1fr] md:grid-cols-[220px_1fr]" : ""} overflow-hidden border transition duration-300 hover:-translate-y-0.5 ${cardRadius} ${cardShadow} ${
           isDark ? "border-white/10 bg-white/5 text-white" : "border-gray-100 bg-white text-gray-950"
-        } ${highlightProductId === product.id ? "ring-4 ring-indigo-400 ring-offset-4 ring-offset-white" : ""}`}
+        } ${highlightProductId === product.id ? "ring-4 ring-indigo-400/40 outline outline-2 outline-indigo-400" : ""}`}
       >
         <div className={`${list ? "h-full min-h-40" : featured ? "aspect-[4/3]" : "aspect-square max-h-72"} relative overflow-hidden shrink-0 ${isColorful ? "p-2" : ""}`} style={{ backgroundColor: store.secondaryColor }}>
           <div className={`h-full w-full overflow-hidden cursor-pointer ${isColorful ? "rounded-2xl" : ""}`} onClick={() => openProduct(product)}>
