@@ -9,7 +9,7 @@ import { useAuth } from "@/components/AuthProvider";
 import {
   CheckCircle, Clock, Loader2, Send, Store, TrendingUp, Users, Wallet,
   XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
-  Star, Package, ArrowRight, ArrowLeft, Eye, Edit3, MapPin, Phone, Save,
+  Star, Package, ArrowRight, ArrowLeft, ChevronLeft, ChevronRight, Eye, Edit3, MapPin, Phone, Save,
   DollarSign, ShoppingCart, Award, FileText, UploadCloud, Trash2, Download, Search,
   Moon, Sun,
 } from "lucide-react";
@@ -67,6 +67,10 @@ function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, x: number, 
   lines.forEach((item, index) => ctx.fillText(item, x, y + index * lineHeight));
 }
 
+function formatCategory(value: string) {
+  return value.split("-").filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
 function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => void }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [products, setProducts] = useState<ShareProduct[]>([]);
@@ -76,6 +80,9 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
   const [cardError, setCardError] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
   const [selectedImages, setSelectedImages] = useState<Record<string, number>>({});
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [expandedDescs, setExpandedDescs] = useState<Set<string>>(new Set());
+  const touchStartX = useRef<number>(0);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const storeUrl = `${origin}/tienda/${target.storeSlug}?ref=${target.affiliateId}`;
@@ -358,11 +365,18 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                   <Package className="h-12 w-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
                   <p className="text-gray-500 text-sm">Esta tienda aún no tiene productos.</p>
                 </div>
-              ) : (
-                <div className="space-y-4 max-w-4xl mx-auto">
-                  {/* Search + tip */}
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="relative flex-1">
+              ) : (() => {
+                const allCategories = [...new Set(products.map((p) => p.category).filter(Boolean))];
+                const filteredProducts = products.filter((p) => {
+                  const matchSearch = !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase());
+                  const matchCat = categoryFilter === "all" || p.category === categoryFilter;
+                  return matchSearch && matchCat;
+                });
+
+                return (
+                  <div className="space-y-4 max-w-4xl mx-auto">
+                    {/* Search */}
+                    <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-600 pointer-events-none" />
                       <input
                         type="text"
@@ -377,96 +391,127 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                         </button>
                       )}
                     </div>
-                  </div>
 
-                  {/* Instagram tip */}
-                  <div className="flex items-start gap-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-500/20 rounded-2xl px-4 py-3">
-                    <span className="text-base mt-0.5">💡</span>
-                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                      <span className="text-purple-600 dark:text-purple-300 font-bold">Para Instagram/TikTok:</span> elegí la foto, generá la placa y subila a stories con el sticker de link. También podés descargar las fotos directamente.
-                    </p>
-                  </div>
+                    {/* Category chips */}
+                    {allCategories.length > 1 && (
+                      <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:-mx-6 sm:px-6 scrollbar-none">
+                        {["all", ...allCategories].map((cat) => (
+                          <button key={cat} onClick={() => setCategoryFilter(cat)}
+                            className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+                              categoryFilter === cat
+                                ? "bg-indigo-600 text-white shadow-sm"
+                                : "bg-gray-100 dark:bg-white/8 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/15"
+                            }`}>
+                            {cat === "all" ? `Todos (${products.length})` : `${formatCategory(cat)} (${products.filter((p) => p.category === cat).length})`}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
-                  {/* Products grid */}
-                  {(() => {
-                    const filteredProducts = productSearch
-                      ? products.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
-                      : products;
+                    {/* Instagram tip */}
+                    <div className="flex items-start gap-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-500/20 rounded-2xl px-4 py-3">
+                      <span className="text-base mt-0.5">💡</span>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                        <span className="text-purple-600 dark:text-purple-300 font-bold">Para Instagram/TikTok:</span> swipeá la foto, generá la placa y subila a stories con el sticker de link.
+                      </p>
+                    </div>
 
-                    if (filteredProducts.length === 0) {
-                      return (
-                        <div className="text-center py-12">
-                          <p className="text-gray-500 text-sm">Sin resultados para &quot;{productSearch}&quot;</p>
-                        </div>
-                      );
-                    }
-
-                    return (
+                    {/* Products grid */}
+                    {filteredProducts.length === 0 ? (
+                      <div className="text-center py-12">
+                        <p className="text-gray-500 text-sm">Sin resultados{productSearch ? ` para "${productSearch}"` : ""}</p>
+                      </div>
+                    ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {filteredProducts.map((p) => {
                           const pUrl = productUrl(p.id);
                           const imgs = parseImages(p.images);
                           const isLoading = cardLoading === p.id;
                           const selectedIdx = selectedImages[p.id] ?? 0;
+                          const isExpanded = expandedDescs.has(p.id);
+                          const descLong = (p.description?.length ?? 0) > 90;
+
+                          function selectImg(i: number) {
+                            setSelectedImages((prev) => ({ ...prev, [p.id]: i }));
+                          }
+
                           return (
                             <div key={p.id} className="bg-white dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-2xl overflow-hidden flex flex-col">
-                              {/* Product image — larger */}
-                              <div className="relative w-full aspect-square bg-gray-100 dark:bg-gray-800/60 overflow-hidden">
+                              {/* Carrusel de imagen */}
+                              <div
+                                className="relative w-full aspect-square bg-gray-100 dark:bg-gray-800/60 overflow-hidden select-none"
+                                onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+                                onTouchEnd={(e) => {
+                                  const diff = touchStartX.current - e.changedTouches[0].clientX;
+                                  if (Math.abs(diff) > 40) selectImg(diff > 0 ? Math.min(selectedIdx + 1, imgs.length - 1) : Math.max(selectedIdx - 1, 0));
+                                }}
+                              >
                                 {imgs[selectedIdx]
-                                  ? <img src={imgs[selectedIdx]} alt={p.name} className="w-full h-full object-cover" />
+                                  ? <img src={imgs[selectedIdx]} alt={p.name} className="w-full h-full object-cover transition-opacity duration-200" />
                                   : <div className="w-full h-full flex items-center justify-center"><Package className="h-10 w-10 text-gray-400 dark:text-gray-700" /></div>
                                 }
-                              </div>
 
-                              <div className="p-4 flex flex-col gap-3 flex-1">
-                                {/* Info */}
-                                <div>
-                                  <p className="text-gray-900 dark:text-white font-bold text-sm leading-snug">{p.name}</p>
-                                  {p.description && <p className="text-gray-500 dark:text-gray-500 text-xs mt-1 line-clamp-2">{p.description}</p>}
-                                  <p className="text-emerald-600 dark:text-emerald-400 font-black text-base mt-2">{money(p.price)}</p>
-                                </div>
+                                {/* Flechas */}
+                                {selectedIdx > 0 && (
+                                  <button onClick={() => selectImg(selectedIdx - 1)}
+                                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/65 rounded-full flex items-center justify-center text-white transition-all">
+                                    <ChevronLeft className="h-4 w-4" />
+                                  </button>
+                                )}
+                                {selectedIdx < imgs.length - 1 && (
+                                  <button onClick={() => selectImg(selectedIdx + 1)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/65 rounded-full flex items-center justify-center text-white transition-all">
+                                    <ChevronRight className="h-4 w-4" />
+                                  </button>
+                                )}
 
-                                {/* Image selector */}
+                                {/* Dots indicadores */}
                                 {imgs.length > 1 && (
-                                  <div>
-                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1.5">
-                                      Elegí la foto · {imgs.length} disponibles
-                                    </p>
-                                    <div className="flex gap-1.5 flex-wrap">
-                                      {imgs.map((imgUrl, i) => (
-                                        <div key={i} className="relative group/thumb">
-                                          <button
-                                            onClick={() => setSelectedImages((prev) => ({ ...prev, [p.id]: i }))}
-                                            className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
-                                              selectedIdx === i
-                                                ? "border-purple-500 ring-2 ring-purple-500/30"
-                                                : "border-gray-200 dark:border-white/10 opacity-50 hover:opacity-80"
-                                            }`}
-                                          >
-                                            <img src={imgUrl} alt="" className="w-full h-full object-cover" />
-                                          </button>
-                                          <button
-                                            onClick={() => downloadWithWatermark(imgUrl, p.name)}
-                                            title="Descargar foto"
-                                            className="absolute -top-1 -right-1 w-4 h-4 bg-gray-800 hover:bg-indigo-600 border border-white/20 rounded-full flex items-center justify-center transition-all opacity-0 group-hover/thumb:opacity-100"
-                                          >
-                                            <Download className="h-2 w-2 text-white" />
-                                          </button>
-                                        </div>
-                                      ))}
-                                    </div>
+                                  <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5 items-center">
+                                    {imgs.map((_, i) => (
+                                      <button key={i} onClick={() => selectImg(i)}
+                                        className={`rounded-full transition-all duration-200 ${selectedIdx === i ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50 hover:bg-white/75"}`} />
+                                    ))}
                                   </div>
                                 )}
 
-                                {/* Single image download */}
-                                {imgs.length === 1 && imgs[0] && (
-                                  <button
-                                    onClick={() => downloadWithWatermark(imgs[0], p.name)}
-                                    className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
-                                  >
-                                    <Download className="h-3.5 w-3.5" /> Descargar foto
+                                {/* Descargar foto actual */}
+                                {imgs[selectedIdx] && (
+                                  <button onClick={() => downloadWithWatermark(imgs[selectedIdx], p.name)}
+                                    title="Descargar foto"
+                                    className="absolute top-2 right-2 w-7 h-7 bg-black/40 hover:bg-black/65 rounded-full flex items-center justify-center text-white transition-all">
+                                    <Download className="h-3.5 w-3.5" />
                                   </button>
                                 )}
+
+                                {/* Contador foto */}
+                                {imgs.length > 1 && (
+                                  <div className="absolute top-2 left-2 bg-black/40 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                    {selectedIdx + 1}/{imgs.length}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="p-4 flex flex-col gap-3 flex-1">
+                                {/* Info + descripción expandible */}
+                                <div>
+                                  <p className="text-gray-900 dark:text-white font-bold text-sm leading-snug">{p.name}</p>
+                                  {p.description && (
+                                    <div className="mt-1">
+                                      <p className={`text-gray-500 dark:text-gray-400 text-xs leading-relaxed ${isExpanded ? "" : "line-clamp-2"}`}>
+                                        {p.description}
+                                      </p>
+                                      {descLong && (
+                                        <button
+                                          onClick={() => setExpandedDescs((prev) => { const n = new Set(prev); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; })}
+                                          className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 hover:underline mt-0.5">
+                                          {isExpanded ? "Ver menos" : "Ver más"}
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                  <p className="text-emerald-600 dark:text-emerald-400 font-black text-base mt-2">{money(p.price)}</p>
+                                </div>
 
                                 {/* CTA placa */}
                                 <button onClick={() => shareCard(p)} disabled={isLoading}
@@ -476,9 +521,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                                     : <><Star className="h-4 w-4" /> Generar placa{imgs.length > 1 ? ` · foto ${selectedIdx + 1}` : ""}</>
                                   }
                                 </button>
-                                {cardError && (
-                                  <p className="text-xs text-red-400 text-center">{cardError}</p>
-                                )}
+                                {cardError && <p className="text-xs text-red-400 text-center">{cardError}</p>}
 
                                 {/* Acciones secundarias */}
                                 <div className="grid grid-cols-4 gap-1.5">
@@ -505,10 +548,10 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                           );
                         })}
                       </div>
-                    );
-                  })()}
-                </div>
-              )}
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
