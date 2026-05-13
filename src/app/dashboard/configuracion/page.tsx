@@ -576,9 +576,11 @@ function NavLinksEditor({ value, onChange, categories = [], blocks = [] }: { val
 function ContentGlobalSettings({
   config,
   set,
+  onEditPolicy,
 }: {
   config: StoreConfig;
   set: <K extends keyof StoreConfig>(k: K, v: StoreConfig[K]) => void;
+  onEditPolicy: (key: "policyReturns"|"policyShipping"|"policyTerms") => void;
 }) {
   const [open, setOpen] = useState<DesignSection[]>([]);
   const toggle = (section: DesignSection) => {
@@ -609,58 +611,41 @@ function ContentGlobalSettings({
       </Accordion>
 
       <Accordion label="Footer & Políticas legales" icon={CreditCard} id="footer" open={open.includes("footer")} toggle={toggle}>
-        {/* Footer */}
+        {/* Pie de página */}
         <div className="space-y-3">
           <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Pie de página</p>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Descripción breve (opcional)</label>
-            <textarea value={config.footerDescription||""} onChange={e=>set("footerDescription",e.target.value)} rows={2}
-              placeholder="Ropa y accesorios · Buenos Aires, Argentina"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+            <input type="text" value={config.footerDescription||""} onChange={e=>set("footerDescription",e.target.value)}
+              placeholder="Ropa y accesorios · Buenos Aires"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Texto adicional (opcional)</label>
-            <textarea value={config.footerText} onChange={e=>set("footerText",e.target.value)} rows={2}
-              placeholder="Envíos a todo el país · Pagos seguros"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
-          </div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={config.footerShowLegal!==false} onChange={e=>set("footerShowLegal",e.target.checked)} className="rounded accent-indigo-600"/>
-            <span className="text-xs text-gray-700">Mostrar links a políticas en el footer</span>
-          </label>
         </div>
 
         <hr className="border-gray-100"/>
 
-        {/* Políticas */}
-        <div className="space-y-3">
-          <div className="flex items-start gap-2">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Políticas legales</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">Aparecen en <strong>/politicas</strong> y como links en el footer</p>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">↩️ Política de devoluciones</label>
-            <textarea value={config.policyReturns||""} onChange={e=>set("policyReturns",e.target.value)} rows={4}
-              placeholder={"Aceptamos devoluciones hasta 30 días después de la compra. El producto debe estar en su estado original con etiquetas. Para iniciar una devolución contactanos por WhatsApp."}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">📦 Política de envíos</label>
-            <textarea value={config.policyShipping||""} onChange={e=>set("policyShipping",e.target.value)} rows={4}
-              placeholder={"Realizamos envíos a todo el país por Andreani y Correo Argentino. El plazo de entrega es de 3 a 7 días hábiles. Envío gratis en compras mayores a $X."}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">📋 Términos y condiciones</label>
-            <textarea value={config.policyTerms||""} onChange={e=>set("policyTerms",e.target.value)} rows={4}
-              placeholder={"Al realizar una compra aceptás nuestros términos y condiciones. Los precios pueden variar sin previo aviso. Nos reservamos el derecho de cancelar pedidos en caso de error de precio."}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
-          </div>
-          <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
-            <p className="text-[11px] text-blue-700">💡 Los campos que dejés vacíos no aparecen en la página pública.</p>
-          </div>
+        {/* Políticas — solo toggles + botón editar */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Políticas legales</p>
+          <p className="text-[10px] text-gray-400 -mt-1">Activá y luego tocá <strong>Editar</strong> para escribir el texto</p>
+          {([
+            { key:"policyReturns"  as const, emoji:"↩️", label:"Política de devoluciones" },
+            { key:"policyShipping" as const, emoji:"📦", label:"Política de envíos" },
+            { key:"policyTerms"    as const, emoji:"📋", label:"Términos y condiciones" },
+          ]).map(({key,emoji,label})=>{
+            const hasText = !!(config[key] as string);
+            return (
+              <div key={key} className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
+                <span className="text-base shrink-0">{emoji}</span>
+                <span className="flex-1 text-xs font-medium text-gray-700">{label}</span>
+                {hasText && <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">Escrita ✓</span>}
+                <button type="button" onClick={()=>onEditPolicy(key)}
+                  className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-600 hover:bg-indigo-100 transition-colors shrink-0">
+                  {hasText ? "✏️ Editar" : "✏️ Escribir"}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </Accordion>
 
@@ -2514,6 +2499,7 @@ export default function ConfiguracionPage() {
   // Blocks state
   const [blocks, setBlocks]               = useState<Block[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string|null>(null);
+  const [policyEditing, setPolicyEditing] = useState<"policyReturns"|"policyShipping"|"policyTerms"|null>(null);
   const [selectedImageField, setSelectedImageField] = useState<string>("image");
   const [showBlockLibrary, setShowBlockLibrary] = useState(false);
   const [previewMenuOpen, setPreviewMenuOpen] = useState(false);
@@ -2968,7 +2954,7 @@ export default function ConfiguracionPage() {
                 </div>
               )}
 
-              <ContentGlobalSettings config={config} set={set} />
+              <ContentGlobalSettings config={config} set={set} onEditPolicy={setPolicyEditing} />
 
               <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-3 space-y-1.5">
                 <p className="text-[11px] text-gray-500 leading-relaxed">
@@ -3191,8 +3177,17 @@ export default function ConfiguracionPage() {
                     </div>
 
                     {/* Mini footer */}
-                    <div style={{background:"#f9fafb",borderTop:"1px solid #e5e7eb",padding:"12px 16px",textAlign:"center"}}>
-                      <p style={{fontSize:"11px",color:"#9ca3af"}}>{config.footerText||`© 2025 ${config.name||"Mi Tienda"}`}</p>
+                    <div style={{background:"#f9fafb",borderTop:"1px solid #e5e7eb",padding:"14px 16px",textAlign:"center"}}>
+                      <p style={{fontSize:"12px",fontWeight:700,color:"#374151",marginBottom:"4px"}}>{config.name||"Mi Tienda"}</p>
+                      {config.footerDescription && <p style={{fontSize:"10px",color:"#9ca3af",marginBottom:"6px"}}>{config.footerDescription}</p>}
+                      {config.footerShowLegal!==false && (config.policyReturns||config.policyShipping||config.policyTerms) && (
+                        <div style={{display:"flex",flexWrap:"wrap",justifyContent:"center",gap:"10px",marginBottom:"6px"}}>
+                          {config.policyReturns && <span style={{fontSize:"9px",color:"#6b7280",cursor:"pointer"}}>Política de devoluciones</span>}
+                          {config.policyShipping && <span style={{fontSize:"9px",color:"#6b7280",cursor:"pointer"}}>Política de envíos</span>}
+                          {config.policyTerms && <span style={{fontSize:"9px",color:"#6b7280",cursor:"pointer"}}>Términos y condiciones</span>}
+                        </div>
+                      )}
+                      <p style={{fontSize:"9px",color:"#d1d5db"}}>© {new Date().getFullYear()} {config.name||"Mi Tienda"}</p>
                     </div>
 
                   </div>
@@ -3217,6 +3212,54 @@ export default function ConfiguracionPage() {
 
       {/* Block library modal */}
       {showBlockLibrary&&<BlockLibraryModal onAdd={addBlock} onClose={()=>setShowBlockLibrary(false)}/>}
+
+      {/* Policy fullscreen editor */}
+      {policyEditing && (()=>{
+        const META = {
+          policyReturns:  { emoji:"↩️", label:"Política de devoluciones", placeholder:"Ej: Aceptamos devoluciones hasta 30 días después de la compra. El producto debe estar en su estado original con etiquetas. Para iniciar una devolución contactanos por WhatsApp o email." },
+          policyShipping: { emoji:"📦", label:"Política de envíos",        placeholder:"Ej: Realizamos envíos a todo el país por Andreani y Correo Argentino. El plazo de entrega es de 3 a 7 días hábiles. Envío gratis en compras mayores a $X." },
+          policyTerms:    { emoji:"📋", label:"Términos y condiciones",    placeholder:"Ej: Al realizar una compra aceptás nuestros términos. Los precios pueden variar sin previo aviso. Nos reservamos el derecho de cancelar pedidos en caso de error de precio." },
+        };
+        const m = META[policyEditing];
+        return (
+          <div className="fixed inset-0 z-[200] flex flex-col bg-white">
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-gray-100 px-6 py-4 shrink-0">
+              <button type="button" onClick={()=>setPolicyEditing(null)}
+                className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd"/></svg>
+                Volver
+              </button>
+              <div className="flex-1">
+                <p className="text-sm font-black text-gray-900">{m.emoji} {m.label}</p>
+                <p className="text-[11px] text-gray-400">Aparece en la página de políticas de tu tienda</p>
+              </div>
+              <button type="button" onClick={()=>{ setIsDirty(true); setPolicyEditing(null); }}
+                className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-bold text-white hover:bg-indigo-700 transition-colors">
+                Listo ✓
+              </button>
+            </div>
+            {/* Editor */}
+            <div className="flex-1 overflow-auto px-6 py-6 md:px-12 md:py-8">
+              <div className="mx-auto max-w-3xl h-full flex flex-col gap-4">
+                <textarea
+                  autoFocus
+                  value={(config[policyEditing] as string)||""}
+                  onChange={e=>set(policyEditing, e.target.value)}
+                  placeholder={m.placeholder}
+                  className="flex-1 w-full min-h-[60vh] rounded-2xl border border-gray-200 bg-gray-50 px-6 py-5 text-sm leading-relaxed text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:bg-white resize-none transition-colors"
+                />
+                <div className="flex items-center justify-between text-[11px] text-gray-400">
+                  <span>{((config[policyEditing] as string)||"").length} caracteres</span>
+                  {(config[policyEditing] as string) && (
+                    <button type="button" onClick={()=>set(policyEditing,"")} className="text-red-400 hover:text-red-600 transition-colors">Borrar todo</button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Product modal editor */}
       {previewModalProduct && (() => {
