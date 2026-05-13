@@ -97,7 +97,7 @@ function colorPreview(val: string): string | null {
 function Tip({ text }: { text: string }) {
   return (
     <span className="relative inline-flex group/tip ml-1 cursor-help align-middle">
-      <HelpCircle className="h-3.5 w-3.5 text-gray-300 hover:text-indigo-400 transition-colors" />
+      <HelpCircle className="h-3.5 w-3.5 text-indigo-400 hover:text-indigo-600 transition-colors" />
       <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-56 rounded-xl bg-gray-900 px-3 py-2 text-xs text-white opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 leading-relaxed shadow-lg">
         {text}
         <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
