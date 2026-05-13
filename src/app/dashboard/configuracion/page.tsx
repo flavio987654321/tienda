@@ -124,6 +124,22 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
     ], height:"md", autoplay:true, speed:4, showDots:true, showArrows:true, overlayColor:"#000000", overlayOpacity:35, textColor:"#ffffff", textAlign:"center" } },
 ];
 
+const BLOCK_TIPS: Partial<Record<BlockType, string>> = {
+  "navbar":       "La barra de navegación aparece fija en el tope de la tienda. Agregá links a tus secciones más importantes.",
+  "hero":         "El texto se puede mover arrastrándolo directamente en la preview. Usá altura 'Pantalla completa' para mayor impacto visual.",
+  "text":         "Ideal para contar tu historia o describir tu marca. Controlá el tamaño del título con H1–H4 y el cuerpo por separado.",
+  "products":     "Los productos se actualizan solos cuando los editás desde el catálogo — no hace falta guardar la tienda de nuevo.",
+  "banner":       "Perfecto para anunciar ofertas, envíos gratis o novedades. Usá colores llamativos para que se destaque.",
+  "cta":          "Botón de llamada a la acción. Posicionalo cerca del final de la página para cerrar la venta.",
+  "image-text":   "Mostrá una foto de tu taller, equipo o producto junto a texto. Probá imagen a la derecha y a la izquierda para ver cuál queda mejor.",
+  "spacer":       "Separa secciones para que la tienda respire. Podés agregar un emoji o texto decorativo opcional.",
+  "socials":      "Conectá tus redes. El botón de WhatsApp abre un chat directo con vos. Podés reordenar los canales arrastrándolos.",
+  "divider":      "Línea decorativa para separar secciones. Simple y efectiva.",
+  "contacto":     "El formulario envía los mensajes al email de tu cuenta. Activá solo los campos que necesitás (nombre, teléfono, etc.).",
+  "nosotros":     "Presentá tu equipo y tu misión. Genera confianza con clientes nuevos que no te conocen.",
+  "banner-group": "Agregá imágenes de alta calidad (banner de tu marca, productos, etc.). El texto se puede mover en la preview. Ideal como portada principal.",
+};
+
 /* ─── Bloques prediseñados por template ─── */
 const TEMPLATE_BLOCKS: Record<string, Omit<Block,"id">[]> = {
   default:  [ // Clean
@@ -2738,10 +2754,29 @@ export default function ConfiguracionPage() {
               </button>
 
               {blocks.length===0 ? (
-                <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
-                  <Layers className="h-8 w-8 text-gray-300 mx-auto mb-3"/>
-                  <p className="text-gray-500 text-sm font-medium">Sin bloques de contenido</p>
-                  <p className="text-gray-400 text-xs mt-1">Agregá secciones para personalizar el contenido de tu tienda</p>
+                <div className="bg-gradient-to-b from-indigo-50 to-white border border-indigo-100 rounded-2xl p-4 space-y-3">
+                  <div>
+                    <p className="text-sm font-bold text-indigo-700">👋 ¡Armá tu tienda!</p>
+                    <p className="text-xs text-indigo-500 mt-0.5">Te sugerimos empezar con estos bloques en orden:</p>
+                  </div>
+                  {([
+                    { step:"1", type:"banner-group" as BlockType, emoji:"🎠", label:"Carrusel de banners", desc:"Portada con tu imagen de marca" },
+                    { step:"2", type:"products"     as BlockType, emoji:"🛍️", label:"Grilla de productos",  desc:"Tu catálogo visible para todos" },
+                    { step:"3", type:"socials"      as BlockType, emoji:"🔗", label:"Redes / Contacto",    desc:"WhatsApp, Instagram y más" },
+                  ]).map(({ step, type, emoji, label, desc }) => (
+                    <button key={type} type="button"
+                      onClick={() => addBlock(type)}
+                      className="w-full flex items-center gap-3 p-3 bg-white border border-gray-100 hover:border-indigo-300 hover:bg-indigo-50/60 rounded-xl transition-all text-left group">
+                      <span className="shrink-0 w-5 h-5 bg-indigo-100 group-hover:bg-indigo-200 rounded-full flex items-center justify-center text-[10px] font-bold text-indigo-600 transition-colors">{step}</span>
+                      <span className="text-base">{emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800">{label}</p>
+                        <p className="text-[11px] text-gray-400">{desc}</p>
+                      </div>
+                      <Plus className="h-3.5 w-3.5 text-gray-300 group-hover:text-indigo-500 transition-colors shrink-0"/>
+                    </button>
+                  ))}
+                  <p className="text-[11px] text-gray-400 text-center pt-1">O usá "Agregar bloque" para elegir cualquier sección</p>
                 </div>
               ) : (
                 /* Block list */
@@ -2816,6 +2851,12 @@ export default function ConfiguracionPage() {
                             <div className="sticky top-0 z-[1] -mx-3 -mt-3 mb-3 border-b border-indigo-100 bg-white/90 px-3 py-2 backdrop-blur">
                               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-indigo-500">Editando este bloque</p>
                             </div>
+                            {BLOCK_TIPS[b.type] && (
+                              <div className="flex gap-2 rounded-xl bg-amber-50 border border-amber-100 px-3 py-2.5 mb-1">
+                                <span className="text-sm shrink-0">💡</span>
+                                <p className="text-[11px] leading-relaxed text-amber-700">{BLOCK_TIPS[b.type]}</p>
+                              </div>
+                            )}
                             <BlockEditor
                               block={b}
                               onChange={props=>updateBlock(b.id,props)}
@@ -2853,9 +2894,17 @@ export default function ConfiguracionPage() {
 
               <ContentGlobalSettings config={config} set={set} />
 
-              <p className="text-xs text-gray-400 text-center px-2">
-                Hacé clic en un bloque para editarlo · Los cambios se ven en tiempo real en la preview →
-              </p>
+              <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-3 space-y-1.5">
+                <p className="text-[11px] text-gray-500 leading-relaxed">
+                  <span className="font-semibold text-gray-700">Cómo funciona:</span> hacé clic en un bloque para editarlo. Los cambios se ven en tiempo real en la preview.
+                </p>
+                <p className="text-[11px] text-gray-500 leading-relaxed">
+                  <span className="font-semibold text-gray-700">Productos:</span> se actualizan solos cuando los editás desde el catálogo. No hace falta guardar la tienda de nuevo.
+                </p>
+                <p className="text-[11px] text-gray-500 leading-relaxed">
+                  <span className="font-semibold text-gray-700">Guardar:</span> presioná "Guardar cambios" arriba para publicar el diseño de tu tienda.
+                </p>
+              </div>
             </div>
         </div>
 
