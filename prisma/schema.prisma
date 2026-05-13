@@ -109,12 +109,15 @@ model Store {
   pageBlocks          String   @default("[]")
   navLinks            String   @default("[]")
   // Políticas legales
-  policyReturns       String?
-  policyShipping      String?
-  policyTerms         String?
+  policyReturns        String?
+  policyShipping       String?
+  policyTerms          String?
+  policyReturnsActive  Boolean  @default(true)
+  policyShippingActive Boolean  @default(true)
+  policyTermsActive    Boolean  @default(true)
   // Footer
-  footerDescription   String?
-  footerShowLegal     Boolean  @default(true)
+  footerDescription    String?
+  footerShowLegal      Boolean  @default(true)
   tipoTienda          String   @default("ROPA")
   tipoTiendaConfigurado Boolean @default(false)
   tieneVentaMayorista Boolean  @default(false)

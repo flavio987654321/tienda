@@ -228,6 +228,7 @@ const DEFAULT_CONFIG: StoreConfig = {
   whatsappNumber:"", showWhatsappButton:false,
   footerText:"", footerDescription:"", footerShowLegal:true,
   policyReturns:"", policyShipping:"", policyTerms:"",
+  policyReturnsActive:true, policyShippingActive:true, policyTermsActive:true,
   currency:"ARS",
   tipoTienda:"ROPA", tipoTiendaConfigurado:false, tieneVentaMayorista:false,
   productModalSizeChart:false, productModalSizeChartTitle:"Tabla de talles",
@@ -624,24 +625,35 @@ function ContentGlobalSettings({
 
         <hr className="border-gray-100"/>
 
-        {/* Políticas — solo toggles + botón editar */}
+        {/* Políticas — toggle + lápiz */}
         <div className="space-y-2">
           <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Políticas legales</p>
-          <p className="text-[10px] text-gray-400 -mt-1">Activá y luego tocá <strong>Editar</strong> para escribir el texto</p>
+          <p className="text-[10px] text-gray-400 -mt-1">Activá el toggle para mostrar el link en el footer, tocá el lápiz para escribir</p>
           {([
-            { key:"policyReturns"  as const, emoji:"↩️", label:"Política de devoluciones" },
-            { key:"policyShipping" as const, emoji:"📦", label:"Política de envíos" },
-            { key:"policyTerms"    as const, emoji:"📋", label:"Términos y condiciones" },
-          ]).map(({key,emoji,label})=>{
+            { key:"policyReturns"  as const, activeKey:"policyReturnsActive"  as const, emoji:"↩️", label:"Devoluciones" },
+            { key:"policyShipping" as const, activeKey:"policyShippingActive" as const, emoji:"📦", label:"Envíos" },
+            { key:"policyTerms"    as const, activeKey:"policyTermsActive"    as const, emoji:"📋", label:"Términos" },
+          ]).map(({key,activeKey,emoji,label})=>{
+            const isActive = config[activeKey] !== false;
             const hasText = !!(config[key] as string);
             return (
-              <div key={key} className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
+              <div key={key} className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 transition-colors ${isActive?"border-indigo-100 bg-indigo-50":"border-gray-100 bg-gray-50"}`}>
                 <span className="text-base shrink-0">{emoji}</span>
-                <span className="flex-1 text-xs font-medium text-gray-700">{label}</span>
-                {hasText && <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">Escrita ✓</span>}
+                <span className={`flex-1 text-xs font-medium ${isActive?"text-indigo-800":"text-gray-500"}`}>{label}</span>
+                {hasText && isActive && <span className="text-[9px] font-bold text-emerald-600">✓</span>}
+                {/* Toggle */}
+                <button type="button" onClick={()=>set(activeKey,!isActive)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${isActive?"bg-indigo-500":"bg-gray-200"}`}
+                  role="switch" aria-checked={isActive}>
+                  <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${isActive?"translate-x-4":"translate-x-0"}`}/>
+                </button>
+                {/* Lápiz */}
                 <button type="button" onClick={()=>onEditPolicy(key)}
-                  className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-600 hover:bg-indigo-100 transition-colors shrink-0">
-                  {hasText ? "✏️ Editar" : "✏️ Escribir"}
+                  className={`rounded-lg p-1.5 transition-colors ${hasText?"text-indigo-500 hover:bg-indigo-100":"text-gray-400 hover:bg-gray-100"}`}
+                  title={hasText?"Editar texto":"Escribir texto"}>
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                    <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z"/>
+                  </svg>
                 </button>
               </div>
             );
@@ -2541,6 +2553,9 @@ export default function ConfiguracionPage() {
           policyReturns:(store as any).policyReturns||"",
           policyShipping:(store as any).policyShipping||"",
           policyTerms:(store as any).policyTerms||"",
+          policyReturnsActive:(store as any).policyReturnsActive!==false,
+          policyShippingActive:(store as any).policyShippingActive!==false,
+          policyTermsActive:(store as any).policyTermsActive!==false,
           navLinks:store.navLinks||"[]",
         }));
         try {
@@ -3178,13 +3193,16 @@ export default function ConfiguracionPage() {
 
                     {/* Mini footer */}
                     <div style={{background:"#f9fafb",borderTop:"1px solid #e5e7eb",padding:"14px 16px",textAlign:"center"}}>
-                      <p style={{fontSize:"12px",fontWeight:700,color:"#374151",marginBottom:"4px"}}>{config.name||"Mi Tienda"}</p>
                       {config.footerDescription && <p style={{fontSize:"10px",color:"#9ca3af",marginBottom:"6px"}}>{config.footerDescription}</p>}
-                      {config.footerShowLegal!==false && (config.policyReturns||config.policyShipping||config.policyTerms) && (
+                      {config.footerShowLegal!==false && (
+                        (config.policyReturnsActive && config.policyReturns)||
+                        (config.policyShippingActive && config.policyShipping)||
+                        (config.policyTermsActive && config.policyTerms)
+                      ) && (
                         <div style={{display:"flex",flexWrap:"wrap",justifyContent:"center",gap:"10px",marginBottom:"6px"}}>
-                          {config.policyReturns && <span style={{fontSize:"9px",color:"#6b7280",cursor:"pointer"}}>Política de devoluciones</span>}
-                          {config.policyShipping && <span style={{fontSize:"9px",color:"#6b7280",cursor:"pointer"}}>Política de envíos</span>}
-                          {config.policyTerms && <span style={{fontSize:"9px",color:"#6b7280",cursor:"pointer"}}>Términos y condiciones</span>}
+                          {config.policyReturnsActive && config.policyReturns && <span style={{fontSize:"9px",color:"#6b7280"}}>Política de devoluciones</span>}
+                          {config.policyShippingActive && config.policyShipping && <span style={{fontSize:"9px",color:"#6b7280"}}>Política de envíos</span>}
+                          {config.policyTermsActive && config.policyTerms && <span style={{fontSize:"9px",color:"#6b7280"}}>Términos y condiciones</span>}
                         </div>
                       )}
                       <p style={{fontSize:"9px",color:"#d1d5db"}}>© {new Date().getFullYear()} {config.name||"Mi Tienda"}</p>

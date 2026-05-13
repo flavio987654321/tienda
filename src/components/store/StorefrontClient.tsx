@@ -182,6 +182,9 @@ type Store = {
   policyReturns: string | null;
   policyShipping: string | null;
   policyTerms: string | null;
+  policyReturnsActive: boolean;
+  policyShippingActive: boolean;
+  policyTermsActive: boolean;
   currency: string;
   pageBlocks: string;
   navLinks: string;
@@ -1959,19 +1962,23 @@ export default function StorefrontClient({
           </div>
 
           {/* Políticas legales */}
-          {store.footerShowLegal && (store.policyReturns || store.policyShipping || store.policyTerms) && (
+          {store.footerShowLegal && (
+            (store.policyReturnsActive && store.policyReturns) ||
+            (store.policyShippingActive && store.policyShipping) ||
+            (store.policyTermsActive && store.policyTerms)
+          ) && (
             <div className="mb-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs opacity-60">
-              {store.policyReturns && (
+              {store.policyReturnsActive && store.policyReturns && (
                 <a href={`/tienda/${store.slug}/politicas#devoluciones`} className="hover:opacity-80 transition-opacity">
                   Política de devoluciones
                 </a>
               )}
-              {store.policyShipping && (
+              {store.policyShippingActive && store.policyShipping && (
                 <a href={`/tienda/${store.slug}/politicas#envios`} className="hover:opacity-80 transition-opacity">
                   Política de envíos
                 </a>
               )}
-              {store.policyTerms && (
+              {store.policyTermsActive && store.policyTerms && (
                 <a href={`/tienda/${store.slug}/politicas#terminos`} className="hover:opacity-80 transition-opacity">
                   Términos y condiciones
                 </a>

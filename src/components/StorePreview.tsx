@@ -22,6 +22,7 @@ export interface StoreConfig {
   whatsappNumber: string; showWhatsappButton: boolean;
   footerText: string; footerDescription?: string; footerShowLegal?: boolean;
   policyReturns?: string; policyShipping?: string; policyTerms?: string;
+  policyReturnsActive?: boolean; policyShippingActive?: boolean; policyTermsActive?: boolean;
   currency: string;
   affiliatesEnabled?: boolean; commissionRate?: string | number;
   seoTitle?: string; seoDescription?: string;
