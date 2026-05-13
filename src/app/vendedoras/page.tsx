@@ -315,7 +315,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                   <FbIcon /> Facebook
                 </button>
                 <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`¡Mirá ${target.storeName}! 🛍️`)}&url=${encodeURIComponent(storeUrl)}`, "_blank")}
-                  className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-bold py-3 rounded-xl text-sm transition-all">
+                  className="flex items-center justify-center gap-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl text-sm transition-all">
                   <TwIcon /> X
                 </button>
                 <button onClick={() => window.open(`https://t.me/share/url?url=${encodeURIComponent(storeUrl)}&text=${encodeURIComponent(`¡Mirá ${target.storeName}!`)}`, "_blank")}
@@ -325,28 +325,28 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
               </div>
 
               {/* Instagram & TikTok — paso a paso */}
-              <div className="bg-gradient-to-br from-purple-950/60 to-pink-950/40 border border-purple-500/20 rounded-2xl p-4 space-y-3">
+              <div className="bg-purple-50 dark:bg-gradient-to-br dark:from-purple-950/60 dark:to-pink-950/40 border border-purple-200 dark:border-purple-500/20 rounded-2xl p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <IgIconLg />
-                  <p className="text-sm font-black text-white">Instagram & TikTok</p>
+                  <p className="text-sm font-black text-purple-900 dark:text-white">Instagram & TikTok</p>
                 </div>
                 <ol className="space-y-2">
                   {["Copiá tu link de afiliado (arriba ↑)", "Abrí Instagram → Stories → sticker de link", "Pegá el link y publicá la historia"].map((step, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-xs text-gray-400">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-600/30 border border-purple-500/30 text-purple-300 font-black text-[10px] flex items-center justify-center mt-0.5">{i + 1}</span>
+                    <li key={i} className="flex items-start gap-2.5 text-xs text-purple-700 dark:text-gray-400">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-200 dark:bg-purple-600/30 border border-purple-300 dark:border-purple-500/30 text-purple-700 dark:text-purple-300 font-black text-[10px] flex items-center justify-center mt-0.5">{i + 1}</span>
                       {step}
                     </li>
                   ))}
                 </ol>
                 <button onClick={() => copy(storeUrl, "ig")}
-                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600/25 to-pink-600/25 hover:from-purple-600/40 hover:to-pink-600/40 border border-purple-500/25 text-purple-300 font-bold py-2.5 rounded-xl text-sm transition-all">
-                  {copied === "ig" ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                  className="w-full flex items-center justify-center gap-2 bg-purple-100 dark:bg-gradient-to-r dark:from-purple-600/25 dark:to-pink-600/25 hover:bg-purple-200 dark:hover:from-purple-600/40 dark:hover:to-pink-600/40 border border-purple-300 dark:border-purple-500/25 text-purple-700 dark:text-purple-300 font-bold py-2.5 rounded-xl text-sm transition-all">
+                  {copied === "ig" ? <Check className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
                   {copied === "ig" ? "¡Link copiado!" : "Copiar link"}
                 </button>
               </div>
 
               <Link href={storeUrl} target="_blank"
-                className="flex items-center justify-center gap-2 border border-white/8 hover:border-white/15 text-gray-500 hover:text-gray-300 py-3 rounded-2xl text-sm font-medium transition-all hover:bg-white/4">
+                className="flex items-center justify-center gap-2 border border-gray-200 dark:border-white/8 hover:border-gray-300 dark:hover:border-white/15 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 py-3 rounded-2xl text-sm font-medium transition-all hover:bg-gray-50 dark:hover:bg-white/4">
                 <Eye className="h-4 w-4" /> Ver cómo queda la tienda
               </Link>
             </div>
@@ -488,8 +488,8 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                               <WaIcon /> WhatsApp
                             </button>
                             <button onClick={() => copy(pUrl, p.id)}
-                              className="flex flex-col items-center gap-1 py-2.5 bg-white/5 hover:bg-white/10 border border-white/8 text-gray-400 hover:text-white rounded-xl text-[10px] font-bold transition-all">
-                              {copied === p.id ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                              className="flex flex-col items-center gap-1 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl text-[10px] font-bold transition-all">
+                              {copied === p.id ? <Check className="h-4 w-4 text-emerald-500 dark:text-emerald-400" /> : <Copy className="h-4 w-4" />}
                               {copied === p.id ? "¡Listo!" : "Copiar link"}
                             </button>
                             <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pUrl)}`, "_blank")}
@@ -497,7 +497,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                               <FbIcon /> Facebook
                             </button>
                             <Link href={pUrl} target="_blank"
-                              className="flex flex-col items-center gap-1 py-2.5 bg-white/5 hover:bg-white/10 border border-white/8 text-gray-400 hover:text-white rounded-xl text-[10px] font-bold transition-all">
+                              className="flex flex-col items-center gap-1 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl text-[10px] font-bold transition-all">
                               <ExternalLink className="h-4 w-4" /> Ver
                             </Link>
                           </div>
@@ -819,9 +819,9 @@ function ProfileCard({ profile, stats, onEdit }: { profile: UserProfile; stats: 
   const fmt = (n: number) => n >= 1000 ? `$${(n/1000).toFixed(1)}k` : `$${n.toLocaleString("es-AR")}`;
 
   return (
-    <div className="relative bg-white dark:bg-gradient-to-br dark:from-gray-900 dark:via-indigo-950/40 dark:to-gray-900 border border-gray-200 dark:border-white/10 rounded-3xl p-6 overflow-hidden shadow-sm">
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="relative bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-3xl p-6 overflow-hidden shadow-sm">
+      <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/5 dark:bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/5 dark:bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative flex flex-col sm:flex-row gap-5 items-start sm:items-center">
         {/* Avatar */}
