@@ -1039,10 +1039,11 @@ export default function StorefrontClient({
         <article
           id={`producto-${product.id}`}
           key={product.id}
-          className={`relative flex h-full flex-col overflow-hidden rounded-[28px] border-2 border-white bg-white text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg ${
-            highlightProductId === product.id ? "ring-4 ring-inset ring-indigo-400" : ""
-          }`}
+          className="relative flex h-full flex-col overflow-hidden rounded-[28px] border-2 border-white bg-white text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
         >
+          {highlightProductId === product.id && (
+            <div className="absolute inset-0 rounded-[28px] border-[3px] border-indigo-400 pointer-events-none z-20 shadow-[0_0_0_4px_rgba(99,102,241,0.15)]" />
+          )}
           <div className="relative aspect-square max-h-72 p-3 shrink-0" style={{ backgroundColor: bg }}>
             <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-20">{emoji}</div>
             <div className="relative h-full overflow-hidden rounded-[22px] cursor-pointer" onClick={() => openProduct(product)}>
@@ -1112,10 +1113,13 @@ export default function StorefrontClient({
       <article
         id={`producto-${product.id}`}
         key={product.id}
-        className={`flex h-full flex-col ${featured ? "sm:col-span-2 sm:row-span-2" : ""} ${list ? "grid grid-cols-[150px_1fr] md:grid-cols-[220px_1fr]" : ""} overflow-hidden border transition duration-300 hover:-translate-y-0.5 ${cardRadius} ${cardShadow} ${
+        className={`relative flex h-full flex-col ${featured ? "sm:col-span-2 sm:row-span-2" : ""} ${list ? "grid grid-cols-[150px_1fr] md:grid-cols-[220px_1fr]" : ""} overflow-hidden border transition duration-300 hover:-translate-y-0.5 ${cardRadius} ${cardShadow} ${
           isDark ? "border-white/10 bg-white/5 text-white" : "border-gray-100 bg-white text-gray-950"
-        } ${highlightProductId === product.id ? "ring-4 ring-inset ring-indigo-400" : ""}`}
+        }`}
       >
+        {highlightProductId === product.id && (
+          <div className={`absolute inset-0 border-[3px] border-indigo-400 pointer-events-none z-20 shadow-[0_0_0_4px_rgba(99,102,241,0.15)] ${cardRadius}`} />
+        )}
         <div className={`${list ? "h-full min-h-40" : featured ? "aspect-[4/3]" : "aspect-square max-h-72"} relative overflow-hidden shrink-0 ${isColorful ? "p-2" : ""}`} style={{ backgroundColor: store.secondaryColor }}>
           <div className={`h-full w-full overflow-hidden cursor-pointer ${isColorful ? "rounded-2xl" : ""}`} onClick={() => openProduct(product)}>
             <ProductImage image={image} name={product.name} fit="contain" className="transition duration-500 hover:scale-105" />
