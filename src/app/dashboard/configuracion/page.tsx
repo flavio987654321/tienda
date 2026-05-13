@@ -3240,9 +3240,9 @@ export default function ConfiguracionPage() {
         };
         const m = META[policyEditing];
         return (
-          <div className="fixed inset-0 z-[200] flex flex-col bg-white">
+          <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%)" }}>
             {/* Header */}
-            <div className="flex items-center gap-3 border-b border-gray-100 px-6 py-4 shrink-0">
+            <div className="flex items-center gap-3 border-b border-indigo-100 bg-white/80 backdrop-blur px-6 py-4 shrink-0">
               <button type="button" onClick={()=>setPolicyEditing(null)}
                 className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors">
                 <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd"/></svg>
@@ -3258,20 +3258,27 @@ export default function ConfiguracionPage() {
               </button>
             </div>
             {/* Editor */}
-            <div className="flex-1 overflow-auto px-6 py-6 md:px-12 md:py-8">
+            <div className="flex-1 overflow-auto px-6 py-8 md:px-12 md:py-10">
               <div className="mx-auto max-w-3xl h-full flex flex-col gap-4">
-                <textarea
-                  autoFocus
-                  value={(config[policyEditing] as string)||""}
-                  onChange={e=>set(policyEditing, e.target.value)}
-                  placeholder={m.placeholder}
-                  className="flex-1 w-full min-h-[60vh] rounded-2xl border border-gray-200 bg-gray-50 px-6 py-5 text-sm leading-relaxed text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:bg-white resize-none transition-colors"
-                />
-                <div className="flex items-center justify-between text-[11px] text-gray-400">
-                  <span>{((config[policyEditing] as string)||"").length} caracteres</span>
-                  {(config[policyEditing] as string) && (
-                    <button type="button" onClick={()=>set(policyEditing,"")} className="text-red-400 hover:text-red-600 transition-colors">Borrar todo</button>
-                  )}
+                {/* "Papel" blanco */}
+                <div className="flex-1 flex flex-col rounded-2xl bg-white shadow-xl shadow-indigo-100/60 border border-indigo-100 overflow-hidden">
+                  <div className="flex items-center gap-2 border-b border-gray-100 px-5 py-3 bg-gray-50/60">
+                    <span className="text-base">{m.emoji}</span>
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{m.label}</span>
+                  </div>
+                  <textarea
+                    autoFocus
+                    value={(config[policyEditing] as string)||""}
+                    onChange={e=>set(policyEditing, e.target.value)}
+                    placeholder={m.placeholder}
+                    className="flex-1 w-full min-h-[55vh] px-7 py-6 text-[15px] leading-relaxed text-gray-800 placeholder:text-gray-300 focus:outline-none resize-none bg-white"
+                  />
+                  <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 bg-gray-50/60 text-[11px] text-gray-400">
+                    <span>{((config[policyEditing] as string)||"").length} caracteres</span>
+                    {(config[policyEditing] as string) && (
+                      <button type="button" onClick={()=>set(policyEditing,"")} className="text-red-400 hover:text-red-600 transition-colors">Borrar todo</button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

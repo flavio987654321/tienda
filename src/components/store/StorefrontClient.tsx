@@ -1970,17 +1970,17 @@ export default function StorefrontClient({
           ) && (
             <div className="mb-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs opacity-60">
               {store.policyReturnsActive && store.policyReturns && (
-                <a href={`/tienda/${store.slug}/politicas#devoluciones`} className="hover:opacity-80 transition-opacity">
+                <a href={`/tienda/${store.slug}/politicas?tipo=devoluciones`} className="hover:opacity-80 transition-opacity">
                   Política de devoluciones
                 </a>
               )}
               {store.policyShippingActive && store.policyShipping && (
-                <a href={`/tienda/${store.slug}/politicas#envios`} className="hover:opacity-80 transition-opacity">
+                <a href={`/tienda/${store.slug}/politicas?tipo=envios`} className="hover:opacity-80 transition-opacity">
                   Política de envíos
                 </a>
               )}
               {store.policyTermsActive && store.policyTerms && (
-                <a href={`/tienda/${store.slug}/politicas#terminos`} className="hover:opacity-80 transition-opacity">
+                <a href={`/tienda/${store.slug}/politicas?tipo=terminos`} className="hover:opacity-80 transition-opacity">
                   Términos y condiciones
                 </a>
               )}
