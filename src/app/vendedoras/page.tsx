@@ -927,6 +927,7 @@ export default function VendedorasPage() {
 
   useEffect(() => {
     function fetchStores() {
+      if (document.hidden) return;
       fetch("/api/vendedoras?mode=tiendas-disponibles")
         .then((r) => r.json())
         .then(({ stores }) => { setStores(stores ?? []); setLoadingStores(false); })
@@ -940,6 +941,7 @@ export default function VendedorasPage() {
   useEffect(() => {
     if (sessionStatus !== "authenticated") return;
     function fetchUserData() {
+      if (document.hidden) return;
       fetch("/api/vendedoras/perfil").then(r => r.json()).then(d => { if (d.user) setProfile(d.user); }).catch(() => {});
       fetch("/api/vendedoras?mode=stats").then(r => r.json()).then(d => { setStats(d); }).catch(() => {});
     }
