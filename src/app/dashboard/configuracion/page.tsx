@@ -226,7 +226,9 @@ const DEFAULT_CONFIG: StoreConfig = {
   announcementBar:"", announcementBarColor:"#6366f1",
   instagramUrl:"", facebookUrl:"", tiktokUrl:"",
   whatsappNumber:"", showWhatsappButton:false,
-  footerText:"", currency:"ARS",
+  footerText:"", footerDescription:"", footerShowLegal:true,
+  policyReturns:"", policyShipping:"", policyTerms:"",
+  currency:"ARS",
   tipoTienda:"ROPA", tipoTiendaConfigurado:false, tieneVentaMayorista:false,
   productModalSizeChart:false, productModalSizeChartTitle:"Tabla de talles",
   productModalSizeChartData:'{"columns":["Talle","Pecho","Cintura","Cadera"],"rows":[]}',
@@ -606,12 +608,59 @@ function ContentGlobalSettings({
         </div>
       </Accordion>
 
-      <Accordion label="Footer" icon={CreditCard} id="footer" open={open.includes("footer")} toggle={toggle}>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1.5">Texto del footer</label>
-          <textarea value={config.footerText} onChange={e=>set("footerText",e.target.value)} rows={3}
-            placeholder="© 2025 Mi Tienda · Buenos Aires, Argentina"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+      <Accordion label="Footer & Políticas legales" icon={CreditCard} id="footer" open={open.includes("footer")} toggle={toggle}>
+        {/* Footer */}
+        <div className="space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Pie de página</p>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Descripción breve (opcional)</label>
+            <textarea value={config.footerDescription||""} onChange={e=>set("footerDescription",e.target.value)} rows={2}
+              placeholder="Ropa y accesorios · Buenos Aires, Argentina"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Texto adicional (opcional)</label>
+            <textarea value={config.footerText} onChange={e=>set("footerText",e.target.value)} rows={2}
+              placeholder="Envíos a todo el país · Pagos seguros"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={config.footerShowLegal!==false} onChange={e=>set("footerShowLegal",e.target.checked)} className="rounded accent-indigo-600"/>
+            <span className="text-xs text-gray-700">Mostrar links a políticas en el footer</span>
+          </label>
+        </div>
+
+        <hr className="border-gray-100"/>
+
+        {/* Políticas */}
+        <div className="space-y-3">
+          <div className="flex items-start gap-2">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Políticas legales</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">Aparecen en <strong>/politicas</strong> y como links en el footer</p>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">↩️ Política de devoluciones</label>
+            <textarea value={config.policyReturns||""} onChange={e=>set("policyReturns",e.target.value)} rows={4}
+              placeholder={"Aceptamos devoluciones hasta 30 días después de la compra. El producto debe estar en su estado original con etiquetas. Para iniciar una devolución contactanos por WhatsApp."}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">📦 Política de envíos</label>
+            <textarea value={config.policyShipping||""} onChange={e=>set("policyShipping",e.target.value)} rows={4}
+              placeholder={"Realizamos envíos a todo el país por Andreani y Correo Argentino. El plazo de entrega es de 3 a 7 días hábiles. Envío gratis en compras mayores a $X."}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">📋 Términos y condiciones</label>
+            <textarea value={config.policyTerms||""} onChange={e=>set("policyTerms",e.target.value)} rows={4}
+              placeholder={"Al realizar una compra aceptás nuestros términos y condiciones. Los precios pueden variar sin previo aviso. Nos reservamos el derecho de cancelar pedidos en caso de error de precio."}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+          </div>
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
+            <p className="text-[11px] text-blue-700">💡 Los campos que dejés vacíos no aparecen en la página pública.</p>
+          </div>
         </div>
       </Accordion>
 
@@ -2501,6 +2550,11 @@ export default function ConfiguracionPage() {
           tiktokUrl:store.tiktokUrl||"",
           whatsappNumber:store.whatsappNumber||"",
           footerText:store.footerText||"",
+          footerDescription:(store as any).footerDescription??undefined,
+          footerShowLegal:(store as any).footerShowLegal!==false,
+          policyReturns:(store as any).policyReturns||"",
+          policyShipping:(store as any).policyShipping||"",
+          policyTerms:(store as any).policyTerms||"",
           navLinks:store.navLinks||"[]",
         }));
         try {

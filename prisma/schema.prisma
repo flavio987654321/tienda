@@ -108,6 +108,13 @@ model Store {
   commissionRate Float    @default(10)
   pageBlocks          String   @default("[]")
   navLinks            String   @default("[]")
+  // Políticas legales
+  policyReturns       String?
+  policyShipping      String?
+  policyTerms         String?
+  // Footer
+  footerDescription   String?
+  footerShowLegal     Boolean  @default(true)
   tipoTienda          String   @default("ROPA")
   tipoTiendaConfigurado Boolean @default(false)
   tieneVentaMayorista Boolean  @default(false)

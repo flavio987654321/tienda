@@ -177,6 +177,11 @@ type Store = {
   showWhatsappButton: boolean;
   tipoTienda: string | null;
   footerText: string | null;
+  footerDescription: string | null;
+  footerShowLegal: boolean;
+  policyReturns: string | null;
+  policyShipping: string | null;
+  policyTerms: string | null;
   currency: string;
   pageBlocks: string;
   navLinks: string;
@@ -1943,8 +1948,40 @@ export default function StorefrontClient({
       {renderBlocks()}
 
 
-      <footer className={`${isDark ? "border-t border-white/10 bg-gray-950 text-gray-400" : "border-t border-gray-100 bg-white text-gray-500"} px-6 py-8 text-center text-sm`}>
-        {store.footerText || `${store.name} - tienda online`}
+      <footer className={`${isDark ? "border-t border-white/10 bg-gray-950 text-gray-400" : "border-t border-gray-100 bg-white text-gray-500"} px-6 py-10 text-sm`} style={{ fontFamily: store.fontFamily }}>
+        <div className="mx-auto max-w-4xl">
+          {/* Nombre + descripción */}
+          <div className="mb-6 text-center">
+            <p className={`font-black text-base ${isDark ? "text-white" : "text-gray-900"}`}>{store.name}</p>
+            {(store.footerDescription || store.footerText) && (
+              <p className="mt-1 text-xs opacity-70 max-w-sm mx-auto">{store.footerDescription || store.footerText}</p>
+            )}
+          </div>
+
+          {/* Links legales */}
+          {store.footerShowLegal && (store.policyReturns || store.policyShipping || store.policyTerms) && (
+            <div className="mb-6 flex flex-wrap justify-center gap-4 text-xs">
+              {store.policyReturns && (
+                <a href={`/tienda/${store.slug}/politicas#devoluciones`} className={`underline underline-offset-2 hover:opacity-80 transition-opacity ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                  Devoluciones
+                </a>
+              )}
+              {store.policyShipping && (
+                <a href={`/tienda/${store.slug}/politicas#envios`} className={`underline underline-offset-2 hover:opacity-80 transition-opacity ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                  Envíos
+                </a>
+              )}
+              {store.policyTerms && (
+                <a href={`/tienda/${store.slug}/politicas#terminos`} className={`underline underline-offset-2 hover:opacity-80 transition-opacity ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                  Términos y condiciones
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Copyright */}
+          <p className="text-center text-xs opacity-50">© {new Date().getFullYear()} {store.name}</p>
+        </div>
       </footer>
 
       {store.showWhatsappButton && store.whatsappNumber && (

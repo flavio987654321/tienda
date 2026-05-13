@@ -164,6 +164,11 @@ export async function PUT(req: NextRequest) {
       tipoTienda:           b.tipoTienda || "ROPA",
       tipoTiendaConfigurado: Boolean(b.tipoTiendaConfigurado),
       tieneVentaMayorista:  Boolean(b.tieneVentaMayorista),
+      policyReturns:        typeof b.policyReturns === "string" ? (b.policyReturns || null) : undefined,
+      policyShipping:       typeof b.policyShipping === "string" ? (b.policyShipping || null) : undefined,
+      policyTerms:          typeof b.policyTerms === "string" ? (b.policyTerms || null) : undefined,
+      footerDescription:    typeof b.footerDescription === "string" ? (b.footerDescription || null) : undefined,
+      footerShowLegal:      b.footerShowLegal !== undefined ? Boolean(b.footerShowLegal) : undefined,
     },
   });
 

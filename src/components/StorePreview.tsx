@@ -20,7 +20,9 @@ export interface StoreConfig {
   announcementBar: string; announcementBarColor: string;
   instagramUrl: string; facebookUrl: string; tiktokUrl: string;
   whatsappNumber: string; showWhatsappButton: boolean;
-  footerText: string; currency: string;
+  footerText: string; footerDescription?: string; footerShowLegal?: boolean;
+  policyReturns?: string; policyShipping?: string; policyTerms?: string;
+  currency: string;
   affiliatesEnabled?: boolean; commissionRate?: string | number;
   seoTitle?: string; seoDescription?: string;
   productModalSizeChart?: boolean;
