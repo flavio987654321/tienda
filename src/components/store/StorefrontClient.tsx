@@ -1958,21 +1958,21 @@ export default function StorefrontClient({
             )}
           </div>
 
-          {/* Links legales */}
+          {/* Políticas legales */}
           {store.footerShowLegal && (store.policyReturns || store.policyShipping || store.policyTerms) && (
-            <div className="mb-6 flex flex-wrap justify-center gap-4 text-xs">
+            <div className="mb-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs opacity-60">
               {store.policyReturns && (
-                <a href={`/tienda/${store.slug}/politicas#devoluciones`} className={`underline underline-offset-2 hover:opacity-80 transition-opacity ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  Devoluciones
+                <a href={`/tienda/${store.slug}/politicas#devoluciones`} className="hover:opacity-80 transition-opacity">
+                  Política de devoluciones
                 </a>
               )}
               {store.policyShipping && (
-                <a href={`/tienda/${store.slug}/politicas#envios`} className={`underline underline-offset-2 hover:opacity-80 transition-opacity ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                  Envíos
+                <a href={`/tienda/${store.slug}/politicas#envios`} className="hover:opacity-80 transition-opacity">
+                  Política de envíos
                 </a>
               )}
               {store.policyTerms && (
-                <a href={`/tienda/${store.slug}/politicas#terminos`} className={`underline underline-offset-2 hover:opacity-80 transition-opacity ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                <a href={`/tienda/${store.slug}/politicas#terminos`} className="hover:opacity-80 transition-opacity">
                   Términos y condiciones
                 </a>
               )}
