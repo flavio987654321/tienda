@@ -1103,80 +1103,101 @@ export default function VendedorasPage() {
           </button>
         </div>
 
-        {/* Menú mobile desplegable */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
-              className="sm:hidden border-t border-gray-200 dark:border-white/10 bg-white dark:bg-gray-950 px-6 py-4 flex flex-col gap-3"
-            >
-              {isLoggedIn ? (
-                <>
-                  {/* Usuario */}
-                  <div className="flex items-center gap-3 py-2">
-                    <div className="w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0">
-                      {userInitial}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{userName}</p>
-                    </div>
-                    {user?.id && (
-                      <div className="ml-auto">
-                        <NotificationBell userId={user.id} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="h-px bg-gray-100 dark:bg-white/10" />
-                  <Link
-                    href="/vendedoras/billetera"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
-                    <Wallet className="h-4 w-4 text-indigo-500" /> Mi billetera
-                  </Link>
-                  {mounted && (
-                    <button
-                      onClick={() => { setTheme(isDark ? "light" : "dark"); setMobileMenuOpen(false); }}
-                      className="flex items-center gap-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
-                      {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4 text-gray-500" />}
-                      {isDark ? "Modo claro" : "Modo oscuro"}
-                    </button>
-                  )}
-                  <div className="h-px bg-gray-100 dark:bg-white/10" />
-                  <button
-                    onClick={() => { signOut("/"); setMobileMenuOpen(false); }}
-                    className="flex items-center gap-3 py-2.5 text-sm font-medium text-red-500"
-                  >
-                    <LogOut className="h-4 w-4" /> Cerrar sesión
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-xl">
-                    Iniciar sesión
-                  </Link>
-                  <Link href="/registro?tipo=vendedora" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2.5 text-sm font-semibold bg-purple-600 text-white rounded-xl">
-                    Crear cuenta
-                  </Link>
-                  {mounted && (
-                    <button
-                      onClick={() => { setTheme(isDark ? "light" : "dark"); setMobileMenuOpen(false); }}
-                      className="flex items-center gap-3 py-2 text-sm text-gray-500 dark:text-gray-400"
-                    >
-                      {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
-                      {isDark ? "Modo claro" : "Modo oscuro"}
-                    </button>
-                  )}
-                </>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </nav>
+
+      {/* Panel lateral mobile — fuera del nav para cubrir toda la pantalla */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            {/* Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="sm:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            {/* Panel derecho */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 280 }}
+              className="sm:hidden fixed top-0 right-0 h-full w-72 z-50 bg-white dark:bg-[#0f1629] shadow-2xl flex flex-col"
+            >
+              {/* Header del panel */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0">
+                    {isLoggedIn ? userInitial : "?"}
+                  </div>
+                  {isLoggedIn && <p className="text-sm font-semibold text-gray-900 dark:text-white">{userName}</p>}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isLoggedIn && user?.id && <NotificationBell userId={user.id} />}
+                  <button
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Items */}
+              <div className="flex-1 px-4 py-4 flex flex-col gap-1">
+                {isLoggedIn ? (
+                  <>
+                    <Link
+                      href="/vendedoras/billetera"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                    >
+                      <Wallet className="h-4 w-4 text-indigo-500" /> Mi billetera
+                    </Link>
+                    {mounted && (
+                      <button
+                        onClick={() => { setTheme(isDark ? "light" : "dark"); }}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors w-full text-left"
+                      >
+                        {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4 text-gray-500" />}
+                        {isDark ? "Modo claro" : "Modo oscuro"}
+                      </button>
+                    )}
+                    <div className="mt-auto pt-4 border-t border-gray-100 dark:border-white/10">
+                      <button
+                        onClick={() => { signOut("/"); setMobileMenuOpen(false); }}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors w-full"
+                      >
+                        <LogOut className="h-4 w-4" /> Cerrar sesión
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center py-3 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-xl">
+                      Iniciar sesión
+                    </Link>
+                    <Link href="/registro?tipo=vendedora" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center py-3 text-sm font-semibold bg-purple-600 text-white rounded-xl">
+                      Crear cuenta
+                    </Link>
+                    {mounted && (
+                      <button
+                        onClick={() => { setTheme(isDark ? "light" : "dark"); }}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors w-full"
+                      >
+                        {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
+                        {isDark ? "Modo claro" : "Modo oscuro"}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── HERO / DASHBOARD ── */}
       {isLoggedIn ? (
