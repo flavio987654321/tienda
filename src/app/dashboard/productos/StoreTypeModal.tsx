@@ -55,10 +55,10 @@ export default function StoreTypeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
 
         {/* Header */}
-        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 px-8 py-7 text-white relative">
+        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 px-8 py-7 text-white relative shrink-0">
           <button
             onClick={handleClose}
             title="Cerrar"
@@ -74,7 +74,7 @@ export default function StoreTypeModal({
           </p>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto">
 
           {/* Tipos */}
           <div className="grid grid-cols-2 gap-2.5">

@@ -93,12 +93,12 @@ export default function DashboardLayout({
       <aside className="group fixed left-0 top-0 h-full w-14 hover:w-60 bg-white border-r border-gray-100 flex flex-col z-40 transition-[width] duration-200 overflow-hidden hover:shadow-xl">
 
         {/* Logo */}
-        <div className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 shrink-0">
+        <Link href="/" className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 shrink-0 hover:bg-gray-50 transition-colors">
           <ShoppingBag className="h-6 w-6 text-indigo-600 shrink-0" />
           <span className="font-bold text-gray-900 whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
             MiTienda
           </span>
-        </div>
+        </Link>
 
         {/* Nav items */}
         <nav className="flex-1 p-2 space-y-0.5 overflow-hidden">
