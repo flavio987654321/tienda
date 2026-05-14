@@ -184,9 +184,10 @@ model Order {
   shippingMethod  String?
   trackingCode    String?
   notes           String?
-  shippingAddress String   @default("{}")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  shippingAddress      String   @default("{}")
+  lockedCommissionRate Float?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   buyerId String
   buyer   User   @relation(fields: [buyerId], references: [id])

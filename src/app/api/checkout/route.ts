@@ -161,6 +161,7 @@ export async function POST(req: NextRequest) {
           total,
           subtotal,
           discountAmount,
+          lockedCommissionRate: validAffiliateId ? store.commissionRate : null,
           couponId: validCouponId,
           shippingCost: shipping.cost,
           shippingMethod: shipping.label,

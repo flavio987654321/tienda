@@ -83,9 +83,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         }
 
         if (order.affiliateId && order.store.affiliatesEnabled && !order.commission) {
-          // Base = subtotal menos descuento (nunca sobre envío)
+          // Usar el rate bloqueado al momento de la compra; si no existe (pedidos viejos), usar el actual
+          const rate = order.lockedCommissionRate ?? order.store.commissionRate;
           const commissionBase = (order.subtotal ?? order.total) - (order.discountAmount ?? 0);
-          const amount = Math.round((Math.max(0, commissionBase) * order.store.commissionRate) / 100);
+          const amount = Math.round((Math.max(0, commissionBase) * rate) / 100);
           await tx.commission.create({
             data: {
               orderId: order.id,
@@ -120,7 +121,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
               storeSlug: order.store.slug,
               commissionAmount: amount,
               orderTotal: order.total,
-              commissionRate: order.store.commissionRate,
+              commissionRate: rate,
               newBalance: updatedWallet.balance,
             }).catch(() => {});
           }
@@ -138,7 +139,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
               affiliateEmail: affiliateUser.email,
               orderTotal: order.total,
               commissionAmount: amount,
-              commissionRate: order.store.commissionRate,
+              commissionRate: rate,
               itemCount: order.items.length,
             }).catch(() => {});
           }
