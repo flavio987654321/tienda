@@ -116,7 +116,8 @@ export async function POST(req: NextRequest) {
   if (cvUrl && !isSafeUrl(cvUrl)) {
     return NextResponse.json({ error: "URL del CV inválida" }, { status: 400 });
   }
-  if (socialUrl && !isSafeUrl(socialUrl)) {
+  // socialUrl acepta handles (@usuario) o URLs completas
+  if (socialUrl && socialUrl.startsWith("http") && !isSafeUrl(socialUrl)) {
     return NextResponse.json({ error: "URL de redes inválida" }, { status: 400 });
   }
 

@@ -570,6 +570,7 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
   const [cvUploading, setCvUploading] = useState(false);
   const [cvFileName, setCvFileName] = useState("");
   const [cvError, setCvError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const cvInputRef = useRef<HTMLInputElement>(null);
 
   async function uploadCv(file: File) {
@@ -597,6 +598,7 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
+    setSubmitError("");
     const res = await fetch("/api/vendedoras", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -605,6 +607,9 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
     if (res.ok) {
       const data = await res.json();
       onSuccess(data.affiliate.id);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setSubmitError(data.error || "Error al enviar la solicitud. Intentá de nuevo.");
     }
     setSubmitting(false);
   }
@@ -727,7 +732,12 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
             </span>
           </label>
         </div>
-        <div className="p-6 border-t border-gray-100 dark:border-white/5 flex gap-3">
+        <div className="px-6 pb-2">
+          {submitError && (
+            <p className="text-sm text-red-500 dark:text-red-400 font-medium text-center">{submitError}</p>
+          )}
+        </div>
+        <div className="p-6 pt-3 border-t border-gray-100 dark:border-white/5 flex gap-3">
           <button type="button" onClick={onClose} className="flex-1 py-3.5 border border-gray-200 dark:border-white/10 rounded-2xl text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/20 transition-all">
             Cancelar
           </button>
