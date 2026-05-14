@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { Bell } from "lucide-react";
+import { Bell, X, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 type Notification = {
@@ -22,6 +22,7 @@ const ICONS: Record<string, string> = {
   ORDER_DELIVERED: "🎉",
   ORDER_CANCELLED: "❌",
   COMMISSION_EARNED: "💰",
+  COMMISSION_RATE_CHANGED: "📊",
   LOW_STOCK: "⚠️",
   PRICE_CHANGED: "🏷️",
 };
@@ -36,13 +37,19 @@ function timeAgo(dateStr: string) {
   return `hace ${Math.floor(hs / 24)}d`;
 }
 
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr);
+  const date = d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
+  const time = d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  return `${date}, ${time}`;
+}
+
 export default function NotificationBell({ userId }: { userId: string }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Cargar notificaciones iniciales
   useEffect(() => {
     fetch("/api/notifications")
       .then((r) => r.json())
@@ -52,7 +59,6 @@ export default function NotificationBell({ userId }: { userId: string }) {
       });
   }, []);
 
-  // Supabase Realtime — escuchar nuevas notificaciones para este usuario
   useEffect(() => {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -80,7 +86,6 @@ export default function NotificationBell({ userId }: { userId: string }) {
     return () => { supabase.removeChannel(channel); };
   }, [userId]);
 
-  // Cerrar dropdown al click fuera
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -105,6 +110,20 @@ export default function NotificationBell({ userId }: { userId: string }) {
     await fetch(`/api/notifications?id=${id}`, { method: "PATCH" });
   }
 
+  async function deleteOne(e: React.MouseEvent, id: string, wasRead: boolean) {
+    e.preventDefault();
+    e.stopPropagation();
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    if (!wasRead) setUnread((prev) => Math.max(0, prev - 1));
+    await fetch(`/api/notifications?id=${id}`, { method: "DELETE" });
+  }
+
+  async function deleteAll() {
+    setNotifications([]);
+    setUnread(0);
+    await fetch("/api/notifications", { method: "DELETE" });
+  }
+
   return (
     <div ref={ref} className="relative">
       <button
@@ -124,14 +143,26 @@ export default function NotificationBell({ userId }: { userId: string }) {
         <div className="absolute right-0 top-11 z-50 w-80 rounded-2xl border border-gray-100 bg-white shadow-xl dark:bg-[#0f1629] dark:border-white/10">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/10">
             <p className="font-bold text-sm text-gray-900 dark:text-white">Notificaciones</p>
-            {unread > 0 && (
-              <button
-                onClick={markAllRead}
-                className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
-              >
-                Marcar todas como leídas
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {unread > 0 && (
+                <button
+                  onClick={markAllRead}
+                  className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
+                >
+                  Marcar leídas
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={deleteAll}
+                  title="Limpiar todas"
+                  className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 font-semibold transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Limpiar
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="max-h-[400px] overflow-y-auto divide-y divide-gray-50 dark:divide-white/5">
@@ -143,7 +174,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
               notifications.map((n) => {
                 const inner = (
                   <div
-                    className={`flex gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-white/5 ${!n.read ? "bg-indigo-50/60 dark:bg-indigo-950/30" : ""}`}
+                    className={`group flex gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-white/5 ${!n.read ? "bg-indigo-50/60 dark:bg-indigo-950/30" : ""}`}
                     onClick={() => !n.read && markOneRead(n.id)}
                   >
                     <span className="text-lg shrink-0 mt-0.5">{ICONS[n.type] ?? "🔔"}</span>
@@ -154,11 +185,22 @@ export default function NotificationBell({ userId }: { userId: string }) {
                       {n.body && (
                         <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{n.body}</p>
                       )}
-                      <p className="text-xs text-gray-300 dark:text-gray-500 mt-1">{timeAgo(n.createdAt)}</p>
+                      <p className="text-xs text-gray-300 dark:text-gray-500 mt-1">
+                        {timeAgo(n.createdAt)} · {formatDate(n.createdAt)}
+                      </p>
                     </div>
-                    {!n.read && (
-                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-indigo-500" />
-                    )}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <button
+                        onClick={(e) => deleteOne(e, n.id, n.read)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-white/10"
+                        title="Eliminar"
+                      >
+                        <X className="h-3.5 w-3.5 text-gray-400" />
+                      </button>
+                      {!n.read && (
+                        <span className="mt-1 h-2 w-2 rounded-full bg-indigo-500" />
+                      )}
+                    </div>
                   </div>
                 );
 

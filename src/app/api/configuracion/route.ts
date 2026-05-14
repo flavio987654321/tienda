@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { revalidatePath } from "next/cache";
+import { createNotificationMany } from "@/lib/notifications";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -122,6 +123,11 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "URL de banner inválida" }, { status: 400 });
   }
 
+  const prevStore = await prisma.store.findUnique({
+    where: { ownerId: user.id },
+    select: { id: true, commissionRate: true },
+  });
+
   const store = await prisma.store.update({
     where: { ownerId: user.id },
     data: {
@@ -174,6 +180,29 @@ export async function PUT(req: NextRequest) {
       footerShowLegal:      b.footerShowLegal !== undefined ? Boolean(b.footerShowLegal) : undefined,
     },
   });
+
+  // Notificar a afiliados activos si cambió la comisión
+  const newRate = isNaN(commissionRate) ? 10 : commissionRate;
+  if (prevStore && prevStore.commissionRate !== newRate) {
+    const affiliates = await prisma.affiliate.findMany({
+      where: { storeId: prevStore.id, isActive: true },
+      select: { userId: true },
+    });
+    if (affiliates.length > 0) {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+      const timeStr = now.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+      await createNotificationMany(
+        affiliates.map(({ userId }) => ({
+          userId,
+          type: "COMMISSION_RATE_CHANGED",
+          title: `Cambio de comisión en ${store.name}`,
+          body: `La comisión pasó de ${prevStore.commissionRate}% a ${newRate}%. · ${dateStr}, ${timeStr}`,
+          link: "/vendedoras",
+        }))
+      );
+    }
+  }
 
   revalidatePath(`/tienda/${store.slug}`, "layout");
   return NextResponse.json({ store });
