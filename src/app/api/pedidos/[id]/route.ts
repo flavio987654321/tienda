@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { sendLowStockEmail, sendReviewRequestEmail } from "@/lib/email";
+import { sendLowStockEmail, sendReviewRequestEmail, sendCommissionEarnedEmail, sendAffiliateOrderNotificationEmail } from "@/lib/email";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -25,7 +25,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           items: { include: { product: true, variant: true } },
           payment: true,
           shipping: true,
-          affiliate: { include: { wallet: true } },
+          affiliate: { include: { wallet: true, user: { select: { email: true, name: true } } } },
           commission: true,
         },
       });
@@ -97,7 +97,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           });
 
           // upsert: si la wallet no existe la crea en lugar de silenciar el incremento
-          await tx.wallet.upsert({
+          const updatedWallet = await tx.wallet.upsert({
             where: { affiliateId: order.affiliateId! },
             update: {
               balance: { increment: amount },
@@ -110,6 +110,38 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
               totalWithdrawn: 0,
             },
           });
+
+          const affiliateUser = order.affiliate?.user;
+          if (affiliateUser?.email) {
+            sendCommissionEarnedEmail({
+              affiliateEmail: affiliateUser.email,
+              affiliateName: affiliateUser.name || "afiliada",
+              storeName: order.store.name,
+              storeSlug: order.store.slug,
+              commissionAmount: amount,
+              orderTotal: order.total,
+              commissionRate: order.store.commissionRate,
+              newBalance: updatedWallet.balance,
+            }).catch(() => {});
+          }
+
+          const owner = await tx.user.findUnique({
+            where: { id: ownerId },
+            select: { email: true, name: true },
+          });
+          if (owner?.email && affiliateUser) {
+            sendAffiliateOrderNotificationEmail({
+              ownerEmail: owner.email,
+              ownerName: owner.name || "titular",
+              storeName: order.store.name,
+              affiliateName: affiliateUser.name || "afiliada",
+              affiliateEmail: affiliateUser.email,
+              orderTotal: order.total,
+              commissionAmount: amount,
+              commissionRate: order.store.commissionRate,
+              itemCount: order.items.length,
+            }).catch(() => {});
+          }
         }
 
         await tx.payment.updateMany({

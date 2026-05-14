@@ -327,3 +327,151 @@ export async function sendNewAffiliateApplicationEmail({
     `,
   });
 }
+
+export async function sendCommissionEarnedEmail({
+  affiliateEmail,
+  affiliateName,
+  storeName,
+  storeSlug,
+  commissionAmount,
+  orderTotal,
+  commissionRate,
+  newBalance,
+}: {
+  affiliateEmail: string;
+  affiliateName: string;
+  storeName: string;
+  storeSlug: string;
+  commissionAmount: number;
+  orderTotal: number;
+  commissionRate: number;
+  newBalance: number;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
+
+  await transporter.sendMail({
+    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    to: affiliateEmail,
+    subject: `💰 Ganaste ${fmt(commissionAmount)} de comisión en ${storeName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#16a34a;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">${storeName}</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">¡Comisión acreditada!</h1>
+        </div>
+
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${affiliateName || "afiliada"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:24px;">
+          Una venta que generaste en <strong>${storeName}</strong> fue confirmada y tu comisión ya está en tu billetera.
+        </p>
+
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#6b7280;">Total de la venta</span>
+            <span style="font-size:14px;font-weight:600;color:#111827;">${fmt(orderTotal)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#6b7280;">Tu comisión (${commissionRate}%)</span>
+            <span style="font-size:16px;font-weight:800;color:#16a34a;">${fmt(commissionAmount)}</span>
+          </div>
+          <hr style="border:none;border-top:1px solid #bbf7d0;margin:12px 0;" />
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-size:14px;color:#6b7280;">Saldo en billetera</span>
+            <span style="font-size:14px;font-weight:700;color:#111827;">${fmt(newBalance)}</span>
+          </div>
+        </div>
+
+        <div style="text-align:center;">
+          <a href="${appUrl}/vendedoras/billetera"
+             style="display:inline-block;background:#16a34a;color:#fff;padding:12px 28px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;">
+            Ver mi billetera
+          </a>
+        </div>
+
+        <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
+          Podés solicitar un retiro cuando quieras desde tu billetera · ${storeName}
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendAffiliateOrderNotificationEmail({
+  ownerEmail,
+  ownerName,
+  storeName,
+  affiliateName,
+  affiliateEmail,
+  orderTotal,
+  commissionAmount,
+  commissionRate,
+  itemCount,
+}: {
+  ownerEmail: string;
+  ownerName: string;
+  storeName: string;
+  affiliateName: string;
+  affiliateEmail: string;
+  orderTotal: number;
+  commissionAmount: number;
+  commissionRate: number;
+  itemCount: number;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
+
+  await transporter.sendMail({
+    from: `"MiTienda" <${process.env.SMTP_USER}>`,
+    to: ownerEmail,
+    subject: `🛍️ Nueva venta por afiliada en ${storeName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">${storeName}</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Nueva venta por afiliada</h1>
+        </div>
+
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${ownerName || "titular"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:24px;">
+          <strong>${affiliateName}</strong> generó una nueva venta en tu tienda. Confirmá el pago para que la comisión se acredite automáticamente.
+        </p>
+
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#6b7280;">Afiliada</span>
+            <span style="font-size:14px;font-weight:600;color:#111827;">${affiliateName} <span style="color:#9ca3af;font-weight:400;">(${affiliateEmail})</span></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#6b7280;">Productos</span>
+            <span style="font-size:14px;font-weight:600;color:#111827;">${itemCount} ítem${itemCount !== 1 ? "s" : ""}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#6b7280;">Total del pedido</span>
+            <span style="font-size:14px;font-weight:600;color:#111827;">${fmt(orderTotal)}</span>
+          </div>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0;" />
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-size:14px;color:#6b7280;">Comisión a pagar (${commissionRate}%)</span>
+            <span style="font-size:14px;font-weight:700;color:#6366f1;">${fmt(commissionAmount)}</span>
+          </div>
+        </div>
+
+        <div style="text-align:center;">
+          <a href="${appUrl}/dashboard/pedidos"
+             style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;">
+            Ver pedido y confirmar pago
+          </a>
+        </div>
+
+        <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
+          La comisión se acredita automáticamente al confirmar el pago del pedido.
+        </p>
+      </div>
+    `,
+  });
+}
