@@ -71,12 +71,14 @@ export async function POST(req: NextRequest) {
       if (!store) throw new Error("Tienda no encontrada");
 
       let validAffiliateId: string | null = null;
+      let resolvedAffiliateUserId: string | null = null;
       if (affiliateId && store.affiliatesEnabled) {
         const affiliate = await tx.affiliate.findFirst({
           where: { id: affiliateId, storeId, isActive: true },
-          select: { id: true },
+          select: { id: true, userId: true },
         });
         validAffiliateId = affiliate?.id ?? null;
+        resolvedAffiliateUserId = affiliate?.userId ?? null;
       }
 
       const MAX_QUANTITY_PER_ITEM = 99;
@@ -154,6 +156,11 @@ export async function POST(req: NextRequest) {
       const buyer =
         (await tx.user.findUnique({ where: { email: emailNorm } })) ??
         (await tx.user.create({ data: { email: emailNorm, name: customer.name.trim(), role: "BUYER" } }));
+
+      // Un afiliado no puede ganar comisión comprándose a sí mismo
+      if (validAffiliateId && resolvedAffiliateUserId && resolvedAffiliateUserId === buyer.id) {
+        validAffiliateId = null;
+      }
 
       return tx.order.create({
         data: {

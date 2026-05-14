@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import AffiliateToggle from "./AffiliateToggle";
+import WithdrawalActions from "@/components/affiliates/WithdrawalActions";
 
 function statusClass(status: string) {
   if (status === "APPROVED") return "bg-green-100 text-green-700";
@@ -59,7 +60,14 @@ export default async function VendedorasPage() {
       affiliates: {
         include: {
           user: { select: { name: true, email: true, image: true, city: true, phone: true, instagramHandle: true } },
-          wallet: true,
+          wallet: {
+            include: {
+              withdrawals: {
+                where: { status: "PENDING" },
+                orderBy: { createdAt: "desc" },
+              },
+            },
+          },
           commissions: { orderBy: { createdAt: "desc" } },
           orders: {
             select: { id: true, total: true, status: true, createdAt: true },
@@ -73,6 +81,12 @@ export default async function VendedorasPage() {
   });
 
   const affiliates = store?.affiliates ?? [];
+  const pendingWithdrawals = affiliates.flatMap((a) =>
+    (a.wallet?.withdrawals ?? []).map((w) => ({
+      ...w,
+      affiliateName: a.user.name || a.user.email,
+    }))
+  );
   const pending = affiliates.filter((affiliate) => affiliate.status === "PENDING");
   const teamAffiliates = affiliates.filter((affiliate) => affiliate.status !== "PENDING" && affiliate.status !== "REMOVED");
   const approved = affiliates.filter((affiliate) => affiliate.status === "APPROVED");
@@ -110,6 +124,39 @@ export default async function VendedorasPage() {
       />
 
       <div className={`transition-opacity ${store?.affiliatesEnabled ? "opacity-100" : "opacity-30 pointer-events-none select-none"}`}>
+
+      {pendingWithdrawals.length > 0 && (
+        <section className="mb-8">
+          <h2 className="font-bold text-gray-900 mb-1">Retiros pendientes de pago</h2>
+          <p className="text-sm text-gray-400 mb-4">Estas personas solicitaron retirar su saldo. Hacé la transferencia y luego aprobá.</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {pendingWithdrawals.map((w) => (
+              <div key={w.id} className="bg-white rounded-2xl border border-amber-100 p-5 flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-bold text-gray-900">{w.affiliateName}</p>
+                    <p className="text-2xl font-black text-amber-600">${w.amount.toLocaleString("es-AR")}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Solicitado el {new Date(w.createdAt).toLocaleDateString("es-AR")}
+                    </p>
+                  </div>
+                  <WithdrawalActions
+                    withdrawalId={w.id}
+                    affiliateName={w.affiliateName}
+                    amount={w.amount}
+                    bankInfo={w.notes || ""}
+                  />
+                </div>
+                {w.notes && (
+                  <div className="rounded-xl bg-amber-50 p-3 text-xs text-gray-600 font-mono whitespace-pre-wrap break-all">
+                    {w.notes}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-4 gap-4 mb-8">
         {[

@@ -82,7 +82,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           }
         }
 
-        if (order.affiliateId && order.store.affiliatesEnabled && !order.commission) {
+        if (order.affiliateId && order.lockedCommissionRate !== null && !order.commission) {
           // Usar el rate bloqueado al momento de la compra; si no existe (pedidos viejos), usar el actual
           const rate = order.lockedCommissionRate ?? order.store.commissionRate;
           const commissionBase = (order.subtotal ?? order.total) - (order.discountAmount ?? 0);
@@ -92,7 +92,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
               orderId: order.id,
               affiliateId: order.affiliateId,
               amount,
-              rate: order.store.commissionRate,
+              rate,
               status: "PENDING",
             },
           });
@@ -203,13 +203,17 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         if (order.commission && order.affiliateId) {
           const commissionAmount = order.commission.amount;
           await tx.commission.delete({ where: { id: order.commission.id } });
-          // Descontamos solo lo que haya en balance (podría haber sido retirado parcialmente)
           const currentBalance = order.affiliate?.wallet?.balance ?? 0;
+          // Si ya retiró parte o todo, solo descontamos lo que queda en balance
+          // y ajustamos totalEarned + totalWithdrawn para que la contabilidad cierre
+          const balanceToDecrement = Math.min(commissionAmount, currentBalance);
+          const alreadyWithdrawn = commissionAmount - balanceToDecrement;
           await tx.wallet.update({
             where: { affiliateId: order.affiliateId },
             data: {
-              balance: { decrement: Math.min(commissionAmount, currentBalance) },
+              balance: { decrement: balanceToDecrement },
               totalEarned: { decrement: commissionAmount },
+              totalWithdrawn: { decrement: alreadyWithdrawn },
             },
           });
         }
