@@ -557,7 +557,8 @@ export default function StorefrontClient({
 }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [imgIndex, setImgIndex] = useState(0);
-  const [selectedColorValue, setSelectedColorValue] = useState<string | null>(null);
+  const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>({});
+  const [selectionError, setSelectionError] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
@@ -721,21 +722,101 @@ export default function StorefrontClient({
   function openProduct(product: Product) {
     setSelectedProduct(product);
     setImgIndex(0);
-    setSelectedColorValue(null);
+    setSelectedAttrs({});
+    setSelectionError(false);
     setZoomLevel(1);
   }
 
   function closeProduct() {
     setSelectedProduct(null);
     setImgIndex(0);
-    setSelectedColorValue(null);
+    setSelectedAttrs({});
+    setSelectionError(false);
     setZoomLevel(1);
   }
 
-  function selectColor(value: string, imgs: ImageItem[]) {
-    setSelectedColorValue(value);
-    const idx = imgs.findIndex((img) => img.variantValue === value);
-    if (idx !== -1) showImage(idx);
+  function selectAttr(groupName: string, value: string) {
+    if (!selectedProduct) return;
+    setSelectionError(false);
+
+    // Toggle off if ya seleccionado
+    if (selectedAttrs[groupName] === value) {
+      const next = { ...selectedAttrs };
+      delete next[groupName];
+      setSelectedAttrs(next);
+      return;
+    }
+
+    const next = { ...selectedAttrs, [groupName]: value };
+
+    // Auto-seleccionar otros grupos si solo queda 1 opción disponible
+    const groupKeys = new Set<string>();
+    selectedProduct.variants.forEach((v) =>
+      parseVariantAttrs(v).forEach((p) => { if (p.value) groupKeys.add(p.name); })
+    );
+    groupKeys.forEach((otherGroup) => {
+      if (otherGroup === groupName || next[otherGroup]) return;
+      const avail = new Set<string>();
+      selectedProduct.variants
+        .filter((v) => {
+          if (v.stock === 0) return false;
+          const va = Object.fromEntries(parseVariantAttrs(v).map((p) => [p.name, p.value]));
+          return Object.entries(next).every(([k, val]) => va[k] === val);
+        })
+        .forEach((v) => {
+          const val = parseVariantAttrs(v).find((p) => p.name === otherGroup)?.value;
+          if (val) avail.add(val);
+        });
+      if (avail.size === 1) next[otherGroup] = [...avail][0];
+    });
+
+    setSelectedAttrs(next);
+
+    // Cambiar imagen si es atributo de color
+    const isColor = groupName.toLowerCase().includes("color") || groupName.toLowerCase().includes("tono");
+    if (isColor && selectedProduct) {
+      const imgs = parseImages(selectedProduct.images);
+      const idx = imgs.findIndex((img) => img.variantValue === value);
+      if (idx !== -1) showImage(idx);
+    }
+  }
+
+  function addSpecificVariantToCart(product: Product, variant: Product["variants"][0]) {
+    const imgs = parseImages(product.images);
+    const price = variant.price ?? product.price;
+    const variantId = variant.id;
+    const maxStock = variant.stock;
+    const key = `${product.id}:${variantId}`;
+    const colorAttr = parseVariantAttrs(variant).find(
+      (p) => p.name.toLowerCase().includes("color") || p.name.toLowerCase().includes("tono")
+    );
+    const assignedImg = colorAttr ? imgs.find((img) => img.variantValue === colorAttr.value) : null;
+    const image = assignedImg?.url ?? imgs[0]?.url ?? null;
+
+    setCart((prev) => {
+      const existing = prev.find((item) => `${item.productId}:${item.variantId ?? "base"}` === key);
+      if (existing) {
+        return prev.map((item) =>
+          `${item.productId}:${item.variantId ?? "base"}` === key
+            ? { ...item, quantity: maxStock ? Math.min(item.quantity + 1, maxStock) : item.quantity + 1 }
+            : item
+        );
+      }
+      return [
+        ...prev,
+        {
+          productId: product.id,
+          variantId,
+          name: product.name,
+          variantLabel: parseVariantAttrs(variant).filter((p) => p.value).map((p) => `${p.name}: ${p.value}`).join(", "),
+          price,
+          quantity: 1,
+          maxStock,
+          image,
+        },
+      ];
+    });
+    setOpenCart(true);
   }
 
   function showImage(index: number) {
@@ -2064,6 +2145,37 @@ export default function StorefrontClient({
         const clampedIdx = Math.min(imgIndex, imgs.length - 1);
         const totalStock = selectedProduct.variants.reduce((s, v) => s + v.stock, 0);
         const available = selectedProduct.variants.length === 0 || totalStock > 0;
+
+        // attrGroups con disponibilidad cross-filtered según selección actual
+        const attrGroupsModal: Record<string, { id: string; value: string; available: boolean }[]> = {};
+        selectedProduct.variants.forEach((v) => {
+          parseVariantAttrs(v).forEach(({ name: attrName, value: attrValue }) => {
+            if (!attrValue) return;
+            if (!attrGroupsModal[attrName]) attrGroupsModal[attrName] = [];
+            if (!attrGroupsModal[attrName].find((e) => e.value === attrValue))
+              attrGroupsModal[attrName].push({ id: `${v.id}:${attrName}:${attrValue}`, value: attrValue, available: false });
+          });
+        });
+        Object.keys(attrGroupsModal).forEach((groupName) => {
+          const otherSelected = { ...selectedAttrs };
+          delete otherSelected[groupName];
+          attrGroupsModal[groupName].forEach((item) => {
+            item.available = selectedProduct.variants.some((v) => {
+              if (v.stock === 0) return false;
+              const va = Object.fromEntries(parseVariantAttrs(v).map((p) => [p.name, p.value]));
+              if (va[groupName] !== item.value) return false;
+              return Object.entries(otherSelected).every(([k, val]) => va[k] === val);
+            });
+          });
+        });
+        const resolvedVariant = Object.keys(selectedAttrs).length > 0
+          ? selectedProduct.variants.find((v) => {
+              const va = Object.fromEntries(parseVariantAttrs(v).map((p) => [p.name, p.value]));
+              return Object.entries(selectedAttrs).every(([k, val]) => va[k] === val);
+            }) ?? null
+          : null;
+        const needsSelection = selectedProduct.variants.length > 1;
+        const isReady = !needsSelection || resolvedVariant !== null;
         const canZoomIn = imgs.length > 0 && zoomLevel < 3;
         const canZoomOut = zoomLevel > 1;
 
@@ -2192,58 +2304,52 @@ export default function StorefrontClient({
               )}
 
               {/* 3. Variantes (colores + talles como chips) */}
-              {selectedProduct.variants.length > 0 && (() => {
-                const attrGroups: Record<string, { id: string; value: string; available: boolean }[]> = {};
-                selectedProduct.variants.forEach(v => {
-                  parseVariantAttrs(v).forEach(({ name: attrName, value: attrValue }) => {
-                    if (!attrValue) return;
-                    if (!attrGroups[attrName]) attrGroups[attrName] = [];
-                    const existing = attrGroups[attrName].find(e => e.value === attrValue);
-                    if (existing) { if (v.stock > 0) existing.available = true; }
-                    else attrGroups[attrName].push({ id: `${v.id}:${attrName}:${attrValue}`, value: attrValue, available: v.stock > 0 });
-                  });
-                });
-                return Object.keys(attrGroups).length > 0 ? (
-                  <div className="mt-4 space-y-3">
-                    {Object.entries(attrGroups).map(([groupName, items]) => {
-                      const isColor = groupName.toLowerCase().includes("color") || groupName.toLowerCase().includes("tono");
-                      if (isColor && !modalCfg.showColors) return null;
-                      if (!isColor && modalCfg.sizeChart) return null;
-                      return (
-                        <div key={groupName}>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{groupName}</p>
-                          {isColor ? (
-                            <div className="flex flex-wrap gap-2">
-                              {items.map((item) => {
-                                const bg = variantToColor(item.value);
-                                const isSelected = selectedColorValue === item.value;
-                                return bg ? (
-                                  <button key={item.id} type="button" title={item.value}
-                                    onClick={() => item.available && selectColor(item.value, imgs)}
-                                    className={`h-7 w-7 rounded-full border-2 transition-all ${item.available ? "hover:scale-110 cursor-pointer" : "opacity-40 cursor-not-allowed"} ${isSelected ? "border-gray-800 ring-2 ring-offset-1 ring-gray-600 scale-110" : "border-gray-200"}`}
-                                    style={{ backgroundColor: bg }} />
-                                ) : (
-                                  <button key={item.id} type="button"
-                                    onClick={() => item.available && selectColor(item.value, imgs)}
-                                    className={`rounded-full border px-3 py-1 text-sm transition-colors ${item.available ? "cursor-pointer hover:bg-gray-50" : "cursor-not-allowed text-gray-300 line-through border-gray-100"} ${isSelected ? "border-gray-800 bg-gray-100 font-semibold text-gray-900" : "border-gray-200 text-gray-700"}`}>{item.value}</button>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div className="flex flex-wrap gap-2">
-                              {items.map((item) => (
+              {Object.keys(attrGroupsModal).length > 0 && (
+                <div className="mt-4 space-y-3">
+                  {Object.entries(attrGroupsModal).map(([groupName, items]) => {
+                    const isColor = groupName.toLowerCase().includes("color") || groupName.toLowerCase().includes("tono");
+                    if (isColor && !modalCfg.showColors) return null;
+                    if (!isColor && modalCfg.sizeChart) return null;
+                    const selected = selectedAttrs[groupName];
+                    return (
+                      <div key={groupName}>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
+                          {groupName}{selected ? <span className="ml-2 normal-case text-gray-700 font-bold">{selected}</span> : null}
+                        </p>
+                        {isColor ? (
+                          <div className="flex flex-wrap gap-2">
+                            {items.map((item) => {
+                              const bg = variantToColor(item.value);
+                              const isSelected = selected === item.value;
+                              return bg ? (
+                                <button key={item.id} type="button" title={item.value}
+                                  onClick={() => selectAttr(groupName, item.value)}
+                                  className={`h-7 w-7 rounded-full border-2 transition-all ${item.available ? "hover:scale-110 cursor-pointer" : "opacity-30 cursor-not-allowed"} ${isSelected ? "border-gray-800 ring-2 ring-offset-1 ring-gray-600 scale-110" : "border-gray-200"}`}
+                                  style={{ backgroundColor: bg }} />
+                              ) : (
                                 <button key={item.id} type="button"
-                                  onClick={() => item.available && selectColor(item.value, imgs)}
-                                  className={`rounded-full border px-3 py-1 text-sm transition-colors ${item.available ? "cursor-pointer border-gray-200 text-gray-700 hover:bg-gray-50" : "cursor-not-allowed border-gray-100 text-gray-300 line-through"} ${selectedColorValue === item.value ? "border-gray-800 bg-gray-100 font-semibold" : ""}`}>{item.value}</button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : null;
-              })()}
+                                  onClick={() => selectAttr(groupName, item.value)}
+                                  className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${item.available ? "cursor-pointer hover:bg-gray-50" : "cursor-not-allowed text-gray-300 line-through border-gray-100"} ${isSelected ? "border-gray-800 bg-gray-100 font-semibold text-gray-900" : "border-gray-200 text-gray-700"}`}>{item.value}</button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {items.map((item) => {
+                              const isSelected = selected === item.value;
+                              return (
+                                <button key={item.id} type="button"
+                                  onClick={() => selectAttr(groupName, item.value)}
+                                  className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${item.available ? "cursor-pointer hover:bg-gray-50" : "cursor-not-allowed text-gray-300 line-through border-gray-100"} ${isSelected ? "border-gray-800 bg-gray-100 font-semibold text-gray-900" : "border-gray-200 text-gray-700"}`}>{item.value}</button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* 4. Tabla de talles (cuando sizeChart está activo) */}
               {modalCfg.sizeChart && (() => {
@@ -2251,20 +2357,30 @@ export default function StorefrontClient({
                   name.toLowerCase().includes("tall") ||
                   name.toLowerCase().includes("size") ||
                   name.toLowerCase().includes("talla");
-                const sizeRows = selectedProduct.variants
-                  .map(v => {
-                    const pairs = parseVariantAttrs(v);
-                    const sizeAttr = pairs.find(p => isSizeKey(p.name));
-                    return sizeAttr ? { ...v, value: sizeAttr.value } : null;
-                  })
-                  .filter(Boolean) as typeof selectedProduct.variants;
-                const rows = sizeRows.length > 0
-                  ? sizeRows
-                  : selectedProduct.variants.filter(v => v.value && v.value !== "default");
-                if (rows.length === 0) return null;
+                // Encontrar el nombre del atributo de talle
+                const sizeGroupName = Object.keys(attrGroupsModal).find(isSizeKey) ?? null;
+                // Filtrar variantes compatibles con la selección de attrs no-talle
+                const nonSizeSelected = Object.fromEntries(
+                  Object.entries(selectedAttrs).filter(([k]) => !isSizeKey(k))
+                );
+                const compatibleVariants = selectedProduct.variants.filter((v) => {
+                  const va = Object.fromEntries(parseVariantAttrs(v).map((p) => [p.name, p.value]));
+                  return Object.entries(nonSizeSelected).every(([k, val]) => va[k] === val);
+                });
+                const rows = compatibleVariants.map((v) => {
+                  const pairs = parseVariantAttrs(v);
+                  const sizeAttr = pairs.find((p) => isSizeKey(p.name));
+                  return sizeAttr ? { ...v, sizeValue: sizeAttr.value } : null;
+                }).filter(Boolean) as (Variant & { sizeValue: string })[];
+                const uniqueRows = rows.filter((r, i) => rows.findIndex((x) => x.sizeValue === r.sizeValue) === i);
+                if (uniqueRows.length === 0) return null;
+                const selectedSize = sizeGroupName ? selectedAttrs[sizeGroupName] : null;
                 return (
                   <div className="mt-5">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{modalCfg.sizeChartTitle}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
+                      {modalCfg.sizeChartTitle}
+                      {selectedSize && <span className="ml-2 normal-case text-gray-700 font-bold">{selectedSize}</span>}
+                    </p>
                     <div className="overflow-hidden rounded-xl border border-gray-100">
                       <table className="w-full text-sm">
                         <thead>
@@ -2275,19 +2391,31 @@ export default function StorefrontClient({
                           </tr>
                         </thead>
                         <tbody>
-                          {rows.map((v, i) => (
-                            <tr key={v.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                              <td className="px-3 py-2 font-bold text-gray-900">{v.value}</td>
-                              <td className="px-3 py-2 text-center">
-                                {v.stock > 0
-                                  ? <span className="font-bold text-emerald-500">✓</span>
-                                  : <span className="font-bold text-red-400">✗</span>}
-                              </td>
-                              <td className="px-3 py-2 text-center text-xs text-gray-500">
-                                {v.stock > 0 ? `${v.stock} u.` : "Sin stock"}
-                              </td>
-                            </tr>
-                          ))}
+                          {uniqueRows.map((v, i) => {
+                            const isSelected = selectedSize === v.sizeValue;
+                            const rowBg = isSelected
+                              ? (modalCfg.accentColor || store.primaryColor) + "20"
+                              : i % 2 === 0 ? "white" : "#f9fafb";
+                            return (
+                              <tr key={v.id}
+                                onClick={() => sizeGroupName && selectAttr(sizeGroupName, v.sizeValue)}
+                                className={`transition-colors ${sizeGroupName ? (v.stock > 0 ? "cursor-pointer hover:bg-gray-100" : "cursor-not-allowed opacity-50") : ""}`}
+                                style={{ backgroundColor: rowBg }}>
+                                <td className="px-3 py-2 font-bold text-gray-900 flex items-center gap-2">
+                                  {v.sizeValue}
+                                  {isSelected && <span className="text-[10px] font-black uppercase tracking-wide" style={{ color: modalCfg.accentColor || store.primaryColor }}>✓</span>}
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  {v.stock > 0
+                                    ? <span className="font-bold text-emerald-500">✓</span>
+                                    : <span className="font-bold text-red-400">✗</span>}
+                                </td>
+                                <td className="px-3 py-2 text-center text-xs text-gray-500">
+                                  {v.stock > 0 ? `${v.stock} u.` : "Sin stock"}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -2308,16 +2436,34 @@ export default function StorefrontClient({
                   Consultar por WhatsApp
                 </button>
               ) : (
-                <button
-                  type="button"
-                  disabled={!available}
-                  onClick={() => { addToCart(selectedProduct); closeProduct(); }}
-                  className={`mt-5 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-bold transition disabled:opacity-40 ${buttonRadius}`}
-                  style={{ backgroundColor: modalCfg.accentColor || store.primaryColor, color: textColor }}
-                >
-                  <ShoppingBag className="h-4 w-4" />
-                  {available ? (modalCfg.buttonText || "Agregar al carrito") : "Sin stock"}
-                </button>
+                <>
+                  {selectionError && (
+                    <p className="mt-3 text-center text-xs font-semibold text-red-500">
+                      Elegí una variante para continuar
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    disabled={!available}
+                    onClick={() => {
+                      if (!available) return;
+                      if (needsSelection && !isReady) { setSelectionError(true); return; }
+                      if (resolvedVariant) {
+                        addSpecificVariantToCart(selectedProduct, resolvedVariant);
+                      } else if (!needsSelection && selectedProduct.variants.length === 1) {
+                        addSpecificVariantToCart(selectedProduct, selectedProduct.variants[0]);
+                      } else {
+                        addToCart(selectedProduct);
+                      }
+                      closeProduct();
+                    }}
+                    className={`mt-3 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-bold transition disabled:opacity-40 ${buttonRadius} ${selectionError ? "animate-pulse" : ""}`}
+                    style={{ backgroundColor: modalCfg.accentColor || store.primaryColor, color: textColor }}
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    {!available ? "Sin stock" : needsSelection && !isReady ? "Elegí una variante" : (modalCfg.buttonText || "Agregar al carrito")}
+                  </button>
+                </>
               )}
 
               {/* 6. Descripción */}
