@@ -2987,7 +2987,7 @@ export default function ConfiguracionPage() {
         </div>
 
         {/* ── PREVIEW PANEL ── */}
-        <div className="flex-1 min-h-0 flex flex-col rounded-2xl border-2 border-indigo-100 shadow-xl shadow-indigo-100/40">
+        <div className="flex-1 min-w-0 min-h-0 flex flex-col rounded-2xl border-2 border-indigo-100 shadow-xl shadow-indigo-100/40">
           <div className="bg-gray-800 rounded-2xl overflow-hidden flex flex-col flex-1 min-h-0">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 shrink-0">
               <div className="flex items-center gap-1.5">
