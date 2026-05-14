@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
 
   const where = {
     isActive: true,
+    isPublished: true,
     ...(category ? { products: { some: { category, isActive: true } } } : {}),
   };
 

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import CopyLinkButton from "@/components/CopyLinkButton";
+import PublishToggle from "@/components/PublishToggle";
 import { getCurrentUser } from "@/lib/auth-session";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
@@ -102,6 +103,9 @@ export default async function DashboardPage() {
                   Ver tienda
                 </Link>
               </div>
+            </div>
+            <div className="mt-3">
+              <PublishToggle initialPublished={store.isPublished} />
             </div>
           </div>
         )}

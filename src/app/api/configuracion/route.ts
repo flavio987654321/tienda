@@ -178,3 +178,18 @@ export async function PUT(req: NextRequest) {
   revalidatePath(`/tienda/${store.slug}`, "layout");
   return NextResponse.json({ store });
 }
+
+export async function PATCH(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { isPublished } = await req.json();
+  if (typeof isPublished !== "boolean") {
+    return NextResponse.json({ error: "Valor inválido" }, { status: 400 });
+  }
+  const store = await prisma.store.update({
+    where: { ownerId: user.id },
+    data: { isPublished },
+  });
+  revalidatePath(`/tienda/${store.slug}`, "layout");
+  return NextResponse.json({ isPublished: store.isPublished });
+}

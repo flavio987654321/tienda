@@ -105,6 +105,7 @@ model Store {
   seoTitle       String?
   seoDescription String?
   isActive       Boolean  @default(true)
+  isPublished    Boolean  @default(false)
   affiliatesEnabled Boolean @default(false)
   commissionRate Float    @default(10)
   pageBlocks          String   @default("[]")
