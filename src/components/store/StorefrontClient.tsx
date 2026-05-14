@@ -268,10 +268,20 @@ const GRID: Record<string, string> = {
   list: "grid-cols-1",
 };
 
-function parseImages(images: string) {
+type ImageItem = { url: string; variantValue?: string };
+
+function parseImages(images: string): ImageItem[] {
   try {
     const parsed = JSON.parse(images);
-    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(Boolean)
+      .map((item) =>
+        typeof item === "string"
+          ? { url: item }
+          : { url: (item as any).url || "", variantValue: (item as any).variantValue }
+      )
+      .filter((item) => item.url);
   } catch {
     return [];
   }
@@ -547,6 +557,7 @@ export default function StorefrontClient({
 }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [imgIndex, setImgIndex] = useState(0);
+  const [selectedColorValue, setSelectedColorValue] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
@@ -637,7 +648,7 @@ export default function StorefrontClient({
   const total = subtotal - couponDiscount + shipping.cost;
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const firstProducts = store.products.slice(0, 3).map((product) => ({ product, image: parseImages(product.images)[0] ?? null }));
+  const firstProducts = store.products.slice(0, 3).map((product) => ({ product, image: parseImages(product.images)[0]?.url ?? null }));
   const heroImage = store.banner || firstProducts[0]?.image || null;
   const textColor = readableText(store.primaryColor);
   const isInquiry = getStoreType(store.tipoTienda || "GENERAL").checkoutMode === "inquiry";
@@ -710,13 +721,21 @@ export default function StorefrontClient({
   function openProduct(product: Product) {
     setSelectedProduct(product);
     setImgIndex(0);
+    setSelectedColorValue(null);
     setZoomLevel(1);
   }
 
   function closeProduct() {
     setSelectedProduct(null);
     setImgIndex(0);
+    setSelectedColorValue(null);
     setZoomLevel(1);
+  }
+
+  function selectColor(value: string, imgs: ImageItem[]) {
+    setSelectedColorValue(value);
+    const idx = imgs.findIndex((img) => img.variantValue === value);
+    if (idx !== -1) showImage(idx);
   }
 
   function showImage(index: number) {
@@ -862,7 +881,7 @@ export default function StorefrontClient({
           price,
           quantity: 1,
           maxStock,
-          image: images[0] ?? null,
+          image: images[0]?.url ?? null,
         },
       ];
     });
@@ -1035,7 +1054,7 @@ export default function StorefrontClient({
 
   function renderProductCard(product: Product, index: number) {
     const images = parseImages(product.images);
-    const image = images[0] ?? null;
+    const image = images[0]?.url ?? null;
     const totalStock = product.variants.reduce((sum, variant) => sum + variant.stock, 0);
     const hasDiscount = product.comparePrice && product.comparePrice > product.price;
     const available = product.variants.length === 0 || totalStock > 0;
@@ -2086,7 +2105,7 @@ export default function StorefrontClient({
                 }}
               >
                 <img
-                  src={imgs[clampedIdx]}
+                  src={imgs[clampedIdx]?.url ?? ""}
                   alt={selectedProduct.name}
                   draggable={false}
                   className="h-full w-full object-contain transition-transform duration-200"
@@ -2197,19 +2216,25 @@ export default function StorefrontClient({
                             <div className="flex flex-wrap gap-2">
                               {items.map((item) => {
                                 const bg = variantToColor(item.value);
+                                const isSelected = selectedColorValue === item.value;
                                 return bg ? (
-                                  <span key={item.id} title={item.value}
-                                    className={`h-7 w-7 rounded-full border-2 ${item.available ? "border-gray-200" : "border-gray-100 opacity-40"}`}
+                                  <button key={item.id} type="button" title={item.value}
+                                    onClick={() => item.available && selectColor(item.value, imgs)}
+                                    className={`h-7 w-7 rounded-full border-2 transition-all ${item.available ? "hover:scale-110 cursor-pointer" : "opacity-40 cursor-not-allowed"} ${isSelected ? "border-gray-800 ring-2 ring-offset-1 ring-gray-600 scale-110" : "border-gray-200"}`}
                                     style={{ backgroundColor: bg }} />
                                 ) : (
-                                  <span key={item.id} className={`rounded-full border px-3 py-1 text-sm ${item.available ? "border-gray-200 text-gray-700" : "border-gray-100 text-gray-300 line-through"}`}>{item.value}</span>
+                                  <button key={item.id} type="button"
+                                    onClick={() => item.available && selectColor(item.value, imgs)}
+                                    className={`rounded-full border px-3 py-1 text-sm transition-colors ${item.available ? "cursor-pointer hover:bg-gray-50" : "cursor-not-allowed text-gray-300 line-through border-gray-100"} ${isSelected ? "border-gray-800 bg-gray-100 font-semibold text-gray-900" : "border-gray-200 text-gray-700"}`}>{item.value}</button>
                                 );
                               })}
                             </div>
                           ) : (
                             <div className="flex flex-wrap gap-2">
                               {items.map((item) => (
-                                <span key={item.id} className={`rounded-full border px-3 py-1 text-sm ${item.available ? "border-gray-200 text-gray-700" : "border-gray-100 text-gray-300 line-through"}`}>{item.value}</span>
+                                <button key={item.id} type="button"
+                                  onClick={() => item.available && selectColor(item.value, imgs)}
+                                  className={`rounded-full border px-3 py-1 text-sm transition-colors ${item.available ? "cursor-pointer border-gray-200 text-gray-700 hover:bg-gray-50" : "cursor-not-allowed border-gray-100 text-gray-300 line-through"} ${selectedColorValue === item.value ? "border-gray-800 bg-gray-100 font-semibold" : ""}`}>{item.value}</button>
                               ))}
                             </div>
                           )}

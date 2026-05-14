@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getStoreType } from "@/lib/storeTypes";
+
+type ImageItem = { url: string; variantValue?: string };
 
 function getVariantOptions(storeType: string): string[] {
   const map: Record<string, string[]> = {
@@ -288,7 +290,7 @@ function ProductoFormPage() {
   const [condicion, setCondicion] = useState<"Nuevo" | "Usado">("Usado");
   const [precioMayorista, setPrecioMayorista] = useState("");
   const [cantMinMayorista, setCantMinMayorista] = useState("");
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<ImageItem[]>([]);
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [uploadingImg, setUploadingImg] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -362,7 +364,13 @@ function ProductoFormPage() {
         });
         setCustomCategory(knownCategory ? "" : product.category || "");
         setCustomSubcategory(product.subcategory && !((productSubcategories[product.category] || []).includes(product.subcategory)) ? product.subcategory : "");
-        setImages(safeJsonArray(product.images).filter((url) => typeof url === "string") as string[]);
+        setImages(
+          safeJsonArray(product.images)
+            .map((item: any) =>
+              typeof item === "string" ? { url: item } : { url: item?.url || "", variantValue: item?.variantValue }
+            )
+            .filter((img: ImageItem) => img.url)
+        );
         setReelUrls(safeJsonArray(product.reelUrls || "[]").filter((url) => typeof url === "string") as string[]);
         setCarouselIdx(0);
         setVariants(
@@ -423,6 +431,23 @@ function ProductoFormPage() {
     markDirty();
   }
 
+  const colorValues = useMemo(() => {
+    const values = new Set<string>();
+    variants.forEach((v) => {
+      Object.entries(v.attrs).forEach(([key, val]) => {
+        if ((key.toLowerCase().includes("color") || key.toLowerCase().includes("tono")) && val.trim()) {
+          values.add(val.trim());
+        }
+      });
+    });
+    return Array.from(values);
+  }, [variants]);
+
+  function assignImageColor(idx: number, variantValue: string | undefined) {
+    setImages((p) => p.map((img, i) => i === idx ? { ...img, variantValue: variantValue || undefined } : img));
+    markDirty();
+  }
+
   function addAttribute() {
     setAttributes((p) => [...p, { key: "", value: "" }]);
     markDirty();
@@ -470,7 +495,7 @@ function ProductoFormPage() {
         if (data.url) urls.push(data.url);
       }
       setImages((p) => {
-        const next = [...p, ...urls];
+        const next = [...p, ...urls.map((u) => ({ url: u }))];
         setCarouselIdx(next.length - urls.length);
         return next;
       });
@@ -555,7 +580,7 @@ function ProductoFormPage() {
         category,
         subcategory,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-        images,
+        images: images.map((img) => img.variantValue ? img : img.url),
         reelUrls,
         variants: preparedVariants,
         attributes: finalAttrs,
@@ -671,27 +696,45 @@ function ProductoFormPage() {
               {/* Thumbnails */}
               {images.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
-                  {images.map((url, i) => (
-                    <div
-                      key={url + i}
-                      draggable
-                      onDragStart={() => setDragIdx(i)}
-                      onDragOver={(e) => { e.preventDefault(); }}
-                      onDrop={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== i) moveImage(dragIdx, i); setDragIdx(null); }}
-                      onDragEnd={() => setDragIdx(null)}
-                      onClick={() => setCarouselIdx(i)}
-                      className={`group relative w-16 h-16 rounded-lg cursor-grab active:cursor-grabbing border-2 transition-all flex-shrink-0 ${
-                        dragIdx === i ? "opacity-40 scale-95" : ""
-                      } ${carouselIdx === i ? "border-indigo-500 scale-105" : "border-transparent hover:border-gray-300"}`}
-                    >
-                      <img src={url} alt="" className="w-full h-full object-cover rounded-[6px]" />
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); removeImage(i); }}
-                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10"
+                  {images.map((img, i) => (
+                    <div key={img.url + i} className="flex flex-col items-center gap-1">
+                      <div
+                        draggable
+                        onDragStart={() => setDragIdx(i)}
+                        onDragOver={(e) => { e.preventDefault(); }}
+                        onDrop={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== i) moveImage(dragIdx, i); setDragIdx(null); }}
+                        onDragEnd={() => setDragIdx(null)}
+                        onClick={() => setCarouselIdx(i)}
+                        className={`group relative w-16 h-16 rounded-lg cursor-grab active:cursor-grabbing border-2 transition-all flex-shrink-0 ${
+                          dragIdx === i ? "opacity-40 scale-95" : ""
+                        } ${carouselIdx === i ? "border-indigo-500 scale-105" : "border-transparent hover:border-gray-300"}`}
                       >
-                        <X className="h-3 w-3" />
-                      </button>
+                        <img src={img.url} alt="" className="w-full h-full object-cover rounded-[6px]" />
+                        {img.variantValue && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 rounded-b-[5px] text-center">
+                            <span className="text-[8px] text-white font-medium px-1 leading-4 truncate block">{img.variantValue}</span>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); removeImage(i); }}
+                          className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                      {colorValues.length > 0 && (
+                        <select
+                          value={img.variantValue || ""}
+                          onChange={(e) => assignImageColor(i, e.target.value || undefined)}
+                          onClick={(e) => e.stopPropagation()}
+                          title="Asignar a color"
+                          className="w-16 text-[9px] border border-gray-200 rounded-md bg-white text-gray-500 py-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                        >
+                          <option value="">sin color</option>
+                          {colorValues.map((v) => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1091,7 +1134,7 @@ function ProductoFormPage() {
                   {images.length > 0 ? (
                     <>
                       <img
-                        src={images[carouselIdx]}
+                        src={images[carouselIdx]?.url || ""}
                         alt=""
                         className="w-full h-full object-cover transition-all duration-300"
                       />
@@ -1157,9 +1200,9 @@ function ProductoFormPage() {
                 <div className="p-4 space-y-3">
                   {images.length > 1 && (
                     <div className="grid grid-cols-5 gap-1.5">
-                      {images.map((url, i) => (
+                      {images.map((img, i) => (
                         <button
-                          key={url}
+                          key={img.url}
                           type="button"
                           onClick={() => setCarouselIdx(i)}
                           className={`aspect-square overflow-hidden rounded-md border-2 transition ${
@@ -1167,7 +1210,7 @@ function ProductoFormPage() {
                           }`}
                           aria-label={`Seleccionar imagen ${i + 1}`}
                         >
-                          <img src={url} alt="" className="h-full w-full object-cover" />
+                          <img src={img.url} alt="" className="h-full w-full object-cover" />
                         </button>
                       ))}
                     </div>
