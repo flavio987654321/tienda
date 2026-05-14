@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateProductBody, normalizeVariants, MAX_PRODUCT_REELS, getOwnerStore } from "@/lib/products";
+import { createNotificationMany } from "@/lib/notifications";
 
 type ProductRouteContext = RouteContext<"/api/productos/[id]">;
 
@@ -25,7 +26,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
   const { id } = await ctx.params;
   const existing = await prisma.product.findFirst({
     where: { id, storeId: auth.storeId },
-    select: { id: true },
+    select: { id: true, name: true, price: true, variants: { select: { stock: true } } },
   });
 
   if (!existing) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
@@ -100,6 +101,54 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
       include: { variants: true },
     });
   });
+
+  // Notificar a afiliados activos si cambió el precio o quedó sin stock
+  const priceChanged = existing.price !== parsedPrice;
+  const oldTotalStock = existing.variants.reduce((s, v) => s + v.stock, 0);
+  const newTotalStock = product.variants.reduce((s, v) => s + v.stock, 0);
+  const wentOutOfStock = oldTotalStock > 0 && newTotalStock === 0;
+
+  if (priceChanged || wentOutOfStock) {
+    const activeAffiliates = await prisma.affiliate.findMany({
+      where: { storeId: auth.storeId, isActive: true },
+      select: { userId: true },
+    });
+
+    const notifs = activeAffiliates.flatMap(({ userId }) => {
+      const result = [];
+      if (priceChanged) {
+        result.push({
+          userId,
+          type: "PRICE_CHANGED",
+          title: `Precio actualizado: ${product.name}`,
+          body: `Nuevo precio: $${parsedPrice.toLocaleString("es-AR")}`,
+          link: "/vendedoras",
+        });
+      }
+      if (wentOutOfStock) {
+        result.push({
+          userId,
+          type: "OUT_OF_STOCK",
+          title: `Sin stock: ${product.name}`,
+          body: "Este producto ya no tiene stock disponible.",
+          link: "/vendedoras",
+        });
+      }
+      return result;
+    });
+
+    if (notifs.length > 0) createNotificationMany(notifs);
+
+    if (wentOutOfStock) {
+      createNotificationMany([{
+        userId: auth.ownerId,
+        type: "OUT_OF_STOCK",
+        title: `Sin stock: ${product.name}`,
+        body: "Revisá el inventario y actualizá el stock.",
+        link: "/dashboard/productos",
+      }]);
+    }
+  }
 
   return NextResponse.json({ product });
 }

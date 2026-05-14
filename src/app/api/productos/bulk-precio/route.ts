@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { createNotificationMany } from "@/lib/notifications";
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -36,6 +37,26 @@ export async function POST(req: NextRequest) {
   );
 
   await prisma.$transaction(updates);
+
+  // Notificar a afiliados activos que hubo un cambio masivo de precios
+  if (products.length > 0) {
+    const activeAffiliates = await prisma.affiliate.findMany({
+      where: { storeId: store.id, isActive: true },
+      select: { userId: true },
+    });
+    if (activeAffiliates.length > 0) {
+      const sign = pct > 0 ? "+" : "";
+      createNotificationMany(
+        activeAffiliates.map(({ userId }) => ({
+          userId,
+          type: "PRICE_CHANGED",
+          title: "Precios actualizados",
+          body: `${products.length} producto${products.length !== 1 ? "s" : ""} cambiaron de precio (${sign}${pct}%).`,
+          link: "/vendedoras",
+        }))
+      );
+    }
+  }
 
   return NextResponse.json({ updated: products.length });
 }
