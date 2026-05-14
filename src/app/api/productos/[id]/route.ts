@@ -152,3 +152,27 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
 
   return NextResponse.json({ product });
 }
+
+export async function DELETE(_req: NextRequest, ctx: ProductRouteContext) {
+  const auth = await getOwnerStore();
+  if ("error" in auth) return auth.error;
+
+  const { id } = await ctx.params;
+  const exists = await prisma.product.findFirst({
+    where: { id, storeId: auth.storeId },
+    select: { id: true },
+  });
+
+  if (!exists) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+
+  const orderItemCount = await prisma.orderItem.count({ where: { productId: id } });
+  if (orderItemCount > 0) {
+    return NextResponse.json(
+      { error: "Este producto tiene pedidos asociados y no puede eliminarse. Podés ocultarlo en su lugar." },
+      { status: 409 }
+    );
+  }
+
+  await prisma.product.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Edit, Eye, EyeOff, Package, Search, X, Percent, ChevronDown } from "lucide-react";
+import { Edit, Eye, EyeOff, Package, Search, X, Percent, ChevronDown, Trash2 } from "lucide-react";
 
 interface Variant {
   id: string;
@@ -37,6 +37,8 @@ export default function ProductsTable({ products: initialProducts }: Props) {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkError, setBulkError] = useState("");
   const [bulkSuccess, setBulkSuccess] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState("");
 
   const categories = useMemo(
     () => Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort(),
@@ -69,6 +71,20 @@ export default function ProductsTable({ products: initialProducts }: Props) {
 
   const bulkAffected = products.filter((p) => bulkCategory === "all" || p.category === bulkCategory).length;
 
+  async function deleteProduct(id: string, name: string) {
+    if (!confirm(`¿Eliminar "${name}"? Esta acción no se puede deshacer.`)) return;
+    setDeletingId(id);
+    setDeleteError("");
+    const res = await fetch(`/api/productos/${id}`, { method: "DELETE" });
+    const data = await res.json();
+    setDeletingId(null);
+    if (!res.ok) {
+      setDeleteError(data.error || "Error al eliminar el producto");
+      return;
+    }
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+  }
+
   async function applyBulkPrice() {
     const pct = parseFloat(bulkPct);
     if (isNaN(pct) || pct === 0) { setBulkError("Ingresá un porcentaje válido distinto de 0"); return; }
@@ -100,6 +116,13 @@ export default function ProductsTable({ products: initialProducts }: Props) {
 
   return (
     <div className="space-y-4">
+      {deleteError && (
+        <div className="flex items-center justify-between bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
+          <span>{deleteError}</span>
+          <button onClick={() => setDeleteError("")} className="ml-3 text-red-400 hover:text-red-600"><X className="h-4 w-4" /></button>
+        </div>
+      )}
+
       {/* Filters bar */}
       <div className="flex gap-3 items-center flex-wrap">
         <div className="relative flex-1 min-w-48">
@@ -305,13 +328,23 @@ export default function ProductsTable({ products: initialProducts }: Props) {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <Link
-                        href={`/dashboard/productos/nuevo?edit=${product.id}`}
-                        className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                        Editar
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={`/dashboard/productos/nuevo?edit=${product.id}`}
+                          className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                          Editar
+                        </Link>
+                        <button
+                          onClick={() => deleteProduct(product.id, product.name)}
+                          disabled={deletingId === product.id}
+                          className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-600 font-medium disabled:opacity-40"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          {deletingId === product.id ? "..." : "Eliminar"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

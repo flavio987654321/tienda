@@ -178,13 +178,13 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      <main className={`relative ml-14 flex-1 p-4 bg-gray-50 ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
-        {userId && (
-          <div className="absolute top-3 right-4 z-30">
-            <NotificationBell userId={userId} />
-          </div>
-        )}
-        {children}
+      <main className={`ml-14 flex-1 flex flex-col bg-gray-50 ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
+        <div className="flex justify-end items-center px-4 pt-3 pb-0 shrink-0">
+          {userId && <NotificationBell userId={userId} />}
+        </div>
+        <div className={`flex-1 p-4 pt-2 ${fullHeight ? "overflow-hidden min-h-0" : ""}`}>
+          {children}
+        </div>
       </main>
     </div>
   );
