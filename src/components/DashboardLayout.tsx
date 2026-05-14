@@ -141,6 +141,14 @@ export default function DashboardLayout({
 
         {/* Sección inferior */}
         <div className="p-2 border-t border-gray-100 space-y-0.5 shrink-0">
+          {userId && (
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+              <NotificationBell userId={userId} />
+              <span className="whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200 text-sm font-medium">
+                Notificaciones
+              </span>
+            </div>
+          )}
           <Link
             href="/dashboard/configuracion"
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors"
@@ -178,15 +186,9 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      <div className={`ml-14 flex-1 flex flex-col ${fullHeight ? "overflow-hidden h-full" : ""}`}>
-        {/* Topbar con campana */}
-        <header className="h-[61px] shrink-0 border-b border-gray-100 bg-white flex items-center justify-end px-4 gap-2">
-          {userId && <NotificationBell userId={userId} />}
-        </header>
-        <main className={`flex-1 p-4 bg-gray-50 ${fullHeight ? "overflow-hidden" : "overflow-y-auto"}`}>
-          {children}
-        </main>
-      </div>
+      <main className={`ml-14 flex-1 p-4 bg-gray-50 ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
+        {children}
+      </main>
     </div>
   );
 }
