@@ -12,7 +12,7 @@ import {
   XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
   Star, Package, ArrowRight, ArrowLeft, ChevronLeft, ChevronRight, Eye, Edit3, MapPin, Phone, Save,
   DollarSign, ShoppingCart, Award, FileText, UploadCloud, Trash2, Download, Search,
-  Moon, Sun,
+  Moon, Sun, Menu, X,
 } from "lucide-react";
 
 const IgIconLg = () => <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>;
@@ -965,6 +965,7 @@ export default function VendedorasPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [loadingStores, setLoadingStores] = useState(true);
   const [applyStore, setApplyStore] = useState<StoreItem | null>(null);
@@ -1047,9 +1048,9 @@ export default function VendedorasPage() {
             <span className="text-lg font-bold text-gray-900 dark:text-white">MiTienda</span>
           </Link>
 
-          <div className="flex items-center gap-3">
+          {/* Desktop — se oculta en mobile */}
+          <div className="hidden sm:flex items-center gap-3">
             {isLoggedIn && user?.id && <NotificationBell userId={user.id} />}
-            {/* Theme toggle */}
             {mounted && (
               <button
                 type="button"
@@ -1060,7 +1061,6 @@ export default function VendedorasPage() {
                 {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
               </button>
             )}
-
             {isLoggedIn ? (
               <>
                 <Link href="/vendedoras/billetera" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
@@ -1070,7 +1070,7 @@ export default function VendedorasPage() {
                   <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-xs font-bold text-white">
                     {userInitial}
                   </div>
-                  <span className="text-sm text-gray-700 dark:text-gray-300 font-medium hidden sm:block">{userName}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{userName}</span>
                 </div>
                 <button
                   onClick={() => signOut("/")}
@@ -1078,7 +1078,7 @@ export default function VendedorasPage() {
                   title="Cerrar sesión"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span className="hidden sm:block">Salir</span>
+                  <span>Salir</span>
                 </button>
               </>
             ) : (
@@ -1092,7 +1092,90 @@ export default function VendedorasPage() {
               </>
             )}
           </div>
+
+          {/* Mobile — botón hamburguesa */}
+          <button
+            className="sm:hidden w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300"
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            aria-label="Menú"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
+
+        {/* Menú mobile desplegable */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+              className="sm:hidden border-t border-gray-200 dark:border-white/10 bg-white dark:bg-gray-950 px-6 py-4 flex flex-col gap-3"
+            >
+              {isLoggedIn ? (
+                <>
+                  {/* Usuario */}
+                  <div className="flex items-center gap-3 py-2">
+                    <div className="w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0">
+                      {userInitial}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{userName}</p>
+                    </div>
+                    {user?.id && (
+                      <div className="ml-auto">
+                        <NotificationBell userId={user.id} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="h-px bg-gray-100 dark:bg-white/10" />
+                  <Link
+                    href="/vendedoras/billetera"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    <Wallet className="h-4 w-4 text-indigo-500" /> Mi billetera
+                  </Link>
+                  {mounted && (
+                    <button
+                      onClick={() => { setTheme(isDark ? "light" : "dark"); setMobileMenuOpen(false); }}
+                      className="flex items-center gap-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4 text-gray-500" />}
+                      {isDark ? "Modo claro" : "Modo oscuro"}
+                    </button>
+                  )}
+                  <div className="h-px bg-gray-100 dark:bg-white/10" />
+                  <button
+                    onClick={() => { signOut("/"); setMobileMenuOpen(false); }}
+                    className="flex items-center gap-3 py-2.5 text-sm font-medium text-red-500"
+                  >
+                    <LogOut className="h-4 w-4" /> Cerrar sesión
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-xl">
+                    Iniciar sesión
+                  </Link>
+                  <Link href="/registro?tipo=vendedora" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2.5 text-sm font-semibold bg-purple-600 text-white rounded-xl">
+                    Crear cuenta
+                  </Link>
+                  {mounted && (
+                    <button
+                      onClick={() => { setTheme(isDark ? "light" : "dark"); setMobileMenuOpen(false); }}
+                      className="flex items-center gap-3 py-2 text-sm text-gray-500 dark:text-gray-400"
+                    >
+                      {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
+                      {isDark ? "Modo claro" : "Modo oscuro"}
+                    </button>
+                  )}
+                </>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       {/* ── HERO / DASHBOARD ── */}
