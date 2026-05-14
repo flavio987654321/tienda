@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import NotificationBell from "@/components/NotificationBell";
 
 const navItems = [
   { href: "/dashboard", label: "Inicio", icon: TrendingUp },
@@ -20,6 +21,7 @@ export default function DashboardLayout({
   children,
   userName,
   userEmail,
+  userId,
   initialPendingAffiliateCount = 0,
   initialLowStockCount = 0,
   fullHeight = false,
@@ -27,6 +29,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
   userName?: string | null;
   userEmail?: string | null;
+  userId?: string | null;
   initialPendingAffiliateCount?: number;
   initialLowStockCount?: number;
   fullHeight?: boolean;
@@ -175,7 +178,15 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      <main className={`ml-14 flex-1 p-4 bg-gray-50 ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>{children}</main>
+      <div className={`ml-14 flex-1 flex flex-col ${fullHeight ? "overflow-hidden h-full" : ""}`}>
+        {/* Topbar con campana */}
+        <header className="h-[61px] shrink-0 border-b border-gray-100 bg-white flex items-center justify-end px-4 gap-2">
+          {userId && <NotificationBell userId={userId} />}
+        </header>
+        <main className={`flex-1 p-4 bg-gray-50 ${fullHeight ? "overflow-hidden" : "overflow-y-auto"}`}>
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

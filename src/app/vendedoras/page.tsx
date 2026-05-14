@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/components/AuthProvider";
+import NotificationBell from "@/components/NotificationBell";
 import {
   CheckCircle, Clock, Loader2, Send, Store, TrendingUp, Users, Wallet,
   XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
@@ -1047,6 +1048,7 @@ export default function VendedorasPage() {
           </Link>
 
           <div className="flex items-center gap-3">
+            {isLoggedIn && user?.id && <NotificationBell userId={user.id} />}
             {/* Theme toggle */}
             {mounted && (
               <button

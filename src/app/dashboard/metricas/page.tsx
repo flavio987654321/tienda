@@ -164,7 +164,7 @@ export default async function MetricasPage() {
   const totalOrdersAllStatuses = ordersByStatus.reduce((s, o) => s + o._count, 0);
 
   return (
-    <DashboardLayout userName={user.name} userEmail={user.email}>
+    <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id}>
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Métricas</h1>

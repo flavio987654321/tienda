@@ -33,7 +33,7 @@ export default async function ProductosPage() {
     : 0;
 
   return (
-    <DashboardLayout userName={user.name} userEmail={user.email} initialPendingAffiliateCount={pendingAffiliateCount}>
+    <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
       {!store?.tipoTiendaConfigurado && <StoreTypeModal />}
       <div className="flex items-center justify-between mb-8">
         <div>

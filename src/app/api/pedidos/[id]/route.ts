@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { sendLowStockEmail, sendReviewRequestEmail, sendCommissionEarnedEmail, sendAffiliateOrderNotificationEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -232,6 +233,65 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       // No debería llegar acá — el guard de arriba cubre todos los casos
       throw new Error("Accion no valida");
     });
+
+    // Notificaciones en tiempo real (fuera de la transacción para no bloquearla)
+    if (action === "confirmPayment") {
+      // Notificar al afiliado si ganó comisión
+      if (result.commission && result.affiliateId) {
+        const affiliateUser = await prisma.affiliate.findUnique({
+          where: { id: result.affiliateId },
+          select: { userId: true },
+        });
+        if (affiliateUser) {
+          createNotification({
+            userId: affiliateUser.userId,
+            type: "COMMISSION_EARNED",
+            title: "¡Ganaste una comisión!",
+            body: `Tu comisión de $${result.commission.amount.toLocaleString("es-AR")} fue acreditada.`,
+            link: "/dashboard/billetera",
+          });
+        }
+      }
+      // Notificar al dueño
+      createNotification({
+        userId: ownerId,
+        type: "ORDER_CONFIRMED",
+        title: "Pago confirmado",
+        body: `El pedido fue confirmado por $${result.total.toLocaleString("es-AR")}.`,
+        link: `/dashboard/pedidos/${result.id}`,
+      });
+    }
+
+    if (action === "markShipped") {
+      // Notificar al dueño
+      createNotification({
+        userId: ownerId,
+        type: "ORDER_SHIPPED",
+        title: "Pedido marcado como enviado",
+        body: trackingCode ? `Código de seguimiento: ${trackingCode}` : undefined,
+        link: `/dashboard/pedidos/${result.id}`,
+      });
+    }
+
+    if (action === "markDelivered") {
+      createNotification({
+        userId: ownerId,
+        type: "ORDER_DELIVERED",
+        title: "Pedido entregado",
+        body: `El pedido fue marcado como entregado.`,
+        link: `/dashboard/pedidos/${result.id}`,
+      });
+    }
+
+    if (action === "cancel") {
+      createNotification({
+        userId: ownerId,
+        type: "ORDER_CANCELLED",
+        title: "Pedido cancelado",
+        body: `El pedido fue cancelado y el stock fue restaurado.`,
+        link: `/dashboard/pedidos/${result.id}`,
+      });
+    }
 
     return NextResponse.json({ order: result });
   } catch (error) {

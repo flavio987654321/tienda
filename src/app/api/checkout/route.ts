@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createNotification } from "@/lib/notifications";
 
 type CheckoutItem = {
   productId: string;
@@ -211,6 +212,21 @@ export async function POST(req: NextRequest) {
         },
       });
     });
+
+    // Notificar al dueño de la tienda en tiempo real
+    const storeOwner = await prisma.store.findUnique({
+      where: { id: order.storeId },
+      select: { ownerId: true, name: true },
+    });
+    if (storeOwner) {
+      createNotification({
+        userId: storeOwner.ownerId,
+        type: "NEW_ORDER",
+        title: "Nuevo pedido recibido",
+        body: `$${order.total.toLocaleString("es-AR")} — ${order.items.length} producto${order.items.length !== 1 ? "s" : ""}`,
+        link: `/dashboard/pedidos/${order.id}`,
+      });
+    }
 
     return NextResponse.json({ order });
   } catch (error) {

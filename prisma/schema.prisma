@@ -23,14 +23,15 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts    Account[]
-  sessions    Session[]
-  store       Store?
-  orders      Order[]
-  affiliates  Affiliate[] @relation("AffiliateOwner")
-  asAffiliate Affiliate[] @relation("AffiliateUser")
-  favorites   Favorite[]
-  reviews     Review[]
+  accounts      Account[]
+  sessions      Session[]
+  store         Store?
+  orders        Order[]
+  affiliates    Affiliate[] @relation("AffiliateOwner")
+  asAffiliate   Affiliate[] @relation("AffiliateUser")
+  favorites     Favorite[]
+  reviews       Review[]
+  notifications Notification[]
 }
 
 model Account {
@@ -367,6 +368,21 @@ model Coupon {
   orders Order[]
 
   @@unique([storeId, code])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String?
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model WalletWithdrawal {

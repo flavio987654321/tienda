@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
+import NotificationBell from "@/components/NotificationBell";
 
 interface WalletData {
   id: string;
@@ -379,7 +380,7 @@ function StarterGuide({ url, storeName, walletId, onAddBank }: { url: string; st
 // ── page ──────────────────────────────────────────────────────────────────────
 
 export default function BilleteraPage() {
-  const { status: sessionStatus } = useAuth();
+  const { status: sessionStatus, user } = useAuth();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [data, setData] = useState<PageData | null>(null);
@@ -422,6 +423,7 @@ export default function BilleteraPage() {
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex-1">Mi billetera</h1>
+          {user?.id && <NotificationBell userId={user.id} />}
           {mounted && (
             <button
               type="button"

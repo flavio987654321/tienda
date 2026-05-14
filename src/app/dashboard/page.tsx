@@ -65,6 +65,7 @@ export default async function DashboardPage() {
     <DashboardLayout
       userName={user.name}
       userEmail={user.email}
+      userId={user.id}
       initialPendingAffiliateCount={pendingAffiliateCount}
       initialLowStockCount={initialLowStockCount}
     >
@@ -246,3 +247,4 @@ export default async function DashboardPage() {
     </DashboardLayout>
   );
 }
+

@@ -71,7 +71,7 @@ export default async function PedidosPage() {
     .reduce((sum, order) => sum + order.total, 0);
 
   return (
-    <DashboardLayout userName={user.name} userEmail={user.email} initialPendingAffiliateCount={pendingAffiliateCount}>
+    <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pedidos</h1>
