@@ -2523,6 +2523,7 @@ export default function ConfiguracionPage() {
   const [productSubcategories, setProductSubcategories] = useState<Record<string,string[]>>({});
   const [previewProducts, setPreviewProducts] = useState<PreviewProduct[]>([]);
   const [previewModalProduct, setPreviewModalProduct] = useState<PreviewProduct | null>(null);
+  const [previewModalImgIdx, setPreviewModalImgIdx] = useState(0);
 
   // Blocks state
   const [blocks, setBlocks]               = useState<Block[]>([]);
@@ -3190,7 +3191,7 @@ export default function ConfiguracionPage() {
                           onChangeProps={(props)=>updateBlock(b.id,props)}
                           isFirst={idx===0}
                           isLast={idx===blocks.length-1}
-                          onProductClick={setPreviewModalProduct}
+                          onProductClick={(p) => { setPreviewModalProduct(p); setPreviewModalImgIdx(0); }}
                         />
                         );
                       })
@@ -3296,7 +3297,8 @@ export default function ConfiguracionPage() {
       {previewModalProduct && (() => {
         const prod = previewModalProduct;
         const imgs = parsePreviewImages(prod.images || "");
-        const img = imgs[0];
+        const clampedImgIdx = Math.min(previewModalImgIdx, Math.max(0, imgs.length - 1));
+        const img = imgs[clampedImgIdx] ?? null;
         const variants = prod.variants || [];
         const hasVariants = variants.length > 0 && !(variants.length === 1 && variants[0].value === "default");
         const reelList = parsePreviewImages(prod.reelUrls || "");
@@ -3398,7 +3400,7 @@ export default function ConfiguracionPage() {
           : variants.filter((v) => v.value && v.value !== "default");
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={()=>setPreviewModalProduct(null)}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={()=>{ setPreviewModalProduct(null); setPreviewModalImgIdx(0); }}>
             <div className="flex w-full max-w-4xl max-h-[90vh] rounded-2xl overflow-hidden shadow-2xl bg-white" onClick={e=>e.stopPropagation()}>
 
               {/* Left: phone preview */}
@@ -3410,14 +3412,31 @@ export default function ConfiguracionPage() {
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto bg-white" style={{fontFamily:config.fontFamily}}>
-                  {/* Product image */}
-                  {img ? (
-                    <div style={{aspectRatio:"1",background:"#f3f4f6",overflow:"hidden"}}>
-                      <img src={img} alt={prod.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                    </div>
-                  ) : (
-                    <div style={{aspectRatio:"1",background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",color:"#d1d5db",fontSize:"13px"}}>Sin imagen</div>
-                  )}
+                  {/* Product image carousel */}
+                  <div style={{position:"relative",aspectRatio:"1",background:"#f3f4f6",overflow:"hidden"}}>
+                    {img
+                      ? <img src={img} alt={prod.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                      : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",color:"#d1d5db",fontSize:"13px"}}>Sin imagen</div>
+                    }
+                    {imgs.length > 1 && (
+                      <>
+                        <button type="button" onClick={()=>setPreviewModalImgIdx(i=>Math.max(0,i-1))}
+                          style={{position:"absolute",left:"6px",top:"50%",transform:"translateY(-50%)",background:"rgba(255,255,255,0.9)",border:"none",borderRadius:"50%",width:"24px",height:"24px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",opacity:clampedImgIdx===0?0.3:1}}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{width:"12px",height:"12px"}}><path d="M15 18l-6-6 6-6"/></svg>
+                        </button>
+                        <button type="button" onClick={()=>setPreviewModalImgIdx(i=>Math.min(imgs.length-1,i+1))}
+                          style={{position:"absolute",right:"6px",top:"50%",transform:"translateY(-50%)",background:"rgba(255,255,255,0.9)",border:"none",borderRadius:"50%",width:"24px",height:"24px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",opacity:clampedImgIdx===imgs.length-1?0.3:1}}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{width:"12px",height:"12px"}}><path d="M9 18l6-6-6-6"/></svg>
+                        </button>
+                        <div style={{position:"absolute",bottom:"6px",left:0,right:0,display:"flex",justifyContent:"center",gap:"4px"}}>
+                          {imgs.map((_,i)=>(
+                            <button key={i} type="button" onClick={()=>setPreviewModalImgIdx(i)}
+                              style={{width:i===clampedImgIdx?"14px":"6px",height:"6px",borderRadius:"999px",background:i===clampedImgIdx?"#fff":"rgba(255,255,255,0.5)",border:"none",padding:0,cursor:"pointer",transition:"width 0.2s"}}/>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                   <div style={{padding:"16px 14px 24px"}}>
                     <h3 style={{fontSize:"15px",fontWeight:800,color:"#111827",marginBottom:"4px"}}>{prod.name}</h3>
                     {prod.description && config.productModalShowDescription!==false && <p style={{fontSize:"11px",color:"#6b7280",marginBottom:"10px",lineHeight:1.5}}>{prod.description}</p>}
@@ -3427,12 +3446,13 @@ export default function ConfiguracionPage() {
                         <span style={{fontSize:"12px",color:"#9ca3af",textDecoration:"line-through"}}>${Number(prod.comparePrice).toLocaleString("es-AR")}</span>
                       )}
                     </div>
-                    {hasVariants && !config.productModalSizeChart && (() => {
+                    {hasVariants && (() => {
                       const CMAP: Record<string,string> = {rojo:"#ef4444",azul:"#3b82f6",verde:"#22c55e",negro:"#111827",blanco:"#f9fafb",amarillo:"#eab308",naranja:"#f97316",rosa:"#ec4899",violeta:"#8b5cf6",gris:"#9ca3af",marron:"#92400e",beige:"#d4b896",celeste:"#67e8f9",bordo:"#881337",coral:"#fb7185"};
                       const toColor = (val: string) => /^#[0-9a-fA-F]{3,8}$/.test(val.trim()) ? val.trim() : (CMAP[val.toLowerCase().trim()] ?? null);
                       return Object.entries(attrGroups).map(([groupName, items]) => {
                         const isColor = groupName.toLowerCase().includes("color") || groupName.toLowerCase().includes("tono");
                         if (isColor && config.productModalShowColors === false) return null;
+                        if (!isColor && config.productModalSizeChart) return null;
                         return (
                           <div key={groupName} style={{marginBottom:"14px"}}>
                             <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"6px"}}>{groupName}</p>
@@ -3520,7 +3540,7 @@ export default function ConfiguracionPage() {
                     <p className="text-sm font-bold text-gray-900">Editar modal de producto</p>
                     <p className="text-xs text-gray-400 truncate max-w-[240px]">{prod.name}</p>
                   </div>
-                  <button onClick={()=>setPreviewModalProduct(null)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                  <button onClick={()=>{ setPreviewModalProduct(null); setPreviewModalImgIdx(0); }} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                     <X className="h-4 w-4 text-gray-500"/>
                   </button>
                 </div>
