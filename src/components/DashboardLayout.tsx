@@ -141,14 +141,6 @@ export default function DashboardLayout({
 
         {/* Sección inferior */}
         <div className="p-2 border-t border-gray-100 space-y-0.5 shrink-0">
-          {userId && (
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-              <NotificationBell userId={userId} />
-              <span className="whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200 text-sm font-medium">
-                Notificaciones
-              </span>
-            </div>
-          )}
           <Link
             href="/dashboard/configuracion"
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors"
@@ -186,7 +178,12 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      <main className={`ml-14 flex-1 p-4 bg-gray-50 ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
+      <main className={`relative ml-14 flex-1 p-4 bg-gray-50 ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
+        {userId && (
+          <div className="absolute top-3 right-4 z-30">
+            <NotificationBell userId={userId} />
+          </div>
+        )}
         {children}
       </main>
     </div>
