@@ -324,14 +324,29 @@ function formatCategoryLabel(value: string) {
     .join(" ");
 }
 
-function parsePreviewImages(images: string | null | undefined) {
+function parsePreviewImages(images: string | null | undefined): string[] {
   if (!images) return [];
   try {
     const parsed = JSON.parse(images);
-    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(Boolean)
+      .map((item: any) => (typeof item === "string" ? item : item?.url || ""))
+      .filter(Boolean) as string[];
   } catch {
     return [];
   }
+}
+
+function parsePreviewVariantAttrs(v: { name: string; value: string }): { name: string; value: string }[] {
+  if (typeof v.name === "string" && v.name.startsWith("{")) {
+    try {
+      const obj = JSON.parse(v.name) as Record<string, string>;
+      const entries = Object.entries(obj).filter(([, val]) => val);
+      if (entries.length > 0) return entries.map(([k, val]) => ({ name: k, value: val }));
+    } catch {}
+  }
+  return [{ name: v.name || "Variante", value: v.value }];
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -3362,15 +3377,25 @@ export default function ConfiguracionPage() {
           }
         }
 
-        // Auto-generate size chart from product variants
-        const sizeVariants = variants.filter(v =>
-          v.name?.toLowerCase().includes("tall") ||
-          v.name?.toLowerCase().includes("size") ||
-          v.name?.toLowerCase().includes("talla")
+        // Build attrGroups from parsed variants (handles both old and new JSON format)
+        const attrGroups: Record<string, { value: string; stock: number }[]> = {};
+        variants.forEach((v) => {
+          parsePreviewVariantAttrs(v).forEach(({ name: attrName, value: attrValue }) => {
+            if (!attrValue || attrValue === "default") return;
+            if (!attrGroups[attrName]) attrGroups[attrName] = [];
+            const existing = attrGroups[attrName].find((e) => e.value === attrValue);
+            if (existing) { if (v.stock > 0) existing.stock = Math.max(existing.stock, v.stock); }
+            else attrGroups[attrName].push({ value: attrValue, stock: v.stock });
+          });
+        });
+
+        // Auto-generate size chart from attrGroups
+        const sizeKey = Object.keys(attrGroups).find((k) =>
+          k.toLowerCase().includes("tall") || k.toLowerCase().includes("size") || k.toLowerCase().includes("talla")
         );
-        const sizeChartVariants = sizeVariants.length > 0
-          ? sizeVariants
-          : variants.filter(v => v.value && v.value !== "default");
+        const sizeChartVariants = sizeKey
+          ? attrGroups[sizeKey].map((item) => ({ ...item, name: sizeKey, value: item.value }))
+          : variants.filter((v) => v.value && v.value !== "default");
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={()=>setPreviewModalProduct(null)}>
@@ -3402,34 +3427,26 @@ export default function ConfiguracionPage() {
                         <span style={{fontSize:"12px",color:"#9ca3af",textDecoration:"line-through"}}>${Number(prod.comparePrice).toLocaleString("es-AR")}</span>
                       )}
                     </div>
-                    {hasVariants && !config.productModalSizeChart && (
-                      <div style={{marginBottom:"14px"}}>
-                        <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"6px"}}>Variantes</p>
-                        <div style={{display:"flex",flexWrap:"wrap",gap:"5px"}}>
-                          {variants.filter(v=>!v.name?.toLowerCase().includes("color")&&!v.name?.toLowerCase().includes("tono")).map((v,i)=>(
-                            <span key={i} style={{padding:"3px 8px",borderRadius:"999px",border:"1px solid #e5e7eb",fontSize:"10px",fontWeight:600,color:"#374151",background:"#f9fafb"}}>{v.value&&v.value!=="default"?v.value:v.name}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {config.productModalShowColors!==false && (() => {
-                      const colorVs = variants.filter(v => v.name?.toLowerCase().includes("color") || v.name?.toLowerCase().includes("tono"));
+                    {hasVariants && !config.productModalSizeChart && (() => {
                       const CMAP: Record<string,string> = {rojo:"#ef4444",azul:"#3b82f6",verde:"#22c55e",negro:"#111827",blanco:"#f9fafb",amarillo:"#eab308",naranja:"#f97316",rosa:"#ec4899",violeta:"#8b5cf6",gris:"#9ca3af",marron:"#92400e",beige:"#d4b896",celeste:"#67e8f9",bordo:"#881337",coral:"#fb7185"};
                       const toColor = (val: string) => /^#[0-9a-fA-F]{3,8}$/.test(val.trim()) ? val.trim() : (CMAP[val.toLowerCase().trim()] ?? null);
-                      if (colorVs.length === 0) return null;
-                      return (
-                        <div style={{marginBottom:"14px"}}>
-                          <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"6px"}}>Colores</p>
-                          <div style={{display:"flex",flexWrap:"wrap",gap:"6px"}}>
-                            {colorVs.map((v,i) => {
-                              const bg = toColor(v.value);
-                              return bg
-                                ? <span key={i} title={v.value} style={{width:"20px",height:"20px",borderRadius:"50%",background:bg,border:"2px solid #e5e7eb",display:"inline-block",opacity:v.stock===0?0.3:1}}/>
-                                : <span key={i} style={{padding:"3px 8px",borderRadius:"999px",border:"1px solid #e5e7eb",fontSize:"10px",fontWeight:600,color:"#374151",background:"#f9fafb"}}>{v.value}</span>;
-                            })}
+                      return Object.entries(attrGroups).map(([groupName, items]) => {
+                        const isColor = groupName.toLowerCase().includes("color") || groupName.toLowerCase().includes("tono");
+                        if (isColor && config.productModalShowColors === false) return null;
+                        return (
+                          <div key={groupName} style={{marginBottom:"14px"}}>
+                            <p style={{fontSize:"10px",fontWeight:700,color:"#374151",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"6px"}}>{groupName}</p>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:isColor?"6px":"5px"}}>
+                              {items.map((item, i) => {
+                                const bg = isColor ? toColor(item.value) : null;
+                                return bg
+                                  ? <span key={i} title={item.value} style={{width:"20px",height:"20px",borderRadius:"50%",background:bg,border:"2px solid #e5e7eb",display:"inline-block",opacity:item.stock===0?0.3:1}}/>
+                                  : <span key={i} style={{padding:"3px 8px",borderRadius:"999px",border:"1px solid #e5e7eb",fontSize:"10px",fontWeight:600,color:item.stock===0?"#9ca3af":"#374151",background:"#f9fafb",textDecoration:item.stock===0?"line-through":"none"}}>{item.value}</span>;
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      );
+                        );
+                      });
                     })()}
 
                     {/* Size chart preview — auto from variants */}
