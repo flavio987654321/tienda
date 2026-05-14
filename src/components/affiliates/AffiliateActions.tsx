@@ -2,18 +2,75 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Check, Loader2, PauseCircle, Play, Trash2, X } from "lucide-react";
+import { Check, Loader2, PauseCircle, Play, Trash2, X, AlertTriangle } from "lucide-react";
 
-export default function AffiliateActions({ affiliateId, status }: { affiliateId: string; status: string }) {
+function ConfirmModal({
+  title,
+  body,
+  confirmLabel,
+  confirmClass,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  body: React.ReactNode;
+  confirmLabel: string;
+  confirmClass: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full">
+        <div className="flex items-start gap-3 px-5 pt-5 pb-4 border-b border-gray-100">
+          <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-gray-900 text-sm">{title}</h3>
+          </div>
+          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="px-5 py-4 text-sm text-gray-600 leading-relaxed">{body}</div>
+        <div className="px-5 pb-5 flex gap-2">
+          <button onClick={onCancel}
+            className="flex-1 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+            Cancelar
+          </button>
+          <button onClick={onConfirm}
+            className={`flex-1 py-2 rounded-xl text-white text-sm font-semibold transition-colors ${confirmClass}`}>
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AffiliateActions({
+  affiliateId,
+  status,
+  affiliateName,
+  walletBalance = 0,
+}: {
+  affiliateId: string;
+  status: string;
+  affiliateName?: string;
+  walletBalance?: number;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [modal, setModal] = useState<"pause" | "remove" | null>(null);
+
+  const name = affiliateName || "esta afiliada";
+  const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
+  const hasPendingBalance = walletBalance > 0;
 
   async function run(action: "approve" | "reject" | "deactivate" | "reactivate" | "remove") {
-    if (action === "remove" && !window.confirm("Este afiliado quedará dado de baja y perderá su link activo. ¿Querés continuar?")) {
-      return;
-    }
-
+    setModal(null);
     setLoading(action);
     setError("");
     try {
@@ -38,93 +95,106 @@ export default function AffiliateActions({ affiliateId, status }: { affiliateId:
   return (
     <div className="space-y-2">
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
+
       {status === "PENDING" && (
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => run("approve")}
-            disabled={Boolean(loading)}
-            className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
-          >
+          <button type="button" onClick={() => run("approve")} disabled={Boolean(loading)}
+            className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
             {loading === "approve" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
             Aprobar
           </button>
-          <button
-            type="button"
-            onClick={() => run("reject")}
-            disabled={Boolean(loading)}
-            className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-50"
-          >
+          <button type="button" onClick={() => run("reject")} disabled={Boolean(loading)}
+            className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-50">
             {loading === "reject" ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
             Rechazar
           </button>
         </div>
       )}
+
       {status === "APPROVED" && (
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => run("deactivate")}
-            disabled={Boolean(loading)}
-            className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-600 disabled:opacity-50"
-          >
+          <button type="button" onClick={() => setModal("pause")} disabled={Boolean(loading)}
+            className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-600 disabled:opacity-50">
             {loading === "deactivate" ? <Loader2 className="h-3 w-3 animate-spin" /> : <PauseCircle className="h-3 w-3" />}
             {loading === "deactivate" ? "Pausando..." : "Pausar"}
           </button>
-          <button
-            type="button"
-            onClick={() => run("remove")}
-            disabled={Boolean(loading)}
-            className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-50"
-          >
+          <button type="button" onClick={() => setModal("remove")} disabled={Boolean(loading)}
+            className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-50">
             {loading === "remove" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
             {loading === "remove" ? "Dando de baja..." : "Dar de baja"}
           </button>
         </div>
       )}
+
       {status === "PAUSED" && (
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => run("reactivate")}
-            disabled={Boolean(loading)}
-            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
-          >
+          <button type="button" onClick={() => run("reactivate")} disabled={Boolean(loading)}
+            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
             {loading === "reactivate" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
             {loading === "reactivate" ? "Reactivando..." : "Reactivar"}
           </button>
-          <button
-            type="button"
-            onClick={() => run("remove")}
-            disabled={Boolean(loading)}
-            className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-50"
-          >
+          <button type="button" onClick={() => setModal("remove")} disabled={Boolean(loading)}
+            className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-50">
             {loading === "remove" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
             {loading === "remove" ? "Dando de baja..." : "Dar de baja"}
           </button>
         </div>
       )}
+
       {status === "REJECTED" && (
-        <button
-          type="button"
-          onClick={() => run("remove")}
-          disabled={Boolean(loading)}
-          className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-500 disabled:opacity-50"
-        >
+        <button type="button" onClick={() => run("remove")} disabled={Boolean(loading)}
+          className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-500 disabled:opacity-50">
           {loading === "remove" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
           {loading === "remove" ? "Quitando..." : "Quitar de lista"}
         </button>
       )}
+
       {status === "REMOVED" && (
-        <button
-          type="button"
-          onClick={() => run("reactivate")}
-          disabled={Boolean(loading)}
-          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
-        >
+        <button type="button" onClick={() => run("reactivate")} disabled={Boolean(loading)}
+          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
           {loading === "reactivate" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
           {loading === "reactivate" ? "Reincorporando..." : "Reincorporar"}
         </button>
+      )}
+
+      {modal === "pause" && (
+        <ConfirmModal
+          title={`¿Pausar a ${name}?`}
+          body={
+            <div className="space-y-2">
+              <p>Su link de afiliada dejará de funcionar hasta que la reactives.</p>
+              {hasPendingBalance && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-amber-800 text-xs font-medium">
+                  ⚠️ Tiene <strong>{fmt(walletBalance)}</strong> en billetera pendiente de retiro. Pausarla no cancela ese saldo — seguís debiéndoselo.
+                </div>
+              )}
+            </div>
+          }
+          confirmLabel="Sí, pausar"
+          confirmClass="bg-gray-600 hover:bg-gray-500"
+          onConfirm={() => run("deactivate")}
+          onCancel={() => setModal(null)}
+        />
+      )}
+
+      {modal === "remove" && (
+        <ConfirmModal
+          title={`¿Dar de baja a ${name}?`}
+          body={
+            <div className="space-y-2">
+              <p>Su link quedará desactivado y no podrá postularse de nuevo a menos que la reincorpores.</p>
+              {hasPendingBalance && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 text-red-800 text-xs font-medium">
+                  ⚠️ Tiene <strong>{fmt(walletBalance)}</strong> en billetera pendiente de retiro. Dar de baja no cancela ese saldo — seguís debiéndoselo.
+                </div>
+              )}
+            </div>
+          }
+          confirmLabel="Sí, dar de baja"
+          confirmClass="bg-red-600 hover:bg-red-500"
+          onConfirm={() => run("remove")}
+          onCancel={() => setModal(null)}
+        />
       )}
     </div>
   );

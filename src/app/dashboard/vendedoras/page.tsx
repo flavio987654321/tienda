@@ -105,6 +105,8 @@ export default async function VendedorasPage() {
       <AffiliateToggle
         enabled={Boolean(store?.affiliatesEnabled)}
         commissionRate={store?.commissionRate ?? 10}
+        activeAffiliatesCount={active.length}
+        pendingBalance={affiliates.reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0)}
       />
 
       <div className={`transition-opacity ${store?.affiliatesEnabled ? "opacity-100" : "opacity-30 pointer-events-none select-none"}`}>
@@ -170,7 +172,12 @@ export default async function VendedorasPage() {
                   )}
                 </div>
                 <div className="mt-4">
-                  <AffiliateActions affiliateId={affiliate.id} status={affiliate.status} />
+                  <AffiliateActions
+                    affiliateId={affiliate.id}
+                    status={affiliate.status}
+                    affiliateName={affiliate.user.name || undefined}
+                    walletBalance={affiliate.wallet?.balance ?? 0}
+                  />
                 </div>
               </div>
             ))}
@@ -249,7 +256,12 @@ export default async function VendedorasPage() {
                           </div>
                         </div>
                       </div>
-                      <AffiliateActions affiliateId={affiliate.id} status={affiliate.status} />
+                      <AffiliateActions
+                        affiliateId={affiliate.id}
+                        status={affiliate.status}
+                        affiliateName={affiliate.user.name || undefined}
+                        walletBalance={affiliate.wallet?.balance ?? 0}
+                      />
                     </div>
 
                     {(affiliate.applicationMessage || affiliate.experience) && (
