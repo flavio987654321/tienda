@@ -13,7 +13,7 @@ import { getStoreType } from "@/lib/storeTypes";
 
 function getVariantOptions(storeType: string): string[] {
   const map: Record<string, string[]> = {
-    ROPA:      ["Talle", "Color", "Material"],
+    ROPA:      ["Talle", "Color"],
     AUTOS:     ["Color", "Versión"],
     TECH:      ["Almacenamiento", "Color", "RAM"],
     HOGAR:     ["Tamaño", "Color", "Material"],
@@ -29,8 +29,7 @@ function getVariantOptions(storeType: string): string[] {
 }
 
 interface Variant {
-  name: string;
-  value: string;
+  attrs: Record<string, string>;
   stock: string;
   price: string;
   sku: string;
@@ -77,7 +76,11 @@ const MAX_UPLOAD_IMAGE_SIZE_MB = 4;
 const MAX_UPLOAD_IMAGE_SIZE_BYTES = MAX_UPLOAD_IMAGE_SIZE_MB * 1024 * 1024;
 const MAX_IMAGE_SIDE = 2400;
 const MAX_PRODUCT_IMAGES = 5;
-const DEFAULT_VARIANT: Variant = { name: "Talle", value: "", stock: "0", price: "", sku: "" };
+function makeDefaultVariant(dimensions: string[]): Variant {
+  const attrs: Record<string, string> = {};
+  dimensions.forEach(d => { attrs[d] = ""; });
+  return { attrs, stock: "0", price: "", sku: "" };
+}
 const SINGLE_VARIANT_FALLBACK_VALUE = "Unico";
 
 const COLOR_PREVIEW: Record<string, string> = {
@@ -108,17 +111,17 @@ function Tip({ text }: { text: string }) {
 
 function variantTip(tipoTienda: string): string {
   const tips: Record<string, string> = {
-    ROPA:      "Una fila por valor. Ej: Talle S → fila 1, Talle M → fila 2, Color Rojo → fila 3. Cada fila tiene su propio stock.",
-    TECH:      "Una fila por variante. Ej: 128GB → fila 1, 256GB → fila 2. Cada fila tiene su propio stock.",
-    BELLEZA:   "Una fila por tono o tamaño. Ej: Claro → fila 1, Oscuro → fila 2. Cada fila tiene su propio stock.",
-    HOGAR:     "Una fila por tamaño o color. Ej: Chico → fila 1, Grande → fila 2. Cada fila tiene su propio stock.",
-    DEPORTE:   "Una fila por talle o color. Ej: Talle S → fila 1, Color Rojo → fila 2. Cada fila tiene su propio stock.",
-    ALIMENTOS: "Una fila por peso o sabor. Ej: 500g → fila 1, 1kg → fila 2. Cada fila tiene su propio stock.",
-    MASCOTAS:  "Una fila por tamaño o sabor. Ej: Pequeño → fila 1, Grande → fila 2. Cada fila tiene su propio stock.",
+    ROPA:      "Una fila por combinación. Ej: Talle S + Color Negro → fila 1, Talle M + Color Blanco → fila 2. Cada fila tiene su propio stock.",
+    TECH:      "Una fila por combinación. Ej: 128GB + Azul → fila 1, 256GB + Negro → fila 2. Cada fila tiene su propio stock.",
+    BELLEZA:   "Una fila por combinación. Ej: Tono Claro + Tamaño Grande → fila 1, Tono Oscuro + Tamaño Chico → fila 2.",
+    HOGAR:     "Una fila por combinación. Ej: Color Blanco + Material Madera → fila 1. Cada fila tiene su propio stock.",
+    DEPORTE:   "Una fila por combinación. Ej: Talle S + Color Rojo → fila 1, Talle M + Color Azul → fila 2.",
+    ALIMENTOS: "Una fila por combinación. Ej: 500g + Vainilla → fila 1, 1kg + Chocolate → fila 2.",
+    MASCOTAS:  "Una fila por combinación. Ej: Tamaño Pequeño + Sabor Pollo → fila 1. Cada fila tiene su propio stock.",
     LIBROS:    "Una fila por formato. Ej: Físico → fila 1, Digital → fila 2. Cada fila tiene su propio stock.",
-    GENERAL:   "Una fila por variante o color. Ej: Color Rojo → fila 1, Tamaño Grande → fila 2. Cada fila tiene su propio stock.",
+    GENERAL:   "Una fila por combinación. Ej: Color Rojo + Tamaño Grande → fila 1. Cada fila tiene su propio stock.",
   };
-  return tips[tipoTienda] || "Una fila por variante. Cada fila tiene su propio stock.";
+  return tips[tipoTienda] || "Una fila por combinación de variantes. Cada fila tiene su propio stock.";
 }
 
 function tagsTip(tipoTienda: string): string {
@@ -159,17 +162,19 @@ function safeJsonArray(value: unknown) {
 
 function prepareVariantsForSubmit(variants: Variant[]) {
   const prepared = variants
-    .map((variant) => ({
-      ...variant,
-      name: variant.name.trim(),
-      value: variant.value.trim(),
-      stock: variant.stock.trim(),
-      price: variant.price.trim(),
-      sku: variant.sku.trim(),
-    }))
-    .filter((variant) =>
-      variant.value || variant.stock || variant.price || variant.sku || variant.name
-    );
+    .map((v) => {
+      const cleanAttrs = Object.fromEntries(
+        Object.entries(v.attrs).map(([k, val]) => [k, val.trim()])
+      );
+      return {
+        name: JSON.stringify(cleanAttrs),
+        value: Object.values(cleanAttrs).filter(Boolean).join(" / "),
+        stock: v.stock.trim(),
+        price: v.price.trim(),
+        sku: v.sku.trim(),
+      };
+    })
+    .filter((v) => v.value || v.stock || v.price || v.sku);
 
   if (prepared.length === 1 && !prepared[0].value) {
     prepared[0] = { ...prepared[0], value: SINGLE_VARIANT_FALLBACK_VALUE };
@@ -278,7 +283,7 @@ function ProductoFormPage() {
   const [productSubcategories, setProductSubcategories] = useState<Record<string, string[]>>({});
   const [customCategory, setCustomCategory] = useState("");
   const [customSubcategory, setCustomSubcategory] = useState("");
-  const [variants, setVariants] = useState<Variant[]>([DEFAULT_VARIANT]);
+  const [variants, setVariants] = useState<Variant[]>([{ attrs: { Talle: "" }, stock: "0", price: "", sku: "" }]);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [condicion, setCondicion] = useState<"Nuevo" | "Usado">("Usado");
   const [precioMayorista, setPrecioMayorista] = useState("");
@@ -306,6 +311,8 @@ function ProductoFormPage() {
           if (typeConfig.extraFields.length > 0) {
             setAttributes(typeConfig.extraFields.map((f) => ({ key: f.label, value: "" })));
           }
+          const dims = getVariantOptions(d.store.tipoTienda || "ROPA").filter(o => o !== "Otro");
+          setVariants([makeDefaultVariant(dims)]);
         }
       })
       .catch(() => {});
@@ -360,14 +367,17 @@ function ProductoFormPage() {
         setCarouselIdx(0);
         setVariants(
           product.variants?.length
-            ? product.variants.map((v: any) => ({
-                name: v.name || "Talle",
-                value: v.value || (product.variants.length === 1 ? SINGLE_VARIANT_FALLBACK_VALUE : ""),
-                stock: v.stock?.toString() || "0",
-                price: v.price?.toString() || "",
-                sku: v.sku || "",
-              }))
-            : [DEFAULT_VARIANT]
+            ? product.variants.map((v: any) => {
+                let attrs: Record<string, string> = {};
+                if (typeof v.name === "string" && v.name.startsWith("{")) {
+                  try { attrs = JSON.parse(v.name); } catch {}
+                }
+                if (Object.keys(attrs).length === 0) {
+                  attrs = { [v.name || "Variante"]: v.value || (product.variants.length === 1 ? SINGLE_VARIANT_FALLBACK_VALUE : "") };
+                }
+                return { attrs, stock: v.stock?.toString() || "0", price: v.price?.toString() || "", sku: v.sku || "" };
+              })
+            : [makeDefaultVariant(getVariantOptions(store.tipoTienda || "ROPA").filter(o => o !== "Otro"))]
         );
         const allAttrs = safeJsonArray(product.attributes).filter(
           (a: any) => a && typeof a.key === "string" && typeof a.value === "string"
@@ -392,14 +402,19 @@ function ProductoFormPage() {
     markDirty();
   }
 
-  function updateVariant(idx: number, field: keyof Variant, value: string) {
+  function updateVariantAttr(idx: number, attrName: string, value: string) {
+    setVariants((p) => p.map((v, i) => i === idx ? { ...v, attrs: { ...v.attrs, [attrName]: value } } : v));
+    markDirty();
+  }
+
+  function updateVariantField(idx: number, field: "stock" | "price" | "sku", value: string) {
     setVariants((p) => p.map((v, i) => (i === idx ? { ...v, [field]: value } : v)));
     markDirty();
   }
 
   function addVariant() {
-    const defaultName = getStoreType(store.tipoTienda || "ROPA").defaultVariantName;
-    setVariants((p) => [...p, { name: defaultName, value: "", stock: "0", price: "", sku: "" }]);
+    const dims = getVariantOptions(store.tipoTienda || "ROPA").filter(o => o !== "Otro");
+    setVariants((p) => [...p, makeDefaultVariant(dims)]);
     markDirty();
   }
 
@@ -522,7 +537,7 @@ function ProductoFormPage() {
       return;
     }
     if (!isHideVariants && preparedVariants.some((variant) => !variant.value)) {
-      setError("Cada variante debe tener un valor. Si es un producto simple, usa una sola variante.");
+      setError("Cada combinación de variantes debe tener al menos un valor. Si es un producto simple, dejá una sola fila.");
       setLoading(false);
       return;
     }
@@ -567,6 +582,7 @@ function ProductoFormPage() {
   const cardShadow = SHADOW_MAP[store.cardShadow] || "shadow-sm";
   const storeTypeConfig = getStoreType(store.tipoTienda || "ROPA");
   const variantOptions = getVariantOptions(store.tipoTienda || "ROPA");
+  const variantDimensions = variantOptions.filter(o => o !== "Otro");
   const previewCategory = form.category === "otro" ? customCategory.trim() || "otro" : form.category;
   const previewSubcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
   const availableSubcategories = form.category === "otro" ? [] : productSubcategories[form.category] || [];
@@ -577,6 +593,15 @@ function ProductoFormPage() {
       : 0;
 
   const totalStock = variants.reduce((s, v) => s + (parseInt(v.stock) || 0), 0);
+
+  const attrPreviewGroups: Record<string, string[]> = {};
+  variants.forEach(v => {
+    Object.entries(v.attrs).forEach(([key, val]) => {
+      if (!val.trim()) return;
+      if (!attrPreviewGroups[key]) attrPreviewGroups[key] = [];
+      if (!attrPreviewGroups[key].includes(val)) attrPreviewGroups[key].push(val);
+    });
+  });
 
   return (
     <DashboardLayout>
@@ -886,7 +911,7 @@ function ProductoFormPage() {
                     <h2 className="font-semibold text-gray-900">Variantes y stock</h2>
                     <Tip text={variantTip(store.tipoTienda || "ROPA")} />
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">Una fila por valor — ej: Talle S (fila 1), Talle M (fila 2)</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Una fila por combinación — ej: Talle S + Color Negro</p>
                 </div>
                 <button
                   type="button"
@@ -899,64 +924,59 @@ function ProductoFormPage() {
               </div>
 
               {variants.map((variant, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-3 items-end p-4 bg-gray-50 rounded-xl">
-                  <div className="col-span-3">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
-                    <select
-                      value={variant.name}
-                      onChange={(e) => updateVariant(idx, "name", e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                    >
-                      {variantOptions.map((opt) => (
-                        <option key={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-span-3">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">
-                      Valor
-                      {(variant.name === "Color" || variant.name === "Tono") && (
-                        <Tip text="Escribí el nombre del color (Rojo, Verde, Negro) o un código hex (#FF0000). Se muestra como círculo de color en tu tienda." />
-                      )}
-                    </label>
-                    <div className="relative">
-                      {(variant.name === "Color" || variant.name === "Tono") && colorPreview(variant.value) && (
-                        <span
-                          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border border-gray-300"
-                          style={{ backgroundColor: colorPreview(variant.value)! }}
-                        />
-                      )}
-                      <input
-                        type="text"
-                        value={variant.value}
-                        onChange={(e) => updateVariant(idx, "value", e.target.value)}
-                        placeholder={variantPlaceholder(variant.name)}
-                        className={`w-full border border-gray-200 rounded-lg py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${(variant.name === "Color" || variant.name === "Tono") && colorPreview(variant.value) ? "pl-8 pr-3" : "px-3"}`}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-span-2">
+                <div key={idx} className="flex flex-wrap gap-3 items-end p-4 bg-gray-50 rounded-xl">
+                  {Object.keys(variant.attrs).map(dim => {
+                    const isColor = dim === "Color" || dim === "Tono";
+                    const val = variant.attrs[dim] || "";
+                    const circle = isColor ? colorPreview(val) : null;
+                    return (
+                      <div key={dim} className="flex-1 min-w-[80px]">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          {dim}
+                          {isColor && (
+                            <Tip text="Escribí el nombre del color (Rojo, Verde, Negro) o un código hex (#FF0000). Se muestra como círculo de color en tu tienda." />
+                          )}
+                        </label>
+                        <div className="relative">
+                          {circle && (
+                            <span
+                              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border border-gray-300"
+                              style={{ backgroundColor: circle }}
+                            />
+                          )}
+                          <input
+                            type="text"
+                            value={val}
+                            onChange={(e) => updateVariantAttr(idx, dim, e.target.value)}
+                            placeholder={variantPlaceholder(dim)}
+                            className={`w-full border border-gray-200 rounded-lg py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${circle ? "pl-8 pr-3" : "px-3"}`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="w-20 shrink-0">
                     <label className="block text-xs font-medium text-gray-500 mb-1">Stock</label>
                     <input
                       type="number"
                       value={variant.stock}
-                      onChange={(e) => updateVariant(idx, "stock", e.target.value)}
+                      onChange={(e) => updateVariantField(idx, "stock", e.target.value)}
                       min="0"
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="w-24 shrink-0">
                     <label className="block text-xs font-medium text-gray-500 mb-1">Precio extra</label>
                     <input
                       type="number"
                       value={variant.price}
-                      onChange={(e) => updateVariant(idx, "price", e.target.value)}
+                      onChange={(e) => updateVariantField(idx, "price", e.target.value)}
                       min="0"
                       placeholder="0"
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
-                  <div className="col-span-1 flex justify-end">
+                  <div className="flex items-end pb-1 shrink-0">
                     {variants.length > 1 && (
                       <button
                         type="button"
@@ -1217,38 +1237,31 @@ function ProductoFormPage() {
                   )}
 
                   {/* Variants preview — colores como círculos, talles como chips */}
-                  {!storeTypeConfig.hideVariants && variants.filter((v) => v.value).length > 0 && (
+                  {!storeTypeConfig.hideVariants && Object.keys(attrPreviewGroups).length > 0 && (
                     <div className="space-y-1.5">
-                      {Object.entries(
-                        variants.filter((v) => v.value).reduce((acc, v) => {
-                          const k = v.name || "Variante";
-                          if (!acc[k]) acc[k] = [];
-                          acc[k].push(v);
-                          return acc;
-                        }, {} as Record<string, typeof variants>)
-                      ).map(([groupName, groupVs]) => {
+                      {Object.entries(attrPreviewGroups).map(([groupName, values]) => {
                         const isColor = groupName === "Color" || groupName === "Tono";
                         return (
                           <div key={groupName} className="flex flex-wrap gap-1 items-center">
                             {isColor ? (
-                              groupVs.slice(0, 8).map((v, i) => {
-                                const bg = colorPreview(v.value);
+                              values.slice(0, 8).map((val, i) => {
+                                const bg = colorPreview(val);
                                 return bg ? (
-                                  <span key={i} title={v.value}
+                                  <span key={i} title={val}
                                     className="h-5 w-5 rounded-full border-2 border-gray-200"
                                     style={{ backgroundColor: bg }} />
                                 ) : (
                                   <span key={i} className="text-xs border px-2 py-0.5 rounded-md"
                                     style={{ borderColor: store.primaryColor + "40", color: store.primaryColor }}>
-                                    {v.value}
+                                    {val}
                                   </span>
                                 );
                               })
                             ) : (
-                              groupVs.slice(0, 4).map((v, i) => (
+                              values.slice(0, 4).map((val, i) => (
                                 <span key={i} className="text-xs border px-2 py-0.5 rounded-md"
                                   style={{ borderColor: store.primaryColor + "40", color: store.primaryColor }}>
-                                  {v.value}
+                                  {val}
                                 </span>
                               ))
                             )}
@@ -1302,7 +1315,7 @@ function ProductoFormPage() {
                   <>
                     <div className="flex justify-between text-xs text-indigo-600">
                       <span>Variantes</span>
-                      <span>{variants.filter((v) => v.value).length} cargadas</span>
+                      <span>{variants.filter((v) => Object.values(v.attrs).some(Boolean)).length} cargadas</span>
                     </div>
                     <div className="flex justify-between text-xs text-indigo-600">
                       <span>Stock total</span>

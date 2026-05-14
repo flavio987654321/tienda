@@ -103,8 +103,8 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     emoji: "💻",
     supportsWholesale: false,
     supportsCondicion: true,
-    hideVariants: true,
-    hideTags: true,
+    hideVariants: false,
+    hideTags: false,
     checkoutMode: "cart" as const,
     defaultVariantName: "Almacenamiento",
     variantValuePlaceholder: "128GB, 256GB, 512GB",
@@ -151,7 +151,6 @@ export const STORE_TYPES: StoreTypeConfig[] = [
       organizacion: ["cajas", "perchas", "estantes", "cestos"],
     },
     extraFields: [
-      { key: "material", label: "Material", placeholder: "Madera, metal, tela..." },
       { key: "dimensiones", label: "Dimensiones", placeholder: "80x60x120 cm" },
     ],
   },
@@ -180,7 +179,6 @@ export const STORE_TYPES: StoreTypeConfig[] = [
       organicos: ["frutas", "verduras", "lácteos", "cereales"],
     },
     extraFields: [
-      { key: "peso", label: "Peso/Contenido", placeholder: "500g, 1kg, 1L..." },
       { key: "ingredientes", label: "Ingredientes", placeholder: "Lista de ingredientes..." },
     ],
   },

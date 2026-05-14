@@ -118,6 +118,17 @@ const COLOR_NAMES: Record<string, string> = {
   dorado:"#d97706", gold:"#d97706", plateado:"#e2e8f0", silver:"#e2e8f0",
   bordo:"#881337", coral:"#fb7185", mostaza:"#ca8a04", nude:"#f5d5ba",
 };
+function parseVariantAttrs(v: { name: string; value: string }): { name: string; value: string }[] {
+  if (typeof v.name === "string" && v.name.startsWith("{")) {
+    try {
+      const obj = JSON.parse(v.name) as Record<string, string>;
+      const entries = Object.entries(obj).filter(([, val]) => val);
+      if (entries.length > 0) return entries.map(([k, val]) => ({ name: k, value: val }));
+    } catch {}
+  }
+  return [{ name: v.name || "Variante", value: v.value }];
+}
+
 function variantToColor(value: string): string | null {
   const v = value.trim();
   if (/^#[0-9a-fA-F]{3,8}$/.test(v)) return v;
@@ -847,7 +858,7 @@ export default function StorefrontClient({
           productId: product.id,
           variantId,
           name: product.name,
-          variantLabel: variant ? `${variant.name}: ${variant.value}` : null,
+          variantLabel: variant ? parseVariantAttrs(variant).filter(p => p.value).map(p => `${p.name}: ${p.value}`).join(", ") : null,
           price,
           quantity: 1,
           maxStock,
@@ -1066,15 +1077,19 @@ export default function StorefrontClient({
             <p className="text-base font-black leading-tight text-gray-950">{product.name}</p>
             {product.description && <p className="mt-1 line-clamp-2 text-sm text-gray-500">{product.description}</p>}
             {(() => {
-              const colorVs = product.variants.filter(v => v.name?.toLowerCase().includes("color") || v.name?.toLowerCase().includes("tono"));
-              if (colorVs.length === 0) return null;
+              const colorPairs = product.variants.flatMap(v => {
+                return parseVariantAttrs(v)
+                  .filter(p => p.name.toLowerCase().includes("color") || p.name.toLowerCase().includes("tono"))
+                  .map(p => ({ id: `${v.id}:${p.name}:${p.value}`, value: p.value, stock: v.stock }));
+              }).filter((item, idx, arr) => arr.findIndex(x => x.value === item.value) === idx);
+              if (colorPairs.length === 0) return null;
               return (
                 <div className="mt-1.5 flex flex-wrap gap-1">
-                  {colorVs.slice(0, 8).map((v, i) => {
+                  {colorPairs.slice(0, 8).map((v) => {
                     const bg = variantToColor(v.value);
                     return bg
-                      ? <span key={i} title={v.value} className={`h-4 w-4 rounded-full border border-white ring-1 ring-gray-200 shrink-0 inline-block ${v.stock === 0 ? "opacity-30" : ""}`} style={{ backgroundColor: bg }} />
-                      : <span key={i} className={`rounded-full border border-gray-200 px-1.5 text-[10px] text-gray-600 ${v.stock === 0 ? "opacity-30 line-through" : ""}`}>{v.value}</span>;
+                      ? <span key={v.id} title={v.value} className={`h-4 w-4 rounded-full border border-white ring-1 ring-gray-200 shrink-0 inline-block ${v.stock === 0 ? "opacity-30" : ""}`} style={{ backgroundColor: bg }} />
+                      : <span key={v.id} className={`rounded-full border border-gray-200 px-1.5 text-[10px] text-gray-600 ${v.stock === 0 ? "opacity-30 line-through" : ""}`}>{v.value}</span>;
                   })}
                 </div>
               );
@@ -1159,21 +1174,29 @@ export default function StorefrontClient({
             <p className={`mt-1 text-xs font-semibold ${available ? "text-emerald-600" : "text-red-500"}`}>{available ? `${totalStock} disponibles` : "Sin stock"}</p>
           )}
           {(() => {
-            const colorVs = product.variants.filter(v => v.name?.toLowerCase().includes("color") || v.name?.toLowerCase().includes("tono"));
-            const otherVs = product.variants.filter(v => !v.name?.toLowerCase().includes("color") && !v.name?.toLowerCase().includes("tono"));
+            const colorPairs = product.variants.flatMap(v => {
+              return parseVariantAttrs(v)
+                .filter(p => p.name.toLowerCase().includes("color") || p.name.toLowerCase().includes("tono"))
+                .map(p => ({ id: `${v.id}:${p.name}:${p.value}`, value: p.value, stock: v.stock }));
+            }).filter((item, idx, arr) => arr.findIndex(x => x.value === item.value) === idx);
+            const otherPairs = product.variants.flatMap(v => {
+              return parseVariantAttrs(v)
+                .filter(p => !p.name.toLowerCase().includes("color") && !p.name.toLowerCase().includes("tono"))
+                .map(p => ({ id: `${v.id}:${p.name}:${p.value}`, value: p.value, stock: v.stock }));
+            }).filter((item, idx, arr) => arr.findIndex(x => x.value === item.value) === idx);
             return (
               <>
-                {colorVs.length > 0 && (
+                {colorPairs.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1">
-                    {colorVs.slice(0, 8).map((v, i) => {
+                    {colorPairs.slice(0, 8).map((v) => {
                       const bg = variantToColor(v.value);
                       return bg
-                        ? <span key={i} title={v.value} className={`h-4 w-4 rounded-full border border-white ring-1 ring-gray-200 shrink-0 inline-block ${v.stock === 0 ? "opacity-30" : ""}`} style={{ backgroundColor: bg }} />
-                        : <span key={i} className={`rounded-full border border-gray-200 px-1.5 text-[10px] text-gray-600 ${v.stock === 0 ? "opacity-30 line-through" : ""}`}>{v.value}</span>;
+                        ? <span key={v.id} title={v.value} className={`h-4 w-4 rounded-full border border-white ring-1 ring-gray-200 shrink-0 inline-block ${v.stock === 0 ? "opacity-30" : ""}`} style={{ backgroundColor: bg }} />
+                        : <span key={v.id} className={`rounded-full border border-gray-200 px-1.5 text-[10px] text-gray-600 ${v.stock === 0 ? "opacity-30 line-through" : ""}`}>{v.value}</span>;
                     })}
                   </div>
                 )}
-                {otherVs.length > 0 && <p className={`mt-1 text-xs ${isDark ? "text-gray-400" : "text-gray-400"}`}>{otherVs.map(v => v.value).join(", ")}</p>}
+                {otherPairs.length > 0 && <p className={`mt-1 text-xs ${isDark ? "text-gray-400" : "text-gray-400"}`}>{otherPairs.map(v => v.value).join(", ")}</p>}
               </>
             );
           })()}
@@ -2150,58 +2173,68 @@ export default function StorefrontClient({
               )}
 
               {/* 3. Variantes (colores + talles como chips) */}
-              {selectedProduct.variants.length > 0 && (
-                <div className="mt-4 space-y-3">
-                  {Object.entries(
-                    selectedProduct.variants.reduce((acc, v) => {
-                      const k = v.name || "Variante";
-                      if (!acc[k]) acc[k] = [];
-                      acc[k].push(v);
-                      return acc;
-                    }, {} as Record<string, typeof selectedProduct.variants>)
-                  ).map(([groupName, groupVs]) => {
-                    const isColor = groupName.toLowerCase().includes("color") || groupName.toLowerCase().includes("tono");
-                    if (isColor && !modalCfg.showColors) return null;
-                    if (!isColor && modalCfg.sizeChart) return null;
-                    return (
-                      <div key={groupName}>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{groupName}</p>
-                        {isColor ? (
-                          <div className="flex flex-wrap gap-2">
-                            {groupVs.map((v) => {
-                              const bg = variantToColor(v.value);
-                              const ok = v.stock > 0;
-                              return bg ? (
-                                <span key={v.id} title={v.value}
-                                  className={`h-7 w-7 rounded-full border-2 ${ok ? "border-gray-200" : "border-gray-100 opacity-40"}`}
-                                  style={{ backgroundColor: bg }} />
-                              ) : (
-                                <span key={v.id} className={`rounded-full border px-3 py-1 text-sm ${ok ? "border-gray-200 text-gray-700" : "border-gray-100 text-gray-300 line-through"}`}>{v.value}</span>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap gap-2">
-                            {groupVs.map((v) => (
-                              <span key={v.id} className={`rounded-full border px-3 py-1 text-sm ${v.stock > 0 ? "border-gray-200 text-gray-700" : "border-gray-100 text-gray-300 line-through"}`}>{v.value}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              {selectedProduct.variants.length > 0 && (() => {
+                const attrGroups: Record<string, { id: string; value: string; available: boolean }[]> = {};
+                selectedProduct.variants.forEach(v => {
+                  parseVariantAttrs(v).forEach(({ name: attrName, value: attrValue }) => {
+                    if (!attrValue) return;
+                    if (!attrGroups[attrName]) attrGroups[attrName] = [];
+                    const existing = attrGroups[attrName].find(e => e.value === attrValue);
+                    if (existing) { if (v.stock > 0) existing.available = true; }
+                    else attrGroups[attrName].push({ id: `${v.id}:${attrName}:${attrValue}`, value: attrValue, available: v.stock > 0 });
+                  });
+                });
+                return Object.keys(attrGroups).length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {Object.entries(attrGroups).map(([groupName, items]) => {
+                      const isColor = groupName.toLowerCase().includes("color") || groupName.toLowerCase().includes("tono");
+                      if (isColor && !modalCfg.showColors) return null;
+                      if (!isColor && modalCfg.sizeChart) return null;
+                      return (
+                        <div key={groupName}>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">{groupName}</p>
+                          {isColor ? (
+                            <div className="flex flex-wrap gap-2">
+                              {items.map((item) => {
+                                const bg = variantToColor(item.value);
+                                return bg ? (
+                                  <span key={item.id} title={item.value}
+                                    className={`h-7 w-7 rounded-full border-2 ${item.available ? "border-gray-200" : "border-gray-100 opacity-40"}`}
+                                    style={{ backgroundColor: bg }} />
+                                ) : (
+                                  <span key={item.id} className={`rounded-full border px-3 py-1 text-sm ${item.available ? "border-gray-200 text-gray-700" : "border-gray-100 text-gray-300 line-through"}`}>{item.value}</span>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap gap-2">
+                              {items.map((item) => (
+                                <span key={item.id} className={`rounded-full border px-3 py-1 text-sm ${item.available ? "border-gray-200 text-gray-700" : "border-gray-100 text-gray-300 line-through"}`}>{item.value}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null;
+              })()}
 
               {/* 4. Tabla de talles (cuando sizeChart está activo) */}
               {modalCfg.sizeChart && (() => {
-                const sizeVariants = selectedProduct.variants.filter(v =>
-                  v.name?.toLowerCase().includes("tall") ||
-                  v.name?.toLowerCase().includes("size") ||
-                  v.name?.toLowerCase().includes("talla")
-                );
-                const rows = sizeVariants.length > 0
-                  ? sizeVariants
+                const isSizeKey = (name: string) =>
+                  name.toLowerCase().includes("tall") ||
+                  name.toLowerCase().includes("size") ||
+                  name.toLowerCase().includes("talla");
+                const sizeRows = selectedProduct.variants
+                  .map(v => {
+                    const pairs = parseVariantAttrs(v);
+                    const sizeAttr = pairs.find(p => isSizeKey(p.name));
+                    return sizeAttr ? { ...v, value: sizeAttr.value } : null;
+                  })
+                  .filter(Boolean) as typeof selectedProduct.variants;
+                const rows = sizeRows.length > 0
+                  ? sizeRows
                   : selectedProduct.variants.filter(v => v.value && v.value !== "default");
                 if (rows.length === 0) return null;
                 return (
