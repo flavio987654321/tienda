@@ -12,10 +12,14 @@ type TiendaPageProps = {
   searchParams: Promise<{ ref?: string; producto?: string }>;
 };
 
-function parseImages(images: string) {
+function parseImages(images: string): string[] {
   try {
     const parsed = JSON.parse(images);
-    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(Boolean)
+      .map((item) => (typeof item === "string" ? item : (item as any)?.url ?? ""))
+      .filter(Boolean);
   } catch {
     return [];
   }
