@@ -149,6 +149,8 @@ type Product = {
   description: string | null;
   price: number;
   comparePrice: number | null;
+  precioMayorista: number | null;
+  cantMinMayorista: number | null;
   images: string;
   reelUrls: string;
   category: string;
@@ -209,6 +211,8 @@ type CartItem = {
   name: string;
   variantLabel: string | null;
   price: number;
+  precioMayorista: number | null;
+  cantMinMayorista: number | null;
   quantity: number;
   maxStock: number | null;
   image: string | null;
@@ -643,7 +647,13 @@ export default function StorefrontClient({
     if (!cat || cat === "all") return [];
     return [...new Set(store.products.filter(p => p.category === cat).map(p => p.subcategory).filter(Boolean))] as string[];
   }
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  function effectivePrice(item: CartItem): number {
+    if (item.precioMayorista && item.cantMinMayorista && item.quantity >= item.cantMinMayorista) {
+      return item.precioMayorista;
+    }
+    return item.price;
+  }
+  const subtotal = cart.reduce((sum, item) => sum + effectivePrice(item) * item.quantity, 0);
   const shipping = SHIPPING_OPTIONS.find((option) => option.id === shippingMethod) ?? SHIPPING_OPTIONS[0];
   const couponDiscount = appliedCoupon ? Math.min(appliedCoupon.discount, subtotal) : 0;
   const total = subtotal - couponDiscount + shipping.cost;
@@ -810,7 +820,9 @@ export default function StorefrontClient({
           name: product.name,
           variantLabel: parseVariantAttrs(variant).filter((p) => p.value).map((p) => `${p.name}: ${p.value}`).join(", "),
           price,
-          quantity: 1,
+          precioMayorista: product.precioMayorista ?? null,
+          cantMinMayorista: product.cantMinMayorista ?? null,
+          quantity: product.cantMinMayorista ?? 1,
           maxStock,
           image,
         },
@@ -960,7 +972,9 @@ export default function StorefrontClient({
           name: product.name,
           variantLabel: variant ? parseVariantAttrs(variant).filter(p => p.value).map(p => `${p.name}: ${p.value}`).join(", ") : null,
           price,
-          quantity: 1,
+          precioMayorista: product.precioMayorista ?? null,
+          cantMinMayorista: product.cantMinMayorista ?? null,
+          quantity: product.cantMinMayorista ?? 1,
           maxStock,
           image: images[0]?.url ?? null,
         },
@@ -975,7 +989,10 @@ export default function StorefrontClient({
         .map((item) => {
           if (item.productId !== productId || item.variantId !== variantId) return item;
           const next = item.maxStock ? Math.min(item.quantity + delta, item.maxStock) : item.quantity + delta;
-          return { ...item, quantity: next };
+          const min = item.cantMinMayorista ?? 1;
+          // Si baja del mínimo mayorista, va a 0 (se elimina del carrito)
+          const clamped = next < min && next > 0 ? 0 : next;
+          return { ...item, quantity: clamped };
         })
         .filter((item) => item.quantity > 0)
     );
@@ -2293,12 +2310,20 @@ export default function StorefrontClient({
 
               {/* 2. Precio */}
               {store.showPrices && (
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="text-2xl font-black" style={{ color: modalCfg.accentColor || store.primaryColor }}>
-                    {money(selectedProduct.price, store.currency)}
-                  </span>
-                  {selectedProduct.comparePrice && selectedProduct.comparePrice > selectedProduct.price && (
-                    <span className="text-sm text-gray-400 line-through">{money(selectedProduct.comparePrice, store.currency)}</span>
+                <div className="mt-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-black" style={{ color: modalCfg.accentColor || store.primaryColor }}>
+                      {money(selectedProduct.price, store.currency)}
+                    </span>
+                    {selectedProduct.comparePrice && selectedProduct.comparePrice > selectedProduct.price && (
+                      <span className="text-sm text-gray-400 line-through">{money(selectedProduct.comparePrice, store.currency)}</span>
+                    )}
+                  </div>
+                  {selectedProduct.precioMayorista && selectedProduct.cantMinMayorista && (
+                    <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+                      <Package className="h-3 w-3" />
+                      Comprá {selectedProduct.cantMinMayorista}+ y pagá {money(selectedProduct.precioMayorista, store.currency)} c/u
+                    </div>
                   )}
                 </div>
               )}
@@ -2667,7 +2692,17 @@ export default function StorefrontClient({
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-gray-900">{item.name}</p>
                         {item.variantLabel && <p className="text-xs text-gray-400">{item.variantLabel}</p>}
-                        <p className="text-sm font-bold text-gray-900">{money(item.price, store.currency)}</p>
+                        {item.precioMayorista && item.cantMinMayorista && item.quantity >= item.cantMinMayorista ? (
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-bold text-indigo-600">{money(item.precioMayorista, store.currency)}</p>
+                            <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-md">Mayor</span>
+                          </div>
+                        ) : (
+                          <p className="text-sm font-bold text-gray-900">{money(item.price, store.currency)}</p>
+                        )}
+                        {item.cantMinMayorista && (
+                          <p className="text-[10px] text-gray-400">Mín. {item.cantMinMayorista} u.</p>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <button type="button" onClick={() => changeQty(item.productId, item.variantId, -1)} className="rounded-lg border border-gray-200 p-1">

@@ -232,6 +232,7 @@ export default function Home() {
             {[["#tiendas", "Tiendas"], ["#como-funciona", "Cómo funciona"], ["#nosotros", "Quiénes somos"]].map(([href, label]) => (
               <a key={href} href={href} className="text-gray-400 hover:text-white text-sm font-medium transition-colors">{label}</a>
             ))}
+            <Link href="/precios" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Precios</Link>
             <button onClick={() => setContact(true)} className="text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5">
               <MessageCircle className="h-4 w-4" />Contacto
             </button>
@@ -271,6 +272,7 @@ export default function Home() {
               {[["#tiendas", "Tiendas"], ["#como-funciona", "Cómo funciona"], ["#nosotros", "Quiénes somos"]].map(([href, label]) => (
                 <a key={href} href={href} onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-2">{label}</a>
               ))}
+              <Link href="/precios" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-2">Precios</Link>
               <button onClick={() => { setContact(true); setMobileMenu(false); }} className="block text-gray-300 hover:text-white py-2 w-full text-left">Contacto</button>
               <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
                 {sessionUser ? (

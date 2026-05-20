@@ -49,6 +49,8 @@ export async function POST(req: NextRequest) {
     }
 
     try {
+      const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
       const user = await prisma.user.create({
         data: {
           id: authData.user.id,
@@ -62,6 +64,18 @@ export async function POST(req: NextRequest) {
                   create: {
                     name: storeName,
                     slug: await uniqueStoreSlug(storeName),
+                  },
+                },
+              }
+            : {}),
+          ...(type === "OWNER" || type === "SELLER"
+            ? {
+                subscription: {
+                  create: {
+                    role: type === "OWNER" ? "OWNER" : "AFFILIATE",
+                    plan: "MONTHLY",
+                    status: "TRIAL",
+                    trialEndsAt,
                   },
                 },
               }

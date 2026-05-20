@@ -137,9 +137,13 @@ export default function RegistroPage() {
       return;
     }
     setRedirecting(true);
-    if (accountType === "seller") router.push("/login?registered=seller");
-    else if (accountType === "buyer") router.push("/login?registered=buyer");
-    else router.push("/login?registered=true");
+    if (accountType === "buyer") {
+      router.push("/login?registered=buyer");
+    } else if (accountType === "seller") {
+      router.push("/precios?registered=true&role=affiliate");
+    } else {
+      router.push("/precios?registered=true&role=owner");
+    }
   }
 
   if (redirecting) {

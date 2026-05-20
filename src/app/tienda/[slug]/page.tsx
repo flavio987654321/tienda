@@ -164,6 +164,8 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
           description: product.description,
           price: product.price,
           comparePrice: product.comparePrice,
+          precioMayorista: product.precioMayorista ?? null,
+          cantMinMayorista: product.cantMinMayorista ?? null,
           images: product.images,
           reelUrls: (product as any).reelUrls,
           category: product.category,

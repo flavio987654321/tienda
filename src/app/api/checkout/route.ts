@@ -120,11 +120,19 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        const basePrice = variant?.price ?? product.price;
+        const wholesale = (product as any).precioMayorista as number | null;
+        const minQty = (product as any).cantMinMayorista as number | null;
+        if (minQty && item.quantity < minQty) {
+          throw new Error(`${product.name} requiere un mínimo de ${minQty} unidades`);
+        }
+        const unitPrice = (wholesale && minQty && item.quantity >= minQty) ? wholesale : basePrice;
+
         orderItems.push({
           productId: product.id,
           variantId: variant?.id ?? null,
           quantity: item.quantity,
-          price: variant?.price ?? product.price,
+          price: unitPrice,
         });
       }
 

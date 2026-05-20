@@ -32,6 +32,7 @@ model User {
   favorites     Favorite[]
   reviews       Review[]
   notifications Notification[]
+  subscription  Subscription?
 }
 
 model Account {
@@ -395,4 +396,26 @@ model WalletWithdrawal {
 
   walletId String
   wallet   Wallet @relation(fields: [walletId], references: [id])
+}
+
+// SUSCRIPCIONES
+// status: TRIAL | ACTIVE | GRACE | EXPIRED | CANCELLED
+// plan:   MONTHLY | ANNUAL
+// role:   AFFILIATE | OWNER
+model Subscription {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role              String   // AFFILIATE | OWNER
+  plan              String   // MONTHLY | ANNUAL
+  status            String   @default("TRIAL") // TRIAL | ACTIVE | GRACE | EXPIRED | CANCELLED
+  trialEndsAt       DateTime
+  currentPeriodStart DateTime?
+  currentPeriodEnd  DateTime?
+  gracePeriodEndsAt DateTime?
+  cancelAtPeriodEnd Boolean  @default(false)
+  mpPaymentId       String?
+  mpPreapprovalId   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
