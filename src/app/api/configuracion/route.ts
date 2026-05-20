@@ -125,7 +125,7 @@ export async function PUT(req: NextRequest) {
 
   const prevStore = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, commissionRate: true },
+    select: { id: true, commissionRate: true, affiliatesEnabled: true, tcOwnerAcceptedAt: true },
   });
 
   const store = await prisma.store.update({
@@ -165,6 +165,12 @@ export async function PUT(req: NextRequest) {
       seoDescription:     b.seoDescription || null,
       affiliatesEnabled:  Boolean(b.affiliatesEnabled),
       commissionRate:     isNaN(commissionRate) ? 10 : commissionRate,
+      // Registrar aceptación del dueño la primera vez que activa el programa
+      ...(b.affiliatesEnabled && !prevStore?.affiliatesEnabled && !prevStore?.tcOwnerAcceptedAt ? {
+        tcOwnerAcceptedAt: new Date(),
+        tcOwnerAcceptedIp: (req.headers.get("x-forwarded-for")?.split(",")[0].trim()) ?? "unknown",
+        tcOwnerVersion: b.tcOwnerVersion ?? "1.0",
+      } : {}),
       pageBlocks:         sanitizePageBlocks(b.pageBlocks || "[]"),
       navLinks:           sanitizeNavLinks(b.navLinks || "[]"),
       tipoTienda:           b.tipoTienda || "ROPA",

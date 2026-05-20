@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, AlertTriangle, X, ShieldCheck } from "lucide-react";
+import { Loader2, AlertTriangle, X, ShieldCheck, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+const TC_OWNER_VERSION = "1.0";
 
 export default function AffiliateToggle({
   enabled,
@@ -35,6 +38,7 @@ export default function AffiliateToggle({
         name: store.name || "Mi Tienda",
         affiliatesEnabled: newEnabled,
         commissionRate: newRate,
+        tcOwnerVersion: newEnabled ? TC_OWNER_VERSION : undefined,
       }),
     });
     router.refresh();
@@ -129,19 +133,27 @@ export default function AffiliateToggle({
               <p><strong className="text-gray-900">Tus obligaciones como titular</strong></p>
               <ul className="list-disc pl-4 space-y-1.5">
                 <li>Pagar las comisiones a las afiliadas al confirmar el pago de cada pedido. La plataforma las acredita automáticamente en la billetera de la afiliada.</li>
-                <li>Procesar los retiros de billetera solicitados por las afiliadas en un plazo razonable.</li>
+                <li>Procesar los retiros de billetera solicitados por las afiliadas en un plazo de <strong className="text-gray-800">1 a 3 días hábiles</strong>.</li>
                 <li>No pausar ni dar de baja a una afiliada con el fin de no pagarle comisiones ya devengadas.</li>
-                <li>Informar a las afiliadas de cualquier cambio en la tasa de comisión con anticipación.</li>
+                <li>Notificar con al menos <strong className="text-gray-800">48 horas de anticipación</strong> antes de dar de baja a una afiliada activa, salvo caso de fraude comprobado.</li>
+                <li>Informar a las afiliadas de cualquier cambio en la tasa de comisión con al menos 7 días de anticipación.</li>
               </ul>
 
               <p><strong className="text-gray-900">Responsabilidades de la plataforma</strong><br />
-                MiTienda provee la infraestructura de tracking y billetera. No interviene en disputas entre titulares y afiliadas, ni garantiza el pago de comisiones — eso es responsabilidad exclusiva del titular de la tienda.</p>
+                MiTienda provee la infraestructura de tracking y billetera. Actúa como intermediaria tecnológica y no garantiza un volumen mínimo de ventas. El pago de comisiones es responsabilidad exclusiva del titular.</p>
 
               <p><strong className="text-gray-900">Cambios en la comisión</strong><br />
                 Podés cambiar el porcentaje de comisión en cualquier momento. El nuevo valor aplica a pedidos futuros. Los pedidos ya realizados conservan la tasa original.</p>
 
               <p><strong className="text-gray-900">Desactivación del programa</strong><br />
-                Si desactivás el programa, los links de afiliadas dejan de funcionar inmediatamente. Los saldos pendientes en billetera siguen siendo válidos y debés honrarlos.</p>
+                Si desactivás el programa, los links de afiliadas dejan de funcionar inmediatamente. Los saldos pendientes en billetera siguen siendo válidos y debés honrarlos. Si cancelás tu suscripción a MiTienda teniendo saldos pendientes, las comisiones ya acreditadas siguen siendo exigibles.</p>
+
+              <p><strong className="text-gray-900">Acuerdos fuera de la plataforma</strong><br />
+                Queda prohibido acordar pagos o compensaciones con afiliadas por fuera de la plataforma para evitar el sistema de billetera. Toda comisión debe procesarse a través de MiTienda.</p>
+
+              <Link href="/terminos?role=owner" target="_blank" className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-xs font-medium mt-1">
+                Ver términos completos para dueños <ExternalLink className="h-3 w-3" />
+              </Link>
             </div>
 
             <div className="px-6 py-4 border-t border-gray-100 space-y-3">

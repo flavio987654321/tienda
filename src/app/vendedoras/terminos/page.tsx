@@ -76,8 +76,8 @@ export default function TerminosAfiliados() {
             <ul className="list-disc list-inside space-y-2 text-gray-400">
               <li>El monto mínimo de retiro es de <strong className="text-gray-300">$500 ARS</strong>.</li>
               <li>
-                Los retiros solicitados son procesados manualmente en un plazo de
-                <strong className="text-gray-300"> 1 a 3 días hábiles</strong>, sujeto a disponibilidad.
+                Los retiros solicitados son procesados manualmente en un plazo máximo de
+                <strong className="text-gray-300"> 1 a 3 días hábiles</strong> contados desde la solicitud.
               </li>
               <li>
                 El/la Afiliado/a es responsable de ingresar correctamente sus datos bancarios
@@ -113,24 +113,38 @@ export default function TerminosAfiliados() {
               <li>
                 Mantener actualizados sus datos de contacto y bancarios en la Plataforma.
               </li>
+              <li>
+                No acordar ni recibir pagos, comisiones o compensaciones de parte del/la Titular
+                por fuera del sistema de billetera de la Plataforma. Toda comisión derivada de ventas
+                generadas a través del enlace de referido debe procesarse exclusivamente a través de MiTienda.
+              </li>
             </ul>
           </section>
 
           <section>
             <h2 className="text-lg font-bold text-white mb-3">6. Facultades del/la Titular</h2>
             <p>
-              El/la Titular tiene derecho a aprobar, rechazar, pausar o dar de baja a cualquier Afiliado/a
-              en cualquier momento, sin necesidad de expresar causa, siempre que:
+              El/la Titular tiene derecho a aprobar, rechazar, pausar o dar de baja a cualquier Afiliado/a,
+              con las siguientes condiciones:
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-400 mt-3">
+              <li>
+                Para dar de baja a un/a Afiliado/a activo/a sin causa de fraude, el/la Titular debe
+                notificar con al menos <strong className="text-gray-300">48 horas de anticipación</strong>.
+                Las bajas por fraude comprobado o incumplimiento grave pueden ser inmediatas.
+              </li>
               <li>
                 Las comisiones ya acreditadas por ventas confirmadas previas a la baja
                 permanecerán disponibles para retiro en la billetera del/la Afiliado/a.
               </li>
               <li>
+                El/la Titular no puede dar de baja ni pausar a un/a Afiliado/a con el exclusivo
+                propósito de no pagarle comisiones ya devengadas.
+              </li>
+              <li>
                 En caso de baja por fraude comprobado o incumplimiento grave de estos
-                términos, el/la Titular puede retener las comisiones pendientes y solicitar
-                la reversión de las ya pagadas mediante el procedimiento legal correspondiente.
+                términos, el/la Titular puede solicitar la retención de comisiones pendientes
+                mediante el procedimiento de disputa establecido en la Sección 10.
               </li>
             </ul>
           </section>
@@ -143,13 +157,31 @@ export default function TerminosAfiliados() {
               es de naturaleza comercial independiente y no implica relación de dependencia laboral.
             </p>
             <p className="mt-3">
-              La Plataforma no es responsable por disputas entre el/la Afiliado/a y el/la Titular que
-              excedan el alcance de estas condiciones.
+              La acreditación automática de comisiones en billetera constituye un servicio de la Plataforma,
+              pero el/la Titular es el/la único/a responsable del pago efectivo. MiTienda no garantiza
+              la solvencia del/la Titular ni asume responsabilidad ante incumplimientos de pago de su parte.
+            </p>
+            <p className="mt-3">
+              La responsabilidad máxima de la Plataforma ante cualquier reclamo queda limitada al monto
+              de la última cuota de suscripción abonada por el/la Afiliado/a reclamante.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-white mb-3">8. Modificaciones</h2>
+            <h2 className="text-lg font-bold text-white mb-3">8. Cancelación de suscripción con saldos pendientes</h2>
+            <p>
+              Si el/la Titular cancela su suscripción a MiTienda teniendo saldos pendientes de retiro
+              en billeteras de Afiliados/as, dichas comisiones ya acreditadas siguen siendo exigibles.
+              La cancelación de la suscripción no extingue las obligaciones de pago ya devengadas.
+            </p>
+            <p className="mt-3">
+              En este escenario, el/la Afiliado/a puede iniciar el procedimiento de disputa descripto
+              en la Sección 10 dentro de los 30 días posteriores a la cancelación.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-white mb-3">9. Modificaciones</h2>
             <p>
               Estos términos pueden ser actualizados. Cuando eso ocurra, la versión anterior
               permanecerá registrada en el sistema junto a la fecha en que cada Afiliado/a la aceptó.
@@ -158,7 +190,24 @@ export default function TerminosAfiliados() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-white mb-3">9. Jurisdicción</h2>
+            <h2 className="text-lg font-bold text-white mb-3">10. Mecanismo de disputas</h2>
+            <p>
+              Ante un conflicto entre el/la Afiliado/a y el/la Titular (comisiones no pagadas, baja
+              indebida, fraude u otros), cualquiera de las partes puede iniciar una disputa escribiendo
+              a <strong className="text-white">soporte@mitienda.ar</strong> con el asunto{" "}
+              <em>"Disputa de afiliado"</em>, detallando el reclamo y adjuntando evidencia relevante.
+            </p>
+            <ul className="list-disc list-inside space-y-2 text-gray-400 mt-3">
+              <li>MiTienda revisará la disputa dentro de los <strong className="text-gray-300">5 días hábiles</strong> de recibida.</li>
+              <li>La Plataforma puede solicitar información adicional a ambas partes.</li>
+              <li>La resolución de MiTienda es orientativa y no vinculante en términos legales,
+                pero puede derivar en suspensión o baja de cuentas involucradas.</li>
+              <li>Si no hay acuerdo, las partes pueden recurrir a la justicia ordinaria según la Sección 11.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-white mb-3">11. Jurisdicción</h2>
             <p>
               Las partes acuerdan someterse a la jurisdicción de los tribunales ordinarios de la
               <strong className="text-white"> Ciudad Autónoma de Buenos Aires, Argentina</strong>,

@@ -40,11 +40,11 @@ const CONTENT = {
       },
       {
         title: "5. Gestión de afiliados",
-        body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. Al aceptar un afiliado, acordás pagarle la comisión configurada por cada venta válida generada a través de su link. MiTienda no es responsable de disputas entre dueños y afiliados.",
+        body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. Al aceptar un afiliado y activar el programa, aceptás los Términos del Programa de Afiliados y te comprometés a pagarle la comisión configurada por cada venta válida generada a través de su link. Las comisiones se acreditan al confirmar el pago del pedido. MiTienda actúa como intermediaria tecnológica en la gestión de comisiones.",
       },
       {
         title: "6. Cancelación y acceso",
-        body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tu tienda permanecerá visible hasta el fin del período abonado. Tras el vencimiento y período de gracia, la tienda se ocultará pero tus datos no se borran — podés reactivarla en cualquier momento.",
+        body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tu tienda permanecerá visible hasta el fin del período abonado. Tras el vencimiento y período de gracia, la tienda se ocultará pero tus datos no se borran — podés reactivarla en cualquier momento. La cancelación no extingue las obligaciones de pago de comisiones ya acreditadas en billeteras de afiliados activos.",
       },
       {
         title: "7. Propiedad intelectual",
@@ -98,7 +98,7 @@ const CONTENT = {
       },
       {
         title: "5. Comisiones",
-        body: "Las comisiones son definidas por cada dueño de tienda y pueden variar. MiTienda no garantiza un monto mínimo de comisión ni un volumen de ventas. Las comisiones se calculan sobre el precio de venta neto y se acreditan luego de confirmada la entrega.",
+        body: "Las comisiones son definidas por cada dueño de tienda y pueden variar. MiTienda no garantiza un monto mínimo de comisión ni un volumen de ventas. Las comisiones se calculan sobre el subtotal del pedido sin envío y se acreditan automáticamente en tu billetera cuando el dueño de la tienda confirma el pago del pedido (estado Confirmado). Pedidos en estado Pendiente no generan comisión.",
       },
       {
         title: "6. Premios y beneficios",
@@ -106,7 +106,7 @@ const CONTENT = {
       },
       {
         title: "7. Cancelación",
-        body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tus comisiones acumuladas seguirán disponibles para cobrar. Si no renovás, perdés acceso a tu link de afiliado activo.",
+        body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tus comisiones ya acreditadas en billetera seguirán disponibles para retirar durante 30 días desde la cancelación. Si no renovás, perdés acceso a tu link de afiliado activo.",
       },
       {
         title: "8. Modificaciones",
