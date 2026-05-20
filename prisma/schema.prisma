@@ -16,6 +16,7 @@ model User {
   image         String?
   password      String?
   role          String    @default("BUYER")
+  banned        Boolean   @default(false)
   bio           String?
   city          String?
   instagramHandle String?

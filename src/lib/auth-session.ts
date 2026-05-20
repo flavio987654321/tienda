@@ -27,10 +27,15 @@ export async function getCurrentUser(): Promise<AppSessionUser | null> {
       email: true,
       role: true,
       image: true,
+      banned: true,
     },
   });
 
-  if (profile) return profile;
+  if (profile) {
+    if (profile.banned) return null;
+    const { banned: _, ...rest } = profile;
+    return rest;
+  }
 
   // upsert evita crash por unique constraint si dos requests llegan simultáneamente para el mismo usuario nuevo
   return prisma.user.upsert({
