@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Store, Package, Users, ShoppingBag, Globe, EyeOff, Calendar, RefreshCw, Power } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Store, Package, Users, ShoppingBag, Globe, EyeOff, Calendar, RefreshCw, Power, Search, X } from "lucide-react";
 
 type StoreRow = {
   id: string;
@@ -18,6 +18,18 @@ type StoreRow = {
 export default function TiendasAdmin({ stores: initial }: { stores: StoreRow[] }) {
   const [stores, setStores] = useState(initial);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) return stores;
+    return stores.filter(s =>
+      s.name.toLowerCase().includes(q) ||
+      s.slug.toLowerCase().includes(q) ||
+      s.owner.name?.toLowerCase().includes(q) ||
+      s.owner.email.toLowerCase().includes(q)
+    );
+  }, [stores, query]);
 
   async function toggle(store: StoreRow, field: "isPublished" | "isActive") {
     setLoadingId(store.id + "-" + field);
@@ -71,6 +83,23 @@ export default function TiendasAdmin({ stores: initial }: { stores: StoreRow[] }
         </div>
       </div>
 
+      {/* Buscador */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Buscar por nombre, slug o dueño..."
+          className="w-full bg-gray-900/50 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+        />
+        {query && (
+          <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       {/* Tabla */}
       <div className="bg-gray-900/50 border border-white/5 rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -88,7 +117,14 @@ export default function TiendasAdmin({ stores: initial }: { stores: StoreRow[] }
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {stores.map((s) => (
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-5 py-10 text-center text-gray-500 text-sm">
+                    No se encontraron tiendas para &quot;{query}&quot;
+                  </td>
+                </tr>
+              )}
+              {filtered.map((s) => (
                 <tr key={s.id} className="hover:bg-white/[0.02] transition-colors">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
