@@ -125,7 +125,7 @@ export async function PUT(req: NextRequest) {
 
   const prevStore = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, commissionRate: true, affiliatesEnabled: true, tcOwnerAcceptedAt: true },
+    select: { id: true, commissionRate: true, affiliatesEnabled: true },
   });
 
   const store = await prisma.store.update({
@@ -165,12 +165,6 @@ export async function PUT(req: NextRequest) {
       seoDescription:     b.seoDescription || null,
       affiliatesEnabled:  Boolean(b.affiliatesEnabled),
       commissionRate:     isNaN(commissionRate) ? 10 : commissionRate,
-      // Registrar aceptación del dueño la primera vez que activa el programa
-      ...(b.affiliatesEnabled && !prevStore?.affiliatesEnabled && !prevStore?.tcOwnerAcceptedAt ? {
-        tcOwnerAcceptedAt: new Date(),
-        tcOwnerAcceptedIp: (req.headers.get("x-forwarded-for")?.split(",")[0].trim()) ?? "unknown",
-        tcOwnerVersion: b.tcOwnerVersion ?? "1.0",
-      } : {}),
       pageBlocks:         sanitizePageBlocks(b.pageBlocks || "[]"),
       navLinks:           sanitizeNavLinks(b.navLinks || "[]"),
       tipoTienda:           b.tipoTienda || "ROPA",
@@ -186,6 +180,17 @@ export async function PUT(req: NextRequest) {
       footerShowLegal:      b.footerShowLegal !== undefined ? Boolean(b.footerShowLegal) : undefined,
     },
   });
+
+  // Registrar aceptación del dueño la primera vez que activa el programa (raw SQL para compatibilidad)
+  if (b.affiliatesEnabled && !prevStore?.affiliatesEnabled) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+    const version = (b.tcOwnerVersion as string) ?? "1.0";
+    prisma.$executeRaw`
+      UPDATE "Store"
+      SET "tcOwnerAcceptedAt" = NOW(), "tcOwnerAcceptedIp" = ${ip}, "tcOwnerVersion" = ${version}
+      WHERE "ownerId" = ${user.id} AND "tcOwnerAcceptedAt" IS NULL
+    `.catch(() => {});
+  }
 
   // Notificar a afiliados activos si cambió la comisión
   const newRate = isNaN(commissionRate) ? 10 : commissionRate;
