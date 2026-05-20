@@ -229,9 +229,10 @@ export default function Home() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            {[["#tiendas", "Tiendas"], ["#como-funciona", "Cómo funciona"], ["#nosotros", "Quiénes somos"]].map(([href, label]) => (
+            {[["#tiendas", "Tiendas"], ["#como-funciona", "Cómo funciona"]].map(([href, label]) => (
               <a key={href} href={href} className="text-gray-400 hover:text-white text-sm font-medium transition-colors">{label}</a>
             ))}
+            <Link href="/quienes-somos" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Quiénes somos</Link>
             <Link href="/precios" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Precios</Link>
             <button onClick={() => setContact(true)} className="text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5">
               <MessageCircle className="h-4 w-4" />Contacto
@@ -269,9 +270,10 @@ export default function Home() {
               initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
               className="md:hidden bg-gray-950 border-t border-white/5 px-6 py-4 space-y-3"
             >
-              {[["#tiendas", "Tiendas"], ["#como-funciona", "Cómo funciona"], ["#nosotros", "Quiénes somos"]].map(([href, label]) => (
+              {[["#tiendas", "Tiendas"], ["#como-funciona", "Cómo funciona"]].map(([href, label]) => (
                 <a key={href} href={href} onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-2">{label}</a>
               ))}
+              <Link href="/quienes-somos" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-2">Quiénes somos</Link>
               <Link href="/precios" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-2">Precios</Link>
               <button onClick={() => { setContact(true); setMobileMenu(false); }} className="block text-gray-300 hover:text-white py-2 w-full text-left">Contacto</button>
               <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
@@ -859,7 +861,7 @@ export default function Home() {
             <div>
               <p className="text-white font-semibold text-sm mb-4">Afiliados</p>
               <ul className="space-y-2.5">
-                {[["/vendedoras", "Postularme"], ["/vendedoras/billetera", "Mi billetera"], ["#nosotros", "Quiénes somos"]].map(([href, label]) => (
+                {[["/vendedoras", "Postularme"], ["/vendedoras/billetera", "Mi billetera"], ["/quienes-somos", "Quiénes somos"]].map(([href, label]) => (
                   <li key={label}><a href={href} className="text-gray-500 hover:text-white text-sm transition-colors">{label}</a></li>
                 ))}
                 <li><button onClick={() => setContact(true)} className="text-gray-500 hover:text-white text-sm transition-colors">Contacto</button></li>
