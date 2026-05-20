@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { sendAffiliateStatusEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -49,13 +50,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       data: { role: "SELLER" },
     });
 
-    await sendAffiliateStatusEmail({
-      affiliateEmail: affiliate.user.email,
-      affiliateName: affiliate.user.name || "",
-      storeName: affiliate.store.name,
-      storeSlug: affiliate.store.slug,
-      status: "APPROVED",
-    });
+    await Promise.all([
+      sendAffiliateStatusEmail({
+        affiliateEmail: affiliate.user.email,
+        affiliateName: affiliate.user.name || "",
+        storeName: affiliate.store.name,
+        storeSlug: affiliate.store.slug,
+        status: "APPROVED",
+      }),
+      createNotification({
+        userId: affiliate.userId,
+        type: "AFFILIATE_APPROVED",
+        title: `¡Fuiste aceptado/a en ${affiliate.store.name}!`,
+        body: "Ya podés compartir tu link de afiliado y empezar a ganar comisiones.",
+        link: "/vendedoras",
+      }),
+    ]);
 
     return NextResponse.json({ affiliate: updated });
   }
@@ -70,13 +80,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       },
     });
 
-    await sendAffiliateStatusEmail({
-      affiliateEmail: affiliate.user.email,
-      affiliateName: affiliate.user.name || "",
-      storeName: affiliate.store.name,
-      storeSlug: affiliate.store.slug,
-      status: "REJECTED",
-    });
+    await Promise.all([
+      sendAffiliateStatusEmail({
+        affiliateEmail: affiliate.user.email,
+        affiliateName: affiliate.user.name || "",
+        storeName: affiliate.store.name,
+        storeSlug: affiliate.store.slug,
+        status: "REJECTED",
+      }),
+      createNotification({
+        userId: affiliate.userId,
+        type: "AFFILIATE_REJECTED",
+        title: `Tu solicitud en ${affiliate.store.name} fue rechazada`,
+        body: "El dueño de la tienda decidió no aceptar tu postulación en este momento.",
+        link: "/vendedoras",
+      }),
+    ]);
 
     return NextResponse.json({ affiliate: updated });
   }
@@ -87,13 +106,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       data: { isActive: false, status: "PAUSED" },
     });
 
-    await sendAffiliateStatusEmail({
-      affiliateEmail: affiliate.user.email,
-      affiliateName: affiliate.user.name || "",
-      storeName: affiliate.store.name,
-      storeSlug: affiliate.store.slug,
-      status: "PAUSED",
-    });
+    await Promise.all([
+      sendAffiliateStatusEmail({
+        affiliateEmail: affiliate.user.email,
+        affiliateName: affiliate.user.name || "",
+        storeName: affiliate.store.name,
+        storeSlug: affiliate.store.slug,
+        status: "PAUSED",
+      }),
+      createNotification({
+        userId: affiliate.userId,
+        type: "AFFILIATE_PAUSED",
+        title: `Tu acceso en ${affiliate.store.name} fue pausado`,
+        body: "Tu link de afiliado está temporalmente inactivo. Contactate con el dueño de la tienda para más información.",
+        link: "/vendedoras",
+      }),
+    ]);
 
     return NextResponse.json({ affiliate: updated });
   }
@@ -112,13 +140,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       include: { wallet: true },
     });
 
-    await sendAffiliateStatusEmail({
-      affiliateEmail: affiliate.user.email,
-      affiliateName: affiliate.user.name || "",
-      storeName: affiliate.store.name,
-      storeSlug: affiliate.store.slug,
-      status: "APPROVED",
-    });
+    await Promise.all([
+      sendAffiliateStatusEmail({
+        affiliateEmail: affiliate.user.email,
+        affiliateName: affiliate.user.name || "",
+        storeName: affiliate.store.name,
+        storeSlug: affiliate.store.slug,
+        status: "APPROVED",
+      }),
+      createNotification({
+        userId: affiliate.userId,
+        type: "AFFILIATE_APPROVED",
+        title: `Tu acceso en ${affiliate.store.name} fue reactivado`,
+        body: "Ya podés volver a compartir tu link de afiliado y generar comisiones.",
+        link: "/vendedoras",
+      }),
+    ]);
 
     return NextResponse.json({ affiliate: updated });
   }
@@ -135,13 +172,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     // Solo avisamos si tenía una relación activa — si era REJECTED nunca fue afiliado/a
     if (["APPROVED", "PAUSED"].includes(affiliate.status)) {
-      await sendAffiliateStatusEmail({
-        affiliateEmail: affiliate.user.email,
-        affiliateName: affiliate.user.name || "",
-        storeName: affiliate.store.name,
-        storeSlug: affiliate.store.slug,
-        status: "REMOVED",
-      });
+      await Promise.all([
+        sendAffiliateStatusEmail({
+          affiliateEmail: affiliate.user.email,
+          affiliateName: affiliate.user.name || "",
+          storeName: affiliate.store.name,
+          storeSlug: affiliate.store.slug,
+          status: "REMOVED",
+        }),
+        createNotification({
+          userId: affiliate.userId,
+          type: "AFFILIATE_REMOVED",
+          title: `Fuiste dado/a de baja en ${affiliate.store.name}`,
+          body: "Tu link de afiliado fue desactivado. Los saldos ya acreditados en tu billetera siguen disponibles para retirar.",
+          link: "/vendedoras",
+        }),
+      ]);
     }
 
     return NextResponse.json({ affiliate: updated });
