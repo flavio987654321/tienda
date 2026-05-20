@@ -131,17 +131,32 @@ function PreciosContent() {
 
           {/* Toggle mensual/anual */}
           <div className="flex flex-col items-center gap-3 mb-12">
-            <div className="flex items-center gap-4">
-              <span className={`text-sm font-medium w-16 text-right ${!isAnnual ? "text-white" : "text-gray-500"}`}>Mensual</span>
+            <div className="inline-flex rounded-2xl border border-white/10 bg-gray-900/60 p-1 gap-1">
               <button
-                onClick={() => setIsAnnual(!isAnnual)}
-                className={`relative w-14 h-7 rounded-full transition-colors shrink-0 ${isAnnual ? "bg-indigo-600" : "bg-gray-700"}`}
+                onClick={() => setIsAnnual(false)}
+                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                  !isAnnual
+                    ? "bg-white text-gray-900 shadow"
+                    : "text-gray-400 hover:text-white"
+                }`}
               >
-                <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${isAnnual ? "translate-x-8" : "translate-x-1"}`} />
+                Mensual
               </button>
-              <span className={`text-sm font-medium w-16 ${isAnnual ? "text-white" : "text-gray-500"}`}>Anual</span>
+              <button
+                onClick={() => setIsAnnual(true)}
+                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
+                  isAnnual
+                    ? "bg-white text-gray-900 shadow"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                Anual
+                <span className={`text-xs font-black px-2 py-0.5 rounded-full ${isAnnual ? "bg-emerald-500 text-white" : "bg-emerald-500/20 text-emerald-400"}`}>
+                  -25%
+                </span>
+              </button>
             </div>
-            <span className="bg-emerald-500/15 text-emerald-400 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/20">
+            <span className="text-emerald-400 text-xs font-semibold">
               3 meses gratis pagando anual
             </span>
           </div>

@@ -327,42 +327,54 @@ function RegistroContent() {
 
             {/* Plan toggle — solo para owner y seller */}
             {hasPlan && planPrices && (
-              <div className="mb-7 rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="mb-7">
                 <p className="text-xs text-gray-400 font-semibold mb-3">Elegí tu plan</p>
-                <div className="grid grid-cols-2 gap-2">
+
+                {/* Selector pill */}
+                <div className="inline-flex w-full rounded-2xl border border-white/10 bg-white/5 p-1 gap-1 mb-3">
                   <button
                     type="button"
                     onClick={() => setBilling("MONTHLY")}
-                    className={`rounded-xl px-3 py-2.5 text-left transition-all border ${
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
                       billing === "MONTHLY"
-                        ? `${colors.border} bg-white/10 border-opacity-100`
-                        : "border-white/5 bg-transparent hover:bg-white/5"
+                        ? "bg-white text-gray-900 shadow"
+                        : "text-gray-400 hover:text-white"
                     }`}
                   >
-                    <p className={`text-xs font-bold mb-0.5 ${billing === "MONTHLY" ? colors.text : "text-gray-400"}`}>Mensual</p>
-                    <p className="text-white font-black text-base">{money(planPrices.MONTHLY)}</p>
-                    <p className="text-gray-500 text-xs">por mes</p>
+                    Mensual
                   </button>
                   <button
                     type="button"
                     onClick={() => setBilling("ANNUAL")}
-                    className={`rounded-xl px-3 py-2.5 text-left transition-all border relative ${
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
                       billing === "ANNUAL"
-                        ? `${colors.border} bg-white/10 border-opacity-100`
-                        : "border-white/5 bg-transparent hover:bg-white/5"
+                        ? "bg-white text-gray-900 shadow"
+                        : "text-gray-400 hover:text-white"
                     }`}
                   >
-                    <span className="absolute -top-2 right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      3 meses gratis
+                    Anual
+                    <span className={`text-xs font-black px-1.5 py-0.5 rounded-full ${billing === "ANNUAL" ? "bg-emerald-500 text-white" : "bg-emerald-500/20 text-emerald-400"}`}>
+                      -25%
                     </span>
-                    <p className={`text-xs font-bold mb-0.5 ${billing === "ANNUAL" ? colors.text : "text-gray-400"}`}>Anual</p>
-                    <p className="text-white font-black text-base">{money(Math.round(planPrices.ANNUAL / 12))}</p>
-                    <p className="text-gray-500 text-xs">por mes · {money(planPrices.ANNUAL)}/año</p>
                   </button>
                 </div>
-                <p className="text-xs text-gray-600 mt-2.5 text-center">
-                  7 días gratis · Sin tarjeta de crédito · Cancelá cuando quieras
-                </p>
+
+                {/* Precio según selección */}
+                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-white font-black text-xl">
+                      {money(billing === "ANNUAL" ? Math.round(planPrices.ANNUAL / 12) : planPrices.MONTHLY)}
+                      <span className="text-gray-500 text-sm font-normal">/mes</span>
+                    </p>
+                    {billing === "ANNUAL" && (
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {money(planPrices.ANNUAL)}/año
+                        <span className="ml-2 text-emerald-400 font-semibold">Ahorrás {money(planPrices.MONTHLY * 12 - planPrices.ANNUAL)}</span>
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-600">7 días gratis</span>
+                </div>
               </div>
             )}
 
