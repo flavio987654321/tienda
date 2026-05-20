@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield,
 } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -15,6 +16,7 @@ const NAV = [
 
 export default function AdminSidebar({ user }: { user: { name: string | null; email: string } }) {
   const pathname = usePathname();
+  const { signOut } = useAuth();
 
   function isActive(href: string, exact?: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
@@ -67,12 +69,12 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
             <p className="text-gray-500 text-xs truncate">{user.email}</p>
           </div>
         </div>
-        <a
-          href="/api/auth/signout"
+        <button
+          onClick={() => signOut("/")}
           className="flex items-center gap-2 text-gray-500 hover:text-red-400 text-xs transition-colors"
         >
           <LogOut className="h-3.5 w-3.5" /> Cerrar sesión
-        </a>
+        </button>
       </div>
     </aside>
   );
