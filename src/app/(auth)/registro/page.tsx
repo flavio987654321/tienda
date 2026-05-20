@@ -121,7 +121,14 @@ function RegistroContent() {
   const searchParams = useSearchParams();
 
   // Pre-select from URL: /registro?plan=owner&billing=annual
-  const planParam = searchParams.get("plan") as AccountType | null;
+  // Map "affiliate" → "seller" (used by /precios legacy param)
+  const rawPlan = searchParams.get("plan");
+  const planParam: AccountType | null =
+    rawPlan === "affiliate" ? "seller" :
+    rawPlan === "owner" ? "owner" :
+    rawPlan === "buyer" ? "buyer" :
+    rawPlan === "seller" ? "seller" :
+    null;
   const billingParam = searchParams.get("billing");
 
   const [step, setStep] = useState<"type" | "form">(planParam ? "form" : "type");

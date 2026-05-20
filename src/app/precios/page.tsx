@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper } from "lucide-react";
+import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart } from "lucide-react";
 import PaymentModal from "@/components/subscription/PaymentModal";
 
 const PLANS = {
@@ -147,7 +147,7 @@ function PreciosContent() {
           </div>
 
           {/* Cards */}
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {(Object.entries(PLANS) as [string, typeof PLANS.affiliate][]).map(([key, plan]) => {
               const Icon = plan.icon;
               const price = isAnnual ? plan.annual : plan.monthly;
@@ -211,7 +211,7 @@ function PreciosContent() {
                     </button>
                   ) : (
                     <Link
-                      href={`/registro?plan=${key}&billing=${isAnnual ? "annual" : "monthly"}`}
+                      href={`/registro?plan=${key === "affiliate" ? "seller" : key}&billing=${isAnnual ? "annual" : "monthly"}`}
                       className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all bg-gradient-to-r ${plan.color} text-white hover:opacity-90 hover:scale-[1.02] shadow-lg`}
                     >
                       Empezar prueba gratis
@@ -224,6 +224,49 @@ function PreciosContent() {
                 </div>
               );
             })}
+
+            {/* Card Cliente — gratis */}
+            <div className="relative rounded-3xl border border-gray-700/40 bg-gray-900/20 p-8 flex flex-col opacity-80">
+              <div className="w-12 h-12 rounded-2xl bg-gray-700/40 flex items-center justify-center mb-5">
+                <ShoppingCart className="h-6 w-6 text-gray-400" />
+              </div>
+
+              <h2 className="text-2xl font-black text-gray-300 mb-1">Cliente</h2>
+              <p className="text-gray-500 text-sm mb-6">Explorá tiendas, comprá productos y seguí tus pedidos.</p>
+
+              <div className="mb-2">
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-black text-gray-300">Gratis</span>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">Sin suscripción · Siempre gratis</p>
+              </div>
+
+              <div className="h-px bg-white/5 my-6" />
+
+              <ul className="space-y-3 mb-8 flex-1">
+                {[
+                  "Acceso a todas las tiendas",
+                  "Historial de pedidos",
+                  "Favoritos sincronizados",
+                  "Checkout más rápido",
+                  "Seguimiento de envíos",
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-2.5 text-sm text-gray-500">
+                    <Check className="h-4 w-4 text-gray-600 shrink-0 mt-0.5" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href="/registro?plan=buyer"
+                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all bg-gray-700/50 hover:bg-gray-700/80 text-gray-300 border border-gray-600/40"
+              >
+                Crear cuenta gratis
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <p className="text-center text-xs text-gray-700 mt-3">Sin tarjeta · Sin límite de tiempo</p>
+            </div>
           </div>
 
           {/* FAQ */}
