@@ -152,6 +152,7 @@ export default function MiCuentaPage() {
       })
       .then((data) => {
         if (!data) return;
+        if (data.role === "ADMIN") { window.location.href = "/admin"; return; }
         setProfile(data);
         setEditForm({
           name: data.name || "",
