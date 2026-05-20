@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
@@ -52,6 +52,14 @@ function money(amount: number) {
 }
 
 export default function PreciosPage() {
+  return (
+    <Suspense>
+      <PreciosContent />
+    </Suspense>
+  );
+}
+
+function PreciosContent() {
   const [isAnnual, setIsAnnual] = useState(false);
   const [payModal, setPayModal] = useState<{ plan: "OWNER" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL"; amount: number } | null>(null);
   const searchParams = useSearchParams();
