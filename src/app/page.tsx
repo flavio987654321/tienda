@@ -7,7 +7,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useSc
 import {
   ArrowRight, X, Store, Users, TrendingUp, Wallet, Truck, CheckCircle,
   ShoppingBag, Star, Zap, Shield, Send, MessageCircle, Phone, Mail,
-  Package, Heart, ShoppingCart, Globe, Eye, ChevronRight, Menu,
+  Package, Heart, ShoppingCart, Globe, Eye, ChevronRight, Menu, MapPin,
 } from "lucide-react";
 
 /* ─── 3D Tilt Card ─── */
@@ -158,6 +158,142 @@ type RealStore = {
   coverImg: string | null;
 };
 
+type RealTestimonial = {
+  id: string;
+  name: string;
+  role: string;
+  location: string | null;
+  text: string;
+};
+
+/* ─── Modal: Contá tu historia ─── */
+function TestimonioModal({ onClose }: { onClose: () => void }) {
+  const [form, setForm] = useState({ name: "", role: "Afiliado", location: "", text: "", rating: 5 });
+  const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSending(true);
+    setError("");
+    try {
+      const res = await fetch("/api/testimonios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error();
+      setSent(true);
+    } catch {
+      setError("Algo salió mal. Intentá de nuevo.");
+    }
+    setSending(false);
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        transition={{ type: "spring", stiffness: 280, damping: 22 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative bg-gray-950 border border-white/10 rounded-3xl p-8 w-full max-w-md shadow-2xl"
+      >
+        <button onClick={onClose} className="absolute top-5 right-5 text-gray-500 hover:text-white transition-colors">
+          <X className="h-5 w-5" />
+        </button>
+
+        {sent ? (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-emerald-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="h-8 w-8 text-emerald-400" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">¡Gracias por compartir!</h3>
+            <p className="text-gray-400 text-sm">Revisamos tu historia y si todo está bien la publicamos en la página.</p>
+            <button onClick={onClose} className="mt-6 bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-indigo-500 transition-colors text-sm">
+              Cerrar
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="mb-6">
+              <h3 className="text-2xl font-bold text-white">Contá tu historia</h3>
+              <p className="text-gray-400 mt-1 text-sm">¿Ya usás MiTienda? Contanos cómo te fue. La revisamos y la publicamos.</p>
+            </div>
+            <form onSubmit={submit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-2">Tu calificación</label>
+                <div className="flex gap-1.5">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button key={s} type="button" onClick={() => setForm((p) => ({ ...p, rating: s }))}
+                      className="transition-transform hover:scale-110">
+                      <Star className={`h-7 w-7 ${s <= form.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-600"}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Tu nombre</label>
+                <input
+                  type="text" required value={form.name} maxLength={80}
+                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="Valentina M."
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Soy...</label>
+                  <select
+                    value={form.role}
+                    onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  >
+                    <option value="Afiliado" className="bg-gray-900">Afiliado/a</option>
+                    <option value="Dueño de tienda" className="bg-gray-900">Dueño/a de tienda</option>
+                    <option value="Comprador" className="bg-gray-900">Comprador/a</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Ciudad (opcional)</label>
+                  <input
+                    type="text" value={form.location} maxLength={60}
+                    onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+                    placeholder="Buenos Aires"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Tu experiencia</label>
+                <textarea
+                  required value={form.text} maxLength={500}
+                  onChange={(e) => setForm((p) => ({ ...p, text: e.target.value }))}
+                  rows={4} placeholder="Contanos cómo te fue, qué lograste, qué cambió..."
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-none"
+                />
+                <p className="text-right text-xs text-gray-600 mt-1">{form.text.length}/500</p>
+              </div>
+              {error && <p className="text-red-400 text-xs">{error}</p>}
+              <button
+                type="submit" disabled={sending}
+                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-xl font-semibold transition-all disabled:opacity-60 text-sm"
+              >
+                {sending ? <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Send className="h-4 w-4" /> Enviar mi historia</>}
+              </button>
+            </form>
+          </>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
 const FEATURES = [
   { icon: Store, title: "Tienda personalizable", desc: "Elegí entre 10 plantillas, personalizá colores, fuentes y fotos. Tu marca, exactamente como la imaginás.", color: "#6366f1" },
   { icon: Users, title: "Afiliados que venden por vos", desc: "Los afiliados se postulan, vos aprobás. Cada uno sale a vender con su link — sin que pagues un sueldo.", color: "#8b5cf6" },
@@ -180,6 +316,8 @@ export default function Home() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
   const [realStores, setRealStores] = useState<RealStore[]>([]);
+  const [realTestimonials, setRealTestimonials] = useState<RealTestimonial[]>([]);
+  const [testimonioModal, setTestimonioModal] = useState(false);
   const { user: sessionUser } = useAuth();
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (v) => setNavScrolled(v > 50));
@@ -188,6 +326,10 @@ export default function Home() {
     fetch("/api/stores?featured=true&limit=6")
       .then((r) => r.json())
       .then((d) => { if (Array.isArray(d.stores)) setRealStores(d.stores); })
+      .catch(() => {});
+    fetch("/api/testimonios")
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d)) setRealTestimonials(d); })
       .catch(() => {});
   }, []);
 
@@ -736,28 +878,62 @@ export default function Home() {
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
             <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Historias reales</motion.p>
             <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-900">Personas que ya están ganando</motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-500 text-lg mt-3 max-w-xl mx-auto">Dueños con equipo. Afiliados con ingresos. Sin inversión inicial.</motion.p>
           </motion.div>
 
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t) => (
-              <motion.div key={t.name} variants={fadeUp}>
-                <Card3D className="h-full">
-                  <div className="h-full bg-white rounded-3xl p-7 border border-gray-100 shadow-sm hover:shadow-lg transition-all">
-                    <div className="flex gap-0.5 mb-4">
-                      {[1,2,3,4,5].map((s) => <Star key={s} className="h-4 w-4 fill-yellow-400 text-yellow-400" />)}
-                    </div>
-                    <p className="text-gray-700 text-sm leading-relaxed mb-6 italic">"{t.text}"</p>
-                    <div className="flex items-center gap-3 mt-auto">
-                      <img src={t.img} alt={t.name} className="w-11 h-11 rounded-full object-cover" />
-                      <div>
-                        <p className="font-bold text-gray-900 text-sm">{t.name}</p>
-                        <p className="text-gray-500 text-xs">{t.role}</p>
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            {(() => {
+              const displayed = [
+                ...realTestimonials.slice(0, 3),
+                ...TESTIMONIALS.slice(0, Math.max(0, 3 - realTestimonials.length)).map((t, i) => ({
+                  id: `fallback-${i}`, name: t.name, role: t.role, location: null, text: t.text, rating: 5, img: t.img,
+                })),
+              ].slice(0, 3);
+              return displayed.map((t) => (
+                <motion.div key={t.id} variants={fadeUp}>
+                  <Card3D className="h-full">
+                    <div className="h-full bg-white rounded-3xl p-7 border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col">
+                      <div className="flex gap-0.5 mb-4">
+                        {[1,2,3,4,5].map((s) => (
+                          <Star key={s} className={`h-4 w-4 ${"rating" in t && s <= (t as {rating:number}).rating ? "fill-yellow-400 text-yellow-400" : "fill-yellow-400 text-yellow-400"}`} />
+                        ))}
+                      </div>
+                      <p className="text-gray-700 text-sm leading-relaxed mb-6 italic flex-1">"{t.text}"</p>
+                      <div className="flex items-center gap-3">
+                        {"img" in t && (t as {img:string}).img ? (
+                          <img src={(t as {img:string}).img} alt={t.name} className="w-11 h-11 rounded-full object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+                            <span className="text-indigo-400 font-bold text-sm">{t.name[0]}</span>
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-bold text-gray-900 text-sm">{t.name}</p>
+                          <p className="text-gray-500 text-xs">
+                            {t.role}{"location" in t && t.location ? ` · ${t.location}` : ""}
+                          </p>
+                        </div>
+                        {realTestimonials.some((r) => r.id === t.id) && (
+                          <div className="ml-auto">
+                            <span className="text-xs bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">Verificado</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                </Card3D>
-              </motion.div>
-            ))}
+                  </Card3D>
+                </motion.div>
+              ));
+            })()}
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center">
+            <button
+              onClick={() => setTestimonioModal(true)}
+              className="inline-flex items-center gap-2 bg-white border border-indigo-200 hover:border-indigo-400 text-indigo-600 hover:text-indigo-700 px-7 py-3.5 rounded-2xl font-semibold text-sm transition-all hover:shadow-md hover:shadow-indigo-100"
+            >
+              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+              ¿Ya usás MiTienda? Contá tu historia
+            </button>
           </motion.div>
         </div>
       </section>
@@ -886,6 +1062,11 @@ export default function Home() {
       {/* ── Contact Modal ── */}
       <AnimatePresence>
         {contact && <ContactModal onClose={() => setContact(false)} />}
+      </AnimatePresence>
+
+      {/* ── Testimonio Modal ── */}
+      <AnimatePresence>
+        {testimonioModal && <TestimonioModal onClose={() => setTestimonioModal(false)} />}
       </AnimatePresence>
     </div>
   );

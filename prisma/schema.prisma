@@ -398,6 +398,18 @@ model WalletWithdrawal {
   wallet   Wallet @relation(fields: [walletId], references: [id])
 }
 
+model Testimonial {
+  id        String   @id @default(cuid())
+  name      String
+  role      String
+  location  String?
+  text      String
+  rating    Int      @default(5)
+  photoUrl  String?
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
 // SUSCRIPCIONES
 // status: TRIAL | ACTIVE | GRACE | EXPIRED | CANCELLED
 // plan:   MONTHLY | ANNUAL
