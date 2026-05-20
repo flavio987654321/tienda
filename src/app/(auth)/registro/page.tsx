@@ -1,15 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ShoppingBag, Loader2, Eye, EyeOff, ArrowRight,
-  Store, Users, CheckCircle, ShoppingCart,
+  Store, Users, CheckCircle, ShoppingCart, Zap,
 } from "lucide-react";
 
+export default function RegistroPage() {
+  return (
+    <Suspense>
+      <RegistroContent />
+    </Suspense>
+  );
+}
+
 type AccountType = "owner" | "seller" | "buyer";
+
+const PRICES = {
+  owner:  { MONTHLY: 25000, ANNUAL: 225000 },
+  seller: { MONTHLY: 15000, ANNUAL: 135000 },
+};
 
 const TYPES = [
   {
@@ -83,6 +96,10 @@ const COLOR_MAP: Record<string, { bg: string; border: string; ring: string; text
   },
 };
 
+function money(n: number) {
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
+}
+
 function validate(form: { name: string; email: string; password: string; storeName: string }, accountType: AccountType) {
   if (!form.name.trim() || form.name.trim().length < 2)
     return "El nombre debe tener al menos 2 caracteres.";
@@ -99,10 +116,19 @@ function validate(form: { name: string; email: string; password: string; storeNa
   return null;
 }
 
-export default function RegistroPage() {
+function RegistroContent() {
   const router = useRouter();
-  const [step, setStep] = useState<"type" | "form">("type");
-  const [accountType, setAccountType] = useState<AccountType>("owner");
+  const searchParams = useSearchParams();
+
+  // Pre-select from URL: /registro?plan=owner&billing=annual
+  const planParam = searchParams.get("plan") as AccountType | null;
+  const billingParam = searchParams.get("billing");
+
+  const [step, setStep] = useState<"type" | "form">(planParam ? "form" : "type");
+  const [accountType, setAccountType] = useState<AccountType>(planParam ?? "owner");
+  const [billing, setBilling] = useState<"MONTHLY" | "ANNUAL">(
+    billingParam === "annual" ? "ANNUAL" : "MONTHLY"
+  );
   const [form, setForm] = useState({ name: "", email: "", password: "", storeName: "" });
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
@@ -140,9 +166,9 @@ export default function RegistroPage() {
     if (accountType === "buyer") {
       router.push("/login?registered=buyer");
     } else if (accountType === "seller") {
-      router.push("/precios?registered=true&role=affiliate");
+      router.push(`/precios?registered=true&role=affiliate&billing=${billing.toLowerCase()}`);
     } else {
-      router.push("/precios?registered=true&role=owner");
+      router.push(`/precios?registered=true&role=owner&billing=${billing.toLowerCase()}`);
     }
   }
 
@@ -156,6 +182,8 @@ export default function RegistroPage() {
 
   const selected = TYPES.find((t) => t.key === accountType)!;
   const colors = COLOR_MAP[selected.color];
+  const hasPlan = accountType !== "buyer";
+  const planPrices = hasPlan ? PRICES[accountType as "owner" | "seller"] : null;
 
   const LEFT_PANEL: Record<AccountType, { gradient: string; headline: string; sub: string }> = {
     owner: {
@@ -177,7 +205,7 @@ export default function RegistroPage() {
 
   const panel = LEFT_PANEL[accountType];
 
-  /* ── STEP 2: split layout (igual que login) ── */
+  /* ── STEP 2: split layout ── */
   if (step === "form") {
     return (
       <div className="min-h-screen bg-[#030712] flex">
@@ -218,6 +246,32 @@ export default function RegistroPage() {
                 </li>
               ))}
             </ul>
+
+            {/* Plan preview en panel lateral */}
+            {hasPlan && planPrices && (
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                <p className="text-xs text-indigo-300/60 font-medium mb-2">Plan seleccionado</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-indigo-300" />
+                    <span className="text-white font-bold text-sm">
+                      {billing === "ANNUAL" ? "Anual" : "Mensual"}
+                    </span>
+                  </div>
+                  <span className="text-indigo-200 font-black">
+                    {billing === "ANNUAL"
+                      ? `${money(Math.round(planPrices.ANNUAL / 12))}/mes`
+                      : `${money(planPrices.MONTHLY)}/mes`}
+                  </span>
+                </div>
+                {billing === "ANNUAL" && (
+                  <p className="text-xs text-emerald-400/80 mt-1">
+                    {money(planPrices.ANNUAL)}/año · Ahorrás {money(planPrices.MONTHLY * 12 - planPrices.ANNUAL)}
+                  </p>
+                )}
+                <p className="text-xs text-indigo-300/50 mt-1.5">7 días gratis · Sin tarjeta</p>
+              </div>
+            )}
           </div>
 
           <p className="relative text-indigo-400/40 text-xs">© 2026 MiTienda · Argentina</p>
@@ -263,6 +317,47 @@ export default function RegistroPage() {
                 ? "Te mandamos al panel de vendedor."
                 : "Empezá a explorar tiendas ya."}
             </p>
+
+            {/* Plan toggle — solo para owner y seller */}
+            {hasPlan && planPrices && (
+              <div className="mb-7 rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs text-gray-400 font-semibold mb-3">Elegí tu plan</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBilling("MONTHLY")}
+                    className={`rounded-xl px-3 py-2.5 text-left transition-all border ${
+                      billing === "MONTHLY"
+                        ? `${colors.border} bg-white/10 border-opacity-100`
+                        : "border-white/5 bg-transparent hover:bg-white/5"
+                    }`}
+                  >
+                    <p className={`text-xs font-bold mb-0.5 ${billing === "MONTHLY" ? colors.text : "text-gray-400"}`}>Mensual</p>
+                    <p className="text-white font-black text-base">{money(planPrices.MONTHLY)}</p>
+                    <p className="text-gray-500 text-xs">por mes</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBilling("ANNUAL")}
+                    className={`rounded-xl px-3 py-2.5 text-left transition-all border relative ${
+                      billing === "ANNUAL"
+                        ? `${colors.border} bg-white/10 border-opacity-100`
+                        : "border-white/5 bg-transparent hover:bg-white/5"
+                    }`}
+                  >
+                    <span className="absolute -top-2 right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      3 meses gratis
+                    </span>
+                    <p className={`text-xs font-bold mb-0.5 ${billing === "ANNUAL" ? colors.text : "text-gray-400"}`}>Anual</p>
+                    <p className="text-white font-black text-base">{money(Math.round(planPrices.ANNUAL / 12))}</p>
+                    <p className="text-gray-500 text-xs">por mes · {money(planPrices.ANNUAL)}/año</p>
+                  </button>
+                </div>
+                <p className="text-xs text-gray-600 mt-2.5 text-center">
+                  7 días gratis · Sin tarjeta de crédito · Cancelá cuando quieras
+                </p>
+              </div>
+            )}
 
             {error && (
               <motion.div
@@ -341,7 +436,13 @@ export default function RegistroPage() {
 
               <p className="text-center text-xs text-gray-600">
                 Al registrarte aceptás los{" "}
-                <span className="text-gray-500 underline cursor-pointer">términos y condiciones</span>.
+                <Link href={`/terminos?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`} className="text-gray-500 underline hover:text-gray-400 transition-colors">
+                  términos y condiciones
+                </Link>
+                {" "}y la{" "}
+                <Link href={`/privacidad?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`} className="text-gray-500 underline hover:text-gray-400 transition-colors">
+                  política de privacidad
+                </Link>.
               </p>
             </form>
 
@@ -402,6 +503,11 @@ export default function RegistroPage() {
                     </li>
                   ))}
                 </ul>
+                {key !== "buyer" && (
+                  <p className="text-xs text-gray-600 mb-3">
+                    Desde {money(PRICES[key as "owner" | "seller"].MONTHLY)}/mes · 7 días gratis
+                  </p>
+                )}
                 <div className={`flex items-center gap-2 text-sm ${c.text} font-semibold group-hover:gap-3 transition-all`}>
                   {cta} <ArrowRight className="h-4 w-4" />
                 </div>

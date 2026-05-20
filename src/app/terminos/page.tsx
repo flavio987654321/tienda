@@ -1,0 +1,248 @@
+import Link from "next/link";
+import { ShoppingBag, ArrowLeft } from "lucide-react";
+
+const CONTENT = {
+  owner: {
+    label: "Dueño de tienda",
+    color: "text-indigo-400",
+    badge: "bg-indigo-500/10 border-indigo-500/20 text-indigo-400",
+    sections: [
+      {
+        title: "1. Aceptación de los términos",
+        body: "Al crear una cuenta como Dueño de tienda en MiTienda, aceptás estos Términos y Condiciones en su totalidad. Si no estás de acuerdo con alguna parte, no podés usar el servicio.",
+      },
+      {
+        title: "2. Descripción del servicio para dueños",
+        body: "Como Dueño de tienda, podés crear y gestionar tu propia tienda online dentro de la plataforma MiTienda. Esto incluye cargar productos, definir precios, configurar métodos de pago y gestionar una red de vendedores afiliados que comercialicen tus productos a cambio de comisiones.",
+      },
+      {
+        title: "3. Suscripción y pagos",
+        body: null,
+        list: [
+          "El plan Dueño de tienda tiene un costo de $25.000 ARS/mes o $225.000 ARS/año (equivalente a 9 meses, 3 meses gratis).",
+          "Todos los planes incluyen 7 días de prueba gratuita sin tarjeta de crédito.",
+          "Al vencer la prueba, se requiere suscripción activa para continuar operando la tienda.",
+          "Los pagos se procesan a través de Mercado Pago.",
+          "Ante el vencimiento, hay un período de gracia de 4 días para renovar antes de que se limite el acceso.",
+          "Las suscripciones se renuevan automáticamente salvo cancelación desde el panel.",
+        ],
+      },
+      {
+        title: "4. Responsabilidades del dueño",
+        body: null,
+        list: [
+          "Sos responsable de que los productos que publiques sean legales y tengan información veraz (precios, stock, imágenes, descripción).",
+          "Sos responsable de cumplir con los envíos y la atención al cliente.",
+          "No podés publicar productos prohibidos, falsificados, ilegales o que infrinjan derechos de terceros.",
+          "Sos responsable de las comisiones que acordés con tus afiliados.",
+          "Sos responsable de cumplir con las obligaciones impositivas de tu actividad comercial.",
+        ],
+      },
+      {
+        title: "5. Gestión de afiliados",
+        body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. Al aceptar un afiliado, acordás pagarle la comisión configurada por cada venta válida generada a través de su link. MiTienda no es responsable de disputas entre dueños y afiliados.",
+      },
+      {
+        title: "6. Cancelación y acceso",
+        body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tu tienda permanecerá visible hasta el fin del período abonado. Tras el vencimiento y período de gracia, la tienda se ocultará pero tus datos no se borran — podés reactivarla en cualquier momento.",
+      },
+      {
+        title: "7. Propiedad intelectual",
+        body: "Las imágenes, descripciones y contenidos que cargás en tu tienda siguen siendo de tu propiedad. Al subirlos, otorgás a MiTienda una licencia no exclusiva para mostrarlos a compradores dentro de la plataforma.",
+      },
+      {
+        title: "8. Modificaciones",
+        body: "Podemos actualizar estos términos. Te notificaremos por email ante cambios significativos con al menos 15 días de anticipación.",
+      },
+      {
+        title: "9. Contacto",
+        body: "Para consultas escribinos a soporte@mitienda.ar",
+      },
+    ],
+  },
+  seller: {
+    label: "Vendedor/Afiliado",
+    color: "text-purple-400",
+    badge: "bg-purple-500/10 border-purple-500/20 text-purple-400",
+    sections: [
+      {
+        title: "1. Aceptación de los términos",
+        body: "Al crear una cuenta como Vendedor/Afiliado en MiTienda, aceptás estos Términos y Condiciones en su totalidad. Si no estás de acuerdo con alguna parte, no podés usar el servicio.",
+      },
+      {
+        title: "2. Descripción del servicio para afiliados",
+        body: "Como Afiliado, podés postularte a tiendas activas dentro de MiTienda y, una vez aceptado, compartir tu link personal de afiliado para generar ventas. Por cada venta concretada a través de tu link, recibís una comisión definida por el dueño de la tienda.",
+      },
+      {
+        title: "3. Suscripción y pagos",
+        body: null,
+        list: [
+          "El plan Afiliado tiene un costo de $15.000 ARS/mes o $135.000 ARS/año (equivalente a 9 meses, 3 meses gratis).",
+          "Todos los planes incluyen 7 días de prueba gratuita sin tarjeta de crédito.",
+          "Al vencer la prueba, se requiere suscripción activa para generar y usar tu link de afiliado.",
+          "Los pagos de suscripción se procesan a través de Mercado Pago.",
+          "Las comisiones ganadas se acreditan en tu billetera digital dentro de la plataforma.",
+          "El cobro de comisiones está sujeto a los períodos de liquidación de cada tienda.",
+        ],
+      },
+      {
+        title: "4. Responsabilidades del afiliado",
+        body: null,
+        list: [
+          "No podés hacer publicidad engañosa ni prometer beneficios que la tienda no ofrece.",
+          "No podés usar spam, técnicas de phishing ni prácticas desleales para generar ventas.",
+          "Sos responsable de declarar tus ingresos por comisiones ante la AFIP según corresponda.",
+          "No podés compartir tu link de afiliado en nombre de terceros sin autorización.",
+          "Debés respetar las condiciones de cada tienda a la que estés afiliado.",
+        ],
+      },
+      {
+        title: "5. Comisiones",
+        body: "Las comisiones son definidas por cada dueño de tienda y pueden variar. MiTienda no garantiza un monto mínimo de comisión ni un volumen de ventas. Las comisiones se calculan sobre el precio de venta neto y se acreditan luego de confirmada la entrega.",
+      },
+      {
+        title: "6. Premios y beneficios",
+        body: "MiTienda puede ofrecer premios o cupones adicionales por volumen de ventas a afiliados destacados. Estos beneficios son opcionales y pueden modificarse sin previo aviso.",
+      },
+      {
+        title: "7. Cancelación",
+        body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tus comisiones acumuladas seguirán disponibles para cobrar. Si no renovás, perdés acceso a tu link de afiliado activo.",
+      },
+      {
+        title: "8. Modificaciones",
+        body: "Podemos actualizar estos términos. Te notificaremos por email ante cambios significativos con al menos 15 días de anticipación.",
+      },
+      {
+        title: "9. Contacto",
+        body: "Para consultas escribinos a soporte@mitienda.ar",
+      },
+    ],
+  },
+  buyer: {
+    label: "Cliente",
+    color: "text-pink-400",
+    badge: "bg-pink-500/10 border-pink-500/20 text-pink-400",
+    sections: [
+      {
+        title: "1. Aceptación de los términos",
+        body: "Al crear una cuenta como Cliente en MiTienda, aceptás estos Términos y Condiciones en su totalidad. Si no estás de acuerdo, no podés usar el servicio.",
+      },
+      {
+        title: "2. Descripción del servicio para clientes",
+        body: "Como Cliente, podés explorar tiendas dentro de MiTienda, agregar productos al carrito, realizar compras y hacer seguimiento de tus pedidos. La cuenta es completamente gratuita sin suscripción requerida.",
+      },
+      {
+        title: "3. Cuenta gratuita",
+        body: "La cuenta de cliente no tiene costo. No se requiere tarjeta de crédito para registrarte. Solo pagarás al realizar compras dentro de las tiendas, mediante los métodos de pago que cada tienda habilite.",
+      },
+      {
+        title: "4. Compras y pagos",
+        body: null,
+        list: [
+          "Los precios y condiciones de venta los define cada tienda de forma independiente.",
+          "MiTienda actúa como plataforma tecnológica y no es parte en la relación de compraventa.",
+          "Las disputas sobre productos, envíos o devoluciones deben resolverse directamente con el dueño de la tienda.",
+          "MiTienda puede mediar en casos de conflicto pero no garantiza resultados.",
+        ],
+      },
+      {
+        title: "5. Responsabilidades del cliente",
+        body: null,
+        list: [
+          "Debés brindar datos de envío correctos y completos al realizar una compra.",
+          "No podés usar la plataforma para actividades fraudulentas o ilegales.",
+          "Sos responsable de mantener la confidencialidad de tu cuenta y contraseña.",
+          "No podés hacer chargebacks abusivos o reclamaciones falsas.",
+        ],
+      },
+      {
+        title: "6. Devoluciones y reembolsos",
+        body: "Las políticas de devolución y reembolso son definidas por cada tienda. Te recomendamos consultar la política de la tienda antes de comprar. En caso de incumplimiento grave por parte de una tienda, podés reportarlo a soporte@mitienda.ar",
+      },
+      {
+        title: "7. Cancelación de cuenta",
+        body: "Podés eliminar tu cuenta en cualquier momento desde la configuración. Tus pedidos anteriores quedan registrados a efectos de garantías o reclamos.",
+      },
+      {
+        title: "8. Modificaciones",
+        body: "Podemos actualizar estos términos. Te notificaremos por email ante cambios significativos.",
+      },
+      {
+        title: "9. Contacto",
+        body: "Para consultas escribinos a soporte@mitienda.ar",
+      },
+    ],
+  },
+};
+
+export default function TerminosPage({
+  searchParams,
+}: {
+  searchParams: { role?: string };
+}) {
+  const role = (searchParams.role as keyof typeof CONTENT) ?? "buyer";
+  const content = CONTENT[role] ?? CONTENT.buyer;
+
+  return (
+    <div className="min-h-screen bg-gray-950 text-white">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-950/90 backdrop-blur-xl border-b border-white/5">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
+              <ShoppingBag className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-lg font-bold text-white">MiTienda</span>
+          </Link>
+        </div>
+      </nav>
+
+      <div className="pt-28 pb-20 px-6">
+        <div className="max-w-3xl mx-auto">
+          <Link href="/registro" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-8">
+            <ArrowLeft className="h-4 w-4" /> Volver al registro
+          </Link>
+
+          <div className="flex items-center gap-3 mb-4">
+            <span className={`text-xs font-bold px-3 py-1 rounded-full border ${content.badge}`}>
+              {content.label}
+            </span>
+          </div>
+
+          <h1 className="text-4xl font-black mb-2">Términos y Condiciones</h1>
+          <p className="text-gray-500 text-sm mb-3">Última actualización: mayo 2026</p>
+
+          {/* Tabs por tipo */}
+          <div className="flex gap-2 mb-10 flex-wrap">
+            {(Object.entries(CONTENT) as [keyof typeof CONTENT, typeof CONTENT.buyer][]).map(([key, val]) => (
+              <Link
+                key={key}
+                href={`/terminos?role=${key}`}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+                  role === key ? val.badge : "border-white/10 text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                {val.label}
+              </Link>
+            ))}
+          </div>
+
+          <div className="space-y-8 text-gray-300">
+            {content.sections.map((s) => (
+              <section key={s.title}>
+                <h2 className={`text-xl font-bold mb-3 ${content.color}`}>{s.title}</h2>
+                {s.body && <p className="text-sm leading-relaxed">{s.body}</p>}
+                {s.list && (
+                  <ul className="list-disc list-inside space-y-1.5 mt-2 text-sm">
+                    {s.list.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
