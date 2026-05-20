@@ -304,7 +304,7 @@ const FEATURES = [
 ];
 
 const TESTIMONIALS = [
-  { name: "Valentina M.", role: "Dueña · Luna Moda", text: "Tengo 12 afiliados que venden mis productos en Instagram y TikTok. No les pago sueldo — solo comisión por venta real. Triplicamos las ventas en 4 meses.", img: "https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=150&q=80" },
+  { name: "Valentina M.", role: "Dueña · Luna Moda", text: "Tengo 12 afiliados que venden mis productos en Instagram y TikTok. No les pago sueldo — solo comisión por venta real. Triplicamos las ventas en 4 meses.", img: "https://i.pravatar.cc/150?img=47" },
   { name: "Camila R.", role: "Afiliada · Tucumán", text: "Empecé sin saber nada. Con el celular, compartiendo productos por WhatsApp e Instagram. Hoy gano $180.000 por mes sin salir de mi casa y sin haber invertido un peso.", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80" },
   { name: "Sofía G.", role: "Dueña · Bella Joyas", text: "Antes gastaba una fortuna en publicidad y llegaba a muy poca gente. Con los afiliados, mi tienda llegó a provincias que nunca hubiera podido alcanzar sola.", img: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=150&q=80" },
 ];
@@ -544,7 +544,7 @@ export default function Home() {
                     {/* Afiliado row */}
                     <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full overflow-hidden">
-                        <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=80&q=80" alt="" className="w-full h-full object-cover" />
+                        <img src="https://i.pravatar.cc/80?img=47" alt="" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-emerald-400 text-xs font-semibold">Valentina vendió $18.400</p>
