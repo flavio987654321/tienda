@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       const periodEnd = billing === "MONTHLY"
         ? new Date(now.getTime() + 30 * 86400000)
         : new Date(now.getTime() + 365 * 86400000);
+      const gracePeriodEndsAt = new Date(periodEnd.getTime() + 4 * 86400000);
 
       await prisma.subscription.upsert({
         where: { userId },
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
           status: "ACTIVE",
           currentPeriodStart: now,
           currentPeriodEnd: periodEnd,
-          gracePeriodEndsAt: null,
+          gracePeriodEndsAt,
           mpPaymentId: String(payment.id),
         },
         create: {
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
           trialEndsAt: now,
           currentPeriodStart: now,
           currentPeriodEnd: periodEnd,
+          gracePeriodEndsAt,
           mpPaymentId: String(payment.id),
         },
       });

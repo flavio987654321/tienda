@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-  const { plan, billing, cardToken } = await req.json();
+  const { plan, billing, cardToken, paymentMethodId } = await req.json();
   // plan: "OWNER" | "AFFILIATE"
   // billing: "MONTHLY" | "ANNUAL"
   // cardToken: token generado por MP.js en el frontend
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
         token: cardToken,
         description: `Suscripción ${plan === "OWNER" ? "Dueño de tienda" : "Afiliado"} - ${billing === "MONTHLY" ? "Mensual" : "Anual"}`,
         installments: 1,
-        payment_method_id: "visa", // se sobreescribe con el token
+        payment_method_id: paymentMethodId || "visa",
         payer: { email: user.email },
         notification_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/suscripcion/webhook`,
         metadata: {
@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       const periodEnd = billing === "MONTHLY"
         ? new Date(now.getTime() + 30 * 86400000)
         : new Date(now.getTime() + 365 * 86400000);
+      const gracePeriodEndsAt = new Date(periodEnd.getTime() + 4 * 86400000);
 
       await prisma.subscription.upsert({
         where: { userId: user.id },
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
           status: "ACTIVE",
           currentPeriodStart: now,
           currentPeriodEnd: periodEnd,
-          gracePeriodEndsAt: null,
+          gracePeriodEndsAt,
           mpPaymentId: String(mpData.id),
         },
         create: {
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
           trialEndsAt: now,
           currentPeriodStart: now,
           currentPeriodEnd: periodEnd,
+          gracePeriodEndsAt,
           mpPaymentId: String(mpData.id),
         },
       });
@@ -85,8 +87,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, status: "approved" });
     }
 
-    // Pago pendiente (ej: transferencia)
-    return NextResponse.json({ success: true, status: mpData.status });
+    // Pago pendiente (ej: transferencia bancaria) — no activar todavía
+    if (mpData.status === "pending" || mpData.status === "in_process") {
+      return NextResponse.json({ success: false, status: "pending", error: "Tu pago está siendo procesado. Te avisaremos por email cuando se confirme." }, { status: 202 });
+    }
+
+    return NextResponse.json({ error: "Estado de pago desconocido. Contactá soporte." }, { status: 400 });
   } catch (e: any) {
     console.error("SUSCRIPCION PAGO ERROR:", e?.message);
     return NextResponse.json({ error: "Error al procesar el pago" }, { status: 500 });

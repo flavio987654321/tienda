@@ -161,7 +161,7 @@ function RegistroContent() {
     const res = await fetch("/api/auth/registro", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, accountType }),
+      body: JSON.stringify({ ...form, accountType, billing }),
     });
     const data = await res.json();
     if (!res.ok) {

@@ -81,11 +81,17 @@ export default function PaymentModal({ plan, billing, amount, onClose, onSuccess
           const res = await fetch("/api/suscripcion/pagar", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ plan, billing, cardToken: token }),
+            body: JSON.stringify({ plan, billing, cardToken: token, paymentMethodId }),
           });
 
           const data = await res.json();
           setLoading(false);
+
+          if (res.status === 202) {
+            // Pago pendiente — informar sin redirigir
+            setError(data.error || "Tu pago está siendo procesado. Recibirás un email de confirmación.");
+            return;
+          }
 
           if (!res.ok) {
             setError(data.error || "Error al procesar el pago");

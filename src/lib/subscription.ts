@@ -20,7 +20,10 @@ export function getSubscriptionStatus(sub: {
 
   if (sub.status === "CANCELLED") return "CANCELLED";
   if (sub.status === "TRIAL") {
-    return now <= sub.trialEndsAt ? "TRIAL" : "EXPIRED";
+    if (now <= sub.trialEndsAt) return "TRIAL";
+    // Trial vencido → 4 días de gracia antes de bloquear
+    const trialGraceEnd = new Date(sub.trialEndsAt.getTime() + GRACE_DAYS * 86400000);
+    return now <= trialGraceEnd ? "GRACE" : "EXPIRED";
   }
   if (sub.status === "ACTIVE" && sub.currentPeriodEnd) {
     if (now <= sub.currentPeriodEnd) return "ACTIVE";

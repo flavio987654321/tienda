@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Demasiados intentos. Esperá un momento e intentá de nuevo." }, { status: 429 });
     }
 
-    const { name, email, password, storeName, accountType } = await req.json();
+    const { name, email, password, storeName, accountType, billing } = await req.json();
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
                 subscription: {
                   create: {
                     role: type === "OWNER" ? "OWNER" : "AFFILIATE",
-                    plan: "MONTHLY",
+                    plan: billing === "ANNUAL" ? "ANNUAL" : "MONTHLY",
                     status: "TRIAL",
                     trialEndsAt,
                   },
