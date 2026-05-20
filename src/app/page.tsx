@@ -159,18 +159,18 @@ type RealStore = {
 };
 
 const FEATURES = [
-  { icon: Store, title: "Tienda personalizable", desc: "10 plantillas, colores, fuentes, hero, tarjetas y más. Tu marca, tu estilo.", color: "#6366f1" },
-  { icon: Users, title: "Red de afiliados", desc: "Los afiliados se postulan. Vos aprobas quien puede vender con tu link.", color: "#8b5cf6" },
-  { icon: TrendingUp, title: "Comisiones automáticas", desc: "Cada venta por link afiliado genera comisión al instante en la billetera.", color: "#ec4899" },
-  { icon: Wallet, title: "Billetera digital", desc: "Saldo, historial de ganancias y retiros con un solo clic.", color: "#f59e0b" },
-  { icon: Truck, title: "Envíos integrados", desc: "Andreani, OCA y Correo Argentino con tracking automático.", color: "#10b981" },
-  { icon: Shield, title: "Control total", desc: "Vos decidis que afiliados activar, que stock mostrar y como presentarte.", color: "#0ea5e9" },
+  { icon: Store, title: "Tienda personalizable", desc: "Elegí entre 10 plantillas, personalizá colores, fuentes y fotos. Tu marca, exactamente como la imaginás.", color: "#6366f1" },
+  { icon: Users, title: "Afiliados que venden por vos", desc: "Los afiliados se postulan, vos aprobás. Cada uno sale a vender con su link — sin que pagues un sueldo.", color: "#8b5cf6" },
+  { icon: TrendingUp, title: "Comisiones automáticas", desc: "Cuando el afiliado genera una venta, la comisión se acredita sola en su billetera. Sin planillas ni cálculos.", color: "#ec4899" },
+  { icon: Wallet, title: "Billetera digital", desc: "Cada afiliado ve su saldo en tiempo real y retira sus ganancias cuando quiere. Simple y transparente.", color: "#f59e0b" },
+  { icon: Truck, title: "Envíos integrados", desc: "Andreani, OCA y Correo Argentino con seguimiento automático. Tus clientes saben dónde está su pedido.", color: "#10b981" },
+  { icon: Shield, title: "Control total", desc: "Vos decidís qué afiliados activar, qué stock mostrar y cómo presentarte. Tu tienda, tus reglas.", color: "#0ea5e9" },
 ];
 
 const TESTIMONIALS = [
-  { name: "Valentina M.", role: "Dueña · Luna Moda", text: "En 3 meses duplicamos las ventas gracias al sistema de afiliados. Es increiblemente facil de usar.", img: "https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=150&q=80" },
-  { name: "Camila R.", role: "Afiliada", text: "Gano $180k por mes compartiendo links desde mi celular. Sin invertir nada, solo tiempo.", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80" },
-  { name: "Sofía G.", role: "Dueña · Bella Joyas", text: "La tienda quedó hermosa sin saber nada de diseño. Y las comisiones se calculan solas.", img: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=150&q=80" },
+  { name: "Valentina M.", role: "Dueña · Luna Moda", text: "Tengo 12 afiliados que venden mis productos en Instagram y TikTok. No les pago sueldo — solo comisión por venta real. Triplicamos las ventas en 4 meses.", img: "https://images.unsplash.com/photo-1494790108755-2616b612b786?auto=format&fit=crop&w=150&q=80" },
+  { name: "Camila R.", role: "Afiliada · Tucumán", text: "Empecé sin saber nada. Con el celular, compartiendo productos por WhatsApp e Instagram. Hoy gano $180.000 por mes sin salir de mi casa y sin haber invertido un peso.", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80" },
+  { name: "Sofía G.", role: "Dueña · Bella Joyas", text: "Antes gastaba una fortuna en publicidad y llegaba a muy poca gente. Con los afiliados, mi tienda llegó a provincias que nunca hubiera podido alcanzar sola.", img: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=150&q=80" },
 ];
 
 const SLOTS = 6;
@@ -304,18 +304,19 @@ export default function Home() {
           <motion.div initial="hidden" animate="show" variants={stagger}>
             <motion.div variants={fadeUp} className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 px-4 py-1.5 rounded-full text-sm font-medium mb-8">
               <Star className="h-3.5 w-3.5 fill-indigo-400 text-indigo-400" />
-              Plataforma #1 para afiliados argentinos
+              Generamos trabajo real en Argentina
             </motion.div>
 
             <motion.h1 variants={fadeUp} className="text-5xl lg:text-7xl font-black leading-[1.05] mb-6 tracking-tight">
-              Vendé más.<br />
-              <span className="gradient-text">Con equipo.</span><br />
-              Sin límites.
+              Tu tienda.<br />
+              <span className="gradient-text">Tu equipo.</span><br />
+              Todos ganan.
             </motion.h1>
 
             <motion.p variants={fadeUp} className="text-lg text-gray-400 mb-10 leading-relaxed max-w-lg">
-              Las tiendas cargan productos y aprueban afiliados.
-              Los afiliados comparten su link y cobran comisiones automaticamente.
+              Los dueños de tienda consiguen un equipo de ventas sin pagar sueldos.
+              Los afiliados trabajan desde casa, con el celular, sin invertir un peso.
+              Cada venta que se genera, los dos cobran.
             </motion.p>
 
             <motion.div variants={fadeUp} className="flex flex-wrap gap-4 mb-14">
@@ -337,9 +338,9 @@ export default function Home() {
 
             <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6">
               {[
-                { value: "1.200+", label: "Tiendas activas" },
-                { value: "3.800+", label: "Afiliados" },
-                { value: "$12M+", label: "Ventas/mes" },
+                { value: "1.200+", label: "Tiendas con equipo" },
+                { value: "3.800+", label: "Afiliados ganando" },
+                { value: "$12M+", label: "Distribuido/mes" },
               ].map((s) => (
                 <div key={s.label} className="border-l border-indigo-500/30 pl-4">
                   <p className="text-3xl font-black gradient-text">{s.value}</p>
@@ -468,8 +469,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} variants={stagger} className="text-center mb-16">
             <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Plataforma completa</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-4">Todo lo que necesitás para vender</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">Tienda, productos, pedidos, afiliados, comisiones y retiros en un solo panel.</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-4">Todo en uno. Sin complicaciones.</motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">Tienda, afiliados, comisiones, envíos y cobros en un solo lugar. Para que vos te enfoques en vender.</motion.p>
           </motion.div>
 
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -568,14 +569,15 @@ export default function Home() {
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-16">
             <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">Simple y rápido</motion.p>
             <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-4">¿Cómo funciona?</motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-400 text-lg max-w-xl mx-auto">Tres pasos para tener tu tienda con equipo propio trabajando para vos.</motion.p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
             <div className="hidden md:block absolute top-10 left-[calc(16.66%+1rem)] right-[calc(16.66%+1rem)] h-px bg-gradient-to-r from-indigo-600/0 via-indigo-600/50 to-indigo-600/0" />
             {[
-              { n: "01", title: "Creás tu tienda", desc: "Registrate, elegí una plantilla, personalizá colores y cargá tus productos en minutos.", icon: Store },
-              { n: "02", title: "Aprobas afiliados", desc: "Los afiliados se postulan. Revisas su perfil y decidis quien puede vender con tu marca.", icon: Users },
-              { n: "03", title: "Vendés con equipo", desc: "Cada venta por link afiliado suma comisión automáticamente. Vos crecés, ellas también.", icon: TrendingUp },
+              { n: "01", title: "Creás tu tienda", desc: "Registrate en minutos, personalizá con tus colores y cargá tus productos. Sin conocimientos técnicos, sin pagar a un diseñador.", icon: Store },
+              { n: "02", title: "Sumás afiliados", desc: "Los afiliados ven tu tienda y se postulan para vender. Vos revisás y aprobás quién representa tu marca. El control es tuyo.", icon: Users },
+              { n: "03", title: "Todos cobran", desc: "Cada venta por link afiliado genera comisión automática para ellos y ganancia para vos. Sin sueldos fijos, sin riesgos.", icon: TrendingUp },
             ].map(({ n, title, desc, icon: Icon }) => (
               <motion.div key={n} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: parseInt(n) * 0.15 }} className="relative text-center">
                 <div className="w-20 h-20 bg-indigo-600/10 border border-indigo-500/20 rounded-3xl flex items-center justify-center mx-auto mb-5">
@@ -674,29 +676,29 @@ export default function Home() {
         <div className="relative max-w-7xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
             <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">Para todos</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-4">Tres caminos, una plataforma</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-400 text-lg">¿Tenés tienda, sos afiliada o querés comprar? Cada perfil tiene su panel propio.</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-4">¿Cuál es tu rol?</motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-400 text-lg">Tenés tienda, querés trabajar como afiliado o simplemente comprar — hay un lugar para vos.</motion.p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
                 icon: Store, color: "#6366f1", gradient: "from-indigo-600/20 to-purple-600/10", border: "border-indigo-500/20",
-                title: "Para dueñas", sub: "Creá y administrá tu tienda",
-                items: ["Tienda propia con dominio personalizable", "Hasta 10 plantillas de diseño distintas", "Panel de afiliados con aprobacion", "Control de stock, pedidos y envios", "Comisiones automaticas y reportes"],
-                cta: "Crear mi tienda", href: "/registro",
+                title: "Tengo una tienda", sub: "Armá tu equipo de ventas sin pagar sueldos",
+                items: ["Tienda online con dominio personalizable", "10 plantillas de diseño sin código", "Afiliados que venden por vos — gratis hasta que venden", "Control total: vos aprobás quién entra", "Comisiones automáticas y reportes en tiempo real"],
+                cta: "Crear mi tienda gratis", href: "/registro",
               },
               {
                 icon: Users, color: "#a855f7", gradient: "from-purple-600/20 to-pink-600/10", border: "border-purple-500/20",
-                title: "Para afiliadas", sub: "Ganás sin tener tienda propia",
-                items: ["Postulate a tiendas activas", "Link de afiliado con tracking propio", "Billetera digital con historial", "Retirá tus ganancias cuando quieras", "Panel simple desde el celular"],
-                cta: "Quiero ser afiliada", href: "/vendedoras",
+                title: "Quiero trabajar", sub: "Trabajá desde casa sin invertir un peso",
+                items: ["Postulate a tiendas y empezá a vender ya", "Tu propio link con seguimiento en tiempo real", "Cuanto más compartís, más ganás — sin límite", "Billetera digital con tu historial completo", "Retirá tus ganancias cuando quieras"],
+                cta: "Quiero ser afiliado", href: "/vendedoras",
               },
               {
                 icon: ShoppingCart, color: "#10b981", gradient: "from-emerald-600/20 to-teal-600/10", border: "border-emerald-500/20",
-                title: "Para compradores", sub: "Comprá en tiendas argentinas",
-                items: ["Encontrá tiendas locales verificadas", "Comprá con Mercado Pago seguro", "Seguí tus envíos en tiempo real", "Guardá favoritos y dejá reseñas", "Panel de pedidos desde el celular"],
-                cta: "Ver tiendas", href: "/tiendas",
+                title: "Quiero comprar", sub: "Descubrí tiendas argentinas en un solo lugar",
+                items: ["Tiendas locales verificadas y activas", "Pagá con Mercado Pago de forma segura", "Seguí tus envíos en tiempo real", "Guardá favoritos y dejá reseñas", "Tu historial de pedidos siempre a mano"],
+                cta: "Explorar tiendas", href: "/tiendas",
               },
             ].map(({ icon: Icon, color, gradient, border, title, sub, items, cta, href }) => (
               <motion.div key={title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
@@ -732,8 +734,8 @@ export default function Home() {
       <section className="py-24 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
-            <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Testimonios reales</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-900">Lo que dicen nuestras usuarias</motion.h2>
+            <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Historias reales</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-900">Personas que ya están ganando</motion.h2>
           </motion.div>
 
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger} className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -774,30 +776,20 @@ export default function Home() {
 
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
             <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Quiénes somos</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-900 mb-6">Construimos la plataforma que quisiéramos usar</motion.h2>
+            <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-900 mb-6">Queremos que la gente tenga trabajo.</motion.h2>
             <motion.p variants={fadeUp} className="text-gray-500 leading-relaxed mb-5">
-              Somos un equipo argentino que entendio el potencial de las redes de afiliados. Vimos como las tiendas perdian ventas por no tener herramientas para gestionar su equipo de forma profesional.
+              Somos un equipo argentino y sabemos cómo está el país. Vimos que había dos problemas sin resolver: dueños de tienda sin equipo para vender, y personas con ganas de trabajar sin oportunidades reales.
             </motion.p>
             <motion.p variants={fadeUp} className="text-gray-500 leading-relaxed mb-8">
-              MiTienda nacio para democratizar el ecommerce: que cualquier persona pueda tener una tienda online hermosa, con afiliados, pagos y envios, sin necesitar conocimientos tecnicos.
+              MiTienda une esos dos mundos. Un dueño puede tener 10, 20 o 50 personas vendiendo sus productos en redes sin pagar un sueldo fijo. Y cada uno de esos afiliados gana dinero real desde su casa, con su celular, sin haber puesto un peso.
             </motion.p>
-            <motion.div variants={fadeUp} className="grid grid-cols-2 gap-5">
-              {[
-                { icon: Globe, label: "100% argentino", desc: "Medios de pago y envíos locales" },
-                { icon: Shield, label: "Datos seguros", desc: "Tus datos y los de tus clientes" },
-                { icon: Zap, label: "Siempre activo", desc: "Uptime 99.9% garantizado" },
-                { icon: MessageCircle, label: "Soporte real", desc: "Respondemos en menos de 24hs" },
-              ].map(({ icon: Icon, label, desc }) => (
-                <div key={label} className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Icon className="h-5 w-5 text-indigo-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 text-sm">{label}</p>
-                    <p className="text-gray-400 text-xs mt-0.5">{desc}</p>
-                  </div>
-                </div>
-              ))}
+            <motion.div variants={fadeUp} className="flex flex-wrap gap-4">
+              <Link href="/quienes-somos" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-500/25 hover:scale-105">
+                Conocé nuestra historia <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href="/vendedoras" className="inline-flex items-center gap-2 border border-gray-200 hover:border-indigo-300 text-gray-600 hover:text-indigo-600 px-6 py-3 rounded-2xl font-semibold transition-all hover:bg-indigo-50">
+                Quiero ser afiliado
+              </Link>
             </motion.div>
           </motion.div>
         </div>
@@ -809,23 +801,27 @@ export default function Home() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-indigo-600/15 rounded-full blur-3xl" />
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="relative text-center max-w-3xl mx-auto px-6">
           <h2 className="text-5xl lg:text-6xl font-black text-white mb-6 leading-tight">
-            ¿Lista para <span className="gradient-text">vender mejor?</span>
+            Empezá hoy.<br />
+            <span className="gradient-text">Es gratis.</span>
           </h2>
-          <p className="text-gray-400 text-xl mb-10">Creá tu tienda gratis hoy. Sin tarjeta de crédito. Sin límite de tiempo.</p>
+          <p className="text-gray-400 text-xl mb-10">
+            Si tenés una tienda, armá tu equipo sin pagar sueldos.<br />
+            Si buscás trabajo, empezá a ganar desde tu celular.
+          </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/registro"
-              className="group flex items-center justify-center gap-2.5 bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-5 rounded-2xl font-bold text-xl transition-all shadow-2xl shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105"
+              href="/registro?plan=owner"
+              className="group flex items-center justify-center gap-2.5 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-5 rounded-2xl font-bold text-lg transition-all shadow-2xl shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105"
             >
-              Crear cuenta gratis
+              Crear mi tienda gratis
               <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
             </Link>
-            <button
-              onClick={() => setContact(true)}
-              className="flex items-center justify-center gap-2 border border-white/15 hover:border-white/30 text-gray-300 hover:text-white px-10 py-5 rounded-2xl font-bold text-xl transition-all hover:bg-white/5"
+            <Link
+              href="/vendedoras"
+              className="flex items-center justify-center gap-2 border border-white/15 hover:border-white/30 text-gray-300 hover:text-white px-8 py-5 rounded-2xl font-bold text-lg transition-all hover:bg-white/5"
             >
-              <Phone className="h-5 w-5" /> Contactar
-            </button>
+              <Users className="h-5 w-5" /> Quiero ser afiliado
+            </Link>
           </div>
         </motion.div>
       </section>
