@@ -45,7 +45,7 @@ const CONTENT = {
       },
       {
         title: "5. Retención de datos",
-        body: "Conservamos tus datos mientras tu cuenta esté activa. Si cancelás, mantenemos los datos por 90 días adicionales para resolver disputas pendientes. Podés solicitar la eliminación completa escribiendo a soporte@mitienda.ar",
+        body: "Conservamos tus datos mientras tu cuenta esté activa. Si cancelás, mantenemos los datos por 90 días adicionales para resolver disputas pendientes. Podés solicitar la eliminación completa escribiendo a marketplacemitienda@gmail.com",
       },
       {
         title: "6. Seguridad",
@@ -53,7 +53,7 @@ const CONTENT = {
       },
       {
         title: "7. Tus derechos",
-        body: "Podés solicitar en cualquier momento acceso, corrección o eliminación de tus datos enviando un email a soporte@mitienda.ar con el asunto 'Solicitud de datos'.",
+        body: "Podés solicitar en cualquier momento acceso, corrección o eliminación de tus datos enviando un email a marketplacemitienda@gmail.com con el asunto 'Solicitud de datos'.",
       },
       {
         title: "8. Cambios a esta política",
@@ -112,7 +112,7 @@ const CONTENT = {
       },
       {
         title: "7. Tus derechos",
-        body: "Podés solicitar acceso, corrección o eliminación de tus datos en cualquier momento escribiendo a soporte@mitienda.ar con el asunto 'Solicitud de datos'.",
+        body: "Podés solicitar acceso, corrección o eliminación de tus datos en cualquier momento escribiendo a marketplacemitienda@gmail.com con el asunto 'Solicitud de datos'.",
       },
       {
         title: "8. Cambios a esta política",
@@ -173,7 +173,7 @@ const CONTENT = {
       },
       {
         title: "8. Tus derechos",
-        body: "Podés solicitar acceso, corrección o eliminación de tus datos en cualquier momento escribiendo a soporte@mitienda.ar o desde la configuración de tu cuenta.",
+        body: "Podés solicitar acceso, corrección o eliminación de tus datos en cualquier momento escribiendo a marketplacemitienda@gmail.com o desde la configuración de tu cuenta.",
       },
       {
         title: "9. Cambios a esta política",
@@ -183,12 +183,13 @@ const CONTENT = {
   },
 };
 
-export default function PrivacidadPage({
+export default async function PrivacidadPage({
   searchParams,
 }: {
-  searchParams: { role?: string };
+  searchParams: Promise<{ role?: string }>;
 }) {
-  const role = (searchParams.role as keyof typeof CONTENT) ?? "buyer";
+  const { role: roleParam } = await searchParams;
+  const role = (roleParam as keyof typeof CONTENT) ?? "buyer";
   const content = CONTENT[role] ?? CONTENT.buyer;
 
   return (

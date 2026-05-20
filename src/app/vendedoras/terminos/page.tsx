@@ -194,7 +194,7 @@ export default function TerminosAfiliados() {
             <p>
               Ante un conflicto entre el/la Afiliado/a y el/la Titular (comisiones no pagadas, baja
               indebida, fraude u otros), cualquiera de las partes puede iniciar una disputa escribiendo
-              a <strong className="text-white">soporte@mitienda.ar</strong> con el asunto{" "}
+              a <strong className="text-white">marketplacemitienda@gmail.com</strong> con el asunto{" "}
               <em>"Disputa de afiliado"</em>, detallando el reclamo y adjuntando evidencia relevante.
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-400 mt-3">

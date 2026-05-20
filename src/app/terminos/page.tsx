@@ -56,7 +56,7 @@ const CONTENT = {
       },
       {
         title: "9. Contacto",
-        body: "Para consultas escribinos a soporte@mitienda.ar",
+        body: "Para consultas escribinos a marketplacemitienda@gmail.com",
       },
     ],
   },
@@ -114,7 +114,7 @@ const CONTENT = {
       },
       {
         title: "9. Contacto",
-        body: "Para consultas escribinos a soporte@mitienda.ar",
+        body: "Para consultas escribinos a marketplacemitienda@gmail.com",
       },
     ],
   },
@@ -157,7 +157,7 @@ const CONTENT = {
       },
       {
         title: "6. Devoluciones y reembolsos",
-        body: "Las políticas de devolución y reembolso son definidas por cada tienda. Te recomendamos consultar la política de la tienda antes de comprar. En caso de incumplimiento grave por parte de una tienda, podés reportarlo a soporte@mitienda.ar",
+        body: "Las políticas de devolución y reembolso son definidas por cada tienda. Te recomendamos consultar la política de la tienda antes de comprar. En caso de incumplimiento grave por parte de una tienda, podés reportarlo a marketplacemitienda@gmail.com",
       },
       {
         title: "7. Cancelación de cuenta",
@@ -169,18 +169,19 @@ const CONTENT = {
       },
       {
         title: "9. Contacto",
-        body: "Para consultas escribinos a soporte@mitienda.ar",
+        body: "Para consultas escribinos a marketplacemitienda@gmail.com",
       },
     ],
   },
 };
 
-export default function TerminosPage({
+export default async function TerminosPage({
   searchParams,
 }: {
-  searchParams: { role?: string };
+  searchParams: Promise<{ role?: string }>;
 }) {
-  const role = (searchParams.role as keyof typeof CONTENT) ?? "buyer";
+  const { role: roleParam } = await searchParams;
+  const role = (roleParam as keyof typeof CONTENT) ?? "buyer";
   const content = CONTENT[role] ?? CONTENT.buyer;
 
   return (
