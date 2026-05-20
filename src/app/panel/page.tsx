@@ -11,6 +11,7 @@ export default async function PanelPage() {
     select: { id: true },
   });
 
+  if (user.role === "ADMIN") redirect("/admin");
   if (store || user.role === "OWNER") redirect("/dashboard");
   if (user.role === "SELLER") redirect("/vendedoras");
 
