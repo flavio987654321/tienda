@@ -130,20 +130,20 @@ function PreciosContent() {
           </div>
 
           {/* Toggle mensual/anual */}
-          <div className="flex items-center justify-center gap-4 mb-12">
-            <span className={`text-sm font-medium ${!isAnnual ? "text-white" : "text-gray-500"}`}>Mensual</span>
-            <button
-              onClick={() => setIsAnnual(!isAnnual)}
-              className={`relative w-14 h-7 rounded-full transition-colors ${isAnnual ? "bg-indigo-600" : "bg-gray-700"}`}
-            >
-              <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${isAnnual ? "translate-x-8" : "translate-x-1"}`} />
-            </button>
-            <div className="flex items-center gap-2">
-              <span className={`text-sm font-medium ${isAnnual ? "text-white" : "text-gray-500"}`}>Anual</span>
-              <span className="bg-emerald-500/15 text-emerald-400 text-xs font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
-                3 meses gratis
-              </span>
+          <div className="flex flex-col items-center gap-3 mb-12">
+            <div className="flex items-center gap-4">
+              <span className={`text-sm font-medium w-16 text-right ${!isAnnual ? "text-white" : "text-gray-500"}`}>Mensual</span>
+              <button
+                onClick={() => setIsAnnual(!isAnnual)}
+                className={`relative w-14 h-7 rounded-full transition-colors shrink-0 ${isAnnual ? "bg-indigo-600" : "bg-gray-700"}`}
+              >
+                <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${isAnnual ? "translate-x-8" : "translate-x-1"}`} />
+              </button>
+              <span className={`text-sm font-medium w-16 ${isAnnual ? "text-white" : "text-gray-500"}`}>Anual</span>
             </div>
+            <span className="bg-emerald-500/15 text-emerald-400 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/20">
+              3 meses gratis pagando anual
+            </span>
           </div>
 
           {/* Cards */}
