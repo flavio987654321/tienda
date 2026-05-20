@@ -4,28 +4,30 @@ import { getCurrentUser } from "@/lib/auth-session";
 
 const ADMIN_EMAIL = "qrdreamcar@gmail.com";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user || user.email !== ADMIN_EMAIL) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
+  const { id } = await params;
   const { approved } = await req.json();
 
   const testimonial = await prisma.testimonial.update({
-    where: { id: params.id },
+    where: { id },
     data: { approved: Boolean(approved) },
   });
 
   return NextResponse.json(testimonial);
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user || user.email !== ADMIN_EMAIL) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  await prisma.testimonial.delete({ where: { id: params.id } });
+  const { id } = await params;
+  await prisma.testimonial.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }
