@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/components/AuthProvider";
@@ -977,6 +977,7 @@ const STATUS: Record<string, { label: string; cls: string; dot: string }> = {
 export default function VendedorasPage() {
   const { user, status: sessionStatus, signOut } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -1032,6 +1033,19 @@ export default function VendedorasPage() {
   const activeStores = approvedStores.filter((s) => s.affiliatesEnabled);
   const pendingStores = myAffiliations.filter((s) => s.affiliates[0]?.status === "PENDING");
   const availableStores = stores.filter((s) => s.affiliates.length === 0 || ["REJECTED", "REMOVED"].includes(s.affiliates[0]?.status));
+  const sortedAvailable = [...availableStores].sort((a, b) => (b.commissionRate * 10 + b._count.products) - (a.commissionRate * 10 + a._count.products));
+  const topStores = sortedAvailable.slice(0, 3);
+
+  // Auto-open apply modal when coming from /vendedoras/tiendas?apply={id}
+  useEffect(() => {
+    const applyId = searchParams.get("apply");
+    if (!applyId || stores.length === 0 || sessionStatus !== "authenticated") return;
+    const store = stores.find((s) => s.id === applyId);
+    if (store) {
+      setApplyStore(store);
+      router.replace("/vendedoras", { scroll: false });
+    }
+  }, [searchParams, stores, sessionStatus]);
 
   function handleApplySuccess(storeId: string, affiliateId: string, storeName: string) {
     setStores((prev) =>
@@ -1228,7 +1242,7 @@ export default function VendedorasPage() {
               {[
                 { label: "Tiendas activas", value: activeStores.length, icon: CheckCircle, color: "text-emerald-400" },
                 { label: "Solicitudes pendientes", value: pendingStores.length, icon: Clock, color: "text-yellow-400" },
-                { label: "Tiendas disponibles", value: availableStores.length, icon: Store, color: "text-indigo-400" },
+                { label: "Tiendas disponibles", value: availableStores.length > 0 ? `${availableStores.length} →` : "0", icon: Store, color: "text-indigo-400", link: availableStores.length > 0 ? "/vendedoras/tiendas" : undefined },
                 { label: "Mi billetera", value: "Ver →", icon: Wallet, color: "text-purple-400", link: "/vendedoras/billetera" },
               ].map(({ label, value, icon: Icon, color, link }) => (
                 link ? (
@@ -1361,13 +1375,22 @@ export default function VendedorasPage() {
             </section>
           )}
 
-          {/* Available stores */}
+          {/* Available stores — top 3 */}
           <section>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                {availableStores.length > 0 ? "Descubrí más tiendas" : "Tiendas disponibles"}
-              </h2>
-              <span className="text-sm text-gray-500">{availableStores.length} para postularte</span>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                  {availableStores.length > 0 ? "Mejores tiendas para sumarte" : "Tiendas disponibles"}
+                </h2>
+                {availableStores.length > 0 && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Ordenadas por comisión y catálogo</p>
+                )}
+              </div>
+              {availableStores.length > 0 && (
+                <Link href="/vendedoras/tiendas" className="flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold transition-colors">
+                  Ver todas <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
             </div>
             {availableStores.length === 0 ? (
               <div className="bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-white/5 rounded-3xl p-12 text-center shadow-sm">
@@ -1376,11 +1399,20 @@ export default function VendedorasPage() {
                 <p className="text-gray-400 dark:text-gray-600 text-sm mt-1">Volvé más tarde para ver nuevas oportunidades.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {availableStores.map((store) => (
-                  <StoreCard key={store.id} store={store} onApply={() => setApplyStore(store)} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {topStores.map((store) => (
+                    <StoreCard key={store.id} store={store} onApply={() => setApplyStore(store)} />
+                  ))}
+                </div>
+                {availableStores.length > 3 && (
+                  <div className="mt-4 text-center">
+                    <Link href="/vendedoras/tiendas" className="inline-flex items-center gap-2 bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/40 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-6 py-3 rounded-2xl text-sm font-semibold transition-all shadow-sm">
+                      Ver las {availableStores.length} tiendas disponibles <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                )}
+              </>
             )}
           </section>
         </div>
