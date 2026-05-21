@@ -3,11 +3,19 @@ import { nanoid } from "nanoid";
 
 export type RewardLevel = "BRONZE" | "SILVER" | "GOLD" | "DIAMOND";
 
-// Umbrales de comisión mensual — difíciles de alcanzar para que el premio valga
+// Umbrales de comisión mensual para tiendas minoristas
 export const LEVEL_THRESHOLDS = {
   DIAMOND: 150000,
   GOLD:     50000,
   SILVER:   15000,
+  BRONZE:       1,
+};
+
+// Umbrales para tiendas mayoristas (ventas más grandes, comisiones más altas por transacción)
+export const LEVEL_THRESHOLDS_MAYORISTA = {
+  DIAMOND: 750000,
+  GOLD:    250000,
+  SILVER:   75000,
   BRONZE:       1,
 };
 
@@ -30,11 +38,12 @@ const DIAMOND_STREAK_BONUS: Record<string, number> = {
   ANNUAL:  40, // 40% off en tiendas
 };
 
-export function calcularNivel(comisionDelMes: number): RewardLevel {
-  if (comisionDelMes >= LEVEL_THRESHOLDS.DIAMOND) return "DIAMOND";
-  if (comisionDelMes >= LEVEL_THRESHOLDS.GOLD)    return "GOLD";
-  if (comisionDelMes >= LEVEL_THRESHOLDS.SILVER)  return "SILVER";
-  if (comisionDelMes >= LEVEL_THRESHOLDS.BRONZE)  return "BRONZE";
+export function calcularNivel(comisionDelMes: number, esMayorista = false): RewardLevel {
+  const t = esMayorista ? LEVEL_THRESHOLDS_MAYORISTA : LEVEL_THRESHOLDS;
+  if (comisionDelMes >= t.DIAMOND) return "DIAMOND";
+  if (comisionDelMes >= t.GOLD)    return "GOLD";
+  if (comisionDelMes >= t.SILVER)  return "SILVER";
+  if (comisionDelMes >= t.BRONZE)  return "BRONZE";
   return "BRONZE";
 }
 
@@ -101,7 +110,10 @@ export async function generarCuponesMensuales(
 ): Promise<void> {
   const affiliate = await prisma.affiliate.findUnique({
     where: { id: affiliateId },
-    include: { user: { include: { subscription: true } } },
+    include: {
+      user: { include: { subscription: true } },
+      store: { select: { tieneVentaMayorista: true } },
+    },
   });
 
   if (!affiliate || !affiliate.isActive) return;
@@ -110,8 +122,9 @@ export async function generarCuponesMensuales(
   if (!subscription || !["ACTIVE", "TRIAL"].includes(subscription.status)) return;
 
   const plan = subscription.plan as "MONTHLY" | "ANNUAL";
+  const esMayorista = affiliate.store.tieneVentaMayorista;
   const comisiones = await getComisionesDelMes(affiliateId, year, month);
-  const nivel = calcularNivel(comisiones);
+  const nivel = calcularNivel(comisiones, esMayorista);
 
   if (nivel === "BRONZE") return;
 
@@ -192,8 +205,13 @@ export async function expirarCuponesVencidos(): Promise<void> {
 }
 
 // Obtener nivel actual de un afiliado (mes en curso)
-export async function getNivelActual(affiliateId: string): Promise<RewardLevel> {
+export async function getNivelActual(affiliateId: string): Promise<{ nivel: RewardLevel; esMayorista: boolean }> {
   const now = new Date();
+  const affiliate = await prisma.affiliate.findUnique({
+    where: { id: affiliateId },
+    select: { store: { select: { tieneVentaMayorista: true } } },
+  });
+  const esMayorista = affiliate?.store.tieneVentaMayorista ?? false;
   const total = await getComisionesDelMes(affiliateId, now.getFullYear(), now.getMonth() + 1);
-  return calcularNivel(total);
+  return { nivel: calcularNivel(total, esMayorista), esMayorista };
 }

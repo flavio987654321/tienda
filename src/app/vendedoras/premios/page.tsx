@@ -29,6 +29,7 @@ interface PageData {
   nivelColor: string;
   plan: string;
   rachaDiamante: number;
+  esMayorista: boolean;
 }
 
 const NIVEL_ICONS: Record<string, string> = {
@@ -229,19 +230,24 @@ export default function PremiosPage() {
         {/* Tabla de niveles */}
         {data && (
           <section>
-            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Niveles y premios</h2>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300">Niveles y premios</h2>
+              {data.esMayorista && (
+                <span className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 px-2 py-0.5 rounded-full font-semibold">Tienda mayorista</span>
+              )}
+            </div>
             <div className="space-y-2">
               {[
                 {
                   level: "BRONZE", icon: "🥉", label: "Bronce", color: "#cd7f32",
-                  range: "Hasta $14.999 en comisiones",
+                  range: data.esMayorista ? "Hasta $74.999 en comisiones" : "Hasta $14.999 en comisiones",
                   premios: ["Solo insignia — seguí vendiendo para desbloquear premios"],
                   active: data.nivelActual === "BRONZE",
                   extra: null,
                 },
                 {
                   level: "SILVER", icon: "🥈", label: "Plata", color: "#9ca3af",
-                  range: "$15.000 – $49.999 en comisiones",
+                  range: data.esMayorista ? "$75.000 – $249.999 en comisiones" : "$15.000 – $49.999 en comisiones",
                   premios: data.plan === "ANNUAL"
                     ? ["Cupón 15% off en tiendas que aceptan premios"]
                     : ["Cupón 10% off en tu próxima suscripción", "Cupón 10% off en tiendas que aceptan premios"],
@@ -250,7 +256,7 @@ export default function PremiosPage() {
                 },
                 {
                   level: "GOLD", icon: "🥇", label: "Oro", color: "#f59e0b",
-                  range: "$50.000 – $149.999 en comisiones",
+                  range: data.esMayorista ? "$250.000 – $749.999 en comisiones" : "$50.000 – $149.999 en comisiones",
                   premios: data.plan === "ANNUAL"
                     ? ["Cupón 20% off en tiendas que aceptan premios"]
                     : ["Cupón 20% off en tu próxima suscripción", "Cupón 15% off en tiendas que aceptan premios"],
@@ -259,7 +265,7 @@ export default function PremiosPage() {
                 },
                 {
                   level: "DIAMOND", icon: "💎", label: "Diamante", color: "#6366f1",
-                  range: "$150.000+ en comisiones",
+                  range: data.esMayorista ? "$750.000+ en comisiones" : "$150.000+ en comisiones",
                   premios: data.plan === "ANNUAL"
                     ? ["Cupón 25% off en tiendas que aceptan premios"]
                     : ["Mes de suscripción gratis", "Cupón 20% off en tiendas que aceptan premios"],

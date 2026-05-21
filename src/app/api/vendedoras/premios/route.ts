@@ -9,22 +9,24 @@ export async function GET() {
 
   const userId = currentUser.id;
 
-  // Obtener cupones de premio del usuario
   const cupones = await prisma.affiliateRewardCoupon.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
   });
 
-  // Obtener nivel actual basado en comisiones del mes en curso
   const affiliates = await prisma.affiliate.findMany({
     where: { userId, isActive: true },
     select: { id: true },
   });
 
   let nivelActual = "BRONZE";
+  let esMayorista = false;
   let rachaDiamante = 0;
+
   if (affiliates.length > 0) {
-    nivelActual = await getNivelActual(affiliates[0].id);
+    const result = await getNivelActual(affiliates[0].id);
+    nivelActual = result.nivel;
+    esMayorista = result.esMayorista;
   }
   if (nivelActual === "DIAMOND") {
     rachaDiamante = await calcularRachaDiamante(userId);
@@ -42,5 +44,6 @@ export async function GET() {
     nivelColor: getNivelColor(nivelActual as any),
     plan: subscription?.plan ?? "MONTHLY",
     rachaDiamante,
+    esMayorista,
   });
 }
