@@ -1029,6 +1029,7 @@ export default function VendedorasPage() {
   const isLoggedIn = sessionStatus === "authenticated";
   const myAffiliations = stores.filter((s) => s.affiliates.length > 0);
   const approvedStores = myAffiliations.filter((s) => s.affiliates[0]?.status === "APPROVED");
+  const activeStores = approvedStores.filter((s) => s.affiliatesEnabled);
   const pendingStores = myAffiliations.filter((s) => s.affiliates[0]?.status === "PENDING");
   const availableStores = stores.filter((s) => s.affiliates.length === 0 || ["REJECTED", "REMOVED"].includes(s.affiliates[0]?.status));
 
@@ -1225,7 +1226,7 @@ export default function VendedorasPage() {
             {/* Quick counters */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { label: "Tiendas activas", value: approvedStores.length, icon: CheckCircle, color: "text-emerald-400" },
+                { label: "Tiendas activas", value: activeStores.length, icon: CheckCircle, color: "text-emerald-400" },
                 { label: "Solicitudes pendientes", value: pendingStores.length, icon: Clock, color: "text-yellow-400" },
                 { label: "Tiendas disponibles", value: availableStores.length, icon: Store, color: "text-indigo-400" },
                 { label: "Mi billetera", value: "Ver →", icon: Wallet, color: "text-purple-400", link: "/vendedoras/billetera" },
@@ -1251,9 +1252,16 @@ export default function VendedorasPage() {
           {approvedStores.length > 0 && (
             <section>
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Mis tiendas activas</h2>
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2 py-0.5 rounded-full">{approvedStores.length} activas</span>
+                <div className={`w-2 h-2 rounded-full ${activeStores.length > 0 ? "bg-emerald-400 animate-pulse" : "bg-gray-400"}`} />
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                  {activeStores.length > 0 ? "Mis tiendas activas" : "Mis afiliaciones"}
+                </h2>
+                {activeStores.length > 0 && (
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2 py-0.5 rounded-full">{activeStores.length} activas</span>
+                )}
+                {approvedStores.length > activeStores.length && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-2 py-0.5 rounded-full">{approvedStores.length - activeStores.length} pausadas</span>
+                )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {approvedStores.map((store) => {
