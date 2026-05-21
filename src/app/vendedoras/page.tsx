@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/components/AuthProvider";
@@ -977,7 +977,6 @@ const STATUS: Record<string, { label: string; cls: string; dot: string }> = {
 export default function VendedorasPage() {
   const { user, status: sessionStatus, signOut } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -1038,14 +1037,15 @@ export default function VendedorasPage() {
 
   // Auto-open apply modal when coming from /vendedoras/tiendas?apply={id}
   useEffect(() => {
-    const applyId = searchParams.get("apply");
+    if (typeof window === "undefined") return;
+    const applyId = new URLSearchParams(window.location.search).get("apply");
     if (!applyId || stores.length === 0 || sessionStatus !== "authenticated") return;
     const store = stores.find((s) => s.id === applyId);
     if (store) {
       setApplyStore(store);
-      router.replace("/vendedoras", { scroll: false });
+      window.history.replaceState({}, "", "/vendedoras");
     }
-  }, [searchParams, stores, sessionStatus]);
+  }, [stores, sessionStatus]);
 
   function handleApplySuccess(storeId: string, affiliateId: string, storeName: string) {
     setStores((prev) =>
