@@ -68,7 +68,7 @@ function ProgressBar({ nivelActual }: { nivelActual: string }) {
   const pct = ((idx + 1) / LEVEL_ORDER.length) * 100;
   const meta = LEVEL_META[nivelActual];
   return (
-    <div className="relative h-1.5 rounded-full bg-white/10 overflow-hidden">
+    <div className="relative h-1.5 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
       <div
         className={`h-full rounded-full transition-all duration-700 ${meta.bar}`}
         style={{ width: `${pct}%` }}
@@ -85,17 +85,17 @@ function CouponRow({ c }: { c: RewardCoupon }) {
   return (
     <div className={`group border rounded-xl transition-all ${
       isAvailable
-        ? "border-white/10 bg-white/3 hover:border-white/20"
-        : "border-white/5 bg-white/2 opacity-50"
+        ? "border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/3 hover:border-gray-300 dark:hover:border-white/20"
+        : "border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/2 opacity-50"
     }`}>
       <div className="flex items-center gap-4 px-5 py-4">
         {/* Indicador de nivel */}
-        <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: isAvailable ? levelMeta.color : "#374151" }} />
+        <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: isAvailable ? levelMeta.color : "#9ca3af" }} />
 
         {/* Info principal */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-white">
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">
               {c.type === "STORE"
                 ? `${c.discountValue}% off en tiendas`
                 : c.discountValue === 100
@@ -108,7 +108,7 @@ function CouponRow({ c }: { c: RewardCoupon }) {
             >
               {levelMeta.label}
             </span>
-            <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-gray-500 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full">
               {c.type === "STORE" ? "Tiendas" : "Suscripción"}
             </span>
           </div>
@@ -118,8 +118,8 @@ function CouponRow({ c }: { c: RewardCoupon }) {
         {/* Código */}
         <code className={`hidden sm:block text-xs font-mono tracking-widest px-3 py-1.5 rounded-lg shrink-0 ${
           isAvailable
-            ? "bg-indigo-500/10 text-indigo-300"
-            : "bg-white/5 text-gray-500 line-through"
+            ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
+            : "bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 line-through"
         }`}>
           {c.code}
         </code>
@@ -128,25 +128,25 @@ function CouponRow({ c }: { c: RewardCoupon }) {
         <div className="shrink-0 text-right min-w-[90px]">
           {isAvailable && (
             <>
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 inline-block" />
                 Disponible
               </span>
-              <p className="text-xs text-gray-600 mt-0.5 flex items-center gap-1 justify-end">
+              <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5 flex items-center gap-1 justify-end">
                 <Clock className="h-3 w-3" /> {formatDate(c.expiresAt)}
               </p>
             </>
           )}
           {isUsed && (
             <>
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 dark:text-gray-500">
                 <CheckCircle className="h-3 w-3" /> Usado
               </span>
-              {c.usedAt && <p className="text-xs text-gray-600 mt-0.5">{formatDate(c.usedAt)}</p>}
+              {c.usedAt && <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{formatDate(c.usedAt)}</p>}
             </>
           )}
           {c.status === "EXPIRED" && (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-600">
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 dark:text-gray-600">
               <XCircle className="h-3 w-3" /> Vencido
             </span>
           )}
@@ -156,7 +156,7 @@ function CouponRow({ c }: { c: RewardCoupon }) {
       {/* Código en mobile */}
       {isAvailable && (
         <div className="sm:hidden px-5 pb-4">
-          <code className="text-xs font-mono tracking-widest bg-indigo-500/10 text-indigo-300 px-3 py-1.5 rounded-lg block text-center">
+          <code className="text-xs font-mono tracking-widest bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 px-3 py-1.5 rounded-lg block text-center">
             {c.code}
           </code>
         </div>
@@ -181,7 +181,7 @@ export default function PremiosPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
         <div className="w-5 h-5 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
       </div>
     );
@@ -205,20 +205,20 @@ export default function PremiosPage() {
   const currentMeta = LEVEL_META[data?.nivelActual ?? "BRONZE"];
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-gray-950/80 backdrop-blur-md border-b border-white/8">
+      <header className="sticky top-0 z-40 bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-200 dark:border-white/8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Link href="/vendedoras" className="p-1.5 rounded-lg hover:bg-white/5 transition-colors text-gray-400 hover:text-white">
+            <Link href="/vendedoras" className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <span className="text-sm font-semibold text-white">Programa de premios</span>
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">Programa de premios</span>
             {data?.categoria && data.categoria !== "RETAIL" && (
               <span className={`hidden sm:inline text-xs px-2 py-0.5 rounded-full border font-medium ${
                 data.categoria === "ALTO_VALOR"
-                  ? "text-violet-400/80 bg-violet-500/10 border-violet-500/20"
-                  : "text-amber-400/80 bg-amber-500/10 border-amber-500/20"
+                  ? "text-violet-600 dark:text-violet-400/80 bg-violet-50 dark:bg-violet-500/10 border-violet-200 dark:border-violet-500/20"
+                  : "text-amber-600 dark:text-amber-400/80 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20"
               }`}>
                 {data.categoriaLabel}
               </span>
@@ -227,7 +227,7 @@ export default function PremiosPage() {
           <div className="flex items-center gap-1">
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-2 rounded-lg hover:bg-white/5 transition-colors text-gray-500 hover:text-gray-300"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
             >
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
@@ -245,7 +245,7 @@ export default function PremiosPage() {
 
             {/* Card de nivel actual */}
             {data && (
-              <div className="border border-white/10 rounded-2xl overflow-hidden">
+              <div className="border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden bg-white dark:bg-transparent">
                 {/* Banda de color del nivel */}
                 <div className="h-1" style={{ backgroundColor: currentMeta.color }} />
                 <div className="p-6">
@@ -278,13 +278,13 @@ export default function PremiosPage() {
                   )}
 
                   {data.nivelActual === "DIAMOND" && (
-                    <div className="mt-4 border-t border-white/5 pt-4">
-                      <p className="text-xs text-gray-400 font-medium">Racha Diamante</p>
+                    <div className="mt-4 border-t border-gray-100 dark:border-white/5 pt-4">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">Racha Diamante</p>
                       <div className="flex items-center gap-2 mt-2">
                         {[1, 2, 3].map((i) => (
                           <div
                             key={i}
-                            className={`h-1.5 flex-1 rounded-full ${racha % 3 >= i ? "bg-indigo-500" : "bg-white/10"}`}
+                            className={`h-1.5 flex-1 rounded-full ${racha % 3 >= i ? "bg-indigo-500" : "bg-gray-200 dark:bg-white/10"}`}
                           />
                         ))}
                       </div>
@@ -303,20 +303,20 @@ export default function PremiosPage() {
 
             {/* Tabla de niveles */}
             {data && (
-              <div className="border border-white/10 rounded-2xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
-                  <p className="text-xs text-gray-400 font-medium uppercase tracking-widest">Estructura de niveles</p>
+              <div className="border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden bg-white dark:bg-transparent">
+                <div className="px-5 py-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-widest">Estructura de niveles</p>
                   {data.categoria !== "RETAIL" && (
                     <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
                       data.categoria === "ALTO_VALOR"
-                        ? "text-violet-400/80 bg-violet-500/10 border-violet-500/20"
-                        : "text-amber-400/80 bg-amber-500/10 border-amber-500/20"
+                        ? "text-violet-600 dark:text-violet-400/80 bg-violet-50 dark:bg-violet-500/10 border-violet-200 dark:border-violet-500/20"
+                        : "text-amber-600 dark:text-amber-400/80 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20"
                     }`}>
                       {data.categoriaLabel}
                     </span>
                   )}
                 </div>
-                <div className="divide-y divide-white/5">
+                <div className="divide-y divide-gray-100 dark:divide-white/5">
                   {((): { level: string; range: string; premios: string[] }[] => {
                     const c = data.categoria;
                     const isAnnual = data.plan === "ANNUAL";
@@ -348,20 +348,20 @@ export default function PremiosPage() {
                     const meta = LEVEL_META[row.level];
                     const isActive = data.nivelActual === row.level;
                     return (
-                      <div key={row.level} className={`flex items-start gap-3 px-5 py-4 ${isActive ? "bg-white/3" : ""}`}>
+                      <div key={row.level} className={`flex items-start gap-3 px-5 py-4 ${isActive ? "bg-gray-100 dark:bg-white/3" : ""}`}>
                         <div className="w-1 self-stretch rounded-full shrink-0 mt-0.5" style={{ backgroundColor: meta.color }} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-semibold" style={{ color: meta.color }}>{meta.label}</span>
                             {isActive && (
-                              <span className="text-xs text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">Actual</span>
+                              <span className="text-xs text-gray-500 bg-gray-200 dark:bg-white/5 px-1.5 py-0.5 rounded">Actual</span>
                             )}
                           </div>
                           <p className="text-xs text-gray-500 mb-2">{row.range}</p>
                           <ul className="space-y-0.5">
                             {row.premios.map((p, i) => (
-                              <li key={i} className="text-xs text-gray-400 flex items-center gap-1.5">
-                                <ChevronRight className="h-3 w-3 text-gray-600 shrink-0" />
+                              <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                                <ChevronRight className="h-3 w-3 text-gray-400 dark:text-gray-600 shrink-0" />
                                 {p}
                               </li>
                             ))}
@@ -371,8 +371,8 @@ export default function PremiosPage() {
                     );
                   })}
                 </div>
-                <div className="px-5 py-3 border-t border-white/5">
-                  <p className="text-xs text-gray-600">Los premios se generan al cierre de cada mes.</p>
+                <div className="px-5 py-3 border-t border-gray-100 dark:border-white/5">
+                  <p className="text-xs text-gray-400 dark:text-gray-600">Los premios se generan al cierre de cada mes.</p>
                 </div>
               </div>
             )}
@@ -384,10 +384,10 @@ export default function PremiosPage() {
             {/* Cupones disponibles */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-gray-300">
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                   Cupones disponibles
                   {disponibles.length > 0 && (
-                    <span className="ml-2 text-xs font-normal bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded-full">
+                    <span className="ml-2 text-xs font-normal bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded-full">
                       {disponibles.length}
                     </span>
                   )}
@@ -399,9 +399,9 @@ export default function PremiosPage() {
                   {disponibles.map((c) => <CouponRow key={c.id} c={c} />)}
                 </div>
               ) : (
-                <div className="border border-white/5 rounded-xl px-6 py-12 text-center">
+                <div className="border border-gray-200 dark:border-white/5 rounded-xl px-6 py-12 text-center">
                   <p className="text-sm text-gray-500">Sin cupones disponibles</p>
-                  <p className="text-xs text-gray-600 mt-1 max-w-xs mx-auto">
+                  <p className="text-xs text-gray-400 dark:text-gray-600 mt-1 max-w-xs mx-auto">
                     Al cierre del mes recibís tus cupones si alcanzás nivel Plata o superior.
                   </p>
                 </div>
@@ -411,7 +411,7 @@ export default function PremiosPage() {
             {/* Historial */}
             {historial.length > 0 && (
               <div>
-                <h2 className="text-sm font-semibold text-gray-500 mb-3">Historial</h2>
+                <h2 className="text-sm font-semibold text-gray-400 dark:text-gray-500 mb-3">Historial</h2>
                 <div className="space-y-2">
                   {historial.map((c) => <CouponRow key={c.id} c={c} />)}
                 </div>

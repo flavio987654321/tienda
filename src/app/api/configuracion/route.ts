@@ -125,7 +125,7 @@ export async function PUT(req: NextRequest) {
 
   const prevStore = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, commissionRate: true, affiliatesEnabled: true },
+    select: { id: true, commissionRate: true, affiliatesEnabled: true, acceptsRewardCoupons: true },
   });
 
   const store = await prisma.store.update({
@@ -178,6 +178,8 @@ export async function PUT(req: NextRequest) {
       policyTermsActive:    b.policyTermsActive !== undefined ? Boolean(b.policyTermsActive) : undefined,
       footerDescription:    typeof b.footerDescription === "string" ? (b.footerDescription || null) : undefined,
       footerShowLegal:      b.footerShowLegal !== undefined ? Boolean(b.footerShowLegal) : undefined,
+      // Si se apaga el programa completo, también se apagan los cupones
+      acceptsRewardCoupons: !b.affiliatesEnabled ? false : (b.acceptsRewardCoupons !== undefined ? Boolean(b.acceptsRewardCoupons) : undefined),
     },
   });
 
@@ -208,6 +210,37 @@ export async function PUT(req: NextRequest) {
           link: "/vendedoras",
         }))
       );
+    }
+  }
+
+  // Notificar a afiliados con cupones disponibles si se desactivó la aceptación de cupones
+  // (ya sea apagando el toggle de cupones o apagando el programa completo)
+  const couponsWereDisabled =
+    prevStore?.acceptsRewardCoupons &&
+    (!b.affiliatesEnabled || b.acceptsRewardCoupons === false);
+  if (couponsWereDisabled) {
+    const storeAffiliates = await prisma.affiliate.findMany({
+      where: { storeId: prevStore.id, isActive: true },
+      select: { userId: true },
+    });
+    const affiliateUserIds = storeAffiliates.map((a: { userId: string }) => a.userId);
+    if (affiliateUserIds.length > 0) {
+      const withCoupons = await prisma.affiliateRewardCoupon.findMany({
+        where: { userId: { in: affiliateUserIds }, status: "AVAILABLE" },
+        select: { userId: true },
+        distinct: ["userId"],
+      });
+      if (withCoupons.length > 0) {
+        await createNotificationMany(
+          withCoupons.map((c: { userId: string }) => ({
+            userId: c.userId,
+            type: "STORE_COUPONS_DISABLED",
+            title: `${store.name} ya no acepta cupones de premio`,
+            body: "Tus cupones siguen válidos pero no podés usarlos en esta tienda por ahora.",
+            link: "/vendedoras/premios",
+          }))
+        );
+      }
     }
   }
 

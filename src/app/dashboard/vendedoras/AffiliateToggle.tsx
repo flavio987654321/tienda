@@ -28,6 +28,8 @@ export default function AffiliateToggle({
   const [showTcModal, setShowTcModal] = useState(false);
   const [showDisableWarning, setShowDisableWarning] = useState(false);
   const [tcAccepted, setTcAccepted] = useState(false);
+  const [showCouponModal, setShowCouponModal] = useState(false);
+  const [couponTcAccepted, setCouponTcAccepted] = useState(false);
 
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
 
@@ -132,7 +134,14 @@ export default function AffiliateToggle({
                 </div>
               </div>
               <button
-                onClick={() => saveRewardCoupons(!acceptsCoupons)}
+                onClick={() => {
+                  if (!acceptsCoupons) {
+                    setCouponTcAccepted(false);
+                    setShowCouponModal(true);
+                  } else {
+                    saveRewardCoupons(false);
+                  }
+                }}
                 disabled={savingCoupons}
                 className={`relative inline-flex h-7 items-center rounded-full transition-colors disabled:opacity-60 shrink-0 ${acceptsCoupons ? "bg-green-500" : "bg-gray-300"}`}
                 style={{ width: "52px" }}
@@ -216,6 +225,62 @@ export default function AffiliateToggle({
                   disabled={!tcAccepted || saving}
                   className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold disabled:opacity-40 hover:bg-indigo-500 transition-colors">
                   {saving ? "Activando..." : "Activar programa"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal T&C al activar cupones */}
+      {showCouponModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100">
+              <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                <Ticket className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <h2 className="font-bold text-gray-900 text-base">Aceptar cupones de premio</h2>
+                <p className="text-xs text-gray-500">Leé antes de activar</p>
+              </div>
+              <button onClick={() => setShowCouponModal(false)} className="ml-auto text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-4 space-y-3 text-sm text-gray-600 leading-relaxed">
+              <p>Al activar esta opción, tus afiliadas podrán usar sus <strong className="text-gray-900">cupones de premio ganados</strong> como descuento al comprar en tu tienda.</p>
+              <ul className="list-disc pl-4 space-y-1.5">
+                <li>El descuento se aplica sobre el precio de venta y sale de tu margen, no de la plataforma.</li>
+                <li>El cupón se valida al momento del pago. No se puede combinar con otras promociones.</li>
+                <li>Podés desactivar esta opción en cualquier momento. Los cupones ya emitidos siguen siendo válidos para cuando vuelvas a habilitarlos.</li>
+                <li>Las afiliadas que tengan cupones disponibles serán notificadas si desactivás la opción.</li>
+              </ul>
+            </div>
+
+            <div className="px-6 pb-6 space-y-3">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={couponTcAccepted}
+                  onChange={(e) => setCouponTcAccepted(e.target.checked)}
+                  className="mt-0.5 accent-green-600 w-4 h-4 flex-shrink-0"
+                />
+                <span className="text-sm text-gray-600">
+                  Entiendo que los descuentos se descontarán de mis ventas y acepto las condiciones.
+                </span>
+              </label>
+              <div className="flex gap-3">
+                <button onClick={() => setShowCouponModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => { setShowCouponModal(false); saveRewardCoupons(true); }}
+                  disabled={!couponTcAccepted || savingCoupons}
+                  className="flex-1 py-2.5 rounded-xl bg-green-600 text-white text-sm font-semibold disabled:opacity-40 hover:bg-green-500 transition-colors">
+                  Activar cupones
                 </button>
               </div>
             </div>
