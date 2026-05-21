@@ -30,6 +30,8 @@ interface PageData {
   plan: string;
   rachaDiamante: number;
   esMayorista: boolean;
+  categoria: "RETAIL" | "MAYORISTA" | "ALTO_VALOR";
+  categoriaLabel: string;
 }
 
 const MONTH_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -191,9 +193,12 @@ export default function PremiosPage() {
   const nextLevel   = LEVEL_ORDER[nivelIdx + 1];
   const nextMeta    = nextLevel ? LEVEL_META[nextLevel] : null;
 
-  const nextThresholds: Record<string, string> = data?.esMayorista
-    ? { BRONZE: "$75.000", SILVER: "$250.000", GOLD: "$750.000" }
-    : { BRONZE: "$15.000", SILVER: "$50.000", GOLD: "$150.000" };
+  const NEXT_THRESHOLDS: Record<string, Record<string, string>> = {
+    RETAIL:     { BRONZE: "$15.000",  SILVER: "$50.000",    GOLD: "$150.000" },
+    MAYORISTA:  { BRONZE: "$75.000",  SILVER: "$250.000",   GOLD: "$750.000" },
+    ALTO_VALOR: { BRONZE: "$500.000", SILVER: "$1.500.000", GOLD: "$5.000.000" },
+  };
+  const nextThresholds = NEXT_THRESHOLDS[data?.categoria ?? "RETAIL"];
 
   const racha = data?.rachaDiamante ?? 0;
   const nextStreakNeeded = racha > 0 ? (3 - (racha % 3)) % 3 : 3;
@@ -209,9 +214,13 @@ export default function PremiosPage() {
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <span className="text-sm font-semibold text-white">Programa de premios</span>
-            {data?.esMayorista && (
-              <span className="hidden sm:inline text-xs text-amber-400/80 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                Tienda mayorista
+            {data?.categoria && data.categoria !== "RETAIL" && (
+              <span className={`hidden sm:inline text-xs px-2 py-0.5 rounded-full border font-medium ${
+                data.categoria === "ALTO_VALOR"
+                  ? "text-violet-400/80 bg-violet-500/10 border-violet-500/20"
+                  : "text-amber-400/80 bg-amber-500/10 border-amber-500/20"
+              }`}>
+                {data.categoriaLabel}
               </span>
             )}
           </div>
@@ -295,38 +304,47 @@ export default function PremiosPage() {
             {/* Tabla de niveles */}
             {data && (
               <div className="border border-white/10 rounded-2xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-white/5">
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
                   <p className="text-xs text-gray-400 font-medium uppercase tracking-widest">Estructura de niveles</p>
+                  {data.categoria !== "RETAIL" && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                      data.categoria === "ALTO_VALOR"
+                        ? "text-violet-400/80 bg-violet-500/10 border-violet-500/20"
+                        : "text-amber-400/80 bg-amber-500/10 border-amber-500/20"
+                    }`}>
+                      {data.categoriaLabel}
+                    </span>
+                  )}
                 </div>
                 <div className="divide-y divide-white/5">
-                  {[
-                    {
-                      level: "BRONZE",
-                      range: data.esMayorista ? "Hasta $74.999" : "Hasta $14.999",
-                      premios: ["Solo insignia"],
-                    },
-                    {
-                      level: "SILVER",
-                      range: data.esMayorista ? "$75.000 – $249.999" : "$15.000 – $49.999",
-                      premios: data.plan === "ANNUAL"
-                        ? ["15% off en tiendas"]
-                        : ["10% off en suscripción", "10% off en tiendas"],
-                    },
-                    {
-                      level: "GOLD",
-                      range: data.esMayorista ? "$250.000 – $749.999" : "$50.000 – $149.999",
-                      premios: data.plan === "ANNUAL"
-                        ? ["20% off en tiendas"]
-                        : ["20% off en suscripción", "15% off en tiendas"],
-                    },
-                    {
-                      level: "DIAMOND",
-                      range: data.esMayorista ? "$750.000+" : "$150.000+",
-                      premios: data.plan === "ANNUAL"
-                        ? ["25% off en tiendas", `Bonus racha: +${data.plan === "ANNUAL" ? "40" : "30"}% off`]
-                        : ["Mes gratis", "20% off en tiendas", "Bonus racha: +30% off"],
-                    },
-                  ].map((row) => {
+                  {((): { level: string; range: string; premios: string[] }[] => {
+                    const c = data.categoria;
+                    const isAnnual = data.plan === "ANNUAL";
+                    return [
+                      {
+                        level: "BRONZE",
+                        range: c === "ALTO_VALOR" ? "Hasta $499.999" : c === "MAYORISTA" ? "Hasta $74.999" : "Hasta $14.999",
+                        premios: ["Solo insignia — seguí generando comisiones"],
+                      },
+                      {
+                        level: "SILVER",
+                        range: c === "ALTO_VALOR" ? "$500.000 – $1.499.999" : c === "MAYORISTA" ? "$75.000 – $249.999" : "$15.000 – $49.999",
+                        premios: isAnnual ? ["15% off en tiendas"] : ["10% off en suscripción", "10% off en tiendas"],
+                      },
+                      {
+                        level: "GOLD",
+                        range: c === "ALTO_VALOR" ? "$1.500.000 – $4.999.999" : c === "MAYORISTA" ? "$250.000 – $749.999" : "$50.000 – $149.999",
+                        premios: isAnnual ? ["20% off en tiendas"] : ["20% off en suscripción", "15% off en tiendas"],
+                      },
+                      {
+                        level: "DIAMOND",
+                        range: c === "ALTO_VALOR" ? "$5.000.000+" : c === "MAYORISTA" ? "$750.000+" : "$150.000+",
+                        premios: isAnnual
+                          ? ["25% off en tiendas", "Bonus racha: +40% off"]
+                          : ["Mes de suscripción gratis", "20% off en tiendas", "Bonus racha: +30% off"],
+                      },
+                    ];
+                  })().map((row) => {
                     const meta = LEVEL_META[row.level];
                     const isActive = data.nivelActual === row.level;
                     return (
