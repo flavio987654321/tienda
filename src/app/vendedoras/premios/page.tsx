@@ -213,15 +213,76 @@ export default function PremiosPage() {
           />
         )}
 
-        {/* Cómo funciona */}
-        <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl p-4">
-          <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 mb-2 flex items-center gap-1.5">
-            <Gift className="h-3.5 w-3.5" /> ¿Cómo ganás premios?
-          </p>
-          <p className="text-xs text-indigo-600 dark:text-indigo-400 leading-relaxed">
-            Al cierre de cada mes, según cuánto ganaste en comisiones, subís de nivel y recibís cupones automáticamente. Los cupones de tienda podés usarlos en las tiendas de la plataforma que aceptan premios. Los de suscripción se aplican en tu próximo cobro.
-          </p>
-        </div>
+        {/* Tabla de niveles */}
+        {data && (
+          <section>
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Niveles y premios</h2>
+            <div className="space-y-2">
+              {[
+                {
+                  level: "BRONZE", icon: "🥉", label: "Bronce", color: "#cd7f32",
+                  range: "$0 – $4.999 en comisiones",
+                  premios: ["Solo insignia — seguí vendiendo para desbloquear premios"],
+                  active: data.nivelActual === "BRONZE",
+                },
+                {
+                  level: "SILVER", icon: "🥈", label: "Plata", color: "#9ca3af",
+                  range: "$5.000 – $19.999 en comisiones",
+                  premios: data.plan === "ANNUAL"
+                    ? ["Cupón 15% off en tiendas que aceptan premios"]
+                    : ["Cupón 10% off en tu próxima suscripción", "Cupón 10% off en tiendas que aceptan premios"],
+                  active: data.nivelActual === "SILVER",
+                },
+                {
+                  level: "GOLD", icon: "🥇", label: "Oro", color: "#f59e0b",
+                  range: "$20.000 – $49.999 en comisiones",
+                  premios: data.plan === "ANNUAL"
+                    ? ["Cupón 20% off en tiendas que aceptan premios"]
+                    : ["Cupón 20% off en tu próxima suscripción", "Cupón 15% off en tiendas que aceptan premios"],
+                  active: data.nivelActual === "GOLD",
+                },
+                {
+                  level: "DIAMOND", icon: "💎", label: "Diamante", color: "#6366f1",
+                  range: "$50.000+ en comisiones",
+                  premios: data.plan === "ANNUAL"
+                    ? ["Cupón 25% off en tiendas que aceptan premios"]
+                    : ["Mes de suscripción gratis", "Cupón 20% off en tiendas que aceptan premios"],
+                  active: data.nivelActual === "DIAMOND",
+                },
+              ].map((row) => (
+                <div
+                  key={row.level}
+                  className={`rounded-2xl border p-4 transition-all ${
+                    row.active
+                      ? "border-indigo-300 dark:border-indigo-500/50 bg-indigo-50 dark:bg-indigo-500/10"
+                      : "border-gray-200 dark:border-white/5 bg-white dark:bg-gray-900/40"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl">{row.icon}</span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm" style={{ color: row.color }}>{row.label}</span>
+                        {row.active && (
+                          <span className="text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 px-2 py-0.5 rounded-full font-semibold">Tu nivel actual</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{row.range}</p>
+                    </div>
+                  </div>
+                  <ul className="space-y-1 pl-1">
+                    {row.premios.map((p, i) => (
+                      <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5">
+                        <span className="text-gray-300 dark:text-gray-600 mt-0.5">→</span> {p}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">Los premios se generan automáticamente al cierre de cada mes.</p>
+          </section>
+        )}
 
         {/* Cupones disponibles */}
         {disponibles.length > 0 && (
