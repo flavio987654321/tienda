@@ -43,8 +43,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut(callbackUrl = "/") {
-    setStatus("loading");
-    await supabase.auth.signOut();
+    // No awaitar — navegar de inmediato para que el auth state change
+    // no dispare re-renders de páginas protegidas mientras se desmonta.
+    supabase.auth.signOut();
     window.location.href = callbackUrl;
   }
 
