@@ -28,6 +28,7 @@ interface PageData {
   nivelLabel: string;
   nivelColor: string;
   plan: string;
+  rachaDiamante: number;
 }
 
 const NIVEL_ICONS: Record<string, string> = {
@@ -48,15 +49,16 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-function LevelCard({ nivel, nivelLabel, nivelColor, plan }: { nivel: string; nivelLabel: string; nivelColor: string; plan: string }) {
+function LevelCard({ nivel, nivelLabel, nivelColor, plan, racha }: { nivel: string; nivelLabel: string; nivelColor: string; plan: string; racha: number }) {
   const icon = NIVEL_ICONS[nivel] ?? "🥉";
-  const nextLevels: Record<string, { label: string; amount: number }> = {
-    BRONZE:  { label: "Plata", amount: 5000 },
-    SILVER:  { label: "Oro", amount: 20000 },
-    GOLD:    { label: "Diamante", amount: 50000 },
-    DIAMOND: { label: "", amount: 0 },
+  const nextLevels: Record<string, { label: string; amount: string }> = {
+    BRONZE:  { label: "Plata",    amount: "$15.000 en comisiones" },
+    SILVER:  { label: "Oro",      amount: "$50.000 en comisiones" },
+    GOLD:    { label: "Diamante", amount: "$150.000 en comisiones" },
+    DIAMOND: { label: "",         amount: "" },
   };
   const next = nextLevels[nivel];
+  const nextStreak = racha > 0 ? (3 - (racha % 3)) % 3 : 3;
 
   return (
     <div className="bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-white/10 rounded-2xl p-5 flex items-center gap-4">
@@ -64,10 +66,20 @@ function LevelCard({ nivel, nivelLabel, nivelColor, plan }: { nivel: string; niv
       <div className="flex-1 min-w-0">
         <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide mb-0.5">Tu nivel este mes</p>
         <p className="text-xl font-bold" style={{ color: nivelColor }}>{nivelLabel}</p>
-        {next.label && (
+        {next.label ? (
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            Faltán comisiones para llegar a <span className="font-semibold text-gray-600 dark:text-gray-300">{next.label}</span>
+            Necesitás <span className="font-semibold text-gray-600 dark:text-gray-300">{next.amount}</span> para llegar a {next.label}
           </p>
+        ) : (
+          <div className="mt-1">
+            {racha > 0 ? (
+              <p className="text-xs text-indigo-500 dark:text-indigo-400 font-semibold">
+                🔥 {racha} {racha === 1 ? "mes" : "meses"} consecutivos · {nextStreak === 0 ? "¡Bonus desbloqueado!" : `${nextStreak} más para el bonus`}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-400 dark:text-gray-500">Mantené Diamante 3 meses seguidos para ganar un bonus extra</p>
+            )}
+          </div>
         )}
       </div>
       <div className="text-right shrink-0">
@@ -210,6 +222,7 @@ export default function PremiosPage() {
             nivelLabel={data.nivelLabel}
             nivelColor={data.nivelColor}
             plan={data.plan}
+            racha={data.rachaDiamante}
           />
         )}
 
@@ -221,33 +234,39 @@ export default function PremiosPage() {
               {[
                 {
                   level: "BRONZE", icon: "🥉", label: "Bronce", color: "#cd7f32",
-                  range: "$0 – $4.999 en comisiones",
+                  range: "Hasta $14.999 en comisiones",
                   premios: ["Solo insignia — seguí vendiendo para desbloquear premios"],
                   active: data.nivelActual === "BRONZE",
+                  extra: null,
                 },
                 {
                   level: "SILVER", icon: "🥈", label: "Plata", color: "#9ca3af",
-                  range: "$5.000 – $19.999 en comisiones",
+                  range: "$15.000 – $49.999 en comisiones",
                   premios: data.plan === "ANNUAL"
                     ? ["Cupón 15% off en tiendas que aceptan premios"]
                     : ["Cupón 10% off en tu próxima suscripción", "Cupón 10% off en tiendas que aceptan premios"],
                   active: data.nivelActual === "SILVER",
+                  extra: null,
                 },
                 {
                   level: "GOLD", icon: "🥇", label: "Oro", color: "#f59e0b",
-                  range: "$20.000 – $49.999 en comisiones",
+                  range: "$50.000 – $149.999 en comisiones",
                   premios: data.plan === "ANNUAL"
                     ? ["Cupón 20% off en tiendas que aceptan premios"]
                     : ["Cupón 20% off en tu próxima suscripción", "Cupón 15% off en tiendas que aceptan premios"],
                   active: data.nivelActual === "GOLD",
+                  extra: null,
                 },
                 {
                   level: "DIAMOND", icon: "💎", label: "Diamante", color: "#6366f1",
-                  range: "$50.000+ en comisiones",
+                  range: "$150.000+ en comisiones",
                   premios: data.plan === "ANNUAL"
                     ? ["Cupón 25% off en tiendas que aceptan premios"]
                     : ["Mes de suscripción gratis", "Cupón 20% off en tiendas que aceptan premios"],
                   active: data.nivelActual === "DIAMOND",
+                  extra: data.plan === "ANNUAL"
+                    ? "🔥 Bonus: 3 meses consecutivos → cupón extra 40% off en tiendas"
+                    : "🔥 Bonus: 3 meses consecutivos → cupón extra 30% off en tiendas",
                 },
               ].map((row) => (
                 <div
@@ -276,6 +295,11 @@ export default function PremiosPage() {
                         <span className="text-gray-300 dark:text-gray-600 mt-0.5">→</span> {p}
                       </li>
                     ))}
+                    {row.extra && (
+                      <li className="text-xs text-indigo-500 dark:text-indigo-400 flex items-start gap-1.5 mt-1 pt-1 border-t border-gray-100 dark:border-white/5">
+                        {row.extra}
+                      </li>
+                    )}
                   </ul>
                 </div>
               ))}

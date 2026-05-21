@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { getNivelActual, getNivelLabel, getNivelColor } from "@/lib/rewards";
+import { getNivelActual, getNivelLabel, getNivelColor, calcularRachaDiamante } from "@/lib/rewards";
 
 export async function GET() {
   const currentUser = await getCurrentUser();
@@ -22,11 +22,14 @@ export async function GET() {
   });
 
   let nivelActual = "BRONZE";
+  let rachaDiamante = 0;
   if (affiliates.length > 0) {
     nivelActual = await getNivelActual(affiliates[0].id);
   }
+  if (nivelActual === "DIAMOND") {
+    rachaDiamante = await calcularRachaDiamante(userId);
+  }
 
-  // Suscripción para saber el plan
   const subscription = await prisma.subscription.findUnique({
     where: { userId },
     select: { plan: true },
@@ -38,5 +41,6 @@ export async function GET() {
     nivelLabel: getNivelLabel(nivelActual as any),
     nivelColor: getNivelColor(nivelActual as any),
     plan: subscription?.plan ?? "MONTHLY",
+    rachaDiamante,
   });
 }

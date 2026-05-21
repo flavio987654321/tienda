@@ -3,12 +3,12 @@ import { nanoid } from "nanoid";
 
 export type RewardLevel = "BRONZE" | "SILVER" | "GOLD" | "DIAMOND";
 
-// Umbrales de comisión mensual para cada nivel
-const LEVEL_THRESHOLDS = {
-  DIAMOND: 50000,
-  GOLD:    20000,
-  SILVER:  5000,
-  BRONZE:  1,
+// Umbrales de comisión mensual — difíciles de alcanzar para que el premio valga
+export const LEVEL_THRESHOLDS = {
+  DIAMOND: 150000,
+  GOLD:     50000,
+  SILVER:   15000,
+  BRONZE:       1,
 };
 
 // Descuentos para cupones de tienda según plan y nivel
@@ -22,6 +22,12 @@ const SUBSCRIPTION_DISCOUNT: Record<string, number> = {
   SILVER:  10,
   GOLD:    20,
   DIAMOND: 100, // mes gratis
+};
+
+// Cupón bonus por racha de 3 meses consecutivos en Diamante
+const DIAMOND_STREAK_BONUS: Record<string, number> = {
+  MONTHLY: 30, // 30% off en tiendas
+  ANNUAL:  40, // 40% off en tiendas
 };
 
 export function calcularNivel(comisionDelMes: number): RewardLevel {
@@ -69,6 +75,24 @@ async function getComisionesDelMes(affiliateId: string, year: number, month: num
   return result._sum.amount ?? 0;
 }
 
+// Calcula cuántos meses consecutivos en Diamante tiene un usuario (máx 6 hacia atrás)
+export async function calcularRachaDiamante(userId: string): Promise<number> {
+  const now = new Date();
+  let streak = 0;
+
+  for (let i = 1; i <= 6; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const coupon = await prisma.affiliateRewardCoupon.findFirst({
+      where: { userId, earnedMonth: ym, level: "DIAMOND" },
+    });
+    if (coupon) streak++;
+    else break;
+  }
+
+  return streak;
+}
+
 // Genera los cupones de premio para un afiliado al cierre del mes
 export async function generarCuponesMensuales(
   affiliateId: string,
@@ -77,9 +101,7 @@ export async function generarCuponesMensuales(
 ): Promise<void> {
   const affiliate = await prisma.affiliate.findUnique({
     where: { id: affiliateId },
-    include: {
-      user: { include: { subscription: true } },
-    },
+    include: { user: { include: { subscription: true } } },
   });
 
   if (!affiliate || !affiliate.isActive) return;
@@ -91,13 +113,12 @@ export async function generarCuponesMensuales(
   const comisiones = await getComisionesDelMes(affiliateId, year, month);
   const nivel = calcularNivel(comisiones);
 
-  if (nivel === "BRONZE") return; // Bronce no genera cupones
+  if (nivel === "BRONZE") return;
 
   const earnedMonth = `${year}-${String(month).padStart(2, "0")}`;
-  const expiresAt   = new Date(year, month, 1); // vence al inicio del mes siguiente
-  expiresAt.setDate(expiresAt.getDate() + 30);  // 30 días para usarlo
+  const expiresAt   = new Date(year, month, 1);
+  expiresAt.setDate(expiresAt.getDate() + 30);
 
-  // Verificar que no se generaron cupones este mes ya
   const yaGenerados = await prisma.affiliateRewardCoupon.findFirst({
     where: { userId: affiliate.userId, earnedMonth },
   });
@@ -109,7 +130,7 @@ export async function generarCuponesMensuales(
   };
   const cupones: CuponData[] = [];
 
-  // Cupón de tienda siempre (mensual y anual)
+  // Cupón de tienda
   const storeDiscount = STORE_DISCOUNT[plan]?.[nivel];
   if (storeDiscount) {
     cupones.push({
@@ -124,7 +145,7 @@ export async function generarCuponesMensuales(
     });
   }
 
-  // Cupón de suscripción solo para plan mensual
+  // Cupón de suscripción (solo mensual)
   if (plan === "MONTHLY") {
     const subDiscount = SUBSCRIPTION_DISCOUNT[nivel];
     if (subDiscount) {
@@ -141,23 +162,38 @@ export async function generarCuponesMensuales(
     }
   }
 
+  // Bonus por racha de 3 meses consecutivos en Diamante
+  if (nivel === "DIAMOND") {
+    const racha = await calcularRachaDiamante(affiliate.userId);
+    if (racha > 0 && racha % 3 === 0) {
+      const bonusDiscount = DIAMOND_STREAK_BONUS[plan];
+      cupones.push({
+        code:          `RACHA-DI-${nanoid(8).toUpperCase()}`,
+        userId:        affiliate.userId,
+        type:          "STORE",
+        level:         "DIAMOND",
+        plan,
+        discountValue: bonusDiscount,
+        earnedMonth,
+        expiresAt,
+      });
+    }
+  }
+
   await prisma.affiliateRewardCoupon.createMany({ data: cupones });
 }
 
 // Marcar cupones vencidos
 export async function expirarCuponesVencidos(): Promise<void> {
   await prisma.affiliateRewardCoupon.updateMany({
-    where: {
-      status:    "AVAILABLE",
-      expiresAt: { lt: new Date() },
-    },
-    data: { status: "EXPIRED" },
+    where: { status: "AVAILABLE", expiresAt: { lt: new Date() } },
+    data:  { status: "EXPIRED" },
   });
 }
 
 // Obtener nivel actual de un afiliado (mes en curso)
 export async function getNivelActual(affiliateId: string): Promise<RewardLevel> {
-  const now   = new Date();
+  const now = new Date();
   const total = await getComisionesDelMes(affiliateId, now.getFullYear(), now.getMonth() + 1);
   return calcularNivel(total);
 }
