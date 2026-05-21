@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Award, Gift, Clock, CheckCircle, XCircle, ArrowLeft, Loader2, Moon, Sun, Star, Ticket } from "lucide-react";
+import { ArrowLeft, Moon, Sun, Clock, CheckCircle, XCircle, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
@@ -32,13 +32,6 @@ interface PageData {
   esMayorista: boolean;
 }
 
-const NIVEL_ICONS: Record<string, string> = {
-  BRONZE:  "🥉",
-  SILVER:  "🥈",
-  GOLD:    "🥇",
-  DIAMOND: "💎",
-};
-
 const MONTH_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
 function formatMonth(ym: string) {
@@ -50,119 +43,122 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-function LevelCard({ nivel, nivelLabel, nivelColor, plan, racha }: { nivel: string; nivelLabel: string; nivelColor: string; plan: string; racha: number }) {
-  const icon = NIVEL_ICONS[nivel] ?? "🥉";
-  const nextLevels: Record<string, { label: string; amount: string }> = {
-    BRONZE:  { label: "Plata",    amount: "$15.000 en comisiones" },
-    SILVER:  { label: "Oro",      amount: "$50.000 en comisiones" },
-    GOLD:    { label: "Diamante", amount: "$150.000 en comisiones" },
-    DIAMOND: { label: "",         amount: "" },
-  };
-  const next = nextLevels[nivel];
-  const nextStreak = racha > 0 ? (3 - (racha % 3)) % 3 : 3;
+const LEVEL_ORDER = ["BRONZE", "SILVER", "GOLD", "DIAMOND"];
+const LEVEL_META: Record<string, { label: string; color: string; bar: string }> = {
+  BRONZE:  { label: "Bronce",   color: "#a8835a", bar: "bg-amber-700" },
+  SILVER:  { label: "Plata",    color: "#9ca3af", bar: "bg-gray-400" },
+  GOLD:    { label: "Oro",      color: "#d97706", bar: "bg-amber-500" },
+  DIAMOND: { label: "Diamante", color: "#6366f1", bar: "bg-indigo-500" },
+};
 
+function LevelDot({ nivel, active }: { nivel: string; active: boolean }) {
+  const meta = LEVEL_META[nivel];
   return (
-    <div className="bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-white/10 rounded-2xl p-5 flex items-center gap-4">
-      <div className="text-5xl">{icon}</div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide mb-0.5">Tu nivel este mes</p>
-        <p className="text-xl font-bold" style={{ color: nivelColor }}>{nivelLabel}</p>
-        {next.label ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            Necesitás <span className="font-semibold text-gray-600 dark:text-gray-300">{next.amount}</span> para llegar a {next.label}
-          </p>
-        ) : (
-          <div className="mt-1">
-            {racha > 0 ? (
-              <p className="text-xs text-indigo-500 dark:text-indigo-400 font-semibold">
-                🔥 {racha} {racha === 1 ? "mes" : "meses"} consecutivos · {nextStreak === 0 ? "¡Bonus desbloqueado!" : `${nextStreak} más para el bonus`}
-              </p>
-            ) : (
-              <p className="text-xs text-gray-400 dark:text-gray-500">Mantené Diamante 3 meses seguidos para ganar un bonus extra</p>
-            )}
-          </div>
-        )}
-      </div>
-      <div className="text-right shrink-0">
-        <p className="text-xs text-gray-400 dark:text-gray-500">Plan</p>
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${plan === "ANNUAL" ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300" : "bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400"}`}>
-          {plan === "ANNUAL" ? "Anual" : "Mensual"}
-        </span>
-      </div>
+    <span
+      className={`inline-block w-2.5 h-2.5 rounded-full transition-all ${active ? "scale-125" : "opacity-40"}`}
+      style={{ backgroundColor: meta.color }}
+    />
+  );
+}
+
+function ProgressBar({ nivelActual }: { nivelActual: string }) {
+  const idx = LEVEL_ORDER.indexOf(nivelActual);
+  const pct = ((idx + 1) / LEVEL_ORDER.length) * 100;
+  const meta = LEVEL_META[nivelActual];
+  return (
+    <div className="relative h-1.5 rounded-full bg-white/10 overflow-hidden">
+      <div
+        className={`h-full rounded-full transition-all duration-700 ${meta.bar}`}
+        style={{ width: `${pct}%` }}
+      />
     </div>
   );
 }
 
-function CouponCard({ c }: { c: RewardCoupon }) {
-  const isStore = c.type === "STORE";
+function CouponRow({ c }: { c: RewardCoupon }) {
   const isAvailable = c.status === "AVAILABLE";
   const isUsed = c.status === "USED";
-
-  const statusColors = {
-    AVAILABLE: "border-indigo-200 dark:border-indigo-500/30 bg-white dark:bg-gray-900/60",
-    USED:      "border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-gray-900/30 opacity-60",
-    EXPIRED:   "border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-gray-900/30 opacity-50",
-  };
+  const levelMeta = LEVEL_META[c.level] ?? LEVEL_META.BRONZE;
 
   return (
-    <div className={`border rounded-2xl p-4 transition-all ${statusColors[c.status]}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-xl ${isAvailable ? "bg-indigo-100 dark:bg-indigo-500/20" : "bg-gray-100 dark:bg-white/5"}`}>
-            {isStore ? (
-              <Ticket className={`h-5 w-5 ${isAvailable ? "text-indigo-600 dark:text-indigo-400" : "text-gray-400"}`} />
-            ) : (
-              <Star className={`h-5 w-5 ${isAvailable ? "text-amber-500" : "text-gray-400"}`} />
-            )}
+    <div className={`group border rounded-xl transition-all ${
+      isAvailable
+        ? "border-white/10 bg-white/3 hover:border-white/20"
+        : "border-white/5 bg-white/2 opacity-50"
+    }`}>
+      <div className="flex items-center gap-4 px-5 py-4">
+        {/* Indicador de nivel */}
+        <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: isAvailable ? levelMeta.color : "#374151" }} />
+
+        {/* Info principal */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-white">
+              {c.type === "STORE"
+                ? `${c.discountValue}% off en tiendas`
+                : c.discountValue === 100
+                ? "Mes de suscripción gratis"
+                : `${c.discountValue}% off en suscripción`}
+            </span>
+            <span
+              className="text-xs px-2 py-0.5 rounded-full font-medium"
+              style={{ color: levelMeta.color, backgroundColor: `${levelMeta.color}18` }}
+            >
+              {levelMeta.label}
+            </span>
+            <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">
+              {c.type === "STORE" ? "Tiendas" : "Suscripción"}
+            </span>
           </div>
-          <div>
-            <p className="text-sm font-bold text-gray-800 dark:text-white">
-              {isStore ? `${c.discountValue}% off en tiendas` : c.discountValue === 100 ? "Mes gratis" : `${c.discountValue}% off en tu suscripción`}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {NIVEL_ICONS[c.level]} Premio {c.level === "SILVER" ? "Plata" : c.level === "GOLD" ? "Oro" : "Diamante"} · {formatMonth(c.earnedMonth)}
-            </p>
-          </div>
+          <p className="text-xs text-gray-500 mt-1">{formatMonth(c.earnedMonth)}</p>
         </div>
 
-        <div className="shrink-0 text-right">
+        {/* Código */}
+        <code className={`hidden sm:block text-xs font-mono tracking-widest px-3 py-1.5 rounded-lg shrink-0 ${
+          isAvailable
+            ? "bg-indigo-500/10 text-indigo-300"
+            : "bg-white/5 text-gray-500 line-through"
+        }`}>
+          {c.code}
+        </code>
+
+        {/* Estado */}
+        <div className="shrink-0 text-right min-w-[90px]">
           {isAvailable && (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">
-              <CheckCircle className="h-3 w-3" /> Disponible
-            </span>
+            <>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                Disponible
+              </span>
+              <p className="text-xs text-gray-600 mt-0.5 flex items-center gap-1 justify-end">
+                <Clock className="h-3 w-3" /> {formatDate(c.expiresAt)}
+              </p>
+            </>
           )}
           {isUsed && (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full">
-              <CheckCircle className="h-3 w-3" /> Usado
-            </span>
+            <>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500">
+                <CheckCircle className="h-3 w-3" /> Usado
+              </span>
+              {c.usedAt && <p className="text-xs text-gray-600 mt-0.5">{formatDate(c.usedAt)}</p>}
+            </>
           )}
           {c.status === "EXPIRED" && (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-600">
               <XCircle className="h-3 w-3" /> Vencido
             </span>
           )}
         </div>
       </div>
 
-      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-2">
-        <code className={`text-xs font-mono font-bold tracking-widest px-3 py-1.5 rounded-lg ${isAvailable ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300" : "bg-gray-100 dark:bg-white/5 text-gray-400 line-through"}`}>
-          {c.code}
-        </code>
-        <div className="text-right">
-          {isAvailable ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-              <Clock className="h-3 w-3" /> Vence {formatDate(c.expiresAt)}
-            </p>
-          ) : isUsed ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500">
-              Usado el {formatDate(c.usedAt!)}
-              {c.usedStoreName && <> en <span className="font-medium">{c.usedStoreName}</span></>}
-            </p>
-          ) : (
-            <p className="text-xs text-gray-400">Venció el {formatDate(c.expiresAt)}</p>
-          )}
+      {/* Código en mobile */}
+      {isAvailable && (
+        <div className="sm:hidden px-5 pb-4">
+          <code className="text-xs font-mono tracking-widest bg-indigo-500/10 text-indigo-300 px-3 py-1.5 rounded-lg block text-center">
+            {c.code}
+          </code>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -183,167 +179,228 @@ export default function PremiosPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <div className="w-5 h-5 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
       </div>
     );
   }
 
   const disponibles = data?.cupones.filter((c) => c.status === "AVAILABLE") ?? [];
   const historial   = data?.cupones.filter((c) => c.status !== "AVAILABLE") ?? [];
+  const nivelIdx    = LEVEL_ORDER.indexOf(data?.nivelActual ?? "BRONZE");
+  const nextLevel   = LEVEL_ORDER[nivelIdx + 1];
+  const nextMeta    = nextLevel ? LEVEL_META[nextLevel] : null;
+
+  const nextThresholds: Record<string, string> = data?.esMayorista
+    ? { BRONZE: "$75.000", SILVER: "$250.000", GOLD: "$750.000" }
+    : { BRONZE: "$15.000", SILVER: "$50.000", GOLD: "$150.000" };
+
+  const racha = data?.rachaDiamante ?? 0;
+  const nextStreakNeeded = racha > 0 ? (3 - (racha % 3)) % 3 : 3;
+  const currentMeta = LEVEL_META[data?.nivelActual ?? "BRONZE"];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-16">
+    <div className="min-h-screen bg-gray-950 text-white">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-200 dark:border-white/10">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Link href="/vendedoras" className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
-              <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+      <header className="sticky top-0 z-40 bg-gray-950/80 backdrop-blur-md border-b border-white/8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Link href="/vendedoras" className="p-1.5 rounded-lg hover:bg-white/5 transition-colors text-gray-400 hover:text-white">
+              <ArrowLeft className="h-4 w-4" />
             </Link>
-            <div className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-indigo-500" />
-              <span className="font-bold text-gray-900 dark:text-white">Mis premios</span>
-            </div>
+            <span className="text-sm font-semibold text-white">Programa de premios</span>
+            {data?.esMayorista && (
+              <span className="hidden sm:inline text-xs text-amber-400/80 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                Tienda mayorista
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
-              {theme === "dark" ? <Sun className="h-4 w-4 text-gray-400" /> : <Moon className="h-4 w-4 text-gray-500" />}
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-lg hover:bg-white/5 transition-colors text-gray-500 hover:text-gray-300"
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
             {user?.id && <NotificationBell userId={user.id} />}
           </div>
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 pt-5 space-y-5">
-        {/* Nivel actual */}
-        {data && (
-          <LevelCard
-            nivel={data.nivelActual}
-            nivelLabel={data.nivelLabel}
-            nivelColor={data.nivelColor}
-            plan={data.plan}
-            racha={data.rachaDiamante}
-          />
-        )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {/* Layout principal: 2 columnas en desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Tabla de niveles */}
-        {data && (
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300">Niveles y premios</h2>
-              {data.esMayorista && (
-                <span className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 px-2 py-0.5 rounded-full font-semibold">Tienda mayorista</span>
-              )}
-            </div>
-            <div className="space-y-2">
-              {[
-                {
-                  level: "BRONZE", icon: "🥉", label: "Bronce", color: "#cd7f32",
-                  range: data.esMayorista ? "Hasta $74.999 en comisiones" : "Hasta $14.999 en comisiones",
-                  premios: ["Solo insignia — seguí vendiendo para desbloquear premios"],
-                  active: data.nivelActual === "BRONZE",
-                  extra: null,
-                },
-                {
-                  level: "SILVER", icon: "🥈", label: "Plata", color: "#9ca3af",
-                  range: data.esMayorista ? "$75.000 – $249.999 en comisiones" : "$15.000 – $49.999 en comisiones",
-                  premios: data.plan === "ANNUAL"
-                    ? ["Cupón 15% off en tiendas que aceptan premios"]
-                    : ["Cupón 10% off en tu próxima suscripción", "Cupón 10% off en tiendas que aceptan premios"],
-                  active: data.nivelActual === "SILVER",
-                  extra: null,
-                },
-                {
-                  level: "GOLD", icon: "🥇", label: "Oro", color: "#f59e0b",
-                  range: data.esMayorista ? "$250.000 – $749.999 en comisiones" : "$50.000 – $149.999 en comisiones",
-                  premios: data.plan === "ANNUAL"
-                    ? ["Cupón 20% off en tiendas que aceptan premios"]
-                    : ["Cupón 20% off en tu próxima suscripción", "Cupón 15% off en tiendas que aceptan premios"],
-                  active: data.nivelActual === "GOLD",
-                  extra: null,
-                },
-                {
-                  level: "DIAMOND", icon: "💎", label: "Diamante", color: "#6366f1",
-                  range: data.esMayorista ? "$750.000+ en comisiones" : "$150.000+ en comisiones",
-                  premios: data.plan === "ANNUAL"
-                    ? ["Cupón 25% off en tiendas que aceptan premios"]
-                    : ["Mes de suscripción gratis", "Cupón 20% off en tiendas que aceptan premios"],
-                  active: data.nivelActual === "DIAMOND",
-                  extra: data.plan === "ANNUAL"
-                    ? "🔥 Bonus: 3 meses consecutivos → cupón extra 40% off en tiendas"
-                    : "🔥 Bonus: 3 meses consecutivos → cupón extra 30% off en tiendas",
-                },
-              ].map((row) => (
-                <div
-                  key={row.level}
-                  className={`rounded-2xl border p-4 transition-all ${
-                    row.active
-                      ? "border-indigo-300 dark:border-indigo-500/50 bg-indigo-50 dark:bg-indigo-500/10"
-                      : "border-gray-200 dark:border-white/5 bg-white dark:bg-gray-900/40"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-2xl">{row.icon}</span>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm" style={{ color: row.color }}>{row.label}</span>
-                        {row.active && (
-                          <span className="text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 px-2 py-0.5 rounded-full font-semibold">Tu nivel actual</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">{row.range}</p>
+          {/* Columna izquierda: estado + tabla de niveles */}
+          <div className="lg:col-span-1 space-y-6">
+
+            {/* Card de nivel actual */}
+            {data && (
+              <div className="border border-white/10 rounded-2xl overflow-hidden">
+                {/* Banda de color del nivel */}
+                <div className="h-1" style={{ backgroundColor: currentMeta.color }} />
+                <div className="p-6">
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-widest mb-4">Tu nivel · {data.plan === "ANNUAL" ? "Plan anual" : "Plan mensual"}</p>
+
+                  <div className="flex items-end justify-between mb-4">
+                    <div>
+                      <p className="text-3xl font-bold tracking-tight" style={{ color: currentMeta.color }}>
+                        {currentMeta.label}
+                      </p>
+                      {nextMeta && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Próximo nivel: <span className="font-medium" style={{ color: nextMeta.color }}>{nextMeta.label}</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {LEVEL_ORDER.map((l) => (
+                        <LevelDot key={l} nivel={l} active={LEVEL_ORDER.indexOf(l) <= nivelIdx} />
+                      ))}
                     </div>
                   </div>
-                  <ul className="space-y-1 pl-1">
-                    {row.premios.map((p, i) => (
-                      <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5">
-                        <span className="text-gray-300 dark:text-gray-600 mt-0.5">→</span> {p}
-                      </li>
-                    ))}
-                    {row.extra && (
-                      <li className="text-xs text-indigo-500 dark:text-indigo-400 flex items-start gap-1.5 mt-1 pt-1 border-t border-gray-100 dark:border-white/5">
-                        {row.extra}
-                      </li>
-                    )}
-                  </ul>
+
+                  <ProgressBar nivelActual={data.nivelActual} />
+
+                  {nextMeta && nextThresholds[data.nivelActual] && (
+                    <p className="text-xs text-gray-500 mt-3">
+                      Necesitás {nextThresholds[data.nivelActual]} en comisiones este mes para alcanzar {nextMeta.label}.
+                    </p>
+                  )}
+
+                  {data.nivelActual === "DIAMOND" && (
+                    <div className="mt-4 border-t border-white/5 pt-4">
+                      <p className="text-xs text-gray-400 font-medium">Racha Diamante</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        {[1, 2, 3].map((i) => (
+                          <div
+                            key={i}
+                            className={`h-1.5 flex-1 rounded-full ${racha % 3 >= i ? "bg-indigo-500" : "bg-white/10"}`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        {racha > 0
+                          ? nextStreakNeeded === 0
+                            ? "¡Bonus de racha activo!"
+                            : `${racha % 3 === 0 ? 3 : racha % 3}/3 meses — ${nextStreakNeeded} más para el bonus`
+                          : "Mantené Diamante 3 meses para ganar un bonus extra"}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">Los premios se generan automáticamente al cierre de cada mes.</p>
-          </section>
-        )}
+              </div>
+            )}
 
-        {/* Cupones disponibles */}
-        {disponibles.length > 0 && (
-          <section>
-            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Disponibles ({disponibles.length})</h2>
-            <div className="space-y-3">
-              {disponibles.map((c) => <CouponCard key={c.id} c={c} />)}
-            </div>
-          </section>
-        )}
-
-        {/* Sin cupones disponibles */}
-        {disponibles.length === 0 && data && (
-          <div className="text-center py-10">
-            <Award className="h-12 w-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-            <p className="text-gray-500 dark:text-gray-400 font-medium">Todavía no tenés premios</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-              Al cierre del mes recibís tus cupones si llegás a nivel Plata o superior.
-            </p>
+            {/* Tabla de niveles */}
+            {data && (
+              <div className="border border-white/10 rounded-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-white/5">
+                  <p className="text-xs text-gray-400 font-medium uppercase tracking-widest">Estructura de niveles</p>
+                </div>
+                <div className="divide-y divide-white/5">
+                  {[
+                    {
+                      level: "BRONZE",
+                      range: data.esMayorista ? "Hasta $74.999" : "Hasta $14.999",
+                      premios: ["Solo insignia"],
+                    },
+                    {
+                      level: "SILVER",
+                      range: data.esMayorista ? "$75.000 – $249.999" : "$15.000 – $49.999",
+                      premios: data.plan === "ANNUAL"
+                        ? ["15% off en tiendas"]
+                        : ["10% off en suscripción", "10% off en tiendas"],
+                    },
+                    {
+                      level: "GOLD",
+                      range: data.esMayorista ? "$250.000 – $749.999" : "$50.000 – $149.999",
+                      premios: data.plan === "ANNUAL"
+                        ? ["20% off en tiendas"]
+                        : ["20% off en suscripción", "15% off en tiendas"],
+                    },
+                    {
+                      level: "DIAMOND",
+                      range: data.esMayorista ? "$750.000+" : "$150.000+",
+                      premios: data.plan === "ANNUAL"
+                        ? ["25% off en tiendas", `Bonus racha: +${data.plan === "ANNUAL" ? "40" : "30"}% off`]
+                        : ["Mes gratis", "20% off en tiendas", "Bonus racha: +30% off"],
+                    },
+                  ].map((row) => {
+                    const meta = LEVEL_META[row.level];
+                    const isActive = data.nivelActual === row.level;
+                    return (
+                      <div key={row.level} className={`flex items-start gap-3 px-5 py-4 ${isActive ? "bg-white/3" : ""}`}>
+                        <div className="w-1 self-stretch rounded-full shrink-0 mt-0.5" style={{ backgroundColor: meta.color }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-semibold" style={{ color: meta.color }}>{meta.label}</span>
+                            {isActive && (
+                              <span className="text-xs text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">Actual</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mb-2">{row.range}</p>
+                          <ul className="space-y-0.5">
+                            {row.premios.map((p, i) => (
+                              <li key={i} className="text-xs text-gray-400 flex items-center gap-1.5">
+                                <ChevronRight className="h-3 w-3 text-gray-600 shrink-0" />
+                                {p}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="px-5 py-3 border-t border-white/5">
+                  <p className="text-xs text-gray-600">Los premios se generan al cierre de cada mes.</p>
+                </div>
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Historial */}
-        {historial.length > 0 && (
-          <section>
-            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Historial</h2>
-            <div className="space-y-3">
-              {historial.map((c) => <CouponCard key={c.id} c={c} />)}
+          {/* Columna derecha: cupones */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* Cupones disponibles */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-gray-300">
+                  Cupones disponibles
+                  {disponibles.length > 0 && (
+                    <span className="ml-2 text-xs font-normal bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded-full">
+                      {disponibles.length}
+                    </span>
+                  )}
+                </h2>
+              </div>
+
+              {disponibles.length > 0 ? (
+                <div className="space-y-2">
+                  {disponibles.map((c) => <CouponRow key={c.id} c={c} />)}
+                </div>
+              ) : (
+                <div className="border border-white/5 rounded-xl px-6 py-12 text-center">
+                  <p className="text-sm text-gray-500">Sin cupones disponibles</p>
+                  <p className="text-xs text-gray-600 mt-1 max-w-xs mx-auto">
+                    Al cierre del mes recibís tus cupones si alcanzás nivel Plata o superior.
+                  </p>
+                </div>
+              )}
             </div>
-          </section>
-        )}
+
+            {/* Historial */}
+            {historial.length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold text-gray-500 mb-3">Historial</h2>
+                <div className="space-y-2">
+                  {historial.map((c) => <CouponRow key={c.id} c={c} />)}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
