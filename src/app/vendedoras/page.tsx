@@ -1095,6 +1095,9 @@ export default function VendedorasPage() {
                 <Link href="/vendedoras/billetera" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
                   <Wallet className="h-4 w-4" /> Mi billetera
                 </Link>
+                <Link href="/vendedoras/premios" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
+                  <Award className="h-4 w-4" /> Mis premios
+                </Link>
                 <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl">
                   <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-xs font-bold text-white">
                     {userInitial}
@@ -1184,6 +1187,13 @@ export default function VendedorasPage() {
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                     >
                       <Wallet className="h-4 w-4 text-indigo-500" /> Mi billetera
+                    </Link>
+                    <Link
+                      href="/vendedoras/premios"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                    >
+                      <Award className="h-4 w-4 text-amber-500" /> Mis premios
                     </Link>
                     {mounted && (
                       <button

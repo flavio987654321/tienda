@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import {
-  ArrowLeft, Store, Search, Send, Loader2, ShoppingBag, Star, Package, X,
+  ArrowLeft, Store, Search, Send, Loader2, ShoppingBag, Star, Package, X, Ticket,
 } from "lucide-react";
 
 interface StoreItem {
@@ -17,6 +17,7 @@ interface StoreItem {
   commissionRate: number;
   primaryColor: string;
   affiliatesEnabled: boolean;
+  acceptsRewardCoupons: boolean;
   _count: { products: number };
   owner: { name: string | null };
   affiliates: { id: string; status: string; isActive: boolean }[];
@@ -163,9 +164,16 @@ export default function TiendasPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                       por {store.owner.name ?? "Anónimo"}
                     </p>
-                    <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 mb-3">
-                      <Package className="h-3 w-3" />
-                      {store._count.products} productos
+                    <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 mb-3 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <Package className="h-3 w-3" />
+                        {store._count.products} productos
+                      </span>
+                      {store.acceptsRewardCoupons && (
+                        <span className="flex items-center gap-1 text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-1.5 py-0.5 rounded-full font-medium">
+                          <Ticket className="h-3 w-3" /> Acepta cupones
+                        </span>
+                      )}
                     </div>
                     {store.description && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-4">{store.description}</p>

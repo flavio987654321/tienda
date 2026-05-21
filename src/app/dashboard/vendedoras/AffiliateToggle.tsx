@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, AlertTriangle, X, ShieldCheck, ExternalLink } from "lucide-react";
+import { Loader2, AlertTriangle, X, ShieldCheck, ExternalLink, Ticket } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -10,17 +10,21 @@ const TC_OWNER_VERSION = "1.0";
 export default function AffiliateToggle({
   enabled,
   commissionRate: initialRate,
+  acceptsRewardCoupons: initialAcceptsRewardCoupons,
   activeAffiliatesCount,
   pendingBalance,
 }: {
   enabled: boolean;
   commissionRate: number;
+  acceptsRewardCoupons: boolean;
   activeAffiliatesCount: number;
   pendingBalance: number;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [savingCoupons, setSavingCoupons] = useState(false);
   const [rate, setRate] = useState(initialRate);
+  const [acceptsCoupons, setAcceptsCoupons] = useState(initialAcceptsRewardCoupons);
   const [showTcModal, setShowTcModal] = useState(false);
   const [showDisableWarning, setShowDisableWarning] = useState(false);
   const [tcAccepted, setTcAccepted] = useState(false);
@@ -43,6 +47,19 @@ export default function AffiliateToggle({
     });
     router.refresh();
     setSaving(false);
+  }
+
+  async function saveRewardCoupons(newValue: boolean) {
+    setSavingCoupons(true);
+    setAcceptsCoupons(newValue);
+    const { store } = await fetch("/api/configuracion").then((r) => r.json());
+    await fetch("/api/configuracion", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...store, name: store.name || "Mi Tienda", acceptsRewardCoupons: newValue }),
+    });
+    router.refresh();
+    setSavingCoupons(false);
   }
 
   function handleToggle() {
@@ -104,6 +121,27 @@ export default function AffiliateToggle({
               <span>1%</span>
               <span className="text-green-700">Venta $10.000 → afiliada cobra ${(10000 * rate / 100).toLocaleString("es-AR")}</span>
               <span>50%</span>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-green-200 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Ticket className="h-4 w-4 text-green-700 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-green-800">Aceptar cupones de premio</p>
+                  <p className="text-xs text-green-600">Las afiliadas podrán usar sus cupones ganados como clientes en tu tienda. El descuento sale de la venta.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => saveRewardCoupons(!acceptsCoupons)}
+                disabled={savingCoupons}
+                className={`relative inline-flex h-7 items-center rounded-full transition-colors disabled:opacity-60 shrink-0 ${acceptsCoupons ? "bg-green-500" : "bg-gray-300"}`}
+                style={{ width: "52px" }}
+              >
+                {savingCoupons
+                  ? <Loader2 className="h-4 w-4 animate-spin text-white absolute left-1/2 -translate-x-1/2" />
+                  : <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${acceptsCoupons ? "translate-x-7" : "translate-x-1"}`} />
+                }
+              </button>
             </div>
           </div>
         )}

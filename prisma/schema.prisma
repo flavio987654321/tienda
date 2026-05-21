@@ -34,6 +34,7 @@ model User {
   reviews       Review[]
   notifications Notification[]
   subscription  Subscription?
+  rewardCoupons AffiliateRewardCoupon[]
 }
 
 model Account {
@@ -110,6 +111,7 @@ model Store {
   isPublished    Boolean  @default(false)
   affiliatesEnabled Boolean @default(false)
   commissionRate Float    @default(10)
+  acceptsRewardCoupons Boolean @default(false)
   // Aceptación de términos del programa de afiliados por el titular
   tcOwnerAcceptedAt DateTime?
   tcOwnerAcceptedIp String?
@@ -413,6 +415,28 @@ model Testimonial {
   photoUrl  String?
   approved  Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+// CUPONES DE PREMIO
+// level:  SILVER | GOLD | DIAMOND
+// type:   STORE | SUBSCRIPTION
+// status: AVAILABLE | USED | EXPIRED
+model AffiliateRewardCoupon {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String   // STORE | SUBSCRIPTION
+  level         String   // SILVER | GOLD | DIAMOND
+  plan          String   // MONTHLY | ANNUAL
+  discountValue Float
+  earnedMonth   String   // "2026-04"
+  status        String   @default("AVAILABLE") // AVAILABLE | USED | EXPIRED
+  usedAt        DateTime?
+  usedOrderId   String?
+  usedStoreName String?
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
 }
 
 // SUSCRIPCIONES

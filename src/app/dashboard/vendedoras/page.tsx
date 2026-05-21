@@ -119,6 +119,7 @@ export default async function VendedorasPage() {
       <AffiliateToggle
         enabled={Boolean(store?.affiliatesEnabled)}
         commissionRate={store?.commissionRate ?? 10}
+        acceptsRewardCoupons={Boolean(store?.acceptsRewardCoupons)}
         activeAffiliatesCount={active.length}
         pendingBalance={affiliates.reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0)}
       />

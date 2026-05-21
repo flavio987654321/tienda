@@ -7,17 +7,68 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-  const { plan, billing, cardToken, paymentMethodId } = await req.json();
+  const { plan, billing, cardToken, paymentMethodId, rewardCouponCode } = await req.json();
   // plan: "OWNER" | "AFFILIATE"
   // billing: "MONTHLY" | "ANNUAL"
-  // cardToken: token generado por MP.js en el frontend
+  // cardToken: token generado por MP.js en el frontend (puede ser null si el cupón cubre el 100%)
 
-  if (!plan || !billing || !cardToken) {
+  if (!plan || !billing) {
     return NextResponse.json({ error: "Faltan datos del pago" }, { status: 400 });
   }
 
-  const amount = PRICES[plan as keyof typeof PRICES]?.[billing as "MONTHLY" | "ANNUAL"];
-  if (!amount) return NextResponse.json({ error: "Plan inválido" }, { status: 400 });
+  const baseAmount = PRICES[plan as keyof typeof PRICES]?.[billing as "MONTHLY" | "ANNUAL"];
+  if (!baseAmount) return NextResponse.json({ error: "Plan inválido" }, { status: 400 });
+
+  // Validar y aplicar cupón de suscripción si viene
+  let finalAmount = baseAmount;
+  let couponToMark: string | null = null;
+
+  if (rewardCouponCode) {
+    const coupon = await prisma.affiliateRewardCoupon.findUnique({
+      where: { code: String(rewardCouponCode).trim().toUpperCase() },
+    });
+    if (
+      coupon &&
+      coupon.userId === user.id &&
+      coupon.type === "SUBSCRIPTION" &&
+      coupon.status === "AVAILABLE" &&
+      coupon.expiresAt > new Date()
+    ) {
+      const discountPct = Math.min(coupon.discountValue, 100);
+      finalAmount = Math.round(baseAmount * (1 - discountPct / 100));
+      couponToMark = coupon.id;
+    }
+  }
+
+  // Mes gratis (100% off) — no pasar por MP
+  if (finalAmount === 0) {
+    const now = new Date();
+    const periodEnd = billing === "MONTHLY"
+      ? new Date(now.getTime() + 30 * 86400000)
+      : new Date(now.getTime() + 365 * 86400000);
+    const gracePeriodEndsAt = new Date(periodEnd.getTime() + 4 * 86400000);
+
+    await prisma.subscription.upsert({
+      where: { userId: user.id },
+      update: { plan: billing, status: "ACTIVE", currentPeriodStart: now, currentPeriodEnd: periodEnd, gracePeriodEndsAt },
+      create: { userId: user.id, role: plan, plan: billing, status: "ACTIVE", trialEndsAt: now, currentPeriodStart: now, currentPeriodEnd: periodEnd, gracePeriodEndsAt },
+    });
+
+    if (couponToMark) {
+      await prisma.affiliateRewardCoupon.update({
+        where: { id: couponToMark },
+        data: { status: "USED", usedAt: now },
+      });
+    }
+
+    return NextResponse.json({ success: true, status: "approved" });
+  }
+
+  if (!cardToken) {
+    return NextResponse.json({ error: "Faltan datos del pago" }, { status: 400 });
+  }
+
+  const amount = finalAmount;
 
   try {
     // Crear pago en Mercado Pago
@@ -83,6 +134,13 @@ export async function POST(req: NextRequest) {
           mpPaymentId: String(mpData.id),
         },
       });
+
+      if (couponToMark) {
+        await prisma.affiliateRewardCoupon.update({
+          where: { id: couponToMark },
+          data: { status: "USED", usedAt: now },
+        });
+      }
 
       return NextResponse.json({ success: true, status: "approved" });
     }

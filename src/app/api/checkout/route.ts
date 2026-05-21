@@ -13,6 +13,7 @@ type CheckoutBody = {
   storeId: string;
   affiliateId?: string | null;
   couponId?: string | null;
+  rewardCouponCode?: string | null;
   items: CheckoutItem[];
   customer: {
     name: string;
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = (await req.json()) as CheckoutBody;
-  const { storeId, affiliateId, couponId, items, customer, shippingMethod, paymentProvider } = body;
+  const { storeId, affiliateId, couponId, rewardCouponCode, items, customer, shippingMethod, paymentProvider } = body;
 
   if (!storeId || !items?.length) {
     return NextResponse.json({ error: "El carrito esta vacio" }, { status: 400 });
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
   const shipping = SHIPPING_COSTS[shippingMethod] ?? SHIPPING_COSTS.pickup;
 
   try {
+    let usedRewardCouponId: string | null = null;
     const order = await prisma.$transaction(async (tx) => {
       const store = await tx.store.findUnique({
         where: { id: storeId },
@@ -159,6 +161,29 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Cupón de premio (AffiliateRewardCoupon) — solo si no hay cupón normal ya aplicado
+      if (!validCouponId && rewardCouponCode) {
+        const rewardCoupon = await tx.affiliateRewardCoupon.findUnique({
+          where: { code: String(rewardCouponCode).trim().toUpperCase() },
+        });
+        if (
+          rewardCoupon &&
+          rewardCoupon.type === "STORE" &&
+          rewardCoupon.status === "AVAILABLE" &&
+          rewardCoupon.expiresAt > new Date()
+        ) {
+          const storeAccepts = await tx.store.findUnique({
+            where: { id: storeId },
+            select: { acceptsRewardCoupons: true },
+          });
+          if (storeAccepts?.acceptsRewardCoupons) {
+            const MAX_REWARD_DISCOUNT = 100_000;
+            discountAmount = Math.min(Math.round((subtotal * rewardCoupon.discountValue) / 100), MAX_REWARD_DISCOUNT);
+            usedRewardCouponId = rewardCoupon.id;
+          }
+        }
+      }
+
       const total = subtotal - discountAmount + shipping.cost;
 
       // Nunca actualizar un usuario existente desde checkout — podría sobreescribir datos de dueñas u otros roles
@@ -220,6 +245,20 @@ export async function POST(req: NextRequest) {
         },
       });
     });
+
+    // Marcar cupón de premio como USADO
+    if (usedRewardCouponId) {
+      const storeForCoupon = await prisma.store.findUnique({ where: { id: order.storeId }, select: { name: true } });
+      await prisma.affiliateRewardCoupon.update({
+        where: { id: usedRewardCouponId },
+        data: {
+          status: "USED",
+          usedAt: new Date(),
+          usedOrderId: order.id,
+          usedStoreName: storeForCoupon?.name ?? null,
+        },
+      });
+    }
 
     // Notificar al dueño de la tienda en tiempo real
     const storeOwner = await prisma.store.findUnique({
