@@ -40,7 +40,15 @@ export async function GET(req: NextRequest) {
   if (mode === "tiendas-disponibles") {
     const userId = user?.id;
     const stores = await prisma.store.findMany({
-      where: { affiliatesEnabled: true, isActive: true },
+      where: {
+        isActive: true,
+        OR: [
+          // Tiendas con el programa activo (para postularse)
+          { affiliatesEnabled: true },
+          // Tiendas donde el usuario ya tiene afiliación (para mostrar aunque estén pausadas)
+          ...(userId ? [{ affiliates: { some: { userId, status: { in: ["APPROVED", "PENDING", "PAUSED"] } } } }] : []),
+        ],
+      },
       include: {
         owner: { select: { name: true } },
         _count: { select: { products: true } },

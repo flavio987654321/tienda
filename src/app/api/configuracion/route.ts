@@ -192,6 +192,25 @@ export async function PUT(req: NextRequest) {
     `.catch(() => {});
   }
 
+  // Notificar a afiliados activos si el programa fue pausado
+  if (prevStore?.affiliatesEnabled && !b.affiliatesEnabled) {
+    const affiliates = await prisma.affiliate.findMany({
+      where: { storeId: prevStore.id, isActive: true },
+      select: { userId: true },
+    });
+    if (affiliates.length > 0) {
+      await createNotificationMany(
+        affiliates.map(({ userId }) => ({
+          userId,
+          type: "STORE_PROGRAM_PAUSED",
+          title: `${store.name} pausó su programa de afiliados`,
+          body: "Por ahora no podés generar nuevas ventas con tu link. Tu saldo en billetera sigue disponible para retirar.",
+          link: "/vendedoras",
+        }))
+      );
+    }
+  }
+
   // Notificar a afiliados activos si cambió la comisión
   const newRate = isNaN(commissionRate) ? 10 : commissionRate;
   if (prevStore && prevStore.commissionRate !== newRate) {

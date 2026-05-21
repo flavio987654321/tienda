@@ -565,7 +565,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
 }
 
 /* ── Application Modal ── */
-interface StoreItem { id: string; name: string; slug: string; description: string | null; commissionRate: number; primaryColor: string; _count: { products: number }; owner: { name: string | null }; affiliates: { id: string; status: string; isActive: boolean }[]; }
+interface StoreItem { id: string; name: string; slug: string; description: string | null; commissionRate: number; primaryColor: string; affiliatesEnabled: boolean; _count: { products: number }; owner: { name: string | null }; affiliates: { id: string; status: string; isActive: boolean }[]; }
 
 function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: () => void; onSuccess: (id: string) => void }) {
   const [submitting, setSubmitting] = useState(false);
@@ -1258,10 +1258,11 @@ export default function VendedorasPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {approvedStores.map((store) => {
                   const aff = store.affiliates[0];
+                  const paused = !store.affiliatesEnabled;
                   return (
-                    <motion.div key={store.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-white/10 rounded-3xl overflow-hidden shadow-sm">
-                      <div className="h-20 relative flex items-center px-5 gap-3" style={{ backgroundColor: store.primaryColor + "20", borderBottom: `1px solid ${store.primaryColor}25` }}>
-                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ backgroundColor: store.primaryColor }}>
+                    <motion.div key={store.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={`bg-white dark:bg-gray-900/80 border rounded-3xl overflow-hidden shadow-sm ${paused ? "border-gray-200 dark:border-white/5 opacity-60" : "border-gray-200 dark:border-white/10"}`}>
+                      <div className="h-20 relative flex items-center px-5 gap-3" style={{ backgroundColor: store.primaryColor + (paused ? "10" : "20"), borderBottom: `1px solid ${store.primaryColor}25` }}>
+                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ backgroundColor: store.primaryColor + (paused ? "60" : "") }}>
                           <Store className="h-5 w-5 text-white" />
                         </div>
                         <div>
@@ -1269,36 +1270,50 @@ export default function VendedorasPage() {
                           <p className="text-xs text-gray-500 dark:text-gray-400">por {store.owner.name ?? "Anónimo"}</p>
                         </div>
                         <div className="ml-auto flex items-center gap-2">
-                          <span className="text-xs bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 px-2.5 py-1 rounded-full font-bold">
-                            {store.commissionRate}% comisión
-                          </span>
+                          {paused ? (
+                            <span className="text-xs bg-gray-100 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10 px-2.5 py-1 rounded-full font-semibold">
+                              Programa pausado
+                            </span>
+                          ) : (
+                            <span className="text-xs bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 px-2.5 py-1 rounded-full font-bold">
+                              {store.commissionRate}% comisión
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="p-5 space-y-4">
-                        <div className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/8 rounded-2xl p-3">
-                          <p className="text-xs text-gray-500 mb-1">Tu link de venta</p>
-                          <p className="text-xs text-indigo-600 dark:text-indigo-300 font-mono break-all">
-                            {typeof window !== "undefined" ? window.location.origin : ""}/tienda/{store.slug}?ref={aff.id}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setShareTarget({ storeSlug: store.slug, storeName: store.name, affiliateId: aff.id, commissionRate: store.commissionRate })}
-                            className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-2xl font-semibold text-sm transition-all"
-                          >
-                            <Share2 className="h-4 w-4" /> Ver productos y compartir
-                          </button>
-                          <Link
-                            href={`/tienda/${store.slug}?ref=${aff.id}`}
-                            target="_blank"
-                            className="flex items-center justify-center gap-2 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-4 py-3 rounded-2xl text-sm transition-all hover:bg-gray-50 dark:hover:bg-white/5"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Link>
-                        </div>
-                        <p className="text-xs text-gray-400 dark:text-gray-600 text-center">
-                          {store._count.products} productos disponibles para compartir
-                        </p>
+                        {paused ? (
+                          <div className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/8 rounded-2xl p-4 text-center">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">La dueña pausó el programa de afiliados temporalmente. Tu saldo en billetera sigue disponible para retirar.</p>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/8 rounded-2xl p-3">
+                              <p className="text-xs text-gray-500 mb-1">Tu link de venta</p>
+                              <p className="text-xs text-indigo-600 dark:text-indigo-300 font-mono break-all">
+                                {typeof window !== "undefined" ? window.location.origin : ""}/tienda/{store.slug}?ref={aff.id}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setShareTarget({ storeSlug: store.slug, storeName: store.name, affiliateId: aff.id, commissionRate: store.commissionRate })}
+                                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-2xl font-semibold text-sm transition-all"
+                              >
+                                <Share2 className="h-4 w-4" /> Ver productos y compartir
+                              </button>
+                              <Link
+                                href={`/tienda/${store.slug}?ref=${aff.id}`}
+                                target="_blank"
+                                className="flex items-center justify-center gap-2 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-4 py-3 rounded-2xl text-sm transition-all hover:bg-gray-50 dark:hover:bg-white/5"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Link>
+                            </div>
+                            <p className="text-xs text-gray-400 dark:text-gray-600 text-center">
+                              {store._count.products} productos disponibles para compartir
+                            </p>
+                          </>
+                        )}
                       </div>
                     </motion.div>
                   );
