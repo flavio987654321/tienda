@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut(callbackUrl = "/") {
-    await supabase.auth.signOut();
+    try { await supabase.auth.signOut(); } catch {}
     window.location.href = callbackUrl;
   }
 

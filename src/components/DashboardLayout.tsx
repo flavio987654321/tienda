@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle } from "lucide-react";
+import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 
@@ -36,6 +36,7 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const { signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
   const [pendingAffiliateCount, setPendingAffiliateCount] = useState(initialPendingAffiliateCount);
   const [lowStockCount, setLowStockCount] = useState(initialLowStockCount);
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
@@ -151,12 +152,13 @@ export default function DashboardLayout({
             </span>
           </Link>
           <button
-            onClick={() => signOut("/")}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors"
+            onClick={async () => { setSigningOut(true); await signOut("/"); }}
+            disabled={signingOut}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60"
           >
-            <LogOut className="h-4 w-4 shrink-0" />
+            {signingOut ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <LogOut className="h-4 w-4 shrink-0" />}
             <span className="whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
-              Cerrar sesión
+              {signingOut ? "Cerrando..." : "Cerrar sesión"}
             </span>
           </button>
           {/* Info de usuario — solo visible expandido */}
