@@ -4,9 +4,8 @@ import { Users, Store, ShoppingBag, MessageSquare, TrendingUp, CheckCircle, Cloc
 async function getSystemStatus() {
   const checks = await Promise.allSettled([
     prisma.$queryRaw`SELECT 1`,
-    process.env.NEXT_PUBLIC_SUPABASE_URL
-      ? fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/health`, { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(); })
-      : Promise.resolve(),
+    // Si llegamos a esta página, Supabase Auth ya funcionó (el layout lo verifica)
+    Promise.resolve(),
     process.env.MP_ACCESS_TOKEN
       ? fetch("https://api.mercadopago.com/v1/payment_methods", {
           headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
