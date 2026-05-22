@@ -31,6 +31,19 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
 
   if (action === "approve") {
+    const sub = await prisma.subscription.findUnique({ where: { userId: ownerId }, select: { tier: true } });
+    if (!sub || (sub as any).tier !== "PREMIUM") {
+      const activeCount = await prisma.affiliate.count({
+        where: { ownerId, status: "APPROVED", isActive: true },
+      });
+      if (activeCount >= 6) {
+        return NextResponse.json(
+          { error: "Alcanzaste el límite de 6 afiliados del plan Tienda Pro. Actualizá a Premium para agregar más." },
+          { status: 403 }
+        );
+      }
+    }
+
     const updated = await prisma.affiliate.update({
       where: { id },
       data: {
@@ -127,6 +140,19 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
 
   if (action === "reactivate") {
+    const subR = await prisma.subscription.findUnique({ where: { userId: ownerId }, select: { tier: true } });
+    if (!subR || (subR as any).tier !== "PREMIUM") {
+      const activeCount = await prisma.affiliate.count({
+        where: { ownerId, status: "APPROVED", isActive: true },
+      });
+      if (activeCount >= 6) {
+        return NextResponse.json(
+          { error: "Alcanzaste el límite de 6 afiliados del plan Tienda Pro. Actualizá a Premium para agregar más." },
+          { status: 403 }
+        );
+      }
+    }
+
     const updated = await prisma.affiliate.update({
       where: { id },
       data: {

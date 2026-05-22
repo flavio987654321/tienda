@@ -20,7 +20,10 @@ export default function RegistroPage() {
 type AccountType = "owner" | "seller" | "buyer";
 
 const PRICES = {
-  owner:  { MONTHLY: 25000, ANNUAL: 225000 },
+  owner: {
+    BASIC:   { MONTHLY: 20000, ANNUAL: 180000 },
+    PREMIUM: { MONTHLY: 25000, ANNUAL: 225000 },
+  },
   seller: { MONTHLY: 15000, ANNUAL: 135000 },
 };
 
@@ -131,8 +134,12 @@ function RegistroContent() {
     null;
   const billingParam = searchParams.get("billing");
 
+  const rawTier = searchParams.get("tier");
+  const tierParam: "BASIC" | "PREMIUM" = rawTier === "premium" || rawTier === "PREMIUM" ? "PREMIUM" : "BASIC";
+
   const [step, setStep] = useState<"type" | "form">(planParam ? "form" : "type");
   const [accountType, setAccountType] = useState<AccountType>(planParam ?? "owner");
+  const [ownerTier, setOwnerTier] = useState<"BASIC" | "PREMIUM">(tierParam);
   const [billing, setBilling] = useState<"MONTHLY" | "ANNUAL">(
     billingParam === "annual" ? "ANNUAL" : "MONTHLY"
   );
@@ -161,7 +168,7 @@ function RegistroContent() {
     const res = await fetch("/api/auth/registro", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, accountType, billing }),
+      body: JSON.stringify({ ...form, accountType, billing, tier: ownerTier }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -175,7 +182,7 @@ function RegistroContent() {
     } else if (accountType === "seller") {
       router.push(`/precios?registered=true&role=affiliate&billing=${billing.toLowerCase()}`);
     } else {
-      router.push(`/precios?registered=true&role=owner&billing=${billing.toLowerCase()}`);
+      router.push(`/precios?registered=true&role=owner&billing=${billing.toLowerCase()}&tier=${ownerTier.toLowerCase()}`);
     }
   }
 
@@ -190,7 +197,11 @@ function RegistroContent() {
   const selected = TYPES.find((t) => t.key === accountType)!;
   const colors = COLOR_MAP[selected.color];
   const hasPlan = accountType !== "buyer";
-  const planPrices = hasPlan ? PRICES[accountType as "owner" | "seller"] : null;
+  const planPrices = hasPlan
+    ? accountType === "owner"
+      ? PRICES.owner[ownerTier]
+      : PRICES.seller
+    : null;
 
   const LEFT_PANEL: Record<AccountType, { gradient: string; headline: string; sub: string }> = {
     owner: {
@@ -262,7 +273,9 @@ function RegistroContent() {
                   <div className="flex items-center gap-2">
                     <Zap className="h-4 w-4 text-indigo-300" />
                     <span className="text-white font-bold text-sm">
-                      {billing === "ANNUAL" ? "Anual" : "Mensual"}
+                      {accountType === "owner"
+                        ? ownerTier === "PREMIUM" ? "Tienda Premium" : "Tienda Pro"
+                        : billing === "ANNUAL" ? "Anual" : "Mensual"}
                     </span>
                   </div>
                   <span className="text-indigo-200 font-black">
@@ -327,36 +340,77 @@ function RegistroContent() {
 
             {/* Plan toggle — solo para owner y seller */}
             {hasPlan && planPrices && (
-              <div className="mb-7">
-                <p className="text-xs text-gray-400 font-semibold mb-3">Elegí tu plan</p>
+              <div className="mb-7 space-y-3">
 
-                {/* Selector pill */}
-                <div className="inline-flex w-full rounded-2xl border border-white/10 bg-white/5 p-1 gap-1 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setBilling("MONTHLY")}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                      billing === "MONTHLY"
-                        ? "bg-white text-gray-900 shadow"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    Mensual
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBilling("ANNUAL")}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                      billing === "ANNUAL"
-                        ? "bg-white text-gray-900 shadow"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    Anual
-                    <span className={`text-xs font-black px-1.5 py-0.5 rounded-full ${billing === "ANNUAL" ? "bg-emerald-500 text-white" : "bg-emerald-500/20 text-emerald-400"}`}>
-                      -25%
-                    </span>
-                  </button>
+                {/* Selector de tier — solo para dueños */}
+                {accountType === "owner" && (
+                  <div>
+                    <p className="text-xs text-gray-400 font-semibold mb-2">Elegí tu plan de tienda</p>
+                    <div className="inline-flex w-full rounded-2xl border border-white/10 bg-white/5 p-1 gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setOwnerTier("BASIC")}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                          ownerTier === "BASIC"
+                            ? "bg-white text-gray-900 shadow"
+                            : "text-gray-400 hover:text-white"
+                        }`}
+                      >
+                        Tienda Pro
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOwnerTier("PREMIUM")}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
+                          ownerTier === "PREMIUM"
+                            ? "bg-white text-gray-900 shadow"
+                            : "text-gray-400 hover:text-white"
+                        }`}
+                      >
+                        Tienda Premium
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${ownerTier === "PREMIUM" ? "bg-amber-500 text-white" : "bg-amber-500/20 text-amber-400"}`}>
+                          ★
+                        </span>
+                      </button>
+                    </div>
+                    {ownerTier === "BASIC" ? (
+                      <p className="text-xs text-gray-600 mt-1.5">6 afiliados · 10 cupones · Dominio propio no incluido</p>
+                    ) : (
+                      <p className="text-xs text-amber-500/70 mt-1.5">Afiliados y cupones ilimitados · Dominio propio · App instalable</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Selector de facturación */}
+                <div>
+                  <p className="text-xs text-gray-400 font-semibold mb-2">Facturación</p>
+                  <div className="inline-flex w-full rounded-2xl border border-white/10 bg-white/5 p-1 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setBilling("MONTHLY")}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                        billing === "MONTHLY"
+                          ? "bg-white text-gray-900 shadow"
+                          : "text-gray-400 hover:text-white"
+                      }`}
+                    >
+                      Mensual
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBilling("ANNUAL")}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                        billing === "ANNUAL"
+                          ? "bg-white text-gray-900 shadow"
+                          : "text-gray-400 hover:text-white"
+                      }`}
+                    >
+                      Anual
+                      <span className={`text-xs font-black px-1.5 py-0.5 rounded-full ${billing === "ANNUAL" ? "bg-emerald-500 text-white" : "bg-emerald-500/20 text-emerald-400"}`}>
+                        -25%
+                      </span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Precio según selección */}
@@ -524,7 +578,7 @@ function RegistroContent() {
                 </ul>
                 {key !== "buyer" && (
                   <p className="text-xs text-gray-600 mb-3">
-                    Desde {money(PRICES[key as "owner" | "seller"].MONTHLY)}/mes · 7 días gratis
+                    Desde {money(key === "owner" ? PRICES.owner.BASIC.MONTHLY : PRICES.seller.MONTHLY)}/mes · 7 días gratis
                   </p>
                 )}
                 <div className={`flex items-center gap-2 text-sm ${c.text} font-semibold group-hover:gap-3 transition-all`}>

@@ -33,8 +33,21 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } });
+  const [store, sub] = await Promise.all([
+    prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } }),
+    prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } }),
+  ]);
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+
+  if (!sub || (sub as any).tier !== "PREMIUM") {
+    const couponCount = await prisma.coupon.count({ where: { storeId: store.id } });
+    if (couponCount >= 10) {
+      return NextResponse.json(
+        { error: "Alcanzaste el límite de 10 cupones del plan Tienda Pro. Actualizá a Premium para crear más." },
+        { status: 403 }
+      );
+    }
+  }
 
   const body = await req.json();
   const { code, discountType, discountValue, minOrderAmount, maxUses, expiresAt } = body;

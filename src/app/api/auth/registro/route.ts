@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Demasiados intentos. Esperá un momento e intentá de nuevo." }, { status: 429 });
     }
 
-    const { name, email, password, storeName, accountType, billing } = await req.json();
+    const { name, email, password, storeName, accountType, billing, tier } = await req.json();
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
                     plan: billing === "ANNUAL" ? "ANNUAL" : "MONTHLY",
                     status: "TRIAL",
                     trialEndsAt,
+                    ...(type === "OWNER" ? { tier: tier === "PREMIUM" ? "PREMIUM" : "BASIC" } : {}),
                   },
                 },
               }
