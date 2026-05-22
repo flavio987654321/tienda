@@ -2994,6 +2994,44 @@ export default function ConfiguracionPage() {
                 </div>
               )}
 
+              {/* ── SELECTOR DE TEMPLATES ── */}
+              <div className="border-t border-gray-100 pt-3 space-y-2">
+                <p className="px-1 text-xs font-bold uppercase tracking-wide text-gray-400">Diseño / Plantilla</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {TEMPLATES.map((t) => {
+                    const active = config.templateId === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          set("templateId", t.id);
+                          if (blocks.length === 0 || window.confirm("¿Reemplazar los bloques actuales con los del template " + t.name + "?")) {
+                            loadTemplateBlocks(t.id);
+                          }
+                        }}
+                        className={`flex flex-col items-start gap-1 rounded-xl border-2 px-2.5 py-2 text-left transition-all ${
+                          active
+                            ? "border-indigo-500 bg-indigo-50 shadow-sm shadow-indigo-100"
+                            : "border-gray-100 bg-white hover:border-indigo-200 hover:bg-indigo-50/40"
+                        }`}
+                      >
+                        <span className="text-lg leading-none">{t.emoji}</span>
+                        <p className={`text-xs font-bold leading-tight ${active ? "text-indigo-700" : "text-gray-800"}`}>{t.name}</p>
+                        {active && (
+                          <span className="text-[9px] font-semibold text-indigo-500 uppercase tracking-wide">Activo</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {config.templateId && (
+                  <p className="text-[11px] text-gray-400 px-1 leading-relaxed">
+                    {TEMPLATES.find(t => t.id === config.templateId)?.desc}
+                  </p>
+                )}
+              </div>
+
               <ContentGlobalSettings config={config} set={set} onEditPolicy={setPolicyEditing} />
 
               <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-3 space-y-1.5">
