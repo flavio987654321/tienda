@@ -1,15 +1,24 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Users, Ticket, Globe, Mail, Headphones, X } from "lucide-react";
+import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Mail, X, BadgeCheck } from "lucide-react";
 import PaymentModal from "@/components/subscription/PaymentModal";
 
 function money(amount: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(amount);
 }
+
+type UserSub = {
+  status: string;
+  role: string;
+  plan: "MONTHLY" | "ANNUAL";
+  tier: string;
+  daysLeft: number;
+  currentPeriodEnd: string | null;
+};
 
 export default function PreciosPage() {
   return (
@@ -22,11 +31,26 @@ export default function PreciosPage() {
 function PreciosContent() {
   const [isAnnual, setIsAnnual] = useState(false);
   const [ownerTier, setOwnerTier] = useState<"BASIC" | "PREMIUM">("BASIC");
-  const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL"; amount: number } | null>(null);
+  const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL"; amount: number; prorated?: boolean } | null>(null);
+  const [userSub, setUserSub] = useState<UserSub | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const isRegistered = searchParams.get("registered") === "true";
   const role = searchParams.get("role");
+
+  useEffect(() => {
+    fetch("/api/suscripcion/estado")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        const sub: UserSub | null = data?.subscription ?? null;
+        setUserSub(sub);
+        if (sub) {
+          if (sub.plan === "ANNUAL") setIsAnnual(true);
+          if (sub.role === "OWNER") setOwnerTier(sub.tier === "PREMIUM" ? "PREMIUM" : "BASIC");
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const ownerPrices = {
     BASIC:   { monthly: 20000, annual: 180000 },
@@ -35,6 +59,35 @@ function PreciosContent() {
   const selectedOwner = ownerPrices[ownerTier];
   const ownerMonthlyEquiv = isAnnual ? Math.round(selectedOwner.annual / 12) : selectedOwner.monthly;
   const ownerPrice = isAnnual ? selectedOwner.annual : selectedOwner.monthly;
+
+  // Helpers para saber si el plan mostrado es el plan actual del usuario
+  const viewingBilling: "MONTHLY" | "ANNUAL" = isAnnual ? "ANNUAL" : "MONTHLY";
+  const isOnAnnual = userSub?.plan === "ANNUAL";
+
+  function isCurrentPlan(cardRole: "OWNER" | "AFFILIATE", cardTier?: "BASIC" | "PREMIUM") {
+    if (!userSub) return false;
+    if (userSub.role !== cardRole) return false;
+    if (cardRole === "OWNER" && userSub.tier !== (cardTier ?? "BASIC")) return false;
+    return userSub.plan === viewingBilling;
+  }
+
+  function isUpgradeToAnnual(cardRole: "OWNER" | "AFFILIATE", cardTier?: "BASIC" | "PREMIUM") {
+    if (!userSub) return false;
+    if (userSub.role !== cardRole) return false;
+    if (cardRole === "OWNER" && userSub.tier !== (cardTier ?? "BASIC")) return false;
+    return userSub.plan === "MONTHLY" && viewingBilling === "ANNUAL" && userSub.status === "ACTIVE";
+  }
+
+  function getProratedAmount(plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE") {
+    if (!userSub?.currentPeriodEnd) return ownerPrice;
+    const now = Date.now();
+    const periodEnd = new Date(userSub.currentPeriodEnd).getTime();
+    const daysLeft = Math.max(0, Math.ceil((periodEnd - now) / 86400000));
+    const monthlyPrice = plan === "OWNER_PREMIUM" ? 25000 : plan === "OWNER_BASIC" ? 20000 : 15000;
+    const annualPrice = plan === "OWNER_PREMIUM" ? 225000 : plan === "OWNER_BASIC" ? 180000 : 135000;
+    const credit = Math.round((daysLeft / 30) * monthlyPrice);
+    return Math.max(0, annualPrice - credit);
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -102,8 +155,14 @@ function PreciosContent() {
           <div className="flex flex-col items-center gap-3 mb-12">
             <div className="inline-flex rounded-2xl border border-white/10 bg-gray-900/60 p-1 gap-1">
               <button
-                onClick={() => setIsAnnual(false)}
-                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${!isAnnual ? "bg-white text-gray-900 shadow" : "text-gray-400 hover:text-white"}`}
+                onClick={() => !isOnAnnual && setIsAnnual(false)}
+                disabled={isOnAnnual}
+                title={isOnAnnual ? "Estás en un plan anual. Al vencer podés elegir mensual." : undefined}
+                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                  isOnAnnual
+                    ? "text-gray-700 cursor-not-allowed"
+                    : !isAnnual ? "bg-white text-gray-900 shadow" : "text-gray-400 hover:text-white"
+                }`}
               >
                 Mensual
               </button>
@@ -117,7 +176,11 @@ function PreciosContent() {
                 </span>
               </button>
             </div>
-            <span className="text-emerald-400 text-xs font-semibold">3 meses gratis pagando anual</span>
+            {isOnAnnual ? (
+              <span className="text-gray-600 text-xs">Estás en plan anual · Al vencer podés cambiarte a mensual</span>
+            ) : (
+              <span className="text-emerald-400 text-xs font-semibold">3 meses gratis pagando anual</span>
+            )}
           </div>
 
           {/* Cards */}
@@ -163,7 +226,21 @@ function PreciosContent() {
                 ))}
               </ul>
 
-              {isRegistered ? (
+              {isCurrentPlan("AFFILIATE") ? (
+                <div className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                  <BadgeCheck className="h-4 w-4" /> Tu plan actual
+                </div>
+              ) : isUpgradeToAnnual("AFFILIATE") ? (
+                <button
+                  onClick={() => {
+                    const proratedAmt = getProratedAmount("AFFILIATE");
+                    setPayModal({ plan: "AFFILIATE", billing: "ANNUAL", amount: proratedAmt, prorated: true });
+                  }}
+                  className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg"
+                >
+                  Cambiar a anual <ArrowRight className="h-4 w-4" />
+                </button>
+              ) : isRegistered ? (
                 <button
                   onClick={() => setPayModal({ plan: "AFFILIATE", billing: isAnnual ? "ANNUAL" : "MONTHLY", amount: isAnnual ? 135000 : 15000 })}
                   className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg"
@@ -178,7 +255,9 @@ function PreciosContent() {
                   Empezar prueba gratis <ArrowRight className="h-4 w-4" />
                 </Link>
               )}
-              <p className="text-center text-xs text-gray-600 mt-3">7 días gratis · Sin tarjeta · Cancelá cuando quieras</p>
+              <p className="text-center text-xs text-gray-600 mt-3">
+                {isCurrentPlan("AFFILIATE") ? `${userSub!.daysLeft} días restantes` : "7 días gratis · Sin tarjeta · Cancelá cuando quieras"}
+              </p>
             </div>
 
             {/* ── DUEÑO DE TIENDA (con selector interno) ── */}
@@ -271,26 +350,61 @@ function PreciosContent() {
                 })}
               </ul>
 
-              {isRegistered ? (
-                <button
-                  onClick={() => setPayModal({
-                    plan: ownerTier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC",
-                    billing: isAnnual ? "ANNUAL" : "MONTHLY",
-                    amount: ownerPrice,
-                  })}
-                  className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all text-white hover:opacity-90 hover:scale-[1.02] shadow-lg ${ownerTier === "PREMIUM" ? "bg-gradient-to-r from-amber-500 to-orange-600" : "bg-gradient-to-r from-indigo-600 to-cyan-600"}`}
-                >
-                  Suscribirme ahora <ArrowRight className="h-4 w-4" />
-                </button>
-              ) : (
-                <Link
-                  href={`/registro?plan=owner&billing=${isAnnual ? "annual" : "monthly"}&tier=${ownerTier === "PREMIUM" ? "premium" : "basic"}`}
-                  className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all text-white hover:opacity-90 hover:scale-[1.02] shadow-lg ${ownerTier === "PREMIUM" ? "bg-gradient-to-r from-amber-500 to-orange-600" : "bg-gradient-to-r from-indigo-600 to-cyan-600"}`}
-                >
-                  Empezar prueba gratis <ArrowRight className="h-4 w-4" />
-                </Link>
-              )}
-              <p className="text-center text-xs text-gray-600 mt-3">7 días gratis · Sin tarjeta · Cancelá cuando quieras</p>
+              {(() => {
+                const planKey = ownerTier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC";
+                const cardTier = ownerTier;
+                const btnClass = ownerTier === "PREMIUM"
+                  ? "bg-gradient-to-r from-amber-500 to-orange-600"
+                  : "bg-gradient-to-r from-indigo-600 to-cyan-600";
+
+                if (isCurrentPlan("OWNER", cardTier)) {
+                  return (
+                    <div className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                      <BadgeCheck className="h-4 w-4" /> Tu plan actual
+                    </div>
+                  );
+                }
+                if (isUpgradeToAnnual("OWNER", cardTier)) {
+                  const proratedAmt = getProratedAmount(planKey);
+                  const credit = ownerPrice - proratedAmt;
+                  return (
+                    <>
+                      {credit > 0 && (
+                        <p className="text-xs text-emerald-400 text-center mb-2">
+                          Pagás {money(proratedAmt)} (descontamos {money(credit)} por los días restantes del mes)
+                        </p>
+                      )}
+                      <button
+                        onClick={() => setPayModal({ plan: planKey, billing: "ANNUAL", amount: proratedAmt, prorated: true })}
+                        className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all text-white hover:opacity-90 hover:scale-[1.02] shadow-lg ${btnClass}`}
+                      >
+                        Cambiar a anual <ArrowRight className="h-4 w-4" />
+                      </button>
+                    </>
+                  );
+                }
+                if (isRegistered || userSub) {
+                  return (
+                    <button
+                      onClick={() => setPayModal({ plan: planKey, billing: isAnnual ? "ANNUAL" : "MONTHLY", amount: ownerPrice })}
+                      className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all text-white hover:opacity-90 hover:scale-[1.02] shadow-lg ${btnClass}`}
+                    >
+                      {userSub ? "Cambiar de plan" : "Suscribirme ahora"} <ArrowRight className="h-4 w-4" />
+                    </button>
+                  );
+                }
+                return (
+                  <Link
+                    href={`/registro?plan=owner&billing=${isAnnual ? "annual" : "monthly"}&tier=${ownerTier === "PREMIUM" ? "premium" : "basic"}`}
+                    className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all text-white hover:opacity-90 hover:scale-[1.02] shadow-lg ${btnClass}`}
+                  >
+                    Empezar prueba gratis <ArrowRight className="h-4 w-4" />
+                  </Link>
+                );
+              })()}
+              <p className="text-center text-xs text-gray-600 mt-3">
+                {isCurrentPlan("OWNER", ownerTier) ? `${userSub!.daysLeft} días restantes` : "7 días gratis · Sin tarjeta · Cancelá cuando quieras"}
+              </p>
             </div>
 
             {/* ── CLIENTE ── */}

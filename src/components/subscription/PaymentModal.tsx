@@ -7,6 +7,7 @@ type Props = {
   plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE";
   billing: "MONTHLY" | "ANNUAL";
   amount: number;
+  prorated?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 };
@@ -29,7 +30,7 @@ function money(n: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 }
 
-export default function PaymentModal({ plan, billing, amount, onClose, onSuccess }: Props) {
+export default function PaymentModal({ plan, billing, amount, prorated, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [mpReady, setMpReady] = useState(false);
   const [error, setError] = useState("");
@@ -114,6 +115,7 @@ export default function PaymentModal({ plan, billing, amount, onClose, onSuccess
             body: JSON.stringify({
               plan, billing, cardToken: token, paymentMethodId,
               rewardCouponCode: appliedCoupon?.code ?? null,
+              prorated: prorated ?? false,
             }),
           });
 

@@ -7,9 +7,10 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-  const { plan, billing, cardToken, paymentMethodId, rewardCouponCode } = await req.json();
+  const { plan, billing, cardToken, paymentMethodId, rewardCouponCode, prorated } = await req.json();
   // plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"
   // billing: "MONTHLY" | "ANNUAL"
+  // prorated: true → cobrar solo la diferencia al pasar de mensual a anual
 
   if (!plan || !billing) {
     return NextResponse.json({ error: "Faltan datos del pago" }, { status: 400 });
@@ -21,8 +22,20 @@ export async function POST(req: NextRequest) {
   const role = plan.startsWith("OWNER") ? "OWNER" : "AFFILIATE";
   const tier = plan === "OWNER_PREMIUM" ? "PREMIUM" : "BASIC";
 
+  // Prorrateo: si viene de mensual activo y está cambiando a anual
+  let proratedCredit = 0;
+  if (prorated && billing === "ANNUAL") {
+    const currentSub = await prisma.subscription.findUnique({ where: { userId: user.id } });
+    if (currentSub?.plan === "MONTHLY" && currentSub.status === "ACTIVE" && currentSub.currentPeriodEnd) {
+      const now = new Date();
+      const daysLeft = Math.max(0, Math.ceil((currentSub.currentPeriodEnd.getTime() - now.getTime()) / 86400000));
+      const monthlyPrice = PRICES[plan as keyof typeof PRICES]?.["MONTHLY"] ?? 0;
+      proratedCredit = Math.round((daysLeft / 30) * monthlyPrice);
+    }
+  }
+
   // Validar y aplicar cupón de suscripción si viene
-  let finalAmount = baseAmount;
+  let finalAmount = Math.max(0, baseAmount - proratedCredit);
   let couponToMark: string | null = null;
 
   if (rewardCouponCode) {
