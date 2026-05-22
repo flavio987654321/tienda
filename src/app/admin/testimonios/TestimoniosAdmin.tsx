@@ -20,7 +20,7 @@ export default function TestimoniosAdmin({ testimonials: initial }: { testimonia
 
   async function setApproved(id: string, approved: boolean) {
     setLoading(id);
-    const res = await fetch(`/api/testimonios/${id}`, {
+    const res = await fetch(`/api/admin/testimonios/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ approved }),
@@ -34,7 +34,7 @@ export default function TestimoniosAdmin({ testimonials: initial }: { testimonia
   async function remove(id: string) {
     if (!confirm("¿Eliminar este testimonio?")) return;
     setLoading(id);
-    const res = await fetch(`/api/testimonios/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/testimonios/${id}`, { method: "DELETE" });
     if (res.ok) setItems((prev) => prev.filter((t) => t.id !== id));
     setLoading(null);
   }

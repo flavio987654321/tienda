@@ -1,5 +1,23 @@
 import { prisma } from "@/lib/prisma";
-import { Users, Store, ShoppingBag, MessageSquare, TrendingUp, CheckCircle, Clock } from "lucide-react";
+import { Users, Store, ShoppingBag, MessageSquare, TrendingUp, CheckCircle, Clock, AlertCircle } from "lucide-react";
+
+async function getSystemStatus() {
+  const checks = await Promise.allSettled([
+    prisma.$queryRaw`SELECT 1`,
+    process.env.NEXT_PUBLIC_SUPABASE_URL
+      ? fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/health`, { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(); })
+      : Promise.resolve(),
+    process.env.MP_ACCESS_TOKEN
+      ? fetch("https://api.mercadopago.com/v1/payment_methods", {
+          headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
+          cache: "no-store",
+        }).then(r => { if (!r.ok) throw new Error(); })
+      : Promise.resolve(),
+  ]);
+
+  const [db, auth, mp] = checks.map(r => r.status === "fulfilled");
+  return { db, auth, mp };
+}
 
 async function getStats() {
   const [
@@ -32,7 +50,7 @@ async function getStats() {
 }
 
 export default async function AdminPage() {
-  const s = await getStats();
+  const [s, sys] = await Promise.all([getStats(), getSystemStatus()]);
 
   const cards = [
     {
@@ -103,20 +121,30 @@ export default async function AdminPage() {
 
       <div className="mt-10 bg-gray-900/30 border border-white/5 rounded-2xl p-6">
         <div className="flex items-center gap-3 mb-4">
-          <CheckCircle className="h-5 w-5 text-emerald-400" />
+          {sys.db && sys.auth && sys.mp ? (
+            <CheckCircle className="h-5 w-5 text-emerald-400" />
+          ) : (
+            <AlertCircle className="h-5 w-5 text-red-400" />
+          )}
           <h2 className="text-white font-bold">Estado del sistema</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: "API", status: "OK" },
-            { label: "Base de datos", status: "OK" },
-            { label: "Auth (Supabase)", status: "OK" },
-            { label: "Pagos (MercadoPago)", status: "OK" },
-          ].map(({ label, status }) => (
+            { label: "API", ok: true },
+            { label: "Base de datos", ok: sys.db },
+            { label: "Auth (Supabase)", ok: sys.auth },
+            { label: "Pagos (MercadoPago)", ok: sys.mp },
+          ].map(({ label, ok }) => (
             <div key={label} className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              {ok ? (
+                <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              )}
               <span className="text-gray-400 text-sm">{label}</span>
-              <span className="text-emerald-400 text-xs font-semibold ml-auto">{status}</span>
+              <span className={`text-xs font-semibold ml-auto ${ok ? "text-emerald-400" : "text-red-400"}`}>
+                {ok ? "OK" : "Error"}
+              </span>
             </div>
           ))}
         </div>

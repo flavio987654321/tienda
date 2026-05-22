@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Store, Zap, ShoppingCart, Shield, Calendar, X, RefreshCw, Ban, CheckCircle, Search } from "lucide-react";
+import { Store, Zap, ShoppingCart, Shield, Calendar, X, RefreshCw, Ban, CheckCircle, Search, Trash2, AlertTriangle } from "lucide-react";
 
 type Sub = {
   status: string;
@@ -41,6 +41,9 @@ export default function UsuariosAdmin({ users: initial }: { users: User[] }) {
   const [subModal, setSubModal] = useState<User | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [deleteModal, setDeleteModal] = useState<User | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -88,6 +91,20 @@ export default function UsuariosAdmin({ users: initial }: { users: User[] }) {
       }
     } finally {
       setLoadingId(null);
+    }
+  }
+
+  async function deleteUser(user: User) {
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/admin/usuarios/${user.id}`, { method: "DELETE" });
+      if (res.ok) {
+        setUsers(prev => prev.filter(u => u.id !== user.id));
+        setDeleteModal(null);
+        setDeleteConfirm("");
+      }
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -218,24 +235,33 @@ export default function UsuariosAdmin({ users: initial }: { users: User[] }) {
                       </span>
                     </td>
                     <td className="px-5 py-4">
-                      <button
-                        onClick={() => toggleBan(u)}
-                        disabled={isBanLoading}
-                        title={u.banned ? "Desbanear usuario" : "Banear usuario"}
-                        className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
-                          u.banned
-                            ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                            : "bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                        }`}
-                      >
-                        {isBanLoading ? (
-                          <RefreshCw className="h-3 w-3 animate-spin" />
-                        ) : u.banned ? (
-                          <><CheckCircle className="h-3 w-3" /> Desbanear</>
-                        ) : (
-                          <><Ban className="h-3 w-3" /> Banear</>
-                        )}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleBan(u)}
+                          disabled={isBanLoading}
+                          title={u.banned ? "Desbanear usuario" : "Banear usuario"}
+                          className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
+                            u.banned
+                              ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                              : "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                          }`}
+                        >
+                          {isBanLoading ? (
+                            <RefreshCw className="h-3 w-3 animate-spin" />
+                          ) : u.banned ? (
+                            <><CheckCircle className="h-3 w-3" /> Desbanear</>
+                          ) : (
+                            <><Ban className="h-3 w-3" /> Banear</>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => { setDeleteModal(u); setDeleteConfirm(""); }}
+                          title="Eliminar cuenta completa"
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-800 text-gray-500 hover:bg-red-950/60 hover:text-red-400 transition-all"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -244,6 +270,62 @@ export default function UsuariosAdmin({ users: initial }: { users: User[] }) {
           </table>
         </div>
       </div>
+
+      {/* Modal eliminar cuenta */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setDeleteModal(null); setDeleteConfirm(""); }}>
+          <div className="bg-gray-900 border border-red-500/20 rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-4 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold">Eliminar cuenta completa</h3>
+                <p className="text-gray-400 text-xs mt-1">
+                  Esta acción es <span className="text-red-400 font-semibold">permanente e irreversible</span>. Se borrará todo:
+                  cuenta, tienda, productos, pedidos, afiliaciones, suscripción, términos aceptados e historial completo.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-800/60 rounded-xl p-3 mb-5 text-sm">
+              <p className="text-gray-500 text-xs mb-1">Usuario a eliminar</p>
+              <p className="text-white font-semibold">{deleteModal.name ?? "—"}</p>
+              <p className="text-gray-400 text-xs">{deleteModal.email}</p>
+            </div>
+
+            <div className="mb-5">
+              <label className="text-gray-400 text-xs mb-2 block">
+                Escribí el email <span className="text-white font-semibold">{deleteModal.email}</span> para confirmar
+              </label>
+              <input
+                type="text"
+                value={deleteConfirm}
+                onChange={e => setDeleteConfirm(e.target.value)}
+                placeholder={deleteModal.email}
+                className="w-full bg-gray-800 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setDeleteModal(null); setDeleteConfirm(""); }}
+                className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 text-sm font-semibold transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => deleteUser(deleteModal)}
+                disabled={deleteConfirm !== deleteModal.email || deleteLoading}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {deleteLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                {deleteLoading ? "Eliminando..." : "Eliminar todo"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal suscripción */}
       {subModal && (
