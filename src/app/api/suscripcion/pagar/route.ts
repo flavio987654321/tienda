@@ -8,9 +8,8 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
   const { plan, billing, cardToken, paymentMethodId, rewardCouponCode } = await req.json();
-  // plan: "OWNER" | "AFFILIATE"
+  // plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"
   // billing: "MONTHLY" | "ANNUAL"
-  // cardToken: token generado por MP.js en el frontend (puede ser null si el cupón cubre el 100%)
 
   if (!plan || !billing) {
     return NextResponse.json({ error: "Faltan datos del pago" }, { status: 400 });
@@ -18,6 +17,9 @@ export async function POST(req: NextRequest) {
 
   const baseAmount = PRICES[plan as keyof typeof PRICES]?.[billing as "MONTHLY" | "ANNUAL"];
   if (!baseAmount) return NextResponse.json({ error: "Plan inválido" }, { status: 400 });
+
+  const role = plan.startsWith("OWNER") ? "OWNER" : "AFFILIATE";
+  const tier = plan === "OWNER_PREMIUM" ? "PREMIUM" : "BASIC";
 
   // Validar y aplicar cupón de suscripción si viene
   let finalAmount = baseAmount;
@@ -50,8 +52,8 @@ export async function POST(req: NextRequest) {
 
     await prisma.subscription.upsert({
       where: { userId: user.id },
-      update: { plan: billing, status: "ACTIVE", currentPeriodStart: now, currentPeriodEnd: periodEnd, gracePeriodEndsAt },
-      create: { userId: user.id, role: plan, plan: billing, status: "ACTIVE", trialEndsAt: now, currentPeriodStart: now, currentPeriodEnd: periodEnd, gracePeriodEndsAt },
+      update: { role, tier, plan: billing, status: "ACTIVE", currentPeriodStart: now, currentPeriodEnd: periodEnd, gracePeriodEndsAt },
+      create: { userId: user.id, role, tier, plan: billing, status: "ACTIVE", trialEndsAt: now, currentPeriodStart: now, currentPeriodEnd: periodEnd, gracePeriodEndsAt },
     });
 
     if (couponToMark) {
@@ -71,7 +73,6 @@ export async function POST(req: NextRequest) {
   const amount = finalAmount;
 
   try {
-    // Crear pago en Mercado Pago
     const mpRes = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {
@@ -82,16 +83,12 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         transaction_amount: amount,
         token: cardToken,
-        description: `Suscripción ${plan === "OWNER" ? "Dueño de tienda" : "Afiliado"} - ${billing === "MONTHLY" ? "Mensual" : "Anual"}`,
+        description: `Suscripción ${role === "OWNER" ? (tier === "PREMIUM" ? "Dueño Premium" : "Dueño Básico") : "Afiliado"} - ${billing === "MONTHLY" ? "Mensual" : "Anual"}`,
         installments: 1,
         payment_method_id: paymentMethodId || "visa",
         payer: { email: user.email },
         notification_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/suscripcion/webhook`,
-        metadata: {
-          userId: user.id,
-          plan,
-          billing,
-        },
+        metadata: { userId: user.id, plan, billing, role, tier },
       }),
     });
 
@@ -104,7 +101,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Pago aprobado — activar suscripción
     if (mpData.status === "approved") {
       const now = new Date();
       const periodEnd = billing === "MONTHLY"
@@ -114,25 +110,8 @@ export async function POST(req: NextRequest) {
 
       await prisma.subscription.upsert({
         where: { userId: user.id },
-        update: {
-          plan: billing,
-          status: "ACTIVE",
-          currentPeriodStart: now,
-          currentPeriodEnd: periodEnd,
-          gracePeriodEndsAt,
-          mpPaymentId: String(mpData.id),
-        },
-        create: {
-          userId: user.id,
-          role: plan,
-          plan: billing,
-          status: "ACTIVE",
-          trialEndsAt: now,
-          currentPeriodStart: now,
-          currentPeriodEnd: periodEnd,
-          gracePeriodEndsAt,
-          mpPaymentId: String(mpData.id),
-        },
+        update: { role, tier, plan: billing, status: "ACTIVE", currentPeriodStart: now, currentPeriodEnd: periodEnd, gracePeriodEndsAt, mpPaymentId: String(mpData.id) },
+        create: { userId: user.id, role, tier, plan: billing, status: "ACTIVE", trialEndsAt: now, currentPeriodStart: now, currentPeriodEnd: periodEnd, gracePeriodEndsAt, mpPaymentId: String(mpData.id) },
       });
 
       if (couponToMark) {
@@ -145,7 +124,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, status: "approved" });
     }
 
-    // Pago pendiente (ej: transferencia bancaria) — no activar todavía
     if (mpData.status === "pending" || mpData.status === "in_process") {
       return NextResponse.json({ success: false, status: "pending", error: "Tu pago está siendo procesado. Te avisaremos por email cuando se confirme." }, { status: 202 });
     }

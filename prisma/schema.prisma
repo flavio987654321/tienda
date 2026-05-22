@@ -448,6 +448,7 @@ model Subscription {
   userId            String   @unique
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   role              String   // AFFILIATE | OWNER
+  tier              String   @default("BASIC") // BASIC | PREMIUM (solo para OWNER)
   plan              String   // MONTHLY | ANNUAL
   status            String   @default("TRIAL") // TRIAL | ACTIVE | GRACE | EXPIRED | CANCELLED
   trialEndsAt       DateTime

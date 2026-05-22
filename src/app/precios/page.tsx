@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart } from "lucide-react";
+import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Globe } from "lucide-react";
 import PaymentModal from "@/components/subscription/PaymentModal";
 
 const PLANS = {
@@ -17,8 +17,9 @@ const PLANS = {
     color: "from-violet-600 to-indigo-600",
     border: "border-violet-500/30",
     badge: null,
+    planKey: "AFFILIATE" as const,
     features: [
-      "Acceso a todas las tiendas de la plataforma",
+      "Acceso a todas las tiendas",
       "Link de afiliado con tracking en tiempo real",
       "Billetera digital para cobrar comisiones",
       "Panel de ventas y estadísticas",
@@ -26,23 +27,43 @@ const PLANS = {
       "Soporte prioritario",
     ],
   },
-  owner: {
-    name: "Dueño de tienda",
+  owner_basic: {
+    name: "Dueño Básico",
     icon: Store,
     description: "Creá tu tienda online y gestioná afiliados que vendan por vos.",
-    monthly: 25000,
-    annual: 225000,
+    monthly: 20000,
+    annual: 180000,
     color: "from-indigo-600 to-cyan-600",
     border: "border-indigo-500/30",
     badge: "Más popular",
+    planKey: "OWNER_BASIC" as const,
     features: [
-      "Tienda online con dominio propio",
+      "Tienda con subdominio incluido",
       "Productos y variantes ilimitados",
       "Red de afiliados que venden por vos",
       "Panel de pedidos y estadísticas",
       "Gestión de cupones y descuentos",
-      "Venta mayorista integrada",
+      "Tienda instalable como app (PWA)",
       "Soporte prioritario",
+    ],
+  },
+  owner_premium: {
+    name: "Dueño Premium",
+    icon: Crown,
+    description: "Todo lo del plan Básico más dominio personalizado incluido el primer año.",
+    monthly: 25000,
+    annual: 225000,
+    color: "from-amber-500 to-orange-600",
+    border: "border-amber-500/30",
+    badge: "Con dominio propio",
+    planKey: "OWNER_PREMIUM" as const,
+    features: [
+      "Todo lo del plan Básico",
+      "Dominio propio incluido 1er año",
+      "Configuración DNS automática",
+      "Tu tienda en tudominio.com",
+      "Renovación del dominio por tu cuenta el 2do año",
+      "Soporte prioritario premium",
     ],
   },
 };
@@ -61,11 +82,11 @@ export default function PreciosPage() {
 
 function PreciosContent() {
   const [isAnnual, setIsAnnual] = useState(false);
-  const [payModal, setPayModal] = useState<{ plan: "OWNER" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL"; amount: number } | null>(null);
+  const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL"; amount: number } | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const isRegistered = searchParams.get("registered") === "true";
-  const role = searchParams.get("role"); // "owner" | "affiliate"
+  const role = searchParams.get("role");
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -90,7 +111,7 @@ function PreciosContent() {
       </nav>
 
       <div className="pt-32 pb-24 px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
 
           {/* Banner post-registro */}
           {isRegistered && (
@@ -134,21 +155,13 @@ function PreciosContent() {
             <div className="inline-flex rounded-2xl border border-white/10 bg-gray-900/60 p-1 gap-1">
               <button
                 onClick={() => setIsAnnual(false)}
-                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                  !isAnnual
-                    ? "bg-white text-gray-900 shadow"
-                    : "text-gray-400 hover:text-white"
-                }`}
+                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${!isAnnual ? "bg-white text-gray-900 shadow" : "text-gray-400 hover:text-white"}`}
               >
                 Mensual
               </button>
               <button
                 onClick={() => setIsAnnual(true)}
-                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
-                  isAnnual
-                    ? "bg-white text-gray-900 shadow"
-                    : "text-gray-400 hover:text-white"
-                }`}
+                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${isAnnual ? "bg-white text-gray-900 shadow" : "text-gray-400 hover:text-white"}`}
               >
                 Anual
                 <span className={`text-xs font-black px-2 py-0.5 rounded-full ${isAnnual ? "bg-emerald-500 text-white" : "bg-emerald-500/20 text-emerald-400"}`}>
@@ -161,8 +174,8 @@ function PreciosContent() {
             </span>
           </div>
 
-          {/* Cards */}
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {/* Cards planes pagos */}
+          <div className="grid md:grid-cols-3 gap-6 mb-6">
             {(Object.entries(PLANS) as [string, typeof PLANS.affiliate][]).map(([key, plan]) => {
               const Icon = plan.icon;
               const price = isAnnual ? plan.annual : plan.monthly;
@@ -175,7 +188,11 @@ function PreciosContent() {
                 >
                   {plan.badge && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                      <span className="bg-indigo-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg shadow-indigo-500/30">
+                      <span className={`text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg ${
+                        key === "owner_premium"
+                          ? "bg-amber-500 shadow-amber-500/30"
+                          : "bg-indigo-600 shadow-indigo-500/30"
+                      }`}>
                         {plan.badge}
                       </span>
                     </div>
@@ -204,9 +221,13 @@ function PreciosContent() {
                   <div className="h-px bg-white/5 my-6" />
 
                   <ul className="space-y-3 mb-8 flex-1">
-                    {plan.features.map((f) => (
+                    {plan.features.map((f, i) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm text-gray-300">
-                        <Check className="h-4 w-4 text-indigo-400 shrink-0 mt-0.5" />
+                        <Check className={`h-4 w-4 shrink-0 mt-0.5 ${
+                          key === "owner_premium" && i === 1
+                            ? "text-amber-400"
+                            : "text-indigo-400"
+                        }`} />
                         {f}
                       </li>
                     ))}
@@ -215,7 +236,7 @@ function PreciosContent() {
                   {isRegistered ? (
                     <button
                       onClick={() => setPayModal({
-                        plan: key === "owner" ? "OWNER" : "AFFILIATE",
+                        plan: plan.planKey,
                         billing: isAnnual ? "ANNUAL" : "MONTHLY",
                         amount: isAnnual ? plan.annual : plan.monthly,
                       })}
@@ -226,7 +247,7 @@ function PreciosContent() {
                     </button>
                   ) : (
                     <Link
-                      href={`/registro?plan=${key === "affiliate" ? "seller" : key}&billing=${isAnnual ? "annual" : "monthly"}`}
+                      href={`/registro?plan=${key === "affiliate" ? "seller" : "owner"}&billing=${isAnnual ? "annual" : "monthly"}&tier=${key === "owner_premium" ? "premium" : "basic"}`}
                       className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all bg-gradient-to-r ${plan.color} text-white hover:opacity-90 hover:scale-[1.02] shadow-lg`}
                     >
                       Empezar prueba gratis
@@ -239,40 +260,31 @@ function PreciosContent() {
                 </div>
               );
             })}
+          </div>
 
-            {/* Card Cliente — gratis */}
+          {/* Card Cliente — gratis */}
+          <div className="max-w-sm mx-auto">
             <div className="relative rounded-3xl border border-gray-700/40 bg-gray-900/20 p-8 flex flex-col opacity-80">
               <div className="w-12 h-12 rounded-2xl bg-gray-700/40 flex items-center justify-center mb-5">
                 <ShoppingCart className="h-6 w-6 text-gray-400" />
               </div>
-
               <h2 className="text-2xl font-black text-gray-300 mb-1">Cliente</h2>
               <p className="text-gray-500 text-sm mb-6">Explorá tiendas, comprá productos y seguí tus pedidos.</p>
-
               <div className="mb-2">
                 <div className="flex items-end gap-2">
                   <span className="text-4xl font-black text-gray-300">Gratis</span>
                 </div>
                 <p className="text-xs text-gray-600 mt-1">Sin suscripción · Siempre gratis</p>
               </div>
-
               <div className="h-px bg-white/5 my-6" />
-
               <ul className="space-y-3 mb-8 flex-1">
-                {[
-                  "Acceso a todas las tiendas",
-                  "Historial de pedidos",
-                  "Favoritos sincronizados",
-                  "Checkout más rápido",
-                  "Seguimiento de envíos",
-                ].map((f) => (
+                {["Acceso a todas las tiendas", "Historial de pedidos", "Favoritos sincronizados", "Checkout más rápido", "Seguimiento de envíos"].map((f) => (
                   <li key={f} className="flex items-start gap-2.5 text-sm text-gray-500">
                     <Check className="h-4 w-4 text-gray-600 shrink-0 mt-0.5" />
                     {f}
                   </li>
                 ))}
               </ul>
-
               <Link
                 href="/registro?plan=buyer"
                 className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all bg-gray-700/50 hover:bg-gray-700/80 text-gray-300 border border-gray-600/40"
@@ -284,14 +296,44 @@ function PreciosContent() {
             </div>
           </div>
 
+          {/* Comparación de planes Básico vs Premium */}
+          <div className="mt-16 max-w-2xl mx-auto rounded-2xl border border-white/5 bg-gray-900/30 p-6">
+            <h3 className="text-center text-lg font-black text-white mb-6">¿Básico o Premium?</h3>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="text-gray-500 font-medium">Característica</div>
+              <div className="text-center font-bold text-indigo-400">Básico</div>
+              <div className="text-center font-bold text-amber-400">Premium</div>
+              {[
+                ["Tienda online", true, true],
+                ["Subdominio incluido", true, true],
+                ["Afiliados", true, true],
+                ["PWA instalable", true, true],
+                ["Dominio propio", false, true],
+                ["DNS automático", false, true],
+              ].map(([label, basic, premium]) => (
+                <>
+                  <div key={String(label)} className="text-gray-400 py-2 border-t border-white/5">{label}</div>
+                  <div className="text-center py-2 border-t border-white/5">
+                    {basic ? <Check className="h-4 w-4 text-emerald-400 mx-auto" /> : <span className="text-gray-600">—</span>}
+                  </div>
+                  <div className="text-center py-2 border-t border-white/5">
+                    {premium ? <Check className="h-4 w-4 text-emerald-400 mx-auto" /> : <span className="text-gray-600">—</span>}
+                  </div>
+                </>
+              ))}
+            </div>
+          </div>
+
           {/* FAQ */}
-          <div className="mt-20 max-w-2xl mx-auto">
+          <div className="mt-16 max-w-2xl mx-auto">
             <h2 className="text-2xl font-black text-center mb-8">Preguntas frecuentes</h2>
             <div className="space-y-4">
               {[
                 { q: "¿Necesito tarjeta de crédito para el período de prueba?", a: "No. Los 7 días de prueba son completamente gratis y no te pedimos datos de pago hasta que decides suscribirte." },
+                { q: "¿Qué es el subdominio incluido?", a: "Al crear tu tienda recibís automáticamente una URL del tipo tutienda.tiendaapps.com. Es gratis y funciona desde el primer día." },
+                { q: "¿Cómo funciona el dominio propio en el plan Premium?", a: "Compramos el dominio por vos el primer año. El segundo año en adelante lo renovás vos directamente, cuesta aproximadamente $9 USD/año." },
+                { q: "¿Puedo cambiar de Básico a Premium?", a: "Sí, podés cambiar en cualquier momento desde tu panel de suscripción." },
                 { q: "¿Qué pasa cuando vence mi suscripción?", a: "Te avisamos con anticipación. Tenés 4 días de gracia para renovar antes de que se limite el acceso." },
-                { q: "¿Puedo cambiar de plan?", a: "Sí, podés cambiar entre mensual y anual o cancelar en cualquier momento desde tu configuración." },
                 { q: "¿Cómo se cobra la suscripción?", a: "Con tarjeta de crédito o débito de cualquier banco argentino a través de Mercado Pago." },
               ].map(({ q, a }) => (
                 <div key={q} className="rounded-2xl border border-white/5 bg-gray-900/30 p-5">
@@ -312,7 +354,6 @@ function PreciosContent() {
         </div>
       </div>
 
-      {/* Modal de pago */}
       {payModal && (
         <PaymentModal
           plan={payModal.plan}
@@ -321,7 +362,7 @@ function PreciosContent() {
           onClose={() => setPayModal(null)}
           onSuccess={() => {
             setPayModal(null);
-            router.push(payModal.plan === "OWNER" ? "/login?registered=true" : "/login?registered=seller");
+            router.push(payModal.plan === "AFFILIATE" ? "/login?registered=seller" : "/login?registered=true");
           }}
         />
       )}

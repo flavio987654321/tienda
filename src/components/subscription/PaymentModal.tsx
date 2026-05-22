@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, X, CreditCard, Lock, CheckCircle, Ticket } from "lucide-react";
 
 type Props = {
-  plan: "OWNER" | "AFFILIATE";
+  plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE";
   billing: "MONTHLY" | "ANNUAL";
   amount: number;
   onClose: () => void;
@@ -157,7 +157,7 @@ export default function PaymentModal({ plan, billing, amount, onClose, onSuccess
     );
   }
 
-  const planLabel = plan === "OWNER" ? "Dueño de tienda" : "Afiliado";
+  const planLabel = plan === "OWNER_PREMIUM" ? "Dueño Premium" : plan === "OWNER_BASIC" ? "Dueño Básico" : "Afiliado";
   const billingLabel = billing === "MONTHLY" ? "mensual" : "anual";
 
   return (

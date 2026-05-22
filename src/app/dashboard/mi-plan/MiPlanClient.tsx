@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { CheckCircle, Clock, AlertTriangle, CreditCard, ArrowRight, RefreshCw } from "lucide-react";
-import { getSubscriptionStatus, daysRemaining, PRICES } from "@/lib/subscription";
+import { getSubscriptionStatus, daysRemaining, PRICES, getPriceForRole } from "@/lib/subscription";
 import PaymentModal from "@/components/subscription/PaymentModal";
 
 type Sub = {
   role: string;
+  tier?: string;
   plan: string;
   status: string;
   trialEndsAt: Date;
@@ -29,16 +30,17 @@ const STATUS_LABELS: Record<string, { label: string; color: string; icon: any }>
 };
 
 export default function MiPlanClient({ sub, userRole }: Props) {
-  const [payModal, setPayModal] = useState<{ plan: "OWNER" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL"; amount: number } | null>(null);
+  const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL"; amount: number } | null>(null);
 
   const role: "OWNER" | "AFFILIATE" = userRole === "OWNER" ? "OWNER" : "AFFILIATE";
 
   if (!sub) {
+    const defaultPlan = role === "OWNER" ? "OWNER_BASIC" : "AFFILIATE";
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
         <p className="text-gray-500 text-sm mb-4">No tenés una suscripción activa.</p>
         <button
-          onClick={() => setPayModal({ plan: role, billing: "MONTHLY", amount: PRICES[role].MONTHLY })}
+          onClick={() => setPayModal({ plan: defaultPlan, billing: "MONTHLY", amount: getPriceForRole(role, "BASIC", "MONTHLY") })}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 transition-colors"
         >
           <CreditCard className="h-4 w-4" /> Suscribirme
@@ -61,11 +63,13 @@ export default function MiPlanClient({ sub, userRole }: Props) {
 
   const days = daysRemaining(relevantDate);
   const planRole = (sub.role as "OWNER" | "AFFILIATE");
+  const planTier = (sub.tier ?? "BASIC") as "BASIC" | "PREMIUM";
   const planBilling = (sub.plan as "MONTHLY" | "ANNUAL");
-  const planPrice = PRICES[planRole]?.[planBilling] ?? 0;
+  const planPrice = getPriceForRole(planRole, planTier, planBilling);
 
-  const planNames: Record<string, string> = {
-    OWNER: "Dueño de tienda", AFFILIATE: "Afiliado",
+  const planNames: Record<string, Record<string, string>> = {
+    OWNER: { BASIC: "Dueño Básico", PREMIUM: "Dueño Premium" },
+    AFFILIATE: { BASIC: "Afiliado", PREMIUM: "Afiliado" },
   };
   const billingNames: Record<string, string> = {
     MONTHLY: "Mensual", ANNUAL: "Anual",
@@ -81,7 +85,7 @@ export default function MiPlanClient({ sub, userRole }: Props) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Plan actual</p>
-            <h2 className="text-xl font-black text-gray-900">{planNames[planRole] ?? planRole}</h2>
+            <h2 className="text-xl font-black text-gray-900">{planNames[planRole]?.[planTier] ?? planRole}</h2>
             <p className="text-gray-500 text-sm">{billingNames[planBilling] ?? planBilling} · {money(planPrice)}</p>
           </div>
           <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${statusMeta.color}`}>
@@ -130,7 +134,10 @@ export default function MiPlanClient({ sub, userRole }: Props) {
           {/* Renovar / Suscribirme */}
           {(!isActive || status === "GRACE" || (status === "ACTIVE" && days <= 5)) && (
             <button
-              onClick={() => setPayModal({ plan: planRole, billing: planBilling, amount: planPrice })}
+              onClick={() => {
+                const planKey = planRole === "OWNER" ? (planTier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC") : "AFFILIATE";
+                setPayModal({ plan: planKey, billing: planBilling, amount: planPrice });
+              }}
               className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 transition-colors"
             >
               <div className="flex items-center gap-2.5 text-sm font-semibold text-indigo-700">
@@ -144,14 +151,17 @@ export default function MiPlanClient({ sub, userRole }: Props) {
           {/* Cambiar a anual si es mensual */}
           {isActive && planBilling === "MONTHLY" && (
             <button
-              onClick={() => setPayModal({ plan: planRole, billing: "ANNUAL", amount: PRICES[planRole].ANNUAL })}
+              onClick={() => {
+                const planKey = planRole === "OWNER" ? (planTier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC") : "AFFILIATE";
+                setPayModal({ plan: planKey, billing: "ANNUAL", amount: getPriceForRole(planRole, planTier, "ANNUAL") });
+              }}
               className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors"
             >
               <div className="flex items-center gap-2.5 text-sm font-semibold text-emerald-700">
                 <CreditCard className="h-4 w-4" />
                 Cambiar a plan anual (3 meses gratis)
               </div>
-              <span className="text-xs font-bold text-emerald-600">{money(PRICES[planRole].ANNUAL)}/año</span>
+              <span className="text-xs font-bold text-emerald-600">{money(getPriceForRole(planRole, planTier, "ANNUAL"))}/año</span>
             </button>
           )}
 

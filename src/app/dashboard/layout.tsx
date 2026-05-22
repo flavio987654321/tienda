@@ -21,6 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           status={status}
           daysLeft={days}
           role={sub.role as "OWNER" | "AFFILIATE"}
+          tier={(sub.tier ?? "BASIC") as "BASIC" | "PREMIUM"}
           plan={sub.plan as "MONTHLY" | "ANNUAL"}
         />
       );

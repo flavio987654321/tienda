@@ -1,9 +1,19 @@
 import { prisma } from "@/lib/prisma";
 
 export const PRICES = {
-  OWNER:     { MONTHLY: 25000, ANNUAL: 225000 },
-  AFFILIATE: { MONTHLY: 15000, ANNUAL: 135000 },
+  OWNER_BASIC:   { MONTHLY: 20000, ANNUAL: 180000 },
+  OWNER_PREMIUM: { MONTHLY: 25000, ANNUAL: 225000 },
+  AFFILIATE:     { MONTHLY: 15000, ANNUAL: 135000 },
 };
+
+// Compatibilidad con código existente que usa PRICES["OWNER"] o PRICES["AFFILIATE"]
+export function getPriceForRole(role: string, tier: string, billing: "MONTHLY" | "ANNUAL"): number {
+  if (role === "OWNER") {
+    const key = tier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC";
+    return PRICES[key][billing];
+  }
+  return PRICES.AFFILIATE[billing];
+}
 
 export const TRIAL_DAYS = 7;
 export const GRACE_DAYS = 4;
