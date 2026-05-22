@@ -28,6 +28,7 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
       policyReturns: true,
       policyShipping: true,
       policyTerms: true,
+      owner: { select: { email: true } },
     },
   });
   if (!store) notFound();
@@ -111,6 +112,35 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
           </div>
         )}
       </main>
+
+      {/* Bloque fijo de derechos del consumidor — siempre visible */}
+      <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", padding: "24px", margin: "0 0 24px" }}>
+        <p style={{ fontSize: "14px", fontWeight: 700, color: "#92400e", marginBottom: "10px" }}>
+          📋 Tus derechos como consumidor (Ley 24.240 — Argentina)
+        </p>
+        <ul style={{ paddingLeft: "18px", color: "#78350f", fontSize: "13px", lineHeight: 1.8, margin: 0 }}>
+          <li><strong>Arrepentimiento:</strong> Podés cancelar una compra online dentro de los <strong>10 días corridos</strong> desde que recibiste el producto, sin dar explicaciones y sin costo.</li>
+          <li><strong>Garantía legal:</strong> Los productos tienen garantía de 6 meses (nuevos) o 3 meses (usados) ante defectos de fabricación.</li>
+          <li><strong>Información clara:</strong> Tenés derecho a conocer el precio total, datos del vendedor y condiciones antes de comprar.</li>
+          <li><strong>Reclamos:</strong> Si no recibís respuesta satisfactoria, podés contactar a Defensa del Consumidor de tu provincia sin cargo.</li>
+        </ul>
+        <p style={{ fontSize: "12px", color: "#92400e", marginTop: "12px", marginBottom: 0 }}>
+          Más información: <a href="https://www.argentina.gob.ar/produccion/defensadelconsumidor" target="_blank" rel="noopener noreferrer" style={{ color: "#d97706" }}>argentina.gob.ar/defensadelconsumidor</a>
+        </p>
+      </div>
+
+      {/* Datos de contacto del vendedor */}
+      <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
+        <p style={{ fontSize: "13px", fontWeight: 700, color: "#374151", marginBottom: "8px" }}>📬 Contacto con la tienda</p>
+        <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>
+          Esta tienda opera a través de <strong>MiTienda</strong>.
+          Para consultas sobre tu pedido, devoluciones o garantías, contactá directamente a <strong>{store.name}</strong>
+          {store.owner?.email ? <> al email: <a href={`mailto:${store.owner.email}`} style={{ color: store.primaryColor }}>{store.owner.email}</a></> : " desde el formulario de contacto de la tienda"}.
+        </p>
+        <p style={{ fontSize: "12px", color: "#9ca3af", marginTop: "8px", marginBottom: 0 }}>
+          Plataforma: MiTienda · soporte: marketplacemitienda@gmail.com
+        </p>
+      </div>
 
       <footer style={{ borderTop: "1px solid #e5e7eb", padding: "24px", textAlign: "center", color: "#9ca3af", fontSize: "13px" }}>
         © {new Date().getFullYear()} {store.name}

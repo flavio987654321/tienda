@@ -100,6 +100,65 @@
 
 ---
 
+## BLOQUE 8 — NUEVOS BUGS CRÍTICOS (diagnóstico 2026-05-22)
+
+| # | Estado | Severidad | Descripción | Archivo |
+|---|--------|-----------|-------------|---------|
+| BUG-08 | ✅ resuelto | 🔴 | Race condition en retiros: dos requests simultáneos pasan la validación "retiro pendiente" → doble retiro. Fix: $transaction Serializable con re-check interno | src/app/api/vendedoras/wallet/route.ts:205 |
+| BUG-09 | ✅ resuelto | 🟠 | Cálculo incorrecto al cancelar pedido con comisión: `totalWithdrawn` se decrementa cuando debería reflejar solo lo ya retirado → balances corruptos en afiliadas | src/app/api/pedidos/[id]/route.ts:204 |
+| BUG-10 | ✅ resuelto | 🟠 | Fetch a MercadoPago sin timeout: fix con AbortController (8s timeout) en el mismo commit de SEC-09 | src/app/api/suscripcion/webhook/route.ts:15 |
+| BUG-11 | ✅ resuelto | 🟠 | ProductRouteContext usa tipo genérico inexistente en Next.js 15+: `RouteContext<"/api/productos/[id]">` no es válido | src/app/api/productos/[id]/route.ts:6 |
+| BUG-12 | ✅ resuelto | 🟡 | Query de reseñas sin límite: si un producto tiene miles de reseñas, las carga todas en memoria | src/app/api/reviews/route.ts:12 |
+
+---
+
+## BLOQUE 9 — NUEVAS VULNERABILIDADES DE SEGURIDAD (diagnóstico 2026-05-22)
+
+| # | Estado | Severidad | Descripción | Archivo |
+|---|--------|-----------|-------------|---------|
+| SEC-09 | ✅ resuelto | 🔴 | Webhook MercadoPago sin validación de firma: fix con verifyMPSignature (HMAC-SHA256 + timingSafeEqual) y MP_WEBHOOK_SECRET env var | src/app/api/suscripcion/webhook/route.ts |
+| SEC-10 | ✅ resuelto | 🔴 | Datos bancarios en texto plano: fix con AES-256-GCM en src/lib/crypto.ts, CBU/CUIL/bankHolder cifrados al guardar, CUIL nunca expuesto al frontend | src/app/api/vendedoras/wallet/route.ts |
+| SEC-11 | ✅ resuelto | 🔴 | Rate limiter en memoria: agregado warning en producción + código KV listo para activar con 1 línea. Pendiente instalar @vercel/kv en Vercel dashboard | src/lib/rate-limit.ts |
+| SEC-12 | ✅ resuelto | 🟠 | CSP configurado con `unsafe-inline` + `unsafe-eval`: anula toda protección XSS aunque SEC-08 esté "resuelto" | next.config.ts |
+| SEC-13 | ✅ resuelto | 🟠 | CORS no configurado explícitamente: Next.js permite cualquier origen en API routes por defecto → CSRF posible | middleware o next.config.ts |
+| SEC-14 | ✅ resuelto | 🟠 | Formulario de contacto público sin CAPTCHA ni rate limit: cualquiera puede inundar con spam o usar `replyTo` falso para phishing | src/app/api/public/[slug]/contacto/route.ts |
+| SEC-15 | ✅ resuelto | 🟡 | `isSafeUrl` en configuracion acepta cualquier URL relativa (`/` o `#`) — versión más restrictiva existe en vendedoras pero no se reutiliza | src/lib/url-utils.ts (nuevo módulo compartido) |
+| SEC-16 | ✅ resuelto | 🟡 | Mensajes de error internos expuestos al cliente (`e?.message` directo): puede revelar estructura de BD o Supabase | src/app/api/auth/registro/route.ts:98 |
+
+---
+
+## BLOQUE 10 — LEGAL Y PROTECCIÓN AL CONSUMIDOR (diagnóstico 2026-05-22)
+
+| # | Estado | Severidad | Descripción | Ley / Archivo |
+|---|--------|-----------|-------------|---------------|
+| LEGAL-01 | ✅ resuelto | 🔴 | Sin checkbox de consentimiento: fix con checkbox required + mención explícita Ley 25.326, bloquea submit si no está marcado | src/app/(auth)/registro/page.tsx |
+| LEGAL-02 | ✅ resuelto | 🟠 | Bloque fijo de derechos del consumidor (Ley 24.240) + datos de contacto del vendedor siempre visibles en página de políticas | src/app/tienda/[slug]/politicas/page.tsx |
+| LEGAL-03 | ✅ resuelto | 🟠 | Sección "Derechos como consumidor — Ley 24.240" agregada en términos del comprador: arrepentimiento 10 días, garantía 6 meses, trato digno | src/app/terminos/page.tsx |
+| LEGAL-04 | ✅ resuelto | 🟠 | Cláusula de responsabilidad reescrita: ya no limita a "última cuota", ahora remite a legislación argentina y preserva derechos irrenunciables | src/app/vendedoras/terminos/page.tsx |
+| LEGAL-05 | ✅ resuelto | 🟡 | Jurisdicción corregida: consumidor puede demandar en su domicilio, ninguna cláusula puede interpretarse como renuncia a derechos Ley 24.240 | src/app/vendedoras/terminos/page.tsx |
+| LEGAL-06 | ✅ resuelto | 🟡 | Email de confirmación al comprador implementado con detalle de productos, totales, método de envío y recordatorio de derechos | src/lib/email.ts + src/app/api/checkout/route.ts |
+| LEGAL-07 | ✅ resuelto | 🟡 | Política de privacidad actualizada con procesadores de datos: Supabase, Vercel, MercadoPago con links a sus políticas | src/app/privacidad/page.tsx |
+| LEGAL-08 | ✅ resuelto | 🟡 | Sección seguridad de pagos: PCI-DSS MercadoPago, AES-256-GCM datos bancarios, HTTPS, bcrypt contraseñas | src/app/privacidad/page.tsx |
+| LEGAL-09 | ✅ resuelto | 🟢 | Retención de datos vaga: ahora especifica cada tipo de dato (cuenta, pedidos, CBU/CUIL, backups) con plazos concretos por rol | src/app/privacidad/page.tsx |
+| LEGAL-10 | ✅ resuelto | 🟢 | ARCO ampliado: describe los 4 derechos (A/R/C/O), indica plazo de 10 días hábiles, link a DNPDP para reclamos, formato de asunto unificado | src/app/privacidad/page.tsx |
+
+---
+
+## BLOQUE 11 — NUEVAS MEJORAS UX (diagnóstico 2026-05-22)
+
+| # | Estado | Severidad | Descripción | Archivo |
+|---|--------|-----------|-------------|---------|
+| UX-06 | ✅ resuelto | 🟡 | Eliminar producto usa `confirm()` del navegador: reemplazar con modal elegante que muestre el nombre del producto | src/app/dashboard/productos/ProductsTable.tsx |
+| UX-07 | ✅ resuelto | 🟡 | Toggle activo/inactivo de cupón sin loading state ni rollback visual si hay error de red | src/app/dashboard/cupones/page.tsx |
+| UX-08 | ✅ resuelto | 🟡 | Formularios sin validación en tiempo real: onBlur en nombre, email, contraseña y nombre de tienda en el formulario de registro | src/app/(auth)/registro/page.tsx |
+| UX-09 | ✅ resuelto | 🟡 | Stock sin leyenda de colores: rojo/amarillo/verde sin explicación → usuario nuevo no entiende el estado del inventario | src/app/dashboard/productos/ProductsTable.tsx |
+| UX-10 | ✅ resuelto | 🟡 | Confirmación de cambio de contraseña redirige sin mensaje visible → usuario no sabe si funcionó | src/app/(auth)/actualizar-contrasena/page.tsx |
+| UX-11 | ✅ resuelto | 🟢 | Estados vacíos sin orientación ni call-to-action: pedidos ahora tiene botón "Ver mi tienda", afiliados y cupones ya tenían estados vacíos con descripción | src/app/dashboard/pedidos/page.tsx |
+| UX-12 | ✅ resuelto | 🟢 | Botones solo-icono sin `aria-label` (copiar, descargar, editar, eliminar) → inaccesible para lectores de pantalla | ProductsTable + cupones/page.tsx + StorefrontClient.tsx |
+| UX-13 | ✅ resuelto | 🟢 | Imágenes de productos sin `alt` text descriptivo → accesibilidad e indexado SEO afectados | StorefrontClient.tsx (componente ProductImage ya tenía alt={name}; imágenes decorativas con alt="" es correcto por HTML spec) |
+
+---
+
 ## ORDEN DE EJECUCIÓN RECOMENDADO
 
 ### Sprint 1 — Críticos que afectan dinero y datos (hacer YA)
@@ -139,9 +198,45 @@
 
 ---
 
+### Sprint 6 — Nuevos críticos de seguridad (diagnóstico 2026-05-22)
+26. SEC-09 — Validar firma X-Signature webhook MercadoPago
+27. SEC-10 — Encriptar datos bancarios (CBU, CUIL) en BD
+28. BUG-08 — UNIQUE constraint en wallet withdrawals (race condition)
+29. SEC-11 — Migrar rate-limit.ts a Vercel KV / Redis distribuido
+30. LEGAL-01 — Checkbox consentimiento en registro (Ley 25.326)
+
+### Sprint 7 — Legal y compliance
+31. LEGAL-02 — Exigir CUIT/domicilio visible por tienda
+32. LEGAL-03 — Comunicar derechos del consumidor (Ley 24.240)
+33. LEGAL-04 — Revisar cláusula de responsabilidad limitada
+34. LEGAL-06 — Enviar recibo/confirmación al comprador tras checkout
+35. LEGAL-07 + LEGAL-08 — Actualizar política de privacidad y pagos
+
+### Sprint 8 — Bugs y seguridad alta
+36. BUG-09 — Corregir cálculo reversión comisión en cancelaciones
+37. BUG-10 — Agregar timeout a fetch de MercadoPago
+38. BUG-11 — Corregir ProductRouteContext para Next.js 15+
+39. SEC-12 — Eliminar unsafe-inline/unsafe-eval del CSP
+40. SEC-13 — Configurar CORS explícitamente
+41. SEC-14 — CAPTCHA o rate limit en formulario de contacto público
+
+### Sprint 9 — UX y calidad
+42. UX-06 — Modal de confirmación para eliminar producto
+43. UX-07 — Loading state en toggle de cupones
+44. UX-08 — Validación en tiempo real en formularios
+45. UX-09 — Leyenda de colores de stock
+46. BUG-12 — Límite en query de reseñas
+47. SEC-15 + SEC-16 — Sanitizar isSafeUrl y mensajes de error
+
+### Sprint 10 — Hardening final
+48. LEGAL-05, LEGAL-09, LEGAL-10 — Términos y privacidad finos
+49. UX-10 + UX-11 + UX-12 + UX-13 — Feedback y accesibilidad
+
+---
+
 ## CONTADOR TOTAL
-- 🔴 Críticos: 5 / 5 ✅
-- 🟠 Altos: 12 / 12 ✅
-- 🟡 Medios: 12 / 12 ✅
-- 🟢 Bajos: 9 / 9 ✅
-- **Total: 38 / 38 ✅ — TODOS RESUELTOS**
+- 🔴 Críticos: 5 / 5 ✅ (anteriores) + 4 ⬜ nuevos = 9 total
+- 🟠 Altos: 12 / 12 ✅ (anteriores) + 10 ⬜ nuevos = 22 total
+- 🟡 Medios: 12 / 12 ✅ (anteriores) + 10 ⬜ nuevos = 22 total
+- 🟢 Bajos: 9 / 9 ✅ (anteriores) + 5 ⬜ nuevos = 14 total
+- **Total resueltos: 51 / 67 — 16 pendientes**

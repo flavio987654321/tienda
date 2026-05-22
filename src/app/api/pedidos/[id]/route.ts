@@ -205,16 +205,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           const commissionAmount = order.commission.amount;
           await tx.commission.delete({ where: { id: order.commission.id } });
           const currentBalance = order.affiliate?.wallet?.balance ?? 0;
-          // Si ya retiró parte o todo, solo descontamos lo que queda en balance
-          // y ajustamos totalEarned + totalWithdrawn para que la contabilidad cierre
           const balanceToDecrement = Math.min(commissionAmount, currentBalance);
-          const alreadyWithdrawn = commissionAmount - balanceToDecrement;
           await tx.wallet.update({
             where: { affiliateId: order.affiliateId },
             data: {
               balance: { decrement: balanceToDecrement },
               totalEarned: { decrement: commissionAmount },
-              totalWithdrawn: { decrement: alreadyWithdrawn },
+              // totalWithdrawn no se toca: refleja retiros reales históricos
             },
           });
         }

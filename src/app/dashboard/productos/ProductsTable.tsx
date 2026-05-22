@@ -39,6 +39,7 @@ export default function ProductsTable({ products: initialProducts }: Props) {
   const [bulkSuccess, setBulkSuccess] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   const categories = useMemo(
     () => Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort(),
@@ -71,8 +72,10 @@ export default function ProductsTable({ products: initialProducts }: Props) {
 
   const bulkAffected = products.filter((p) => bulkCategory === "all" || p.category === bulkCategory).length;
 
-  async function deleteProduct(id: string, name: string) {
-    if (!confirm(`¿Eliminar "${name}"? Esta acción no se puede deshacer.`)) return;
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    const { id, name } = pendingDelete;
+    setPendingDelete(null);
     setDeletingId(id);
     setDeleteError("");
     const res = await fetch(`/api/productos/${id}`, { method: "DELETE" });
@@ -116,6 +119,36 @@ export default function ProductsTable({ products: initialProducts }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Modal de confirmación de eliminación */}
+      {pendingDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl">
+            <div className="mb-1 flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
+              <Trash2 className="h-5 w-5 text-red-600" />
+            </div>
+            <h3 className="mt-3 text-base font-bold text-gray-900">¿Eliminar producto?</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Vas a eliminar <strong className="text-gray-800">{pendingDelete.name}</strong>.
+              Esta acción no se puede deshacer.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setPendingDelete(null)}
+                className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-bold text-white hover:bg-red-700"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {deleteError && (
         <div className="flex items-center justify-between bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
           <span>{deleteError}</span>
@@ -137,6 +170,7 @@ export default function ProductsTable({ products: initialProducts }: Props) {
           {search && (
             <button
               onClick={() => setSearch("")}
+              aria-label="Limpiar búsqueda"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <X className="h-3.5 w-3.5" />
@@ -244,6 +278,14 @@ export default function ProductsTable({ products: initialProducts }: Props) {
         )}
       </div>
 
+      {/* Leyenda de colores de stock */}
+      <div className="flex items-center gap-4 text-xs text-gray-400">
+        <span className="font-medium text-gray-500">Stock:</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500 inline-block" />Sin stock (0 u.)</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-400 inline-block" />Bajo (1–4 u.)</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500 inline-block" />Normal (5+ u.)</span>
+      </div>
+
       {/* Results count */}
       {hasFilters && (
         <p className="text-xs text-gray-400">
@@ -337,7 +379,7 @@ export default function ProductsTable({ products: initialProducts }: Props) {
                           Editar
                         </Link>
                         <button
-                          onClick={() => deleteProduct(product.id, product.name)}
+                          onClick={() => setPendingDelete({ id: product.id, name: product.name })}
                           disabled={deletingId === product.id}
                           className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-600 font-medium disabled:opacity-40"
                         >

@@ -399,6 +399,116 @@ export async function sendCommissionEarnedEmail({
   });
 }
 
+export async function sendOrderConfirmationEmail({
+  buyerEmail,
+  buyerName,
+  orderId,
+  storeName,
+  storeSlug,
+  items,
+  subtotal,
+  discountAmount,
+  shippingCost,
+  shippingMethod,
+  total,
+}: {
+  buyerEmail: string;
+  buyerName: string;
+  orderId: string;
+  storeName: string;
+  storeSlug: string;
+  items: { name: string; quantity: number; price: number }[];
+  subtotal: number;
+  discountAmount: number;
+  shippingCost: number;
+  shippingMethod: string;
+  total: number;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
+
+  const itemRows = items
+    .map(
+      (item) => `
+        <tr style="border-bottom:1px solid #f3f4f6;">
+          <td style="padding:10px 16px;font-size:14px;color:#111827;">${item.name}</td>
+          <td style="padding:10px 16px;font-size:14px;color:#6b7280;text-align:center;">${item.quantity}</td>
+          <td style="padding:10px 16px;font-size:14px;color:#111827;text-align:right;">${fmt(item.price * item.quantity)}</td>
+        </tr>`
+    )
+    .join("");
+
+  await transporter.sendMail({
+    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    to: buyerEmail,
+    subject: `Tu pedido en ${storeName} fue recibido`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+          <p style="color:#e0e7ff;font-size:13px;margin:0 0 4px;">${storeName}</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">¡Tu pedido fue recibido!</h1>
+        </div>
+
+        <p style="color:#374151;font-size:15px;margin-bottom:4px;">Hola <strong>${buyerName}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:24px;">
+          Gracias por tu compra en <strong>${storeName}</strong>. El vendedor revisará tu pedido y se pondrá en contacto para coordinar el pago y el envío.
+        </p>
+
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:20px;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f9fafb;">
+                <th style="padding:10px 16px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;">Producto</th>
+                <th style="padding:10px 16px;text-align:center;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;">Cant.</th>
+                <th style="padding:10px 16px;text-align:right;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>${itemRows}</tbody>
+          </table>
+        </div>
+
+        <div style="background:#f9fafb;border-radius:12px;padding:16px;margin-bottom:24px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:14px;color:#6b7280;">Subtotal</span>
+            <span style="font-size:14px;color:#111827;">${fmt(subtotal)}</span>
+          </div>
+          ${discountAmount > 0 ? `
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:14px;color:#16a34a;">Descuento</span>
+            <span style="font-size:14px;color:#16a34a;">−${fmt(discountAmount)}</span>
+          </div>` : ""}
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:14px;color:#6b7280;">Envío (${shippingMethod})</span>
+            <span style="font-size:14px;color:#111827;">${shippingCost === 0 ? "Gratis" : fmt(shippingCost)}</span>
+          </div>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:10px 0;" />
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-size:15px;font-weight:700;color:#111827;">Total</span>
+            <span style="font-size:16px;font-weight:800;color:#6366f1;">${fmt(total)}</span>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${appUrl}/mi-cuenta"
+             style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;">
+            Ver mis pedidos
+          </a>
+        </div>
+
+        <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;font-size:13px;color:#92400e;margin-bottom:20px;">
+          <strong>Tus derechos como consumidor:</strong> Según la Ley 24.240, tenés derecho a solicitar cambio o devolución dentro de los 10 días corridos si el producto no coincide con lo publicado. Podés contactar a la tienda desde esta página o enviando un email a soporte.
+        </div>
+
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">
+          Número de pedido: <strong>${orderId.slice(-8).toUpperCase()}</strong> · ${storeName}
+        </p>
+      </div>
+    `,
+  });
+}
+
 export async function sendAffiliateOrderNotificationEmail({
   ownerEmail,
   ownerName,

@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     }
   } catch (e: any) {
     console.error("REGISTRO ERROR:", e?.message, e?.stack);
-    return NextResponse.json({ error: e?.message ?? "Error interno del servidor" }, { status: 500 });
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
 

@@ -1180,6 +1180,7 @@ export default function StorefrontClient({
             {hasDiscount && <span className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-black text-white" style={{ backgroundColor: store.accentColor }}>OFERTA ✨</span>}
             <button
               onClick={() => toggleFavorite(product.id)}
+              aria-label={favoriteIds.has(product.id) ? "Quitar de favoritos" : "Agregar a favoritos"}
               className="absolute right-3 top-3 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-white transition-colors"
             >
               <Heart className={`h-4 w-4 transition-colors ${favoriteIds.has(product.id) ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
@@ -1259,6 +1260,7 @@ export default function StorefrontClient({
           {hasDiscount && <span className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-xs font-black text-white" style={{ backgroundColor: store.accentColor }}>OFERTA</span>}
           <button
             onClick={() => toggleFavorite(product.id)}
+            aria-label={favoriteIds.has(product.id) ? "Quitar de favoritos" : "Agregar a favoritos"}
             className="absolute right-2 top-2 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-white transition-colors"
           >
             <Heart className={`h-4 w-4 transition-colors ${favoriteIds.has(product.id) ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
@@ -2303,6 +2305,7 @@ export default function StorefrontClient({
               <div className="flex items-start justify-between gap-3">
                 <h2 className="text-xl font-black text-gray-950">{selectedProduct.name}</h2>
                 <button type="button" onClick={() => toggleFavorite(selectedProduct.id)}
+                  aria-label={favoriteIds.has(selectedProduct.id) ? "Quitar de favoritos" : "Agregar a favoritos"}
                   className="shrink-0 h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-red-50 transition-colors">
                   <Heart className={`h-4 w-4 ${favoriteIds.has(selectedProduct.id) ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
                 </button>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { sendNewAffiliateApplicationEmail } from "@/lib/email";
+import { isSafeExternalUrl } from "@/lib/url-utils";
 
 // GET - afiliado: ver tiendas disponibles / tienda: ver sus afiliados
 export async function GET(req: NextRequest) {
@@ -81,14 +82,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ affiliates: store?.affiliates ?? [] });
 }
 
-function isSafeUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return ["http:", "https:"].includes(parsed.protocol);
-  } catch {
-    return false;
-  }
-}
 
 const TC_VERSION = "1.0";
 
@@ -121,11 +114,11 @@ export async function POST(req: NextRequest) {
   if (exp && exp.length > 500) {
     return NextResponse.json({ error: "La experiencia no puede superar 500 caracteres" }, { status: 400 });
   }
-  if (cvUrl && !isSafeUrl(cvUrl)) {
+  if (cvUrl && !isSafeExternalUrl(cvUrl)) {
     return NextResponse.json({ error: "URL del CV inválida" }, { status: 400 });
   }
   // socialUrl acepta handles (@usuario) o URLs completas
-  if (socialUrl && socialUrl.startsWith("http") && !isSafeUrl(socialUrl)) {
+  if (socialUrl && socialUrl.startsWith("http") && !isSafeExternalUrl(socialUrl)) {
     return NextResponse.json({ error: "URL de redes inválida" }, { status: 400 });
   }
 

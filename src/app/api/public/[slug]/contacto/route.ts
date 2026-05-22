@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendContactFormEmail } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const { slug } = await params;
+
+  // 5 mensajes por hora por IP + tienda
+  if (!checkRateLimit(`contact:${ip}:${slug}`, 5, 60 * 60 * 1000)) {
+    return NextResponse.json(
+      { error: "Demasiados mensajes enviados. Esperá un momento antes de volver a intentarlo." },
+      { status: 429 }
+    );
+  }
 
   const store = await prisma.store.findFirst({
     where: { slug, isActive: true },

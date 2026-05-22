@@ -172,16 +172,28 @@ const CONTENT = {
         body: "Las políticas de devolución y reembolso son definidas por cada tienda. Te recomendamos consultar la política de la tienda antes de comprar. En caso de incumplimiento grave por parte de una tienda, podés reportarlo a marketplacemitienda@gmail.com",
       },
       {
-        title: "7. Cancelación de cuenta",
+        title: "7. Tus derechos como consumidor — Ley 24.240",
+        body: null,
+        list: [
+          "Derecho a información clara y veraz: antes de comprar, tenés derecho a conocer el precio total (con envío e impuestos), descripción del producto, datos de contacto del vendedor y plazo de entrega.",
+          "Derecho de arrepentimiento (art. 34): si compraste a distancia (por internet), podés cancelar la compra sin dar explicaciones dentro de los 10 días corridos desde que recibiste el producto o desde que contrataste el servicio. El vendedor debe reintegrarte el dinero sin descuentos.",
+          "Garantía legal (art. 11): los productos tienen garantía mínima de 3 meses para productos usados y 6 meses para productos nuevos. Si el producto tiene un defecto, podés pedir reparación, cambio o devolución del dinero.",
+          "Derecho a trato digno (art. 8 bis): tenés derecho a ser tratado con respeto y dignidad. No podés ser discriminado ni intimidado.",
+          "Derecho a hacer reclamos: podés reclamar ante la tienda, ante MiTienda (marketplacemitienda@gmail.com) o ante Defensa del Consumidor de tu provincia sin costo alguno.",
+          "Para más información sobre tus derechos visitá: argentina.gob.ar/produccion/defensadelconsumidor",
+        ],
+      },
+      {
+        title: "8. Cancelación de cuenta",
         body: "Podés eliminar tu cuenta en cualquier momento desde la configuración. Tus pedidos anteriores quedan registrados a efectos de garantías o reclamos.",
       },
       {
-        title: "8. Modificaciones",
+        title: "9. Modificaciones",
         body: "Podemos actualizar estos términos. Te notificaremos por email ante cambios significativos.",
       },
       {
-        title: "9. Contacto",
-        body: "Para consultas escribinos a marketplacemitienda@gmail.com",
+        title: "10. Contacto y reclamos",
+        body: "Para consultas o reclamos escribinos a marketplacemitienda@gmail.com. También podés contactar a Defensa del Consumidor de tu provincia si considerás que tus derechos fueron vulnerados.",
       },
     ],
   },

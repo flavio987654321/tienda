@@ -144,14 +144,38 @@ function RegistroContent() {
     billingParam === "annual" ? "ANNUAL" : "MONTHLY"
   );
   const [form, setForm] = useState({ name: "", email: "", password: "", storeName: "" });
+  const [fieldErrors, setFieldErrors] = useState({ name: "", email: "", password: "", storeName: "" });
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm((p) => ({ ...p, [name]: value }));
     setError("");
+    if (fieldErrors[name as keyof typeof fieldErrors])
+      setFieldErrors((p) => ({ ...p, [name]: "" }));
+  }
+
+  function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
+    const { name, value } = e.target;
+    let err = "";
+    if (name === "name" && value) {
+      if (value.trim().length < 2) err = "Mínimo 2 caracteres.";
+      else if (/\d/.test(value)) err = "No puede contener números.";
+    }
+    if (name === "email" && value) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) err = "Email inválido.";
+    }
+    if (name === "password" && value) {
+      if (value.length < 6) err = "Mínimo 6 caracteres.";
+    }
+    if (name === "storeName" && value && accountType === "owner") {
+      if (value.trim().length < 3) err = "Mínimo 3 caracteres.";
+    }
+    setFieldErrors((p) => ({ ...p, [name]: err }));
   }
 
   function selectType(t: AccountType) {
@@ -163,6 +187,10 @@ function RegistroContent() {
     e.preventDefault();
     const err = validate(form, accountType);
     if (err) { setError(err); return; }
+    if (!termsAccepted) {
+      setError("Debés aceptar los términos y condiciones para continuar.");
+      return;
+    }
     setLoading(true);
     setError("");
     const res = await fetch("/api/auth/registro", {
@@ -446,57 +474,68 @@ function RegistroContent() {
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1.5">Nombre completo</label>
                 <input
-                  type="text" name="name" value={form.name} onChange={handleChange}
+                  type="text" name="name" value={form.name} onChange={handleChange} onBlur={handleBlur}
                   placeholder="Ej: María García"
-                  className={`w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all`}
+                  className={`w-full bg-white/5 border rounded-2xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all ${fieldErrors.name ? "border-red-500/50" : "border-white/10"}`}
                 />
-                <p className="text-xs text-gray-600 mt-1">Solo letras, mínimo 2 caracteres.</p>
+                {fieldErrors.name
+                  ? <p className="text-xs text-red-400 mt-1">{fieldErrors.name}</p>
+                  : <p className="text-xs text-gray-600 mt-1">Solo letras, mínimo 2 caracteres.</p>
+                }
               </div>
 
               {accountType === "owner" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1.5">Nombre de tu tienda</label>
                   <input
-                    type="text" name="storeName" value={form.storeName} onChange={handleChange}
+                    type="text" name="storeName" value={form.storeName} onChange={handleChange} onBlur={handleBlur}
                     placeholder="Ej: Joyas María, Luna Moda..."
-                    className={`w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all`}
+                    className={`w-full bg-white/5 border rounded-2xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all ${fieldErrors.storeName ? "border-red-500/50" : "border-white/10"}`}
                   />
-                  <p className="text-xs text-gray-600 mt-1">
-                    Tu tienda quedará en mitienda.ar/
-                    <span className="text-gray-500">
-                      {form.storeName
-                        ? form.storeName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "tu-tienda"
-                        : "tu-tienda"}
-                    </span>
-                  </p>
+                  {fieldErrors.storeName
+                    ? <p className="text-xs text-red-400 mt-1">{fieldErrors.storeName}</p>
+                    : <p className="text-xs text-gray-600 mt-1">
+                        Tu tienda quedará en mitienda.ar/
+                        <span className="text-gray-500">
+                          {form.storeName
+                            ? form.storeName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "tu-tienda"
+                            : "tu-tienda"}
+                        </span>
+                      </p>
+                  }
                 </div>
               )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1.5">Email</label>
                 <input
-                  type="email" name="email" value={form.email} onChange={handleChange}
+                  type="email" name="email" value={form.email} onChange={handleChange} onBlur={handleBlur}
                   placeholder="tu@email.com"
-                  className={`w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all`}
+                  className={`w-full bg-white/5 border rounded-2xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all ${fieldErrors.email ? "border-red-500/50" : "border-white/10"}`}
                 />
+                {fieldErrors.email && <p className="text-xs text-red-400 mt-1">{fieldErrors.email}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1.5">Contraseña</label>
                 <div className="relative">
                   <input
-                    type={showPass ? "text" : "password"} name="password" value={form.password} onChange={handleChange}
+                    type={showPass ? "text" : "password"} name="password" value={form.password} onChange={handleChange} onBlur={handleBlur}
                     placeholder="Mínimo 6 caracteres"
-                    className={`w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 pr-12 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all`}
+                    className={`w-full bg-white/5 border rounded-2xl px-4 py-3.5 pr-12 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all ${fieldErrors.password ? "border-red-500/50" : "border-white/10"}`}
                   />
                   <button
                     type="button" onClick={() => setShowPass(!showPass)}
+                    aria-label={showPass ? "Ocultar contraseña" : "Mostrar contraseña"}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
                   >
                     {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <p className="text-xs text-gray-600 mt-1">Mínimo 6 caracteres.</p>
+                {fieldErrors.password
+                  ? <p className="text-xs text-red-400 mt-1">{fieldErrors.password}</p>
+                  : <p className="text-xs text-gray-600 mt-1">Mínimo 6 caracteres.</p>
+                }
               </div>
 
               <button
@@ -507,16 +546,33 @@ function RegistroContent() {
                 {loading ? "Creando cuenta..." : selected.cta}
               </button>
 
-              <p className="text-center text-xs text-gray-600">
-                Al registrarte aceptás los{" "}
-                <Link href={`/terminos?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`} className="text-gray-500 underline hover:text-gray-400 transition-colors">
-                  términos y condiciones
-                </Link>
-                {" "}y la{" "}
-                <Link href={`/privacidad?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`} className="text-gray-500 underline hover:text-gray-400 transition-colors">
-                  política de privacidad
-                </Link>.
-              </p>
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => { setTermsAccepted(e.target.checked); setError(""); }}
+                  className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 accent-indigo-500 cursor-pointer flex-shrink-0"
+                />
+                <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-400 transition-colors">
+                  Leí y acepto los{" "}
+                  <Link
+                    href={`/terminos?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`}
+                    className="text-gray-400 underline hover:text-white transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    términos y condiciones
+                  </Link>
+                  {" "}y la{" "}
+                  <Link
+                    href={`/privacidad?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`}
+                    className="text-gray-400 underline hover:text-white transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    política de privacidad
+                  </Link>
+                  . Entiendo que mis datos serán tratados conforme a la Ley 25.326.
+                </span>
+              </label>
             </form>
 
             <p className="text-center text-sm text-gray-600 mt-7">

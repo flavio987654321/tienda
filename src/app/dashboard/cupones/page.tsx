@@ -27,6 +27,8 @@ export default function CuponesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [toggleError, setToggleError] = useState("");
   const [form, setForm] = useState({
     code: "",
     discountType: "percentage",
@@ -63,6 +65,10 @@ export default function CuponesPage() {
   }
 
   async function toggleCoupon(id: string, isActive: boolean) {
+    setTogglingId(id);
+    setToggleError("");
+    // Actualización optimista
+    setCoupons((prev) => prev.map((c) => (c.id === id ? { ...c, isActive: !isActive } : c)));
     const res = await fetch(`/api/cupones/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -71,7 +77,12 @@ export default function CuponesPage() {
     if (res.ok) {
       const data = await res.json();
       setCoupons((prev) => prev.map((c) => (c.id === id ? data.coupon : c)));
+    } else {
+      // Rollback si falla
+      setCoupons((prev) => prev.map((c) => (c.id === id ? { ...c, isActive } : c)));
+      setToggleError("No se pudo cambiar el estado del cupón. Intentá de nuevo.");
     }
+    setTogglingId(null);
   }
 
   async function deleteCoupon(id: string) {
@@ -194,6 +205,12 @@ export default function CuponesPage() {
           </form>
         )}
 
+        {toggleError && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {toggleError}
+          </div>
+        )}
+
         {/* Lista */}
         {loading ? (
           <div className="py-16 text-center text-sm text-gray-400">Cargando...</div>
@@ -216,7 +233,9 @@ export default function CuponesPage() {
                         <code className="rounded-lg bg-indigo-50 px-3 py-1 text-sm font-black tracking-widest text-indigo-700">
                           {c.code}
                         </code>
-                        <button onClick={() => copyCode(c.code, c.id)}
+                        <button
+                          onClick={() => copyCode(c.code, c.id)}
+                          aria-label="Copiar código"
                           className="text-gray-400 hover:text-gray-600">
                           {copiedId === c.id ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                         </button>
@@ -255,12 +274,22 @@ export default function CuponesPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => toggleCoupon(c.id, c.isActive)} title={c.isActive ? "Desactivar" : "Activar"}>
+                      <button
+                        onClick={() => toggleCoupon(c.id, c.isActive)}
+                        disabled={togglingId === c.id}
+                        aria-label={c.isActive ? "Desactivar cupón" : "Activar cupón"}
+                        title={c.isActive ? "Desactivar" : "Activar"}
+                        className="disabled:opacity-50"
+                      >
                         {c.isActive
                           ? <ToggleRight className="h-6 w-6 text-indigo-500" />
                           : <ToggleLeft className="h-6 w-6 text-gray-300" />}
                       </button>
-                      <button onClick={() => deleteCoupon(c.id)} className="text-red-400 hover:text-red-600">
+                      <button
+                        onClick={() => deleteCoupon(c.id)}
+                        aria-label="Eliminar cupón"
+                        className="text-red-400 hover:text-red-600"
+                      >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>

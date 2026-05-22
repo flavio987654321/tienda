@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { revalidatePath } from "next/cache";
 import { createNotificationMany } from "@/lib/notifications";
+import { isSafeUrl } from "@/lib/url-utils";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -13,16 +14,6 @@ export async function GET() {
 
 function isValidHex(color: string): boolean {
   return /^#[0-9A-Fa-f]{6}$/.test(color);
-}
-
-function isSafeUrl(url: unknown): boolean {
-  if (!url || typeof url !== "string") return true;
-  try {
-    const { protocol } = new URL(url);
-    return protocol === "https:" || protocol === "http:";
-  } catch {
-    return url.startsWith("/") || url === "#"; // rutas relativas ok
-  }
 }
 
 // Limpia protocolos peligrosos (javascript:, data:) de todos los campos URL de un bloque

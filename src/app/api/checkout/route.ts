@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createNotification } from "@/lib/notifications";
+import { sendOrderConfirmationEmail } from "@/lib/email";
 
 type CheckoutItem = {
   productId: string;
@@ -273,6 +274,38 @@ export async function POST(req: NextRequest) {
         body: `$${order.total.toLocaleString("es-AR")} — ${order.items.length} producto${order.items.length !== 1 ? "s" : ""}`,
         link: `/dashboard/pedidos/${order.id}`,
       });
+    }
+
+    // Email de confirmación al comprador (no bloquea la respuesta si falla)
+    const storeForEmail = await prisma.store.findUnique({
+      where: { id: order.storeId },
+      select: { name: true, slug: true },
+    });
+    if (storeForEmail && customer.email) {
+      const productIds = order.items.map((i) => i.productId);
+      const productNames = await prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, name: true },
+      });
+      const nameMap = Object.fromEntries(productNames.map((p) => [p.id, p.name]));
+
+      sendOrderConfirmationEmail({
+        buyerEmail: customer.email,
+        buyerName: customer.name,
+        orderId: order.id,
+        storeName: storeForEmail.name,
+        storeSlug: storeForEmail.slug,
+        items: order.items.map((item) => ({
+          name: nameMap[item.productId] ?? "Producto",
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        subtotal: order.subtotal,
+        discountAmount: order.discountAmount,
+        shippingCost: order.shippingCost,
+        shippingMethod: shipping.label,
+        total: order.total,
+      }).catch((e) => console.error("Error enviando email de confirmación:", e));
     }
 
     return NextResponse.json({ order });

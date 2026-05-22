@@ -35,28 +35,58 @@ const CONTENT = {
         body: "Como Dueño de tienda, tenés acceso a los datos de envío y contacto de tus compradores. Sos responsable de tratar esos datos de acuerdo con la legislación vigente (Ley 25.326 de Protección de Datos Personales). No podés usar esos datos para fines distintos a la gestión de pedidos.",
       },
       {
-        title: "4. Compartir información",
-        body: "No vendemos tus datos. Podemos compartirlos con:",
+        title: "4. Procesadores de datos (terceros que procesan tus datos)",
+        body: "No vendemos tus datos. Trabajamos con los siguientes proveedores que procesan datos en tu nombre:",
         list: [
-          "Mercado Pago para procesar pagos de suscripción.",
-          "Supabase y Vercel como proveedores de infraestructura bajo acuerdos de confidencialidad.",
+          "Supabase (supabase.com): gestión de autenticación y base de datos. Servidores en AWS us-east-1. Política de privacidad: supabase.com/privacy",
+          "Vercel (vercel.com): hosting y ejecución de la plataforma. Servidores en AWS/Cloudflare. Política de privacidad: vercel.com/legal/privacy-policy",
+          "Mercado Pago (mercadopago.com.ar): procesamiento de pagos de suscripción. Nunca almacenamos datos de tarjetas — Mercado Pago gestiona todo con cumplimiento PCI-DSS nivel 1. Política de privacidad: mercadopago.com.ar/privacidad",
+          "Nodemailer / SMTP: envío de emails transaccionales (confirmaciones, alertas). Solo se comparte el email necesario para cada mensaje.",
           "Autoridades competentes cuando sea requerido por ley.",
         ],
       },
       {
-        title: "5. Retención de datos",
-        body: "Conservamos tus datos mientras tu cuenta esté activa. Si cancelás, mantenemos los datos por 90 días adicionales para resolver disputas pendientes. Podés solicitar la eliminación completa escribiendo a marketplacemitienda@gmail.com",
+        title: "5. Seguridad de tus pagos",
+        body: null,
+        list: [
+          "MiTienda NO almacena datos de tarjetas de crédito o débito. Todo el procesamiento de pagos lo realiza Mercado Pago, certificado PCI-DSS nivel 1 (el estándar de seguridad más alto para pagos).",
+          "Las comunicaciones entre tu navegador y nuestros servidores usan HTTPS con TLS 1.2 o superior.",
+          "Los datos de acceso bancario de las afiliadas (CBU, CUIL) se almacenan cifrados con AES-256-GCM.",
+          "Las contraseñas se almacenan con hash bcrypt. Nunca las vemos ni podemos recuperarlas.",
+        ],
       },
       {
-        title: "6. Seguridad",
-        body: "Usamos HTTPS, contraseñas hasheadas, acceso por roles y bases de datos con cifrado en reposo. Realizamos auditorías periódicas de seguridad.",
+        title: "6. Retención de datos",
+        body: "Conservamos cada tipo de dato durante el período mínimo necesario:",
+        list: [
+          "Datos de cuenta (nombre, email): mientras la cuenta esté activa + 90 días adicionales tras la cancelación.",
+          "Datos de tienda (productos, precios, imágenes): mismos plazos que la cuenta.",
+          "Historial de pedidos: 12 meses adicionales tras el cierre de cuenta para resolver disputas o reclamaciones de garantía.",
+          "Datos bancarios cifrados (CBU/CUIL): eliminados junto con la cuenta. No se conservan post-cancelación.",
+          "Backups automáticos de base de datos: 30 días de retención gestionados por Supabase. Los backups no permiten recuperar una cuenta eliminada.",
+          "Logs de auditoría y seguridad: 90 días máximo.",
+          "Para solicitar eliminación anticipada escribí a marketplacemitienda@gmail.com con el asunto 'Eliminación de datos — [tu email de cuenta]'.",
+        ],
       },
       {
-        title: "7. Tus derechos",
-        body: "Podés solicitar en cualquier momento acceso, corrección o eliminación de tus datos enviando un email a marketplacemitienda@gmail.com con el asunto 'Solicitud de datos'.",
+        title: "7. Seguridad técnica",
+        body: "Usamos HTTPS, contraseñas hasheadas con bcrypt, acceso por roles, bases de datos con cifrado en reposo y datos bancarios cifrados con AES-256-GCM. Realizamos revisiones periódicas de seguridad.",
       },
       {
-        title: "8. Cambios a esta política",
+        title: "8. Tus derechos (ARCO — Ley 25.326)",
+        body: "La Ley 25.326 de Protección de Datos Personales te otorga los derechos de Acceso, Rectificación, Cancelación y Oposición (ARCO). Para ejercerlos:",
+        list: [
+          "Acceso: podés solicitar qué datos tenemos sobre vos, cómo los usamos y a quién los compartimos.",
+          "Rectificación: podés pedir que corrijamos datos inexactos o incompletos.",
+          "Cancelación / Eliminación: podés solicitar que eliminemos tus datos cuando ya no sean necesarios o retires tu consentimiento.",
+          "Oposición: podés oponerte al tratamiento de tus datos en casos justificados.",
+          "Cómo ejercerlos: escribí a marketplacemitienda@gmail.com con el asunto 'Solicitud ARCO — [tipo de derecho]' indicando tu nombre completo y email de cuenta.",
+          "Respondemos dentro de los 10 días hábiles conforme al art. 14 de la Ley 25.326.",
+          "Si considerás que tu solicitud no fue atendida correctamente podés presentar una denuncia ante la Dirección Nacional de Protección de Datos Personales (argentina.gob.ar/aaip/datospersonales).",
+        ],
+      },
+      {
+        title: "9. Cambios a esta política",
         body: "Te notificaremos por email con al menos 15 días de anticipación ante cambios significativos.",
       },
     ],
@@ -104,15 +134,21 @@ const CONTENT = {
       },
       {
         title: "5. Retención de datos",
-        body: "Conservamos tus datos mientras tu cuenta esté activa más 90 días adicionales tras la cancelación. El historial de comisiones se conserva por 3 años a efectos impositivos.",
+        body: null,
+        list: [
+          "Datos de cuenta: mientras esté activa + 90 días adicionales tras la cancelación.",
+          "Historial de comisiones: 3 años a efectos impositivos (AFIP).",
+          "Datos bancarios cifrados (CBU/CUIL): eliminados al cerrar la cuenta.",
+          "Para solicitar eliminación escribí a marketplacemitienda@gmail.com con el asunto 'Eliminación de datos — [tu email]'.",
+        ],
       },
       {
         title: "6. Seguridad",
         body: "Usamos HTTPS, contraseñas hasheadas con bcrypt y control de acceso por roles. Tus datos de comisiones son privados y solo accesibles por vos.",
       },
       {
-        title: "7. Tus derechos",
-        body: "Podés solicitar acceso, corrección o eliminación de tus datos en cualquier momento escribiendo a marketplacemitienda@gmail.com con el asunto 'Solicitud de datos'.",
+        title: "7. Tus derechos (ARCO — Ley 25.326)",
+        body: "Podés ejercer tus derechos de Acceso, Rectificación, Cancelación y Oposición escribiendo a marketplacemitienda@gmail.com con el asunto 'Solicitud ARCO — [tipo de derecho]'. Respondemos dentro de los 10 días hábiles. Si tu solicitud no es atendida podés recurrir a la Dirección Nacional de Protección de Datos Personales (argentina.gob.ar/aaip/datospersonales).",
       },
       {
         title: "8. Cambios a esta política",
@@ -161,7 +197,13 @@ const CONTENT = {
       },
       {
         title: "5. Retención de datos",
-        body: "Conservamos tus datos mientras tu cuenta esté activa. Si la eliminás, borramos tus datos personales en un plazo de 30 días, excepto el historial de pedidos que se conserva por 1 año a efectos de garantías.",
+        body: null,
+        list: [
+          "Datos de cuenta (nombre, email): mientras la cuenta esté activa + 30 días para eliminación completa.",
+          "Historial de pedidos: 1 año tras el cierre de cuenta para resolución de garantías y disputas.",
+          "Favoritos y preferencias: eliminados al eliminar la cuenta.",
+          "Para eliminar tu cuenta antes del plazo escribí a marketplacemitienda@gmail.com con el asunto 'Eliminación de cuenta — [tu email]'.",
+        ],
       },
       {
         title: "6. Cookies",
@@ -172,8 +214,14 @@ const CONTENT = {
         body: "Usamos HTTPS en todas las comunicaciones. Tus contraseñas se almacenan con hash y nunca en texto plano. Nunca te pediremos tu contraseña por email o chat.",
       },
       {
-        title: "8. Tus derechos",
-        body: "Podés solicitar acceso, corrección o eliminación de tus datos en cualquier momento escribiendo a marketplacemitienda@gmail.com o desde la configuración de tu cuenta.",
+        title: "8. Tus derechos (ARCO — Ley 25.326)",
+        body: "Podés ejercer tus derechos de Acceso, Rectificación, Cancelación y Oposición en cualquier momento:",
+        list: [
+          "Desde la configuración de tu cuenta para acceder o eliminar tus datos directamente.",
+          "Por email a marketplacemitienda@gmail.com con el asunto 'Solicitud ARCO — [tipo de derecho]'.",
+          "Respondemos dentro de los 10 días hábiles (art. 14, Ley 25.326).",
+          "Si considerás que no fue atendido correctamente podés recurrir a la Dirección Nacional de Protección de Datos Personales: argentina.gob.ar/aaip/datospersonales",
+        ],
       },
       {
         title: "9. Cambios a esta política",

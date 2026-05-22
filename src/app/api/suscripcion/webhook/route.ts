@@ -1,5 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
+
+function verifyMPSignature(req: NextRequest, dataId: string): boolean {
+  const secret = process.env.MP_WEBHOOK_SECRET;
+  if (!secret) {
+    console.warn("WEBHOOK: MP_WEBHOOK_SECRET no configurado, saltando verificación");
+    return true; // En dev sin secret configurado, permitir
+  }
+
+  const xSignature = req.headers.get("x-signature");
+  const xRequestId = req.headers.get("x-request-id") ?? "";
+  if (!xSignature) return false;
+
+  const ts = xSignature.match(/ts=([^,]+)/)?.[1];
+  const v1 = xSignature.match(/v1=([^,]+)/)?.[1];
+  if (!ts || !v1) return false;
+
+  // MP firma: id:{dataId};request-id:{xRequestId};ts:{ts};
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+  const expected = createHmac("sha256", secret).update(manifest).digest("hex");
+
+  // timingSafeEqual evita timing attacks
+  try {
+    return timingSafeEqual(Buffer.from(expected), Buffer.from(v1));
+  } catch {
+    return false;
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,10 +39,24 @@ export async function POST(req: NextRequest) {
     const paymentId = body.data?.id;
     if (!paymentId) return NextResponse.json({ ok: true });
 
-    // Consultar el pago a la API de MP
+    // Verificar firma criptográfica de MercadoPago
+    if (!verifyMPSignature(req, String(paymentId))) {
+      console.warn("WEBHOOK: firma inválida — request rechazada", {
+        xSignature: req.headers.get("x-signature"),
+        paymentId,
+      });
+      return NextResponse.json({ ok: true }); // 200 para que MP no reintente, pero no procesamos
+    }
+
+    // Consultar el pago con timeout para no colgar el serverless
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
     const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
       headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!mpRes.ok) return NextResponse.json({ ok: true });
 

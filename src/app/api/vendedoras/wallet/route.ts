@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { encryptIfNeeded, decryptIfNeeded } from "@/lib/crypto";
 
 const MIN_WITHDRAWAL = 500;
 const BANK_LOCKOUT_HOURS = 72;
@@ -60,15 +62,20 @@ export async function GET() {
     totalCommissions: a._count.commissions,
     totalOrders: a._count.orders,
     wallet: a.wallet
-      ? {
-          ...a.wallet,
-          cbu: a.wallet.cbu ? `${"•".repeat(18)}${a.wallet.cbu.slice(-4)}` : null,
-          hasBankData: !!(a.wallet.cbu || a.wallet.alias),
-          bankLocked: isWithinLockout(a.wallet.bankUpdatedAt),
-          bankLockedUntil: a.wallet.bankUpdatedAt
-            ? new Date(a.wallet.bankUpdatedAt.getTime() + BANK_LOCKOUT_HOURS * 3600000).toISOString()
-            : null,
-        }
+      ? (() => {
+          const rawCbu = decryptIfNeeded(a.wallet.cbu);
+          return {
+            ...a.wallet,
+            cbu: rawCbu ? `${"•".repeat(18)}${rawCbu.slice(-4)}` : null,
+            cuil: null, // nunca exponer CUIL al frontend
+            bankHolder: a.wallet.bankHolder ? decryptIfNeeded(a.wallet.bankHolder) : null,
+            hasBankData: !!(a.wallet.cbu || a.wallet.alias),
+            bankLocked: isWithinLockout(a.wallet.bankUpdatedAt),
+            bankLockedUntil: a.wallet.bankUpdatedAt
+              ? new Date(a.wallet.bankUpdatedAt.getTime() + BANK_LOCKOUT_HOURS * 3600000).toISOString()
+              : null,
+          };
+        })()
       : null,
   }));
 
@@ -127,10 +134,10 @@ export async function PUT(req: NextRequest) {
   const updated = await prisma.wallet.update({
     where: { id: walletId },
     data: {
-      cbu: cbuClean,
-      alias: aliasClean,
-      cuil: cuilClean,
-      bankHolder: holderClean,
+      cbu: encryptIfNeeded(cbuClean),
+      alias: aliasClean, // el alias es semi-público, no se cifra
+      cuil: encryptIfNeeded(cuilClean),
+      bankHolder: encryptIfNeeded(holderClean),
       bankUpdatedAt: new Date(),
     },
   });
@@ -174,7 +181,6 @@ export async function POST(req: NextRequest) {
     where: { id: walletId },
     include: {
       affiliate: { select: { userId: true } },
-      withdrawals: { where: { status: "PENDING" }, take: 1 },
     },
   });
 
@@ -201,36 +207,57 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Solo un retiro pendiente a la vez
-  if (wallet.withdrawals.length > 0) {
-    return NextResponse.json(
-      { error: "Ya tenés un retiro pendiente. Esperar que sea procesado antes de solicitar otro" },
-      { status: 400 }
-    );
-  }
-
   if (amount > wallet.balance) {
     return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
   }
 
-  // Transacción atómica: crear retiro y descontar saldo
-  const [withdrawal] = await prisma.$transaction([
-    prisma.walletWithdrawal.create({
-      data: {
-        walletId,
-        amount,
-        status: "PENDING",
-        notes: `CBU: ${wallet.cbu ?? ""} | Alias: ${wallet.alias ?? ""} | CUIL: ${wallet.cuil ?? ""} | Titular: ${wallet.bankHolder ?? ""}`,
+  // Transacción serializable: re-verifica retiro pendiente dentro de la tx
+  // para eliminar race condition entre dos requests simultáneos
+  let withdrawal;
+  try {
+    [withdrawal] = await prisma.$transaction(
+      async (tx) => {
+        const pendingCount = await tx.walletWithdrawal.count({
+          where: { walletId, status: "PENDING" },
+        });
+        if (pendingCount > 0) throw new Error("PENDING_EXISTS");
+
+        const newWithdrawal = await tx.walletWithdrawal.create({
+          data: {
+            walletId,
+            amount,
+            status: "PENDING",
+            notes: [
+              wallet.cbu ? `CBU: ••••${decryptIfNeeded(wallet.cbu)?.slice(-4) ?? "????"}` : null,
+              wallet.alias ? `Alias: ${wallet.alias}` : null,
+              wallet.bankHolder ? `Titular: ${decryptIfNeeded(wallet.bankHolder)}` : null,
+            ]
+              .filter(Boolean)
+              .join(" | "),
+          },
+        });
+
+        await tx.wallet.update({
+          where: { id: walletId },
+          data: {
+            balance: { decrement: amount },
+            totalWithdrawn: { increment: amount },
+          },
+        });
+
+        return [newWithdrawal];
       },
-    }),
-    prisma.wallet.update({
-      where: { id: walletId },
-      data: {
-        balance: { decrement: amount },
-        totalWithdrawn: { increment: amount },
-      },
-    }),
-  ]);
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+  } catch (e: any) {
+    if (e.message === "PENDING_EXISTS") {
+      return NextResponse.json(
+        { error: "Ya tenés un retiro pendiente. Esperá que sea procesado antes de solicitar otro" },
+        { status: 400 }
+      );
+    }
+    throw e;
+  }
 
   return NextResponse.json({ withdrawal, message: "Retiro solicitado. Lo procesamos en 1-3 días hábiles." });
 }

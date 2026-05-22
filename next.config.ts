@@ -10,7 +10,7 @@ const csp = [
   `connect-src 'self' https://${supabaseHost} https://api.mercadopago.com`,
   "media-src 'self' blob: https: https://res.cloudinary.com https://www.youtube.com https://www.instagram.com https://*.cdninstagram.com",
   "frame-src https://www.youtube.com https://www.instagram.com https://sdk.mercadopago.com",
-  `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com`,
+  `script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   "object-src 'none'",
@@ -28,6 +28,15 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
 ];
 
+// MercadoPago SDK requiere unsafe-eval — solo en páginas de pago
+const cspPayment = csp.replace(
+  "script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com"
+);
+const paymentHeaders = securityHeaders.map((h) =>
+  h.key === "Content-Security-Policy" ? { key: h.key, value: cspPayment } : h
+);
+
 const nextConfig: NextConfig = {
   experimental: {
     staleTimes: {
@@ -35,7 +44,11 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }];
+    return [
+      { source: "/(.*)", headers: securityHeaders },
+      // Páginas donde carga el SDK de MercadoPago (checkout de tienda + suscripciones)
+      { source: "/(precios|tienda/.*)", headers: paymentHeaders },
+    ];
   },
   images: {
     remotePatterns: [

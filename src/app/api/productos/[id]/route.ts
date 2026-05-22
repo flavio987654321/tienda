@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { validateProductBody, normalizeVariants, MAX_PRODUCT_REELS, getOwnerStore } from "@/lib/products";
 import { createNotificationMany } from "@/lib/notifications";
 
-type ProductRouteContext = RouteContext<"/api/productos/[id]">;
+type ProductRouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, ctx: ProductRouteContext) {
   const auth = await getOwnerStore();

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import OrderActions from "@/components/orders/OrderActions";
 import { prisma } from "@/lib/prisma";
-import { Package, ShoppingBag, Truck, UserRound } from "lucide-react";
+import { ArrowUpRight, Package, ShoppingBag, Truck, UserRound } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 
 function money(value: number) {
@@ -43,7 +43,7 @@ export default async function PedidosPage() {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: userId },
-    select: { id: true, name: true },
+    select: { id: true, name: true, slug: true },
   });
 
   const orders = store
@@ -97,9 +97,24 @@ export default async function PedidosPage() {
 
       {orders.length === 0 ? (
         <div className="rounded-2xl border border-gray-100 bg-white p-16 text-center">
-          <ShoppingBag className="mx-auto mb-3 h-12 w-12 text-gray-200" />
-          <h2 className="text-lg font-semibold text-gray-900">Todavia no hay pedidos</h2>
-          <p className="mt-1 text-sm text-gray-400">Cuando alguien compre desde la tienda, aparece aca.</p>
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
+            <ShoppingBag className="h-8 w-8 text-indigo-300" />
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900">Todavía no hay pedidos</h2>
+          <p className="mt-1 text-sm text-gray-400">Cuando alguien compre desde tu tienda, los pedidos aparecen acá.</p>
+          {store && (
+            <div className="mt-6 flex flex-col items-center gap-3">
+              <a
+                href={`/tienda/${store.slug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 transition-colors"
+              >
+                Ver mi tienda <ArrowUpRight className="h-4 w-4" />
+              </a>
+              <p className="text-xs text-gray-400">Compartí el link de tu tienda para empezar a recibir pedidos.</p>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-4">

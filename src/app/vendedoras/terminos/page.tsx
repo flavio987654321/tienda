@@ -162,8 +162,10 @@ export default function TerminosAfiliados() {
               la solvencia del/la Titular ni asume responsabilidad ante incumplimientos de pago de su parte.
             </p>
             <p className="mt-3">
-              La responsabilidad máxima de la Plataforma ante cualquier reclamo queda limitada al monto
-              de la última cuota de suscripción abonada por el/la Afiliado/a reclamante.
+              MiTienda no será responsable por daños indirectos o imprevisibles derivados del uso de la
+              Plataforma. En caso de daño directo comprobable imputable a la Plataforma, la responsabilidad
+              se determinará según la legislación argentina vigente, sin perjuicio de los derechos
+              irrenunciables que la Ley 24.240 reconoce a los/las usuarios/as consumidores/as.
             </p>
           </section>
 
@@ -209,9 +211,16 @@ export default function TerminosAfiliados() {
           <section>
             <h2 className="text-lg font-bold text-white mb-3">11. Jurisdicción</h2>
             <p>
-              Las partes acuerdan someterse a la jurisdicción de los tribunales ordinarios de la
-              <strong className="text-white"> Ciudad Autónoma de Buenos Aires, Argentina</strong>,
-              con renuncia a cualquier otro fuero que pudiera corresponder.
+              Estos términos se rigen por la legislación argentina. Para cualquier conflicto
+              derivado de la relación comercial entre Afiliado/a y Titular, las partes podrán
+              acudir a los tribunales competentes según su domicilio real, o bien a los mecanismos
+              de mediación disponibles en su jurisdicción.
+            </p>
+            <p className="mt-3">
+              Los/las usuarios/as que actúen como consumidores/as en los términos de la Ley 24.240
+              conservan el derecho de demandar ante los tribunales del lugar de su domicilio,
+              sin perjuicio de lo establecido en este artículo. Ninguna cláusula de estos términos
+              puede interpretarse como renuncia a derechos irrenunciables del consumidor.
             </p>
           </section>
 

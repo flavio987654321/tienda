@@ -9,11 +9,17 @@ export async function GET(req: NextRequest) {
 
   const user = await getCurrentUser();
 
-  const [reviews, userReview, eligibleOrder] = await Promise.all([
+  const [reviews, reviewStats, userReview, eligibleOrder] = await Promise.all([
     prisma.review.findMany({
       where: { productId },
       include: { user: { select: { name: true, image: true } } },
       orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
+    prisma.review.aggregate({
+      where: { productId },
+      _avg: { rating: true },
+      _count: { id: true },
     }),
     user
       ? prisma.review.findUnique({
@@ -32,13 +38,14 @@ export async function GET(req: NextRequest) {
       : null,
   ]);
 
-  const avg = reviews.length > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
+  const avg = reviewStats._avg.rating ?? 0;
+  const total = reviewStats._count.id;
   const canReview = !!eligibleOrder && !userReview;
 
   return NextResponse.json({
     reviews,
     avg,
-    total: reviews.length,
+    total,
     canReview,
     eligibleOrderId: eligibleOrder?.orderId ?? null,
     userReview: userReview ?? null,
