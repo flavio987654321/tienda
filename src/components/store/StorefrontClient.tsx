@@ -676,6 +676,7 @@ export default function StorefrontClient({
   const isSplit = ["fashion", "luxury", "boutique"].includes(store.templateId);
   const isMarket = store.templateId === "market";
   const isColorful = store.templateId === "colorful" || store.templateId === "kids";
+  const isDawn = store.templateId === "dawn";
   const pageBlocks = useMemo(() => parseBlocks(store.pageBlocks), [store.pageBlocks]);
   const modalCfg = useMemo(() => parseModalConfig(store.pageBlocks), [store.pageBlocks]);
   const contentBlocks = isStarterBlocks(pageBlocks) ? [] : pageBlocks;
@@ -1098,6 +1099,35 @@ export default function StorefrontClient({
       );
     }
 
+    if (isDawn) {
+      return (
+        <section className="relative overflow-hidden bg-gray-100" style={{ minHeight: "92vh" }}>
+          {heroImage && (
+            <img src={heroImage} alt={store.name} className="absolute inset-0 h-full w-full object-cover" />
+          )}
+          <div className="absolute inset-0" style={{ background: heroImage ? "linear-gradient(to top, rgba(0,0,0,0.72) 40%, rgba(0,0,0,0.15) 100%)" : `linear-gradient(135deg, ${store.primaryColor}cc, ${store.primaryColor})` }} />
+          <div className="relative flex h-full min-h-[92vh] flex-col justify-end px-8 pb-16 md:px-20 max-w-screen-xl mx-auto">
+            {store.logo && (
+              <img src={store.logo} alt={store.name} className="mb-6 h-14 w-14 rounded-2xl object-cover ring-2 ring-white/30" />
+            )}
+            {store.tagline && (
+              <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/60 mb-3">{store.tagline}</p>
+            )}
+            <h1 className="text-5xl font-black text-white leading-[1.0] md:text-7xl max-w-3xl">{store.name}</h1>
+            {store.description && (
+              <p className="mt-4 text-base text-white/75 max-w-xl leading-relaxed">{store.description}</p>
+            )}
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <a href="#productos" className="inline-block bg-white text-gray-900 px-8 py-3.5 text-sm font-bold hover:bg-gray-100 transition-colors">
+                Comprar ahora
+              </a>
+              <span className="text-sm text-white/50">{store.products.length} productos</span>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     if (isSplit) {
       return (
         <section className={`${isDark ? "bg-gray-950 text-white" : "bg-white text-gray-950"}`}>
@@ -1158,6 +1188,100 @@ export default function StorefrontClient({
     const available = product.variants.length === 0 || totalStock > 0;
     const list = store.productLayout === "list";
     const featured = store.templateId === "boutique" && index === 0 && !list;
+
+    if (isDawn && !list) {
+      return (
+        <article
+          id={`producto-${product.id}`}
+          key={product.id}
+          className="group relative flex flex-col"
+        >
+          {highlightProductId === product.id && (
+            <div className="absolute inset-0 ring-2 ring-indigo-400 pointer-events-none z-20" />
+          )}
+          <div
+            className="relative overflow-hidden bg-gray-100 cursor-pointer"
+            style={{ aspectRatio: "3/4" }}
+            onClick={() => openProduct(product)}
+          >
+            <ProductImage image={image} name={product.name} fit="cover" className="transition duration-700 group-hover:scale-105" />
+            {hasDiscount && (
+              <span className="absolute left-3 top-3 bg-red-600 text-white text-[10px] font-black px-2 py-1 tracking-wider">SALE</span>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
+              className="absolute right-3 top-3 h-8 w-8 bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+            >
+              <Heart className={`h-4 w-4 ${favoriteIds.has(product.id) ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+            </button>
+            {!available && (
+              <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                <span className="text-xs font-bold text-gray-500 border border-gray-400 px-3 py-1.5">Sin stock</span>
+              </div>
+            )}
+            {!isInquiry && (
+              <div className="absolute bottom-0 left-0 right-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                <button
+                  disabled={!available}
+                  onClick={(e) => { e.stopPropagation(); addToCart(product); }}
+                  className="w-full py-3 text-xs font-bold tracking-widest text-white transition-colors disabled:opacity-50"
+                  style={{ backgroundColor: store.primaryColor }}
+                >
+                  {!available ? "SIN STOCK" : "AGREGAR AL CARRITO"}
+                </button>
+              </div>
+            )}
+            {isInquiry && (
+              <div className="absolute bottom-0 left-0 right-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                <button
+                  disabled={!store.whatsappNumber}
+                  onClick={(e) => { e.stopPropagation(); consultarWhatsApp(product); }}
+                  className="w-full py-3 text-xs font-bold tracking-widest text-white transition-colors disabled:opacity-50"
+                  style={{ backgroundColor: "#25D366" }}
+                >
+                  CONSULTAR
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="mt-3 space-y-1 px-0.5">
+            {product.category && (
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">{formatCategoryLabel(product.category)}</p>
+            )}
+            <p className="text-sm font-medium text-gray-900 leading-snug">{product.name}</p>
+            {(() => {
+              const colorPairs = product.variants.flatMap(v =>
+                parseVariantAttrs(v)
+                  .filter(p => p.name.toLowerCase().includes("color") || p.name.toLowerCase().includes("tono"))
+                  .map(p => ({ id: `${v.id}:${p.name}:${p.value}`, value: p.value, stock: v.stock }))
+              ).filter((item, idx, arr) => arr.findIndex(x => x.value === item.value) === idx);
+              if (colorPairs.length === 0) return null;
+              return (
+                <div className="flex flex-wrap gap-1">
+                  {colorPairs.slice(0, 6).map((v) => {
+                    const bg = variantToColor(v.value);
+                    return bg
+                      ? <span key={v.id} title={v.value} className={`h-3 w-3 rounded-full border border-gray-200 inline-block ${v.stock === 0 ? "opacity-30" : ""}`} style={{ backgroundColor: bg }} />
+                      : <span key={v.id} className={`text-[9px] text-gray-400 border border-gray-200 px-1 rounded ${v.stock === 0 ? "opacity-30 line-through" : ""}`}>{v.value}</span>;
+                  })}
+                </div>
+              );
+            })()}
+            {store.showPrices && (
+              <div className="flex items-center gap-2 pt-0.5">
+                <span className="text-sm font-semibold text-gray-900">{money(product.price, store.currency)}</span>
+                {hasDiscount && <span className="text-xs text-gray-400 line-through">{money(product.comparePrice!, store.currency)}</span>}
+              </div>
+            )}
+            {store.showStock && product.variants.length > 0 && (
+              <p className={`text-[10px] font-semibold ${available ? "text-emerald-600" : "text-red-400"}`}>
+                {available ? `${totalStock} disponibles` : "Sin stock"}
+              </p>
+            )}
+          </div>
+        </article>
+      );
+    }
 
     if (isKids && !list) {
       const emoji = ["🦄", "⭐", "🎀", "🌈", "🎉", "🍭"][index % 6];

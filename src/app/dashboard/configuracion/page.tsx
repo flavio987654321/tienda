@@ -25,6 +25,7 @@ const TEMPLATES = [
   { id:"tech",     name:"Moderno",   emoji:"🖥️", desc:"Gris claro, split hero, grid limpio y profesional" },
   { id:"kids",     name:"Colorful",  emoji:"🎀", desc:"Colores vivos, redondeado, divertido pero prolijo" },
   { id:"market",   name:"Market",    emoji:"🏪", desc:"Sidebar de filtros, grid denso, estilo marketplace" },
+  { id:"dawn",     name:"Vitrina",   emoji:"🪟", desc:"Fotografía full-screen, cards sin borde, hover con quick-add — estilo tienda premium internacional" },
 ];
 
 const FUENTES = ["Inter","Poppins","Playfair Display","Roboto","Montserrat","Lato","Raleway","Oswald","Nunito","DM Sans"];
@@ -212,6 +213,13 @@ const TEMPLATE_BLOCKS: Record<string, Omit<Block,"id">[]> = {
     { type:"products",   props:{ heading:"Más vendidos", columns:4, layoutMode:"grid", showHeading:true } },
     { type:"cta",         props:{ heading:"¿Querés vender con nosotros?", body:"Unite a nuestra plataforma", buttonText:"Contactanos", bgColor:"#1e3a5f" } },
     { type:"socials",     props:{ heading:"Seguinos y contactanos", showInstagram:true, showWhatsapp:true, showFacebook:true, columns:3 } },
+  ],
+  dawn:     [ // Vitrina
+    { type:"banner",      props:{ text:"NUEVA COLECCIÓN — DESCUBRILA AHORA", bgColor:"#111827", textColor:"#f9fafb", size:"sm" } },
+    { type:"products",   props:{ heading:"", columns:4, layoutMode:"grid", showHeading:false, showCategoryTabs:true } },
+    { type:"image-text",  props:{ heading:"Nuestra historia", body:"Contá de qué se trata tu marca y qué te hace diferente.", imagePosition:"left", imageFit:"cover", imageRadius:"redondeada" } },
+    { type:"cta",         props:{ heading:"Enviamos a todo el país", sub:"Comprá hoy y recibís en tu puerta", buttonText:"Ver productos", bgColor:"#111827", textColor:"#ffffff" } },
+    { type:"socials",     props:{ heading:"Seguinos", showInstagram:true, showTiktok:true, showWhatsapp:true, layout:"icons" } },
   ],
 };
 
