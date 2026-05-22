@@ -258,7 +258,7 @@ function PreciosContent() {
                     ) : (
                       <li key={i} className="flex items-start gap-2.5 text-sm text-gray-600">
                         <X className="h-4 w-4 text-gray-700 shrink-0 mt-0.5" />
-                        Dominio propio
+                        {f.text}
                       </li>
                     );
                   }
