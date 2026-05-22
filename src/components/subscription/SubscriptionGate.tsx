@@ -17,8 +17,37 @@ export default function SubscriptionGate({ status, daysLeft, role, tier, plan }:
   const planKey = role === "OWNER" ? (tier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC") : "AFFILIATE";
   const [payModal, setPayModal] = useState(false);
 
-  // Suscripción activa y no está por vencer — no mostrar nada
-  if (status === "ACTIVE" && daysLeft > 5) return null;
+  // Suscripción activa — no mostrar nada
+  if (status === "ACTIVE" && daysLeft > 3) return null;
+
+  // Suscripción activa próxima a vencer — banner suave
+  if (status === "ACTIVE" && daysLeft <= 3) {
+    return (
+      <>
+        <div className="mx-4 mt-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 px-4 py-3 flex items-center gap-3 text-sm">
+          <Clock className="h-4 w-4 shrink-0" />
+          <span className="flex-1">
+            Tu suscripción vence en {daysLeft === 0 ? "menos de 24 hs" : `${daysLeft} día${daysLeft !== 1 ? "s" : ""}`}. Renovála para no perder el acceso.
+          </span>
+          <button
+            onClick={() => setPayModal(true)}
+            className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 transition-colors"
+          >
+            Renovar
+          </button>
+        </div>
+        {payModal && (
+          <PaymentModal
+            plan={planKey}
+            billing={plan}
+            amount={planKey === "OWNER_PREMIUM" ? (plan === "MONTHLY" ? 25000 : 225000) : planKey === "OWNER_BASIC" ? (plan === "MONTHLY" ? 20000 : 180000) : (plan === "MONTHLY" ? 15000 : 135000)}
+            onClose={() => setPayModal(false)}
+            onSuccess={() => { setPayModal(false); window.location.reload(); }}
+          />
+        )}
+      </>
+    );
+  }
 
   // Trial o gracia con días restantes — mostrar banner
   if ((status === "TRIAL" || status === "GRACE") && daysLeft > 0) {
@@ -62,7 +91,7 @@ export default function SubscriptionGate({ status, daysLeft, role, tier, plan }:
   }
 
   // Expirada — bloquear con modal (como ChatGPT)
-  if (status === "EXPIRED" || status === "CANCELLED" || daysLeft === 0) {
+  if (status === "EXPIRED" || status === "CANCELLED") {
     return (
       <>
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/95 backdrop-blur-sm p-4">
