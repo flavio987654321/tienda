@@ -1,9 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createNotificationMany } from "@/lib/notifications";
 
-// GET — devuelve los bloqueadores y el nombre de la tienda
+// ── helpers de storage ────────────────────────────────────────────────────────
+
+function parseJsonUrls(json: string): string[] {
+  try {
+    const arr = JSON.parse(json);
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function extractStoragePaths(urls: (string | null | undefined)[], supabaseUrl: string, bucket: string): string[] {
+  const prefix = `${supabaseUrl}/storage/v1/object/public/${bucket}/`;
+  return urls
+    .filter((u): u is string => !!u && u.startsWith(prefix))
+    .map(u => u.slice(prefix.length));
+}
+
+// ── GET — devuelve bloqueadores, rol y valor de confirmación ─────────────────
+
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -23,17 +43,28 @@ export async function GET() {
     },
   });
 
-  if (!store) return NextResponse.json({ storeName: "", pendingOrders: 0, pendingBalances: 0 });
+  const pendingOrders = store?.orders.length ?? 0;
+  const pendingBalances = store?.affiliates
+    .filter(a => a.wallet && a.wallet.balance > 0)
+    .reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0) ?? 0;
 
-  const pendingOrders = store.orders.length;
-  const pendingBalances = store.affiliates
-    .filter((a) => a.wallet && a.wallet.balance > 0)
-    .reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0);
-
-  return NextResponse.json({ storeName: store.name, pendingOrders, pendingBalances });
+  return NextResponse.json({
+    role: user.role,
+    email: user.email,
+    storeName: store?.name ?? "",
+    pendingOrders,
+    pendingBalances,
+  });
 }
 
-// DELETE — elimina la tienda o la cuenta completa
+// ── DELETE — elimina tienda y/o cuenta ───────────────────────────────────────
+//
+// Estrategia: anonimizar en lugar de borrar.
+// Los registros fiscales (órdenes, pagos, comisiones) quedan anonimizados
+// para cumplimiento de AFIP y Ley 24.240.
+// Las aceptaciones de T&C se preservan en DeletedAccountAudit.
+// Supabase Auth se elimina para liberar el email y permitir re-registro.
+
 export async function DELETE(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -44,83 +75,268 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Target inválido" }, { status: 400 });
   }
 
-  const store = await prisma.store.findUnique({
-    where: { ownerId: user.id },
-    include: {
-      orders: {
-        where: { status: { in: ["PENDING", "PROCESSING"] } },
-        select: { id: true },
+  const isOwner = user.role === "OWNER";
+
+  // ── Validar confirmación según rol ───────────────────────────────────────
+  if (isOwner) {
+    const store = await prisma.store.findUnique({
+      where: { ownerId: user.id },
+      select: { name: true },
+    });
+    if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+    if (confirm !== store.name) {
+      return NextResponse.json({ error: "El nombre ingresado no coincide con el de tu tienda" }, { status: 400 });
+    }
+  } else {
+    // BUYER / SELLER confirman con su email
+    if (confirm !== user.email) {
+      return NextResponse.json({ error: "El email ingresado no es correcto" }, { status: 400 });
+    }
+    // No-owners solo pueden eliminar su cuenta, no una tienda
+    if (target === "store") {
+      return NextResponse.json({ error: "No tenés una tienda para eliminar" }, { status: 400 });
+    }
+  }
+
+  // ── Para OWNER: verificar bloqueadores antes de proceder ─────────────────
+  if (isOwner) {
+    const storeData = await prisma.store.findUnique({
+      where: { ownerId: user.id },
+      include: {
+        orders: { where: { status: { in: ["PENDING", "PROCESSING"] } }, select: { id: true } },
+        affiliates: { where: { isActive: true }, select: { userId: true, wallet: { select: { balance: true } } } },
       },
-      affiliates: {
-        where: { isActive: true },
-        select: { userId: true, wallet: { select: { balance: true } } },
+    });
+
+    if (storeData) {
+      const pendingOrders = storeData.orders.length;
+      const pendingBalances = storeData.affiliates
+        .filter(a => a.wallet && a.wallet.balance > 0)
+        .reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0);
+
+      if (pendingOrders > 0 || pendingBalances > 0) {
+        return NextResponse.json({ error: "Bloqueado", pendingOrders, pendingBalances }, { status: 409 });
+      }
+
+      // Notificar a afiliados activos
+      const affiliateUserIds = storeData.affiliates.map(a => a.userId);
+      if (affiliateUserIds.length > 0) {
+        await createNotificationMany(
+          affiliateUserIds.map(userId => ({
+            userId,
+            type: "STORE_CLOSED",
+            title: `${storeData.name} cerró su tienda`,
+            body: "Tu link de afiliado fue desactivado. Los saldos ya acreditados en tu billetera siguen disponibles para retirar.",
+            link: "/vendedoras",
+          }))
+        );
+      }
+    }
+  }
+
+  // ── Recolectar archivos ANTES de modificar la BD ─────────────────────────
+  const userData = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      image: true,
+      createdAt: true,
+      subscription: true,
+      store: {
+        select: {
+          id: true,
+          logo: true,
+          banner: true,
+          tcOwnerAcceptedAt: true,
+          tcOwnerVersion: true,
+          tcOwnerAcceptedIp: true,
+          products: { select: { images: true, reelUrls: true } },
+        },
+      },
+      asAffiliate: {
+        select: {
+          id: true,
+          cvUrl: true,
+          tcAcceptedAt: true,
+          tcVersion: true,
+          tcAcceptedIp: true,
+        },
       },
     },
   });
 
-  if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+  // Solo recolectar archivos si se elimina cuenta completa
+  const allFileUrls: (string | null | undefined)[] = target === "account" ? [
+    userData?.image,
+    userData?.store?.logo,
+    userData?.store?.banner,
+    ...(userData?.store?.products.flatMap(p => [
+      ...parseJsonUrls(p.images),
+      ...parseJsonUrls(p.reelUrls),
+    ]) ?? []),
+    ...(userData?.asAffiliate.map(a => a.cvUrl) ?? []),
+  ] : [];
 
-  // Validar confirmación
-  if (confirm !== store.name) {
-    return NextResponse.json({ error: "El nombre ingresado no coincide con el de tu tienda" }, { status: 400 });
-  }
+  const affiliateTc = userData?.asAffiliate.find(a => a.tcAcceptedAt);
 
-  // Verificar bloqueadores
-  const pendingOrders = store.orders.length;
-  const pendingBalances = store.affiliates
-    .filter((a) => a.wallet && a.wallet.balance > 0)
-    .reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0);
+  // ── Transacción principal ─────────────────────────────────────────────────
+  await prisma.$transaction(async (tx) => {
+    if (isOwner && userData?.store) {
+      const storeId = userData.store.id;
 
-  if (pendingOrders > 0 || pendingBalances > 0) {
-    return NextResponse.json({ error: "Bloqueado", pendingOrders, pendingBalances }, { status: 409 });
-  }
+      // Desactivar afiliados de la tienda
+      await tx.affiliate.updateMany({
+        where: { storeId, isActive: true },
+        data: { isActive: false, status: "REMOVED" },
+      });
 
-  // Notificar a afiliados activos
-  const affiliateUserIds = store.affiliates.map((a) => a.userId);
-  if (affiliateUserIds.length > 0) {
-    await createNotificationMany(
-      affiliateUserIds.map((userId) => ({
-        userId,
-        type: "STORE_CLOSED",
-        title: `${store.name} cerró su tienda`,
-        body: "Tu link de afiliado fue desactivado. Los saldos ya acreditados en tu billetera siguen disponibles para retirar.",
-        link: "/vendedoras",
-      }))
-    );
-  }
+      if (target === "account") {
+        // Anonimizar productos
+        const productIds = (await tx.product.findMany({ where: { storeId }, select: { id: true } })).map(p => p.id);
+        if (productIds.length) {
+          await tx.product.updateMany({
+            where: { id: { in: productIds } },
+            data: { name: "Producto eliminado", description: null, images: "[]", reelUrls: "[]" },
+          });
+        }
 
-  // Desactivar afiliados y ocultar tienda (soft delete)
-  await prisma.$transaction([
-    prisma.affiliate.updateMany({
-      where: { storeId: store.id, isActive: true },
-      data: { isActive: false, status: "REMOVED" },
-    }),
-    prisma.store.update({
-      where: { id: store.id },
-      data: {
-        isActive: false,
-        isPublished: false,
-        affiliatesEnabled: false,
-        name: `[Eliminada] ${store.name}`,
-        slug: `deleted-${store.id}`,
-      },
-    }),
-  ]);
+        // Nullificar couponId en órdenes antes de borrar cupones
+        const couponIds = (await tx.coupon.findMany({ where: { storeId }, select: { id: true } })).map(c => c.id);
+        if (couponIds.length) {
+          await tx.order.updateMany({ where: { couponId: { in: couponIds } }, data: { couponId: null } });
+          await tx.coupon.deleteMany({ where: { storeId } });
+        }
 
-  // Si elimina cuenta: anonimizar datos personales (conserva historial por AFIP)
+        // Anonimizar tienda
+        await tx.store.update({
+          where: { id: storeId },
+          data: {
+            slug: `deleted-${storeId}`,
+            customDomain: null,
+            name: "Tienda eliminada",
+            description: null,
+            logo: null,
+            banner: null,
+            tagline: null,
+            announcementBar: null,
+            whatsappNumber: null,
+            instagramUrl: null,
+            facebookUrl: null,
+            tiktokUrl: null,
+            footerText: null,
+            footerDescription: null,
+            seoTitle: null,
+            seoDescription: null,
+            policyReturns: null,
+            policyShipping: null,
+            policyTerms: null,
+            pageBlocks: "[]",
+            navLinks: "[]",
+            isActive: false,
+            isPublished: false,
+            tcOwnerAcceptedAt: null,
+            tcOwnerAcceptedIp: null,
+            tcOwnerVersion: null,
+          },
+        });
+      } else {
+        // Solo elimina tienda (soft delete)
+        await tx.store.update({
+          where: { id: storeId },
+          data: {
+            isActive: false,
+            isPublished: false,
+            affiliatesEnabled: false,
+            name: `[Eliminada] ${userData.store.id}`,
+            slug: `deleted-${storeId}`,
+          },
+        });
+      }
+    }
+
+    if (target === "account") {
+      // Audit log legal
+      await tx.deletedAccountAudit.create({
+        data: {
+          deletedByAdminId: user.id, // self-deletion
+          originalUserId: user.id,
+          accountType: user.role,
+          accountCreatedAt: userData?.createdAt ?? new Date(),
+          tcOwnerAcceptedAt: userData?.store?.tcOwnerAcceptedAt ?? null,
+          tcOwnerVersion: userData?.store?.tcOwnerVersion ?? null,
+          tcOwnerAcceptedIp: userData?.store?.tcOwnerAcceptedIp ?? null,
+          tcAffiliateAcceptedAt: affiliateTc?.tcAcceptedAt ?? null,
+          tcAffiliateVersion: affiliateTc?.tcVersion ?? null,
+          tcAffiliateAcceptedIp: affiliateTc?.tcAcceptedIp ?? null,
+          subscriptionRole: userData?.subscription?.role ?? null,
+          subscriptionPlan: userData?.subscription?.plan ?? null,
+          subscriptionStatus: userData?.subscription?.status ?? null,
+          subscriptionCreatedAt: userData?.subscription?.createdAt ?? null,
+        },
+      });
+
+      // Anonimizar usuario
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          email: `deleted-${user.id}@deleted.invalid`,
+          name: null,
+          image: null,
+          bio: null,
+          phone: null,
+          city: null,
+          instagramHandle: null,
+          password: null,
+          banned: true,
+        },
+      });
+
+      // Anonimizar shippingAddress en pedidos como comprador
+      const buyerOrderIds = (await tx.order.findMany({ where: { buyerId: user.id }, select: { id: true } })).map(o => o.id);
+      if (buyerOrderIds.length) {
+        await tx.order.updateMany({
+          where: { id: { in: buyerOrderIds } },
+          data: { shippingAddress: JSON.stringify({ anonymized: true }) },
+        });
+      }
+
+      // Null out cvUrl y T&C en afiliaciones a otras tiendas
+      await tx.affiliate.updateMany({
+        where: { userId: user.id },
+        data: { cvUrl: null, tcAcceptedAt: null, tcVersion: null, tcAcceptedIp: null },
+      });
+
+      // Eliminar datos sin valor fiscal
+      await tx.favorite.deleteMany({ where: { userId: user.id } });
+      await tx.review.deleteMany({ where: { userId: user.id } });
+      await tx.notification.deleteMany({ where: { userId: user.id } });
+      await tx.session.deleteMany({ where: { userId: user.id } });
+      await tx.account.deleteMany({ where: { userId: user.id } });
+      await tx.affiliateRewardCoupon.deleteMany({ where: { userId: user.id } });
+      await tx.subscription.deleteMany({ where: { userId: user.id } });
+    }
+  }, { timeout: 30_000 });
+
+  // ── Eliminar de Supabase Auth — libera email para re-registro ─────────────
   if (target === "account") {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        name: "Usuario eliminado",
-        email: `deleted_${user.id}@deleted.mitienda.ar`,
-        password: null,
-        image: null,
-        bio: null,
-        phone: null,
-        instagramHandle: null,
-      },
-    });
+    const supabase = createSupabaseAdminClient();
+
+    const { error: authDeleteError } = await supabase.auth.admin.deleteUser(user.id);
+    if (authDeleteError) {
+      console.error("DELETE CUENTA: error eliminando de Supabase Auth", user.id, authDeleteError.message);
+    }
+
+    // Borrar archivos de Storage (best-effort)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+    const bucket = process.env.SUPABASE_STORAGE_BUCKET || "product-images";
+    if (supabaseUrl) {
+      const paths = extractStoragePaths(allFileUrls, supabaseUrl, bucket);
+      if (paths.length) {
+        const { error: storageError } = await supabase.storage.from(bucket).remove(paths);
+        if (storageError) {
+          console.error("DELETE CUENTA: error eliminando archivos de storage", storageError.message);
+        }
+      }
+    }
   }
 
   return NextResponse.json({ ok: true, target });
