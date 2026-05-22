@@ -20,7 +20,7 @@ export default async function AjustesPage() {
   const isPremium = tier === "PREMIUM";
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto">
       <div className="mb-6">
         <Link href="/dashboard" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
           ← Volver al panel

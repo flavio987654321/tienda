@@ -12,10 +12,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         {children}
         <Suspense fallback={null}>
           <ProgressBar
-            height="3px"
+            height="4px"
             color="#6366f1"
-            options={{ showSpinner: false, minimum: 0.15, trickleSpeed: 120 }}
-            shallowRouting
+            options={{ showSpinner: false, minimum: 0.08, trickleSpeed: 200 }}
           />
         </Suspense>
       </AuthProvider>
