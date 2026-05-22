@@ -446,7 +446,7 @@ export default function Home() {
           <motion.div initial="hidden" animate="show" variants={stagger}>
             <motion.div variants={fadeUp} className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 px-4 py-1.5 rounded-full text-sm font-medium mb-8">
               <Star className="h-3.5 w-3.5 fill-indigo-400 text-indigo-400" />
-              Generamos trabajo real en Argentina
+              Ecommerce con afiliados · 100% argentino
             </motion.div>
 
             <motion.h1 variants={fadeUp} className="text-5xl lg:text-7xl font-black leading-[1.05] mb-6 tracking-tight">
@@ -469,13 +469,13 @@ export default function Home() {
                 Crear mi tienda gratis
                 <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <button
-                onClick={() => setContact(true)}
+              <Link
+                href="/vendedoras"
                 className="flex items-center gap-2 border border-white/10 hover:border-white/25 text-gray-300 hover:text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all hover:bg-white/5"
               >
-                <MessageCircle className="h-5 w-5" />
-                Hablar con nosotros
-              </button>
+                <Users className="h-5 w-5" />
+                Quiero ser afiliado
+              </Link>
             </motion.div>
 
             <motion.div variants={fadeUp} className="grid grid-cols-3 gap-6">

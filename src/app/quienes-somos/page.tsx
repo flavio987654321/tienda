@@ -4,9 +4,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ShoppingBag, Users, Wallet, TrendingUp, Heart, Briefcase,
-  ArrowRight, CheckCircle, Star, Globe, Shield, MessageCircle,
-  Home, Share2, DollarSign, Zap, Store, Smartphone, Trophy,
-  Gift, Download, Bell,
+  ArrowRight, CheckCircle, Globe, Shield, MessageCircle,
+  Home, Share2, DollarSign, Zap, Store, ShoppingCart,
 } from "lucide-react";
 
 const fadeUp = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, transition: { duration: 0.55 } } };
@@ -64,13 +63,14 @@ export default function QuienesSomosPage() {
             </motion.div>
 
             <motion.h1 variants={fadeUp} className="text-5xl lg:text-7xl font-black leading-[1.05] mb-6 tracking-tight">
-              Generamos<br />
-              <span className="gradient-text">trabajo real.</span>
+              Construimos esto<br />
+              <span className="gradient-text">para ayudar a la gente.</span>
             </motion.h1>
 
             <motion.p variants={fadeUp} className="text-xl text-gray-400 leading-relaxed max-w-2xl mx-auto mb-10">
-              Creemos que hoy, más que nunca, la gente necesita oportunidades para trabajar
-              desde su casa y ganar dinero sin invertir un peso. Eso es exactamente lo que construimos.
+              MiTienda existe para que el dueño de tienda pueda vender más, el afiliado pueda
+              ganarse la vida desde su casa, y el comprador encuentre lo que busca en tiendas argentinas reales.
+              Todos importan. Todos ganan.
             </motion.p>
 
             <motion.div variants={fadeUp} className="flex flex-wrap gap-4 justify-center">
@@ -85,18 +85,114 @@ export default function QuienesSomosPage() {
         </div>
       </section>
 
-      {/* ── EL PROBLEMA ── */}
+      {/* ── TRES PERSONAS, UN SOLO PROPÓSITO ── */}
+      <section className="py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
+            <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Para quiénes existe MiTienda</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-5">
+              Una plataforma, tres personas que ganan.
+            </motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">
+              No diseñamos esto para un solo tipo de usuario. Pensamos en todos — y cada uno
+              tiene un lugar real en este ecosistema.
+            </motion.p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: Store,
+                color: "#6366f1",
+                bg: "from-indigo-50 to-indigo-100/50",
+                border: "border-indigo-200",
+                title: "El dueño de tienda",
+                sub: "Tiene productos, necesita equipo de ventas",
+                gains: [
+                  "Arma un equipo sin pagar sueldos fijos",
+                  "Sus productos llegan a todo el país",
+                  "Solo paga cuando se genera una venta real",
+                  "Control total sobre quién representa su marca",
+                ],
+                cta: "Crear mi tienda",
+                href: "/registro",
+              },
+              {
+                icon: Users,
+                color: "#a855f7",
+                bg: "from-purple-50 to-purple-100/50",
+                border: "border-purple-200",
+                title: "El afiliado",
+                sub: "Quiere trabajar desde casa, sin inversión",
+                gains: [
+                  "Empieza sin poner un peso",
+                  "Trabaja a su ritmo, desde cualquier lugar",
+                  "Cobra comisión automática por cada venta",
+                  "Su billetera crece cuanto más comparte",
+                ],
+                cta: "Quiero ser afiliado",
+                href: "/vendedoras",
+              },
+              {
+                icon: ShoppingCart,
+                color: "#10b981",
+                bg: "from-emerald-50 to-emerald-100/50",
+                border: "border-emerald-200",
+                title: "El comprador",
+                sub: "Quiere comprar con confianza y comodidad",
+                gains: [
+                  "Descubre tiendas argentinas verificadas",
+                  "Paga con Mercado Pago de forma segura",
+                  "Sigue sus envíos en tiempo real",
+                  "Compra desde el celular como si fuera una app",
+                ],
+                cta: "Explorar tiendas",
+                href: "/tiendas",
+              },
+            ].map(({ icon: Icon, color, bg, border, title, sub, gains, cta, href }) => (
+              <motion.div
+                key={title}
+                initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
+                className={`bg-gradient-to-br ${bg} border ${border} rounded-3xl p-8 flex flex-col`}
+              >
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: color + "20" }}>
+                  <Icon className="h-7 w-7" style={{ color }} />
+                </div>
+                <h3 className="text-xl font-black text-gray-900 mb-1">{title}</h3>
+                <p className="text-gray-500 text-sm mb-6">{sub}</p>
+                <ul className="space-y-3 mb-8 flex-1">
+                  {gains.map((g) => (
+                    <li key={g} className="flex items-start gap-3 text-sm text-gray-600">
+                      <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color }} />
+                      {g}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href={href}
+                  className="flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-white text-sm transition-all hover:opacity-90"
+                  style={{ backgroundColor: color }}
+                >
+                  {cta} <ArrowRight className="h-4 w-4" />
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── EL PROBLEMA QUE VIMOS ── */}
       <section className="py-20 bg-gray-950 relative overflow-hidden">
         <div className="absolute inset-0 grid-bg opacity-40" />
         <div className="relative max-w-5xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
-            <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">El problema que vimos</motion.p>
+            <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">Por qué lo construimos</motion.p>
             <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-5">
               Dos mundos que no se encontraban
             </motion.h2>
             <motion.p variants={fadeUp} className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Por un lado, dueños de tiendas con productos increíbles pero sin equipo para difundirlos.
-              Por el otro, personas con ganas de trabajar pero sin capital para invertir.
+              Vimos dos problemas que nadie estaba resolviendo al mismo tiempo.
+              Decidimos resolverlos juntos.
             </motion.p>
           </motion.div>
 
@@ -150,7 +246,7 @@ export default function QuienesSomosPage() {
         </div>
       </section>
 
-      {/* ── LA SOLUCIÓN (TODOS GANAN) ── */}
+      {/* ── LA SOLUCIÓN ── */}
       <section className="py-24 bg-white relative overflow-hidden">
         <div className="max-w-5xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-16">
@@ -164,7 +260,6 @@ export default function QuienesSomosPage() {
             </motion.p>
           </motion.div>
 
-          {/* Flujo visual */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
             {[
               {
@@ -216,7 +311,6 @@ export default function QuienesSomosPage() {
             ))}
           </div>
 
-          {/* La síntesis */}
           <motion.div
             initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
             className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-10 text-center text-white"
@@ -235,19 +329,61 @@ export default function QuienesSomosPage() {
         </div>
       </section>
 
-      {/* ── PARA EL AFILIADO ── */}
+      {/* ── NUESTRO EQUIPO ── */}
       <section className="py-24 bg-gray-950 relative overflow-hidden">
         <div className="absolute inset-0 grid-bg opacity-30" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-purple-900/20 rounded-full blur-3xl" />
         <div className="relative max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
+              <div className="grid grid-cols-2 gap-4">
+                <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=600&q=80" alt="Equipo" className="w-full aspect-square object-cover rounded-3xl" />
+                <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=600&q=80" alt="Equipo" className="w-full aspect-square object-cover rounded-3xl mt-8" />
+                <img src="https://images.unsplash.com/photo-1573497161161-c3e73707e25c?auto=format&fit=crop&w=600&q=80" alt="Equipo" className="w-full aspect-square object-cover rounded-3xl -mt-8" />
+                <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80" alt="Equipo" className="w-full aspect-square object-cover rounded-3xl" />
+              </div>
+            </motion.div>
+
             <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
-              <motion.p variants={fadeUp} className="text-purple-400 font-semibold text-sm uppercase tracking-widest mb-3">Para quienes buscan trabajo</motion.p>
-              <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-6">
-                Trabajá desde tu casa.<br />
-                <span className="text-purple-400">Con tu celular.</span>
+              <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">El equipo</motion.p>
+              <motion.h2 variants={fadeUp} className="text-4xl font-black text-white mb-6">
+                Un equipo chico<br />con un objetivo grande.
               </motion.h2>
-              <motion.p variants={fadeUp} className="text-gray-400 text-lg leading-relaxed mb-8">
+              <motion.p variants={fadeUp} className="text-gray-400 leading-relaxed mb-5">
+                Somos un equipo argentino. Vimos de cerca la falta de oportunidades — personas con ganas de
+                trabajar sin poder arrancar, y dueños de tienda con productos que no llegaban a ningún lado.
+              </motion.p>
+              <motion.p variants={fadeUp} className="text-gray-400 leading-relaxed mb-8">
+                MiTienda nació de esa frustración. Decidimos construir algo simple, honesto, y que le dé
+                trabajo real a la gente. No solo a uno — a todos los que participan.
+              </motion.p>
+              <motion.div variants={stagger} className="grid grid-cols-3 gap-4">
+                {[
+                  { label: "Honestidad", sub: "Sin promesas vacías" },
+                  { label: "Impacto real", sub: "Trabajo concreto" },
+                  { label: "Simple", sub: "Sin complicaciones" },
+                ].map(({ label, sub }) => (
+                  <motion.div key={label} variants={fadeUp} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                    <p className="text-white font-bold text-sm mb-1">{label}</p>
+                    <p className="text-gray-500 text-xs">{sub}</p>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── PARA EL AFILIADO ── */}
+      <section className="py-24 bg-white relative overflow-hidden">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
+              <motion.p variants={fadeUp} className="text-purple-600 font-semibold text-sm uppercase tracking-widest mb-3">Para quienes buscan trabajo</motion.p>
+              <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-6">
+                Trabajá desde tu casa.<br />
+                <span className="text-purple-600">Con tu celular.</span>
+              </motion.h2>
+              <motion.p variants={fadeUp} className="text-gray-500 text-lg leading-relaxed mb-8">
                 No necesitás experiencia, no necesitás inversión, no necesitás local.
                 Solo tenés que compartir productos que ya existen en tiendas reales —
                 y por cada venta que generás, cobrás tu comisión automáticamente.
@@ -261,10 +397,10 @@ export default function QuienesSomosPage() {
                   { icon: DollarSign, text: "Retirás tus ganancias cuando querés" },
                 ].map(({ icon: Icon, text }) => (
                   <motion.li key={text} variants={fadeUp} className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Icon className="h-5 w-5 text-purple-400" />
+                    <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Icon className="h-5 w-5 text-purple-600" />
                     </div>
-                    <span className="text-gray-300 text-sm font-medium">{text}</span>
+                    <span className="text-gray-600 text-sm font-medium">{text}</span>
                   </motion.li>
                 ))}
               </motion.ul>
@@ -277,197 +413,73 @@ export default function QuienesSomosPage() {
 
             <motion.div
               initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
-              className="relative"
             >
-              <div className="bg-gray-900/80 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-5">Billetera del afiliado</p>
-                <div className="bg-gradient-to-br from-purple-600/30 to-indigo-600/20 border border-purple-500/30 rounded-2xl p-6 mb-6">
+              <div className="bg-gray-950 border border-white/10 rounded-3xl p-8">
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-5">Ejemplo real</p>
+                <div className="bg-gradient-to-br from-purple-600/30 to-indigo-600/20 border border-purple-500/30 rounded-2xl p-6 mb-5">
                   <p className="text-purple-300 text-sm mb-1">Ganancias del mes</p>
                   <p className="text-4xl font-black text-white">$183.400</p>
-                  <p className="text-purple-400 text-sm mt-2 flex items-center gap-1.5">
-                    <TrendingUp className="h-4 w-4" /> +34% vs mes anterior
-                  </p>
+                  <p className="text-purple-400 text-sm mt-2">Compartiendo desde el celular</p>
                 </div>
                 <div className="space-y-3">
                   {[
-                    { store: "Luna Moda", amount: "$74.200", sales: "38 ventas", color: "#6366f1" },
-                    { store: "Bella Joyas", amount: "$62.800", sales: "24 ventas", color: "#ec4899" },
-                    { store: "Ropa Kids", amount: "$46.400", sales: "31 ventas", color: "#10b981" },
-                  ].map(({ store, amount, sales, color }) => (
-                    <div key={store} className="flex items-center justify-between bg-white/5 rounded-xl p-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: color + "22" }}>
-                          <Store className="h-4 w-4" style={{ color }} />
-                        </div>
-                        <div>
-                          <p className="text-white text-sm font-semibold">{store}</p>
-                          <p className="text-gray-500 text-xs">{sales}</p>
-                        </div>
-                      </div>
-                      <p className="text-white font-bold text-sm">{amount}</p>
+                    { label: "Invertiste para arrancar", value: "$0" },
+                    { label: "Conocimientos técnicos requeridos", value: "Ninguno" },
+                    { label: "Horario obligatorio", value: "Libre" },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-3">
+                      <span className="text-gray-400 text-sm">{label}</span>
+                      <span className="font-bold text-sm text-emerald-400">{value}</span>
                     </div>
                   ))}
                 </div>
-                <div className="mt-5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-center">
-                  <p className="text-emerald-400 text-sm font-semibold">Retiro disponible: $183.400</p>
-                  <p className="text-gray-500 text-xs mt-1">Se acredita en 24-48hs hábiles</p>
-                </div>
               </div>
-
-              <motion.div
-                animate={{ y: [-4, 4, -4] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-4 -right-4 bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-lg shadow-emerald-500/30"
-              >
-                +$18.400 nueva venta ✓
-              </motion.div>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* ── PREMIOS PARA AFILIADOS ── */}
-      <section className="py-24 bg-white relative overflow-hidden">
-        <div className="max-w-5xl mx-auto px-6">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
-            <motion.p variants={fadeUp} className="text-purple-600 font-semibold text-sm uppercase tracking-widest mb-3">Programa de premios</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-5">
-              Cuanto más generás,<br />
-              <span className="text-purple-600">más premios ganás.</span>
-            </motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">
-              Cada mes se evalúan tus comisiones y subís de nivel automáticamente.
-              Los niveles más altos desbloquean cupones exclusivos para usar en tiendas o en tu suscripción.
-            </motion.p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
-            {[
-              {
-                icon: Gift,
-                level: "Bronce",
-                desc: "Punto de partida",
-                color: "#a8835a",
-                bg: "#fef9f0",
-                border: "#e5d4b8",
-                perks: ["Insignia en tu perfil", "Ya estás en el sistema"],
-              },
-              {
-                icon: Star,
-                level: "Plata",
-                desc: "Primeros cupones",
-                color: "#9ca3af",
-                bg: "#f9fafb",
-                border: "#e5e7eb",
-                perks: ["10% off en suscripción", "10% off en tiendas"],
-              },
-              {
-                icon: Trophy,
-                level: "Oro",
-                desc: "Beneficios reales",
-                color: "#d97706",
-                bg: "#fffbeb",
-                border: "#fde68a",
-                perks: ["20% off en suscripción", "15% off en tiendas"],
-                highlight: true,
-              },
-              {
-                icon: Star,
-                level: "Diamante",
-                desc: "Nivel máximo",
-                color: "#6366f1",
-                bg: "#f5f3ff",
-                border: "#c4b5fd",
-                perks: ["Mes de suscripción gratis", "20% off en tiendas", "Bonus por racha de 3 meses"],
-              },
-            ].map(({ icon: Icon, level, desc, color, bg, border, perks, highlight }) => (
-              <motion.div
-                key={level}
-                initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
-                className={`relative rounded-3xl p-6 border-2 ${highlight ? "shadow-xl" : "shadow-sm"}`}
-                style={{ backgroundColor: bg, borderColor: border }}
-              >
-                {highlight && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full shadow" style={{ backgroundColor: color, color: "#fff" }}>
-                    Popular
-                  </div>
-                )}
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3" style={{ backgroundColor: color + "22" }}>
-                  <Icon className="h-6 w-6" style={{ color }} />
-                </div>
-                <p className="font-black text-gray-900 text-lg mb-0.5">{level}</p>
-                <p className="text-xs font-medium mb-4" style={{ color }}>{desc}</p>
-                <ul className="space-y-2">
-                  {perks.map((p) => (
-                    <li key={p} className="flex items-start gap-2 text-sm text-gray-600">
-                      <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" style={{ color }} />
-                      {p}
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            ))}
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl p-8 text-center text-white"
-          >
-            <Trophy className="h-10 w-10 mx-auto mb-3 text-amber-300" />
-            <p className="text-2xl font-black mb-2">Los cupones llegan solos al cierre de cada mes</p>
-            <p className="text-purple-200 max-w-xl mx-auto text-sm">
-              No hay formularios ni esperas. Si alcanzás Plata o superior, tu cupón aparece automáticamente.
-              Mantener nivel Diamante 3 meses seguidos activa un bonus extra de racha.
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── PARA EL DUEÑO DE TIENDA ── */}
-      <section className="py-24 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
+      {/* ── PARA EL DUEÑO ── */}
+      <section className="py-24 bg-gray-950 relative overflow-hidden">
+        <div className="absolute inset-0 grid-bg opacity-20" />
+        <div className="relative max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <motion.div
               initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
               className="order-2 lg:order-1"
             >
-              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-3xl p-8">
-                <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-5">Panel del dueño</p>
-                <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
+                <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-5">Panel del dueño</p>
+                <div className="grid grid-cols-2 gap-4 mb-5">
                   {[
-                    { label: "Afiliados activos", value: "12", icon: Users, color: "#6366f1" },
-                    { label: "Ventas este mes", value: "94", icon: TrendingUp, color: "#10b981" },
-                    { label: "En comisiones", value: "$0", icon: DollarSign, color: "#f59e0b", sub: "pagado a afiliados" },
-                    { label: "Ganancia neta", value: "$847K", icon: Wallet, color: "#ec4899" },
-                  ].map(({ label, value, icon: Icon, color, sub }) => (
-                    <div key={label} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-gray-500 text-xs">{label}</p>
-                        <Icon className="h-4 w-4" style={{ color }} />
-                      </div>
-                      <p className="text-2xl font-black text-gray-900">{value}</p>
-                      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+                    { label: "Afiliados activos", value: "12", color: "#6366f1" },
+                    { label: "Ventas este mes", value: "94", color: "#10b981" },
+                    { label: "Costo en sueldos", value: "$0", color: "#f59e0b" },
+                    { label: "Ganancia neta", value: "$847K", color: "#ec4899" },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                      <p className="text-gray-500 text-xs mb-2">{label}</p>
+                      <p className="text-2xl font-black" style={{ color }}>{value}</p>
                     </div>
                   ))}
                 </div>
-                <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-2xl p-4">
-                  <p className="text-indigo-700 text-sm font-semibold flex items-center gap-2">
-                    <Star className="h-4 w-4 fill-indigo-500 text-indigo-500" />
-                    12 afiliados trabajando para tu tienda — sin que pagues un sueldo.
+                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 text-center">
+                  <p className="text-indigo-400 text-sm font-semibold">
+                    12 personas vendiendo tus productos — sin pagar un sueldo fijo.
                   </p>
                 </div>
               </div>
             </motion.div>
 
             <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="order-1 lg:order-2">
-              <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Para dueños de tienda</motion.p>
-              <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-6">
+              <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">Para dueños de tienda</motion.p>
+              <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-6">
                 Un equipo de ventas.<br />
-                <span className="text-indigo-600">Sin costo fijo.</span>
+                <span className="text-indigo-400">Sin costo fijo.</span>
               </motion.h2>
-              <motion.p variants={fadeUp} className="text-gray-500 text-lg leading-relaxed mb-8">
-                Cada afiliado que actives es una persona que va a salir a vender tus productos
-                en sus redes, con sus contactos. Vos no pagás nada hasta que se genera una venta —
-                y ahí sí, la comisión se descuenta automáticamente.
+              <motion.p variants={fadeUp} className="text-gray-400 text-lg leading-relaxed mb-8">
+                Cada afiliado que activés es una persona que va a salir a vender tus productos
+                en sus redes, con sus contactos. Solo pagás comisión cuando se genera una venta real.
               </motion.p>
               <motion.ul variants={stagger} className="space-y-4 mb-10">
                 {[
@@ -478,49 +490,6 @@ export default function QuienesSomosPage() {
                   { icon: MessageCircle, text: "Panel completo para ver el rendimiento de cada afiliado" },
                 ].map(({ icon: Icon, text }) => (
                   <motion.li key={text} variants={fadeUp} className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Icon className="h-5 w-5 text-indigo-600" />
-                    </div>
-                    <span className="text-gray-600 text-sm font-medium">{text}</span>
-                  </motion.li>
-                ))}
-              </motion.ul>
-              <motion.div variants={fadeUp}>
-                <Link href="/registro?plan=owner" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-indigo-500/25 hover:scale-105">
-                  Crear mi tienda gratis <ArrowRight className="h-5 w-5" />
-                </Link>
-              </motion.div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── PWA / TU TIENDA COMO APP ── */}
-      <section className="py-24 bg-gray-950 relative overflow-hidden">
-        <div className="absolute inset-0 grid-bg opacity-30" />
-        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
-              <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">Tu tienda como app</motion.p>
-              <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-6">
-                Una app real.<br />
-                <span className="text-indigo-400">Sin app store.</span>
-              </motion.h2>
-              <motion.p variants={fadeUp} className="text-gray-400 text-lg leading-relaxed mb-8">
-                Tu tienda se puede instalar en el celular de tus clientes como si fuera una app nativa.
-                Sin pasar por Google Play ni el App Store — directamente desde el navegador,
-                en segundos. Se ve y se usa exactamente como una app profesional.
-              </motion.p>
-              <motion.ul variants={stagger} className="space-y-4 mb-10">
-                {[
-                  { icon: Download, text: "Se instala con un tap desde cualquier celular o computadora" },
-                  { icon: Smartphone, text: "Ícono propio en la pantalla de inicio del cliente" },
-                  { icon: Bell, text: "Podés enviar notificaciones push a tus clientes" },
-                  { icon: Zap, text: "Carga ultra rápida, experiencia fluida como app nativa" },
-                  { icon: Globe, text: "Funciona en Android, iPhone, Windows y Mac" },
-                ].map(({ icon: Icon, text }) => (
-                  <motion.li key={text} variants={fadeUp} className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
                       <Icon className="h-5 w-5 text-indigo-400" />
                     </div>
@@ -529,73 +498,10 @@ export default function QuienesSomosPage() {
                 ))}
               </motion.ul>
               <motion.div variants={fadeUp}>
-                <Link href="/registro" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-indigo-500/25 hover:scale-105">
-                  Crear mi tienda app <ArrowRight className="h-5 w-5" />
+                <Link href="/registro?plan=owner" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-indigo-500/25 hover:scale-105">
+                  Crear mi tienda gratis <ArrowRight className="h-5 w-5" />
                 </Link>
               </motion.div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
-              className="flex justify-center"
-            >
-              <div className="relative w-64">
-                {/* Phone mockup */}
-                <div className="bg-gray-900 border-4 border-gray-700 rounded-[3rem] p-3 shadow-2xl shadow-indigo-500/20">
-                  <div className="bg-gray-800 rounded-[2.4rem] overflow-hidden">
-                    {/* Status bar */}
-                    <div className="bg-gray-900 px-5 py-2 flex justify-between items-center">
-                      <span className="text-white text-xs font-semibold">9:41</span>
-                      <div className="flex gap-1">
-                        <div className="w-4 h-2 bg-white/60 rounded-sm" />
-                        <div className="w-1.5 h-2 bg-white/40 rounded-sm" />
-                      </div>
-                    </div>
-                    {/* Install banner */}
-                    <div className="bg-white/5 border-b border-white/10 px-4 py-3 flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
-                          <ShoppingBag className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-white text-xs font-bold">Luna Moda</p>
-                          <p className="text-gray-400 text-[10px]">Instalar app</p>
-                        </div>
-                      </div>
-                      <div className="bg-indigo-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg">
-                        Instalar
-                      </div>
-                    </div>
-                    {/* Store content */}
-                    <div className="p-4 space-y-3">
-                      <div className="bg-indigo-600/20 rounded-2xl h-28 flex items-center justify-center border border-indigo-500/30">
-                        <ShoppingBag className="h-10 w-10 text-indigo-400" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {["Remeras", "Vestidos", "Accesorios", "Ofertas"].map((cat) => (
-                          <div key={cat} className="bg-white/5 rounded-xl h-14 flex items-center justify-center">
-                            <p className="text-gray-300 text-xs font-medium">{cat}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Floating badge */}
-                <motion.div
-                  animate={{ y: [-4, 4, -4] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute -top-3 -right-3 bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-lg shadow-emerald-500/30"
-                >
-                  ✓ App instalada
-                </motion.div>
-                <motion.div
-                  animate={{ y: [4, -4, 4] }} transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute -bottom-3 -left-3 bg-indigo-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-lg"
-                >
-                  🔔 Nueva oferta
-                </motion.div>
-              </div>
             </motion.div>
           </div>
         </div>
