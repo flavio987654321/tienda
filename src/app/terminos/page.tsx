@@ -16,19 +16,30 @@ const CONTENT = {
         body: "Como Dueño de tienda, podés crear y gestionar tu propia tienda online dentro de la plataforma MiTienda. Esto incluye cargar productos, definir precios, configurar métodos de pago y gestionar una red de vendedores afiliados que comercialicen tus productos a cambio de comisiones.",
       },
       {
-        title: "3. Suscripción y pagos",
+        title: "3. Planes disponibles",
         body: null,
         list: [
-          "El plan Dueño de tienda tiene un costo de $25.000 ARS/mes o $225.000 ARS/año (equivalente a 9 meses, 3 meses gratis).",
-          "Todos los planes incluyen 7 días de prueba gratuita sin tarjeta de crédito.",
-          "Al vencer la prueba, se requiere suscripción activa para continuar operando la tienda.",
+          "Plan Tienda Pro: $20.000 ARS/mes o $180.000 ARS/año. Incluye subdominio propio (tutienda.tiendaapps.com), hasta 6 afiliados activos, hasta 10 cupones activos simultáneos y soporte por email.",
+          "Plan Tienda Premium: $25.000 ARS/mes o $225.000 ARS/año. Incluye todo lo del plan Pro más dominio personalizado incluido el primer año, afiliados ilimitados, cupones ilimitados y soporte prioritario.",
+          "Ambos planes incluyen 7 días de prueba gratuita sin tarjeta de crédito.",
           "Los pagos se procesan a través de Mercado Pago.",
           "Ante el vencimiento, hay un período de gracia de 4 días para renovar antes de que se limite el acceso.",
           "Las suscripciones se renuevan automáticamente salvo cancelación desde el panel.",
         ],
       },
       {
-        title: "4. Responsabilidades del dueño",
+        title: "4. Dominio personalizado (Plan Tienda Premium)",
+        body: null,
+        list: [
+          "El plan Tienda Premium incluye el registro del dominio .com durante el primer año, gestionado por MiTienda.",
+          "A partir del segundo año, la renovación del dominio es responsabilidad exclusiva del usuario. El costo aproximado es de USD 9/año.",
+          "Si el usuario no renueva el dominio en tiempo y forma, MiTienda no se hace responsable por la pérdida del mismo.",
+          "El dominio registrado es propiedad del usuario una vez completado el proceso de transferencia.",
+          "MiTienda se reserva el derecho de no registrar dominios que infrinjan marcas registradas o leyes vigentes.",
+        ],
+      },
+      {
+        title: "5. Responsabilidades del dueño",
         body: null,
         list: [
           "Sos responsable de que los productos que publiques sean legales y tengan información veraz (precios, stock, imágenes, descripción).",
@@ -39,23 +50,23 @@ const CONTENT = {
         ],
       },
       {
-        title: "5. Gestión de afiliados",
+        title: "6. Gestión de afiliados",
         body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. Al aceptar un afiliado y activar el programa, aceptás los Términos del Programa de Afiliados y te comprometés a pagarle la comisión configurada por cada venta válida generada a través de su link. Las comisiones se acreditan al confirmar el pago del pedido. MiTienda actúa como intermediaria tecnológica en la gestión de comisiones.",
       },
       {
-        title: "6. Cancelación y acceso",
+        title: "7. Cancelación y acceso",
         body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tu tienda permanecerá visible hasta el fin del período abonado. Tras el vencimiento y período de gracia, la tienda se ocultará pero tus datos no se borran — podés reactivarla en cualquier momento. La cancelación no extingue las obligaciones de pago de comisiones ya acreditadas en billeteras de afiliados activos.",
       },
       {
-        title: "7. Propiedad intelectual",
+        title: "8. Propiedad intelectual",
         body: "Las imágenes, descripciones y contenidos que cargás en tu tienda siguen siendo de tu propiedad. Al subirlos, otorgás a MiTienda una licencia no exclusiva para mostrarlos a compradores dentro de la plataforma.",
       },
       {
-        title: "8. Modificaciones",
+        title: "9. Modificaciones",
         body: "Podemos actualizar estos términos. Te notificaremos por email ante cambios significativos con al menos 15 días de anticipación.",
       },
       {
-        title: "9. Contacto",
+        title: "10. Contacto",
         body: "Para consultas escribinos a marketplacemitienda@gmail.com",
       },
     ],
@@ -78,11 +89,12 @@ const CONTENT = {
         body: null,
         list: [
           "El plan Afiliado tiene un costo de $15.000 ARS/mes o $135.000 ARS/año (equivalente a 9 meses, 3 meses gratis).",
-          "Todos los planes incluyen 7 días de prueba gratuita sin tarjeta de crédito.",
+          "Incluye 7 días de prueba gratuita sin tarjeta de crédito.",
           "Al vencer la prueba, se requiere suscripción activa para generar y usar tu link de afiliado.",
           "Los pagos de suscripción se procesan a través de Mercado Pago.",
           "Las comisiones ganadas se acreditan en tu billetera digital dentro de la plataforma.",
           "El cobro de comisiones está sujeto a los períodos de liquidación de cada tienda.",
+          "Podés afiliarte a múltiples tiendas simultáneamente según las disponibilidades de cada una.",
         ],
       },
       {
