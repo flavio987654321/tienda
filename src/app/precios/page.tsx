@@ -235,9 +235,9 @@ function PreciosContent() {
                   { text: "Tienda con subdominio incluido", both: true },
                   { text: "Productos y variantes ilimitados", both: true },
                   { text: "Panel de pedidos y estadísticas", both: true },
-                  { text: "Tienda instalable como app (PWA)", both: true },
                   { text: `Hasta 6 afiliados`, both: false, basic: true, premiumText: "Afiliados ilimitados" },
                   { text: `Hasta 10 cupones activos`, both: false, basic: true, premiumText: "Cupones ilimitados" },
+                  { text: "Tienda instalable como app (PWA)", both: false, basic: false, premiumOnly: true },
                   { text: "Dominio propio incluido 1er año", both: false, basic: false, premiumOnly: true },
                   { text: "Soporte por email", both: false, basic: true, premiumText: "Soporte prioritario" },
                 ].map((f, i) => {

@@ -67,6 +67,7 @@ model Session {
 model Store {
   id             String   @id @default(cuid())
   slug           String   @unique
+  customDomain   String?  @unique
   name           String
   description    String?
   logo           String?

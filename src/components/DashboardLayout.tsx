@@ -142,7 +142,7 @@ export default function DashboardLayout({
         {/* Sección inferior */}
         <div className="p-2 border-t border-gray-100 space-y-0.5 shrink-0">
           <Link
-            href="/dashboard/configuracion"
+            href="/dashboard/ajustes"
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors"
           >
             <Settings className="h-4 w-4 shrink-0" />

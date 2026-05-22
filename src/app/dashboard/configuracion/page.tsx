@@ -5,7 +5,6 @@ import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import DashboardLayout from "@/components/DashboardLayout";
 import StorePreview, { StoreConfig } from "@/components/StorePreview";
 import PolicyEditor from "@/components/PolicyEditor";
-import DangerZone from "./DangerZone";
 import {
   Loader2, Save, Users, Palette, Layout, Type,
   Image as ImageIcon, Monitor, Smartphone, Tablet, LayoutGrid,
@@ -3000,8 +2999,6 @@ export default function ConfiguracionPage() {
                   <span className="font-semibold text-gray-700">Guardar:</span> presioná "Guardar cambios" arriba para publicar el diseño de tu tienda.
                 </p>
               </div>
-
-              <DangerZone />
 
             </div>
         </div>
