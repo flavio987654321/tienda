@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Globe, Smartphone, Crown, Copy, Check, ExternalLink, Info, Lock } from "lucide-react";
+import { Globe, Smartphone, Crown, Copy, Check, ExternalLink, Info, Lock, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
 type Props = {
@@ -21,67 +21,82 @@ export default function AjustesClient({ slug, customDomain, isPremium }: Props) 
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+    <div className="space-y-4">
 
-      {/* ── Columna izquierda: Subdominio + PWA ── */}
-      <div className="space-y-5">
-
-        {/* Subdominio */}
-        <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
-          <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100">
-            <Globe className="h-4 w-4 text-indigo-500" />
-            <h2 className="text-sm font-bold text-gray-800">Tu subdominio</h2>
-          </div>
-          <div className="px-5 py-4 space-y-3">
-            <p className="text-xs text-gray-500">
-              Tu tienda está disponible en esta URL. Compartila con tus clientes y afiliados.
-            </p>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono text-indigo-600 truncate">
-                https://{subdomain}
-              </div>
-              <button
-                onClick={copySubdomain}
-                className="shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                {copied ? "Copiado" : "Copiar"}
-              </button>
-              <a
-                href={`https://${subdomain}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Ver
-              </a>
+      {/* ── Subdominio — ancho completo ── */}
+      <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center">
+              <Globe className="h-4 w-4 text-indigo-500" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-gray-800">Tu subdominio</h2>
+              <p className="text-xs text-gray-400">Disponible desde el primer día</p>
             </div>
           </div>
+          <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+            ✓ Activo
+          </span>
         </div>
+        <div className="px-6 py-5">
+          <p className="text-xs text-gray-500 mb-4">
+            Esta es la URL de tu tienda. Compartila con tus clientes y afiliados para que puedan acceder y comprar.
+          </p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono text-indigo-600 truncate">
+              https://{subdomain}
+            </div>
+            <button
+              onClick={copySubdomain}
+              className="shrink-0 flex items-center gap-1.5 px-4 py-3 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copiado" : "Copiar"}
+            </button>
+            <a
+              href={`https://${subdomain}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 flex items-center gap-1.5 px-4 py-3 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Abrir
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Fila: PWA + Dominio personalizado ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* PWA */}
         <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <div className="flex items-center gap-2.5">
-              <Smartphone className="h-4 w-4 text-indigo-500" />
-              <h2 className="text-sm font-bold text-gray-800">Tu tienda como app</h2>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isPremium ? "bg-indigo-50" : "bg-gray-50"}`}>
+                <Smartphone className={`h-4 w-4 ${isPremium ? "text-indigo-500" : "text-gray-400"}`} />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-800">Tienda como app</h2>
+                <p className="text-xs text-gray-400">Instalable en el celular</p>
+              </div>
             </div>
             {isPremium ? (
               <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1">
                 <Crown className="h-3 w-3" /> Premium
               </span>
             ) : (
-              <span className="text-xs font-bold text-gray-400 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full flex items-center gap-1">
+              <span className="text-xs font-semibold text-gray-400 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full flex items-center gap-1">
                 <Lock className="h-3 w-3" /> Solo Premium
               </span>
             )}
           </div>
 
           {isPremium ? (
-            <div className="px-5 py-4 space-y-4">
+            <div className="px-6 py-5 space-y-4">
               <p className="text-xs text-gray-500">
-                Tus clientes pueden instalar tu tienda en su celular como si fuera una app, sin pasar por el App Store ni Google Play.
+                Tus clientes pueden instalar tu tienda en el celular como una app, sin pasar por el App Store ni Google Play.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-gray-100 bg-gray-50 p-3.5">
@@ -104,101 +119,88 @@ export default function AjustesClient({ slug, customDomain, isPremium }: Props) 
               <div className="flex items-start gap-2 bg-indigo-50 border border-indigo-100 rounded-xl p-3">
                 <Info className="h-4 w-4 text-indigo-400 shrink-0 mt-0.5" />
                 <p className="text-xs text-indigo-600">
-                  Compartí el link de tu tienda con tus clientes y pediles que la instalen. Una vez instalada aparece como un ícono en su pantalla de inicio.
+                  Una vez instalada, aparece como ícono en la pantalla de inicio, igual que cualquier app.
                 </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono text-indigo-600 truncate">
-                  https://{customDomain ?? subdomain}
-                </div>
-                <button
-                  onClick={() => { navigator.clipboard.writeText(`https://${customDomain ?? subdomain}`); }}
-                  className="shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  <Copy className="h-3.5 w-3.5" /> Copiar link
-                </button>
               </div>
             </div>
           ) : (
-            <div className="px-5 py-4">
-              <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl p-3.5">
-                <Crown className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-amber-800">Disponible en Tienda Premium</p>
-                  <p className="text-xs text-amber-600 mt-0.5">
-                    Con Premium tus clientes pueden instalar tu tienda en el celular como una app, sin pasar por el App Store.
-                  </p>
-                  <Link
-                    href="/dashboard/mi-plan"
-                    className="inline-flex items-center gap-1 mt-2.5 text-xs font-bold text-amber-700 hover:text-amber-900 underline"
-                  >
-                    Actualizar a Premium →
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-      </div>
-
-      {/* ── Columna derecha: Dominio personalizado ── */}
-      <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2.5">
-            <Globe className="h-4 w-4 text-amber-500" />
-            <h2 className="text-sm font-bold text-gray-800">Dominio personalizado</h2>
-          </div>
-          {isPremium ? (
-            <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1">
-              <Crown className="h-3 w-3" /> Premium
-            </span>
-          ) : (
-            <span className="text-xs font-bold text-gray-400 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full flex items-center gap-1">
-              <Lock className="h-3 w-3" /> Solo Premium
-            </span>
-          )}
-        </div>
-
-        {isPremium ? (
-          <div className="px-5 py-4 space-y-3">
-            <p className="text-xs text-gray-500">
-              Conectá tu propio dominio. El primer año está incluido en tu plan.
-            </p>
-            {customDomain ? (
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono text-amber-600 truncate">
-                  https://{customDomain}
-                </div>
-                <span className="text-xs text-emerald-600 font-semibold bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl">
-                  ✓ Activo
-                </span>
-              </div>
-            ) : (
-              <CustomDomainForm />
-            )}
-          </div>
-        ) : (
-          <div className="px-5 py-4">
-            <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl p-3.5">
-              <Crown className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-amber-800">Disponible en Tienda Premium</p>
-                <p className="text-xs text-amber-600 mt-0.5">
-                  Con el plan Premium conectás tu propio dominio (ej: tutienda.com) incluido el primer año.
-                </p>
+            <div className="px-6 py-5 flex flex-col gap-3">
+              <p className="text-xs text-gray-500">
+                Con Premium tus clientes pueden instalar tu tienda en el celular como una app, sin pasar por el App Store.
+              </p>
+              <div className="mt-1">
                 <Link
                   href="/dashboard/mi-plan"
-                  className="inline-flex items-center gap-1 mt-2.5 text-xs font-bold text-amber-700 hover:text-amber-900 underline"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 hover:text-amber-800 transition-colors"
                 >
-                  Actualizar a Premium →
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                  Actualizar a Premium
                 </Link>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
+        {/* Dominio personalizado */}
+        <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isPremium ? "bg-amber-50" : "bg-gray-50"}`}>
+                <Globe className={`h-4 w-4 ${isPremium ? "text-amber-500" : "text-gray-400"}`} />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-800">Dominio personalizado</h2>
+                <p className="text-xs text-gray-400">Primer año incluido</p>
+              </div>
+            </div>
+            {isPremium ? (
+              <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1">
+                <Crown className="h-3 w-3" /> Premium
+              </span>
+            ) : (
+              <span className="text-xs font-semibold text-gray-400 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full flex items-center gap-1">
+                <Lock className="h-3 w-3" /> Solo Premium
+              </span>
+            )}
+          </div>
+
+          {isPremium ? (
+            <div className="px-6 py-5 space-y-3">
+              <p className="text-xs text-gray-500">
+                Conectá tu propio dominio (ej: tutienda.com) y el primer año está incluido en tu plan.
+              </p>
+              {customDomain ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono text-amber-600 truncate">
+                    https://{customDomain}
+                  </div>
+                  <span className="shrink-0 text-xs text-emerald-600 font-semibold bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl">
+                    ✓ Activo
+                  </span>
+                </div>
+              ) : (
+                <CustomDomainForm />
+              )}
+            </div>
+          ) : (
+            <div className="px-6 py-5 flex flex-col gap-3">
+              <p className="text-xs text-gray-500">
+                Con Premium conectás tu propio dominio (ej: tutienda.com) incluido el primer año, sin costo adicional.
+              </p>
+              <div className="mt-1">
+                <Link
+                  href="/dashboard/mi-plan"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 hover:text-amber-800 transition-colors"
+                >
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                  Actualizar a Premium
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+
+      </div>
     </div>
   );
 }
@@ -261,7 +263,7 @@ function CustomDomainForm() {
       </div>
       {error && <p className="text-xs text-red-500">{error}</p>}
       <p className="text-xs text-gray-400">
-        Una vez guardado te contactaremos para guiarte en la configuración del DNS.
+        Te contactaremos para guiarte en la configuración del DNS.
       </p>
     </form>
   );
