@@ -5,7 +5,8 @@ import { motion } from "framer-motion";
 import {
   ShoppingBag, Users, Wallet, TrendingUp, Heart, Briefcase,
   ArrowRight, CheckCircle, Star, Globe, Shield, MessageCircle,
-  Home, Share2, DollarSign, Zap, Store,
+  Home, Share2, DollarSign, Zap, Store, Smartphone, Trophy,
+  Gift, Download, Bell,
 } from "lucide-react";
 
 const fadeUp = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, transition: { duration: 0.55 } } };
@@ -324,6 +325,103 @@ export default function QuienesSomosPage() {
         </div>
       </section>
 
+      {/* ── PREMIOS PARA AFILIADOS ── */}
+      <section className="py-24 bg-white relative overflow-hidden">
+        <div className="max-w-5xl mx-auto px-6">
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
+            <motion.p variants={fadeUp} className="text-purple-600 font-semibold text-sm uppercase tracking-widest mb-3">Programa de premios</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-5">
+              Cuanto más generás,<br />
+              <span className="text-purple-600">más premios ganás.</span>
+            </motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">
+              Cada mes se evalúan tus comisiones y subís de nivel automáticamente.
+              Los niveles más altos desbloquean cupones exclusivos para usar en tiendas o en tu suscripción.
+            </motion.p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
+            {[
+              {
+                icon: Gift,
+                level: "Bronce",
+                desc: "Punto de partida",
+                color: "#a8835a",
+                bg: "#fef9f0",
+                border: "#e5d4b8",
+                perks: ["Insignia en tu perfil", "Ya estás en el sistema"],
+              },
+              {
+                icon: Star,
+                level: "Plata",
+                desc: "Primeros cupones",
+                color: "#9ca3af",
+                bg: "#f9fafb",
+                border: "#e5e7eb",
+                perks: ["10% off en suscripción", "10% off en tiendas"],
+              },
+              {
+                icon: Trophy,
+                level: "Oro",
+                desc: "Beneficios reales",
+                color: "#d97706",
+                bg: "#fffbeb",
+                border: "#fde68a",
+                perks: ["20% off en suscripción", "15% off en tiendas"],
+                highlight: true,
+              },
+              {
+                icon: Star,
+                level: "Diamante",
+                desc: "Nivel máximo",
+                color: "#6366f1",
+                bg: "#f5f3ff",
+                border: "#c4b5fd",
+                perks: ["Mes de suscripción gratis", "20% off en tiendas", "Bonus por racha de 3 meses"],
+              },
+            ].map(({ icon: Icon, level, desc, color, bg, border, perks, highlight }) => (
+              <motion.div
+                key={level}
+                initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
+                className={`relative rounded-3xl p-6 border-2 ${highlight ? "shadow-xl" : "shadow-sm"}`}
+                style={{ backgroundColor: bg, borderColor: border }}
+              >
+                {highlight && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full shadow" style={{ backgroundColor: color, color: "#fff" }}>
+                    Popular
+                  </div>
+                )}
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3" style={{ backgroundColor: color + "22" }}>
+                  <Icon className="h-6 w-6" style={{ color }} />
+                </div>
+                <p className="font-black text-gray-900 text-lg mb-0.5">{level}</p>
+                <p className="text-xs font-medium mb-4" style={{ color }}>{desc}</p>
+                <ul className="space-y-2">
+                  {perks.map((p) => (
+                    <li key={p} className="flex items-start gap-2 text-sm text-gray-600">
+                      <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" style={{ color }} />
+                      {p}
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl p-8 text-center text-white"
+          >
+            <Trophy className="h-10 w-10 mx-auto mb-3 text-amber-300" />
+            <p className="text-2xl font-black mb-2">Los cupones llegan solos al cierre de cada mes</p>
+            <p className="text-purple-200 max-w-xl mx-auto text-sm">
+              No hay formularios ni esperas. Si alcanzás Plata o superior, tu cupón aparece automáticamente.
+              Mantener nivel Diamante 3 meses seguidos activa un bonus extra de racha.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
       {/* ── PARA EL DUEÑO DE TIENDA ── */}
       <section className="py-24 bg-white">
         <div className="max-w-6xl mx-auto px-6">
@@ -392,6 +490,112 @@ export default function QuienesSomosPage() {
                   Crear mi tienda gratis <ArrowRight className="h-5 w-5" />
                 </Link>
               </motion.div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── PWA / TU TIENDA COMO APP ── */}
+      <section className="py-24 bg-gray-950 relative overflow-hidden">
+        <div className="absolute inset-0 grid-bg opacity-30" />
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative max-w-6xl mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
+              <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">Tu tienda como app</motion.p>
+              <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-6">
+                Una app real.<br />
+                <span className="text-indigo-400">Sin app store.</span>
+              </motion.h2>
+              <motion.p variants={fadeUp} className="text-gray-400 text-lg leading-relaxed mb-8">
+                Tu tienda se puede instalar en el celular de tus clientes como si fuera una app nativa.
+                Sin pasar por Google Play ni el App Store — directamente desde el navegador,
+                en segundos. Se ve y se usa exactamente como una app profesional.
+              </motion.p>
+              <motion.ul variants={stagger} className="space-y-4 mb-10">
+                {[
+                  { icon: Download, text: "Se instala con un tap desde cualquier celular o computadora" },
+                  { icon: Smartphone, text: "Ícono propio en la pantalla de inicio del cliente" },
+                  { icon: Bell, text: "Podés enviar notificaciones push a tus clientes" },
+                  { icon: Zap, text: "Carga ultra rápida, experiencia fluida como app nativa" },
+                  { icon: Globe, text: "Funciona en Android, iPhone, Windows y Mac" },
+                ].map(({ icon: Icon, text }) => (
+                  <motion.li key={text} variants={fadeUp} className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Icon className="h-5 w-5 text-indigo-400" />
+                    </div>
+                    <span className="text-gray-300 text-sm font-medium">{text}</span>
+                  </motion.li>
+                ))}
+              </motion.ul>
+              <motion.div variants={fadeUp}>
+                <Link href="/registro" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-indigo-500/25 hover:scale-105">
+                  Crear mi tienda app <ArrowRight className="h-5 w-5" />
+                </Link>
+              </motion.div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
+              className="flex justify-center"
+            >
+              <div className="relative w-64">
+                {/* Phone mockup */}
+                <div className="bg-gray-900 border-4 border-gray-700 rounded-[3rem] p-3 shadow-2xl shadow-indigo-500/20">
+                  <div className="bg-gray-800 rounded-[2.4rem] overflow-hidden">
+                    {/* Status bar */}
+                    <div className="bg-gray-900 px-5 py-2 flex justify-between items-center">
+                      <span className="text-white text-xs font-semibold">9:41</span>
+                      <div className="flex gap-1">
+                        <div className="w-4 h-2 bg-white/60 rounded-sm" />
+                        <div className="w-1.5 h-2 bg-white/40 rounded-sm" />
+                      </div>
+                    </div>
+                    {/* Install banner */}
+                    <div className="bg-white/5 border-b border-white/10 px-4 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
+                          <ShoppingBag className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-white text-xs font-bold">Luna Moda</p>
+                          <p className="text-gray-400 text-[10px]">Instalar app</p>
+                        </div>
+                      </div>
+                      <div className="bg-indigo-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg">
+                        Instalar
+                      </div>
+                    </div>
+                    {/* Store content */}
+                    <div className="p-4 space-y-3">
+                      <div className="bg-indigo-600/20 rounded-2xl h-28 flex items-center justify-center border border-indigo-500/30">
+                        <ShoppingBag className="h-10 w-10 text-indigo-400" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {["Remeras", "Vestidos", "Accesorios", "Ofertas"].map((cat) => (
+                          <div key={cat} className="bg-white/5 rounded-xl h-14 flex items-center justify-center">
+                            <p className="text-gray-300 text-xs font-medium">{cat}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Floating badge */}
+                <motion.div
+                  animate={{ y: [-4, 4, -4] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute -top-3 -right-3 bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-lg shadow-emerald-500/30"
+                >
+                  ✓ App instalada
+                </motion.div>
+                <motion.div
+                  animate={{ y: [4, -4, 4] }} transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute -bottom-3 -left-3 bg-indigo-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-lg"
+                >
+                  🔔 Nueva oferta
+                </motion.div>
+              </div>
             </motion.div>
           </div>
         </div>
