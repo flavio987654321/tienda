@@ -440,6 +440,34 @@ model AffiliateRewardCoupon {
   createdAt     DateTime @default(now())
 }
 
+// AUDIT DE CUENTAS ELIMINADAS — resguardo legal/fiscal
+// Se crea al eliminar una cuenta desde el panel admin.
+// Preserva aceptaciones de T&C y resumen de suscripción para disputas legales y AFIP.
+model DeletedAccountAudit {
+  id               String   @id @default(cuid())
+  deletedAt        DateTime @default(now())
+  deletedByAdminId String
+  originalUserId   String
+  accountType      String   // OWNER | SELLER | BUYER
+  accountCreatedAt DateTime
+
+  // Aceptación de T&C del programa de afiliados
+  tcAffiliateAcceptedAt DateTime?
+  tcAffiliateVersion    String?
+  tcAffiliateAcceptedIp String?
+
+  // Aceptación de T&C del programa de dueños de tienda
+  tcOwnerAcceptedAt DateTime?
+  tcOwnerVersion    String?
+  tcOwnerAcceptedIp String?
+
+  // Resumen de suscripción (para registro fiscal)
+  subscriptionRole      String?
+  subscriptionPlan      String?
+  subscriptionStatus    String?
+  subscriptionCreatedAt DateTime?
+}
+
 // SUSCRIPCIONES
 // status: TRIAL | ACTIVE | GRACE | EXPIRED | CANCELLED
 // plan:   MONTHLY | ANNUAL

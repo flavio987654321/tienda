@@ -35,7 +35,7 @@ export async function PATCH(
   return NextResponse.json(user);
 }
 
-// ── helpers de storage ───────────────────────────────────────────────────────
+// ── helpers ──────────────────────────────────────────────────────────────────
 
 function parseJsonUrls(json: string): string[] {
   try {
@@ -54,6 +54,12 @@ function extractStoragePaths(urls: (string | null | undefined)[], supabaseUrl: s
 }
 
 // ── DELETE ───────────────────────────────────────────────────────────────────
+//
+// Estrategia: anonimizar en lugar de borrar.
+// Se elimina toda la PII y los archivos, pero los registros fiscales
+// (órdenes, pagos, comisiones) quedan anonimizados para cumplimiento de AFIP
+// y la Ley 24.240. Las aceptaciones de T&C se preservan en DeletedAccountAudit.
+// El email queda libre en Supabase Auth para que el usuario pueda re-registrarse.
 
 export async function DELETE(
   _req: NextRequest,
@@ -76,19 +82,36 @@ export async function DELETE(
     return NextResponse.json({ error: "No podés eliminar otra cuenta admin" }, { status: 400 });
   }
 
-  // ── 1. Recolectar URLs de archivos ANTES de borrar la BD ─────────────────
+  // ── 1. Recolectar datos ANTES de modificar la BD ──────────────────────────
+
   const userData = await prisma.user.findUnique({
     where: { id },
     select: {
       image: true,
+      role: true,
+      createdAt: true,
+      subscription: true,
       store: {
         select: {
+          id: true,
+          slug: true,
           logo: true,
           banner: true,
-          products: { select: { images: true, reelUrls: true } },
+          tcOwnerAcceptedAt: true,
+          tcOwnerVersion: true,
+          tcOwnerAcceptedIp: true,
+          products: { select: { id: true, images: true, reelUrls: true } },
         },
       },
-      asAffiliate: { select: { cvUrl: true } },
+      asAffiliate: {
+        select: {
+          id: true,
+          cvUrl: true,
+          tcAcceptedAt: true,
+          tcVersion: true,
+          tcAcceptedIp: true,
+        },
+      },
     },
   });
 
@@ -103,86 +126,134 @@ export async function DELETE(
     ...(userData?.asAffiliate.map(a => a.cvUrl) ?? []),
   ];
 
-  // ── 2. Borrar todo de la BD en una transacción ────────────────────────────
+  // Tomar el primer registro de afiliado para T&C (el más reciente con datos)
+  const affiliateTc = userData?.asAffiliate.find(a => a.tcAcceptedAt);
+
+  // ── 2. Transacción: anonimizar y limpiar ──────────────────────────────────
+
   await prisma.$transaction(async (tx) => {
-    // Tienda del usuario (si es OWNER)
-    const store = await tx.store.findUnique({ where: { ownerId: id }, select: { id: true } });
-    if (store) {
-      const storeOrderIds = (
-        await tx.order.findMany({ where: { storeId: store.id }, select: { id: true } })
-      ).map(o => o.id);
+    // Guardar registro de auditoría legal
+    await tx.deletedAccountAudit.create({
+      data: {
+        deletedByAdminId: current.id,
+        originalUserId: id,
+        accountType: userData?.role ?? "BUYER",
+        accountCreatedAt: userData?.createdAt ?? new Date(),
+        tcOwnerAcceptedAt: userData?.store?.tcOwnerAcceptedAt ?? null,
+        tcOwnerVersion: userData?.store?.tcOwnerVersion ?? null,
+        tcOwnerAcceptedIp: userData?.store?.tcOwnerAcceptedIp ?? null,
+        tcAffiliateAcceptedAt: affiliateTc?.tcAcceptedAt ?? null,
+        tcAffiliateVersion: affiliateTc?.tcVersion ?? null,
+        tcAffiliateAcceptedIp: affiliateTc?.tcAcceptedIp ?? null,
+        subscriptionRole: userData?.subscription?.role ?? null,
+        subscriptionPlan: userData?.subscription?.plan ?? null,
+        subscriptionStatus: userData?.subscription?.status ?? null,
+        subscriptionCreatedAt: userData?.subscription?.createdAt ?? null,
+      },
+    });
 
-      if (storeOrderIds.length) {
-        await tx.review.deleteMany({ where: { orderId: { in: storeOrderIds } } });
-        await tx.commission.deleteMany({ where: { orderId: { in: storeOrderIds } } });
-        await tx.orderItem.deleteMany({ where: { orderId: { in: storeOrderIds } } });
-        await tx.payment.deleteMany({ where: { orderId: { in: storeOrderIds } } });
-        await tx.shipping.deleteMany({ where: { orderId: { in: storeOrderIds } } });
-        await tx.order.deleteMany({ where: { id: { in: storeOrderIds } } });
+    // Anonimizar usuario — email único cambiado para liberar el original
+    await tx.user.update({
+      where: { id },
+      data: {
+        email: `deleted-${id}@deleted.invalid`,
+        name: null,
+        image: null,
+        bio: null,
+        city: null,
+        phone: null,
+        instagramHandle: null,
+        password: null,
+        banned: true,
+      },
+    });
+
+    // Anonimizar tienda (si es OWNER) — se preserva para FK de órdenes
+    if (userData?.store) {
+      const storeId = userData.store.id;
+
+      // Anonimizar contenido de los productos (imágenes ya se borran de Storage)
+      if (userData.store.products.length > 0) {
+        const productIds = userData.store.products.map(p => p.id);
+        await tx.product.updateMany({
+          where: { id: { in: productIds } },
+          data: { name: "Producto eliminado", description: null, images: "[]", reelUrls: "[]" },
+        });
       }
 
-      const storeAffiliateIds = (
-        await tx.affiliate.findMany({ where: { storeId: store.id }, select: { id: true } })
-      ).map(a => a.id);
-
-      if (storeAffiliateIds.length) {
-        const walletIds = (
-          await tx.wallet.findMany({ where: { affiliateId: { in: storeAffiliateIds } }, select: { id: true } })
-        ).map(w => w.id);
-        if (walletIds.length) {
-          await tx.walletWithdrawal.deleteMany({ where: { walletId: { in: walletIds } } });
-          await tx.wallet.deleteMany({ where: { id: { in: walletIds } } });
-        }
-        await tx.commission.deleteMany({ where: { affiliateId: { in: storeAffiliateIds } } });
-        await tx.affiliate.deleteMany({ where: { id: { in: storeAffiliateIds } } });
+      // Nullificar couponId en órdenes antes de borrar cupones (FK nullable)
+      const couponIds = (
+        await tx.coupon.findMany({ where: { storeId }, select: { id: true } })
+      ).map(c => c.id);
+      if (couponIds.length) {
+        await tx.order.updateMany({ where: { couponId: { in: couponIds } }, data: { couponId: null } });
+        await tx.coupon.deleteMany({ where: { storeId } });
       }
 
-      const productIds = (
-        await tx.product.findMany({ where: { storeId: store.id }, select: { id: true } })
-      ).map(p => p.id);
-      if (productIds.length) {
-        await tx.orderItem.deleteMany({ where: { productId: { in: productIds } } });
-      }
+      // Anonimizar la tienda — slug liberado, PII y contenido eliminados
+      await tx.store.update({
+        where: { id: storeId },
+        data: {
+          slug: `deleted-${storeId}`,
+          customDomain: null,
+          name: "Tienda eliminada",
+          description: null,
+          logo: null,
+          banner: null,
+          tagline: null,
+          announcementBar: null,
+          whatsappNumber: null,
+          instagramUrl: null,
+          facebookUrl: null,
+          tiktokUrl: null,
+          footerText: null,
+          footerDescription: null,
+          seoTitle: null,
+          seoDescription: null,
+          policyReturns: null,
+          policyShipping: null,
+          policyTerms: null,
+          pageBlocks: "[]",
+          navLinks: "[]",
+          isActive: false,
+          isPublished: false,
+          tcOwnerAcceptedAt: null,
+          tcOwnerAcceptedIp: null,
+          tcOwnerVersion: null,
+        },
+      });
     }
 
-    // Pedidos donde el usuario es comprador en tiendas ajenas
+    // Anonimizar shippingAddress en órdenes donde era comprador
     const buyerOrderIds = (
       await tx.order.findMany({ where: { buyerId: id }, select: { id: true } })
     ).map(o => o.id);
-
     if (buyerOrderIds.length) {
-      await tx.review.deleteMany({ where: { orderId: { in: buyerOrderIds } } });
-      await tx.commission.deleteMany({ where: { orderId: { in: buyerOrderIds } } });
-      await tx.orderItem.deleteMany({ where: { orderId: { in: buyerOrderIds } } });
-      await tx.payment.deleteMany({ where: { orderId: { in: buyerOrderIds } } });
-      await tx.shipping.deleteMany({ where: { orderId: { in: buyerOrderIds } } });
-      await tx.order.deleteMany({ where: { id: { in: buyerOrderIds } } });
+      await tx.order.updateMany({
+        where: { id: { in: buyerOrderIds } },
+        data: { shippingAddress: JSON.stringify({ anonymized: true }) },
+      });
     }
 
-    // Afiliaciones en tiendas ajenas (el usuario como afiliado)
-    const affiliateIds = (
-      await tx.affiliate.findMany({ where: { userId: id }, select: { id: true } })
-    ).map(a => a.id);
-
-    if (affiliateIds.length) {
-      await tx.order.updateMany({ where: { affiliateId: { in: affiliateIds } }, data: { affiliateId: null } });
-      const walletIds = (
-        await tx.wallet.findMany({ where: { affiliateId: { in: affiliateIds } }, select: { id: true } })
-      ).map(w => w.id);
-      if (walletIds.length) {
-        await tx.walletWithdrawal.deleteMany({ where: { walletId: { in: walletIds } } });
-        await tx.wallet.deleteMany({ where: { id: { in: walletIds } } });
-      }
-      await tx.commission.deleteMany({ where: { affiliateId: { in: affiliateIds } } });
-      await tx.affiliate.deleteMany({ where: { id: { in: affiliateIds } } });
+    // Null out cvUrl en afiliaciones a otras tiendas (archivo se borra de Storage)
+    if (userData?.asAffiliate.length) {
+      await tx.affiliate.updateMany({
+        where: { userId: id },
+        data: { cvUrl: null, tcAcceptedAt: null, tcVersion: null, tcAcceptedIp: null },
+      });
     }
 
-    // Eliminar usuario — cascadea: Account, Session, Store→(Products→Variants, Coupons),
-    // Subscription, Notification, Favorite, Review, AffiliateRewardCoupon
-    await tx.user.delete({ where: { id } });
+    // Eliminar datos sin valor fiscal ni legal
+    await tx.favorite.deleteMany({ where: { userId: id } });
+    await tx.review.deleteMany({ where: { userId: id } });
+    await tx.notification.deleteMany({ where: { userId: id } });
+    await tx.session.deleteMany({ where: { userId: id } });
+    await tx.account.deleteMany({ where: { userId: id } });
+    await tx.affiliateRewardCoupon.deleteMany({ where: { userId: id } });
+    await tx.subscription.deleteMany({ where: { userId: id } });
   }, { timeout: 30_000 });
 
-  // ── 3. Borrar usuario de Supabase Auth (libera el email para re-registro) ─
+  // ── 3. Borrar usuario de Supabase Auth — libera el email para re-registro ─
   const supabase = createSupabaseAdminClient();
   const { error: authDeleteError } = await supabase.auth.admin.deleteUser(id);
   if (authDeleteError) {
