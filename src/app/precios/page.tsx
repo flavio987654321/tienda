@@ -317,7 +317,7 @@ function PreciosContent() {
                   { text: `Hasta 6 afiliados`, both: false, basic: true, premiumText: "Afiliados ilimitados" },
                   { text: `Hasta 10 cupones activos`, both: false, basic: true, premiumText: "Cupones ilimitados" },
                   { text: "Tienda instalable como app (PWA)", both: false, basic: false, premiumOnly: true },
-                  { text: "Dominio propio incluido 1er año", both: false, basic: false, premiumOnly: true },
+                  { text: "Conectá tu dominio propio (lo configuramos nosotros)", both: false, basic: false, premiumOnly: true },
                   { text: "Soporte por email", both: false, basic: true, premiumText: "Soporte prioritario" },
                 ].map((f, i) => {
                   if (f.both) {
@@ -449,7 +449,7 @@ function PreciosContent() {
               {[
                 { q: "¿Necesito tarjeta de crédito para el período de prueba?", a: "No. Los 7 días de prueba son completamente gratis y no te pedimos datos de pago hasta que decides suscribirte." },
                 { q: "¿Qué es el subdominio incluido?", a: "Al crear tu tienda recibís automáticamente una URL del tipo tutienda.tiendaapps.com. Es gratis y funciona desde el primer día." },
-                { q: "¿Cómo funciona el dominio propio en Tienda Premium?", a: "Compramos el dominio por vos el primer año. El segundo año en adelante lo renovás vos directamente, cuesta aproximadamente $9 USD/año." },
+                { q: "¿Cómo funciona el dominio propio en Tienda Premium?", a: "Comprás tu dominio donde quieras (ej: Namecheap, GoDaddy) y lo conectás desde tu panel. Nosotros hacemos toda la configuración técnica automáticamente. El dominio es tuyo y lo renovás vos directamente, cuesta aproximadamente $9 USD/año." },
                 { q: "¿Puedo pasar de Tienda Pro a Tienda Premium?", a: "Sí, podés cambiar de plan en cualquier momento desde tu panel." },
                 { q: "¿Qué pasa si supero los 6 afiliados en Tienda Pro?", a: "No podés agregar más afiliados hasta renovar a Tienda Premium. Los afiliados existentes siguen funcionando." },
                 { q: "¿Qué pasa cuando vence mi suscripción?", a: "Te avisamos con anticipación. Tenés 4 días de gracia para renovar antes de que se limite el acceso." },

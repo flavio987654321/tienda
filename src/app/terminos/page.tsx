@@ -20,7 +20,7 @@ const CONTENT = {
         body: null,
         list: [
           "Plan Tienda Pro: $20.000 ARS/mes o $180.000 ARS/año. Incluye subdominio propio (tutienda.tiendaapps.com), hasta 6 afiliados activos, hasta 10 cupones activos simultáneos y soporte por email.",
-          "Plan Tienda Premium: $25.000 ARS/mes o $225.000 ARS/año. Incluye todo lo del plan Pro más dominio personalizado incluido el primer año, afiliados ilimitados, cupones ilimitados y soporte prioritario.",
+          "Plan Tienda Premium: $25.000 ARS/mes o $225.000 ARS/año. Incluye todo lo del plan Pro más la posibilidad de conectar tu propio dominio, afiliados ilimitados, cupones ilimitados y soporte prioritario.",
           "Ambos planes incluyen 7 días de prueba gratuita sin tarjeta de crédito.",
           "Los pagos se procesan a través de Mercado Pago.",
           "Ante el vencimiento, hay un período de gracia de 4 días para renovar antes de que se limite el acceso.",
@@ -31,11 +31,11 @@ const CONTENT = {
         title: "4. Dominio personalizado (Plan Tienda Premium)",
         body: null,
         list: [
-          "El plan Tienda Premium incluye el registro del dominio .com durante el primer año, gestionado por MiTienda.",
-          "A partir del segundo año, la renovación del dominio es responsabilidad exclusiva del usuario. El costo aproximado es de USD 9/año.",
-          "Si el usuario no renueva el dominio en tiempo y forma, MiTienda no se hace responsable por la pérdida del mismo.",
-          "El dominio registrado es propiedad del usuario una vez completado el proceso de transferencia.",
-          "MiTienda se reserva el derecho de no registrar dominios que infrinjan marcas registradas o leyes vigentes.",
+          "El plan Tienda Premium permite conectar un dominio propio (ej: tutienda.com) comprado por el usuario en cualquier registrar.",
+          "TiendaApps realiza la configuración técnica automáticamente, sin costo adicional.",
+          "El dominio es propiedad exclusiva del usuario. TiendaApps no compra, gestiona ni renueva dominios en nombre del usuario.",
+          "El costo del dominio (aproximadamente USD 9-15/año) es responsabilidad del usuario ante su registrar.",
+          "TiendaApps no se hace responsable por la pérdida del dominio si el usuario no lo renueva a tiempo.",
         ],
       },
       {

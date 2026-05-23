@@ -154,7 +154,7 @@ export default function AjustesClient({ slug, customDomain, isPremium }: Props) 
               <div>
                 <p className="text-sm font-semibold text-amber-800">Disponible en Tienda Premium</p>
                 <p className="text-xs text-amber-600 mt-0.5">
-                  Con el plan Premium conectás tu propio dominio (ej: tutienda.com) incluido el primer año.
+                  Con el plan Premium conectás tu propio dominio (ej: tutienda.com). Lo comprás donde quieras y nosotros lo configuramos automáticamente.
                 </p>
                 <Link href="/dashboard/mi-plan" className="inline-flex items-center gap-1 mt-2.5 text-xs font-bold text-amber-700 hover:text-amber-900 underline">
                   Actualizar a Premium →
