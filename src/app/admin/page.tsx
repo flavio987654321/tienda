@@ -23,6 +23,7 @@ async function getSystemStatus() {
 async function getStats() {
   const DELETED = { email: { endsWith: ".invalid" } };
   const ACTIVE_USER = { role: { not: "ADMIN" }, banned: false, NOT: DELETED };
+  const REAL_STORE = { slug: { not: { startsWith: "deleted-" } } };
 
   const [
     totalUsers, totalOwners, totalAffiliates, totalBuyers,
@@ -36,8 +37,8 @@ async function getStats() {
     prisma.user.count({ where: { role: "OWNER",  banned: false, NOT: DELETED } }),
     prisma.user.count({ where: { role: "SELLER", banned: false, NOT: DELETED } }),
     prisma.user.count({ where: { role: "BUYER",  banned: false, NOT: DELETED } }),
-    prisma.store.count(),
-    prisma.store.count({ where: { isActive: true, isPublished: true } }),
+    prisma.store.count({ where: REAL_STORE }),
+    prisma.store.count({ where: { ...REAL_STORE, isActive: true, isPublished: true } }),
     prisma.order.count(),
     prisma.order.count({ where: { status: "PENDING" } }),
     prisma.testimonial.count(),
