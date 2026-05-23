@@ -495,12 +495,13 @@ function RegistroContent() {
                   {fieldErrors.storeName
                     ? <p className="text-xs text-red-400 mt-1">{fieldErrors.storeName}</p>
                     : <p className="text-xs text-gray-600 mt-1">
-                        Tu tienda quedará en mitienda.ar/
+                        Tu tienda quedará en{" "}
                         <span className="text-gray-500">
                           {form.storeName
                             ? form.storeName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || "tu-tienda"
                             : "tu-tienda"}
                         </span>
+                        .tiendaapps.com
                       </p>
                   }
                 </div>

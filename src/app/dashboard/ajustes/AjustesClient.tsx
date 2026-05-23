@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Globe, Smartphone, Crown, Copy, Check, ExternalLink, Info, Lock } from "lucide-react";
+import { Globe, Smartphone, Crown, Copy, Check, ExternalLink, Info, Lock, Clock, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 type Props = {
@@ -141,18 +141,8 @@ export default function AjustesClient({ slug, customDomain, isPremium }: Props) 
         </div>
         {isPremium ? (
           <div className="px-5 py-4 space-y-3">
-            <p className="text-xs text-gray-500">
-              Conectá tu propio dominio. El primer año está incluido en tu plan.
-            </p>
             {customDomain ? (
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono text-amber-600 truncate">
-                  https://{customDomain}
-                </div>
-                <span className="text-xs text-emerald-600 font-semibold bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl">
-                  ✓ Activo
-                </span>
-              </div>
+              <ActiveDomain domain={customDomain} />
             ) : (
               <CustomDomainForm />
             )}
@@ -179,14 +169,55 @@ export default function AjustesClient({ slug, customDomain, isPremium }: Props) 
   );
 }
 
+function ActiveDomain({ domain }: { domain: string }) {
+  const [removing, setRemoving] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function handleRemove() {
+    if (!confirm("¿Querés quitar este dominio personalizado?")) return;
+    setRemoving(true);
+    await fetch("/api/ajustes/dominio", { method: "DELETE" });
+    window.location.reload();
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono text-amber-600 truncate">
+          https://{domain}
+        </div>
+        <button
+          onClick={() => { navigator.clipboard.writeText(`https://${domain}`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+          className="shrink-0 p-2.5 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+        </button>
+        <a href={`https://${domain}`} target="_blank" rel="noopener noreferrer"
+          className="shrink-0 p-2.5 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">
+          <ExternalLink className="h-3.5 w-3.5" />
+        </a>
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl">
+          <Check className="h-3 w-3" /> Activo
+        </span>
+        <button onClick={handleRemove} disabled={removing}
+          className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 transition-colors disabled:opacity-50">
+          <Trash2 className="h-3 w-3" /> Quitar dominio
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CustomDomainForm() {
+  const [step, setStep] = useState<"choice" | "enter" | "instructions">("choice");
   const [domain, setDomain] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [copiedCname, setCopiedCname] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleConnect() {
     const cleaned = domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
     if (!cleaned || !cleaned.includes(".")) {
       setError("Ingresá un dominio válido, ej: mitienda.com");
@@ -199,46 +230,112 @@ function CustomDomainForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ domain: cleaned }),
     });
+    const data = await res.json();
     setLoading(false);
-    if (res.ok) {
-      setSuccess(true);
-    } else {
-      const data = await res.json();
-      setError(data.error ?? "Error al guardar el dominio");
+    if (!res.ok) {
+      setError(data.error ?? "Error al conectar el dominio");
+      return;
     }
+    setStep("instructions");
   }
 
-  if (success) {
+  if (step === "choice") {
     return (
-      <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
-        <Check className="h-4 w-4 text-emerald-500" />
-        <p className="text-sm text-emerald-700 font-medium">Dominio guardado. Nuestro equipo lo configurará en las próximas 24hs.</p>
+      <div className="space-y-3">
+        <p className="text-xs text-gray-500">
+          Con tu plan Premium podés tener tu propio dominio (ej: <span className="font-mono">mitienda.com</span>). ¿Ya tenés uno?
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <a
+            href="https://www.namecheap.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-all text-center cursor-pointer"
+          >
+            <span className="text-2xl">🌐</span>
+            <div>
+              <p className="text-sm font-bold text-gray-700">No tengo</p>
+              <p className="text-xs text-gray-500">Ir a comprar uno</p>
+            </div>
+          </a>
+          <button
+            onClick={() => setStep("enter")}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-all text-center"
+          >
+            <span className="text-2xl">✅</span>
+            <div>
+              <p className="text-sm font-bold text-gray-700">Ya tengo</p>
+              <p className="text-xs text-gray-500">Conectarlo ahora</p>
+            </div>
+          </button>
+        </div>
       </div>
     );
   }
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={domain}
-          onChange={(e) => { setDomain(e.target.value); setError(""); }}
-          placeholder="mitienda.com"
-          className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold transition-colors disabled:opacity-50"
-        >
-          {loading ? "Guardando..." : "Guardar"}
+  if (step === "enter") {
+    return (
+      <div className="space-y-3">
+        <p className="text-xs text-gray-500">Escribí el dominio que compraste:</p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={domain}
+            onChange={(e) => { setDomain(e.target.value); setError(""); }}
+            placeholder="mitienda.com"
+            className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+          />
+          <button
+            onClick={handleConnect}
+            disabled={loading || !domain.trim()}
+            className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold transition-colors disabled:opacity-50"
+          >
+            {loading ? "Conectando..." : "Conectar"}
+          </button>
+        </div>
+        {error && <p className="text-xs text-red-500">{error}</p>}
+        <button onClick={() => setStep("choice")} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+          ← Volver
         </button>
       </div>
-      {error && <p className="text-xs text-red-500">{error}</p>}
-      <p className="text-xs text-gray-400">
-        Una vez guardado te contactaremos para guiarte en la configuración del DNS.
-      </p>
-    </form>
+    );
+  }
+
+  // step === "instructions"
+  const cname = "cname.vercel-dns.com";
+  return (
+    <div className="space-y-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+        <p className="text-sm font-bold text-amber-800">¡Casi listo! Solo un paso más 👇</p>
+        <p className="text-xs text-gray-600">
+          Entrá a donde compraste tu dominio (GoDaddy, Namecheap, etc.) y agregá este registro en la sección <span className="font-bold">DNS</span>:
+        </p>
+        <div className="bg-white border border-amber-100 rounded-xl overflow-hidden text-xs font-mono">
+          <div className="grid grid-cols-3 bg-amber-100 px-3 py-2 text-amber-700 font-bold text-[11px]">
+            <span>Tipo</span><span>Nombre</span><span>Valor</span>
+          </div>
+          <div className="grid grid-cols-3 px-3 py-3 text-gray-700 items-center">
+            <span className="font-bold">CNAME</span>
+            <span className="font-bold">www</span>
+            <div className="flex items-center gap-1">
+              <span className="truncate">{cname}</span>
+              <button
+                onClick={() => { navigator.clipboard.writeText(cname); setCopiedCname(true); setTimeout(() => setCopiedCname(false), 2000); }}
+                className="shrink-0 ml-1"
+              >
+                {copiedCname ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 text-gray-400" />}
+              </button>
+            </div>
+          </div>
+        </div>
+        <p className="text-xs text-gray-500">
+          ¿No encontrás dónde hacerlo? Mandanos un mensaje y te ayudamos en minutos.
+        </p>
+      </div>
+      <div className="flex items-center gap-2 text-xs text-amber-600">
+        <Clock className="h-3.5 w-3.5 animate-pulse" />
+        Esperando activación — puede tardar hasta 24hs.
+      </div>
+    </div>
   );
 }
