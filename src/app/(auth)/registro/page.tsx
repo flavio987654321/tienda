@@ -620,7 +620,7 @@ function RegistroContent() {
       <div className="absolute top-1/4 -left-32 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-32 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative w-full max-w-2xl">
+      <div className="relative w-full max-w-5xl">
         <div className="text-center mb-10">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-8">
             <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
