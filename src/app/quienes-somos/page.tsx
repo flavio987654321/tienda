@@ -1,17 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ShoppingBag, Users, Wallet, TrendingUp, Heart, Briefcase,
   ArrowRight, CheckCircle, Globe, Shield, MessageCircle,
-  Home, Share2, DollarSign, Zap, Store, ShoppingCart,
+  Home, Share2, DollarSign, Zap, Store, ShoppingCart, Menu, X,
 } from "lucide-react";
 
 const fadeUp = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, transition: { duration: 0.55 } } };
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.12 } } };
 
 export default function QuienesSomosPage() {
+  const [mobileMenu, setMobileMenu] = useState(false);
   return (
     <div className="min-h-screen bg-[#030712] text-white overflow-x-hidden">
       <style>{`
@@ -36,7 +38,7 @@ export default function QuienesSomosPage() {
             </div>
             <span className="text-lg font-bold text-white">TiendaApps</span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3">
             <Link href="/precios" className="text-gray-300 hover:text-white text-sm font-medium px-4 py-2 transition-colors">
               Precios
             </Link>
@@ -47,8 +49,40 @@ export default function QuienesSomosPage() {
               Crear cuenta
             </Link>
           </div>
+
+          <button onClick={() => setMobileMenu(true)} className="md:hidden text-gray-400 hover:text-white">
+            <Menu className="h-6 w-6" />
+          </button>
         </div>
       </nav>
+
+      {/* Mobile menu overlay */}
+      {mobileMenu && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileMenu(false)}
+        />
+      )}
+      {/* Mobile menu drawer (slide from right) */}
+      <div className={`fixed top-0 right-0 bottom-0 z-50 w-72 bg-[#030712] border-l border-white/10 transition-transform duration-300 ease-in-out md:hidden flex flex-col ${mobileMenu ? "translate-x-0" : "translate-x-full"}`}>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+          <span className="text-white font-bold">Menú</span>
+          <button onClick={() => setMobileMenu(false)} className="text-gray-400 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="flex flex-col gap-1 px-4 py-4 flex-1">
+          <Link href="/precios" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">
+            Precios
+          </Link>
+          <Link href="/login" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">
+            Iniciar sesión
+          </Link>
+          <Link href="/registro" onClick={() => setMobileMenu(false)} className="block text-center bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 px-3 rounded-xl transition-colors mt-2">
+            Crear cuenta
+          </Link>
+        </div>
+      </div>
 
       {/* ── HERO ── */}
       <section className="relative pt-32 pb-20 grid-bg">

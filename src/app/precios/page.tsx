@@ -4,7 +4,7 @@ import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Mail, X, BadgeCheck } from "lucide-react";
+import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Mail, X, BadgeCheck, Menu } from "lucide-react";
 import PaymentModal from "@/components/subscription/PaymentModal";
 
 function money(amount: number) {
@@ -29,6 +29,7 @@ export default function PreciosPage() {
 }
 
 function PreciosContent() {
+  const [mobileMenu, setMobileMenu] = useState(false);
   const [isAnnual, setIsAnnual] = useState(false);
   const [ownerTier, setOwnerTier] = useState<"BASIC" | "PREMIUM">("BASIC");
   const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL"; amount: number; prorated?: boolean } | null>(null);
@@ -100,7 +101,7 @@ function PreciosContent() {
             </div>
             <span className="text-lg font-bold text-white">TiendaApps</span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3">
             <Link href="/login" className="text-gray-300 hover:text-white text-sm font-medium px-5 py-2.5 rounded-xl border border-white/10 hover:border-white/25 transition-all">
               Iniciar sesión
             </Link>
@@ -108,8 +109,37 @@ function PreciosContent() {
               Crear cuenta
             </Link>
           </div>
+
+          <button onClick={() => setMobileMenu(true)} className="md:hidden text-gray-400 hover:text-white">
+            <Menu className="h-6 w-6" />
+          </button>
         </div>
       </nav>
+
+      {/* Mobile menu overlay */}
+      {mobileMenu && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileMenu(false)}
+        />
+      )}
+      {/* Mobile menu drawer (slide from right) */}
+      <div className={`fixed top-0 right-0 bottom-0 z-50 w-72 bg-gray-950 border-l border-white/10 transition-transform duration-300 ease-in-out md:hidden flex flex-col ${mobileMenu ? "translate-x-0" : "translate-x-full"}`}>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+          <span className="text-white font-bold">Menú</span>
+          <button onClick={() => setMobileMenu(false)} className="text-gray-400 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="flex flex-col gap-1 px-4 py-4 flex-1">
+          <Link href="/login" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">
+            Iniciar sesión
+          </Link>
+          <Link href="/registro" onClick={() => setMobileMenu(false)} className="block text-center bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 px-3 rounded-xl transition-colors mt-2">
+            Crear cuenta
+          </Link>
+        </div>
+      </div>
 
       <div className="pt-32 pb-24 px-6">
         <div className="max-w-6xl mx-auto">
@@ -184,7 +214,7 @@ function PreciosContent() {
           </div>
 
           {/* Cards */}
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 
             {/* ── AFILIADO ── */}
             <div className="rounded-3xl border border-violet-500/30 bg-gray-900/50 p-8 flex flex-col">
@@ -408,7 +438,7 @@ function PreciosContent() {
             </div>
 
             {/* ── CLIENTE ── */}
-            <div className="rounded-3xl border border-gray-700/40 bg-gray-900/20 p-8 flex flex-col opacity-80">
+            <div className="rounded-3xl border border-gray-700/40 bg-gray-900/20 p-8 flex flex-col opacity-80 md:col-span-2 md:w-1/2 md:mx-auto lg:col-span-1 lg:w-auto lg:mx-0">
               <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Para compradores</div>
               <div className="w-12 h-12 rounded-2xl bg-gray-700/40 flex items-center justify-center mb-5">
                 <ShoppingCart className="h-6 w-6 text-gray-400" />

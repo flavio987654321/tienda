@@ -405,35 +405,51 @@ export default function Home() {
             <Menu className="h-6 w-6" />
           </button>
         </div>
+      </motion.nav>
 
-        <AnimatePresence>
-          {mobileMenu && (
+      <AnimatePresence>
+        {mobileMenu && (
+          <>
             <motion.div
-              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-              className="md:hidden bg-gray-950 border-t border-white/5 px-6 py-4 space-y-3"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+              onClick={() => setMobileMenu(false)}
+            />
+            <motion.div
+              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+              transition={{ type: "tween", duration: 0.3 }}
+              className="fixed top-0 right-0 bottom-0 z-50 w-72 bg-gray-950 border-l border-white/10 flex flex-col md:hidden"
             >
-              {[["#tiendas", "Tiendas"], ["#como-funciona", "Cómo funciona"]].map(([href, label]) => (
-                <a key={href} href={href} onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-2">{label}</a>
-              ))}
-              <Link href="/quienes-somos" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-2">Quiénes somos</Link>
-              <Link href="/precios" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-2">Precios</Link>
-              <button onClick={() => { setContact(true); setMobileMenu(false); }} className="block text-gray-300 hover:text-white py-2 w-full text-left">Contacto</button>
-              <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
-                {sessionUser ? (
-                  <Link href={panelHref} onClick={() => setMobileMenu(false)} className="text-center bg-indigo-600 rounded-xl py-2.5 text-sm font-semibold text-white">
-                    {panelLabel}
-                  </Link>
-                ) : (
-                  <>
-                    <Link href="/login" className="text-center border border-white/10 rounded-xl py-2.5 text-sm text-white">Iniciar sesión</Link>
-                    <Link href="/registro" className="text-center bg-indigo-600 rounded-xl py-2.5 text-sm font-semibold text-white">Crear cuenta</Link>
-                  </>
-                )}
+              <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+                <span className="text-white font-bold">Menú</span>
+                <button onClick={() => setMobileMenu(false)} className="text-gray-400 hover:text-white">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="flex flex-col gap-1 px-4 py-4 flex-1">
+                {[["#tiendas", "Tiendas"], ["#como-funciona", "Cómo funciona"]].map(([href, label]) => (
+                  <a key={href} href={href} onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">{label}</a>
+                ))}
+                <Link href="/quienes-somos" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Quiénes somos</Link>
+                <Link href="/precios" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Precios</Link>
+                <button onClick={() => { setContact(true); setMobileMenu(false); }} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors w-full text-left">Contacto</button>
+                <div className="pt-3 border-t border-white/10 flex flex-col gap-2 mt-2">
+                  {sessionUser ? (
+                    <Link href={panelHref} onClick={() => setMobileMenu(false)} className="text-center bg-indigo-600 hover:bg-indigo-500 rounded-xl py-3 text-sm font-semibold text-white transition-colors">
+                      {panelLabel}
+                    </Link>
+                  ) : (
+                    <>
+                      <Link href="/login" onClick={() => setMobileMenu(false)} className="text-center border border-white/10 rounded-xl py-3 text-sm text-white hover:bg-white/5 transition-colors">Iniciar sesión</Link>
+                      <Link href="/registro" onClick={() => setMobileMenu(false)} className="text-center bg-indigo-600 hover:bg-indigo-500 rounded-xl py-3 text-sm font-semibold text-white transition-colors">Crear cuenta</Link>
+                    </>
+                  )}
+                </div>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.nav>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── HERO ── */}
       <section className="relative min-h-screen flex items-center grid-bg">
