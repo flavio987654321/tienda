@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle, Loader2 } from "lucide-react";
@@ -49,22 +50,30 @@ export default function DashboardLayout({
     setLowStockCount(initialLowStockCount);
   }, [initialLowStockCount]);
 
-  useEffect(() => {
-    function fetchAffiliateCount() {
-      fetch("/api/vendedoras")
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          const pendingCount = Array.isArray(data?.affiliates)
-            ? data.affiliates.filter((a: { status?: string }) => a.status === "PENDING").length
-            : 0;
-          setPendingAffiliateCount(pendingCount);
-        })
-        .catch(() => {});
-    }
-    fetchAffiliateCount();
-    const interval = setInterval(fetchAffiliateCount, 60_000);
-    return () => clearInterval(interval);
+  const fetchAffiliateCount = useCallback(() => {
+    fetch("/api/vendedoras")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const pendingCount = Array.isArray(data?.affiliates)
+          ? data.affiliates.filter((a: { status?: string }) => a.status === "PENDING").length
+          : 0;
+        setPendingAffiliateCount(pendingCount);
+      })
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    fetchAffiliateCount();
+    const supabase = createSupabaseBrowserClient();
+    const channel = supabase.channel("dashboard-layout-affiliates");
+    channel.on(
+      "postgres_changes" as Parameters<typeof channel.on>[0],
+      { event: "*", schema: "public", table: "Affiliate" },
+      () => fetchAffiliateCount()
+    );
+    channel.subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchAffiliateCount]);
 
   useEffect(() => {
     fetch("/api/pedidos")

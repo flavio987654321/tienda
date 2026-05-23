@@ -441,7 +441,7 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
 
         return (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSubModal(null)}>
-            <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm overflow-y-auto max-h-[92vh]" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h3 className="text-white font-bold">Suscripción</h3>

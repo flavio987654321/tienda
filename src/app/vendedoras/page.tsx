@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -991,30 +992,56 @@ export default function VendedorasPage() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  useEffect(() => {
-    function fetchStores() {
-      if (document.hidden) return;
-      fetch("/api/vendedoras?mode=tiendas-disponibles")
-        .then((r) => r.json())
-        .then(({ stores }) => { setStores(stores ?? []); setLoadingStores(false); })
-        .catch(() => setLoadingStores(false));
-    }
-    fetchStores();
-    const id = setInterval(fetchStores, 30_000);
-    return () => clearInterval(id);
+  const fetchStores = useCallback(() => {
+    if (document.hidden) return;
+    fetch("/api/vendedoras?mode=tiendas-disponibles")
+      .then((r) => r.json())
+      .then(({ stores }) => { setStores(stores ?? []); setLoadingStores(false); })
+      .catch(() => setLoadingStores(false));
+  }, []);
+
+  const fetchUserData = useCallback(() => {
+    if (document.hidden) return;
+    fetch("/api/vendedoras/perfil").then(r => r.json()).then(d => { if (d.user) setProfile(d.user); }).catch(() => {});
+    fetch("/api/vendedoras?mode=stats").then(r => r.json()).then(d => { setStats(d); }).catch(() => {});
   }, []);
 
   useEffect(() => {
+    fetchStores();
+    const supabase = createSupabaseBrowserClient();
+    const channel = supabase.channel("vendedoras-stores");
+    channel.on(
+      "postgres_changes" as Parameters<typeof channel.on>[0],
+      { event: "*", schema: "public", table: "Store" },
+      () => fetchStores()
+    );
+    channel.on(
+      "postgres_changes" as Parameters<typeof channel.on>[0],
+      { event: "*", schema: "public", table: "Affiliate" },
+      () => fetchStores()
+    );
+    channel.subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchStores]);
+
+  useEffect(() => {
     if (sessionStatus !== "authenticated") return;
-    function fetchUserData() {
-      if (document.hidden) return;
-      fetch("/api/vendedoras/perfil").then(r => r.json()).then(d => { if (d.user) setProfile(d.user); }).catch(() => {});
-      fetch("/api/vendedoras?mode=stats").then(r => r.json()).then(d => { setStats(d); }).catch(() => {});
-    }
     fetchUserData();
-    const id = setInterval(fetchUserData, 30_000);
-    return () => clearInterval(id);
-  }, [sessionStatus]);
+    const supabase = createSupabaseBrowserClient();
+    const channel = supabase.channel("vendedoras-userdata");
+    channel.on(
+      "postgres_changes" as Parameters<typeof channel.on>[0],
+      { event: "*", schema: "public", table: "Affiliate" },
+      () => fetchUserData()
+    );
+    channel.on(
+      "postgres_changes" as Parameters<typeof channel.on>[0],
+      { event: "*", schema: "public", table: "Order" },
+      () => fetchUserData()
+    );
+    channel.subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [sessionStatus, fetchUserData]);
 
   const isDark = theme === "dark";
 
