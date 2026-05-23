@@ -33,12 +33,20 @@ const TYPES = [
     icon: Store,
     color: "indigo",
     title: "Tengo una tienda",
-    desc: "Creá tu tienda online, personalizá el diseño y gestioná tu equipo de vendedores.",
+    desc: "Creá tu tienda online y gestioná afiliados que vendan por vos.",
     perks: [
-      "Tienda con dominio personalizable",
-      "10 plantillas de diseño incluidas",
-      "Sistema de vendedores y comisiones",
-      "Panel de pedidos y stock",
+      "Tienda con subdominio incluido",
+      "Productos y variantes ilimitados",
+      "Panel de pedidos y estadísticas",
+      "Cupones de descuento",
+      "Sistema de afiliados y comisiones automáticas",
+      "Soporte por email",
+    ],
+    premiumPerks: [
+      "App instalable en el celular (PWA)",
+      "Conectá tu dominio propio",
+      "Afiliados y cupones ilimitados",
+      "Soporte prioritario",
     ],
     cta: "Crear mi tienda",
   },
@@ -47,12 +55,14 @@ const TYPES = [
     icon: Users,
     color: "purple",
     title: "Soy vendedor/a",
-    desc: "Postulate a tiendas activas y ganá comisiones compartiendo tu link.",
+    desc: "Vendé productos de otras tiendas y ganá comisiones sin tener stock.",
     perks: [
       "Sin inversión inicial requerida",
-      "Link de vendedor con tracking",
-      "Billetera digital para cobrar",
-      "Panel simple desde el celular",
+      "Acceso a todas las tiendas activas",
+      "Link de afiliado con tracking en tiempo real",
+      "Billetera digital para cobrar comisiones",
+      "Panel de ventas y estadísticas",
+      "Premios por volumen de ventas",
     ],
     cta: "Postularme",
   },
@@ -63,8 +73,9 @@ const TYPES = [
     title: "Soy cliente",
     desc: "Explorá tiendas, guardá tus favoritos y seguí el estado de tus pedidos.",
     perks: [
-      "Favoritos sincronizados en todos tus dispositivos",
+      "Acceso a todas las tiendas",
       "Historial de pedidos y seguimiento",
+      "Favoritos sincronizados en todos tus dispositivos",
       "Checkout más rápido con datos guardados",
       "Calificá los productos que compraste",
     ],
@@ -150,6 +161,7 @@ function RegistroContent() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const [step1Tier, setStep1Tier] = useState<"BASIC" | "PREMIUM">("BASIC");
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
@@ -180,6 +192,7 @@ function RegistroContent() {
 
   function selectType(t: AccountType) {
     setAccountType(t);
+    if (t === "owner") setOwnerTier(step1Tier);
     setStep("form");
   }
 
@@ -235,7 +248,7 @@ function RegistroContent() {
     owner: {
       gradient: "from-indigo-950 via-[#1a0f3c] to-purple-950",
       headline: "Tu tienda te\nestá esperando",
-      sub: "Gestiona productos, pedidos y afiliados desde un panel simple y potente.",
+      sub: "Gestioná productos, pedidos y afiliados desde un panel simple y potente.",
     },
     seller: {
       gradient: "from-purple-950 via-[#1a0f3c] to-pink-950",
@@ -287,6 +300,14 @@ function RegistroContent() {
                 <li key={perk} className="flex items-center gap-3 text-sm text-indigo-200/80">
                   <div className="w-7 h-7 bg-indigo-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
                     <CheckCircle className="h-3.5 w-3.5 text-indigo-300" />
+                  </div>
+                  {perk}
+                </li>
+              ))}
+              {"premiumPerks" in selected && selected.premiumPerks?.map((perk) => (
+                <li key={perk} className={`flex items-center gap-3 text-sm transition-colors ${ownerTier === "PREMIUM" ? "text-amber-300/80" : "text-indigo-200/25"}`}>
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${ownerTier === "PREMIUM" ? "bg-amber-500/20" : "bg-indigo-500/5"}`}>
+                    <CheckCircle className={`h-3.5 w-3.5 transition-colors ${ownerTier === "PREMIUM" ? "text-amber-300" : "text-indigo-300/20"}`} />
                   </div>
                   {perk}
                 </li>
@@ -612,7 +633,8 @@ function RegistroContent() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {TYPES.map(({ key, icon: Icon, color, title, desc, perks, cta }) => {
+          {TYPES.map(({ key, icon: Icon, color, title, desc, perks, cta, ...rest }) => {
+            const premiumPerks = "premiumPerks" in rest ? (rest as { premiumPerks: string[] }).premiumPerks : undefined;
             const c = COLOR_MAP[color];
             return (
               <button
@@ -625,17 +647,57 @@ function RegistroContent() {
                 </div>
                 <h3 className="text-lg font-black text-white mb-1.5">{title}</h3>
                 <p className="text-gray-500 text-xs mb-4 leading-relaxed">{desc}</p>
-                <ul className="space-y-1.5 mb-5">
+                <ul className="space-y-1.5 mb-4">
                   {perks.map((p) => (
                     <li key={p} className="flex items-start gap-2 text-xs text-gray-400">
                       <CheckCircle className={`h-3.5 w-3.5 ${c.check} flex-shrink-0 mt-0.5`} />
                       {p}
                     </li>
                   ))}
+                  {premiumPerks?.map((p) => (
+                    <li key={p} className={`flex items-start gap-2 text-xs transition-colors ${key === "owner" && step1Tier === "PREMIUM" ? "text-amber-400/80" : "text-gray-600"}`}>
+                      <CheckCircle className={`h-3.5 w-3.5 flex-shrink-0 mt-0.5 transition-colors ${key === "owner" && step1Tier === "PREMIUM" ? "text-amber-400" : "text-gray-700"}`} />
+                      {p}
+                    </li>
+                  ))}
                 </ul>
+
+                {key === "owner" && (
+                  <div className="flex gap-1.5 mb-4" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => setStep1Tier("BASIC")}
+                      className={`flex-1 rounded-xl border p-2.5 text-left transition-all ${
+                        step1Tier === "BASIC"
+                          ? "border-indigo-500/60 bg-indigo-500/10"
+                          : "border-white/10 bg-white/5 hover:border-white/20"
+                      }`}
+                    >
+                      <p className="text-[11px] font-bold text-white">Tienda Pro</p>
+                      <p className={`text-[11px] font-black ${step1Tier === "BASIC" ? "text-indigo-400" : "text-gray-500"}`}>
+                        {money(PRICES.owner.BASIC.MONTHLY)}/mes
+                      </p>
+                    </button>
+                    <button
+                      onClick={() => setStep1Tier("PREMIUM")}
+                      className={`flex-1 rounded-xl border p-2.5 text-left transition-all ${
+                        step1Tier === "PREMIUM"
+                          ? "border-amber-500/60 bg-amber-500/10"
+                          : "border-white/10 bg-white/5 hover:border-white/20"
+                      }`}
+                    >
+                      <p className="text-[11px] font-bold text-white">Premium ★</p>
+                      <p className={`text-[11px] font-black ${step1Tier === "PREMIUM" ? "text-amber-400" : "text-gray-500"}`}>
+                        {money(PRICES.owner.PREMIUM.MONTHLY)}/mes
+                      </p>
+                    </button>
+                  </div>
+                )}
+
                 {key !== "buyer" && (
                   <p className="text-xs text-gray-600 mb-3">
-                    Desde {money(key === "owner" ? PRICES.owner.BASIC.MONTHLY : PRICES.seller.MONTHLY)}/mes · 7 días gratis
+                    {key === "owner"
+                      ? `${money(PRICES.owner[step1Tier].MONTHLY)}/mes · 7 días gratis`
+                      : `Desde ${money(PRICES.seller.MONTHLY)}/mes · 7 días gratis`}
                   </p>
                 )}
                 <div className={`flex items-center gap-2 text-sm ${c.text} font-semibold group-hover:gap-3 transition-all`}>
