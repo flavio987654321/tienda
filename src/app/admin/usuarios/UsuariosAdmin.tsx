@@ -80,6 +80,7 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
   const [deleteModal, setDeleteModal] = useState<User | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState<{ tier?: string; plan?: string } | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -413,41 +414,47 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
         const s = subModal.subscription;
         const isLoading = loadingId === subModal.id + "-sub";
         const isAffiliate = s.role === "AFFILIATE";
+        const trialStillActive = s.status === "TRIAL" && new Date(s.trialEndsAt) > new Date();
 
-        const statusActions: { label: string; body: object; color: string }[] = [];
+        const pendingLabel = pendingPlan?.tier
+          ? (pendingPlan.tier === "PREMIUM" ? "Tienda Premium" : "Tienda Pro")
+          : pendingPlan?.plan === "ANNUAL" ? "facturación Anual" : pendingPlan?.plan === "MONTHLY" ? "facturación Mensual" : "";
+
+        const statusActions: { label: string; body: object; color: string; disabled?: boolean; disabledReason?: string }[] = [];
         if (s.status === "TRIAL") {
           statusActions.push(
-            { label: "Extender trial +7 días",  body: { extendDays: 7 },           color: "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20" },
-            { label: "Extender trial +30 días", body: { extendDays: 30 },           color: "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border-indigo-500/20" },
-            { label: "Activar ahora",           body: { status: "ACTIVE" },         color: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" },
-            { label: "Vencer ahora",            body: { status: "EXPIRED" },        color: "bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20" },
+            { label: "Extender trial +7 días",  body: { extendDays: 7 },    color: "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20" },
+            { label: "Extender trial +30 días", body: { extendDays: 30 },   color: "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border-indigo-500/20" },
+            { label: "Activar ahora",           body: { status: "ACTIVE" }, color: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20",
+              disabled: trialStillActive, disabledReason: "El trial sigue vigente" },
+            { label: "Vencer ahora",            body: { status: "EXPIRED" }, color: "bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20" },
           );
         } else if (s.status === "ACTIVE") {
           statusActions.push(
-            { label: "Vencer ahora",            body: { status: "EXPIRED" },        color: "bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20" },
-            { label: "Cancelar suscripción",    body: { status: "CANCELLED" },      color: "bg-gray-500/10 text-gray-400 hover:bg-gray-500/20 border-gray-500/20" },
+            { label: "Vencer ahora",         body: { status: "EXPIRED" },    color: "bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20" },
+            { label: "Cancelar suscripción", body: { status: "CANCELLED" },  color: "bg-gray-500/10 text-gray-400 hover:bg-gray-500/20 border-gray-500/20" },
           );
         } else if (s.status === "GRACE") {
           statusActions.push(
-            { label: "Activar",                 body: { status: "ACTIVE" },         color: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" },
-            { label: "Cancelar",                body: { status: "CANCELLED" },      color: "bg-gray-500/10 text-gray-400 hover:bg-gray-500/20 border-gray-500/20" },
+            { label: "Activar",  body: { status: "ACTIVE" },    color: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" },
+            { label: "Cancelar", body: { status: "CANCELLED" }, color: "bg-gray-500/10 text-gray-400 hover:bg-gray-500/20 border-gray-500/20" },
           );
         } else {
           statusActions.push(
-            { label: "Dar trial (30 días)",     body: { extendDays: 30 },           color: "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20" },
-            { label: "Activar directamente",    body: { status: "ACTIVE" },         color: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" },
+            { label: "Dar trial (30 días)",  body: { extendDays: 30 },      color: "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20" },
+            { label: "Activar directamente", body: { status: "ACTIVE" },    color: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" },
           );
         }
 
         return (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSubModal(null)}>
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setSubModal(null); setPendingPlan(null); }}>
             <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm overflow-y-auto max-h-[92vh]" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h3 className="text-white font-bold">Suscripción</h3>
                   <p className="text-gray-500 text-xs mt-0.5">{subModal.name ?? subModal.email}</p>
                 </div>
-                <button onClick={() => setSubModal(null)} className="text-gray-500 hover:text-white transition-colors">
+                <button onClick={() => { setSubModal(null); setPendingPlan(null); }} className="text-gray-500 hover:text-white transition-colors">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -471,61 +478,36 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                 {s.status === "TRIAL" && (
                   <div className="flex justify-between items-center px-4 py-3">
                     <span className="text-gray-400 text-sm">Trial vence</span>
-                    <span className="text-white text-sm">{new Date(s.trialEndsAt).toLocaleDateString("es-AR")}</span>
+                    <span className={`text-sm font-medium ${trialStillActive ? "text-blue-400" : "text-red-400"}`}>
+                      {new Date(s.trialEndsAt).toLocaleDateString("es-AR")}
+                      {trialStillActive ? " (vigente)" : " (vencido)"}
+                    </span>
                   </div>
                 )}
               </div>
 
-              {/* Cambiar tipo de plan */}
-              <div className="mb-4">
-                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Tipo de plan</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: "Tienda Pro",     body: { tier: "BASIC" } },
-                    { label: "Tienda Premium", body: { tier: "PREMIUM" } },
-                    { label: "Afiliado",       body: { tier: "AFFILIATE" } },
-                  ].map(({ label, body }) => {
-                    const active =
-                      (body.tier === "AFFILIATE" && isAffiliate) ||
-                      (body.tier === "BASIC"     && !isAffiliate && s.tier === "BASIC") ||
-                      (body.tier === "PREMIUM"   && !isAffiliate && s.tier === "PREMIUM");
-                    return (
-                      <button
-                        key={label}
-                        onClick={() => changeSub(subModal.id, body)}
-                        disabled={isLoading || active}
-                        className={`text-xs font-semibold py-2 rounded-lg border transition-all disabled:cursor-default ${
-                          active
-                            ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
-                            : "bg-gray-800 text-gray-400 border-white/5 hover:border-indigo-500/30 hover:text-white"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Cambiar facturación (solo si no es afiliado) */}
+              {/* Cambiar tipo de plan (solo para dueños) */}
               {!isAffiliate && (
-                <div className="mb-5">
-                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Facturación</p>
+                <div className="mb-4">
+                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Tipo de plan</p>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { label: "Mensual", body: { plan: "MONTHLY" } },
-                      { label: "Anual",   body: { plan: "ANNUAL" } },
+                      { label: "Tienda Pro",     body: { tier: "BASIC" } },
+                      { label: "Tienda Premium", body: { tier: "PREMIUM" } },
                     ].map(({ label, body }) => {
-                      const active = (body.plan === "MONTHLY" && s.plan === "MONTHLY") || (body.plan === "ANNUAL" && s.plan === "ANNUAL");
+                      const isCurrent = body.tier === "BASIC" ? s.tier === "BASIC" : s.tier === "PREMIUM";
+                      const isPending = pendingPlan?.tier === body.tier;
                       return (
                         <button
                           key={label}
-                          onClick={() => changeSub(subModal.id, body)}
-                          disabled={isLoading || active}
-                          className={`text-xs font-semibold py-2 rounded-lg border transition-all disabled:cursor-default ${
-                            active
-                              ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
-                              : "bg-gray-800 text-gray-400 border-white/5 hover:border-indigo-500/30 hover:text-white"
+                          onClick={() => isCurrent ? undefined : setPendingPlan(body)}
+                          disabled={isLoading || isCurrent}
+                          className={`text-xs font-semibold py-2.5 rounded-lg border transition-all disabled:cursor-default ${
+                            isPending
+                              ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                              : isCurrent
+                                ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
+                                : "bg-gray-800 text-gray-400 border-white/5 hover:border-indigo-500/30 hover:text-white"
                           }`}
                         >
                           {label}
@@ -536,17 +518,74 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                 </div>
               )}
 
+              {/* Cambiar facturación (solo para dueños) */}
+              {!isAffiliate && (
+                <div className="mb-4">
+                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Facturación</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: "Mensual", body: { plan: "MONTHLY" } },
+                      { label: "Anual",   body: { plan: "ANNUAL" } },
+                    ].map(({ label, body }) => {
+                      const isCurrent = body.plan === "MONTHLY" ? s.plan === "MONTHLY" : s.plan === "ANNUAL";
+                      const isPending = pendingPlan?.plan === body.plan;
+                      return (
+                        <button
+                          key={label}
+                          onClick={() => isCurrent ? undefined : setPendingPlan(body)}
+                          disabled={isLoading || isCurrent}
+                          className={`text-xs font-semibold py-2.5 rounded-lg border transition-all disabled:cursor-default ${
+                            isPending
+                              ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                              : isCurrent
+                                ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
+                                : "bg-gray-800 text-gray-400 border-white/5 hover:border-indigo-500/30 hover:text-white"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Confirmación de cambio de plan */}
+              {pendingPlan && (
+                <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                  <p className="text-amber-300 text-xs font-semibold mb-2.5">
+                    ¿Confirmar cambio a {pendingLabel}?
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setPendingPlan(null)}
+                      className="flex-1 text-xs font-semibold py-2 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => { changeSub(subModal.id, pendingPlan); setPendingPlan(null); }}
+                      disabled={isLoading}
+                      className="flex-1 text-xs font-semibold py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black transition-all disabled:opacity-50"
+                    >
+                      Confirmar
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Acciones de estado (contextuales) */}
               <div className="space-y-2">
                 <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Acciones</p>
-                {statusActions.map(({ label, body, color }) => (
+                {statusActions.map(({ label, body, color, disabled, disabledReason }) => (
                   <button
                     key={label}
                     onClick={() => changeSub(subModal.id, body)}
-                    disabled={isLoading}
-                    className={`w-full text-sm font-semibold py-2.5 rounded-xl border transition-all disabled:opacity-50 ${color}`}
+                    disabled={isLoading || disabled}
+                    title={disabled ? disabledReason : undefined}
+                    className={`w-full text-sm font-semibold py-2.5 rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed ${color}`}
                   >
-                    {isLoading ? "Guardando..." : label}
+                    {isLoading ? "Guardando..." : disabled ? `${label} (${disabledReason})` : label}
                   </button>
                 ))}
               </div>
