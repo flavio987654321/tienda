@@ -640,7 +640,7 @@ function RegistroContent() {
               <button
                 key={key}
                 onClick={() => selectType(key)}
-                className={`group text-left ${c.bg} border ${c.border} rounded-3xl p-6 transition-all duration-300 hover:scale-[1.02]`}
+                className={`group text-left flex flex-col ${c.bg} border ${c.border} rounded-3xl p-6 transition-all duration-300 hover:scale-[1.02]`}
               >
                 <div className={`w-12 h-12 bg-${color}-500/15 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                   <Icon className={`h-6 w-6 ${c.text}`} />
@@ -693,15 +693,17 @@ function RegistroContent() {
                   </div>
                 )}
 
-                {key !== "buyer" && (
-                  <p className="text-xs text-gray-600 mb-3">
-                    {key === "owner"
-                      ? `${money(PRICES.owner[step1Tier].MONTHLY)}/mes · 7 días gratis`
-                      : `Desde ${money(PRICES.seller.MONTHLY)}/mes · 7 días gratis`}
-                  </p>
-                )}
-                <div className={`flex items-center gap-2 text-sm ${c.text} font-semibold group-hover:gap-3 transition-all`}>
-                  {cta} <ArrowRight className="h-4 w-4" />
+                <div className="mt-auto">
+                  {key !== "buyer" && (
+                    <p className="text-xs text-gray-600 mb-3">
+                      {key === "owner"
+                        ? `${money(PRICES.owner[step1Tier].MONTHLY)}/mes · 7 días gratis`
+                        : `Desde ${money(PRICES.seller.MONTHLY)}/mes · 7 días gratis`}
+                    </p>
+                  )}
+                  <div className={`flex items-center gap-2 text-sm ${c.text} font-semibold group-hover:gap-3 transition-all`}>
+                    {cta} <ArrowRight className="h-4 w-4" />
+                  </div>
                 </div>
               </button>
             );
