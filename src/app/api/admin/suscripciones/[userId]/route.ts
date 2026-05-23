@@ -14,7 +14,7 @@ export async function PATCH(
   }
 
   const { userId } = await params;
-  const { status, extendDays } = await req.json();
+  const { status, extendDays, tier, plan } = await req.json();
 
   const sub = await prisma.subscription.findUnique({ where: { userId } });
   if (!sub) return NextResponse.json({ error: "Sin suscripción" }, { status: 404 });
@@ -29,6 +29,19 @@ export async function PATCH(
     const base = sub.trialEndsAt > new Date() ? sub.trialEndsAt : new Date();
     data.trialEndsAt = new Date(base.getTime() + extendDays * 24 * 60 * 60 * 1000);
     data.status = "TRIAL";
+  }
+
+  if (tier === "BASIC" || tier === "PREMIUM") {
+    data.tier = tier;
+    data.role = "OWNER";
+  }
+
+  if (tier === "AFFILIATE") {
+    data.role = "AFFILIATE";
+  }
+
+  if (plan === "MONTHLY" || plan === "ANNUAL") {
+    data.plan = plan;
   }
 
   if (Object.keys(data).length === 0) {

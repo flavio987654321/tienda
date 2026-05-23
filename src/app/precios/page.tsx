@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Mail, X, BadgeCheck, Menu } from "lucide-react";
 import PaymentModal from "@/components/subscription/PaymentModal";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function money(amount: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(amount);
@@ -40,7 +41,7 @@ function PreciosContent() {
   const isRegistered = searchParams.get("registered") === "true";
   const role = searchParams.get("role");
 
-  useEffect(() => {
+  function fetchSub() {
     fetch("/api/suscripcion/estado")
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
@@ -52,7 +53,29 @@ function PreciosContent() {
         }
       })
       .catch(() => {});
-  }, []);
+  }
+
+  useEffect(() => { fetchSub(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    supabase.auth.getUser().then(({ data }) => {
+      const userId = data.user?.id;
+      if (!userId) return;
+
+      channel = supabase.channel("precios-sub-" + userId);
+      channel.on(
+        "postgres_changes" as Parameters<typeof channel.on>[0],
+        { event: "*", schema: "public", table: "Subscription", filter: `userId=eq.${userId}` },
+        () => fetchSub()
+      );
+      channel.subscribe();
+    });
+
+    return () => { if (channel) supabase.removeChannel(channel); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ownerPrices = {
     BASIC:   { monthly: 20000, annual: 180000 },

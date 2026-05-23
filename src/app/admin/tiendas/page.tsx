@@ -1,7 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import TiendasAdmin from "./TiendasAdmin";
 
-export default async function AdminTiendasPage() {
+export const dynamic = "force-dynamic";
+
+export default async function AdminTiendasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ f?: string }>;
+}) {
+  const { f = "" } = await searchParams;
+
   const stores = await prisma.store.findMany({
     orderBy: { createdAt: "desc" },
     include: {
@@ -28,7 +36,7 @@ export default async function AdminTiendasPage() {
         <h1 className="text-3xl font-black text-white mb-1">Tiendas</h1>
         <p className="text-gray-400 text-sm">{stores.length} tiendas registradas</p>
       </div>
-      <TiendasAdmin stores={serialized} />
+      <TiendasAdmin stores={serialized} filter={f} />
     </div>
   );
 }

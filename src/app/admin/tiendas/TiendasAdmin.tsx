@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Store, Package, Users, ShoppingBag, Globe, EyeOff, Calendar, RefreshCw, Power, Search, X } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
+import { Store, Package, Users, ShoppingBag, Globe, EyeOff, Calendar, RefreshCw, Power, Search, X, Trash2 } from "lucide-react";
 
 type StoreRow = {
   id: string;
@@ -15,8 +16,29 @@ type StoreRow = {
   _count: { products: number; affiliates: number; orders: number };
 };
 
-export default function TiendasAdmin({ stores: initial }: { stores: StoreRow[] }) {
-  const [stores, setStores] = useState(initial);
+const STORE_FILTERS = [
+  { value: "",           label: "Todas" },
+  { value: "activas",    label: "Activas" },
+  { value: "inactivas",  label: "Sin publicar" },
+  { value: "eliminadas", label: "Eliminadas" },
+] as const;
+
+function isDeletedStore(s: StoreRow) { return s.slug.startsWith("deleted-"); }
+
+function applyStoreFilter(stores: StoreRow[], filter: string): StoreRow[] {
+  switch (filter) {
+    case "activas":    return stores.filter(s => s.isActive && s.isPublished && !isDeletedStore(s));
+    case "inactivas":  return stores.filter(s => !isDeletedStore(s) && (!s.isActive || !s.isPublished));
+    case "eliminadas": return stores.filter(isDeletedStore);
+    default:           return stores.filter(s => !isDeletedStore(s));
+  }
+}
+
+export default function TiendasAdmin({ stores: initial, filter: activeFilter }: { stores: StoreRow[]; filter: string }) {
+  const baseStores = useMemo(() => applyStoreFilter(initial, activeFilter), [initial, activeFilter]);
+  const [stores, setStores] = useState(baseStores);
+  useEffect(() => { setStores(baseStores); }, [baseStores]);
+
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
@@ -47,40 +69,70 @@ export default function TiendasAdmin({ stores: initial }: { stores: StoreRow[] }
     }
   }
 
-  const activas = stores.filter(s => s.isActive && s.isPublished).length;
-  const inactivas = stores.filter(s => !s.isPublished).length;
+  const stats = useMemo(() => ({
+    total:     initial.filter(s => !isDeletedStore(s)).length,
+    activas:   initial.filter(s => s.isActive && s.isPublished && !isDeletedStore(s)).length,
+    inactivas: initial.filter(s => !isDeletedStore(s) && (!s.isActive || !s.isPublished)).length,
+    eliminadas: initial.filter(isDeletedStore).length,
+  }), [initial]);
 
   return (
     <>
-      {/* Totales */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-5 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/20 flex items-center justify-center">
-            <Store className="h-5 w-5 text-indigo-400" />
+      {/* Resumen clicable */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <Link href="/admin/tiendas" className={`rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-4 flex items-center gap-3 hover:opacity-80 transition-all ${activeFilter === "" ? "ring-2 ring-white/20" : ""}`}>
+          <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
+            <Store className="h-4 w-4 text-indigo-400" />
           </div>
           <div>
-            <p className="text-2xl font-black text-white">{stores.length}</p>
+            <p className="text-xl font-black text-white">{stats.total}</p>
             <p className="text-xs text-indigo-400 font-medium">Total</p>
           </div>
-        </div>
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/20 flex items-center justify-center">
-            <Globe className="h-5 w-5 text-emerald-400" />
+        </Link>
+        <Link href="/admin/tiendas?f=activas" className={`rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 flex items-center gap-3 hover:opacity-80 transition-all ${activeFilter === "activas" ? "ring-2 ring-white/20" : ""}`}>
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+            <Globe className="h-4 w-4 text-emerald-400" />
           </div>
           <div>
-            <p className="text-2xl font-black text-white">{activas}</p>
-            <p className="text-xs text-emerald-400 font-medium">Publicadas</p>
+            <p className="text-xl font-black text-white">{stats.activas}</p>
+            <p className="text-xs text-emerald-400 font-medium">Activas</p>
           </div>
-        </div>
-        <div className="rounded-2xl border border-gray-500/20 bg-gray-500/10 p-5 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-gray-500/20 border border-gray-500/20 flex items-center justify-center">
-            <EyeOff className="h-5 w-5 text-gray-400" />
+        </Link>
+        <Link href="/admin/tiendas?f=inactivas" className={`rounded-2xl border border-gray-500/20 bg-gray-500/10 p-4 flex items-center gap-3 hover:opacity-80 transition-all ${activeFilter === "inactivas" ? "ring-2 ring-white/20" : ""}`}>
+          <div className="w-9 h-9 rounded-xl bg-gray-500/20 border border-gray-500/20 flex items-center justify-center flex-shrink-0">
+            <EyeOff className="h-4 w-4 text-gray-400" />
           </div>
           <div>
-            <p className="text-2xl font-black text-white">{inactivas}</p>
+            <p className="text-xl font-black text-white">{stats.inactivas}</p>
             <p className="text-xs text-gray-400 font-medium">Sin publicar</p>
           </div>
-        </div>
+        </Link>
+        <Link href="/admin/tiendas?f=eliminadas" className={`rounded-2xl border border-red-500/20 bg-red-500/10 p-4 flex items-center gap-3 hover:opacity-80 transition-all ${activeFilter === "eliminadas" ? "ring-2 ring-white/20" : ""}`}>
+          <div className="w-9 h-9 rounded-xl bg-red-500/20 border border-red-500/20 flex items-center justify-center flex-shrink-0">
+            <Trash2 className="h-4 w-4 text-red-400" />
+          </div>
+          <div>
+            <p className="text-xl font-black text-white">{stats.eliminadas}</p>
+            <p className="text-xs text-red-400 font-medium">Eliminadas</p>
+          </div>
+        </Link>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {STORE_FILTERS.map(({ value, label }) => (
+          <Link
+            key={value}
+            href={value ? `/admin/tiendas?f=${value}` : "/admin/tiendas"}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+              activeFilter === value
+                ? "bg-indigo-600/20 text-indigo-300 border-indigo-500/30"
+                : "text-gray-400 border-white/10 hover:text-white hover:border-white/20 bg-transparent"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
       </div>
 
       {/* Buscador */}
@@ -120,7 +172,9 @@ export default function TiendasAdmin({ stores: initial }: { stores: StoreRow[] }
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-5 py-10 text-center text-gray-500 text-sm">
-                    No se encontraron tiendas para &quot;{query}&quot;
+                    {query
+                      ? `No se encontraron tiendas para "${query}"`
+                      : "No hay tiendas en esta categoría"}
                   </td>
                 </tr>
               )}

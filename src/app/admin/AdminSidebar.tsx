@@ -90,10 +90,7 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
       </aside>
 
       {/* ── Mobile top header ── */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-gray-900 border-b border-white/5 flex items-center px-4 py-3 gap-3 h-14">
-        <button onClick={() => setMobileOpen(true)} className="text-gray-400 hover:text-white">
-          <Menu className="h-6 w-6" />
-        </button>
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-gray-900 border-b border-white/5 flex items-center justify-between px-4 py-3 h-14">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
             <ShoppingBag className="h-4 w-4 text-white" />
@@ -104,6 +101,9 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
             <span className="text-indigo-400 text-xs font-semibold">Admin</span>
           </div>
         </div>
+        <button onClick={() => setMobileOpen(true)} className="text-gray-400 hover:text-white">
+          <Menu className="h-6 w-6" />
+        </button>
       </div>
 
       {/* ── Mobile drawer ── */}

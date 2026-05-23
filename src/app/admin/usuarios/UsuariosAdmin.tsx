@@ -1,13 +1,22 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { Store, Zap, ShoppingCart, Shield, Calendar, X, RefreshCw, Ban, CheckCircle, Search, Trash2, AlertTriangle } from "lucide-react";
 
 type Sub = {
   status: string;
   plan: string;
+  tier: string;
+  role: string;
   trialEndsAt: string;
 };
+
+function getTierLabel(sub: Sub): string {
+  if (sub.role === "AFFILIATE") return "Afiliado";
+  if (sub.tier === "PREMIUM") return "Tienda Premium";
+  return "Tienda Pro";
+}
 
 type User = {
   id: string;
@@ -36,8 +45,35 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   CANCELLED: { label: "Cancelado", color: "text-gray-400 bg-gray-500/10" },
 };
 
-export default function UsuariosAdmin({ users: initial }: { users: User[] }) {
-  const [users, setUsers] = useState(initial);
+const USER_FILTERS = [
+  { value: "",          label: "Todos",     color: "text-gray-300" },
+  { value: "activos",   label: "Activos",   color: "text-emerald-400" },
+  { value: "duenos",    label: "Dueños",    color: "text-indigo-400" },
+  { value: "afiliados", label: "Afiliados", color: "text-purple-400" },
+  { value: "clientes",  label: "Clientes",  color: "text-teal-400" },
+  { value: "baneados",  label: "Baneados",  color: "text-red-400" },
+  { value: "eliminados",label: "Eliminados",color: "text-gray-500" },
+] as const;
+
+function applyUserFilter(users: User[], filter: string): User[] {
+  const isDeleted = (u: User) => u.email.endsWith(".invalid");
+  const isActive  = (u: User) => !u.banned && !isDeleted(u);
+  switch (filter) {
+    case "activos":    return users.filter(isActive);
+    case "duenos":     return users.filter(u => u.role === "OWNER"  && isActive(u));
+    case "afiliados":  return users.filter(u => u.role === "SELLER" && isActive(u));
+    case "clientes":   return users.filter(u => u.role === "BUYER"  && isActive(u));
+    case "baneados":   return users.filter(u => u.banned && !isDeleted(u));
+    case "eliminados": return users.filter(isDeleted);
+    default:           return users.filter(u => !isDeleted(u));
+  }
+}
+
+export default function UsuariosAdmin({ users: initial, filter: activeFilter }: { users: User[]; filter: string }) {
+  const baseUsers = useMemo(() => applyUserFilter(initial, activeFilter), [initial, activeFilter]);
+  const [users, setUsers] = useState(baseUsers);
+  useEffect(() => { setUsers(baseUsers); }, [baseUsers]);
+
   const [subModal, setSubModal] = useState<User | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -108,30 +144,73 @@ export default function UsuariosAdmin({ users: initial }: { users: User[] }) {
     }
   }
 
+  const activeOnly = useMemo(() => initial.filter(u => !u.banned && !u.email.endsWith(".invalid")), [initial]);
   const totals = {
-    OWNER:  users.filter(u => u.role === "OWNER").length,
-    SELLER: users.filter(u => u.role === "SELLER").length,
-    BUYER:  users.filter(u => u.role === "BUYER").length,
+    OWNER:    activeOnly.filter(u => u.role === "OWNER").length,
+    SELLER:   activeOnly.filter(u => u.role === "SELLER").length,
+    BUYER:    activeOnly.filter(u => u.role === "BUYER").length,
+    baneados: initial.filter(u => u.banned && !u.email.endsWith(".invalid")).length,
+    eliminados: initial.filter(u => u.email.endsWith(".invalid")).length,
   };
 
   return (
     <>
-      {/* Resumen */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        {(["OWNER", "SELLER", "BUYER"] as const).map((role) => {
+      {/* Resumen clicable */}
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-6">
+        {([
+          { role: "OWNER",  href: "/admin/usuarios?f=duenos",    count: totals.OWNER },
+          { role: "SELLER", href: "/admin/usuarios?f=afiliados", count: totals.SELLER },
+          { role: "BUYER",  href: "/admin/usuarios?f=clientes",  count: totals.BUYER },
+        ] as const).map(({ role, href, count }) => {
           const { label, color, icon: Icon } = ROLE_LABELS[role];
+          const isActive = activeFilter === (role === "OWNER" ? "duenos" : role === "SELLER" ? "afiliados" : "clientes");
           return (
-            <div key={role} className={`rounded-2xl border p-5 flex items-center gap-4 ${color}`}>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${color}`}>
-                <Icon className="h-5 w-5" />
+            <Link key={role} href={href} className={`rounded-2xl border p-4 flex items-center gap-3 transition-all hover:opacity-80 ${color} ${isActive ? "ring-2 ring-white/20" : ""}`}>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center border flex-shrink-0 ${color}`}>
+                <Icon className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-2xl font-black text-white">{totals[role]}</p>
+                <p className="text-xl font-black text-white">{count}</p>
                 <p className="text-xs font-medium opacity-80">{label}s</p>
               </div>
-            </div>
+            </Link>
           );
         })}
+        <Link href="/admin/usuarios?f=baneados" className={`rounded-2xl border border-red-500/20 bg-red-500/10 p-4 flex items-center gap-3 transition-all hover:opacity-80 ${activeFilter === "baneados" ? "ring-2 ring-white/20" : ""}`}>
+          <div className="w-9 h-9 rounded-xl bg-red-500/20 border border-red-500/20 flex items-center justify-center flex-shrink-0">
+            <Ban className="h-4 w-4 text-red-400" />
+          </div>
+          <div>
+            <p className="text-xl font-black text-white">{totals.baneados}</p>
+            <p className="text-xs text-red-400 font-medium">Baneados</p>
+          </div>
+        </Link>
+        <Link href="/admin/usuarios?f=eliminados" className={`rounded-2xl border border-gray-500/20 bg-gray-500/10 p-4 flex items-center gap-3 transition-all hover:opacity-80 ${activeFilter === "eliminados" ? "ring-2 ring-white/20" : ""}`}>
+          <div className="w-9 h-9 rounded-xl bg-gray-500/20 border border-gray-500/20 flex items-center justify-center flex-shrink-0">
+            <Trash2 className="h-4 w-4 text-gray-400" />
+          </div>
+          <div>
+            <p className="text-xl font-black text-white">{totals.eliminados}</p>
+            <p className="text-xs text-gray-400 font-medium">Eliminados</p>
+          </div>
+        </Link>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {USER_FILTERS.map(({ value, label }) => (
+          <Link
+            key={value}
+            href={value ? `/admin/usuarios?f=${value}` : "/admin/usuarios"}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+              activeFilter === value
+                ? "bg-indigo-600/20 text-indigo-300 border-indigo-500/30"
+                : "text-gray-400 border-white/10 hover:text-white hover:border-white/20 bg-transparent"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
       </div>
 
       {/* Buscador */}
@@ -170,7 +249,9 @@ export default function UsuariosAdmin({ users: initial }: { users: User[] }) {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-5 py-10 text-center text-gray-500 text-sm">
-                    No se encontraron usuarios para &quot;{query}&quot;
+                    {query
+                      ? `No se encontraron usuarios para "${query}"`
+                      : "No hay usuarios en esta categoría"}
                   </td>
                 </tr>
               )}
@@ -207,7 +288,7 @@ export default function UsuariosAdmin({ users: initial }: { users: User[] }) {
                           onClick={() => setSubModal(u)}
                           className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-opacity hover:opacity-70 ${sub.color}`}
                         >
-                          {sub.label} · {u.subscription!.plan === "ANNUAL" ? "Anual" : "Mensual"}
+                          {getTierLabel(u.subscription!)} · {sub.label} · {u.subscription!.plan === "ANNUAL" ? "Anual" : "Mensual"}
                         </button>
                       ) : (
                         <span className="text-gray-600 text-xs">Sin suscripción</span>
@@ -328,60 +409,151 @@ export default function UsuariosAdmin({ users: initial }: { users: User[] }) {
       )}
 
       {/* Modal suscripción */}
-      {subModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSubModal(null)}>
-          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-white font-bold">Suscripción</h3>
-                <p className="text-gray-500 text-xs mt-0.5">{subModal.name ?? subModal.email}</p>
-              </div>
-              <button onClick={() => setSubModal(null)} className="text-gray-500 hover:text-white transition-colors">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {subModal && subModal.subscription && (() => {
+        const s = subModal.subscription;
+        const isLoading = loadingId === subModal.id + "-sub";
+        const isAffiliate = s.role === "AFFILIATE";
 
-            {subModal.subscription && (
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
+        const statusActions: { label: string; body: object; color: string }[] = [];
+        if (s.status === "TRIAL") {
+          statusActions.push(
+            { label: "Extender trial +7 días",  body: { extendDays: 7 },           color: "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20" },
+            { label: "Extender trial +30 días", body: { extendDays: 30 },           color: "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border-indigo-500/20" },
+            { label: "Activar ahora",           body: { status: "ACTIVE" },         color: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" },
+            { label: "Vencer ahora",            body: { status: "EXPIRED" },        color: "bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20" },
+          );
+        } else if (s.status === "ACTIVE") {
+          statusActions.push(
+            { label: "Vencer ahora",            body: { status: "EXPIRED" },        color: "bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20" },
+            { label: "Cancelar suscripción",    body: { status: "CANCELLED" },      color: "bg-gray-500/10 text-gray-400 hover:bg-gray-500/20 border-gray-500/20" },
+          );
+        } else if (s.status === "GRACE") {
+          statusActions.push(
+            { label: "Activar",                 body: { status: "ACTIVE" },         color: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" },
+            { label: "Cancelar",                body: { status: "CANCELLED" },      color: "bg-gray-500/10 text-gray-400 hover:bg-gray-500/20 border-gray-500/20" },
+          );
+        } else {
+          statusActions.push(
+            { label: "Dar trial (30 días)",     body: { extendDays: 30 },           color: "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20" },
+            { label: "Activar directamente",    body: { status: "ACTIVE" },         color: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" },
+          );
+        }
+
+        return (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSubModal(null)}>
+            <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-white font-bold">Suscripción</h3>
+                  <p className="text-gray-500 text-xs mt-0.5">{subModal.name ?? subModal.email}</p>
+                </div>
+                <button onClick={() => setSubModal(null)} className="text-gray-500 hover:text-white transition-colors">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Info actual */}
+              <div className="space-y-0 mb-5 bg-gray-800/40 rounded-xl overflow-hidden">
+                <div className="flex justify-between items-center px-4 py-3 border-b border-white/5">
                   <span className="text-gray-400 text-sm">Estado</span>
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_LABELS[subModal.subscription.status]?.color}`}>
-                    {STATUS_LABELS[subModal.subscription.status]?.label}
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_LABELS[s.status]?.color}`}>
+                    {STATUS_LABELS[s.status]?.label}
                   </span>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
-                  <span className="text-gray-400 text-sm">Plan</span>
-                  <span className="text-white text-sm font-semibold">{subModal.subscription.plan === "ANNUAL" ? "Anual" : "Mensual"}</span>
+                <div className="flex justify-between items-center px-4 py-3 border-b border-white/5">
+                  <span className="text-gray-400 text-sm">Tipo</span>
+                  <span className="text-white text-sm font-semibold">{getTierLabel(s)}</span>
                 </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-400 text-sm">Trial vence</span>
-                  <span className="text-white text-sm">{new Date(subModal.subscription.trialEndsAt).toLocaleDateString("es-AR")}</span>
+                <div className="flex justify-between items-center px-4 py-3 border-b border-white/5">
+                  <span className="text-gray-400 text-sm">Facturación</span>
+                  <span className="text-white text-sm font-semibold">{s.plan === "ANNUAL" ? "Anual" : "Mensual"}</span>
+                </div>
+                {s.status === "TRIAL" && (
+                  <div className="flex justify-between items-center px-4 py-3">
+                    <span className="text-gray-400 text-sm">Trial vence</span>
+                    <span className="text-white text-sm">{new Date(s.trialEndsAt).toLocaleDateString("es-AR")}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Cambiar tipo de plan */}
+              <div className="mb-4">
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Tipo de plan</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: "Tienda Pro",     body: { tier: "BASIC" } },
+                    { label: "Tienda Premium", body: { tier: "PREMIUM" } },
+                    { label: "Afiliado",       body: { tier: "AFFILIATE" } },
+                  ].map(({ label, body }) => {
+                    const active =
+                      (body.tier === "AFFILIATE" && isAffiliate) ||
+                      (body.tier === "BASIC"     && !isAffiliate && s.tier === "BASIC") ||
+                      (body.tier === "PREMIUM"   && !isAffiliate && s.tier === "PREMIUM");
+                    return (
+                      <button
+                        key={label}
+                        onClick={() => changeSub(subModal.id, body)}
+                        disabled={isLoading || active}
+                        className={`text-xs font-semibold py-2 rounded-lg border transition-all disabled:cursor-default ${
+                          active
+                            ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
+                            : "bg-gray-800 text-gray-400 border-white/5 hover:border-indigo-500/30 hover:text-white"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            )}
 
-            <div className="space-y-2">
-              <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">Cambiar estado</p>
-              {[
-                { label: "Activar", status: "ACTIVE", color: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" },
-                { label: "Extender trial +7 días", extendDays: 7, color: "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20" },
-                { label: "Extender trial +30 días", extendDays: 30, color: "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border-indigo-500/20" },
-                { label: "Vencer ahora", status: "EXPIRED", color: "bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20" },
-                { label: "Cancelar", status: "CANCELLED", color: "bg-gray-500/10 text-gray-400 hover:bg-gray-500/20 border-gray-500/20" },
-              ].map(({ label, status, extendDays, color }) => (
-                <button
-                  key={label}
-                  onClick={() => changeSub(subModal.id, status ? { status } : { extendDays })}
-                  disabled={loadingId === subModal.id + "-sub"}
-                  className={`w-full text-sm font-semibold py-2.5 rounded-xl border transition-all disabled:opacity-50 ${color}`}
-                >
-                  {loadingId === subModal.id + "-sub" ? "Guardando..." : label}
-                </button>
-              ))}
+              {/* Cambiar facturación (solo si no es afiliado) */}
+              {!isAffiliate && (
+                <div className="mb-5">
+                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Facturación</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: "Mensual", body: { plan: "MONTHLY" } },
+                      { label: "Anual",   body: { plan: "ANNUAL" } },
+                    ].map(({ label, body }) => {
+                      const active = (body.plan === "MONTHLY" && s.plan === "MONTHLY") || (body.plan === "ANNUAL" && s.plan === "ANNUAL");
+                      return (
+                        <button
+                          key={label}
+                          onClick={() => changeSub(subModal.id, body)}
+                          disabled={isLoading || active}
+                          className={`text-xs font-semibold py-2 rounded-lg border transition-all disabled:cursor-default ${
+                            active
+                              ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
+                              : "bg-gray-800 text-gray-400 border-white/5 hover:border-indigo-500/30 hover:text-white"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Acciones de estado (contextuales) */}
+              <div className="space-y-2">
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Acciones</p>
+                {statusActions.map(({ label, body, color }) => (
+                  <button
+                    key={label}
+                    onClick={() => changeSub(subModal.id, body)}
+                    disabled={isLoading}
+                    className={`w-full text-sm font-semibold py-2.5 rounded-xl border transition-all disabled:opacity-50 ${color}`}
+                  >
+                    {isLoading ? "Guardando..." : label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </>
   );
 }

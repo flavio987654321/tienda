@@ -60,9 +60,9 @@ export default function AdminStatsRealtime({ initial }: { initial: Stats }) {
 
   const cards = [
     {
-      label: "Usuarios totales", value: stats.totalUsers, icon: Users, color: "indigo",
+      label: "Usuarios activos", value: stats.totalUsers, icon: Users, color: "indigo",
       sub: `${stats.totalOwners} dueños · ${stats.totalAffiliates} afiliados · ${stats.totalBuyers} clientes`,
-      href: "/admin/usuarios",
+      href: "/admin/usuarios?f=activos",
     },
     {
       label: "Tiendas", value: stats.totalStores, icon: Store, color: "purple",
@@ -116,7 +116,7 @@ export default function AdminStatsRealtime({ initial }: { initial: Stats }) {
 
       {/* Baneados / Eliminados */}
       <div className="mt-6 grid grid-cols-2 gap-4">
-        <Link href="/admin/usuarios" className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5 flex items-center gap-4 hover:border-red-500/40 hover:bg-red-500/10 transition-all group">
+        <Link href="/admin/usuarios?f=baneados" className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5 flex items-center gap-4 hover:border-red-500/40 hover:bg-red-500/10 transition-all group">
           <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
             <Ban className="h-5 w-5 text-red-400" />
           </div>
@@ -125,7 +125,7 @@ export default function AdminStatsRealtime({ initial }: { initial: Stats }) {
             <p className="text-xs text-red-400 font-medium mt-0.5">Usuarios baneados</p>
           </div>
         </Link>
-        <Link href="/admin/usuarios" className="bg-gray-500/5 border border-gray-500/20 rounded-2xl p-5 flex items-center gap-4 hover:border-gray-400/40 hover:bg-gray-500/10 transition-all group">
+        <Link href="/admin/usuarios?f=eliminados" className="bg-gray-500/5 border border-gray-500/20 rounded-2xl p-5 flex items-center gap-4 hover:border-gray-400/40 hover:bg-gray-500/10 transition-all group">
           <div className="w-10 h-10 rounded-xl bg-gray-500/10 border border-gray-500/20 flex items-center justify-center">
             <Trash2 className="h-5 w-5 text-gray-400" />
           </div>

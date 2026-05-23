@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth-session";
 import { getUserSubscription, getSubscriptionStatus, daysRemaining } from "@/lib/subscription";
 import SubscriptionGate from "@/components/subscription/SubscriptionGate";
+import SubscriptionRealtimeRefresher from "@/components/subscription/SubscriptionRealtimeRefresher";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -30,6 +31,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <>
+      {user && <SubscriptionRealtimeRefresher userId={user.id} />}
       {gate}
       {children}
     </>
