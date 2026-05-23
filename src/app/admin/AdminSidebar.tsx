@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield,
+  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -14,68 +15,127 @@ const NAV = [
   { href: "/admin/tiendas", label: "Tiendas", icon: Store },
 ];
 
-export default function AdminSidebar({ user }: { user: { name: string | null; email: string } }) {
-  const pathname = usePathname();
-  const { signOut } = useAuth();
-
+function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   function isActive(href: string, exact?: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
   }
+  return (
+    <nav className="flex-1 px-3 py-4 space-y-1">
+      {NAV.map(({ href, label, icon: Icon, exact }) => (
+        <Link
+          key={href}
+          href={href}
+          onClick={onNavigate}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            isActive(href, exact)
+              ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/20"
+              : "text-gray-400 hover:text-white hover:bg-white/5"
+          }`}
+        >
+          <Icon className="h-5 w-5 flex-shrink-0" />
+          {label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+function UserFooter({ user, onSignOut }: { user: { name: string | null; email: string }; onSignOut: () => void }) {
+  return (
+    <div className="px-4 py-4 border-t border-white/5">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-8 h-8 bg-indigo-600/30 rounded-full flex items-center justify-center flex-shrink-0">
+          <span className="text-indigo-300 text-xs font-bold">
+            {user.name?.[0]?.toUpperCase() ?? "A"}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <p className="text-white text-xs font-semibold truncate">{user.name ?? "Admin"}</p>
+          <p className="text-gray-500 text-xs truncate">{user.email}</p>
+        </div>
+      </div>
+      <button
+        onClick={onSignOut}
+        className="flex items-center gap-2 text-gray-500 hover:text-red-400 text-xs transition-colors"
+      >
+        <LogOut className="h-3.5 w-3.5" /> Cerrar sesión
+      </button>
+    </div>
+  );
+}
+
+export default function AdminSidebar({ user }: { user: { name: string | null; email: string } }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const { signOut } = useAuth();
 
   return (
-    <aside className="w-64 bg-gray-900 border-r border-white/5 flex flex-col min-h-screen sticky top-0">
-      {/* Logo */}
-      <div className="px-6 py-5 border-b border-white/5 flex items-center gap-3">
-        <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
-          <ShoppingBag className="h-5 w-5 text-white" />
+    <>
+      {/* ── Desktop sidebar ── */}
+      <aside className="hidden md:flex w-64 bg-gray-900 border-r border-white/5 flex-col min-h-screen sticky top-0">
+        <div className="px-6 py-5 border-b border-white/5 flex items-center gap-3">
+          <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
+            <ShoppingBag className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <p className="text-white font-bold text-sm">TiendaApps</p>
+            <div className="flex items-center gap-1 mt-0.5">
+              <Shield className="h-3 w-3 text-indigo-400" />
+              <span className="text-indigo-400 text-xs font-semibold">Admin</span>
+            </div>
+          </div>
         </div>
-        <div>
-          <p className="text-white font-bold text-sm">TiendaApps</p>
-          <div className="flex items-center gap-1 mt-0.5">
+        <NavLinks pathname={pathname} />
+        <UserFooter user={user} onSignOut={() => signOut("/")} />
+      </aside>
+
+      {/* ── Mobile top header ── */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-gray-900 border-b border-white/5 flex items-center px-4 py-3 gap-3 h-14">
+        <button onClick={() => setMobileOpen(true)} className="text-gray-400 hover:text-white">
+          <Menu className="h-6 w-6" />
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <ShoppingBag className="h-4 w-4 text-white" />
+          </div>
+          <span className="text-white font-bold text-sm">TiendaApps</span>
+          <div className="flex items-center gap-1">
             <Shield className="h-3 w-3 text-indigo-400" />
             <span className="text-indigo-400 text-xs font-semibold">Admin</span>
           </div>
         </div>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV.map(({ href, label, icon: Icon, exact }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              isActive(href, exact)
-                ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/20"
-                : "text-gray-400 hover:text-white hover:bg-white/5"
-            }`}
-          >
-            <Icon className="h-4.5 w-4.5 h-5 w-5 flex-shrink-0" />
-            {label}
-          </Link>
-        ))}
-      </nav>
-
-      {/* User */}
-      <div className="px-4 py-4 border-t border-white/5">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-8 h-8 bg-indigo-600/30 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-indigo-300 text-xs font-bold">
-              {user.name?.[0]?.toUpperCase() ?? "A"}
-            </span>
-          </div>
-          <div className="min-w-0">
-            <p className="text-white text-xs font-semibold truncate">{user.name ?? "Admin"}</p>
-            <p className="text-gray-500 text-xs truncate">{user.email}</p>
-          </div>
+      {/* ── Mobile drawer ── */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+          <aside className="relative w-64 bg-gray-900 flex flex-col min-h-screen shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
+                  <ShoppingBag className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm">TiendaApps</p>
+                  <div className="flex items-center gap-1">
+                    <Shield className="h-3 w-3 text-indigo-400" />
+                    <span className="text-indigo-400 text-xs font-semibold">Admin</span>
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setMobileOpen(false)} className="text-gray-400 hover:text-white">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <NavLinks pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+            <UserFooter user={user} onSignOut={() => { setMobileOpen(false); signOut("/"); }} />
+          </aside>
         </div>
-        <button
-          onClick={() => signOut("/")}
-          className="flex items-center gap-2 text-gray-500 hover:text-red-400 text-xs transition-colors"
-        >
-          <LogOut className="h-3.5 w-3.5" /> Cerrar sesión
-        </button>
-      </div>
-    </aside>
+      )}
+    </>
   );
 }

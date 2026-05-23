@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Users, Store, ShoppingBag, MessageSquare, TrendingUp, CheckCircle, AlertCircle, Ban, Trash2 } from "lucide-react";
+import AutoRefresh from "@/components/AutoRefresh";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -65,10 +67,12 @@ export default async function AdminPage() {
     {
       label: "Usuarios totales", value: s.totalUsers, icon: Users, color: "indigo",
       sub: `${s.totalOwners} dueños · ${s.totalAffiliates} afiliados · ${s.totalBuyers} clientes`,
+      href: "/admin/usuarios",
     },
     {
       label: "Tiendas", value: s.totalStores, icon: Store, color: "purple",
       sub: `${s.activeStores} publicadas y activas`,
+      href: "/admin/tiendas",
     },
     {
       label: "Pedidos totales", value: s.totalOrders, icon: ShoppingBag, color: "emerald",
@@ -95,7 +99,8 @@ export default async function AdminPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-6 md:p-8">
+      <AutoRefresh intervalMs={30_000} />
       <div className="mb-8">
         <h1 className="text-3xl font-black text-white mb-1">Dashboard</h1>
         <p className="text-gray-400 text-sm">Resumen general de la plataforma</p>
@@ -103,14 +108,14 @@ export default async function AdminPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
         {cards.map(({ label, value, icon: Icon, color, sub, alert, href }) => {
-          const Wrapper = href ? "a" : "div";
+          const Wrapper = href ? Link : "div";
           return (
             <Wrapper
               key={label}
               {...(href ? { href } : {})}
-              className={`relative bg-gray-900/50 border rounded-2xl p-6 ${
+              className={`relative bg-gray-900/50 border rounded-2xl p-6 transition-all ${
                 alert ? "border-yellow-500/30" : "border-white/5"
-              } ${href ? "hover:border-white/15 transition-colors cursor-pointer" : ""}`}
+              } ${href ? "hover:border-indigo-500/40 hover:bg-gray-900/80 cursor-pointer group" : ""}`}
             >
               {alert && (
                 <span className="absolute top-4 right-4 bg-yellow-500 text-black text-xs font-black px-2 py-0.5 rounded-full">
@@ -123,34 +128,33 @@ export default async function AdminPage() {
               <p className="text-4xl font-black text-white mb-1">{value.toLocaleString("es-AR")}</p>
               <p className="text-white font-semibold text-sm mb-1">{label}</p>
               <p className="text-gray-500 text-xs">{sub}</p>
+              {href && <p className="text-indigo-400 text-xs mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Ver detalle →</p>}
             </Wrapper>
           );
         })}
       </div>
 
-      {/* Baneados / Eliminados */}
-      {(s.totalBanned > 0 || s.totalDeleted > 0) && (
-        <div className="mt-6 grid grid-cols-2 gap-4">
-          <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-              <Ban className="h-5 w-5 text-red-400" />
-            </div>
-            <div>
-              <p className="text-3xl font-black text-white">{s.totalBanned}</p>
-              <p className="text-xs text-red-400 font-medium mt-0.5">Usuarios baneados</p>
-            </div>
+      {/* Baneados / Eliminados — siempre visibles */}
+      <div className="mt-6 grid grid-cols-2 gap-4">
+        <Link href="/admin/usuarios" className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5 flex items-center gap-4 hover:border-red-500/40 hover:bg-red-500/10 transition-all group">
+          <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+            <Ban className="h-5 w-5 text-red-400" />
           </div>
-          <div className="bg-gray-500/5 border border-gray-500/20 rounded-2xl p-5 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-gray-500/10 border border-gray-500/20 flex items-center justify-center">
-              <Trash2 className="h-5 w-5 text-gray-400" />
-            </div>
-            <div>
-              <p className="text-3xl font-black text-white">{s.totalDeleted}</p>
-              <p className="text-xs text-gray-400 font-medium mt-0.5">Cuentas eliminadas</p>
-            </div>
+          <div>
+            <p className="text-3xl font-black text-white">{s.totalBanned}</p>
+            <p className="text-xs text-red-400 font-medium mt-0.5">Usuarios baneados</p>
           </div>
-        </div>
-      )}
+        </Link>
+        <Link href="/admin/usuarios" className="bg-gray-500/5 border border-gray-500/20 rounded-2xl p-5 flex items-center gap-4 hover:border-gray-400/40 hover:bg-gray-500/10 transition-all group">
+          <div className="w-10 h-10 rounded-xl bg-gray-500/10 border border-gray-500/20 flex items-center justify-center">
+            <Trash2 className="h-5 w-5 text-gray-400" />
+          </div>
+          <div>
+            <p className="text-3xl font-black text-white">{s.totalDeleted}</p>
+            <p className="text-xs text-gray-400 font-medium mt-0.5">Cuentas eliminadas</p>
+          </div>
+        </Link>
+      </div>
 
       <div className="mt-6 bg-gray-900/30 border border-white/5 rounded-2xl p-6">
         <div className="flex items-center justify-between mb-6">
