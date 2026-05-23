@@ -617,6 +617,7 @@ export default function StorefrontClient({
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount: number } | null>(null);
+  const [saveCustomerData, setSaveCustomerData] = useState(false);
 
   type NavLink = { id: string; label: string; type: "filter" | "url" | "section"; value: string };
   type NavConfig = { layout: "right" | "center"; showSearch: boolean; links: NavLink[]; mode?: "links" | "hamburger"; bgColor?: string; textColor?: string; searchStyle?: "icon" | "bar"; };
@@ -920,6 +921,38 @@ export default function StorefrontClient({
     }
   }, [subcategory, subcategories]);
 
+  // Cargar carrito guardado al montar
+  useEffect(() => {
+    const saved = localStorage.getItem(`tiendaapps_cart_${store.id}`);
+    if (!saved) return;
+    try {
+      const items: CartItem[] = JSON.parse(saved);
+      const valid = items.filter((item) => store.products.some((p) => p.id === item.productId));
+      if (valid.length > 0) setCart(valid);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persistir carrito cuando cambia
+  useEffect(() => {
+    const key = `tiendaapps_cart_${store.id}`;
+    if (cart.length > 0) {
+      localStorage.setItem(key, JSON.stringify(cart));
+    } else {
+      localStorage.removeItem(key);
+    }
+  }, [cart, store.id]);
+
+  // Pre-llenar datos del comprador desde la última compra
+  useEffect(() => {
+    const saved = localStorage.getItem("tiendaapps_customer");
+    if (!saved) return;
+    try {
+      setCustomer(JSON.parse(saved));
+      setSaveCustomerData(true);
+    } catch {}
+  }, []);
+
   function updateCustomer(field: keyof Customer, value: string) {
     setCustomer((prev) => ({ ...prev, [field]: value }));
   }
@@ -1053,6 +1086,12 @@ export default function StorefrontClient({
     setCart([]);
     setAppliedCoupon(null);
     setCouponInput("");
+    localStorage.removeItem(`tiendaapps_cart_${store.id}`);
+    if (saveCustomerData) {
+      localStorage.setItem("tiendaapps_customer", JSON.stringify({ ...customer, notes: "" }));
+    } else {
+      localStorage.removeItem("tiendaapps_customer");
+    }
   }
 
   function renderHero() {
@@ -2677,8 +2716,23 @@ export default function StorefrontClient({
 
             <form onSubmit={submitCheckout} className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
               {successOrderId && (
-                <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-                  Pedido creado. La tienda va a confirmarlo cuando reciba el pago.
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+                    <p className="font-bold mb-1">¡Pedido creado con éxito!</p>
+                    <p>La tienda va a confirmarlo cuando reciba el pago. Te llegará un email con los detalles.</p>
+                  </div>
+                  <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4 text-sm">
+                    <p className="font-semibold text-indigo-800 mb-1">¿Querés comprar más fácil la próxima vez?</p>
+                    <p className="text-indigo-500 text-xs mb-3">Creá tu cuenta gratis en TiendaApps y guardá tus favoritos, historial de pedidos y datos de envío.</p>
+                    <a
+                      href="https://tiendaapps.com/registro?plan=buyer"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 transition-colors"
+                    >
+                      Crear cuenta gratis →
+                    </a>
+                  </div>
                 </div>
               )}
               {checkoutError && <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{checkoutError}</div>}
@@ -2735,6 +2789,18 @@ export default function StorefrontClient({
                     </div>
                     <input value={customer.postalCode} onChange={(e) => updateCustomer("postalCode", e.target.value)} placeholder="Codigo postal" className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
                   </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={saveCustomerData}
+                      onChange={(e) => setSaveCustomerData(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 accent-indigo-500"
+                    />
+                    <span className="text-xs text-gray-400 group-hover:text-gray-600 transition-colors select-none">
+                      Recordar mis datos para la próxima compra
+                    </span>
+                  </label>
 
                   <div className="space-y-2">
                     <p className="text-sm font-bold text-gray-900">Envio</p>
