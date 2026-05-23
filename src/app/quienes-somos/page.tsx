@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ShoppingBag, Users, Wallet, TrendingUp, Heart, Briefcase,
@@ -14,6 +15,7 @@ const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.12 } } };
 
 export default function QuienesSomosPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
+  const pathname = usePathname();
   return (
     <div className="min-h-screen bg-[#030712] text-white overflow-x-hidden">
       <style>{`
@@ -72,10 +74,26 @@ export default function QuienesSomosPage() {
           </button>
         </div>
         <div className="flex flex-col gap-1 px-4 py-4 flex-1">
-          <Link href="/" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Inicio</Link>
-          <Link href="/tiendas" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Tiendas</Link>
-          <Link href="/quienes-somos" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Quiénes somos</Link>
-          <Link href="/precios" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Precios</Link>
+          {[
+            { href: "/", label: "Inicio" },
+            { href: "/#como-funciona", label: "Cómo funciona" },
+            { href: "/tiendas", label: "Tiendas" },
+            { href: "/quienes-somos", label: "Quiénes somos" },
+            { href: "/precios", label: "Precios" },
+          ].map(({ href, label }) => {
+            const active = href === "/quienes-somos" ? pathname === "/quienes-somos" : href === "/precios" ? pathname === "/precios" : href === "/tiendas" ? pathname === "/tiendas" : false;
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setMobileMenu(false)}
+                className={`flex items-center gap-2 py-3 px-3 rounded-xl transition-all text-sm font-medium ${active ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30" : "text-gray-300 hover:text-white hover:bg-white/5"}`}
+              >
+                {active && <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />}
+                {label}
+              </Link>
+            );
+          })}
           <div className="pt-3 border-t border-white/10 flex flex-col gap-2 mt-2">
             <Link href="/login" onClick={() => setMobileMenu(false)} className="block text-center border border-white/10 rounded-xl py-3 text-sm text-white hover:bg-white/5 transition-colors">Iniciar sesión</Link>
             <Link href="/registro" onClick={() => setMobileMenu(false)} className="block text-center bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 px-3 rounded-xl transition-colors">Crear cuenta</Link>

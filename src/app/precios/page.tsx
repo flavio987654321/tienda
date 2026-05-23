@@ -2,7 +2,7 @@
 
 import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Mail, X, BadgeCheck, Menu } from "lucide-react";
 import PaymentModal from "@/components/subscription/PaymentModal";
@@ -30,6 +30,7 @@ export default function PreciosPage() {
 
 function PreciosContent() {
   const [mobileMenu, setMobileMenu] = useState(false);
+  const pathname = usePathname();
   const [isAnnual, setIsAnnual] = useState(false);
   const [ownerTier, setOwnerTier] = useState<"BASIC" | "PREMIUM">("BASIC");
   const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL"; amount: number; prorated?: boolean } | null>(null);
@@ -132,10 +133,27 @@ function PreciosContent() {
           </button>
         </div>
         <div className="flex flex-col gap-1 px-4 py-4 flex-1">
-          <Link href="/" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Inicio</Link>
-          <Link href="/tiendas" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Tiendas</Link>
-          <Link href="/quienes-somos" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Quiénes somos</Link>
-          <Link href="/precios" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Precios</Link>
+          {[
+            { href: "/", label: "Inicio" },
+            { href: "/#como-funciona", label: "Cómo funciona" },
+            { href: "/tiendas", label: "Tiendas" },
+            { href: "/quienes-somos", label: "Quiénes somos" },
+            { href: "/precios", label: "Precios" },
+          ].map(({ href, label }) => {
+            const isActive = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href.replace("#", "").split("#")[0]) && href.includes("#") === false && href !== "/";
+            const active = href === "/precios" ? pathname === "/precios" : href === "/quienes-somos" ? pathname === "/quienes-somos" : href === "/tiendas" ? pathname === "/tiendas" : false;
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setMobileMenu(false)}
+                className={`flex items-center gap-2 py-3 px-3 rounded-xl transition-all text-sm font-medium ${active ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30" : "text-gray-300 hover:text-white hover:bg-white/5"}`}
+              >
+                {active && <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />}
+                {label}
+              </Link>
+            );
+          })}
           <div className="pt-3 border-t border-white/10 flex flex-col gap-2 mt-2">
             <Link href="/login" onClick={() => setMobileMenu(false)} className="block text-center border border-white/10 rounded-xl py-3 text-sm text-white hover:bg-white/5 transition-colors">Iniciar sesión</Link>
             <Link href="/registro" onClick={() => setMobileMenu(false)} className="block text-center bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 px-3 rounded-xl transition-colors">Crear cuenta</Link>
