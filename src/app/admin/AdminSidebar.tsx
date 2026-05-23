@@ -30,7 +30,7 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
           <ShoppingBag className="h-5 w-5 text-white" />
         </div>
         <div>
-          <p className="text-white font-bold text-sm">MiTienda</p>
+          <p className="text-white font-bold text-sm">TiendaApps</p>
           <div className="flex items-center gap-1 mt-0.5">
             <Shield className="h-3 w-3 text-indigo-400" />
             <span className="text-indigo-400 text-xs font-semibold">Admin</span>

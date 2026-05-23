@@ -34,7 +34,7 @@ export default function QuienesSomosPage() {
             <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
               <ShoppingBag className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-bold text-white">MiTienda</span>
+            <span className="text-lg font-bold text-white">TiendaApps</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/precios" className="text-gray-300 hover:text-white text-sm font-medium px-4 py-2 transition-colors">
@@ -68,7 +68,7 @@ export default function QuienesSomosPage() {
             </motion.h1>
 
             <motion.p variants={fadeUp} className="text-xl text-gray-400 leading-relaxed max-w-2xl mx-auto mb-10">
-              MiTienda existe para que el dueño de tienda pueda vender más, el afiliado pueda
+              TiendaApps existe para que el dueño de tienda pueda vender más, el afiliado pueda
               ganarse la vida desde su casa, y el comprador encuentre lo que busca en tiendas argentinas reales.
               Todos importan. Todos ganan.
             </motion.p>
@@ -89,7 +89,7 @@ export default function QuienesSomosPage() {
       <section className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
-            <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Para quiénes existe MiTienda</motion.p>
+            <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Para quiénes existe TiendaApps</motion.p>
             <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-5">
               Una plataforma, tres personas que ganan.
             </motion.h2>
@@ -353,7 +353,7 @@ export default function QuienesSomosPage() {
                 trabajar sin poder arrancar, y dueños de tienda con productos que no llegaban a ningún lado.
               </motion.p>
               <motion.p variants={fadeUp} className="text-gray-400 leading-relaxed mb-8">
-                MiTienda nació de esa frustración. Decidimos construir algo simple, honesto, y que le dé
+                TiendaApps nació de esa frustración. Decidimos construir algo simple, honesto, y que le dé
                 trabajo real a la gente. No solo a uno — a todos los que participan.
               </motion.p>
               <motion.div variants={stagger} className="grid grid-cols-3 gap-4">
@@ -520,7 +520,7 @@ export default function QuienesSomosPage() {
             </motion.h2>
             <motion.p variants={fadeUp} className="text-gray-400 text-xl max-w-3xl mx-auto leading-relaxed mb-14">
               No es solo un negocio. Sabemos cómo está el país. Sabemos que hay personas
-              con ganas de trabajar que no encuentran oportunidades. MiTienda es nuestra
+              con ganas de trabajar que no encuentran oportunidades. TiendaApps es nuestra
               respuesta a eso: una plataforma donde cualquiera puede ganarse la vida
               honestamente, desde su casa, con su celular, sin depender de nadie.
             </motion.p>
@@ -558,7 +558,7 @@ export default function QuienesSomosPage() {
             <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
               <ShoppingBag className="h-4 w-4 text-white" />
             </div>
-            <span className="text-lg font-bold text-white">MiTienda</span>
+            <span className="text-lg font-bold text-white">TiendaApps</span>
           </div>
           <div className="flex flex-wrap gap-6 text-sm">
             <Link href="/" className="text-gray-500 hover:text-white transition-colors">Inicio</Link>
@@ -568,7 +568,7 @@ export default function QuienesSomosPage() {
             <Link href="/terminos" className="text-gray-500 hover:text-white transition-colors">Términos</Link>
             <Link href="/privacidad" className="text-gray-500 hover:text-white transition-colors">Privacidad</Link>
           </div>
-          <p className="text-gray-600 text-sm">© 2026 MiTienda. Hecho en Argentina.</p>
+          <p className="text-gray-600 text-sm">© 2026 TiendaApps. Hecho en Argentina.</p>
         </div>
       </footer>
     </div>

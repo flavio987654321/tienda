@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { Users, Store, ShoppingBag, MessageSquare, TrendingUp, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Users, Store, ShoppingBag, MessageSquare, TrendingUp, CheckCircle, AlertCircle, Ban, Trash2 } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 async function getSystemStatus() {
   const checks = await Promise.allSettled([
@@ -19,17 +21,21 @@ async function getSystemStatus() {
 }
 
 async function getStats() {
+  const DELETED = { email: { endsWith: ".invalid" } };
+  const ACTIVE_USER = { role: { not: "ADMIN" }, banned: false, NOT: DELETED };
+
   const [
     totalUsers, totalOwners, totalAffiliates, totalBuyers,
     totalStores, activeStores,
     totalOrders, pendingOrders,
     totalTestimonials, pendingTestimonials,
     activeSubscriptions,
+    totalBanned, totalDeleted,
   ] = await Promise.all([
-    prisma.user.count({ where: { role: { not: "ADMIN" } } }),
-    prisma.user.count({ where: { role: "OWNER" } }),
-    prisma.user.count({ where: { role: "SELLER" } }),
-    prisma.user.count({ where: { role: "BUYER" } }),
+    prisma.user.count({ where: ACTIVE_USER }),
+    prisma.user.count({ where: { role: "OWNER",  banned: false, NOT: DELETED } }),
+    prisma.user.count({ where: { role: "SELLER", banned: false, NOT: DELETED } }),
+    prisma.user.count({ where: { role: "BUYER",  banned: false, NOT: DELETED } }),
     prisma.store.count(),
     prisma.store.count({ where: { isActive: true, isPublished: true } }),
     prisma.order.count(),
@@ -37,6 +43,8 @@ async function getStats() {
     prisma.testimonial.count(),
     prisma.testimonial.count({ where: { approved: false } }),
     prisma.subscription.count({ where: { status: { in: ["ACTIVE", "TRIAL"] } } }),
+    prisma.user.count({ where: { banned: true, NOT: DELETED } }),
+    prisma.user.count({ where: DELETED }),
   ]);
 
   return {
@@ -45,6 +53,7 @@ async function getStats() {
     totalOrders, pendingOrders,
     totalTestimonials, pendingTestimonials,
     activeSubscriptions,
+    totalBanned, totalDeleted,
   };
 }
 
@@ -118,7 +127,31 @@ export default async function AdminPage() {
         })}
       </div>
 
-      <div className="mt-10 bg-gray-900/30 border border-white/5 rounded-2xl p-6">
+      {/* Baneados / Eliminados */}
+      {(s.totalBanned > 0 || s.totalDeleted > 0) && (
+        <div className="mt-6 grid grid-cols-2 gap-4">
+          <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+              <Ban className="h-5 w-5 text-red-400" />
+            </div>
+            <div>
+              <p className="text-3xl font-black text-white">{s.totalBanned}</p>
+              <p className="text-xs text-red-400 font-medium mt-0.5">Usuarios baneados</p>
+            </div>
+          </div>
+          <div className="bg-gray-500/5 border border-gray-500/20 rounded-2xl p-5 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-gray-500/10 border border-gray-500/20 flex items-center justify-center">
+              <Trash2 className="h-5 w-5 text-gray-400" />
+            </div>
+            <div>
+              <p className="text-3xl font-black text-white">{s.totalDeleted}</p>
+              <p className="text-xs text-gray-400 font-medium mt-0.5">Cuentas eliminadas</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-6 bg-gray-900/30 border border-white/5 rounded-2xl p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             {sys.db && sys.auth && sys.mp ? (

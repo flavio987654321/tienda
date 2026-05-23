@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import UsuariosAdmin from "./UsuariosAdmin";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminUsuariosPage() {
   const users = await prisma.user.findMany({
     where: { role: { not: "ADMIN" } },

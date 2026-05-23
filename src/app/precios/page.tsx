@@ -98,7 +98,7 @@ function PreciosContent() {
             <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
               <ShoppingBag className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-bold text-white">MiTienda</span>
+            <span className="text-lg font-bold text-white">TiendaApps</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/login" className="text-gray-300 hover:text-white text-sm font-medium px-5 py-2.5 rounded-xl border border-white/10 hover:border-white/25 transition-all">

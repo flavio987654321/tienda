@@ -187,16 +187,16 @@ export default function AffiliateToggle({
               </ul>
 
               <p><strong className="text-gray-900">Responsabilidades de la plataforma</strong><br />
-                MiTienda provee la infraestructura de tracking y billetera. Actúa como intermediaria tecnológica y no garantiza un volumen mínimo de ventas. El pago de comisiones es responsabilidad exclusiva del titular.</p>
+                TiendaApps provee la infraestructura de tracking y billetera. Actúa como intermediaria tecnológica y no garantiza un volumen mínimo de ventas. El pago de comisiones es responsabilidad exclusiva del titular.</p>
 
               <p><strong className="text-gray-900">Cambios en la comisión</strong><br />
                 Podés cambiar el porcentaje de comisión en cualquier momento. El nuevo valor aplica a pedidos futuros. Los pedidos ya realizados conservan la tasa original.</p>
 
               <p><strong className="text-gray-900">Desactivación del programa</strong><br />
-                Si desactivás el programa, los links de afiliadas dejan de funcionar inmediatamente. Los saldos pendientes en billetera siguen siendo válidos y debés honrarlos. Si cancelás tu suscripción a MiTienda teniendo saldos pendientes, las comisiones ya acreditadas siguen siendo exigibles.</p>
+                Si desactivás el programa, los links de afiliadas dejan de funcionar inmediatamente. Los saldos pendientes en billetera siguen siendo válidos y debés honrarlos. Si cancelás tu suscripción a TiendaApps teniendo saldos pendientes, las comisiones ya acreditadas siguen siendo exigibles.</p>
 
               <p><strong className="text-gray-900">Acuerdos fuera de la plataforma</strong><br />
-                Queda prohibido acordar pagos o compensaciones con afiliadas por fuera de la plataforma para evitar el sistema de billetera. Toda comisión debe procesarse a través de MiTienda.</p>
+                Queda prohibido acordar pagos o compensaciones con afiliadas por fuera de la plataforma para evitar el sistema de billetera. Toda comisión debe procesarse a través de TiendaApps.</p>
 
               <Link href="/terminos?role=owner" target="_blank" className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-xs font-medium mt-1">
                 Ver términos completos para dueños <ExternalLink className="h-3 w-3" />

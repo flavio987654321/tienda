@@ -223,7 +223,7 @@ function TestimonioModal({ onClose }: { onClose: () => void }) {
           <>
             <div className="mb-6">
               <h3 className="text-2xl font-bold text-white">Contá tu historia</h3>
-              <p className="text-gray-400 mt-1 text-sm">¿Ya usás MiTienda? Contanos cómo te fue. La revisamos y la publicamos.</p>
+              <p className="text-gray-400 mt-1 text-sm">¿Ya usás TiendaApps? Contanos cómo te fue. La revisamos y la publicamos.</p>
             </div>
             <form onSubmit={submit} className="space-y-4">
               <div>
@@ -367,7 +367,7 @@ export default function Home() {
             <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
               <ShoppingBag className="h-4.5 w-4.5 text-white h-5 w-5" />
             </div>
-            <span className="text-lg font-bold text-white">MiTienda</span>
+            <span className="text-lg font-bold text-white">TiendaApps</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
@@ -511,7 +511,7 @@ export default function Home() {
                       </div>
                       <div>
                         <p className="text-white font-bold text-sm">Luna Moda</p>
-                        <p className="text-indigo-200 text-xs">mitienda.ar/lunamoda</p>
+                        <p className="text-indigo-200 text-xs">tiendaapps.com/lunamoda</p>
                       </div>
                       <div className="ml-auto bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium">Activa</div>
                     </div>
@@ -932,7 +932,7 @@ export default function Home() {
               className="inline-flex items-center gap-2 bg-white border border-indigo-200 hover:border-indigo-400 text-indigo-600 hover:text-indigo-700 px-7 py-3.5 rounded-2xl font-semibold text-sm transition-all hover:shadow-md hover:shadow-indigo-100"
             >
               <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-              ¿Ya usás MiTienda? Contá tu historia
+              ¿Ya usás TiendaApps? Contá tu historia
             </button>
           </motion.div>
         </div>
@@ -957,7 +957,7 @@ export default function Home() {
               Somos un equipo argentino y sabemos cómo está el país. Vimos que había dos problemas sin resolver: dueños de tienda sin equipo para vender, y personas con ganas de trabajar sin oportunidades reales.
             </motion.p>
             <motion.p variants={fadeUp} className="text-gray-500 leading-relaxed mb-8">
-              MiTienda une esos dos mundos. Un dueño puede tener 10, 20 o 50 personas vendiendo sus productos en redes sin pagar un sueldo fijo. Y cada uno de esos afiliados gana dinero real desde su casa, con su celular, sin haber puesto un peso.
+              TiendaApps une esos dos mundos. Un dueño puede tener 10, 20 o 50 personas vendiendo sus productos en redes sin pagar un sueldo fijo. Y cada uno de esos afiliados gana dinero real desde su casa, con su celular, sin haber puesto un peso.
             </motion.p>
             <motion.div variants={fadeUp} className="flex flex-wrap gap-4">
               <Link href="/quienes-somos" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-500/25 hover:scale-105">
@@ -1011,14 +1011,14 @@ export default function Home() {
                 <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
                   <ShoppingBag className="h-4 w-4 text-white" />
                 </div>
-                <span className="text-lg font-bold text-white">MiTienda</span>
+                <span className="text-lg font-bold text-white">TiendaApps</span>
               </div>
               <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
                 La plataforma de ecommerce con sistema de afiliados para crecer con equipo.
               </p>
               <div className="flex items-center gap-4 mt-5">
                 <button onClick={() => setContact(true)} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-400 transition-colors">
-                  <Mail className="h-4 w-4" /> hola@mitienda.ar
+                  <Mail className="h-4 w-4" /> hola@tiendaapps.com
                 </button>
               </div>
             </div>
@@ -1041,7 +1041,7 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-white/5 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-gray-600 text-sm">© 2026 MiTienda. Hecho con ❤️ en Argentina.</p>
+            <p className="text-gray-600 text-sm">© 2026 TiendaApps. Hecho con ❤️ en Argentina.</p>
             <p className="text-gray-700 text-xs">Plataforma ecommerce para tiendas y afiliados</p>
           </div>
         </div>

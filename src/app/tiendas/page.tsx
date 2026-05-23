@@ -74,7 +74,7 @@ export default function TiendasPage() {
       <div className="bg-white border-b border-gray-100 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <Link href="/" className="text-indigo-600 font-bold text-lg tracking-tight shrink-0">
-            ← MiTienda
+            ← TiendaApps
           </Link>
           <div className="flex-1 relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />

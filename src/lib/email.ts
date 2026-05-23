@@ -291,7 +291,7 @@ export async function sendNewAffiliateApplicationEmail({
   const dashboardUrl = `${appUrl}/dashboard/vendedoras`;
 
   await transporter.sendMail({
-    from: `"MiTienda" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
     to: ownerEmail,
     subject: `Nueva solicitud de afiliada en ${storeName}`,
     html: `
@@ -536,7 +536,7 @@ export async function sendAffiliateOrderNotificationEmail({
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
 
   await transporter.sendMail({
-    from: `"MiTienda" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
     to: ownerEmail,
     subject: `🛍️ Nueva venta por afiliada en ${storeName}`,
     html: `

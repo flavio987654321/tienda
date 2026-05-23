@@ -1074,7 +1074,7 @@ export default function VendedorasPage() {
             <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
               <ShoppingBag className="h-4 w-4 text-white" />
             </div>
-            <span className="text-lg font-bold text-gray-900 dark:text-white">MiTienda</span>
+            <span className="text-lg font-bold text-gray-900 dark:text-white">TiendaApps</span>
           </Link>
 
           {/* Desktop — se oculta en mobile */}

@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Términos y Condiciones del Programa de Afiliados — MiTienda",
-  description: "Condiciones de participación en el programa de afiliados de MiTienda.",
+  title: "Términos y Condiciones del Programa de Afiliados — TiendaApps",
+  description: "Condiciones de participación en el programa de afiliados de TiendaApps.",
 };
 
 export default function TerminosAfiliados() {
@@ -30,7 +30,7 @@ export default function TerminosAfiliados() {
               El presente acuerdo se celebra entre la persona que acepta estos términos
               (en adelante <strong className="text-white">"el/la Afiliado/a"</strong>) y el/la titular de la tienda
               a la cual el/la Afiliado/a se postula (en adelante <strong className="text-white">"el/la Titular"</strong>),
-              a través de la plataforma MiTienda (en adelante <strong className="text-white">"la Plataforma"</strong>).
+              a través de la plataforma TiendaApps (en adelante <strong className="text-white">"la Plataforma"</strong>).
             </p>
             <p className="mt-3">
               Al marcar la casilla de aceptación al momento de postularse, el/la Afiliado/a declara haber
@@ -116,7 +116,7 @@ export default function TerminosAfiliados() {
               <li>
                 No acordar ni recibir pagos, comisiones o compensaciones de parte del/la Titular
                 por fuera del sistema de billetera de la Plataforma. Toda comisión derivada de ventas
-                generadas a través del enlace de referido debe procesarse exclusivamente a través de MiTienda.
+                generadas a través del enlace de referido debe procesarse exclusivamente a través de TiendaApps.
               </li>
             </ul>
           </section>
@@ -158,11 +158,11 @@ export default function TerminosAfiliados() {
             </p>
             <p className="mt-3">
               La acreditación automática de comisiones en billetera constituye un servicio de la Plataforma,
-              pero el/la Titular es el/la único/a responsable del pago efectivo. MiTienda no garantiza
+              pero el/la Titular es el/la único/a responsable del pago efectivo. TiendaApps no garantiza
               la solvencia del/la Titular ni asume responsabilidad ante incumplimientos de pago de su parte.
             </p>
             <p className="mt-3">
-              MiTienda no será responsable por daños indirectos o imprevisibles derivados del uso de la
+              TiendaApps no será responsable por daños indirectos o imprevisibles derivados del uso de la
               Plataforma. En caso de daño directo comprobable imputable a la Plataforma, la responsabilidad
               se determinará según la legislación argentina vigente, sin perjuicio de los derechos
               irrenunciables que la Ley 24.240 reconoce a los/las usuarios/as consumidores/as.
@@ -172,7 +172,7 @@ export default function TerminosAfiliados() {
           <section>
             <h2 className="text-lg font-bold text-white mb-3">8. Cancelación de suscripción con saldos pendientes</h2>
             <p>
-              Si el/la Titular cancela su suscripción a MiTienda teniendo saldos pendientes de retiro
+              Si el/la Titular cancela su suscripción a TiendaApps teniendo saldos pendientes de retiro
               en billeteras de Afiliados/as, dichas comisiones ya acreditadas siguen siendo exigibles.
               La cancelación de la suscripción no extingue las obligaciones de pago ya devengadas.
             </p>
@@ -200,9 +200,9 @@ export default function TerminosAfiliados() {
               <em>"Disputa de afiliado"</em>, detallando el reclamo y adjuntando evidencia relevante.
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-400 mt-3">
-              <li>MiTienda revisará la disputa dentro de los <strong className="text-gray-300">5 días hábiles</strong> de recibida.</li>
+              <li>TiendaApps revisará la disputa dentro de los <strong className="text-gray-300">5 días hábiles</strong> de recibida.</li>
               <li>La Plataforma puede solicitar información adicional a ambas partes.</li>
-              <li>La resolución de MiTienda es orientativa y no vinculante en términos legales,
+              <li>La resolución de TiendaApps es orientativa y no vinculante en términos legales,
                 pero puede derivar en suspensión o baja de cuentas involucradas.</li>
               <li>Si no hay acuerdo, las partes pueden recurrir a la justicia ordinaria según la Sección 11.</li>
             </ul>
@@ -227,7 +227,7 @@ export default function TerminosAfiliados() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/5 text-xs text-gray-600 text-center">
-          <p>MiTienda — Programa de Afiliados · Versión 1.0</p>
+          <p>TiendaApps — Programa de Afiliados · Versión 1.0</p>
           <p className="mt-1">Para consultas escribí a soporte desde tu panel de afiliado/a.</p>
         </div>
       </div>

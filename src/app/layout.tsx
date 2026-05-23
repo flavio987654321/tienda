@@ -8,7 +8,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "MiTienda - La plataforma de ventas #1 de Argentina",
+  title: "TiendaApps - La plataforma de ventas #1 de Argentina",
   description: "Crea tu tienda online, vende productos y suma afiliados con comisiones automaticas.",
 };
 

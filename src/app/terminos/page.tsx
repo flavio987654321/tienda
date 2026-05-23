@@ -9,11 +9,11 @@ const CONTENT = {
     sections: [
       {
         title: "1. Aceptación de los términos",
-        body: "Al crear una cuenta como Dueño de tienda en MiTienda, aceptás estos Términos y Condiciones en su totalidad. Si no estás de acuerdo con alguna parte, no podés usar el servicio.",
+        body: "Al crear una cuenta como Dueño de tienda en TiendaApps, aceptás estos Términos y Condiciones en su totalidad. Si no estás de acuerdo con alguna parte, no podés usar el servicio.",
       },
       {
         title: "2. Descripción del servicio para dueños",
-        body: "Como Dueño de tienda, podés crear y gestionar tu propia tienda online dentro de la plataforma MiTienda. Esto incluye cargar productos, definir precios, configurar métodos de pago y gestionar una red de vendedores afiliados que comercialicen tus productos a cambio de comisiones.",
+        body: "Como Dueño de tienda, podés crear y gestionar tu propia tienda online dentro de la plataforma TiendaApps. Esto incluye cargar productos, definir precios, configurar métodos de pago y gestionar una red de vendedores afiliados que comercialicen tus productos a cambio de comisiones.",
       },
       {
         title: "3. Planes disponibles",
@@ -51,7 +51,7 @@ const CONTENT = {
       },
       {
         title: "6. Gestión de afiliados",
-        body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. Al aceptar un afiliado y activar el programa, aceptás los Términos del Programa de Afiliados y te comprometés a pagarle la comisión configurada por cada venta válida generada a través de su link. Las comisiones se acreditan al confirmar el pago del pedido. MiTienda actúa como intermediaria tecnológica en la gestión de comisiones.",
+        body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. Al aceptar un afiliado y activar el programa, aceptás los Términos del Programa de Afiliados y te comprometés a pagarle la comisión configurada por cada venta válida generada a través de su link. Las comisiones se acreditan al confirmar el pago del pedido. TiendaApps actúa como intermediaria tecnológica en la gestión de comisiones.",
       },
       {
         title: "7. Cancelación y acceso",
@@ -59,7 +59,7 @@ const CONTENT = {
       },
       {
         title: "8. Propiedad intelectual",
-        body: "Las imágenes, descripciones y contenidos que cargás en tu tienda siguen siendo de tu propiedad. Al subirlos, otorgás a MiTienda una licencia no exclusiva para mostrarlos a compradores dentro de la plataforma.",
+        body: "Las imágenes, descripciones y contenidos que cargás en tu tienda siguen siendo de tu propiedad. Al subirlos, otorgás a TiendaApps una licencia no exclusiva para mostrarlos a compradores dentro de la plataforma.",
       },
       {
         title: "9. Modificaciones",
@@ -78,11 +78,11 @@ const CONTENT = {
     sections: [
       {
         title: "1. Aceptación de los términos",
-        body: "Al crear una cuenta como Vendedor/Afiliado en MiTienda, aceptás estos Términos y Condiciones en su totalidad. Si no estás de acuerdo con alguna parte, no podés usar el servicio.",
+        body: "Al crear una cuenta como Vendedor/Afiliado en TiendaApps, aceptás estos Términos y Condiciones en su totalidad. Si no estás de acuerdo con alguna parte, no podés usar el servicio.",
       },
       {
         title: "2. Descripción del servicio para afiliados",
-        body: "Como Afiliado, podés postularte a tiendas activas dentro de MiTienda y, una vez aceptado, compartir tu link personal de afiliado para generar ventas. Por cada venta concretada a través de tu link, recibís una comisión definida por el dueño de la tienda.",
+        body: "Como Afiliado, podés postularte a tiendas activas dentro de TiendaApps y, una vez aceptado, compartir tu link personal de afiliado para generar ventas. Por cada venta concretada a través de tu link, recibís una comisión definida por el dueño de la tienda.",
       },
       {
         title: "3. Suscripción y pagos",
@@ -110,11 +110,11 @@ const CONTENT = {
       },
       {
         title: "5. Comisiones",
-        body: "Las comisiones son definidas por cada dueño de tienda y pueden variar. MiTienda no garantiza un monto mínimo de comisión ni un volumen de ventas. Las comisiones se calculan sobre el subtotal del pedido sin envío y se acreditan automáticamente en tu billetera cuando el dueño de la tienda confirma el pago del pedido (estado Confirmado). Pedidos en estado Pendiente no generan comisión.",
+        body: "Las comisiones son definidas por cada dueño de tienda y pueden variar. TiendaApps no garantiza un monto mínimo de comisión ni un volumen de ventas. Las comisiones se calculan sobre el subtotal del pedido sin envío y se acreditan automáticamente en tu billetera cuando el dueño de la tienda confirma el pago del pedido (estado Confirmado). Pedidos en estado Pendiente no generan comisión.",
       },
       {
         title: "6. Premios y beneficios",
-        body: "MiTienda puede ofrecer premios o cupones adicionales por volumen de ventas a afiliados destacados. Estos beneficios son opcionales y pueden modificarse sin previo aviso.",
+        body: "TiendaApps puede ofrecer premios o cupones adicionales por volumen de ventas a afiliados destacados. Estos beneficios son opcionales y pueden modificarse sin previo aviso.",
       },
       {
         title: "7. Cancelación",
@@ -137,11 +137,11 @@ const CONTENT = {
     sections: [
       {
         title: "1. Aceptación de los términos",
-        body: "Al crear una cuenta como Cliente en MiTienda, aceptás estos Términos y Condiciones en su totalidad. Si no estás de acuerdo, no podés usar el servicio.",
+        body: "Al crear una cuenta como Cliente en TiendaApps, aceptás estos Términos y Condiciones en su totalidad. Si no estás de acuerdo, no podés usar el servicio.",
       },
       {
         title: "2. Descripción del servicio para clientes",
-        body: "Como Cliente, podés explorar tiendas dentro de MiTienda, agregar productos al carrito, realizar compras y hacer seguimiento de tus pedidos. La cuenta es completamente gratuita sin suscripción requerida.",
+        body: "Como Cliente, podés explorar tiendas dentro de TiendaApps, agregar productos al carrito, realizar compras y hacer seguimiento de tus pedidos. La cuenta es completamente gratuita sin suscripción requerida.",
       },
       {
         title: "3. Cuenta gratuita",
@@ -152,9 +152,9 @@ const CONTENT = {
         body: null,
         list: [
           "Los precios y condiciones de venta los define cada tienda de forma independiente.",
-          "MiTienda actúa como plataforma tecnológica y no es parte en la relación de compraventa.",
+          "TiendaApps actúa como plataforma tecnológica y no es parte en la relación de compraventa.",
           "Las disputas sobre productos, envíos o devoluciones deben resolverse directamente con el dueño de la tienda.",
-          "MiTienda puede mediar en casos de conflicto pero no garantiza resultados.",
+          "TiendaApps puede mediar en casos de conflicto pero no garantiza resultados.",
         ],
       },
       {
@@ -179,7 +179,7 @@ const CONTENT = {
           "Derecho de arrepentimiento (art. 34): si compraste a distancia (por internet), podés cancelar la compra sin dar explicaciones dentro de los 10 días corridos desde que recibiste el producto o desde que contrataste el servicio. El vendedor debe reintegrarte el dinero sin descuentos.",
           "Garantía legal (art. 11): los productos tienen garantía mínima de 3 meses para productos usados y 6 meses para productos nuevos. Si el producto tiene un defecto, podés pedir reparación, cambio o devolución del dinero.",
           "Derecho a trato digno (art. 8 bis): tenés derecho a ser tratado con respeto y dignidad. No podés ser discriminado ni intimidado.",
-          "Derecho a hacer reclamos: podés reclamar ante la tienda, ante MiTienda (marketplacemitienda@gmail.com) o ante Defensa del Consumidor de tu provincia sin costo alguno.",
+          "Derecho a hacer reclamos: podés reclamar ante la tienda, ante TiendaApps (marketplacemitienda@gmail.com) o ante Defensa del Consumidor de tu provincia sin costo alguno.",
           "Para más información sobre tus derechos visitá: argentina.gob.ar/produccion/defensadelconsumidor",
         ],
       },
@@ -216,7 +216,7 @@ export default async function TerminosPage({
             <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
               <ShoppingBag className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-bold text-white">MiTienda</span>
+            <span className="text-lg font-bold text-white">TiendaApps</span>
           </Link>
         </div>
       </nav>

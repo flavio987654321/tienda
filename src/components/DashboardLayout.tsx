@@ -97,7 +97,7 @@ export default function DashboardLayout({
         <Link href="/" className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 shrink-0 hover:bg-gray-50 transition-colors">
           <ShoppingBag className="h-6 w-6 text-indigo-600 shrink-0" />
           <span className="font-bold text-gray-900 whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
-            MiTienda
+            TiendaApps
           </span>
         </Link>
 

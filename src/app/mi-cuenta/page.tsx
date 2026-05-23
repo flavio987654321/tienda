@@ -277,7 +277,7 @@ export default function MiCuentaPage() {
         <div className="mx-auto max-w-4xl px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-gray-950">
             <ShoppingBag className="h-5 w-5 text-indigo-600" />
-            MiTienda
+            TiendaApps
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/tiendas" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors">

@@ -49,7 +49,7 @@ const CONTENT = {
         title: "5. Seguridad de tus pagos",
         body: null,
         list: [
-          "MiTienda NO almacena datos de tarjetas de crédito o débito. Todo el procesamiento de pagos lo realiza Mercado Pago, certificado PCI-DSS nivel 1 (el estándar de seguridad más alto para pagos).",
+          "TiendaApps NO almacena datos de tarjetas de crédito o débito. Todo el procesamiento de pagos lo realiza Mercado Pago, certificado PCI-DSS nivel 1 (el estándar de seguridad más alto para pagos).",
           "Las comunicaciones entre tu navegador y nuestros servidores usan HTTPS con TLS 1.2 o superior.",
           "Los datos de acceso bancario de las afiliadas (CBU, CUIL) se almacenan cifrados con AES-256-GCM.",
           "Las contraseñas se almacenan con hash bcrypt. Nunca las vemos ni podemos recuperarlas.",
@@ -167,7 +167,7 @@ const CONTENT = {
         list: [
           "Datos de cuenta: nombre, email y contraseña (almacenada con hash bcrypt).",
           "Datos de pedidos: dirección de envío, productos comprados e historial de compras.",
-          "Datos de pago: procesados directamente por cada tienda. MiTienda no almacena datos de tarjetas.",
+          "Datos de pago: procesados directamente por cada tienda. TiendaApps no almacena datos de tarjetas.",
           "Datos de uso: tiendas visitadas, productos vistos y productos guardados como favoritos.",
         ],
       },
@@ -248,7 +248,7 @@ export default async function PrivacidadPage({
             <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
               <ShoppingBag className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-bold text-white">MiTienda</span>
+            <span className="text-lg font-bold text-white">TiendaApps</span>
           </Link>
         </div>
       </nav>

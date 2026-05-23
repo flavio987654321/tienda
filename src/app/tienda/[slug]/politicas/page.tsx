@@ -133,12 +133,12 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
       <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
         <p style={{ fontSize: "13px", fontWeight: 700, color: "#374151", marginBottom: "8px" }}>📬 Contacto con la tienda</p>
         <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>
-          Esta tienda opera a través de <strong>MiTienda</strong>.
+          Esta tienda opera a través de <strong>TiendaApps</strong>.
           Para consultas sobre tu pedido, devoluciones o garantías, contactá directamente a <strong>{store.name}</strong>
           {store.owner?.email ? <> al email: <a href={`mailto:${store.owner.email}`} style={{ color: store.primaryColor }}>{store.owner.email}</a></> : " desde el formulario de contacto de la tienda"}.
         </p>
         <p style={{ fontSize: "12px", color: "#9ca3af", marginTop: "8px", marginBottom: 0 }}>
-          Plataforma: MiTienda · soporte: marketplacemitienda@gmail.com
+          Plataforma: TiendaApps · soporte: marketplacemitienda@gmail.com
         </p>
       </div>
 

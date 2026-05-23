@@ -101,7 +101,7 @@ function LoginForm() {
           <div className="w-9 h-9 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/10">
             <ShoppingBag className="h-5 w-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-white">MiTienda</span>
+          <span className="text-xl font-bold text-white">TiendaApps</span>
         </Link>
 
         <div className="relative space-y-6">
@@ -150,7 +150,7 @@ function LoginForm() {
           </div>
         </div>
 
-        <p className="relative text-indigo-400/40 text-xs">© 2026 MiTienda · Argentina</p>
+        <p className="relative text-indigo-400/40 text-xs">© 2026 TiendaApps · Argentina</p>
       </div>
 
       {/* ── RIGHT PANEL ── */}
@@ -167,7 +167,7 @@ function LoginForm() {
             <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
               <ShoppingBag className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-white">MiTienda</span>
+            <span className="text-xl font-bold text-white">TiendaApps</span>
           </Link>
 
           {registered && (
