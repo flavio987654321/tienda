@@ -89,15 +89,8 @@ export default function AdminStatsRealtime({ initial }: { initial: Stats }) {
     <div className={`transition-all duration-500 ${pulse ? "opacity-70" : "opacity-100"}`}>
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
         {cards.map(({ label, value, icon: Icon, color, sub, alert, href }) => {
-          const Wrapper = href ? Link : "div";
-          return (
-            <Wrapper
-              key={label}
-              {...(href ? { href } : {})}
-              className={`relative bg-gray-900/50 border rounded-2xl p-6 transition-all ${
-                alert ? "border-yellow-500/30" : "border-white/5"
-              } ${href ? "hover:border-indigo-500/40 hover:bg-gray-900/80 cursor-pointer group" : ""}`}
-            >
+          const inner = (
+            <>
               {alert && (
                 <span className="absolute top-4 right-4 bg-yellow-500 text-black text-xs font-black px-2 py-0.5 rounded-full">
                   {value}
@@ -110,7 +103,13 @@ export default function AdminStatsRealtime({ initial }: { initial: Stats }) {
               <p className="text-white font-semibold text-sm mb-1">{label}</p>
               <p className="text-gray-500 text-xs">{sub}</p>
               {href && <p className="text-indigo-400 text-xs mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Ver detalle →</p>}
-            </Wrapper>
+            </>
+          );
+          const cls = `relative bg-gray-900/50 border rounded-2xl p-6 transition-all ${alert ? "border-yellow-500/30" : "border-white/5"} ${href ? "hover:border-indigo-500/40 hover:bg-gray-900/80 cursor-pointer group" : ""}`;
+          return href ? (
+            <Link key={label} href={href} className={cls}>{inner}</Link>
+          ) : (
+            <div key={label} className={cls}>{inner}</div>
           );
         })}
       </div>
