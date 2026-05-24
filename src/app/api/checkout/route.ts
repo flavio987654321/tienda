@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
         where: { id: storeId },
         select: {
           id: true,
+          name: true,
           ownerId: true,
           affiliatesEnabled: true,
           commissionRate: true,
@@ -197,7 +198,7 @@ export async function POST(req: NextRequest) {
         validAffiliateId = null;
       }
 
-      return tx.order.create({
+      const createdOrder = await tx.order.create({
         data: {
           status: "PENDING",
           total,
@@ -245,21 +246,23 @@ export async function POST(req: NextRequest) {
           affiliate: { include: { user: { select: { name: true, email: true } } } },
         },
       });
-    });
 
-    // Marcar cupón de premio como USADO
-    if (usedRewardCouponId) {
-      const storeForCoupon = await prisma.store.findUnique({ where: { id: order.storeId }, select: { name: true } });
-      await prisma.affiliateRewardCoupon.update({
-        where: { id: usedRewardCouponId },
-        data: {
-          status: "USED",
-          usedAt: new Date(),
-          usedOrderId: order.id,
-          usedStoreName: storeForCoupon?.name ?? null,
-        },
-      });
-    }
+      // Marcar cupón de premio como USADO dentro de la transacción
+      // para que si algo falla, el cupón no quede consumido sin venta real
+      if (usedRewardCouponId) {
+        await tx.affiliateRewardCoupon.update({
+          where: { id: usedRewardCouponId },
+          data: {
+            status: "USED",
+            usedAt: new Date(),
+            usedOrderId: createdOrder.id,
+            usedStoreName: store.name,
+          },
+        });
+      }
+
+      return createdOrder;
+    });
 
     // Notificar al dueño de la tienda en tiempo real
     const storeOwner = await prisma.store.findUnique({

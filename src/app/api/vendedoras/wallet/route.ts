@@ -229,21 +229,13 @@ export async function POST(req: NextRequest) {
         });
         if (pendingCount > 0) throw new Error("PENDING_EXISTS");
 
-        const rawCbu = decryptIfNeeded(walletFull.cbu);
-        const rawCuil = decryptIfNeeded(walletFull.cuil);
-        const rawHolder = decryptIfNeeded(walletFull.bankHolder);
-
         const newWithdrawal = await tx.walletWithdrawal.create({
           data: {
             walletId,
             amount,
             status: "PENDING",
-            notes: [
-              rawHolder ? `Titular: ${rawHolder}` : null,
-              rawCuil ? `CUIL: ${rawCuil}` : null,
-              rawCbu ? `CBU: ${rawCbu}` : null,
-              walletFull.alias ? `Alias: ${walletFull.alias}` : null,
-            ].filter(Boolean).join(" | "),
+            // No guardar datos bancarios en texto plano — el email al dueño ya los envía
+            notes: walletFull.alias ? `Alias: ${walletFull.alias}` : null,
           },
         });
 
@@ -264,6 +256,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Ya tenés un retiro pendiente. Esperá que sea procesado antes de solicitar otro" },
         { status: 400 }
+      );
+    }
+    // P2034 = serialization failure de Postgres (dos requests simultáneas a la misma wallet)
+    if (e.code === "P2034") {
+      return NextResponse.json(
+        { error: "Solicitud en conflicto. Intentá de nuevo en unos segundos." },
+        { status: 409 }
       );
     }
     throw e;
