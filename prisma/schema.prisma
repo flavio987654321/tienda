@@ -64,6 +64,20 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model AffiliateGoal {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  targetAmount Float
+  bonusRate    Float
+  month        String   // "2026-05"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([storeId, month])
+  @@index([storeId])
+}
+
 model Store {
   id             String   @id @default(cuid())
   slug           String   @unique
@@ -142,6 +156,7 @@ model Store {
   orders     Order[]
   affiliates Affiliate[]
   coupons    Coupon[]
+  affiliateGoals AffiliateGoal[]
 }
 
 model Product {
@@ -290,8 +305,24 @@ model Affiliate {
   orders      Order[]
   commissions Commission[]
   wallet      Wallet?
+  clicks      AffiliateClick[]
 
   @@unique([storeId, userId])
+}
+
+model AffiliateClick {
+  id          String   @id @default(cuid())
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  storeId     String
+  ip          String?
+  convertedToOrder Boolean @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([affiliateId])
+  @@index([storeId])
+  @@index([createdAt])
+  @@index([affiliateId, ip])
 }
 
 model Commission {

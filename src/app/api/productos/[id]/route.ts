@@ -107,8 +107,9 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
   const oldTotalStock = existing.variants.reduce((s, v) => s + v.stock, 0);
   const newTotalStock = product.variants.reduce((s, v) => s + v.stock, 0);
   const wentOutOfStock = oldTotalStock > 0 && newTotalStock === 0;
+  const wentBackInStock = oldTotalStock === 0 && newTotalStock > 0;
 
-  if (priceChanged || wentOutOfStock) {
+  if (priceChanged || wentOutOfStock || wentBackInStock) {
     const activeAffiliates = await prisma.affiliate.findMany({
       where: { storeId: auth.storeId, isActive: true },
       select: { userId: true },
@@ -131,6 +132,15 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
           type: "OUT_OF_STOCK",
           title: `Sin stock: ${product.name}`,
           body: "Este producto ya no tiene stock disponible.",
+          link: "/vendedoras",
+        });
+      }
+      if (wentBackInStock) {
+        result.push({
+          userId,
+          type: "RESTOCK",
+          title: `¡Volvió el stock! ${product.name}`,
+          body: `Ya hay ${newTotalStock} unidades disponibles. ¡Momento ideal para compartirlo!`,
           link: "/vendedoras",
         });
       }

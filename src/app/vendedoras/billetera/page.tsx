@@ -578,7 +578,13 @@ export default function BilleteraPage() {
               {/* Últimas comisiones */}
               {affiliate.commissions.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Últimas comisiones</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Últimas comisiones</p>
+                    <Link href="/vendedoras/pedidos"
+                      className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
+                      Ver todos <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
                   <div className="space-y-2">
                     {affiliate.commissions.slice(0, 5).map((c) => (
                       <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/5 last:border-0">

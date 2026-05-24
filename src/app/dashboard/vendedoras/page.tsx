@@ -23,6 +23,7 @@ import {
 import { getCurrentUser } from "@/lib/auth-session";
 import AffiliateToggle from "./AffiliateToggle";
 import WithdrawalActions from "@/components/affiliates/WithdrawalActions";
+import MetasWidget from "./MetasWidget";
 
 function statusClass(status: string) {
   if (status === "APPROVED") return "bg-green-100 text-green-700";
@@ -123,6 +124,8 @@ export default async function VendedorasPage() {
         activeAffiliatesCount={active.length}
         pendingBalance={affiliates.reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0)}
       />
+
+      {store?.affiliatesEnabled && <MetasWidget />}
 
       <div className={`transition-opacity ${store?.affiliatesEnabled ? "opacity-100" : "opacity-30 pointer-events-none select-none"}`}>
 

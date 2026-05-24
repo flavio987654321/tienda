@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { validateProductBody, MAX_PRODUCT_REELS } from "@/lib/products";
+import { createNotificationMany } from "@/lib/notifications";
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -73,6 +74,25 @@ export async function POST(req: NextRequest) {
     } as any,
     include: { variants: true },
   });
+
+  // Notificar a afiliadas activas sobre el nuevo producto (fire-and-forget)
+  if (store.affiliatesEnabled) {
+    prisma.affiliate.findMany({
+      where: { storeId: store.id, isActive: true },
+      select: { userId: true },
+    }).then((affiliates) => {
+      if (affiliates.length === 0) return;
+      createNotificationMany(
+        affiliates.map(({ userId }) => ({
+          userId,
+          type: "NEW_PRODUCT",
+          title: `Nuevo producto en ${store.name}`,
+          body: `${product.name} — $${parsedPrice.toLocaleString("es-AR")}. ¡Compartilo con tu link!`,
+          link: "/vendedoras",
+        }))
+      );
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ product });
 }

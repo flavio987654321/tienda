@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-session";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -95,6 +96,28 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
       select: { id: true },
     });
     affiliateId = affiliate?.id;
+    if (affiliateId) {
+      const trackedAffiliateId = affiliateId;
+      const hdrs = await headers();
+      const ip = (
+        hdrs.get("x-forwarded-for")?.split(",")[0] ??
+        hdrs.get("x-real-ip") ??
+        "unknown"
+      ).trim().slice(0, 45);
+
+      // Deduplicar: máximo 1 click por IP por afiliada por hora
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      prisma.affiliateClick.findFirst({
+        where: { affiliateId: trackedAffiliateId, ip, createdAt: { gte: oneHourAgo } },
+        select: { id: true },
+      }).then((existing) => {
+        if (!existing) {
+          prisma.affiliateClick.create({
+            data: { affiliateId: trackedAffiliateId, storeId: store.id, ip },
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
   }
 
   const currentUser = await getCurrentUser();

@@ -1,0 +1,169 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Target, Loader2, Check, X, Trash2, ChevronDown } from "lucide-react";
+
+interface GoalData {
+  id: string;
+  targetAmount: number;
+  bonusRate: number;
+  month: string;
+}
+
+function currentMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthLabel(m: string) {
+  const [year, month] = m.split("-");
+  return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+}
+
+export default function MetasWidget() {
+  const [goal, setGoal] = useState<GoalData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [targetAmount, setTargetAmount] = useState("");
+  const [bonusRate, setBonusRate] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const month = currentMonth();
+
+  function loadGoal() {
+    fetch(`/api/vendedoras/metas?owner=1&month=${month}`)
+      .then((r) => r.json())
+      .then((d) => { setGoal(d.goal ?? null); setLoading(false); });
+  }
+
+  useEffect(() => { loadGoal(); }, []);
+
+  async function handleSave() {
+    setError("");
+    setSaving(true);
+    const res = await fetch("/api/vendedoras/metas", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ month, targetAmount, bonusRate }),
+    });
+    const data = await res.json();
+    setSaving(false);
+    if (!res.ok) { setError(data.error ?? "Error al guardar"); return; }
+    setGoal(data.goal);
+    setEditing(false);
+  }
+
+  async function handleDelete() {
+    if (!confirm("¿Eliminar la meta de este mes?")) return;
+    await fetch(`/api/vendedoras/metas?month=${month}`, { method: "DELETE" });
+    setGoal(null);
+  }
+
+  function startEdit() {
+    setTargetAmount(goal ? String(goal.targetAmount) : "");
+    setBonusRate(goal ? String(goal.bonusRate) : "");
+    setError("");
+    setEditing(true);
+  }
+
+  if (loading) return null;
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Target className="h-4 w-4 text-indigo-500" />
+          <h3 className="font-semibold text-gray-900">Meta de ventas — {monthLabel(month)}</h3>
+        </div>
+        <div className="flex gap-2">
+          {goal && !editing && (
+            <button onClick={handleDelete} className="text-xs text-red-400 hover:text-red-600 transition-colors">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+          <button onClick={editing ? () => setEditing(false) : startEdit}
+            className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors">
+            {editing ? "Cancelar" : (goal ? "Editar" : "Crear meta")}
+          </button>
+        </div>
+      </div>
+
+      {!editing && !goal && (
+        <div className="text-center py-4">
+          <p className="text-sm text-gray-400">No hay meta para este mes.</p>
+          <p className="text-xs text-gray-300 mt-1">
+            Fijá un objetivo de ventas con bonus de comisión extra para motivar a tus afiliadas.
+          </p>
+        </div>
+      )}
+
+      {!editing && goal && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 bg-indigo-50 rounded-xl">
+            <div>
+              <p className="text-xs text-indigo-600 font-medium">Objetivo del mes</p>
+              <p className="text-xl font-bold text-indigo-700">${goal.targetAmount.toLocaleString("es-AR")}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-indigo-600 font-medium">Bonus por cumplir</p>
+              <p className="text-xl font-bold text-indigo-700">+{goal.bonusRate}%</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 text-center">
+            Las afiliadas que superen este monto en comisiones reciben un {goal.bonusRate}% extra.
+          </p>
+        </div>
+      )}
+
+      {editing && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Objetivo de ventas ($)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                <input
+                  type="number"
+                  value={targetAmount}
+                  onChange={(e) => setTargetAmount(e.target.value)}
+                  placeholder="50000"
+                  className="w-full border border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Bonus si cumplen (%)</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={bonusRate}
+                  onChange={(e) => setBonusRate(e.target.value)}
+                  placeholder="2"
+                  step="0.5"
+                  min="0.5"
+                  max="20"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-8"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+              </div>
+            </div>
+          </div>
+
+          {error && <p className="text-xs text-red-500">{error}</p>}
+
+          <div className="flex gap-2">
+            <button onClick={handleSave} disabled={saving}
+              className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              {saving ? "Guardando..." : "Guardar meta"}
+            </button>
+            <button onClick={() => setEditing(false)}
+              className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
