@@ -180,6 +180,7 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
         currency: store.currency,
         tipoTienda: (store as any).tipoTienda ?? null,
         navLinks: (store as any).navLinks ?? "[]",
+        mpConnected: !!store.mpConnectedAt,
         owner: store.owner,
         products: store.products.map((product) => ({
           id: product.id,

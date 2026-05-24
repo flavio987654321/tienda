@@ -203,6 +203,7 @@ type Store = {
   navLinks: string;
   owner: { name: string | null; email: string };
   products: Product[];
+  mpConnected: boolean;
 };
 
 type CartItem = {
@@ -596,6 +597,9 @@ export default function StorefrontClient({
   const [category, setCategory] = useState("all");
   const [subcategory, setSubcategory] = useState("all");
   const [shippingMethod, setShippingMethod] = useState(SHIPPING_OPTIONS[0].id);
+  const paymentOptions = store.mpConnected
+    ? [...PAYMENT_OPTIONS, { id: "mercadopago", label: "Pagar con MercadoPago (tarjeta / débito / MP)" }]
+    : PAYMENT_OPTIONS;
   const [paymentProvider, setPaymentProvider] = useState(PAYMENT_OPTIONS[0].id);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set(initialFavoriteIds));
   const [togglingFav, setTogglingFav] = useState<string | null>(null);
@@ -1075,13 +1079,31 @@ export default function StorefrontClient({
     });
 
     const data = await res.json();
-    setSubmitting(false);
 
     if (!res.ok) {
+      setSubmitting(false);
       setCheckoutError(data.error || "No se pudo crear el pedido");
       return;
     }
 
+    // Si eligió MercadoPago, crear preferencia y redirigir
+    if (paymentProvider === "mercadopago") {
+      const mpRes = await fetch("/api/mp/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: data.order.id }),
+      });
+      const mpData = await mpRes.json();
+      setSubmitting(false);
+      if (!mpRes.ok) {
+        setCheckoutError(mpData.error || "No se pudo iniciar el pago con MercadoPago");
+        return;
+      }
+      window.location.href = mpData.initPoint;
+      return;
+    }
+
+    setSubmitting(false);
     setSuccessOrderId(data.order.id);
     setCart([]);
     setAppliedCoupon(null);
@@ -2814,9 +2836,25 @@ export default function StorefrontClient({
 
                   <div className="space-y-2">
                     <p className="text-sm font-bold text-gray-900">Pago</p>
-                    {PAYMENT_OPTIONS.map((option) => (
-                      <label key={option.id} className="block cursor-pointer rounded-xl border border-gray-200 px-3 py-2 text-sm">
+                    {paymentOptions.map((option) => (
+                      <label
+                        key={option.id}
+                        className={`block cursor-pointer rounded-xl border px-3 py-2 text-sm ${
+                          option.id === "mercadopago"
+                            ? "border-[#009EE3] bg-[#f0faff]"
+                            : "border-gray-200"
+                        }`}
+                      >
                         <input type="radio" name="payment" checked={paymentProvider === option.id} onChange={() => setPaymentProvider(option.id)} className="mr-2" />
+                        {option.id === "mercadopago" && (
+                          <span className="inline-block mr-1.5 align-middle">
+                            <svg width="16" height="16" viewBox="0 0 32 32" fill="none" style={{ display:"inline", verticalAlign:"middle" }}>
+                              <rect width="32" height="32" rx="8" fill="#009EE3"/>
+                              <path d="M6 16.5C6 16.5 9.5 11 16 11C22.5 11 26 16.5 26 16.5C26 16.5 22.5 22 16 22C9.5 22 6 16.5 6 16.5Z" fill="white"/>
+                              <circle cx="16" cy="16.5" r="3.5" fill="#009EE3"/>
+                            </svg>
+                          </span>
+                        )}
                         {option.label}
                       </label>
                     ))}
@@ -2861,8 +2899,20 @@ export default function StorefrontClient({
                     <div className="mt-3 flex justify-between border-t border-gray-200 pt-3 text-base"><span>Total</span><strong>{money(total, store.currency)}</strong></div>
                   </div>
 
-                  <button type="submit" disabled={submitting} className="w-full rounded-xl bg-gray-950 py-3 text-sm font-bold text-white disabled:opacity-50">
-                    {submitting ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Crear pedido"}
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className={`w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-50 ${
+                      paymentProvider === "mercadopago" ? "bg-[#009EE3] hover:bg-[#0088c7]" : "bg-gray-950"
+                    }`}
+                  >
+                    {submitting ? (
+                      <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                    ) : paymentProvider === "mercadopago" ? (
+                      "Pagar con MercadoPago →"
+                    ) : (
+                      "Crear pedido"
+                    )}
                   </button>
                 </>
               )}
