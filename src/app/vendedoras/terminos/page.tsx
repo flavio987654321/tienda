@@ -19,7 +19,7 @@ export default function TerminosAfiliados() {
           Términos y Condiciones del Programa de Afiliados
         </h1>
         <p className="text-gray-500 text-sm mb-12">
-          Versión 1.0 — Vigente desde el 1 de mayo de 2025
+          Versión 1.1 — Vigente desde el 24 de mayo de 2025
         </p>
 
         <div className="space-y-10 text-sm leading-relaxed">
@@ -57,12 +57,13 @@ export default function TerminosAfiliados() {
                 No se incluye el costo de envío.
               </li>
               <li>
-                La comisión se acredita únicamente cuando el/la Titular confirma el pago del pedido
+                La comisión se acredita en el momento en que el pago del pedido es confirmado
                 (estado <em>Confirmado</em>). Pedidos en estado Pendiente no generan comisión.
               </li>
               <li>
-                Si un pedido confirmado es cancelado con posterioridad, la comisión acreditada
-                será revertida de la billetera del/la Afiliado/a.
+                Una vez acreditada, la comisión <strong className="text-gray-300">no se revierte</strong> aunque
+                el pedido sea cancelado con posterioridad. La afiliada cumplió su función al generar
+                la venta; cualquier cancelación posterior es responsabilidad del/la Titular.
               </li>
               <li>
                 El porcentaje de comisión es el vigente al momento de la venta y puede ser
@@ -227,7 +228,7 @@ export default function TerminosAfiliados() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/5 text-xs text-gray-600 text-center">
-          <p>TiendaApps — Programa de Afiliados · Versión 1.0</p>
+          <p>TiendaApps — Programa de Afiliados · Versión 1.1</p>
           <p className="mt-1">Para consultas escribí a soporte desde tu panel de afiliado/a.</p>
         </div>
       </div>
