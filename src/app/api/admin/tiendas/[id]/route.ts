@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { logAdminAction } from "@/lib/admin-log";
 
 export async function PATCH(
   req: NextRequest,
@@ -22,6 +23,20 @@ export async function PATCH(
     where: { id },
     data,
     select: { id: true, isPublished: true, isActive: true },
+  });
+
+  const action = data.isPublished !== undefined
+    ? (data.isPublished ? "PUBLISH_STORE" : "UNPUBLISH_STORE")
+    : (data.isActive ? "ACTIVATE_STORE" : "DEACTIVATE_STORE");
+
+  await logAdminAction({
+    adminId: current.id,
+    adminEmail: current.email,
+    action,
+    targetId: id,
+    targetType: "STORE",
+    details: data as Record<string, unknown>,
+    ip: req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip"),
   });
 
   return NextResponse.json(store);

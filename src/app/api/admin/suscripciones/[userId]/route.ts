@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { logAdminAction } from "@/lib/admin-log";
 
 const VALID_STATUSES = ["TRIAL", "ACTIVE", "GRACE", "EXPIRED", "CANCELLED"];
 
@@ -49,5 +50,25 @@ export async function PATCH(
   }
 
   const updated = await prisma.subscription.update({ where: { userId }, data });
+
+  const actions: string[] = [];
+  if (data.status) actions.push(`CHANGE_STATUS:${data.status}`);
+  if (data.tier) actions.push(`CHANGE_TIER:${data.tier}`);
+  if (data.plan) actions.push(`CHANGE_PLAN:${data.plan}`);
+  if (data.trialEndsAt) actions.push("EXTEND_TRIAL");
+
+  await logAdminAction({
+    adminId: current.id,
+    adminEmail: current.email,
+    action: actions.join("|") || "CHANGE_STATUS",
+    targetId: userId,
+    targetType: "SUBSCRIPTION",
+    details: {
+      before: { status: sub.status, tier: sub.tier, plan: sub.plan, role: sub.role },
+      after: data,
+    },
+    ip: req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip"),
+  });
+
   return NextResponse.json(updated);
 }

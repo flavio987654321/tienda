@@ -468,6 +468,20 @@ model DeletedAccountAudit {
   subscriptionCreatedAt DateTime?
 }
 
+// LOG DE ACCIONES ADMIN — auditoría de seguridad interna
+// Se registra cada acción relevante que un admin realiza desde el panel.
+model AdminActionLog {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  adminId    String
+  adminEmail String
+  action     String   // BAN | UNBAN | DELETE | CHANGE_STATUS | CHANGE_TIER | CHANGE_PLAN | TOGGLE_STORE
+  targetId   String   // userId o storeId afectado
+  targetType String   // USER | STORE | SUBSCRIPTION
+  details    String   // JSON con datos adicionales del cambio
+  ip         String?
+}
+
 // SUSCRIPCIONES
 // status: TRIAL | ACTIVE | GRACE | EXPIRED | CANCELLED
 // plan:   MONTHLY | ANNUAL

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { logAdminAction } from "@/lib/admin-log";
 
 export async function PATCH(
   req: NextRequest,
@@ -30,6 +31,16 @@ export async function PATCH(
     where: { id },
     data: { banned: Boolean(banned) },
     select: { id: true, banned: true },
+  });
+
+  await logAdminAction({
+    adminId: current.id,
+    adminEmail: current.email,
+    action: banned ? "BAN" : "UNBAN",
+    targetId: id,
+    targetType: "USER",
+    details: { banned: Boolean(banned) },
+    ip: req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip"),
   });
 
   return NextResponse.json(user);
@@ -259,6 +270,20 @@ export async function DELETE(
   if (authDeleteError) {
     console.error("DELETE USER: error eliminando de Supabase Auth", id, authDeleteError.message);
   }
+
+  await logAdminAction({
+    adminId: current.id,
+    adminEmail: current.email,
+    action: "DELETE",
+    targetId: id,
+    targetType: "USER",
+    details: {
+      originalRole: userData?.role,
+      hadStore: !!userData?.store,
+      hadSubscription: !!userData?.subscription,
+    },
+    ip: _req.headers.get("x-forwarded-for") ?? _req.headers.get("x-real-ip"),
+  });
 
   // ── 4. Borrar archivos de Supabase Storage (best-effort) ─────────────────
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");

@@ -138,7 +138,17 @@ export async function middleware(request: NextRequest) {
   const corsRes = handleCors(request);
   if (corsRes) return corsRes;
 
-  return runSupabaseAuth(request);
+  const res = await runSupabaseAuth(request);
+
+  // Headers de seguridad para el panel admin
+  if (pathname.startsWith("/admin")) {
+    res.headers.set("X-Frame-Options", "DENY");
+    res.headers.set("X-Content-Type-Options", "nosniff");
+    res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  }
+
+  return res;
 }
 
 export const config = {

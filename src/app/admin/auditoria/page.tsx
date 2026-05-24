@@ -5,9 +5,15 @@ import AuditoriaAdmin from "./AuditoriaAdmin";
 export const dynamic = "force-dynamic";
 
 export default async function AdminAuditoriaPage() {
-  const records = await prisma.deletedAccountAudit.findMany({
-    orderBy: { deletedAt: "desc" },
-  });
+  const [records, actionLogs] = await Promise.all([
+    prisma.deletedAccountAudit.findMany({
+      orderBy: { deletedAt: "desc" },
+    }),
+    prisma.adminActionLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 500,
+    }),
+  ]);
 
   const serialized = records.map((r: typeof records[number]) => ({
     ...r,
@@ -16,6 +22,11 @@ export default async function AdminAuditoriaPage() {
     tcAffiliateAcceptedAt: r.tcAffiliateAcceptedAt?.toISOString() ?? null,
     tcOwnerAcceptedAt: r.tcOwnerAcceptedAt?.toISOString() ?? null,
     subscriptionCreatedAt: r.subscriptionCreatedAt?.toISOString() ?? null,
+  }));
+
+  const serializedLogs = actionLogs.map((l: typeof actionLogs[number]) => ({
+    ...l,
+    createdAt: l.createdAt.toISOString(),
   }));
 
   return (
@@ -31,7 +42,7 @@ export default async function AdminAuditoriaPage() {
           Registro permanente de cuentas eliminadas · T&amp;C aceptados · IP y fechas
         </p>
       </div>
-      <AuditoriaAdmin records={serialized} />
+      <AuditoriaAdmin records={serialized} actionLogs={serializedLogs} />
     </div>
   );
 }
