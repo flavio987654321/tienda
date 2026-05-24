@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X,
+  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/admin/testimonios", label: "Testimonios", icon: MessageSquare },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users },
   { href: "/admin/tiendas", label: "Tiendas", icon: Store },
+  { href: "/admin/auditoria", label: "Auditoría", icon: ShieldCheck },
 ];
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
