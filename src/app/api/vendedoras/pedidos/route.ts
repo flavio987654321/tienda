@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
   const storeId = searchParams.get("storeId") ?? undefined;
 
-  const affiliateWhere = { userId: user.id, isActive: true, ...(storeId ? { storeId } : {}) };
+  const affiliateWhere = { userId: user.id, ...(storeId ? { storeId } : {}) };
 
   const [orders, total] = await Promise.all([
     prisma.order.findMany({

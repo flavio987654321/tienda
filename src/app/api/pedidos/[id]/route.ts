@@ -94,7 +94,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
               affiliateId: order.affiliateId,
               amount,
               rate,
-              status: "PENDING",
+              status: "PAID",
+              paidAt: new Date(),
             },
           });
 
@@ -245,7 +246,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             type: "COMMISSION_EARNED",
             title: "¡Ganaste una comisión!",
             body: `Tu comisión de $${result.commission.amount.toLocaleString("es-AR")} fue acreditada.`,
-            link: "/dashboard/billetera",
+            link: "/vendedoras/billetera",
           });
         }
       }
