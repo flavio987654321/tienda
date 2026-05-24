@@ -21,6 +21,7 @@ model User {
   city          String?
   instagramHandle String?
   phone         String?
+  notifyNewStores Boolean  @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

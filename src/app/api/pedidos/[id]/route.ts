@@ -83,7 +83,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           }
         }
 
-        if (order.affiliateId && order.lockedCommissionRate !== null && !order.commission) {
+        // Verificar que el comprador no sea el mismo afiliado (bypass vía email diferente)
+        const affiliateBuyerMatch =
+          order.affiliate?.user?.email &&
+          order.buyer.email.toLowerCase() === order.affiliate.user.email.toLowerCase();
+
+        if (order.affiliateId && order.lockedCommissionRate !== null && !order.commission && !affiliateBuyerMatch) {
           // Usar el rate bloqueado al momento de la compra; si no existe (pedidos viejos), usar el actual
           const rate = order.lockedCommissionRate ?? order.store.commissionRate;
           const commissionBase = (order.subtotal ?? order.total) - (order.discountAmount ?? 0);

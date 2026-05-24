@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { revalidatePath } from "next/cache";
 import { createNotificationMany } from "@/lib/notifications";
 import { isSafeUrl } from "@/lib/url-utils";
+import { sendNewStorePublishedEmail } from "@/lib/email";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -269,10 +270,38 @@ export async function PATCH(req: NextRequest) {
   if (typeof isPublished !== "boolean") {
     return NextResponse.json({ error: "Valor inválido" }, { status: 400 });
   }
+
+  const prevStore = await prisma.store.findUnique({
+    where: { ownerId: user.id },
+    select: { id: true, isPublished: true, slug: true, name: true, commissionRate: true, affiliatesEnabled: true },
+  });
+
   const store = await prisma.store.update({
     where: { ownerId: user.id },
     data: { isPublished },
   });
+
   revalidatePath(`/tienda/${store.slug}`, "layout");
+
+  // Cuando una tienda se publica por primera vez (o se re-publica), notificar a afiliadas interesadas
+  if (isPublished && !prevStore?.isPublished && prevStore?.affiliatesEnabled) {
+    const interested = await prisma.user.findMany({
+      where: { notifyNewStores: true, id: { not: user.id } },
+      select: { email: true, name: true },
+    });
+
+    if (interested.length > 0) {
+      for (const affiliate of interested) {
+        sendNewStorePublishedEmail({
+          affiliateEmail: affiliate.email,
+          affiliateName: affiliate.name || "afiliada",
+          storeName: prevStore.name,
+          storeSlug: prevStore.slug,
+          commissionRate: prevStore.commissionRate,
+        }).catch(() => {});
+      }
+    }
+  }
+
   return NextResponse.json({ isPublished: store.isPublished });
 }

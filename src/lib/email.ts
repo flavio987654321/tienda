@@ -1,5 +1,15 @@
 import nodemailer from "nodemailer";
 
+function escapeHtml(s: string | null | undefined): string {
+  if (!s) return "";
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT) || 587,
@@ -35,18 +45,18 @@ export async function sendContactFormEmail({
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
         <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
-          <p style="color:#e0e7ff;font-size:13px;margin:0 0 4px;">${storeName}</p>
+          <p style="color:#e0e7ff;font-size:13px;margin:0 0 4px;">${escapeHtml(storeName)}</p>
           <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Nuevo mensaje de contacto</h1>
         </div>
         <div style="background:#f9fafb;border-radius:12px;padding:20px;margin-bottom:20px;">
-          <p style="margin:0 0 8px;font-size:14px;"><strong>Nombre:</strong> ${name}</p>
-          <p style="margin:0 0 8px;font-size:14px;"><strong>Email:</strong> <a href="mailto:${email}" style="color:#6366f1;">${email}</a></p>
-          ${phone ? `<p style="margin:0 0 8px;font-size:14px;"><strong>Teléfono:</strong> ${phone}</p>` : ""}
+          <p style="margin:0 0 8px;font-size:14px;"><strong>Nombre:</strong> ${escapeHtml(name)}</p>
+          <p style="margin:0 0 8px;font-size:14px;"><strong>Email:</strong> <a href="mailto:${escapeHtml(email)}" style="color:#6366f1;">${escapeHtml(email)}</a></p>
+          ${phone ? `<p style="margin:0 0 8px;font-size:14px;"><strong>Teléfono:</strong> ${escapeHtml(phone)}</p>` : ""}
           <hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0;" />
-          <p style="margin:0;font-size:14px;white-space:pre-line;color:#374151;">${message}</p>
+          <p style="margin:0;font-size:14px;white-space:pre-line;color:#374151;">${escapeHtml(message)}</p>
         </div>
         <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
-          Podés responder directamente a este email para contestarle a ${name}.
+          Podés responder directamente a este email para contestarle a ${escapeHtml(name)}.
         </p>
       </div>
     `,
@@ -102,7 +112,7 @@ export async function sendLowStockEmail({
           <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Alerta de stock</h1>
         </div>
 
-        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${ownerName}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(ownerName)}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:24px;">${summary} Repone a tiempo para no perder ventas.</p>
 
         <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:24px;">
@@ -170,9 +180,9 @@ export async function sendReviewRequestEmail({
           <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">¡Tu pedido fue entregado!</h1>
         </div>
 
-        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${buyerName || "compradora"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(buyerName) || "compradora"}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:24px;">
-          Esperamos que hayas quedado contenta con tu compra en <strong>${storeName}</strong>.
+          Esperamos que hayas quedado contenta con tu compra en <strong>${escapeHtml(storeName)}</strong>.
           Tu opinión ayuda a otras compradoras a elegir mejor. ¿Nos dejás una reseña?
         </p>
 
@@ -248,11 +258,11 @@ export async function sendAffiliateStatusEmail({
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
         <div style="background:${content.accent};border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
-          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">${storeName}</p>
-          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">${content.title}</h1>
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">${escapeHtml(storeName)}</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">${escapeHtml(content.title)}</h1>
         </div>
 
-        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${affiliateName || "afiliado"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(affiliateName) || "afiliado"}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:24px;">${content.body}</p>
 
         <div style="text-align:center;">
@@ -297,19 +307,19 @@ export async function sendNewAffiliateApplicationEmail({
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
         <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
-          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">${storeName}</p>
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">${escapeHtml(storeName)}</p>
           <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Nueva solicitud de afiliada</h1>
         </div>
 
-        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${ownerName || "titular"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(ownerName) || "titular"}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:20px;">
-          <strong>${applicantName}</strong> (${applicantEmail}) se postuló para vender en tu tienda <strong>${storeName}</strong>.
+          <strong>${escapeHtml(applicantName)}</strong> (${escapeHtml(applicantEmail)}) se postuló para vender en tu tienda <strong>${escapeHtml(storeName)}</strong>.
         </p>
 
         ${applicationMessage ? `
         <div style="background:#f3f4f6;border-radius:10px;padding:16px;margin-bottom:20px;">
           <p style="color:#6b7280;font-size:12px;margin:0 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Su mensaje</p>
-          <p style="color:#374151;font-size:14px;margin:0;">${applicationMessage}</p>
+          <p style="color:#374151;font-size:14px;margin:0;">${escapeHtml(applicationMessage)}</p>
         </div>
         ` : ""}
 
@@ -359,13 +369,13 @@ export async function sendCommissionEarnedEmail({
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
         <div style="background:#16a34a;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
-          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">${storeName}</p>
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">${escapeHtml(storeName)}</p>
           <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">¡Comisión acreditada!</h1>
         </div>
 
-        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${affiliateName || "afiliada"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(affiliateName) || "afiliada"}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:24px;">
-          Una venta que generaste en <strong>${storeName}</strong> fue confirmada y tu comisión ya está en tu billetera.
+          Una venta que generaste en <strong>${escapeHtml(storeName)}</strong> fue confirmada y tu comisión ya está en tu billetera.
         </p>
 
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin-bottom:24px;">
@@ -451,9 +461,9 @@ export async function sendOrderConfirmationEmail({
           <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">¡Tu pedido fue recibido!</h1>
         </div>
 
-        <p style="color:#374151;font-size:15px;margin-bottom:4px;">Hola <strong>${buyerName}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:4px;">Hola <strong>${escapeHtml(buyerName)}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:24px;">
-          Gracias por tu compra en <strong>${storeName}</strong>. El vendedor revisará tu pedido y se pondrá en contacto para coordinar el pago y el envío.
+          Gracias por tu compra en <strong>${escapeHtml(storeName)}</strong>. El vendedor revisará tu pedido y se pondrá en contacto para coordinar el pago y el envío.
         </p>
 
         <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:20px;">
@@ -542,19 +552,19 @@ export async function sendAffiliateOrderNotificationEmail({
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
         <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
-          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">${storeName}</p>
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">${escapeHtml(storeName)}</p>
           <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Nueva venta por afiliada</h1>
         </div>
 
-        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${ownerName || "titular"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(ownerName) || "titular"}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:24px;">
-          <strong>${affiliateName}</strong> generó una nueva venta en tu tienda. Confirmá el pago para que la comisión se acredite automáticamente.
+          <strong>${escapeHtml(affiliateName)}</strong> generó una nueva venta en tu tienda. Confirmá el pago para que la comisión se acredite automáticamente.
         </p>
 
         <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:24px;">
           <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
             <span style="font-size:14px;color:#6b7280;">Afiliada</span>
-            <span style="font-size:14px;font-weight:600;color:#111827;">${affiliateName} <span style="color:#9ca3af;font-weight:400;">(${affiliateEmail})</span></span>
+            <span style="font-size:14px;font-weight:600;color:#111827;">${escapeHtml(affiliateName)} <span style="color:#9ca3af;font-weight:400;">(${escapeHtml(affiliateEmail)})</span></span>
           </div>
           <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
             <span style="font-size:14px;color:#6b7280;">Productos</span>
@@ -613,10 +623,10 @@ export async function sendWithdrawalRequestEmail({
 
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
   const bankRows = [
-    bankHolder ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:14px;">Titular</td><td style="padding:6px 0;font-weight:600;color:#111827;font-size:14px;">${bankHolder}</td></tr>` : "",
-    cuil ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:14px;">CUIL</td><td style="padding:6px 0;font-weight:600;color:#111827;font-size:14px;">${cuil}</td></tr>` : "",
-    cbu ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:14px;">CBU / CVU</td><td style="padding:6px 0;font-weight:700;color:#111827;font-size:14px;font-family:monospace;">${cbu}</td></tr>` : "",
-    alias ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:14px;">Alias</td><td style="padding:6px 0;font-weight:700;color:#111827;font-size:14px;font-family:monospace;">${alias}</td></tr>` : "",
+    bankHolder ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:14px;">Titular</td><td style="padding:6px 0;font-weight:600;color:#111827;font-size:14px;">${escapeHtml(bankHolder)}</td></tr>` : "",
+    cuil ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:14px;">CUIL</td><td style="padding:6px 0;font-weight:600;color:#111827;font-size:14px;">${escapeHtml(cuil)}</td></tr>` : "",
+    cbu ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:14px;">CBU / CVU</td><td style="padding:6px 0;font-weight:700;color:#111827;font-size:14px;font-family:monospace;">${escapeHtml(cbu)}</td></tr>` : "",
+    alias ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:14px;">Alias</td><td style="padding:6px 0;font-weight:700;color:#111827;font-size:14px;font-family:monospace;">${escapeHtml(alias)}</td></tr>` : "",
   ].filter(Boolean).join("");
 
   await transporter.sendMail({
@@ -631,9 +641,9 @@ export async function sendWithdrawalRequestEmail({
           <p style="color:#fff;font-size:32px;font-weight:900;margin:8px 0 0;">${fmt(amount)}</p>
         </div>
 
-        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${ownerName || "titular"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(ownerName) || "titular"}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:24px;">
-          <strong>${affiliateName}</strong> (${affiliateEmail}) solicitó retirar sus comisiones ganadas.
+          <strong>${escapeHtml(affiliateName)}</strong> (${escapeHtml(affiliateEmail)}) solicitó retirar sus comisiones ganadas.
           Por favor realizá la transferencia a los datos bancarios indicados abajo.
         </p>
 
@@ -650,6 +660,63 @@ export async function sendWithdrawalRequestEmail({
 
         <p style="color:#6b7280;font-size:13px;background:#f9fafb;border-radius:8px;padding:12px;">
           La afiliada ya ve su retiro como "en proceso". Una vez que realices la transferencia, el pago está completo. Si tenés algún inconveniente, contactá a soporte de TiendaApps.
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendNewStorePublishedEmail({
+  affiliateEmail,
+  affiliateName,
+  storeName,
+  storeSlug,
+  commissionRate,
+}: {
+  affiliateEmail: string;
+  affiliateName: string;
+  storeName: string;
+  storeSlug: string;
+  commissionRate: number;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const storeUrl = `${appUrl}/vendedoras`;
+
+  await transporter.sendMail({
+    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    to: affiliateEmail,
+    subject: `Nueva tienda disponible: ${escapeHtml(storeName)} — postulate ahora`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+          <p style="color:#e0e7ff;font-size:13px;margin:0 0 4px;">TiendaApps · Programa de Afiliadas</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Nueva tienda disponible</h1>
+        </div>
+
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(affiliateName) || "afiliada"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:24px;">
+          La tienda <strong>${escapeHtml(storeName)}</strong> acaba de abrir su programa de afiliadas.
+          Podés postularte ahora y empezar a ganar comisiones del <strong>${commissionRate}%</strong> por cada venta que generes.
+        </p>
+
+        <div style="background:#f0f0ff;border:1px solid #c7d2fe;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center;">
+          <p style="font-size:13px;color:#6b7280;margin:0 0 6px;">Comisión por venta</p>
+          <p style="font-size:32px;font-weight:900;color:#6366f1;margin:0;">${commissionRate}%</p>
+          <p style="font-size:13px;color:#6b7280;margin:6px 0 0;">${escapeHtml(storeName)}</p>
+        </div>
+
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${storeUrl}"
+             style="display:inline-block;background:#6366f1;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            Ver tienda y postularme
+          </a>
+        </div>
+
+        <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
+          Recibís este email porque activaste las alertas de nuevas tiendas en tu panel.
+          <a href="${appUrl}/vendedoras" style="color:#6b7280;">Gestionar mis preferencias</a>
         </p>
       </div>
     `,

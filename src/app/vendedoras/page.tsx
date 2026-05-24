@@ -760,6 +760,7 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
 interface UserProfile {
   id: string; name: string | null; email: string; image: string | null;
   bio: string | null; city: string | null; instagramHandle: string | null; phone: string | null;
+  notifyNewStores: boolean;
 }
 interface VendedoraStats {
   totalOrders: number; totalEarned: number; pendingBalance: number; pendingCommissions: number;
@@ -767,11 +768,12 @@ interface VendedoraStats {
 
 /* ── Profile Edit Modal ── */
 function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; onClose: () => void; onSave: (p: UserProfile) => void }) {
-  const [form, setForm] = useState({ name: profile.name ?? "", bio: profile.bio ?? "", city: profile.city ?? "", instagramHandle: profile.instagramHandle ?? "", phone: profile.phone ?? "", image: profile.image ?? "" });
+  const [form, setForm] = useState({ name: profile.name ?? "", bio: profile.bio ?? "", city: profile.city ?? "", instagramHandle: profile.instagramHandle ?? "", phone: profile.phone ?? "", image: profile.image ?? "", notifyNewStores: profile.notifyNewStores ?? false });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const upd = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+  type StringKey = { [K in keyof typeof form]: (typeof form)[K] extends string ? K : never }[keyof typeof form];
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -795,7 +797,7 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
 
   const initial = (form.name || profile.email).charAt(0).toUpperCase();
 
-  const inp = (label: string, key: keyof typeof form, ph: string, icon: React.ReactNode) => (
+  const inp = (label: string, key: StringKey, ph: string, icon: React.ReactNode) => (
     <div>
       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{label}</label>
       <div className="relative">
@@ -857,6 +859,24 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
           {inp("Ciudad / Zona", "city", "Buenos Aires, Córdoba...", <MapPin className="h-3.5 w-3.5" />)}
           {inp("Instagram", "instagramHandle", "@tuusuario", <IgIconLg />)}
           {inp("Teléfono / WhatsApp", "phone", "+54 9 11 ...", <Phone className="h-3.5 w-3.5" />)}
+
+          {/* Notificaciones */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Notificaciones</p>
+            <button type="button" onClick={() => setForm(p => ({ ...p, notifyNewStores: !p.notifyNewStores }))}
+              className={`w-full flex items-center justify-between gap-3 rounded-xl border px-4 py-3.5 transition-all text-left ${form.notifyNewStores ? "border-indigo-500/40 bg-indigo-50 dark:bg-indigo-500/10" : "border-gray-200 dark:border-white/8 bg-gray-50 dark:bg-white/3"}`}>
+              <div className="flex items-center gap-3">
+                <Store className="h-4 w-4 text-indigo-500 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">Alertas de nuevas tiendas</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">Te avisamos por email cuando una tienda active su programa de afiliadas</p>
+                </div>
+              </div>
+              <div className={`w-10 h-6 rounded-full transition-colors shrink-0 ${form.notifyNewStores ? "bg-indigo-600" : "bg-gray-300 dark:bg-white/15"}`}>
+                <div className={`w-5 h-5 rounded-full bg-white shadow-sm mt-0.5 transition-transform ${form.notifyNewStores ? "translate-x-4.5" : "translate-x-0.5"}`} />
+              </div>
+            </button>
+          </div>
         </div>
 
         <div className="px-6 pb-6 pt-4 border-t border-gray-100 dark:border-white/5 flex gap-3">

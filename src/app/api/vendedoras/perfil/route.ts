@@ -17,7 +17,7 @@ export async function GET() {
 
   const user = await prisma.user.findUnique({
     where: { id: currentUser.id },
-    select: { id: true, name: true, email: true, image: true, bio: true, city: true, instagramHandle: true, phone: true },
+    select: { id: true, name: true, email: true, image: true, bio: true, city: true, instagramHandle: true, phone: true, notifyNewStores: true },
   });
   return NextResponse.json({ user });
 }
@@ -43,14 +43,15 @@ export async function PUT(req: NextRequest) {
   const user = await prisma.user.update({
     where: { id: currentUser.id },
     data: {
-      name:            b.name?.trim()            || null,
-      bio:             b.bio?.trim()             || null,
-      city:            b.city?.trim()            || null,
-      instagramHandle: b.instagramHandle?.trim() || null,
-      phone:           b.phone?.trim()           || null,
-      image:           b.image?.trim()           || null,
+      name:             b.name?.trim()            || null,
+      bio:              b.bio?.trim()             || null,
+      city:             b.city?.trim()            || null,
+      instagramHandle:  b.instagramHandle?.trim() || null,
+      phone:            b.phone?.trim()           || null,
+      image:            b.image?.trim()           || null,
+      ...(typeof b.notifyNewStores === "boolean" ? { notifyNewStores: b.notifyNewStores } : {}),
     },
-    select: { id: true, name: true, email: true, image: true, bio: true, city: true, instagramHandle: true, phone: true },
+    select: { id: true, name: true, email: true, image: true, bio: true, city: true, instagramHandle: true, phone: true, notifyNewStores: true },
   });
   return NextResponse.json({ user });
 }
