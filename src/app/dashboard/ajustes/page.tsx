@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import DangerZone from "@/app/dashboard/configuracion/DangerZone";
 import AjustesClient from "./AjustesClient";
+import MpConnectButton from "./MpConnectButton";
 
 export default async function AjustesPage() {
   const user = await getCurrentUser();
@@ -13,7 +14,7 @@ export default async function AjustesPage() {
 
   const [sub, store] = await Promise.all([
     getUserSubscription(user.id),
-    prisma.store.findUnique({ where: { ownerId: user.id }, select: { slug: true, customDomain: true } }),
+    prisma.store.findUnique({ where: { ownerId: user.id }, select: { slug: true, customDomain: true, mpConnectedAt: true, mpSellerId: true } }),
   ]);
 
   const tier = (sub as any)?.tier ?? "BASIC";
@@ -34,6 +35,13 @@ export default async function AjustesPage() {
         customDomain={store?.customDomain ?? null}
         isPremium={isPremium}
       />
+      <div className="mt-5">
+        <MpConnectButton
+          connected={!!store?.mpConnectedAt}
+          connectedAt={store?.mpConnectedAt?.toISOString() ?? null}
+          mpSellerId={store?.mpSellerId ?? null}
+        />
+      </div>
       <div className="mt-5">
         <DangerZone />
       </div>

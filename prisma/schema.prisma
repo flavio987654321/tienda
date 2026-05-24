@@ -146,6 +146,11 @@ model Store {
   tipoTienda          String   @default("ROPA")
   tipoTiendaConfigurado Boolean @default(false)
   tieneVentaMayorista Boolean  @default(false)
+  // MercadoPago Marketplace — credenciales del dueño de la tienda (cifradas)
+  mpAccessToken   String?
+  mpRefreshToken  String?
+  mpSellerId      String?
+  mpConnectedAt   DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
