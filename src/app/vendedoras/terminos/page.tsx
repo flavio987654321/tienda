@@ -19,7 +19,7 @@ export default function TerminosAfiliados() {
           Términos y Condiciones del Programa de Afiliados
         </h1>
         <p className="text-gray-500 text-sm mb-12">
-          Versión 1.1 — Vigente desde el 24 de mayo de 2025
+          Versión 1.2 — Vigente desde el 24 de mayo de 2025
         </p>
 
         <div className="space-y-10 text-sm leading-relaxed">
@@ -77,8 +77,13 @@ export default function TerminosAfiliados() {
             <ul className="list-disc list-inside space-y-2 text-gray-400">
               <li>El monto mínimo de retiro es de <strong className="text-gray-300">$500 ARS</strong>.</li>
               <li>
-                Los retiros solicitados son procesados manualmente en un plazo máximo de
-                <strong className="text-gray-300"> 1 a 3 días hábiles</strong> contados desde la solicitud.
+                Los retiros se procesan de forma automática a través de un procesador de pagos
+                externo. El tiempo estimado de acreditación es de <strong className="text-gray-300">1 a 3 días hábiles</strong>.
+              </li>
+              <li>
+                Al momento del retiro se descuenta una <strong className="text-gray-300">comisión de procesamiento</strong>{" "}
+                correspondiente al costo del servicio de transferencia bancaria automática. Dicha comisión
+                se informa antes de confirmar el retiro.
               </li>
               <li>
                 El/la Afiliado/a es responsable de ingresar correctamente sus datos bancarios
@@ -228,7 +233,7 @@ export default function TerminosAfiliados() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/5 text-xs text-gray-600 text-center">
-          <p>TiendaApps — Programa de Afiliados · Versión 1.1</p>
+          <p>TiendaApps — Programa de Afiliados · Versión 1.2</p>
           <p className="mt-1">Para consultas escribí a soporte desde tu panel de afiliado/a.</p>
         </div>
       </div>
