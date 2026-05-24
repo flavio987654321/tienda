@@ -1,66 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { createNotification } from "@/lib/notifications";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// PATCH - dueño aprueba o rechaza un retiro de afiliado
+// PATCH - solo el admin de la plataforma marca un retiro como completado
 export async function PATCH(req: NextRequest, context: RouteContext) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!user || user.role !== "ADMIN") {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
   const { id } = await context.params;
-  const { status, notes } = await req.json();
-
-  if (!["APPROVED", "REJECTED"].includes(status)) {
-    return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
-  }
+  const { notes } = await req.json();
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // Verificar que el retiro pertenece a un afiliado de la tienda del dueño
       const withdrawal = await tx.walletWithdrawal.findUnique({
         where: { id },
         include: {
           wallet: {
-            include: {
-              affiliate: {
-                include: { store: { select: { ownerId: true } } },
-              },
-            },
+            include: { affiliate: { select: { userId: true } } },
           },
         },
       });
 
       if (!withdrawal) throw new Error("Retiro no encontrado");
-      if (withdrawal.wallet.affiliate.store.ownerId !== user.id) {
-        throw new Error("No autorizado");
-      }
       if (withdrawal.status !== "PENDING") {
-        throw new Error(`El retiro ya fue ${withdrawal.status === "APPROVED" ? "aprobado" : "rechazado"}`);
+        throw new Error("Este retiro ya fue procesado");
       }
 
-      // Si se rechaza, devolver el saldo a la billetera
-      if (status === "REJECTED") {
-        await tx.wallet.update({
-          where: { id: withdrawal.walletId },
-          data: {
-            balance: { increment: withdrawal.amount },
-            totalWithdrawn: { decrement: withdrawal.amount },
-          },
-        });
-      }
+      // Notificar a la afiliada que su retiro fue procesado
+      await createNotification({
+        userId: withdrawal.wallet.affiliate.userId,
+        type: "WITHDRAWAL_COMPLETED",
+        title: "Tu retiro fue procesado",
+        body: `$${withdrawal.amount.toLocaleString("es-AR")} transferidos a tu cuenta bancaria.`,
+        link: "/vendedoras/billetera",
+      });
 
       return tx.walletWithdrawal.update({
         where: { id },
-        data: { status, notes: notes || null },
+        data: { status: "APPROVED", notes: notes || null },
       });
     });
 
     return NextResponse.json({ withdrawal: result });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "No se pudo procesar el retiro" },
+      { error: error instanceof Error ? error.message : "Error al procesar el retiro" },
       { status: 400 }
     );
   }

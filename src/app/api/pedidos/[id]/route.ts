@@ -201,21 +201,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           });
         }
 
-        // Revertir comisión si el pedido ya había sido confirmado
-        if (order.commission && order.affiliateId) {
-          const commissionAmount = order.commission.amount;
-          await tx.commission.delete({ where: { id: order.commission.id } });
-          const currentBalance = order.affiliate?.wallet?.balance ?? 0;
-          const balanceToDecrement = Math.min(commissionAmount, currentBalance);
-          await tx.wallet.update({
-            where: { affiliateId: order.affiliateId },
-            data: {
-              balance: { decrement: balanceToDecrement },
-              totalEarned: { decrement: commissionAmount },
-              // totalWithdrawn no se toca: refleja retiros reales históricos
-            },
-          });
-        }
+        // La comisión NO se revierte al cancelar: la afiliada cumplió su parte
+        // (trajo el cliente y se confirmó el pago). Si el dueño cancela después,
+        // es su responsabilidad, no de la afiliada.
 
         await tx.payment.updateMany({
           where: { orderId: order.id },

@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import AffiliateToggle from "./AffiliateToggle";
-import WithdrawalActions from "@/components/affiliates/WithdrawalActions";
 import MetasWidget from "./MetasWidget";
 
 function statusClass(status: string) {
@@ -131,8 +130,10 @@ export default async function VendedorasPage() {
 
       {pendingWithdrawals.length > 0 && (
         <section className="mb-8">
-          <h2 className="font-bold text-gray-900 mb-1">Retiros pendientes de pago</h2>
-          <p className="text-sm text-gray-400 mb-4">Estas personas solicitaron retirar su saldo. Hacé la transferencia y luego aprobá.</p>
+          <h2 className="font-bold text-gray-900 mb-1">Transferencias pendientes</h2>
+          <p className="text-sm text-gray-400 mb-4">
+            Recibiste un email con los datos bancarios de cada retiro. Realizá la transferencia por home banking.
+          </p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {pendingWithdrawals.map((w) => (
               <div key={w.id} className="bg-white rounded-2xl border border-amber-100 p-5 flex flex-col gap-3">
@@ -144,12 +145,9 @@ export default async function VendedorasPage() {
                       Solicitado el {new Date(w.createdAt).toLocaleDateString("es-AR")}
                     </p>
                   </div>
-                  <WithdrawalActions
-                    withdrawalId={w.id}
-                    affiliateName={w.affiliateName}
-                    amount={w.amount}
-                    bankInfo={w.notes || ""}
-                  />
+                  <span className="rounded-full px-3 py-1 text-xs font-bold bg-amber-100 text-amber-700 shrink-0">
+                    En proceso
+                  </span>
                 </div>
                 {w.notes && (
                   <div className="rounded-xl bg-amber-50 p-3 text-xs text-gray-600 font-mono whitespace-pre-wrap break-all">

@@ -585,3 +585,73 @@ export async function sendAffiliateOrderNotificationEmail({
     `,
   });
 }
+
+export async function sendWithdrawalRequestEmail({
+  ownerEmail,
+  ownerName,
+  storeName,
+  affiliateName,
+  affiliateEmail,
+  amount,
+  cbu,
+  alias,
+  cuil,
+  bankHolder,
+}: {
+  ownerEmail: string;
+  ownerName: string;
+  storeName: string;
+  affiliateName: string;
+  affiliateEmail: string;
+  amount: number;
+  cbu: string | null;
+  alias: string | null;
+  cuil: string | null;
+  bankHolder: string | null;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
+  const bankRows = [
+    bankHolder ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:14px;">Titular</td><td style="padding:6px 0;font-weight:600;color:#111827;font-size:14px;">${bankHolder}</td></tr>` : "",
+    cuil ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:14px;">CUIL</td><td style="padding:6px 0;font-weight:600;color:#111827;font-size:14px;">${cuil}</td></tr>` : "",
+    cbu ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:14px;">CBU / CVU</td><td style="padding:6px 0;font-weight:700;color:#111827;font-size:14px;font-family:monospace;">${cbu}</td></tr>` : "",
+    alias ? `<tr><td style="padding:6px 0;color:#6b7280;font-size:14px;">Alias</td><td style="padding:6px 0;font-weight:700;color:#111827;font-size:14px;font-family:monospace;">${alias}</td></tr>` : "",
+  ].filter(Boolean).join("");
+
+  await transporter.sendMail({
+    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    to: ownerEmail,
+    subject: `💸 ${affiliateName} solicitó un retiro de ${fmt(amount)} — ${storeName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#f59e0b;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+          <p style="color:rgba(0,0,0,0.6);font-size:13px;margin:0 0 4px;">${storeName}</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:700;">Solicitud de retiro</h1>
+          <p style="color:#fff;font-size:32px;font-weight:900;margin:8px 0 0;">${fmt(amount)}</p>
+        </div>
+
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${ownerName || "titular"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:24px;">
+          <strong>${affiliateName}</strong> (${affiliateEmail}) solicitó retirar sus comisiones ganadas.
+          Por favor realizá la transferencia a los datos bancarios indicados abajo.
+        </p>
+
+        <div style="background:#fffbeb;border:2px solid #f59e0b;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:13px;font-weight:700;color:#92400e;margin:0 0 12px;text-transform:uppercase;letter-spacing:0.05em;">Datos para la transferencia</p>
+          <table style="width:100%;border-collapse:collapse;">
+            ${bankRows}
+            <tr style="border-top:1px solid #fde68a;">
+              <td style="padding:10px 0 0;color:#6b7280;font-size:14px;">Monto a transferir</td>
+              <td style="padding:10px 0 0;font-weight:900;color:#d97706;font-size:18px;">${fmt(amount)}</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="color:#6b7280;font-size:13px;background:#f9fafb;border-radius:8px;padding:12px;">
+          La afiliada ya ve su retiro como "en proceso". Una vez que realices la transferencia, el pago está completo. Si tenés algún inconveniente, contactá a soporte de TiendaApps.
+        </p>
+      </div>
+    `,
+  });
+}

@@ -3,6 +3,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { encryptIfNeeded, decryptIfNeeded } from "@/lib/crypto";
+import { sendWithdrawalRequestEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 
 const MIN_WITHDRAWAL = 500;
 const BANK_LOCKOUT_HOURS = 72;
@@ -177,19 +179,25 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const wallet = await prisma.wallet.findUnique({
+  const walletFull = await prisma.wallet.findUnique({
     where: { id: walletId },
     include: {
-      affiliate: { select: { userId: true } },
+      affiliate: {
+        include: {
+          store: {
+            include: { owner: { select: { id: true, email: true, name: true } } },
+          },
+        },
+      },
     },
   });
 
-  if (!wallet || wallet.affiliate.userId !== userId) {
+  if (!walletFull || walletFull.affiliate.userId !== userId) {
     return NextResponse.json({ error: "Billetera no encontrada" }, { status: 404 });
   }
 
   // Verificar datos bancarios
-  if (!wallet.cbu && !wallet.alias) {
+  if (!walletFull.cbu && !walletFull.alias) {
     return NextResponse.json(
       { error: "Debés cargar tu CBU/CVU o alias antes de solicitar un retiro" },
       { status: 400 }
@@ -197,8 +205,8 @@ export async function POST(req: NextRequest) {
   }
 
   // 72h lockout tras cambiar datos bancarios
-  if (isWithinLockout(wallet.bankUpdatedAt)) {
-    const unlocksAt = new Date(wallet.bankUpdatedAt!.getTime() + BANK_LOCKOUT_HOURS * 3600000);
+  if (isWithinLockout(walletFull.bankUpdatedAt)) {
+    const unlocksAt = new Date(walletFull.bankUpdatedAt!.getTime() + BANK_LOCKOUT_HOURS * 3600000);
     return NextResponse.json(
       {
         error: `Por seguridad, los retiros están bloqueados 72hs después de cambiar datos bancarios. Podés retirar a partir del ${unlocksAt.toLocaleString("es-AR")}`,
@@ -207,12 +215,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (amount > wallet.balance) {
+  if (amount > walletFull.balance) {
     return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
   }
 
-  // Transacción serializable: re-verifica retiro pendiente dentro de la tx
-  // para eliminar race condition entre dos requests simultáneos
+  // Transacción serializable para eliminar race condition
   let withdrawal;
   try {
     [withdrawal] = await prisma.$transaction(
@@ -222,18 +229,21 @@ export async function POST(req: NextRequest) {
         });
         if (pendingCount > 0) throw new Error("PENDING_EXISTS");
 
+        const rawCbu = decryptIfNeeded(walletFull.cbu);
+        const rawCuil = decryptIfNeeded(walletFull.cuil);
+        const rawHolder = decryptIfNeeded(walletFull.bankHolder);
+
         const newWithdrawal = await tx.walletWithdrawal.create({
           data: {
             walletId,
             amount,
             status: "PENDING",
             notes: [
-              wallet.cbu ? `CBU: ••••${decryptIfNeeded(wallet.cbu)?.slice(-4) ?? "????"}` : null,
-              wallet.alias ? `Alias: ${wallet.alias}` : null,
-              wallet.bankHolder ? `Titular: ${decryptIfNeeded(wallet.bankHolder)}` : null,
-            ]
-              .filter(Boolean)
-              .join(" | "),
+              rawHolder ? `Titular: ${rawHolder}` : null,
+              rawCuil ? `CUIL: ${rawCuil}` : null,
+              rawCbu ? `CBU: ${rawCbu}` : null,
+              walletFull.alias ? `Alias: ${walletFull.alias}` : null,
+            ].filter(Boolean).join(" | "),
           },
         });
 
@@ -259,5 +269,41 @@ export async function POST(req: NextRequest) {
     throw e;
   }
 
-  return NextResponse.json({ withdrawal, message: "Retiro solicitado. Lo procesamos en 1-3 días hábiles." });
+  // Notificar al dueño de la tienda automáticamente con los datos bancarios (fire-and-forget)
+  const owner = walletFull.affiliate.store.owner;
+  if (owner?.email) {
+    const rawCbu = decryptIfNeeded(walletFull.cbu);
+    const rawCuil = decryptIfNeeded(walletFull.cuil);
+    const rawHolder = decryptIfNeeded(walletFull.bankHolder);
+    const affiliateUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+    sendWithdrawalRequestEmail({
+      ownerEmail: owner.email,
+      ownerName: owner.name ?? "",
+      storeName: walletFull.affiliate.store.name,
+      affiliateName: affiliateUser?.name ?? "Afiliada",
+      affiliateEmail: affiliateUser?.email ?? "",
+      amount,
+      cbu: rawCbu ?? null,
+      alias: walletFull.alias ?? null,
+      cuil: rawCuil ?? null,
+      bankHolder: rawHolder ?? null,
+    }).catch(() => {});
+  }
+
+  // Notificación in-app a la afiliada
+  createNotification({
+    userId,
+    type: "WITHDRAWAL_REQUESTED",
+    title: "Retiro en proceso",
+    body: `Tu retiro de $${amount.toLocaleString("es-AR")} fue solicitado y el dueño de la tienda está procesando la transferencia.`,
+    link: "/vendedoras/billetera",
+  });
+
+  return NextResponse.json({
+    withdrawal,
+    message: "Retiro solicitado. El dueño de la tienda recibirá los datos para realizar la transferencia.",
+  });
 }
