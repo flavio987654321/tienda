@@ -98,6 +98,8 @@ export async function DELETE(
   const userData = await prisma.user.findUnique({
     where: { id },
     select: {
+      email: true,
+      name: true,
       image: true,
       role: true,
       createdAt: true,
@@ -148,6 +150,8 @@ export async function DELETE(
       data: {
         deletedByAdminId: current.id,
         originalUserId: id,
+        originalEmail: userData?.email ?? null,
+        originalName: userData?.name ?? null,
         accountType: userData?.role ?? "BUYER",
         accountCreatedAt: userData?.createdAt ?? new Date(),
         tcOwnerAcceptedAt: userData?.store?.tcOwnerAcceptedAt ?? null,

@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Download, Search, X, ShieldCheck, Calendar, Monitor, Activity, Clock } from "lucide-react";
+import { Download, Search, X, ShieldCheck, Calendar, Monitor, Activity, Clock, FileDown, Mail, User } from "lucide-react";
 
 type AuditRow = {
   id: string;
   deletedAt: string;
   deletedByAdminId: string;
   originalUserId: string;
+  originalEmail: string | null;
+  originalName: string | null;
   accountType: string;
   accountCreatedAt: string;
   tcAffiliateAcceptedAt: string | null;
@@ -74,9 +76,42 @@ function fmtFull(date: string | null) {
   return new Date(date).toLocaleString("es-AR");
 }
 
+function downloadSingleCSV(r: AuditRow) {
+  const escape = (v: string | null) => `"${(v ?? "").replace(/"/g, '""')}"`;
+  const rows = [
+    ["Campo", "Valor"],
+    ["Nombre original", r.originalName],
+    ["Email original", r.originalEmail],
+    ["Tipo de cuenta", r.accountType],
+    ["Fecha eliminación", fmtFull(r.deletedAt)],
+    ["Cuenta creada", fmtFull(r.accountCreatedAt)],
+    ["ID original (técnico)", r.originalUserId],
+    ["T&C Dueño — Fecha", fmtFull(r.tcOwnerAcceptedAt)],
+    ["T&C Dueño — Versión", r.tcOwnerVersion],
+    ["T&C Dueño — IP", r.tcOwnerAcceptedIp],
+    ["T&C Afiliado — Fecha", fmtFull(r.tcAffiliateAcceptedAt)],
+    ["T&C Afiliado — Versión", r.tcAffiliateVersion],
+    ["T&C Afiliado — IP", r.tcAffiliateAcceptedIp],
+    ["Suscripción — Rol", r.subscriptionRole],
+    ["Suscripción — Plan", r.subscriptionPlan],
+    ["Suscripción — Estado", r.subscriptionStatus],
+    ["Suscripción — Inicio", fmtFull(r.subscriptionCreatedAt)],
+    ["Eliminado por (Admin ID)", r.deletedByAdminId],
+  ];
+  const csv = rows.map(([k, v]) => [escape(k), escape(v ?? null)].join(",")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const safeName = (r.originalName ?? r.originalUserId).replace(/[^a-z0-9]/gi, "-").toLowerCase();
+  a.download = `auditoria-${safeName}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function downloadCSV(rows: AuditRow[]) {
   const headers = [
-    "Fecha eliminación", "ID original", "Tipo de cuenta", "Cuenta creada",
+    "Nombre original", "Email original", "Fecha eliminación", "ID original", "Tipo de cuenta", "Cuenta creada",
     "T&C Dueño — Fecha", "T&C Dueño — Versión", "T&C Dueño — IP",
     "T&C Afiliado — Fecha", "T&C Afiliado — Versión", "T&C Afiliado — IP",
     "Suscripción — Rol", "Suscripción — Plan", "Suscripción — Estado", "Suscripción — Inicio",
@@ -84,6 +119,8 @@ function downloadCSV(rows: AuditRow[]) {
   ];
   const escape = (v: string | null) => `"${(v ?? "").replace(/"/g, '""')}"`;
   const lines = rows.map(r => [
+    r.originalName,
+    r.originalEmail,
     fmtFull(r.deletedAt),
     r.originalUserId,
     r.accountType,
@@ -145,7 +182,9 @@ function CuentasTab({ records }: { records: AuditRow[] }) {
       if (query) {
         const q = query.toLowerCase();
         return r.originalUserId.toLowerCase().includes(q) ||
-          r.accountType.toLowerCase().includes(q);
+          r.accountType.toLowerCase().includes(q) ||
+          (r.originalName ?? "").toLowerCase().includes(q) ||
+          (r.originalEmail ?? "").toLowerCase().includes(q);
       }
       return true;
     });
@@ -178,7 +217,7 @@ function CuentasTab({ records }: { records: AuditRow[] }) {
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar por ID de usuario..."
+            placeholder="Buscar por nombre, email o ID..."
             className="w-full bg-gray-900/50 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
           />
           {query && (
@@ -202,17 +241,18 @@ function CuentasTab({ records }: { records: AuditRow[] }) {
             <thead>
               <tr className="border-b border-white/5">
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Usuario</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Eliminado</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">ID original</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">T&amp;C Dueño</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">T&amp;C Afiliado</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Suscripción</th>
+                <th className="px-5 py-3.5"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-gray-500 text-sm">
+                  <td colSpan={7} className="px-5 py-12 text-center text-gray-500 text-sm">
                     No hay registros{query ? ` para "${query}"` : ""}
                   </td>
                 </tr>
@@ -228,13 +268,29 @@ function CuentasTab({ records }: { records: AuditRow[] }) {
                       </span>
                     </td>
                     <td className="px-5 py-4">
-                      <p className="text-white text-xs font-medium">{fmt(r.deletedAt)}</p>
-                      <p className="text-gray-500 text-xs mt-0.5">Creada: {fmt(r.accountCreatedAt)}</p>
+                      {r.originalName || r.originalEmail ? (
+                        <div className="space-y-0.5">
+                          {r.originalName && (
+                            <p className="text-white text-xs font-medium flex items-center gap-1">
+                              <User className="h-3 w-3 text-gray-500" /> {r.originalName}
+                            </p>
+                          )}
+                          {r.originalEmail && (
+                            <p className="text-gray-400 text-xs flex items-center gap-1">
+                              <Mail className="h-3 w-3 text-gray-500" /> {r.originalEmail}
+                            </p>
+                          )}
+                          <code className="text-gray-600 text-[10px] select-all">{r.originalUserId.slice(0, 16)}…</code>
+                        </div>
+                      ) : (
+                        <code className="text-gray-400 text-xs bg-gray-800 px-2 py-0.5 rounded select-all">
+                          {r.originalUserId}
+                        </code>
+                      )}
                     </td>
                     <td className="px-5 py-4">
-                      <code className="text-gray-400 text-xs bg-gray-800 px-2 py-0.5 rounded select-all">
-                        {r.originalUserId}
-                      </code>
+                      <p className="text-white text-xs font-medium">{fmt(r.deletedAt)}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">Creada: {fmt(r.accountCreatedAt)}</p>
                     </td>
                     <td className="px-5 py-4">
                       {r.tcOwnerAcceptedAt ? (
@@ -293,6 +349,15 @@ function CuentasTab({ records }: { records: AuditRow[] }) {
                       ) : (
                         <span className="text-gray-600 text-xs">Sin suscripción</span>
                       )}
+                    </td>
+                    <td className="px-5 py-4">
+                      <button
+                        onClick={() => downloadSingleCSV(r)}
+                        title="Descargar ficha individual"
+                        className="text-gray-500 hover:text-indigo-400 transition-colors"
+                      >
+                        <FileDown className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 );

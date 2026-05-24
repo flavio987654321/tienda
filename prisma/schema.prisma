@@ -448,6 +448,8 @@ model DeletedAccountAudit {
   deletedAt        DateTime @default(now())
   deletedByAdminId String
   originalUserId   String
+  originalEmail    String?  // guardado antes de anonimizar
+  originalName     String?  // guardado antes de anonimizar
   accountType      String   // OWNER | SELLER | BUYER
   accountCreatedAt DateTime
 
