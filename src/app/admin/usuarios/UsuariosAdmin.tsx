@@ -257,28 +257,32 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                 </tr>
               )}
               {filtered.map((u) => {
+                const isDeleted = u.email.endsWith(".invalid");
                 const role = ROLE_LABELS[u.role] ?? ROLE_LABELS.BUYER;
                 const sub = u.subscription ? STATUS_LABELS[u.subscription.status] : null;
                 const isBanLoading = loadingId === u.id + "-ban";
 
                 return (
-                  <tr key={u.id} className={`transition-colors ${u.banned ? "bg-red-950/20" : "hover:bg-white/[0.02]"}`}>
+                  <tr key={u.id} className={`transition-colors ${isDeleted ? "bg-gray-900/60 opacity-60" : u.banned ? "bg-red-950/20" : "hover:bg-white/[0.02]"}`}>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${u.banned ? "bg-red-500/20" : "bg-indigo-500/20"}`}>
-                          <span className={`text-xs font-bold ${u.banned ? "text-red-400" : "text-indigo-300"}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isDeleted ? "bg-gray-700/50" : u.banned ? "bg-red-500/20" : "bg-indigo-500/20"}`}>
+                          <span className={`text-xs font-bold ${isDeleted ? "text-gray-500" : u.banned ? "text-red-400" : "text-indigo-300"}`}>
                             {(u.name ?? u.email)[0].toUpperCase()}
                           </span>
                         </div>
                         <div>
-                          <p className={`text-sm font-medium ${u.banned ? "text-red-400 line-through" : "text-white"}`}>{u.name ?? "—"}</p>
-                          <p className="text-gray-500 text-xs">{u.email}</p>
-                          {u.banned && <p className="text-red-500 text-xs font-semibold mt-0.5">BANEADO</p>}
+                          <p className={`text-sm font-medium ${isDeleted ? "text-gray-500 line-through" : u.banned ? "text-red-400 line-through" : "text-white"}`}>{u.name ?? "—"}</p>
+                          <p className="text-gray-600 text-xs">{u.email}</p>
+                          {isDeleted
+                            ? <p className="text-gray-500 text-xs font-semibold mt-0.5">ELIMINADO</p>
+                            : u.banned && <p className="text-red-500 text-xs font-semibold mt-0.5">BANEADO</p>
+                          }
                         </div>
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${role.color}`}>
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${isDeleted ? "text-gray-600 bg-gray-800/50 border-gray-700/30" : role.color}`}>
                         <role.icon className="h-3 w-3" />
                         {role.label}
                       </span>
@@ -317,33 +321,37 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                       </span>
                     </td>
                     <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => toggleBan(u)}
-                          disabled={isBanLoading}
-                          title={u.banned ? "Desbanear usuario" : "Banear usuario"}
-                          className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
-                            u.banned
-                              ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                              : "bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                          }`}
-                        >
-                          {isBanLoading ? (
-                            <RefreshCw className="h-3 w-3 animate-spin" />
-                          ) : u.banned ? (
-                            <><CheckCircle className="h-3 w-3" /> Desbanear</>
-                          ) : (
-                            <><Ban className="h-3 w-3" /> Banear</>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => { setDeleteModal(u); setDeleteConfirm(""); }}
-                          title="Eliminar cuenta completa"
-                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-800 text-gray-500 hover:bg-red-950/60 hover:text-red-400 transition-all"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
+                      {isDeleted ? (
+                        <span className="text-gray-600 text-xs italic">Sin acciones</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleBan(u)}
+                            disabled={isBanLoading}
+                            title={u.banned ? "Desbanear usuario" : "Banear usuario"}
+                            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
+                              u.banned
+                                ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                                : "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                            }`}
+                          >
+                            {isBanLoading ? (
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                            ) : u.banned ? (
+                              <><CheckCircle className="h-3 w-3" /> Desbanear</>
+                            ) : (
+                              <><Ban className="h-3 w-3" /> Banear</>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => { setDeleteModal(u); setDeleteConfirm(""); }}
+                            title="Eliminar cuenta completa"
+                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-800 text-gray-500 hover:bg-red-950/60 hover:text-red-400 transition-all"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
