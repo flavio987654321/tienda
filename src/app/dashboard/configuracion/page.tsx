@@ -125,7 +125,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
       { image:"", title:"Envíos gratis", subtitle:"En compras mayores a $X", buttonText:"Aprovechar", buttonUrl:"", focalX:50, focalY:50 },
     ], height:"md", autoplay:true, speed:4, showDots:true, showArrows:true, overlayColor:"#000000", overlayOpacity:35, textColor:"#ffffff", textAlign:"center" } },
   { type:"video",      emoji:"▶️", label:"Video",                    desc:"Video de YouTube, Vimeo o MP4 incrustado",
-    defaultProps:{ heading:"", subtitle:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", headingSize:"lg", videoWidth:80, videoAlign:"center" } },
+    defaultProps:{ heading:"", subtitle:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", textColor:"", textSize:"md", videoWidth:80, videoAlign:"center" } },
   { type:"gallery",    emoji:"🖼️", label:"Galería de fotos",         desc:"Grilla de imágenes para mostrar tu trabajo o productos",
     defaultProps:{ heading:"Galería", images:[], columns:3, bgColor:"", headingSize:"lg" } },
   { type:"faq",        emoji:"❓", label:"Preguntas frecuentes",      desc:"Acordeón de preguntas y respuestas comunes",
@@ -1378,68 +1378,117 @@ function BlockEditor({
     </div>;
   }
 
-  if (block.type==="video") return <div className="space-y-3">
-    {inp("Título (opcional)","heading","")}
-    {inp("Subtítulo (opcional)","subtitle","")}
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">Video</label>
-      {p.videoUrl ? (
-        <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
-          <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 text-indigo-500 shrink-0"><path d="M8 5v14l11-7z"/></svg>
-          <span className="flex-1 text-xs text-gray-700 truncate">{p.videoUrl}</span>
-          <button type="button" onClick={()=>upd("videoUrl","")} className="text-gray-300 hover:text-red-400 transition-colors shrink-0">
-            <X className="h-3.5 w-3.5"/>
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <input type="url" value={p.videoUrl||""} onChange={e=>upd("videoUrl",e.target.value)}
-            placeholder="https://www.youtube.com/watch?v=..."
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-px bg-gray-200"/>
-            <span className="text-[10px] text-gray-400">o</span>
-            <div className="flex-1 h-px bg-gray-200"/>
+  if (block.type==="video") {
+    const isDirectVideo = p.videoUrl && !String(p.videoUrl).includes("youtube") && !String(p.videoUrl).includes("youtu.be") && !String(p.videoUrl).includes("vimeo");
+    return <div className="space-y-4">
+      {/* ── TEXTO ── */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 border-b border-gray-100 pb-1">Texto superpuesto</p>
+        {inp("Título (opcional)","heading","")}
+        {inp("Subtítulo (opcional)","subtitle","")}
+        {(p.heading || p.subtitle) && <>
+          <ColorPicker label="Color del texto" value={p.textColor||""} onChange={v=>upd("textColor",v)}/>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño</label>
+            <Chips options={[{id:"sm",label:"Chico"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"}]} value={p.textSize||"md"} onChange={v=>upd("textSize",v)}/>
           </div>
-          <label className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors">
-            <Film className="h-4 w-4"/>
-            <span className="text-xs font-medium">Subir video (.mp4, .webm)</span>
-            <input type="file" accept="video/*" className="hidden" onChange={async e=>{
-              const file = e.target.files?.[0]; if(!file||!onUploadFile) return;
-              const url = await onUploadFile(file);
-              if(url) upd("videoUrl",url);
-            }}/>
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-gray-600">Sombra en el texto</label>
+            <button type="button" onClick={()=>upd("textShadow",!p.textShadow)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${p.textShadow?"bg-indigo-600":"bg-gray-200"}`}>
+              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${p.textShadow?"translate-x-4":"translate-x-0.5"}`}/>
+            </button>
+          </div>
+        </>}
+      </div>
+      {/* ── VIDEO ── */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 border-b border-gray-100 pb-1">Video</p>
+        {p.videoUrl ? (
+          <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 text-indigo-500 shrink-0"><path d="M8 5v14l11-7z"/></svg>
+            <span className="flex-1 text-xs text-gray-700 truncate">{p.videoUrl}</span>
+            <button type="button" onClick={()=>upd("videoUrl","")} className="text-gray-300 hover:text-red-400 transition-colors shrink-0">
+              <X className="h-3.5 w-3.5"/>
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <input type="url" value={p.videoUrl||""} onChange={e=>upd("videoUrl",e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-px bg-gray-200"/>
+              <span className="text-[10px] text-gray-400">o</span>
+              <div className="flex-1 h-px bg-gray-200"/>
+            </div>
+            <label className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors">
+              <Film className="h-4 w-4"/>
+              <span className="text-xs font-medium">Subir video (.mp4, .webm)</span>
+              <input type="file" accept="video/*" className="hidden" onChange={async e=>{
+                const file = e.target.files?.[0]; if(!file||!onUploadFile) return;
+                const url = await onUploadFile(file);
+                if(url) upd("videoUrl",url);
+              }}/>
+            </label>
+          </div>
+        )}
+        <p className="text-[10px] text-gray-400">Soporta YouTube, Vimeo y archivos .mp4</p>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Proporción</label>
+          <Chips options={[{id:"16:9",label:"16:9"},{id:"4:3",label:"4:3"},{id:"1:1",label:"Cuadrado"}]} value={p.aspectRatio||"16:9"} onChange={v=>upd("aspectRatio",v)}/>
         </div>
-      )}
-      <p className="text-[10px] text-gray-400 mt-1">Soporta YouTube, Vimeo y archivos de video .mp4</p>
-    </div>
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">Proporción</label>
-      <Chips options={[{id:"16:9",label:"16:9 (TV)"},{id:"4:3",label:"4:3"},{id:"1:1",label:"Cuadrado"}]} value={p.aspectRatio||"16:9"} onChange={v=>upd("aspectRatio",v)}/>
-    </div>
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <label className="text-xs font-medium text-gray-600">Tamaño del video</label>
-        <span className="text-xs font-bold text-indigo-600">{p.videoWidth||100}%</span>
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-medium text-gray-600">Ancho del video</label>
+            <span className="text-xs font-bold text-indigo-600">{p.videoWidth||100}%</span>
+          </div>
+          <input type="range" min="20" max="100" step="5" value={p.videoWidth||100}
+            onChange={e=>upd("videoWidth",parseInt(e.target.value))}
+            onMouseDown={e=>e.stopPropagation()} onPointerDown={e=>e.stopPropagation()}
+            className="w-full accent-indigo-600"/>
+          <p className="text-[10px] text-gray-400 mt-0.5">También podés arrastrarlo desde el borde derecho en la preview</p>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Alineación</label>
+          <div className="flex gap-2">
+            {[["left","Izquierda"],["center","Centro"],["right","Derecha"]].map(([v,l])=>(
+              <button key={v} onClick={()=>upd("videoAlign",v)}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${(p.videoAlign||"center")===v?"border-indigo-500 bg-indigo-50 text-indigo-700":"border-gray-200 text-gray-500 hover:border-gray-300"}`}>{l}</button>
+            ))}
+          </div>
+        </div>
+        {isDirectVideo && <>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-gray-600">Reproducción automática</label>
+            <button type="button" onClick={()=>upd("autoplay",!p.autoplay)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${p.autoplay?"bg-indigo-600":"bg-gray-200"}`}>
+              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${p.autoplay?"translate-x-4":"translate-x-0.5"}`}/>
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-gray-600">Sin sonido (recomendado con autoplay)</label>
+            <button type="button" onClick={()=>upd("muted",!p.muted)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${p.muted?"bg-indigo-600":"bg-gray-200"}`}>
+              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${p.muted?"translate-x-4":"translate-x-0.5"}`}/>
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-gray-600">Repetir en bucle</label>
+            <button type="button" onClick={()=>upd("loop",!p.loop)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${p.loop?"bg-indigo-600":"bg-gray-200"}`}>
+              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${p.loop?"translate-x-4":"translate-x-0.5"}`}/>
+            </button>
+          </div>
+        </>}
       </div>
-      <input type="range" min="20" max="100" step="5" value={p.videoWidth||100}
-        onChange={e=>upd("videoWidth",parseInt(e.target.value))}
-        onMouseDown={e=>e.stopPropagation()} onPointerDown={e=>e.stopPropagation()}
-        className="w-full accent-indigo-600"/>
-      <p className="text-[10px] text-gray-400 mt-1">También podés arrastrarlo desde el borde derecho en la preview</p>
-    </div>
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">Alineación</label>
-      <div className="flex gap-2">
-        {[["left","Izq"],["center","Centro"],["right","Der"]].map(([v,l])=>(
-          <button key={v} onClick={()=>upd("videoAlign",v)}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${(p.videoAlign||"center")===v?"border-indigo-500 bg-indigo-50 text-indigo-700":"border-gray-200 text-gray-500 hover:border-gray-300"}`}>{l}</button>
-        ))}
+      {/* ── FONDO ── */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 border-b border-gray-100 pb-1">Fondo del bloque</p>
+        <ColorPicker label="Color de fondo (vacío = transparente)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
       </div>
-    </div>
-    <ColorPicker label="Color de fondo (vacío = transparente)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
-  </div>;
+    </div>;
+  }
 
   if (block.type==="gallery") {
     const images: string[] = Array.isArray(p.images) ? p.images : [];
@@ -2776,7 +2825,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const videoInner = embedSrc ? (
         <div style={{position:"relative",paddingBottom,height:0,overflow:"hidden",borderRadius:"12px"}}>
           {isDirectVideo
-            ? <video src={embedSrc} controls style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",borderRadius:"12px",pointerEvents:isVideoResizing?"none":"auto"}}/>
+            ? <video src={embedSrc} controls autoPlay={!!p.autoplay} muted={!!p.muted} loop={!!p.loop} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",borderRadius:"12px",pointerEvents:isVideoResizing?"none":"auto"}}/>
             : <iframe src={embedSrc} title={String(p.heading||"Video")} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",border:"none",borderRadius:"12px",pointerEvents:isVideoResizing?"none":"auto"}} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/>
           }
         </div>
@@ -2842,14 +2891,27 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 ...(p.heading ? [{
                   id: "heading",
                   defaultPos: { x: 50, y: 12 },
-                  style: { pointerEvents: "auto" as const, textAlign: "center" as const, maxWidth: "90%" },
-                  content: <h3 style={{fontSize:p.headingSize==="sm"?"14px":p.headingSize==="md"?"17px":p.headingSize==="xl"?"24px":"20px",fontWeight:800,color:c.primaryColor,textShadow:"0 1px 3px rgba(0,0,0,0.2)",whiteSpace:"nowrap"}}>{p.heading}</h3>,
+                  style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: "center" as const, wordBreak: "break-word" as const },
+                  content: <div style={{
+                    fontSize: p.textSize==="sm"?"13px":p.textSize==="lg"?"22px":"17px",
+                    fontWeight: 700,
+                    color: p.textColor || c.primaryColor,
+                    lineHeight: 1.3,
+                    textShadow: p.textShadow ? "0 1px 4px rgba(0,0,0,0.55)" : "none",
+                  }}>{p.heading}</div>,
                 }] : []),
                 ...(p.subtitle ? [{
                   id: "subtitle",
-                  defaultPos: { x: 50, y: 25 },
-                  style: { pointerEvents: "auto" as const, textAlign: "center" as const, maxWidth: "90%" },
-                  content: <p style={{fontSize:"14px",color:c.primaryColor,opacity:0.8,textShadow:"0 1px 2px rgba(0,0,0,0.15)",whiteSpace:"nowrap"}}>{p.subtitle}</p>,
+                  defaultPos: { x: 50, y: 28 },
+                  style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: "center" as const, wordBreak: "break-word" as const },
+                  content: <div style={{
+                    fontSize: p.textSize==="sm"?"11px":p.textSize==="lg"?"15px":"13px",
+                    fontWeight: 400,
+                    color: p.textColor || c.primaryColor,
+                    opacity: 0.85,
+                    lineHeight: 1.5,
+                    textShadow: p.textShadow ? "0 1px 3px rgba(0,0,0,0.45)" : "none",
+                  }}>{p.subtitle}</div>,
                 }] : []),
               ]}
             />
