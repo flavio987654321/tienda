@@ -12,6 +12,7 @@ import {
   MousePointer2, CreditCard, Search, ExternalLink,
   Plus, Trash2, Layers, X, Copy, Menu, Link,
   Ruler, Film, Paintbrush, Info, MessageSquare,
+  AlignLeft, AlignCenter, AlignRight,
 } from "lucide-react";
 
 /* ─── Templates ─── */
@@ -292,10 +293,10 @@ function ColorPicker({ label, value, onChange }: { label:string; value:string; o
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1.5">{label}</label>
       <div className="flex items-center gap-2">
-        <label className="cursor-pointer shrink-0">
-          <input type="color" value={value||"#6366f1"} onChange={e=>onChange(e.target.value)} className="sr-only"/>
-          <div className="h-9 w-9 rounded-xl border-2 border-white shadow-md ring-1 ring-gray-200 cursor-pointer transition-transform hover:scale-110" style={{backgroundColor:value||"#6366f1"}}/>
-        </label>
+        <div className="relative shrink-0 h-9 w-9 rounded-xl border-2 border-white shadow-md ring-1 ring-gray-200 cursor-pointer overflow-hidden transition-transform hover:scale-110" style={{backgroundColor:value||"#6366f1"}}>
+          <input type="color" value={value||"#6366f1"} onChange={e=>onChange(e.target.value)}
+            style={{opacity:0,position:"absolute",inset:0,width:"100%",height:"100%",cursor:"pointer",border:"none",padding:0}}/>
+        </div>
         <input type="text" value={value} onChange={e=>onChange(e.target.value)}
           className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono uppercase"/>
       </div>
@@ -1396,7 +1397,15 @@ function BlockEditor({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Alineación del texto</label>
-            <Chips options={[{id:"left",label:"Izquierda"},{id:"center",label:"Centro"},{id:"right",label:"Derecha"}]} value={p.textAlign||"center"} onChange={v=>upd("textAlign",v)}/>
+            <div className="flex gap-1.5">
+              {([["left", AlignLeft], ["center", AlignCenter], ["right", AlignRight]] as [string, React.ElementType][]).map(([v, Icon]) => (
+                <button key={v} type="button" onClick={()=>upd("textAlign",v)}
+                  title={v==="left"?"Izquierda":v==="center"?"Centro":"Derecha"}
+                  className={`flex-1 flex items-center justify-center py-2 rounded-lg border transition-colors ${(p.textAlign||"center")===v?"border-indigo-500 bg-indigo-50 text-indigo-700":"border-gray-200 text-gray-500 hover:border-gray-300"}`}>
+                  <Icon className="h-4 w-4"/>
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium text-gray-600">Sombra en el texto</label>
