@@ -31,7 +31,7 @@ export default function DangerZone() {
     setInfo(null);
     setTarget(t);
     setLoading(true);
-    const data: AccountInfo = await fetch("/api/cuenta").then(r => r.json());
+    const data: AccountInfo = await fetch(`/api/cuenta?target=${t}`).then(r => r.json());
     setInfo(data);
     setLoading(false);
   }
@@ -53,7 +53,7 @@ export default function DangerZone() {
       body: JSON.stringify({ target, confirm: confirmText }),
     });
     if (r.ok) {
-      window.location.href = target === "account" ? "/login" : "/dashboard";
+      window.location.href = target === "account" ? "/login" : "/dashboard/configuracion";
     } else {
       const err = await r.json();
       setErrorMsg(err.error ?? "Ocurrió un error. Intentá de nuevo.");
@@ -72,15 +72,15 @@ export default function DangerZone() {
           <p className="text-sm font-bold text-red-700">Zona de peligro</p>
         </div>
         <div className="p-4 space-y-2.5">
-          {/* Eliminar tienda solo visible para owners */}
+          {/* Resetear diseño solo visible para owners */}
           <button
             onClick={() => handleOpen("store")}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-red-200 bg-white hover:bg-red-50 text-sm text-red-600 font-medium transition-colors text-left"
           >
             <Store className="h-4 w-4 shrink-0" />
             <div>
-              <p className="font-semibold">Eliminar tienda</p>
-              <p className="text-xs text-red-400 font-normal mt-0.5">Oculta la tienda. Tu cuenta queda activa.</p>
+              <p className="font-semibold">Resetear diseño de la tienda</p>
+              <p className="text-xs text-red-400 font-normal mt-0.5">Borra los bloques de la página. Productos y afiliados quedan.</p>
             </div>
           </button>
           <button
@@ -105,7 +105,7 @@ export default function DangerZone() {
               </div>
               <div>
                 <h2 className="font-bold text-gray-900 text-base">
-                  {target === "store" ? "Eliminar tienda" : "Eliminar cuenta completa"}
+                  {target === "store" ? "Resetear diseño de la tienda" : "Eliminar cuenta completa"}
                 </h2>
                 <p className="text-xs text-gray-500">Esta acción no se puede deshacer</p>
               </div>
@@ -146,21 +146,32 @@ export default function DangerZone() {
                   <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Qué se elimina</p>
                     <ul className="space-y-1.5 text-sm text-gray-600">
-                      {isOwner && <li className="flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400" /> Tienda y todos sus productos</li>}
-                      {isOwner && <li className="flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400" /> Links de afiliados (desactivados)</li>}
+                      {isOwner && target === "store" && (
+                        <li className="flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400" /> El diseño y bloques de tu página</li>
+                      )}
+                      {isOwner && target === "store" && (
+                        <li className="flex items-center gap-2 text-gray-400"><span className="h-3.5 w-3.5 text-green-500 flex-shrink-0">✓</span> Productos, pedidos y afiliados se conservan</li>
+                      )}
                       {target === "account" && (
                         <li className="flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400" /> Tus datos personales (nombre, email, foto)</li>
                       )}
+                      {target === "account" && isOwner && (
+                        <li className="flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400" /> Tienda, productos y afiliados</li>
+                      )}
                     </ul>
                     <p className="text-xs text-gray-400 mt-2">
-                      El historial de pedidos y comisiones se conserva por 5 años (requisito AFIP).{" "}
-                      {target === "account" && "Podés volver a registrarte con el mismo email."}
+                      {target === "store"
+                        ? "Vas a poder armar un diseño nuevo desde cero en el constructor."
+                        : `El historial de pedidos y comisiones se conserva por 5 años (requisito AFIP). ${target === "account" ? "Podés volver a registrarte con el mismo email." : ""}`
+                      }
                     </p>
                   </div>
 
                   <div>
                     <label className="block text-sm text-gray-700 mb-2">
-                      {isOwner
+                      {isOwner && target === "store"
+                        ? <>Escribí el nombre de tu tienda para confirmar: <strong className="text-gray-900">{info?.storeName}</strong></>
+                        : isOwner
                         ? <>Escribí el nombre de tu tienda para confirmar: <strong className="text-gray-900">{info?.storeName}</strong></>
                         : <>Escribí tu email para confirmar: <strong className="text-gray-900">{info?.email}</strong></>
                       }
@@ -197,7 +208,7 @@ export default function DangerZone() {
                   {deleting ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Eliminando...</>
                   ) : (
-                    <><Trash2 className="h-4 w-4" /> {target === "store" ? "Eliminar tienda" : "Eliminar cuenta"}</>
+                    <><Trash2 className="h-4 w-4" /> {target === "store" ? "Resetear diseño" : "Eliminar cuenta"}</>
                   )}
                 </button>
               )}

@@ -24,9 +24,26 @@ function extractStoragePaths(urls: (string | null | undefined)[], supabaseUrl: s
 
 // ── GET — devuelve bloqueadores, rol y valor de confirmación ─────────────────
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const target = new URL(req.url).searchParams.get("target");
+
+  // Para reset de diseño no hay bloqueadores — solo necesitamos el nombre de la tienda
+  if (target === "store") {
+    const store = await prisma.store.findUnique({
+      where: { ownerId: user.id },
+      select: { name: true },
+    });
+    return NextResponse.json({
+      role: user.role,
+      email: user.email,
+      storeName: store?.name ?? "",
+      pendingOrders: 0,
+      pendingBalances: 0,
+    });
+  }
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
@@ -98,8 +115,8 @@ export async function DELETE(req: NextRequest) {
     }
   }
 
-  // ── Para OWNER: verificar bloqueadores antes de proceder ─────────────────
-  if (isOwner) {
+  // ── Para OWNER eliminando cuenta: verificar bloqueadores ────────────────
+  if (isOwner && target === "account") {
     const storeData = await prisma.store.findUnique({
       where: { ownerId: user.id },
       include: {
@@ -239,16 +256,11 @@ export async function DELETE(req: NextRequest) {
           },
         });
       } else {
-        // Solo elimina tienda (soft delete)
+        // Solo resetea el diseño de la página (pageBlocks)
+        // Productos, afiliados, pedidos y configuración base quedan intactos
         await tx.store.update({
           where: { id: storeId },
-          data: {
-            isActive: false,
-            isPublished: false,
-            affiliatesEnabled: false,
-            name: `[Eliminada] ${userData.store.id}`,
-            slug: `deleted-${storeId}`,
-          },
+          data: { pageBlocks: "[]" },
         });
       }
     }
