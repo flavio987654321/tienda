@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(awk '/function ContentGlobalSettings/,/^function [A-Za-z]/ {print NR\": \"$0}' \"c:\\\\Users\\\\flavi\\\\Desktop\\\\tienda\\\\src\\\\app\\\\dashboard\\\\configuracion\\\\page.tsx\")"
     ]
   }
 }
