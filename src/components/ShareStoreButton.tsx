@@ -57,10 +57,12 @@ export default function ShareStoreButton({
   storeName,
   storeSlug,
   storeLogo,
+  isPublished,
 }: {
   storeName: string;
   storeSlug: string;
   storeLogo: string | null;
+  isPublished: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [hint, setHint] = useState<string | null>(null); // inline tip for IG/TikTok
@@ -145,7 +147,23 @@ export default function ShareStoreButton({
             </button>
 
             <h3 className="font-bold text-gray-900 mb-1">Compartir tu tienda</h3>
-            <p className="text-xs text-gray-400 mb-4">Así aparece cuando alguien recibe el link</p>
+            <p className="text-xs text-gray-400 mb-3">Así aparece cuando alguien recibe el link</p>
+
+            {!isPublished && (
+              <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-3 py-3">
+                <p className="text-xs font-semibold text-amber-800 mb-0.5">Tu tienda no está publicada</p>
+                <p className="text-xs text-amber-700 mb-2 leading-relaxed">
+                  Solo vos podés ver el link por ahora. Publicala para que tus clientes puedan comprar.
+                </p>
+                <a
+                  href="/dashboard"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  Publicar ahora →
+                </a>
+              </div>
+            )}
 
             {/* Preview card */}
             <div className="rounded-xl border border-gray-200 overflow-hidden mb-4 shadow-sm">

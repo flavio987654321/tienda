@@ -102,6 +102,7 @@ export default async function DashboardPage() {
                   storeName={store.name}
                   storeSlug={store.slug}
                   storeLogo={store.logo}
+                  isPublished={store.isPublished}
                 />
                 <Link
                   href={`/tienda/${store.slug}`}
