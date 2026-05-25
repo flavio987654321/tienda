@@ -50,8 +50,8 @@ const CONTENT = {
         ],
       },
       {
-        title: "6. Gestión de afiliados",
-        body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. Al aceptar un afiliado y activar el programa, aceptás los Términos del Programa de Afiliados y te comprometés a pagarle la comisión configurada por cada venta válida generada a través de su link. Las comisiones se acreditan al confirmar el pago del pedido. TiendaApps actúa como intermediaria tecnológica en la gestión de comisiones.",
+        title: "6. Gestión de afiliados y consultas",
+        body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. Al aceptar un afiliado y activar el programa, aceptás los Términos del Programa de Afiliados y te comprometés a pagarle la comisión configurada por cada venta válida generada a través de su link. Las comisiones se acreditan al confirmar el pago del pedido. Adicionalmente, cuando un potencial cliente consulta por WhatsApp a través del link de un afiliado, la Plataforma registra esa consulta en tu panel. Si confirmás la consulta como venta, la comisión se acredita automáticamente en la billetera del afiliado. Si la rechazás, no se genera comisión. Los datos del consultante (nombre, teléfono, mensaje) quedan registrados y son de tu responsabilidad conforme a la Ley 25.326. TiendaApps actúa como intermediaria tecnológica en la gestión de comisiones.",
       },
       {
         title: "7. Cancelación y acceso",

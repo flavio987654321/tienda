@@ -19,7 +19,7 @@ export default function TerminosAfiliados() {
           Términos y Condiciones del Programa de Afiliados
         </h1>
         <p className="text-gray-500 text-sm mb-12">
-          Versión 1.2 — Vigente desde el 24 de mayo de 2025
+          Versión 1.3 — Vigente desde el 25 de mayo de 2025
         </p>
 
         <div className="space-y-10 text-sm leading-relaxed">
@@ -68,6 +68,32 @@ export default function TerminosAfiliados() {
               <li>
                 El porcentaje de comisión es el vigente al momento de la venta y puede ser
                 modificado por el/la Titular con aviso previo de al menos 7 días corridos.
+              </li>
+            </ul>
+
+            <h3 className="text-base font-bold text-white mt-5 mb-2">3b. Comisiones por consultas (WhatsApp)</h3>
+            <ul className="list-disc list-inside space-y-2 text-gray-400">
+              <li>
+                Cuando un potencial comprador hace clic en tu link de afiliado y consulta al/a la Titular
+                por WhatsApp, la Plataforma registra esa consulta (<em>lead</em>) vinculada a tu cuenta.
+              </li>
+              <li>
+                El/la Titular decide si confirmar o rechazar la consulta como venta desde su panel.
+                <strong className="text-gray-300"> Solo las consultas confirmadas generan comisión</strong>.
+              </li>
+              <li>
+                La comisión se calcula sobre el precio del producto al momento de la consulta y se
+                acredita automáticamente en tu billetera al ser confirmada.
+              </li>
+              <li>
+                El/la Titular tiene la facultad exclusiva de decidir si una consulta representa
+                una venta válida. La Plataforma no interviene en esta decisión salvo en caso de
+                disputa formal conforme a la Sección 10.
+              </li>
+              <li>
+                Los datos del consultante (nombre, teléfono, mensaje) son accesibles para el/la
+                Titular. No son visibles para el/la Afiliado/a salvo que el/la Titular decida
+                compartirlos directamente.
               </li>
             </ul>
           </section>
@@ -233,7 +259,7 @@ export default function TerminosAfiliados() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/5 text-xs text-gray-600 text-center">
-          <p>TiendaApps — Programa de Afiliados · Versión 1.2</p>
+          <p>TiendaApps — Programa de Afiliados · Versión 1.3</p>
           <p className="mt-1">Para consultas escribí a soporte desde tu panel de afiliado/a.</p>
         </div>
       </div>

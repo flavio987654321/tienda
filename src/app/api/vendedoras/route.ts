@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
 }
 
 
-const TC_VERSION = "1.0";
+const TC_VERSION = "1.3";
 
 // POST - afiliado se une a una tienda
 export async function POST(req: NextRequest) {

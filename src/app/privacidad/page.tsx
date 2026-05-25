@@ -31,8 +31,8 @@ const CONTENT = {
         ],
       },
       {
-        title: "3. Datos de tus clientes",
-        body: "Como Dueño de tienda, tenés acceso a los datos de envío y contacto de tus compradores. Sos responsable de tratar esos datos de acuerdo con la legislación vigente (Ley 25.326 de Protección de Datos Personales). No podés usar esos datos para fines distintos a la gestión de pedidos.",
+        title: "3. Datos de tus clientes y potenciales compradores",
+        body: "Como Dueño de tienda, tenés acceso a los datos de envío y contacto de tus compradores. Adicionalmente, cuando un potencial comprador hace una consulta por WhatsApp a través del link de un afiliado, la Plataforma registra el nombre, teléfono y mensaje del consultante y te lo muestra en el panel de Consultas para que puedas confirmar o rechazar la venta y gestionar la comisión correspondiente. Sos responsable de tratar esos datos de acuerdo con la legislación vigente (Ley 25.326 de Protección de Datos Personales) y no podés usarlos para fines distintos a la gestión del pedido o la consulta.",
       },
       {
         title: "4. Procesadores de datos (terceros que procesan tus datos)",
@@ -119,8 +119,8 @@ const CONTENT = {
         ],
       },
       {
-        title: "3. Link de afiliado y tracking",
-        body: "Tu link de afiliado incluye un identificador único que registra las ventas que generás. Esta información es visible solo para vos y para el dueño de la tienda a la que estás afiliado. No compartimos tus estadísticas con otros afiliados.",
+        title: "3. Link de afiliado, tracking y consultas",
+        body: "Tu link de afiliado incluye un identificador único que registra tanto las ventas como las consultas que generás. Cuando un potencial comprador hace clic en tu link y consulta al dueño de la tienda por WhatsApp, la Plataforma registra ese evento (consulta/lead) vinculado a tu cuenta. El nombre, teléfono y mensaje del consultante son compartidos con el dueño de la tienda para que pueda gestionar la consulta. Si el dueño confirma la venta, se acredita una comisión en tu billetera. Tus estadísticas son visibles solo para vos y para el dueño de la tienda a la que estás afiliado. No compartimos tu identidad ni datos con otros afiliados.",
       },
       {
         title: "4. Compartir información",
