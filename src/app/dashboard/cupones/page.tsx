@@ -81,6 +81,7 @@ export default function CuponesPage() {
       // Rollback si falla
       setCoupons((prev) => prev.map((c) => (c.id === id ? { ...c, isActive } : c)));
       setToggleError("No se pudo cambiar el estado del cupón. Intentá de nuevo.");
+      setTimeout(() => setToggleError(""), 4000);
     }
     setTogglingId(null);
   }

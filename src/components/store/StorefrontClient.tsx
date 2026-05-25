@@ -369,7 +369,7 @@ function parseBlocks(pageBlocks: string): PageBlock[] {
   }
 }
 
-function parseModalConfig(pageBlocks: string): { sizeChart: boolean; sizeChartTitle: string; showReels: boolean; reelUrls: string[]; buttonText: string; accentColor: string; showDescription: boolean; showColors: boolean } {
+function parseModalConfig(pageBlocks: string): { sizeChart: boolean; sizeChartTitle: string; showReels: boolean; reelUrls: string[]; buttonText: string; accentColor: string; showDescription: boolean; showColors: boolean; showReviews: boolean } {
   try {
     const parsed = JSON.parse(pageBlocks || "[]");
     const mc = parsed?.modalConfig || {};
@@ -382,9 +382,10 @@ function parseModalConfig(pageBlocks: string): { sizeChart: boolean; sizeChartTi
       accentColor: mc.accentColor || "",
       showColors: mc.showColors !== false,
       showDescription: mc.showDescription !== false,
+      showReviews: mc.showReviews !== false,
     };
   } catch {
-    return { sizeChart: false, sizeChartTitle: "Tabla de talles", showReels: false, reelUrls: [], buttonText: "Agregar al carrito", accentColor: "", showDescription: true, showColors: true };
+    return { sizeChart: false, sizeChartTitle: "Tabla de talles", showReels: false, reelUrls: [], buttonText: "Agregar al carrito", accentColor: "", showDescription: true, showColors: true, showReviews: true };
   }
 }
 
@@ -687,6 +688,22 @@ export default function StorefrontClient({
     if (!num) return;
     const precio = money(product.price, store.currency);
     const msg = encodeURIComponent(`Hola! Me interesa: ${product.name} - ${precio}. ¿Está disponible?`);
+
+    // Registrar lead en background (no bloquea la apertura de WhatsApp)
+    if (affiliateId) {
+      fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId: store.id,
+          affiliateId,
+          productId: product.id,
+          productName: product.name,
+          productPrice: product.price,
+        }),
+      }).catch(() => {});
+    }
+
     window.open(`https://wa.me/${num}?text=${msg}`, "_blank");
   }
   const isDark = store.templateId === "tech";
@@ -1601,7 +1618,7 @@ export default function StorefrontClient({
                     id: "buttonText",
                     defaultPos: { x: 36, y: 66 },
                     content: (
-                      <a href="#productos" className="inline-block rounded-full bg-white px-8 py-3 text-sm font-black" style={{ color: p.bgColor || store.primaryColor }}>
+                      <a href={p.buttonUrl ? safeHref(p.buttonUrl) : "#productos"} className="inline-block rounded-full bg-white px-8 py-3 text-sm font-black" style={{ color: p.bgColor || store.primaryColor }}>
                         {p.buttonText || "Ver catálogo"}
                       </a>
                     ),
@@ -1799,14 +1816,14 @@ export default function StorefrontClient({
                   ...(p.buttonText ? [{
                     id: "buttonText",
                     defaultPos: { x: (p.layout === "left" ? 8 : p.layout === "right" ? 54 : 28) + (p.layout === "center" ? 10 : 0), y: 65 },
-                    content: <a href="#productos" className="inline-block rounded-full bg-white px-8 py-3 text-sm font-black" style={{ color: p.bgColor || store.primaryColor }}>{p.buttonText}</a>,
+                    content: <a href={p.buttonUrl ? safeHref(p.buttonUrl) : "#productos"} className="inline-block rounded-full bg-white px-8 py-3 text-sm font-black" style={{ color: p.bgColor || store.primaryColor }}>{p.buttonText}</a>,
                   }] : []),
                 ]}
               />
             </div>
           );
           if (block.type === "spacer") {
-            const heights: Record<string,string> = { xs:"20px",sm:"40px",md:"80px",lg:"120px",xl:"180px" };
+            const heights: Record<string,string> = { xs:"12px",sm:"28px",md:"56px",lg:"100px",xl:"150px" };
             const h = heights[String(p.height||"md")] || "80px";
             const hasContent = p.text || p.emoji;
             const lineStyle = String(p.lineStyle || "none");
@@ -1844,6 +1861,173 @@ export default function StorefrontClient({
               <ContactBlock storeSlug={store.slug} p={p} primaryColor={store.primaryColor} fontFamily={store.fontFamily} />
             </div>
           );
+          if (block.type === "video") {
+            const url = String(p.videoUrl || "");
+            let embedSrc = "";
+            if (url) {
+              try {
+                const u = new URL(url);
+                if (u.hostname.includes("youtube.com") || u.hostname.includes("youtu.be")) {
+                  const vid = u.searchParams.get("v") || u.pathname.split("/").pop() || "";
+                  embedSrc = `https://www.youtube.com/embed/${vid}`;
+                } else if (u.hostname.includes("vimeo.com")) {
+                  const vid = u.pathname.split("/").filter(Boolean).pop() || "";
+                  embedSrc = `https://player.vimeo.com/video/${vid}`;
+                } else {
+                  embedSrc = url;
+                }
+              } catch {}
+            }
+            const ratios: Record<string,string> = { "16:9":"56.25%", "4:3":"75%", "1:1":"100%" };
+            const paddingBottom = ratios[String(p.aspectRatio||"16:9")] || "56.25%";
+            const isDirectVideo = embedSrc && !embedSrc.includes("youtube") && !embedSrc.includes("vimeo");
+            return (
+              <div key={block.id} id={block.id} className="px-4 py-8 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor||"transparent") }}>
+                <div className="mx-auto max-w-4xl">
+                  {p.heading && <h2 className={`mb-6 font-black text-center ${p.headingSize==="sm"?"text-xl":p.headingSize==="md"?"text-2xl":p.headingSize==="xl"?"text-4xl":"text-3xl"}`} style={{ color: store.primaryColor }}>{String(p.heading)}</h2>}
+                  {embedSrc ? (
+                    <div style={{ position:"relative", paddingBottom, height:0, overflow:"hidden", borderRadius:"16px" }}>
+                      {isDirectVideo
+                        ? <video src={embedSrc} controls style={{ position:"absolute", top:0, left:0, width:"100%", height:"100%", borderRadius:"16px" }}/>
+                        : <iframe src={embedSrc} title={String(p.heading||"Video")} style={{ position:"absolute", top:0, left:0, width:"100%", height:"100%", border:"none", borderRadius:"16px" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/>
+                      }
+                    </div>
+                  ) : (
+                    <div style={{ paddingBottom, position:"relative", background:"#f3f4f6", borderRadius:"16px" }}>
+                      <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:"8px" }}>
+                        <svg viewBox="0 0 24 24" fill="#9ca3af" width={48} height={48}><path d="M8 5v14l11-7z"/></svg>
+                        <p style={{ color:"#9ca3af", fontSize:"13px" }}>Pegá la URL del video en el panel</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+          if (block.type === "gallery") {
+            const images: string[] = Array.isArray(p.images) ? p.images.filter((x:any) => typeof x === "string" && x) : [];
+            const columns = Math.max(2, Math.min(4, Number(p.columns)||3));
+            const gridClass = columns === 2 ? "grid-cols-1 sm:grid-cols-2" : columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3";
+            return (
+              <div key={block.id} id={block.id} className="px-4 py-8 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor||"transparent") }}>
+                <div className="mx-auto max-w-7xl">
+                  {p.heading && <h2 className={`mb-6 font-black text-center ${p.headingSize==="sm"?"text-xl":p.headingSize==="md"?"text-2xl":p.headingSize==="xl"?"text-4xl":"text-3xl"}`} style={{ color: store.primaryColor }}>{String(p.heading)}</h2>}
+                  {images.length > 0 ? (
+                    <div className={`grid gap-3 ${gridClass}`}>
+                      {images.map((src, i) => (
+                        <div key={i} className="aspect-square overflow-hidden rounded-2xl bg-gray-100">
+                          <img src={src} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-16 text-center text-gray-300">
+                      <svg viewBox="0 0 24 24" fill="currentColor" className="mx-auto mb-3 h-10 w-10"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                      <p>Agregá imágenes en el panel</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+          if (block.type === "faq") {
+            const items: {id:string;question:string;answer:string}[] = Array.isArray(p.items) ? p.items : [];
+            const accentColor = String(p.accentColor || store.primaryColor);
+            return (
+              <div key={block.id} id={block.id} className="px-4 py-10 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor||"#ffffff") }}>
+                <div className="mx-auto max-w-2xl">
+                  {p.heading && <h2 className={`mb-8 font-black text-center ${p.headingSize==="sm"?"text-2xl":p.headingSize==="md"?"text-3xl":p.headingSize==="lg"?"text-3xl md:text-4xl":"text-4xl md:text-5xl"}`} style={{ color: String(p.textColor||store.primaryColor) }}>{String(p.heading)}</h2>}
+                  {items.length > 0 ? (
+                    <div className="space-y-2">
+                      {items.map((item) => (
+                        <details key={item.id} className="group rounded-2xl border overflow-hidden" style={{ borderColor: `${accentColor}30` }}>
+                          <summary className="flex cursor-pointer items-center justify-between gap-3 px-5 py-4 font-semibold text-sm list-none" style={{ color: String(p.textColor||"#111827") }}>
+                            <span>{item.question}</span>
+                            <span className="shrink-0 transition-transform duration-200 group-open:rotate-180" style={{ color: accentColor }}>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} width={16} height={16}><path d="M6 9l6 6 6-6"/></svg>
+                            </span>
+                          </summary>
+                          <div className="px-5 pb-4 text-sm leading-relaxed" style={{ color: String(p.textColor ? `${p.textColor}bb` : "#6b7280"), borderTop: `1px solid ${accentColor}20` }}>
+                            <div className="pt-3">{item.answer}</div>
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-400 py-8">Agregá preguntas frecuentes en el panel</p>
+                  )}
+                </div>
+              </div>
+            );
+          }
+          if (block.type === "testimonios") {
+            const items: {id:string;name:string;text:string;rating:number;avatar:string}[] = Array.isArray(p.items) ? p.items : [];
+            const layout = String(p.layout || "grid");
+            return (
+              <div key={block.id} id={block.id} className="px-4 py-10 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor||"#f9fafb") }}>
+                <div className="mx-auto max-w-6xl">
+                  {p.heading && <h2 className={`mb-8 font-black text-center ${p.headingSize==="sm"?"text-2xl":p.headingSize==="md"?"text-3xl":p.headingSize==="lg"?"text-3xl md:text-4xl":"text-4xl md:text-5xl"}`} style={{ color: String(p.textColor||store.primaryColor) }}>{String(p.heading)}</h2>}
+                  {items.length > 0 ? (
+                    <div className={layout === "carousel"
+                      ? "flex gap-4 overflow-x-auto pb-3"
+                      : "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                    }>
+                      {items.map((item) => (
+                        <div key={item.id} className={`rounded-2xl border border-gray-100 bg-white p-6 shadow-sm ${layout === "carousel" ? "shrink-0 w-72" : ""}`}>
+                          <div className="mb-3 flex">
+                            {Array.from({length: 5}).map((_,i) => (
+                              <svg key={i} viewBox="0 0 24 24" fill={i < (item.rating||5) ? "#f59e0b" : "#e5e7eb"} width={16} height={16}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            ))}
+                          </div>
+                          <p className="mb-4 text-sm leading-relaxed" style={{ color: String(p.textColor||"#374151") }}>&ldquo;{item.text}&rdquo;</p>
+                          <div className="flex items-center gap-2.5">
+                            {item.avatar
+                              ? <img src={item.avatar} alt={item.name} className="h-9 w-9 rounded-full object-cover"/>
+                              : <div className="h-9 w-9 rounded-full flex items-center justify-center text-white text-sm font-black" style={{ background: store.primaryColor }}>{(item.name||"?").charAt(0).toUpperCase()}</div>
+                            }
+                            <p className="text-sm font-bold" style={{ color: String(p.textColor||"#111827") }}>{item.name || "Cliente"}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-400 py-8">Agregá testimonios en el panel</p>
+                  )}
+                </div>
+              </div>
+            );
+          }
+          if (block.type === "mapa") {
+            const mapUrl = String(p.mapEmbedUrl || "");
+            const isSafeMapUrl = mapUrl.startsWith("https://www.google.com/maps/embed") || mapUrl.startsWith("https://maps.google.com/");
+            const heights: Record<string,string> = { sm:"280px", md:"400px", lg:"520px" };
+            const mapHeight = heights[String(p.height||"md")] || "400px";
+            return (
+              <div key={block.id} id={block.id} className="px-4 py-8 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor||"#ffffff") }}>
+                <div className="mx-auto max-w-4xl">
+                  {p.heading && <h2 className={`mb-6 font-black text-center ${p.headingSize==="sm"?"text-xl":p.headingSize==="md"?"text-2xl":p.headingSize==="xl"?"text-4xl":"text-3xl"}`} style={{ color: store.primaryColor }}>{String(p.heading)}</h2>}
+                  {isSafeMapUrl ? (
+                    <iframe
+                      src={mapUrl}
+                      width="100%" height={mapHeight}
+                      style={{ border:0, borderRadius:"16px", display:"block" }}
+                      allowFullScreen loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      title="Mapa"
+                    />
+                  ) : (
+                    <div style={{ height:mapHeight, background:"#f3f4f6", borderRadius:"16px", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:"8px" }}>
+                      <svg viewBox="0 0 24 24" fill="#9ca3af" width={40} height={40}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                      <p style={{ color:"#9ca3af", fontSize:"13px" }}>Pegá la URL del mapa en el panel</p>
+                    </div>
+                  )}
+                  {p.showAddress !== false && p.address && (
+                    <p className="mt-3 text-center text-sm text-gray-500">{String(p.address)}</p>
+                  )}
+                </div>
+              </div>
+            );
+          }
           if (block.type === "nosotros") {
             const members: {id:string;name:string;role:string;image:string;bio:string}[] = Array.isArray(p.members) ? p.members as any[] : [];
             const features: {id:string;number:string;title:string;desc:string}[] = Array.isArray(p.features) ? p.features as any[] : [];
@@ -1888,7 +2072,7 @@ export default function StorefrontClient({
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {features.map(f => (
                           <div key={f.id} className="rounded-2xl border border-white/10 bg-white/10 p-6">
-                            {f.number && <p className="mb-2 text-4xl font-black text-white/20">{f.number}</p>}
+                            {f.number && <p className="mb-2 text-4xl font-black text-white/70">{f.number}</p>}
                             {f.title && <h3 className="mb-2 font-black text-white">{f.title}</h3>}
                             {f.desc && <p className="text-sm text-white/65">{f.desc}</p>}
                           </div>
@@ -2606,14 +2790,14 @@ export default function StorefrontClient({
                 </>
               )}
 
-              {/* 6. Descripción */}
-              {selectedProduct.description && modalCfg.showDescription && (
-                <p className="mt-4 text-sm leading-relaxed text-gray-500">{selectedProduct.description}</p>
-              )}
-
+              {/* 6. Videos del producto — arriba para mayor visibilidad */}
               {modalCfg.showReels && productReels.length > 0 && (
                 <div className="mt-5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Videos</p>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-px flex-1 bg-gray-100" />
+                    <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Videos del producto</span>
+                    <div className="h-px flex-1 bg-gray-100" />
+                  </div>
                   <div
                     ref={reelsRef}
                     className="flex gap-3 overflow-x-auto pb-1"
@@ -2651,34 +2835,52 @@ export default function StorefrontClient({
                     }}
                   >
                     {productReels.map((url, i) => (
-                      <video
-                        key={i}
-                        src={url}
-                        controls
-                        className="h-48 w-28 shrink-0 rounded-xl object-cover bg-black"
-                        style={{ minWidth: "7rem" }}
-                      />
+                      <div key={i} className="relative shrink-0">
+                        <video
+                          src={url}
+                          controls
+                          className="h-56 w-32 rounded-2xl object-cover bg-black shadow-md"
+                          style={{ minWidth: "8rem" }}
+                        />
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
+
+              {/* 7. Descripción */}
+              {selectedProduct.description && modalCfg.showDescription && (
+                <p className="mt-4 text-sm leading-relaxed text-gray-500">{selectedProduct.description}</p>
+              )}
             </div>
 
+            {/* Reviews section */}
+            {modalCfg.showReviews && (
             <div className="border-t border-gray-100 p-5 pb-8">
-              <h3 className="mb-4 font-bold text-gray-900">
-                Opiniones de compradores
-                {!reviewsLoading && reviewsTotal > 0 && (
-                  <span className="ml-2 text-sm font-normal text-gray-400">{reviewsTotal} reseña{reviewsTotal !== 1 ? "s" : ""}</span>
+              {/* Header con rating resumen */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-gray-900 text-base">
+                  Opiniones
+                  {!reviewsLoading && reviewsTotal > 0 && (
+                    <span className="ml-2 text-sm font-normal text-gray-400">{reviewsTotal} reseña{reviewsTotal !== 1 ? "s" : ""}</span>
+                  )}
+                </h3>
+                {!reviewsLoading && reviewsAvg > 0 && (
+                  <div className="flex items-center gap-1.5 bg-yellow-50 rounded-xl px-3 py-1.5">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <span className="text-sm font-black text-gray-900">{reviewsAvg.toFixed(1)}</span>
+                  </div>
                 )}
-              </h3>
+              </div>
+
               {/* Formulario de reseña */}
               {!reviewsLoading && canReview && !reviewSuccess && (
-                <div className="mb-4 rounded-xl bg-indigo-50 p-4">
-                  <p className="mb-2 text-sm font-semibold text-indigo-700">¿Qué te pareció este producto?</p>
+                <div className="mb-5 rounded-2xl bg-indigo-50 p-4 border border-indigo-100">
+                  <p className="mb-3 text-sm font-semibold text-indigo-700">¿Qué te pareció este producto?</p>
                   <div className="mb-3 flex gap-1">
                     {[1, 2, 3, 4, 5].map((s) => (
                       <button key={s} type="button" onClick={() => setReviewRating(s)}>
-                        <Star className={`h-7 w-7 transition-colors ${s <= reviewRating ? "fill-yellow-400 text-yellow-400" : "text-gray-300 hover:text-yellow-300"}`} />
+                        <Star className={`h-8 w-8 transition-colors ${s <= reviewRating ? "fill-yellow-400 text-yellow-400" : "text-gray-200 hover:text-yellow-300"}`} />
                       </button>
                     ))}
                   </div>
@@ -2695,7 +2897,7 @@ export default function StorefrontClient({
                     type="button"
                     disabled={reviewRating === 0 || reviewSubmitting}
                     onClick={submitReview}
-                    className="mt-2 flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
+                    className="mt-3 flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40 hover:bg-indigo-700 transition-colors"
                   >
                     {reviewSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                     Publicar reseña
@@ -2703,14 +2905,15 @@ export default function StorefrontClient({
                 </div>
               )}
               {reviewSuccess && (
-                <div className="mb-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-700">
+                <div className="mb-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700 flex items-center gap-2">
+                  <Star className="h-4 w-4 fill-green-500 text-green-500 shrink-0" />
                   ¡Gracias! Tu reseña ya está publicada.
                 </div>
               )}
               {!reviewsLoading && userReview && !reviewSuccess && (
-                <div className="mb-4 rounded-xl bg-gray-50 p-4">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">Tu reseña</p>
-                  <div className="flex gap-0.5 mb-1">
+                <div className="mb-4 rounded-2xl bg-gray-50 p-4 border border-gray-100">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Tu reseña</p>
+                  <div className="flex gap-0.5 mb-1.5">
                     {[1, 2, 3, 4, 5].map((s) => <Star key={s} className={`h-4 w-4 ${s <= userReview.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />)}
                   </div>
                   {userReview.comment && <p className="text-sm text-gray-600">{userReview.comment}</p>}
@@ -2720,40 +2923,30 @@ export default function StorefrontClient({
               {reviewsLoading ? (
                 <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-gray-300" /></div>
               ) : productReviews.length === 0 ? (
-                <p className="text-center text-sm text-gray-400 py-4">Todavía no hay reseñas para este producto.</p>
+                <p className="text-center text-sm text-gray-400 py-6">Todavía no hay reseñas para este producto.</p>
               ) : (
-                <div className="space-y-1">
-                  {reviewsAvg > 0 && (
-                    <div className="mb-4 flex items-center gap-3 rounded-xl bg-gray-50 p-3">
-                      <span className="text-3xl font-black text-gray-950">{reviewsAvg.toFixed(1)}</span>
-                      <div>
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map((s) => <Star key={s} className={`h-4 w-4 ${s <= Math.round(reviewsAvg) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />)}
-                        </div>
-                        <p className="mt-0.5 text-xs text-gray-400">{reviewsTotal} reseña{reviewsTotal !== 1 ? "s" : ""}</p>
-                      </div>
-                    </div>
-                  )}
+                <div className="space-y-0">
                   {productReviews.map((r) => (
-                    <div key={r.id} className="border-b border-gray-50 py-3 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-100">
-                          {r.user.image ? <img src={r.user.image} alt="" className="h-full w-full object-cover" /> : <span className="text-xs font-bold text-indigo-600">{r.user.name?.[0]?.toUpperCase() ?? "?"}</span>}
+                    <div key={r.id} className="border-b border-gray-50 py-4 last:border-0">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-100 font-bold text-indigo-600 text-xs">
+                          {r.user.image ? <img src={r.user.image} alt="" className="h-full w-full object-cover" /> : (r.user.name?.[0]?.toUpperCase() ?? "?")}
                         </div>
-                        <span className="text-sm font-semibold text-gray-900">{r.user.name || "Comprador"}</span>
-                        <div className="ml-auto flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map((s) => <Star key={s} className={`h-3 w-3 ${s <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />)}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{r.user.name || "Comprador"}</p>
+                          <p className="text-xs text-gray-400">{new Date(r.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                        </div>
+                        <div className="flex gap-0.5 shrink-0">
+                          {[1, 2, 3, 4, 5].map((s) => <Star key={s} className={`h-3.5 w-3.5 ${s <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />)}
                         </div>
                       </div>
-                      {r.comment && <p className="mt-1.5 ml-9 text-sm text-gray-600">{r.comment}</p>}
-                      <p className="mt-1 ml-9 text-xs text-gray-300">
-                        {new Date(r.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
-                      </p>
+                      {r.comment && <p className="mt-2 ml-10 text-sm text-gray-600 leading-relaxed">{r.comment}</p>}
                     </div>
                   ))}
                 </div>
               )}
             </div>
+            )}
           </div>
         );
 

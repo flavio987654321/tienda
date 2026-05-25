@@ -36,6 +36,7 @@ export default function PerfilPage() {
   const [form, setForm] = useState({ name: "", city: "", phone: "" });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     fetch("/api/perfil")
@@ -55,18 +56,26 @@ export default function PerfilPage() {
     e.preventDefault();
     setSaving(true);
     setSaved(false);
-    const res = await fetch("/api/perfil", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    if (res.ok) {
+    setSaveError("");
+    try {
+      const res = await fetch("/api/perfil", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
       const d = await res.json();
-      setProfile(d.profile);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      if (res.ok && d.profile) {
+        setProfile(d.profile);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      } else {
+        setSaveError(d.error || "No se pudo guardar. Intentá de nuevo.");
+      }
+    } catch {
+      setSaveError("Error de conexión. Verificá tu internet.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   const initials = profile ? getInitials(profile.name, profile.email) : "?";
@@ -131,6 +140,12 @@ export default function PerfilPage() {
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
+
+            {saveError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5 text-center">
+                {saveError}
+              </p>
+            )}
 
             <button
               type="submit"

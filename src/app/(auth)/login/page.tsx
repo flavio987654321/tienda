@@ -44,7 +44,7 @@ function LoginForm() {
     } else {
       setRedirecting(true);
       router.refresh();
-      router.push("/panel");
+      router.push("/dashboard");
     }
   }
 

@@ -11,6 +11,7 @@ import {
   List, Grid2X2, ChevronDown, ChevronUp, Megaphone, Share2,
   MousePointer2, CreditCard, Search, ExternalLink,
   Plus, Trash2, Layers, X, Copy, Menu, Link,
+  Ruler, Film, Paintbrush, Info, MessageSquare,
 } from "lucide-react";
 
 /* ─── Templates ─── */
@@ -75,7 +76,7 @@ type DesignSection = "template"|"colores"|"textos"|"imagenes"|"layout"|"tarjetas
 type NavLink = { id: string; label: string; type: "filter" | "url" | "section"; value: string };
 
 /* ─── Block types ─── */
-export type BlockType = "hero"|"text"|"products"|"banner"|"banner-group"|"cta"|"image-text"|"socials"|"spacer"|"divider"|"navbar"|"contacto"|"nosotros";
+export type BlockType = "hero"|"text"|"products"|"banner"|"banner-group"|"cta"|"image-text"|"socials"|"spacer"|"divider"|"navbar"|"contacto"|"nosotros"|"video"|"gallery"|"faq"|"testimonios"|"mapa";
 export interface Block { id:string; type:BlockType; props:Record<string,any> }
 type PreviewViewport = "desktop"|"tablet"|"mobile";
 type TextPosition = { x: number; y: number };
@@ -97,7 +98,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"navbar",     emoji:"🧭", label:"Menú de navegación", desc:"Barra superior con links, buscador y menú hamburguesa",
     defaultProps:{ navConfig:'{"layout":"right","showSearch":false,"links":[]}' } },
   { type:"hero",       emoji:"🖼️", label:"Hero / Portada",       desc:"Título grande, subtítulo y botón de acción",
-    defaultProps:{ title:"¡Bienvenidos a mi tienda!", subtitle:"Encontrá todo lo que buscás", buttonText:"Ver productos", bgColor:"", textColor:"#ffffff", layout:"center", height:"lg", headingSize:"xl" } },
+    defaultProps:{ title:"¡Bienvenidos a mi tienda!", subtitle:"Encontrá todo lo que buscás", buttonText:"Ver productos", buttonUrl:"", bgColor:"", textColor:"#ffffff", layout:"center", height:"lg", headingSize:"xl" } },
   { type:"text",       emoji:"📝", label:"Bloque de texto",        desc:"Título y párrafo de texto libre",
     defaultProps:{ heading:"Sobre nosotros", body:"Somos una tienda con años de experiencia...", align:"center", fontSize:"md", headingSize:"lg", color:"", textColor:"", bgColor:"" } },
   { type:"products",   emoji:"🛍️", label:"Grilla de productos",    desc:"Muestra tu catálogo con columnas configurables",
@@ -105,7 +106,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
   { type:"banner",     emoji:"📢", label:"Banda de anuncio",       desc:"Franja de color con texto destacado",
     defaultProps:{ text:"🔥 ¡Oferta especial! Envío gratis hoy", bgColor:"#f59e0b", textColor:"#000000", size:"md", textSize:"md" } },
   { type:"cta",        emoji:"🚀", label:"Llamada a la acción",    desc:"Sección oscura con botón grande destacado",
-    defaultProps:{ heading:"¿Lista para comprar?", sub:"Envíos a todo el país", buttonText:"Ver catálogo", bgColor:"#0f172a", textColor:"#ffffff", headingSize:"xl" } },
+    defaultProps:{ heading:"¿Lista para comprar?", sub:"Envíos a todo el país", buttonText:"Ver catálogo", buttonUrl:"", bgColor:"#0f172a", textColor:"#ffffff", headingSize:"xl" } },
   { type:"image-text", emoji:"🖼️", label:"Imagen + Texto",         desc:"Foto al lado de texto descriptivo (split)",
     defaultProps:{ heading:"¿Por qué elegirnos?", body:"Calidad y atención garantizada en cada compra.", image:"", imagePosition:"left", imageFit:"cover", imageFocus:"center", color:"", textColor:"", bgColor:"", imageBgColor:"", imageRadius:"redondeada", headingSize:"lg" } },
   { type:"spacer",     emoji:"⬜", label:"Espacio en blanco",      desc:"Separador con texto, emoji y color opcionales",
@@ -123,6 +124,16 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
       { image:"", title:"Bienvenidos", subtitle:"Descubrí nuestra colección", buttonText:"Ver productos", buttonUrl:"", focalX:50, focalY:50 },
       { image:"", title:"Envíos gratis", subtitle:"En compras mayores a $X", buttonText:"Aprovechar", buttonUrl:"", focalX:50, focalY:50 },
     ], height:"md", autoplay:true, speed:4, showDots:true, showArrows:true, overlayColor:"#000000", overlayOpacity:35, textColor:"#ffffff", textAlign:"center" } },
+  { type:"video",      emoji:"▶️", label:"Video",                    desc:"Video de YouTube, Vimeo o MP4 incrustado",
+    defaultProps:{ heading:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", headingSize:"lg" } },
+  { type:"gallery",    emoji:"🖼️", label:"Galería de fotos",         desc:"Grilla de imágenes para mostrar tu trabajo o productos",
+    defaultProps:{ heading:"Galería", images:[], columns:3, bgColor:"", headingSize:"lg" } },
+  { type:"faq",        emoji:"❓", label:"Preguntas frecuentes",      desc:"Acordeón de preguntas y respuestas comunes",
+    defaultProps:{ heading:"Preguntas frecuentes", items:[], bgColor:"", textColor:"", accentColor:"", headingSize:"xl" } },
+  { type:"testimonios",emoji:"💬", label:"Testimonios",               desc:"Reseñas de clientes en tarjetas visuales",
+    defaultProps:{ heading:"Lo que dicen nuestros clientes", items:[], layout:"grid", bgColor:"", textColor:"", headingSize:"xl" } },
+  { type:"mapa",       emoji:"📍", label:"Mapa / Ubicación",          desc:"Mapa de Google Maps con tu dirección",
+    defaultProps:{ heading:"Dónde encontrarnos", address:"", mapEmbedUrl:"", height:"md", bgColor:"", showAddress:true, headingSize:"lg" } },
 ];
 
 const BLOCK_TIPS: Partial<Record<BlockType, string>> = {
@@ -139,6 +150,11 @@ const BLOCK_TIPS: Partial<Record<BlockType, string>> = {
   "contacto":     "El formulario envía los mensajes al email de tu cuenta. Activá solo los campos que necesitás (nombre, teléfono, etc.).",
   "nosotros":     "Presentá tu equipo y tu misión. Genera confianza con clientes nuevos que no te conocen.",
   "banner-group": "Agregá imágenes de alta calidad (banner de tu marca, productos, etc.). El texto se puede mover en la preview. Ideal como portada principal.",
+  "video":        "Pegá el link de un video de YouTube o Vimeo. Ideal para mostrar tu marca, proceso de trabajo o reviews de productos.",
+  "gallery":      "Subí fotos de tu trabajo, taller o productos en alta resolución. Cuanto más fotos, más confianza genera.",
+  "faq":          "Respondé las dudas más comunes antes de que el cliente las tenga. Reduce las consultas y acelera la decisión de compra.",
+  "testimonios":  "Nada vende mejor que la experiencia de otros compradores. Pediles a tus mejores clientes que te escriban unas palabras.",
+  "mapa":         "Mostrá dónde estás. Copiá el código de Google Maps → Compartir → Insertar mapa, y pegá solo la URL del src del iframe.",
 };
 
 /* ─── Bloques prediseñados por template ─── */
@@ -235,7 +251,7 @@ const DEFAULT_CONFIG: StoreConfig = {
   productModalSizeChart:false, productModalSizeChartTitle:"Tabla de talles",
   productModalSizeChartData:'{"columns":["Talle","Pecho","Cintura","Cadera"],"rows":[]}',
   productModalShowReels:false, productModalReelUrls:"[]",
-  productModalButtonText:"Agregar al carrito", productModalAccentColor:"", productModalShowDescription:true,
+  productModalButtonText:"Agregar al carrito", productModalAccentColor:"", productModalShowDescription:true, productModalShowReviews:true,
   navLinks:"[]",
 };
 
@@ -354,7 +370,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function blockSupportsMovableText(type: BlockType) {
-  return ["hero", "text", "products", "banner", "cta", "image-text"].includes(type);
+  return ["hero", "text", "banner", "cta", "image-text"].includes(type);
 }
 
 function getViewportTextPositions(props: Record<string, any>, viewport: PreviewViewport): Record<string, TextPosition> {
@@ -749,6 +765,7 @@ function BlockEditor({
     {inp("Título","title","¡Bienvenidos!")}
     {inp("Subtítulo","subtitle","Encontrá todo lo que buscás")}
     {inp("Texto del botón","buttonText","Ver productos")}
+    {inp("Link del botón (vacío = ir a productos)","buttonUrl","#productos")}
     <ColorPicker label="Color de fondo (vacío = color principal)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
     <ColorPicker label="Color de texto" value={p.textColor||"#ffffff"} onChange={v=>upd("textColor",v)}/>
     <div>
@@ -761,7 +778,7 @@ function BlockEditor({
     </div>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
-      <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
+      <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
     </div>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Altura</label>
@@ -786,7 +803,7 @@ function BlockEditor({
     </div>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
-      <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
+      <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
     </div>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del texto (cuerpo)</label>
@@ -827,7 +844,7 @@ function BlockEditor({
     {p.showHeading!==false && (
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
-        <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
+        <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
       </div>
     )}
     {p.showHeading!==false && p.subheading && (
@@ -866,7 +883,7 @@ function BlockEditor({
     <ColorPicker label="Color de texto" value={p.textColor||"#000000"} onChange={v=>upd("textColor",v)}/>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del texto</label>
-      <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.textSize||"md"} onChange={v=>upd("textSize",v)}/>
+      <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.textSize||"md"} onChange={v=>upd("textSize",v)}/>
     </div>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Altura de la franja</label>
@@ -995,10 +1012,11 @@ function BlockEditor({
     {inp("Título","heading","¿Lista para comprar?")}
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
-      <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
+      <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
     </div>
     {inp("Subtítulo","sub","Envíos a todo el país")}
     {inp("Texto del botón","buttonText","Ver catálogo")}
+    {inp("Link del botón (vacío = ir a productos)","buttonUrl","#productos")}
     <ColorPicker label="Color de fondo" value={p.bgColor||"#0f172a"} onChange={v=>upd("bgColor",v)}/>
     <ColorPicker label="Color de texto" value={p.textColor||"#ffffff"} onChange={v=>upd("textColor",v)}/>
     {heightEditorSection}
@@ -1008,7 +1026,7 @@ function BlockEditor({
     {inp("Título","heading","¿Por qué elegirnos?")}
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
-      <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
+      <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
     </div>
     {ta("Descripción","body","Calidad garantizada en cada compra.")}
     <div>
@@ -1103,7 +1121,7 @@ function BlockEditor({
     {p.showHeading!==false && (
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
-        <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
+        <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
       </div>
     )}
     <div>
@@ -1135,7 +1153,7 @@ function BlockEditor({
   if (block.type==="spacer") return <div className="space-y-3">
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Altura</label>
-      <Chips options={[{id:"xs",label:"8px"},{id:"sm",label:"24px"},{id:"md",label:"48px"},{id:"lg",label:"80px"},{id:"xl",label:"120px"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
+      <Chips options={[{id:"xs",label:"Micro"},{id:"sm",label:"Pequeño"},{id:"md",label:"Normal"},{id:"lg",label:"Grande"},{id:"xl",label:"Enorme"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
     </div>
     <div className="border-t border-gray-100 pt-3 space-y-3">
       <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Contenido opcional</p>
@@ -1169,7 +1187,7 @@ function BlockEditor({
       {inp("Subtítulo","subtitle","¿Tenés alguna pregunta? Escribinos.")}
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
-        <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
+        <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
       </div>
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1.5">Tipo de fondo</label>
@@ -1232,7 +1250,7 @@ function BlockEditor({
         {inp("Título principal","heading","¿Quiénes somos?")}
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
-          <Chips options={[{id:"sm",label:"H4"},{id:"md",label:"H3"},{id:"lg",label:"H2"},{id:"xl",label:"H1"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
+          <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
         </div>
         {ta("Subtítulo","subtitle","Conocé al equipo detrás de la tienda.")}
         <div className="flex gap-2">
@@ -1335,6 +1353,182 @@ function BlockEditor({
       </div>
     </div>;
   }
+
+  if (block.type==="video") return <div className="space-y-3">
+    {inp("Título (opcional)","heading","")}
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">URL del video</label>
+      <input type="url" value={p.videoUrl||""} onChange={e=>upd("videoUrl",e.target.value)}
+        placeholder="https://www.youtube.com/watch?v=..."
+        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+      <p className="text-[10px] text-gray-400 mt-1">Soporta YouTube, Vimeo y links directos .mp4</p>
+    </div>
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Proporción</label>
+      <Chips options={[{id:"16:9",label:"16:9 (TV)"},{id:"4:3",label:"4:3"},{id:"1:1",label:"Cuadrado"}]} value={p.aspectRatio||"16:9"} onChange={v=>upd("aspectRatio",v)}/>
+    </div>
+    <ColorPicker label="Color de fondo (vacío = transparente)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
+  </div>;
+
+  if (block.type==="gallery") {
+    const images: string[] = Array.isArray(p.images) ? p.images : [];
+    return <div className="space-y-3">
+      {inp("Título (opcional)","heading","Galería")}
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Columnas</label>
+        <Chips options={[{id:"2",label:"2 col"},{id:"3",label:"3 col"},{id:"4",label:"4 col"}]} value={String(p.columns||3)} onChange={v=>upd("columns",Number(v))}/>
+      </div>
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-xs font-medium text-gray-600">Imágenes ({images.length})</label>
+          {onPickImage && <button type="button" onClick={()=>onPickImage?.("gallery_add_image")} disabled={uploadingImage}
+            className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold disabled:opacity-50 flex items-center gap-1">
+            <Plus className="h-3 w-3"/> Subir imagen
+          </button>}
+        </div>
+        {images.length === 0 && (
+          <div className="rounded-xl border border-dashed border-gray-200 py-6 text-center">
+            <p className="text-xs text-gray-400">Sin imágenes. Subí una o pegá una URL abajo.</p>
+          </div>
+        )}
+        <div className="grid grid-cols-3 gap-2 mb-2">
+          {images.map((img, idx) => (
+            <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+              <img src={img} alt="" className="w-full h-full object-cover"/>
+              <button type="button" onClick={()=>upd("images",images.filter((_,i)=>i!==idx))}
+                className="absolute top-1 right-1 bg-white/90 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow">
+                <X className="h-3 w-3 text-red-500"/>
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input type="url" placeholder="O pegá una URL de imagen..."
+            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onKeyDown={e=>{
+              if(e.key==="Enter"&&(e.target as HTMLInputElement).value.trim()){
+                upd("images",[...images,(e.target as HTMLInputElement).value.trim()]);
+                (e.target as HTMLInputElement).value="";
+              }
+            }}
+          />
+          <button type="button"
+            onClick={e=>{
+              const input=(e.currentTarget.previousElementSibling as HTMLInputElement);
+              if(input.value.trim()){upd("images",[...images,input.value.trim()]);input.value="";}
+            }}
+            className="px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors">
+            <Plus className="h-3.5 w-3.5"/>
+          </button>
+        </div>
+        <p className="text-[10px] text-gray-400 mt-1">Presioná Enter o el botón + para agregar una URL</p>
+      </div>
+      <ColorPicker label="Color de fondo (vacío = transparente)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
+    </div>;
+  }
+
+  if (block.type==="faq") {
+    const items: {id:string;question:string;answer:string}[] = Array.isArray(p.items) ? p.items : [];
+    return <div className="space-y-3">
+      {inp("Título","heading","Preguntas frecuentes")}
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
+        <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
+      </div>
+      <div className="space-y-2">
+        {items.map((item,i)=>(
+          <div key={item.id} className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-500">Pregunta {i+1}</span>
+              <button type="button" onClick={()=>upd("items",items.filter(x=>x.id!==item.id))}
+                className="text-gray-300 hover:text-red-400 transition-colors"><Trash2 className="h-3.5 w-3.5"/></button>
+            </div>
+            <input value={item.question} onChange={e=>upd("items",items.map(x=>x.id===item.id?{...x,question:e.target.value}:x))}
+              placeholder="¿Cuál es la pregunta?" className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+            <textarea value={item.answer} onChange={e=>upd("items",items.map(x=>x.id===item.id?{...x,answer:e.target.value}:x))}
+              placeholder="Respuesta..." rows={2} className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+          </div>
+        ))}
+        <button type="button" onClick={()=>upd("items",[...items,{id:crypto.randomUUID(),question:"",answer:""}])}
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-300 py-2 text-xs font-semibold text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+          <Plus className="h-3.5 w-3.5"/> Agregar pregunta
+        </button>
+      </div>
+      <ColorPicker label="Color de fondo (vacío = blanco)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
+      <ColorPicker label="Color de texto" value={p.textColor||""} onChange={v=>upd("textColor",v)}/>
+      <ColorPicker label="Color de acento (borde activo)" value={p.accentColor||""} onChange={v=>upd("accentColor",v)}/>
+    </div>;
+  }
+
+  if (block.type==="testimonios") {
+    const items: {id:string;name:string;text:string;rating:number;avatar:string}[] = Array.isArray(p.items) ? p.items : [];
+    return <div className="space-y-3">
+      {inp("Título","heading","Lo que dicen nuestros clientes")}
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
+        <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.headingSize||"xl"} onChange={v=>upd("headingSize",v)}/>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Diseño</label>
+        <Chips options={[{id:"grid",label:"Grilla"},{id:"carousel",label:"Desplazable"}]} value={p.layout||"grid"} onChange={v=>upd("layout",v)}/>
+      </div>
+      <div className="space-y-2">
+        {items.map((item,i)=>(
+          <div key={item.id} className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-500">Testimonio {i+1}</span>
+              <button type="button" onClick={()=>upd("items",items.filter(x=>x.id!==item.id))}
+                className="text-gray-300 hover:text-red-400 transition-colors"><Trash2 className="h-3.5 w-3.5"/></button>
+            </div>
+            <input value={item.name} onChange={e=>upd("items",items.map(x=>x.id===item.id?{...x,name:e.target.value}:x))}
+              placeholder="Nombre del cliente" className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+            <textarea value={item.text} onChange={e=>upd("items",items.map(x=>x.id===item.id?{...x,text:e.target.value}:x))}
+              placeholder="Reseña del cliente..." rows={2} className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"/>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500">Estrellas:</label>
+              <Chips options={[{id:"3",label:"★★★"},{id:"4",label:"★★★★"},{id:"5",label:"★★★★★"}]} value={String(item.rating||5)} onChange={v=>upd("items",items.map(x=>x.id===item.id?{...x,rating:Number(v)}:x))}/>
+            </div>
+            <input value={item.avatar} onChange={e=>upd("items",items.map(x=>x.id===item.id?{...x,avatar:e.target.value}:x))}
+              placeholder="URL de foto (opcional)" className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+          </div>
+        ))}
+        <button type="button" onClick={()=>upd("items",[...items,{id:crypto.randomUUID(),name:"",text:"",rating:5,avatar:""}])}
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-300 py-2 text-xs font-semibold text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+          <Plus className="h-3.5 w-3.5"/> Agregar testimonio
+        </button>
+      </div>
+      <ColorPicker label="Color de fondo (vacío = gris claro)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
+      <ColorPicker label="Color de texto" value={p.textColor||""} onChange={v=>upd("textColor",v)}/>
+    </div>;
+  }
+
+  if (block.type==="mapa") return <div className="space-y-3">
+    {inp("Título (opcional)","heading","Dónde encontrarnos")}
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Dirección (texto visible)</label>
+      <input type="text" value={p.address||""} onChange={e=>upd("address",e.target.value)}
+        placeholder="Av. Corrientes 1234, Buenos Aires"
+        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+    </div>
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">URL de Google Maps</label>
+      <input type="url" value={p.mapEmbedUrl||""} onChange={e=>upd("mapEmbedUrl",e.target.value)}
+        placeholder="https://www.google.com/maps/embed?pb=..."
+        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+      <div className="mt-1.5 rounded-xl bg-blue-50 border border-blue-100 px-3 py-2">
+        <p className="text-[10px] text-blue-700 leading-relaxed">Google Maps → tu ubicación → Compartir → Insertar mapa → copiá la URL del <code>src=</code> del iframe.</p>
+      </div>
+    </div>
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Altura del mapa</label>
+      <Chips options={[{id:"sm",label:"Compacto"},{id:"md",label:"Normal"},{id:"lg",label:"Grande"}]} value={p.height||"md"} onChange={v=>upd("height",v)}/>
+    </div>
+    <label className="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" checked={p.showAddress!==false} onChange={e=>upd("showAddress",e.target.checked)} className="rounded"/>
+      <span className="text-xs text-gray-700">Mostrar dirección debajo del mapa</span>
+    </label>
+    <ColorPicker label="Color de fondo (vacío = blanco)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
+  </div>;
 
   if (block.type==="divider") return <div className="space-y-3">
     <div>
@@ -2614,9 +2808,25 @@ export default function ConfiguracionPage() {
   const toggle = (s:DesignSection) => setOpen(p=>p.includes(s)?p.filter(x=>x!==s):[...p,s]);
 
   async function uploadAsset(file: File) {
-    const fd=new FormData(); fd.append("file",file);
-    const res=await fetch("/api/upload",{method:"POST",body:fd});
-    const {url}=await res.json();
+    // Optimiza imágenes antes de subir: convierte a WebP alta calidad,
+    // redimensiona solo si supera 3000px. Archivos que no son imágenes se suben sin tocar.
+    let toUpload = file;
+    if (file.type.startsWith("image/")) {
+      try {
+        const { optimizeImage } = await import("@/lib/image-optimizer");
+        toUpload = await optimizeImage(file, {
+          maxSidePx: 3000,
+          maxBytes: 4 * 1024 * 1024,
+          startQuality: 0.92,
+        });
+      } catch {
+        // Si la optimización falla, intenta subir el original
+      }
+    }
+    const fd = new FormData();
+    fd.append("file", toUpload);
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const { url } = await res.json();
     return url as string | undefined;
   }
 
@@ -2638,6 +2848,9 @@ export default function ConfiguracionPage() {
           const memberId = selectedImageField.replace("member_image_", "");
           const members = Array.isArray(current.props.members) ? current.props.members : [];
           updateBlock(selectedBlockId, { ...current.props, members: members.map((m: {id:string}) => m.id === memberId ? { ...m, image: url } : m) });
+        } else if (selectedImageField === "gallery_add_image") {
+          const images = Array.isArray(current.props.images) ? current.props.images : [];
+          updateBlock(selectedBlockId, { ...current.props, images: [...images, url] });
         } else {
           updateBlock(selectedBlockId, { ...current.props, [selectedImageField]: url });
         }
@@ -2671,6 +2884,7 @@ export default function ConfiguracionPage() {
         accentColor: config.productModalAccentColor || "",
         showDescription: config.productModalShowDescription !== false,
         showColors: config.productModalShowColors !== false,
+        showReviews: config.productModalShowReviews !== false,
       };
       const pageBlocksPayload = JSON.stringify({ blocks: processedBlocks, modalConfig });
       // UX-04: Validate social URL format
@@ -3553,7 +3767,7 @@ export default function ConfiguracionPage() {
                   <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3.5">
                       <div className="flex items-center gap-2.5">
-                        <div className="p-1.5 bg-blue-50 rounded-lg"><span className="text-sm">📏</span></div>
+                        <div className="p-1.5 bg-blue-50 rounded-lg"><Ruler className="h-4 w-4 text-blue-600"/></div>
                         <div>
                           <p className="font-semibold text-gray-900 text-sm">Tabla de talles</p>
                           <p className="text-xs text-gray-400">Mostrá una guía de medidas en el modal</p>
@@ -3573,7 +3787,7 @@ export default function ConfiguracionPage() {
                             className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
                         </div>
                         <div className="flex items-start gap-2 bg-blue-50 rounded-xl px-3 py-2.5">
-                          <span className="text-sm mt-0.5">ℹ️</span>
+                          <Info className="h-3.5 w-3.5 mt-0.5 text-blue-500 shrink-0"/>
                           <p className="text-xs text-blue-700 leading-relaxed">
                             La tabla se genera automáticamente con los talles que cargaste en cada producto (variantes). Si un talle tiene stock aparece con ✓, si no tiene aparece con ✗.
                           </p>
@@ -3586,7 +3800,7 @@ export default function ConfiguracionPage() {
                   <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3.5">
                       <div className="flex items-center gap-2.5">
-                        <div className="p-1.5 bg-pink-50 rounded-lg"><span className="text-sm">🎬</span></div>
+                        <div className="p-1.5 bg-pink-50 rounded-lg"><Film className="h-4 w-4 text-pink-600"/></div>
                         <div>
                           <p className="font-semibold text-gray-900 text-sm">Carrusel de videos</p>
                           <p className="text-xs text-gray-400">Subí videos del producto desde tu dispositivo</p>
@@ -3625,7 +3839,7 @@ export default function ConfiguracionPage() {
                   <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3.5">
                       <div className="flex items-center gap-2.5">
-                        <div className="p-1.5 bg-orange-50 rounded-lg"><span className="text-sm">🌈</span></div>
+                        <div className="p-1.5 bg-orange-50 rounded-lg"><Palette className="h-4 w-4 text-orange-600"/></div>
                         <div>
                           <p className="font-semibold text-gray-900 text-sm">Paleta de colores</p>
                           <p className="text-xs text-gray-400">Mostrá los colores disponibles del producto</p>
@@ -3639,8 +3853,33 @@ export default function ConfiguracionPage() {
                     {config.productModalShowColors!==false && (
                       <div className="px-4 pb-3 border-t border-gray-50 pt-3">
                         <div className="flex items-start gap-2 bg-orange-50 rounded-xl px-3 py-2.5">
-                          <span className="text-sm mt-0.5">ℹ️</span>
+                          <Info className="h-3.5 w-3.5 mt-0.5 text-orange-500 shrink-0"/>
                           <p className="text-xs text-orange-700 leading-relaxed">Se muestran cuando el producto tiene variantes de tipo "Color" o "Tono" (por ej: rojo, azul, #FF0000).</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Reseñas */}
+                  <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 bg-green-50 rounded-lg"><MessageSquare className="h-4 w-4 text-green-600"/></div>
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm">Reseñas de compradores</p>
+                          <p className="text-xs text-gray-400">Mostrá las opiniones de quienes compraron</p>
+                        </div>
+                      </div>
+                      <button onClick={()=>set("productModalShowReviews",config.productModalShowReviews===false?true:false)}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${config.productModalShowReviews!==false?"bg-indigo-600":"bg-gray-300"}`}>
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${config.productModalShowReviews!==false?"translate-x-4":"translate-x-0.5"}`}/>
+                      </button>
+                    </div>
+                    {config.productModalShowReviews!==false && (
+                      <div className="px-4 pb-3 border-t border-gray-50 pt-3">
+                        <div className="flex items-start gap-2 bg-green-50 rounded-xl px-3 py-2.5">
+                          <Info className="h-3.5 w-3.5 mt-0.5 text-green-600 shrink-0"/>
+                          <p className="text-xs text-green-700 leading-relaxed">Los compradores que recibieron el producto pueden dejar su calificación y comentario. Las reseñas generan confianza y aumentan las ventas.</p>
                         </div>
                       </div>
                     )}
@@ -3649,7 +3888,7 @@ export default function ConfiguracionPage() {
                   {/* Botón y estilo */}
                   <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                     <div className="px-4 py-3.5 flex items-center gap-2.5">
-                      <div className="p-1.5 bg-violet-50 rounded-lg"><span className="text-sm">🎨</span></div>
+                      <div className="p-1.5 bg-violet-50 rounded-lg"><Paintbrush className="h-4 w-4 text-violet-600"/></div>
                       <div>
                         <p className="font-semibold text-gray-900 text-sm">Texto y colores</p>
                         <p className="text-xs text-gray-400">Personalizá el botón y el acento del modal</p>

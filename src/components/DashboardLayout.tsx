@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle, Loader2 } from "lucide-react";
+import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle, Loader2, MessageCircle } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 
@@ -13,6 +13,7 @@ const navItems = [
   { href: "/dashboard/metricas", label: "Métricas", icon: BarChart2 },
   { href: "/dashboard/productos", label: "Productos", icon: Package },
   { href: "/dashboard/pedidos", label: "Pedidos", icon: ShoppingBag },
+  { href: "/dashboard/consultas", label: "Consultas", icon: MessageCircle },
   { href: "/dashboard/vendedoras", label: "Afiliados", icon: Users },
   { href: "/dashboard/cupones", label: "Cupones", icon: Tag },
   { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store },

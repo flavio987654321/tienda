@@ -193,52 +193,14 @@ function formatCategoryLabel(value: string) {
     .join(" ");
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
-  return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
-}
-
+// optimizeImageForUpload usa la utilidad compartida con las mismas limitaciones de antes
 async function optimizeImageForUpload(file: File) {
-  if (file.size <= MAX_UPLOAD_IMAGE_SIZE_BYTES) return file;
-
-  const image = new Image();
-  const objectUrl = URL.createObjectURL(file);
-
-  try {
-    await new Promise<void>((resolve, reject) => {
-      image.onload = () => resolve();
-      image.onerror = () => reject(new Error("No se pudo leer la imagen"));
-      image.src = objectUrl;
-    });
-
-    const sourceMaxSide = Math.max(image.width, image.height);
-    const baseScale = Math.min(1, MAX_IMAGE_SIDE / sourceMaxSide);
-    const outputType = "image/webp";
-
-    for (const scaleFactor of [1, 0.85, 0.7, 0.55]) {
-      const scale = baseScale * scaleFactor;
-      const width = Math.max(1, Math.round(image.width * scale));
-      const height = Math.max(1, Math.round(image.height * scale));
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("No se pudo preparar la imagen");
-      ctx.drawImage(image, 0, 0, width, height);
-
-      for (const quality of [0.86, 0.78, 0.7, 0.62, 0.54]) {
-        const blob = await canvasToBlob(canvas, outputType, quality);
-        if (blob && blob.size <= MAX_UPLOAD_IMAGE_SIZE_BYTES) {
-          const name = file.name.replace(/\.[^.]+$/, "") || "producto";
-          return new File([blob], `${name}.webp`, { type: outputType });
-        }
-      }
-    }
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
-
-  throw new Error(`No pudimos optimizar ${file.name}. Proba con una foto un poco mas liviana.`);
+  const { optimizeImage } = await import("@/lib/image-optimizer");
+  return optimizeImage(file, {
+    maxSidePx: MAX_IMAGE_SIDE,
+    maxBytes: MAX_UPLOAD_IMAGE_SIZE_BYTES,
+    startQuality: 0.92,
+  });
 }
 
 async function readJsonResponse(res: Response) {

@@ -164,6 +164,7 @@ model Store {
   affiliates Affiliate[]
   coupons    Coupon[]
   affiliateGoals AffiliateGoal[]
+  leads      Lead[]
 }
 
 model Product {
@@ -313,6 +314,7 @@ model Affiliate {
   commissions Commission[]
   wallet      Wallet?
   clicks      AffiliateClick[]
+  leads       Lead[]
 
   @@unique([storeId, userId])
 }
@@ -543,4 +545,30 @@ model Subscription {
   mpPreapprovalId   String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+// Consultas/leads para tiendas de tipo inquiry (VEHICULOS, INMOBILIARIA, etc.)
+// Se crea cuando un cliente hace click en "Consultar por WhatsApp" desde un link de afiliado
+model Lead {
+  id              String    @id @default(cuid())
+  storeId         String
+  store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  affiliateId     String?
+  affiliate       Affiliate? @relation(fields: [affiliateId], references: [id], onDelete: SetNull)
+  productId       String?
+  productName     String
+  productPrice    Float
+  customerName    String?
+  customerPhone   String?
+  customerMessage String?
+  // PENDING = consultó / CONFIRMED = venta confirmada / REJECTED = no concretó
+  status          String    @default("PENDING")
+  commissionAmount Float?
+  commissionRate  Float?
+  confirmedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([storeId, createdAt(sort: Desc)])
+  @@index([affiliateId])
 }

@@ -24,17 +24,18 @@ export default async function DashboardPage() {
     },
   });
 
-  if (!store && user.role === "SELLER") redirect("/vendedoras");
+  if (user.role === "SELLER") redirect("/vendedoras");
+  if (!store) redirect("/login");
 
   const recentOrders = await prisma.order.findMany({
-    where: { storeId: store?.id },
+    where: { storeId: store.id },
     include: { buyer: { select: { name: true, email: true } }, items: true },
     orderBy: { createdAt: "desc" },
     take: 5,
   });
 
   const totalRevenue = await prisma.order.aggregate({
-    where: { storeId: store?.id, status: { in: ["CONFIRMED", "DELIVERED"] } },
+    where: { storeId: store.id, status: { in: ["CONFIRMED", "DELIVERED"] } },
     _sum: { total: true },
   });
   const pendingAffiliateCount = store
