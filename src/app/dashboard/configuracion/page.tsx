@@ -978,24 +978,48 @@ function BlockEditor({
                 Usá el botón <strong>📷 Mover foto</strong> en la preview para reposicionar la imagen
               </p>
             )}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Título</label>
+            {/* Toggle + texto del título */}
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-gray-600">Título</label>
+              <button type="button" onClick={()=>updSlide(idx,"showTitle",slide.showTitle===false?true:false)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${slide.showTitle!==false?"bg-indigo-600":"bg-gray-300"}`}>
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${slide.showTitle!==false?"translate-x-4":"translate-x-0.5"}`}/>
+              </button>
+            </div>
+            {slide.showTitle!==false && (
               <input value={slide.title||""} onChange={e=>updSlide(idx,"title",e.target.value)} placeholder="Título del slide" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+            )}
+            {/* Toggle + texto del subtítulo */}
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-gray-600">Subtítulo</label>
+              <button type="button" onClick={()=>updSlide(idx,"showSubtitle",slide.showSubtitle===false?true:false)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${slide.showSubtitle!==false?"bg-indigo-600":"bg-gray-300"}`}>
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${slide.showSubtitle!==false?"translate-x-4":"translate-x-0.5"}`}/>
+              </button>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Subtítulo</label>
+            {slide.showSubtitle!==false && (
               <input value={slide.subtitle||""} onChange={e=>updSlide(idx,"subtitle",e.target.value)} placeholder="Texto debajo del título" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+            )}
+            {/* Toggle + botón */}
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-gray-600">Botón</label>
+              <button type="button" onClick={()=>updSlide(idx,"showButton",slide.showButton===false?true:false)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${slide.showButton!==false?"bg-indigo-600":"bg-gray-300"}`}>
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${slide.showButton!==false?"translate-x-4":"translate-x-0.5"}`}/>
+              </button>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Texto botón</label>
-                <input value={slide.buttonText||""} onChange={e=>updSlide(idx,"buttonText",e.target.value)} placeholder="Ver más" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+            {slide.showButton!==false && (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Texto botón</label>
+                  <input value={slide.buttonText||""} onChange={e=>updSlide(idx,"buttonText",e.target.value)} placeholder="Ver más" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">URL botón</label>
+                  <input value={slide.buttonUrl||""} onChange={e=>updSlide(idx,"buttonUrl",e.target.value)} placeholder="/productos" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">URL botón</label>
-                <input value={slide.buttonUrl||""} onChange={e=>updSlide(idx,"buttonUrl",e.target.value)} placeholder="/productos" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-              </div>
-            </div>
+            )}
           </div>
         ))}
         {slides.length < 5 && (
@@ -1357,11 +1381,37 @@ function BlockEditor({
   if (block.type==="video") return <div className="space-y-3">
     {inp("Título (opcional)","heading","")}
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">URL del video</label>
-      <input type="url" value={p.videoUrl||""} onChange={e=>upd("videoUrl",e.target.value)}
-        placeholder="https://www.youtube.com/watch?v=..."
-        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-      <p className="text-[10px] text-gray-400 mt-1">Soporta YouTube, Vimeo y links directos .mp4</p>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Video</label>
+      {p.videoUrl ? (
+        <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+          <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 text-indigo-500 shrink-0"><path d="M8 5v14l11-7z"/></svg>
+          <span className="flex-1 text-xs text-gray-700 truncate">{p.videoUrl}</span>
+          <button type="button" onClick={()=>upd("videoUrl","")} className="text-gray-300 hover:text-red-400 transition-colors shrink-0">
+            <X className="h-3.5 w-3.5"/>
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <input type="url" value={p.videoUrl||""} onChange={e=>upd("videoUrl",e.target.value)}
+            placeholder="https://www.youtube.com/watch?v=..."
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-px bg-gray-200"/>
+            <span className="text-[10px] text-gray-400">o</span>
+            <div className="flex-1 h-px bg-gray-200"/>
+          </div>
+          <label className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors">
+            <Film className="h-4 w-4"/>
+            <span className="text-xs font-medium">Subir video (.mp4, .webm)</span>
+            <input type="file" accept="video/*" className="hidden" onChange={async e=>{
+              const file = e.target.files?.[0]; if(!file||!onUploadFile) return;
+              const url = await onUploadFile(file);
+              if(url) upd("videoUrl",url);
+            }}/>
+          </label>
+        </div>
+      )}
+      <p className="text-[10px] text-gray-400 mt-1">Soporta YouTube, Vimeo y archivos de video .mp4</p>
     </div>
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Proporción</label>
@@ -2280,9 +2330,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
             {!slide.image && <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>}
             <div style={{position:"absolute",inset:0,background:p.overlayColor||"#000000",opacity:overlayOpacity}}/>
             <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start",justifyContent:"center",padding:"24px 32px",textAlign:textAlign as React.CSSProperties["textAlign"],gap:"10px"}}>
-              {slide.title && <h2 style={{fontSize:"clamp(16px,3vw,28px)",fontWeight:900,color:textColor,lineHeight:1.15,margin:0}}>{slide.title}</h2>}
-              {slide.subtitle && <p style={{fontSize:"clamp(11px,1.2vw,14px)",color:textColor,opacity:0.9,margin:0,maxWidth:"480px"}}>{slide.subtitle}</p>}
-              {slide.buttonText && <button style={{background:c.primaryColor,color:"#fff",padding:"9px 20px",borderRadius:"999px",fontSize:"12px",fontWeight:800,border:"none",cursor:"inherit",marginTop:"4px"}}>{slide.buttonText}</button>}
+              {slide.showTitle!==false && slide.title && <h2 style={{fontSize:"clamp(16px,3vw,28px)",fontWeight:900,color:textColor,lineHeight:1.15,margin:0}}>{slide.title}</h2>}
+              {slide.showSubtitle!==false && slide.subtitle && <p style={{fontSize:"clamp(11px,1.2vw,14px)",color:textColor,opacity:0.9,margin:0,maxWidth:"480px"}}>{slide.subtitle}</p>}
+              {slide.showButton!==false && slide.buttonText && <button style={{background:c.primaryColor,color:"#fff",padding:"9px 20px",borderRadius:"999px",fontSize:"12px",fontWeight:800,border:"none",cursor:"inherit",marginTop:"4px"}}>{slide.buttonText}</button>}
             </div>
 
             {focalMode && slide.image && (
@@ -2644,6 +2694,150 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
               <div style={{background:p.buttonColor||"#6366f1",color:"#fff",borderRadius:"999px",padding:"10px 24px",fontSize:"13px",fontWeight:800,textAlign:"center"}}>{String(p.buttonText||"Enviar mensaje")}</div>
             </div>
           </div>
+        </div>
+      );
+    }
+
+    if (block.type === "video") {
+      const url = String(p.videoUrl || "");
+      let embedSrc = "";
+      if (url) {
+        try {
+          const u = new URL(url);
+          if (u.hostname.includes("youtube.com") || u.hostname.includes("youtu.be")) {
+            const vid = u.searchParams.get("v") || u.pathname.split("/").pop() || "";
+            embedSrc = `https://www.youtube.com/embed/${vid}`;
+          } else if (u.hostname.includes("vimeo.com")) {
+            const vid = u.pathname.split("/").filter(Boolean).pop() || "";
+            embedSrc = `https://player.vimeo.com/video/${vid}`;
+          } else {
+            embedSrc = url;
+          }
+        } catch {}
+      }
+      const ratios: Record<string,string> = { "16:9":"56.25%", "4:3":"75%", "1:1":"100%" };
+      const paddingBottom = ratios[String(p.aspectRatio||"16:9")] || "56.25%";
+      const isDirectVideo = embedSrc && !embedSrc.includes("youtube") && !embedSrc.includes("vimeo");
+      return (
+        <div style={{background:p.bgColor||"transparent",padding:"24px",fontFamily:c.fontFamily,minHeight:customMinHeight}}>
+          {p.heading && <h3 style={{fontSize:p.headingSize==="sm"?"14px":p.headingSize==="md"?"17px":p.headingSize==="xl"?"24px":"20px",fontWeight:800,color:c.primaryColor,textAlign:"center",marginBottom:"16px"}}>{p.heading}</h3>}
+          {embedSrc ? (
+            <div style={{position:"relative",paddingBottom,height:0,overflow:"hidden",borderRadius:"12px"}}>
+              {isDirectVideo
+                ? <video src={embedSrc} controls style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",borderRadius:"12px"}}/>
+                : <iframe src={embedSrc} title={String(p.heading||"Video")} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",border:"none",borderRadius:"12px"}} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/>
+              }
+            </div>
+          ) : (
+            <div style={{position:"relative",paddingBottom,background:"#111827",borderRadius:"12px",overflow:"hidden"}}>
+              <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"10px"}}>
+                <div style={{width:"56px",height:"56px",borderRadius:"50%",background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <svg viewBox="0 0 24 24" fill="white" width={24} height={24}><path d="M8 5v14l11-7z"/></svg>
+                </div>
+                <p style={{color:"rgba(255,255,255,0.5)",fontSize:"12px"}}>Pegá la URL del video en el panel</p>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (block.type === "gallery") {
+      const images: string[] = Array.isArray(p.images) ? p.images.filter((x:any) => typeof x === "string" && x) : [];
+      const cols = Math.max(2, Math.min(4, Number(p.columns)||3));
+      return (
+        <div style={{background:p.bgColor||"transparent",padding:"24px",fontFamily:c.fontFamily,minHeight:customMinHeight}}>
+          {p.heading && <h3 style={{fontSize:p.headingSize==="sm"?"14px":p.headingSize==="md"?"17px":p.headingSize==="xl"?"24px":"20px",fontWeight:800,color:c.primaryColor,textAlign:"center",marginBottom:"16px"}}>{p.heading}</h3>}
+          <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:"8px"}}>
+            {images.length > 0
+              ? images.map((img,i) => (
+                  <div key={i} style={{aspectRatio:"1",overflow:"hidden",borderRadius:"8px",background:"#f3f4f6"}}>
+                    <img src={img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  </div>
+                ))
+              : Array.from({length:cols*2}).map((_,i) => (
+                  <div key={i} style={{aspectRatio:"1",borderRadius:"8px",background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <svg viewBox="0 0 24 24" fill="#d1d5db" width={28} height={28}><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                  </div>
+                ))
+            }
+          </div>
+        </div>
+      );
+    }
+
+    if (block.type === "faq") {
+      const items: {id:string;question:string;answer:string}[] = Array.isArray(p.items) ? p.items : [];
+      const accentCol = p.accentColor || c.primaryColor;
+      return (
+        <div style={{background:p.bgColor||"#fff",padding:"32px 24px",fontFamily:c.fontFamily,minHeight:customMinHeight}}>
+          {p.heading && <h3 style={{fontSize:p.headingSize==="sm"?"14px":p.headingSize==="md"?"17px":p.headingSize==="lg"?"20px":"24px",fontWeight:800,color:p.textColor||c.primaryColor,textAlign:"center",marginBottom:"20px"}}>{p.heading}</h3>}
+          {items.length > 0 ? (
+            <div style={{maxWidth:"640px",margin:"0 auto",display:"flex",flexDirection:"column",gap:"8px"}}>
+              {items.map((item,i) => (
+                <div key={item.id||i} style={{border:`1.5px solid ${i===0?accentCol:"#e5e7eb"}`,borderRadius:"12px",overflow:"hidden",background:i===0?`${accentCol}08`:"#fff"}}>
+                  <div style={{padding:"12px 16px",fontWeight:700,fontSize:"13px",color:p.textColor||"#111827",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <span>{item.question||`Pregunta ${i+1}`}</span>
+                    <span style={{color:accentCol,fontSize:"16px",lineHeight:1}}>{i===0?"▲":"▼"}</span>
+                  </div>
+                  {i===0 && item.answer && (
+                    <div style={{padding:"0 16px 12px",fontSize:"12px",color:p.textColor||"#6b7280",lineHeight:1.6}}>{item.answer}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{textAlign:"center",padding:"24px",background:"#f9fafb",borderRadius:"12px",maxWidth:"640px",margin:"0 auto"}}>
+              <p style={{fontSize:"12px",color:"#9ca3af"}}>Agregá preguntas desde el panel izquierdo</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (block.type === "testimonios") {
+      const items: {id:string;name:string;text:string;rating:number;avatar:string}[] = Array.isArray(p.items) ? p.items : [];
+      return (
+        <div style={{background:p.bgColor||"#f9fafb",padding:"32px 24px",fontFamily:c.fontFamily,minHeight:customMinHeight}}>
+          {p.heading && <h3 style={{fontSize:p.headingSize==="sm"?"14px":p.headingSize==="md"?"17px":p.headingSize==="lg"?"20px":"24px",fontWeight:800,color:p.textColor||c.primaryColor,textAlign:"center",marginBottom:"20px"}}>{p.heading}</h3>}
+          {items.length > 0 ? (
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:"12px",maxWidth:"720px",margin:"0 auto"}}>
+              {items.map((item,i) => (
+                <div key={item.id||i} style={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:"16px",padding:"16px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+                  <div style={{display:"flex",gap:"2px",marginBottom:"8px"}}>
+                    {Array.from({length:Math.min(5,item.rating||5)}).map((_,si)=><span key={si} style={{color:"#f59e0b",fontSize:"13px"}}>★</span>)}
+                  </div>
+                  <p style={{fontSize:"12px",color:p.textColor||"#374151",lineHeight:1.5,margin:"0 0 10px"}}>"{item.text||"Reseña de cliente"}"</p>
+                  <p style={{fontSize:"11px",fontWeight:700,color:"#9ca3af",margin:0}}>— {item.name||"Cliente"}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{textAlign:"center",padding:"24px",background:"#fff",borderRadius:"12px",maxWidth:"640px",margin:"0 auto",border:"1px solid #e5e7eb"}}>
+              <p style={{fontSize:"12px",color:"#9ca3af"}}>Agregá testimonios desde el panel izquierdo</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (block.type === "mapa") {
+      const mapH: Record<string,string> = { sm:"200px", md:"300px", lg:"400px" };
+      const height = mapH[String(p.height||"md")] || "300px";
+      return (
+        <div style={{background:p.bgColor||"#fff",fontFamily:c.fontFamily,minHeight:customMinHeight}}>
+          {p.heading && <h3 style={{fontSize:p.headingSize==="sm"?"14px":p.headingSize==="md"?"17px":p.headingSize==="xl"?"24px":"20px",fontWeight:800,color:c.primaryColor,textAlign:"center",padding:"24px 24px 12px",margin:0}}>{p.heading}</h3>}
+          {p.mapEmbedUrl ? (
+            <iframe src={String(p.mapEmbedUrl)} style={{width:"100%",height,border:"none",display:"block"}} loading="lazy" title="Mapa"/>
+          ) : (
+            <div style={{height,background:"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"8px"}}>
+              <span style={{fontSize:"36px"}}>📍</span>
+              <p style={{fontSize:"12px",color:"#9ca3af",margin:0}}>Pegá la URL de Google Maps en el panel</p>
+            </div>
+          )}
+          {p.showAddress!==false && p.address && (
+            <div style={{padding:"12px 24px",fontSize:"13px",color:"#6b7280",textAlign:"center"}}>📍 {String(p.address)}</div>
+          )}
         </div>
       );
     }

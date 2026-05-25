@@ -61,9 +61,9 @@ function BannerCarouselBlock({ block, primaryColor, fontFamily }: { block: any; 
         ))}
         <div style={{ position:"absolute", inset:0, background:String(p.overlayColor||"#000000"), opacity:overlayOpacity }}/>
         <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:textAlign==="center"?"center":textAlign==="right"?"flex-end":"flex-start", justifyContent:"center", padding:"32px 48px", textAlign:textAlign as React.CSSProperties["textAlign"], gap:"12px" }}>
-          {cur.title && <h2 style={{ fontSize:"clamp(24px,4vw,48px)", fontWeight:900, color:textColor, lineHeight:1.1, margin:0 }}>{cur.title}</h2>}
-          {cur.subtitle && <p style={{ fontSize:"clamp(14px,1.5vw,18px)", color:textColor, opacity:0.9, margin:0, maxWidth:"560px" }}>{cur.subtitle}</p>}
-          {cur.buttonText && (
+          {cur.showTitle!==false && cur.title && <h2 style={{ fontSize:"clamp(24px,4vw,48px)", fontWeight:900, color:textColor, lineHeight:1.1, margin:0 }}>{cur.title}</h2>}
+          {cur.showSubtitle!==false && cur.subtitle && <p style={{ fontSize:"clamp(14px,1.5vw,18px)", color:textColor, opacity:0.9, margin:0, maxWidth:"560px" }}>{cur.subtitle}</p>}
+          {cur.showButton!==false && cur.buttonText && (
             <a href={safeHref(cur.buttonUrl)} style={{ display:"inline-block", background:primaryColor, color:"#fff", padding:"12px 28px", borderRadius:"999px", fontSize:"14px", fontWeight:800, textDecoration:"none", marginTop:"4px" }}>
               {cur.buttonText}
             </a>
@@ -710,6 +710,12 @@ export default function StorefrontClient({
   }
   const isDark = store.templateId === "tech";
   const isKids = store.templateId === "kids";
+  function hexIsDark(hex: string): boolean {
+    const h = hex.replace("#", "");
+    if (h.length < 6) return false;
+    const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+    return (r*299 + g*587 + b*114) / 1000 < 128;
+  }
   const isSplit = ["fashion", "luxury", "boutique"].includes(store.templateId);
   const isMarket = store.templateId === "market";
   const isColorful = store.templateId === "colorful" || store.templateId === "kids";
@@ -732,6 +738,9 @@ export default function StorefrontClient({
     } catch { return { layout: "right", showSearch: false, links: [] }; }
   }, [navbarBlock, store.navLinks]);
   const parsedNavLinks = navConfig.links;
+  // Smart hover: adapt to nav background color (custom or template-based)
+  const navBgIsDark = navConfig.bgColor ? hexIsDark(navConfig.bgColor) : isDark;
+  const navHoverBg = navBgIsDark ? "hover:bg-white/10" : "hover:bg-black/10";
   const sectionBlockIds = useMemo(() => {
     const ids = new Set<string>();
     parsedNavLinks.filter(l => l.type === "section").forEach(l => {
@@ -2178,21 +2187,21 @@ export default function StorefrontClient({
                   <div key={link.id} className="relative" onMouseEnter={() => { if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current); subs.length > 0 && setOpenDropdown(link.id); }} onMouseLeave={() => { dropdownTimerRef.current = setTimeout(() => setOpenDropdown(null), 150); }}>
                     {link.type === "filter" ? (
                       <button type="button" onClick={() => { setCategory(link.value); setSubcategory("all"); setSearchQuery(""); }}
-                        className={`flex items-center gap-1 rounded-lg px-3 py-2 text-base font-semibold transition-colors ${isActive ? "text-white" : isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                        className={`flex items-center gap-1 rounded-lg px-3 py-2 text-base font-semibold transition-colors ${isActive ? "text-white" : navHoverBg}`}
                         style={isActive ? { backgroundColor: store.primaryColor } : undefined}>
                         {link.label}
                         {subs.length > 0 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5"><path d="M6 9l6 6 6-6"/></svg>}
                       </button>
                     ) : link.type === "section" ? (
-                      <button type="button" onClick={() => setOpenSection(link.value)} className={`flex items-center rounded-lg px-3 py-2 text-base font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</button>
+                      <button type="button" onClick={() => setOpenSection(link.value)} className={`flex items-center rounded-lg px-3 py-2 text-base font-semibold transition-colors ${navHoverBg}`}>{link.label}</button>
                     ) : (
-                      <a href={safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-2 text-base font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</a>
+                      <a href={safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-2 text-base font-semibold transition-colors ${navHoverBg}`}>{link.label}</a>
                     )}
                     {subs.length > 0 && openDropdown === link.id && (
                       <div className={`absolute left-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-xl border shadow-xl ${isDark ? "border-white/10 bg-gray-900" : "border-gray-100 bg-white"}`}>
                         {subs.map((sub) => (
                           <button key={sub} type="button" onClick={() => { setCategory(link.value); setSubcategory(sub); setOpenDropdown(null); setSearchQuery(""); }}
-                            className={`flex w-full items-center px-4 py-2.5 text-left text-sm font-medium capitalize transition-colors ${subcategory === sub ? "font-bold" : ""} ${isDark ? "hover:bg-white/10" : "hover:bg-gray-50"}`}
+                            className={`flex w-full items-center px-4 py-2.5 text-left text-sm font-medium capitalize transition-colors ${subcategory === sub ? "font-bold" : ""} ${navHoverBg}`}
                             style={subcategory === sub ? { color: store.primaryColor } : undefined}>
                             {sub}
                           </button>
@@ -2219,21 +2228,21 @@ export default function StorefrontClient({
                   <div key={link.id} className="relative" onMouseEnter={() => { if (dropdownTimerRef.current) clearTimeout(dropdownTimerRef.current); subs.length > 0 && setOpenDropdown(link.id); }} onMouseLeave={() => { dropdownTimerRef.current = setTimeout(() => setOpenDropdown(null), 150); }}>
                     {link.type === "filter" ? (
                       <button type="button" onClick={() => { setCategory(link.value); setSubcategory("all"); setSearchQuery(""); }}
-                        className={`flex items-center gap-1 rounded-lg px-3 py-2 text-base font-semibold transition-colors ${isActive ? "text-white" : isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                        className={`flex items-center gap-1 rounded-lg px-3 py-2 text-base font-semibold transition-colors ${isActive ? "text-white" : navHoverBg}`}
                         style={isActive ? { backgroundColor: store.primaryColor } : undefined}>
                         {link.label}
                         {subs.length > 0 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-3.5 w-3.5"><path d="M6 9l6 6 6-6"/></svg>}
                       </button>
                     ) : link.type === "section" ? (
-                      <button type="button" onClick={() => setOpenSection(link.value)} className={`flex items-center rounded-lg px-3 py-2 text-base font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</button>
+                      <button type="button" onClick={() => setOpenSection(link.value)} className={`flex items-center rounded-lg px-3 py-2 text-base font-semibold transition-colors ${navHoverBg}`}>{link.label}</button>
                     ) : (
-                      <a href={safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-2 text-base font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>{link.label}</a>
+                      <a href={safeHref(link.value)} className={`flex items-center rounded-lg px-3 py-2 text-base font-semibold transition-colors ${navHoverBg}`}>{link.label}</a>
                     )}
                     {subs.length > 0 && openDropdown === link.id && (
                       <div className={`absolute right-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-xl border shadow-xl ${isDark ? "border-white/10 bg-gray-900" : "border-gray-100 bg-white"}`}>
                         {subs.map((sub) => (
                           <button key={sub} type="button" onClick={() => { setCategory(link.value); setSubcategory(sub); setOpenDropdown(null); setSearchQuery(""); }}
-                            className={`flex w-full items-center px-4 py-2.5 text-left text-sm font-medium capitalize transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-50"}`}
+                            className={`flex w-full items-center px-4 py-2.5 text-left text-sm font-medium capitalize transition-colors ${navHoverBg}`}
                             style={subcategory === sub ? { color: store.primaryColor } : undefined}>
                             {sub}
                           </button>
@@ -2250,7 +2259,7 @@ export default function StorefrontClient({
           <div className="flex shrink-0 items-center gap-2">
             {/* Search */}
             {navConfig.showSearch && navConfig.searchStyle === "bar" && (
-              <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 ${isDark ? "border-white/20 bg-white/10 text-white" : "border-gray-200 bg-gray-50 text-gray-900"}`}
+              <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 ${navBgIsDark ? "border-white/20 bg-white/10 text-white" : "border-gray-200 bg-black/5 text-gray-900"}`}
                 style={navConfig.textColor ? { color: navConfig.textColor, borderColor: `${navConfig.textColor}33` } : undefined}>
                 <Search className="h-4 w-4 shrink-0 opacity-50" />
                 <input
@@ -2270,7 +2279,7 @@ export default function StorefrontClient({
             {navConfig.showSearch && (navConfig.searchStyle ?? "icon") === "icon" && (
               <div className="flex items-center">
                 {searchOpen ? (
-                  <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 ${isDark ? "border-white/20 bg-white/10 text-white" : "border-gray-200 bg-gray-50 text-gray-900"}`}>
+                  <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 ${navBgIsDark ? "border-white/20 bg-white/10 text-white" : "border-gray-200 bg-black/5 text-gray-900"}`}>
                     <Search className="h-4 w-4 shrink-0 opacity-60" />
                     <input
                       autoFocus
@@ -2287,7 +2296,7 @@ export default function StorefrontClient({
                   </div>
                 ) : (
                   <button type="button" onClick={() => setSearchOpen(true)}
-                    className={`rounded-lg p-2 transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                    className={`rounded-lg p-2 transition-colors ${navHoverBg}`}
                     style={{ color: navConfig.textColor || (isDark ? "white" : "#4b5563") }}
                     aria-label="Buscar">
                     <Search className="h-5 w-5" />
@@ -2299,7 +2308,7 @@ export default function StorefrontClient({
             {/* Hamburger */}
             {parsedNavLinks.length > 0 && (
               <button type="button" onClick={() => setMenuOpen(true)}
-                className={`flex items-center justify-center rounded-lg p-2 ${navConfig.mode === "hamburger" ? "" : "md:hidden"} ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                className={`flex items-center justify-center rounded-lg p-2 ${navConfig.mode === "hamburger" ? "" : "md:hidden"} ${navHoverBg}`}
                 style={{ color: navConfig.textColor || (isDark ? "white" : "#374151") }}
                 aria-label="Menú">
                 <Menu className="h-5 w-5" />
@@ -2326,7 +2335,7 @@ export default function StorefrontClient({
           <div className={`absolute right-0 top-0 bottom-0 w-72 shadow-2xl flex flex-col transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "translate-x-full"} ${isDark ? "bg-gray-900 text-white" : "bg-white text-gray-900"}`} style={{ fontFamily: store.fontFamily }}>
             <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: isDark ? "rgba(255,255,255,0.1)" : "#f3f4f6" }}>
               <span className="font-black text-lg">{String(navbarBlock?.props?.logoText || store.name || "")}</span>
-              <button type="button" onClick={() => setMenuOpen(false)} className={`rounded-lg p-1.5 ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>
+              <button type="button" onClick={() => setMenuOpen(false)} className={`rounded-lg p-1.5 ${navHoverBg}`}>
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -2353,7 +2362,7 @@ export default function StorefrontClient({
                             setMenuOpen(false);
                           }
                         }}
-                        className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold transition-colors ${isActive ? "text-white" : isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                        className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold transition-colors ${isActive ? "text-white" : navHoverBg}`}
                         style={isActive ? { backgroundColor: store.primaryColor } : undefined}>
                         {link.label}
                         {subs.length > 0 && (
@@ -2365,12 +2374,12 @@ export default function StorefrontClient({
                       </button>
                     ) : link.type === "section" ? (
                       <button type="button" onClick={() => { setOpenSection(link.value); setMenuOpen(false); }}
-                        className={`flex w-full items-center rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>
+                        className={`flex w-full items-center rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${navHoverBg}`}>
                         {link.label}
                       </button>
                     ) : (
                       <a href={safeHref(link.value)} onClick={() => setMenuOpen(false)}
-                        className={`flex w-full items-center rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}>
+                        className={`flex w-full items-center rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${navHoverBg}`}>
                         {link.label}
                       </a>
                     )}
@@ -2378,7 +2387,7 @@ export default function StorefrontClient({
                       <div className="ml-4 flex flex-col gap-0.5 pb-1">
                         {subs.map(sub => (
                           <button key={sub} type="button" onClick={() => { setSubcategory(sub); setMenuOpen(false); setExpandedDrawerItem(null); }}
-                            className={`flex w-full items-center rounded-lg px-4 py-2 text-left text-sm capitalize transition-colors ${subcategory === sub ? "font-bold" : "opacity-70"} ${isDark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+                            className={`flex w-full items-center rounded-lg px-4 py-2 text-left text-sm capitalize transition-colors ${subcategory === sub ? "font-bold" : "opacity-70"} ${navHoverBg}`}
                             style={subcategory === sub ? { color: store.primaryColor } : undefined}>
                             {sub}
                           </button>
