@@ -2,7 +2,9 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { Store, Package, Users, ShoppingBag, Globe, EyeOff, Calendar, RefreshCw, Power, Search, X, Trash2 } from "lucide-react";
+import { Store, Package, Users, ShoppingBag, Globe, EyeOff, Calendar, RefreshCw, Power, Search, X, Trash2, AlertTriangle } from "lucide-react";
+
+type PendingToggle = { store: StoreRow; field: "isPublished" | "isActive" };
 
 type StoreRow = {
   id: string;
@@ -41,6 +43,7 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
 
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [pending, setPending] = useState<PendingToggle | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -55,6 +58,7 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
 
   async function toggle(store: StoreRow, field: "isPublished" | "isActive") {
     setLoadingId(store.id + "-" + field);
+    setPending(null);
     try {
       const res = await fetch(`/api/admin/tiendas/${store.id}`, {
         method: "PATCH",
@@ -67,6 +71,11 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
     } finally {
       setLoadingId(null);
     }
+  }
+
+  function confirmLabel(p: PendingToggle) {
+    if (p.field === "isPublished") return p.store.isPublished ? "dejar de publicar" : "publicar";
+    return p.store.isActive ? "desactivar" : "activar";
   }
 
   const stats = useMemo(() => ({
@@ -152,6 +161,41 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
         )}
       </div>
 
+      {/* Modal de confirmación */}
+      {pending && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm">¿Confirmar acción?</p>
+                <p className="text-gray-400 text-xs mt-0.5">Esta acción afecta la tienda en producción</p>
+              </div>
+            </div>
+            <p className="text-gray-300 text-sm mb-5">
+              Vas a <strong className="text-white">{confirmLabel(pending)}</strong> la tienda{" "}
+              <strong className="text-white">{pending.store.name}</strong>.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => toggle(pending.store, pending.field)}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2.5 rounded-xl transition-colors"
+              >
+                Confirmar
+              </button>
+              <button
+                onClick={() => setPending(null)}
+                className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 text-sm font-semibold py-2.5 rounded-xl border border-white/10 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tabla */}
       <div className="bg-gray-900/50 border border-white/5 rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -200,7 +244,7 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
                   </td>
                   <td className="px-5 py-4">
                     <button
-                      onClick={() => toggle(s, "isPublished")}
+                      onClick={() => setPending({ store: s, field: "isPublished" })}
                       disabled={loadingId === s.id + "-isPublished"}
                       className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
                         s.isPublished
@@ -218,7 +262,7 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
                   </td>
                   <td className="px-5 py-4">
                     <button
-                      onClick={() => toggle(s, "isActive")}
+                      onClick={() => setPending({ store: s, field: "isActive" })}
                       disabled={loadingId === s.id + "-isActive"}
                       className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
                         s.isActive
