@@ -125,7 +125,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
       { image:"", title:"Envíos gratis", subtitle:"En compras mayores a $X", buttonText:"Aprovechar", buttonUrl:"", focalX:50, focalY:50 },
     ], height:"md", autoplay:true, speed:4, showDots:true, showArrows:true, overlayColor:"#000000", overlayOpacity:35, textColor:"#ffffff", textAlign:"center" } },
   { type:"video",      emoji:"▶️", label:"Video",                    desc:"Video de YouTube, Vimeo o MP4 incrustado",
-    defaultProps:{ heading:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", headingSize:"lg", videoWidth:80, videoAlign:"center" } },
+    defaultProps:{ heading:"", subtitle:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", headingSize:"lg", videoWidth:80, videoAlign:"center" } },
   { type:"gallery",    emoji:"🖼️", label:"Galería de fotos",         desc:"Grilla de imágenes para mostrar tu trabajo o productos",
     defaultProps:{ heading:"Galería", images:[], columns:3, bgColor:"", headingSize:"lg" } },
   { type:"faq",        emoji:"❓", label:"Preguntas frecuentes",      desc:"Acordeón de preguntas y respuestas comunes",
@@ -370,7 +370,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function blockSupportsMovableText(type: BlockType) {
-  return ["hero", "text", "banner", "cta", "image-text"].includes(type);
+  return ["hero", "text", "banner", "cta", "image-text", "video"].includes(type);
 }
 
 function getViewportTextPositions(props: Record<string, any>, viewport: PreviewViewport): Record<string, TextPosition> {
@@ -1380,6 +1380,7 @@ function BlockEditor({
 
   if (block.type==="video") return <div className="space-y-3">
     {inp("Título (opcional)","heading","")}
+    {inp("Subtítulo (opcional)","subtitle","")}
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">Video</label>
       {p.videoUrl ? (
@@ -2790,12 +2791,11 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
         </div>
       );
       return (
-        <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily}}>
-          {p.heading && <h3 style={{fontSize:p.headingSize==="sm"?"14px":p.headingSize==="md"?"17px":p.headingSize==="xl"?"24px":"20px",fontWeight:800,color:c.primaryColor,textAlign:"center",marginBottom:"16px"}}>{p.heading}</h3>}
+        <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily,position:"relative"}}>
           <div style={{display:"flex",justifyContent,alignItems:"flex-start",position:"relative",userSelect:"none"}}>
             <div style={{width:`${videoWidth}%`,position:"relative",flexShrink:0}}>
               {videoInner}
-              {/* Resize handle — borde derecho */}
+              {/* Borde derecho para redimensionar */}
               {selected && (
                 <div
                   onMouseDown={(e) => {
@@ -2822,7 +2822,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                   <div style={{width:2,height:14,background:"#fff",borderRadius:999}}/>
                 </div>
               )}
-              {/* Width indicator while resizing */}
+              {/* Indicador de ancho mientras se redimensiona */}
               {isVideoResizing && (
                 <div style={{position:"absolute",top:-28,left:"50%",transform:"translateX(-50%)",background:"#4f46e5",color:"#fff",fontSize:"11px",fontWeight:800,padding:"3px 10px",borderRadius:"999px",whiteSpace:"nowrap",pointerEvents:"none"}}>
                   {videoWidth}%
@@ -2830,6 +2830,30 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
               )}
             </div>
           </div>
+          {/* Texto arrastrable superpuesto sobre el bloque de video */}
+          {(p.heading || p.subtitle) && (
+            <MovableTextStage
+              key={`video-${viewport}-${Boolean(p.heading)}-${Boolean(p.subtitle)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
+              blockProps={p}
+              viewport={viewport}
+              onChange={onChangeProps}
+              style={{position:"absolute",inset:0,pointerEvents:"none"}}
+              items={[
+                ...(p.heading ? [{
+                  id: "heading",
+                  defaultPos: { x: 50, y: 12 },
+                  style: { pointerEvents: "auto" as const, textAlign: "center" as const, maxWidth: "90%" },
+                  content: <h3 style={{fontSize:p.headingSize==="sm"?"14px":p.headingSize==="md"?"17px":p.headingSize==="xl"?"24px":"20px",fontWeight:800,color:c.primaryColor,textShadow:"0 1px 3px rgba(0,0,0,0.2)",whiteSpace:"nowrap"}}>{p.heading}</h3>,
+                }] : []),
+                ...(p.subtitle ? [{
+                  id: "subtitle",
+                  defaultPos: { x: 50, y: 25 },
+                  style: { pointerEvents: "auto" as const, textAlign: "center" as const, maxWidth: "90%" },
+                  content: <p style={{fontSize:"14px",color:c.primaryColor,opacity:0.8,textShadow:"0 1px 2px rgba(0,0,0,0.15)",whiteSpace:"nowrap"}}>{p.subtitle}</p>,
+                }] : []),
+              ]}
+            />
+          )}
         </div>
       );
     }
