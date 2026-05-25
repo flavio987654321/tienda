@@ -1928,7 +1928,7 @@ export default function StorefrontClient({
                   <PositionedTextLayer
                     blockProps={p}
                     viewport={viewport}
-                    style={{ position:"absolute", inset:0, pointerEvents:"none" }}
+                    style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"visible" }}
                     items={[
                       ...(p.heading ? [{
                         id: "heading",
