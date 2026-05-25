@@ -59,13 +59,15 @@ export default function StoreTypeModal({
 
         {/* Header */}
         <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 px-8 py-7 text-white relative shrink-0">
-          <button
-            onClick={handleClose}
-            title="Cerrar"
-            className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-white/20 transition-colors"
-          >
-            <X className="h-4 w-4 text-white/80" />
-          </button>
+          {isEditing && (
+            <button
+              onClick={handleClose}
+              title="Cerrar"
+              className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+            >
+              <X className="h-4 w-4 text-white/80" />
+            </button>
+          )}
           <h2 className="text-2xl font-bold mb-1">
             {isEditing ? "¿Qué vendés?" : "Antes de empezar, ¿qué vendés?"}
           </h2>
