@@ -59,9 +59,12 @@ export async function generateMetadata({ params, searchParams }: TiendaPageProps
     store.tagline ||
     `Comprá en ${store.name} — Envíos a todo el país`;
 
-  const ogImages = image
-    ? [{ url: image, alt: product?.name || store.name, width: 512, height: 512 }]
-    : undefined;
+  // For product pages use the product image directly; for the base store
+  // page, opengraph-image.tsx generates a 1200×630 branded image automatically.
+  const ogImages =
+    product && image
+      ? [{ url: image, alt: product.name, width: 800, height: 800 }]
+      : undefined;
 
   return {
     title,
@@ -77,13 +80,13 @@ export async function generateMetadata({ params, searchParams }: TiendaPageProps
       description,
       type: "website",
       siteName: store.name,
-      images: ogImages,
+      ...(ogImages ? { images: ogImages } : {}),
     },
     twitter: {
-      card: image ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title,
       description,
-      images: image ? [image] : undefined,
+      ...(ogImages ? { images: [ogImages[0].url] } : {}),
     },
     icons: store.logo
       ? { apple: [{ url: store.logo, sizes: "180x180" }] }
