@@ -15,6 +15,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
   const [uploading, setUploading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showSplashModal, setShowSplashModal] = useState(false);
   const [splashActive, setSplashActive] = useState(false);
@@ -87,6 +88,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
 
       setLogo(url);
       setLogoColor(saveData.logoColor ?? null);
+      setEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: unknown) {
@@ -108,6 +110,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
       if (!res.ok) throw new Error("Error al eliminar el logo");
       setLogo(null);
       setLogoColor(null);
+      setEditing(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Error inesperado");
     } finally {
@@ -170,29 +173,65 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
                 className="hidden"
                 onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
               />
-              <button
-                onClick={() => inputRef.current?.click()}
-                disabled={uploading}
-                className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-50 transition-colors"
-              >
-                {uploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : logo ? (
-                  <Upload className="h-4 w-4" />
-                ) : (
-                  <ImageIcon className="h-4 w-4" />
-                )}
-                {logo ? "Cambiar logo" : "Subir logo"}
-              </button>
 
-              {logo && !uploading && (
+              {/* Sin logo: solo "Subir logo" */}
+              {!logo && (
                 <button
-                  onClick={handleRemove}
-                  className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                  onClick={() => inputRef.current?.click()}
+                  disabled={uploading}
+                  className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-50 transition-colors"
                 >
-                  <Trash2 className="h-4 w-4" />
-                  Quitar
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+                  Subir logo
                 </button>
+              )}
+
+              {/* Con logo, modo normal: solo "Editar" */}
+              {logo && !editing && !uploading && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Upload className="h-4 w-4" />
+                  Editar
+                </button>
+              )}
+
+              {/* Con logo, modo edición: "Cambiar foto" + "Quitar" + "×" */}
+              {logo && editing && (
+                <>
+                  <button
+                    onClick={() => inputRef.current?.click()}
+                    disabled={uploading}
+                    className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                  >
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    Cambiar foto
+                  </button>
+                  <button
+                    onClick={handleRemove}
+                    disabled={uploading}
+                    className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Quitar
+                  </button>
+                  <button
+                    onClick={() => { setEditing(false); setError(null); }}
+                    disabled={uploading}
+                    className="inline-flex items-center justify-center rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+
+              {/* Spinner standalone cuando hay logo y está subiendo */}
+              {logo && uploading && (
+                <div className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-400">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Guardando...
+                </div>
               )}
             </div>
           </div>
