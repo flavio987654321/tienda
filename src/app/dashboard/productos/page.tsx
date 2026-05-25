@@ -7,7 +7,6 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Plus, Package } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import ProductsTable from "./ProductsTable";
-import StoreTypeModal from "./StoreTypeModal";
 import ChangeStoreTypeButton from "./ChangeStoreTypeButton";
 import { STORE_TYPES } from "@/lib/storeTypes";
 
@@ -34,7 +33,6 @@ export default async function ProductosPage() {
 
   return (
     <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
-      {!store?.tipoTiendaConfigurado && <StoreTypeModal />}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Productos</h1>

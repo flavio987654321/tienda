@@ -1,7 +1,9 @@
 import { getCurrentUser } from "@/lib/auth-session";
 import { getUserSubscription, getSubscriptionStatus, daysRemaining } from "@/lib/subscription";
+import { prisma } from "@/lib/prisma";
 import SubscriptionGate from "@/components/subscription/SubscriptionGate";
 import SubscriptionRealtimeRefresher from "@/components/subscription/SubscriptionRealtimeRefresher";
+import StoreTypeModal from "./productos/StoreTypeModal";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -29,10 +31,23 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }
   }
 
+  // Gate de tipo de tienda: solo para dueños que aún no configuraron su tipo
+  let storeTypeGate = null;
+  if (user?.role === "OWNER") {
+    const store = await prisma.store.findUnique({
+      where: { ownerId: user.id },
+      select: { tipoTiendaConfigurado: true },
+    });
+    if (store && !store.tipoTiendaConfigurado) {
+      storeTypeGate = <StoreTypeModal />;
+    }
+  }
+
   return (
     <>
       {user && <SubscriptionRealtimeRefresher userId={user.id} />}
       {gate}
+      {storeTypeGate}
       {children}
     </>
   );

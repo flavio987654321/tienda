@@ -66,11 +66,13 @@ export default function StoreTypeModal({
           >
             <X className="h-4 w-4 text-white/80" />
           </button>
-          <h2 className="text-2xl font-bold mb-1">¿Qué vendés?</h2>
+          <h2 className="text-2xl font-bold mb-1">
+            {isEditing ? "¿Qué vendés?" : "Antes de empezar, ¿qué vendés?"}
+          </h2>
           <p className="text-indigo-200 text-sm">
             {isEditing
               ? "Cambiá el tipo de tienda. Tus productos existentes no se modifican."
-              : "Elegí el tipo de tienda para que el formulario de productos muestre los campos correctos."}
+              : "Esto define los campos de tus productos, las categorías, el diseño sugerido y la experiencia de compra de tus clientes. Solo se elige una vez."}
           </p>
         </div>
 
