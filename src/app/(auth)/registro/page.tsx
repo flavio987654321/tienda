@@ -580,6 +580,8 @@ function RegistroContent() {
                   <Link
                     href={`/terminos?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`}
                     className="text-gray-400 underline hover:text-white transition-colors"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                   >
                     términos y condiciones
@@ -588,6 +590,8 @@ function RegistroContent() {
                   <Link
                     href={`/privacidad?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`}
                     className="text-gray-400 underline hover:text-white transition-colors"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                   >
                     política de privacidad
