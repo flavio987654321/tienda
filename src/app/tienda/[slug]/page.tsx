@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 type TiendaPageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ ref?: string; producto?: string }>;
+  searchParams: Promise<{ ref?: string; producto?: string; source?: string }>;
 };
 
 function parseImages(images: string): string[] {
@@ -35,6 +35,9 @@ export async function generateMetadata({ params, searchParams }: TiendaPageProps
     select: {
       name: true,
       description: true,
+      logo: true,
+      primaryColor: true,
+      tagline: true,
       products: producto
         ? {
             where: { id: producto, isActive: true },
@@ -48,18 +51,33 @@ export async function generateMetadata({ params, searchParams }: TiendaPageProps
   if (!store) return {};
 
   const product = Array.isArray(store.products) ? store.products[0] : null;
-  const image = product ? parseImages(product.images)[0] : null;
+  const image = product ? parseImages(product.images)[0] : store.logo || null;
   const title = product ? `${product.name} | ${store.name}` : store.name;
-  const description = product?.description || store.description || `Compra en ${store.name}`;
+  const description =
+    product?.description ||
+    store.description ||
+    store.tagline ||
+    `Comprá en ${store.name} — Envíos a todo el país`;
+
+  const ogImages = image
+    ? [{ url: image, alt: product?.name || store.name, width: 512, height: 512 }]
+    : undefined;
 
   return {
     title,
     description,
+    manifest: `/api/manifest/${slug}`,
+    appleWebApp: {
+      capable: true,
+      title: store.name,
+      statusBarStyle: "default",
+    },
     openGraph: {
       title,
       description,
       type: "website",
-      images: image ? [{ url: image, alt: product?.name || store.name }] : undefined,
+      siteName: store.name,
+      images: ogImages,
     },
     twitter: {
       card: image ? "summary_large_image" : "summary",
@@ -67,13 +85,16 @@ export async function generateMetadata({ params, searchParams }: TiendaPageProps
       description,
       images: image ? [image] : undefined,
     },
+    icons: store.logo
+      ? { apple: [{ url: store.logo, sizes: "180x180" }] }
+      : undefined,
   };
 }
 
 export default async function TiendaPage({ params, searchParams }: TiendaPageProps) {
   noStore();
   const { slug } = await params;
-  const { ref, producto } = await searchParams;
+  const { ref, producto, source } = await searchParams;
 
   const store = await prisma.store.findFirst({
     where: { slug, isActive: true },
@@ -137,6 +158,7 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
       initialProductId={producto}
       userId={currentUser?.id}
       initialFavoriteIds={initialFavoriteIds}
+      isPwa={source === "pwa"}
       store={{
         id: store.id,
         slug: store.slug,
@@ -144,6 +166,7 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
         name: store.name,
         description: store.description,
         logo: store.logo,
+        logoColor: store.logoColor,
         banner: store.banner,
         tagline: store.tagline,
         primaryColor: store.primaryColor,

@@ -164,6 +164,7 @@ type Store = {
   name: string;
   description: string | null;
   logo: string | null;
+  logoColor: string | null;
   banner: string | null;
   tagline: string | null;
   primaryColor: string;
@@ -553,13 +554,25 @@ export default function StorefrontClient({
   initialProductId,
   userId,
   initialFavoriteIds = [],
+  isPwa = false,
 }: {
   store: Store;
   affiliateId?: string;
   initialProductId?: string;
   userId?: string;
   initialFavoriteIds?: string[];
+  isPwa?: boolean;
 }) {
+  const [splashVisible, setSplashVisible] = useState(isPwa);
+  const [splashFading, setSplashFading] = useState(false);
+
+  useEffect(() => {
+    if (!isPwa) return;
+    const fadeTimer = setTimeout(() => setSplashFading(true), 1600);
+    const hideTimer = setTimeout(() => setSplashVisible(false), 2100);
+    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
+  }, [isPwa]);
+
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [imgIndex, setImgIndex] = useState(0);
   const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>({});
@@ -1894,6 +1907,44 @@ export default function StorefrontClient({
   }
 
   return (
+    <>
+    {splashVisible && (
+      <div
+        style={{
+          position: "fixed", inset: 0, zIndex: 9999,
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          background: store.logoColor || store.primaryColor || "#6366f1",
+          opacity: splashFading ? 0 : 1,
+          transition: "opacity 0.5s ease",
+          pointerEvents: "none",
+        }}
+      >
+        {store.logo ? (
+          <img
+            src={store.logo}
+            alt={store.name}
+            style={{ width: 96, height: 96, borderRadius: 24, objectFit: "cover",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.25)" }}
+          />
+        ) : (
+          <div style={{ width: 96, height: 96, borderRadius: 24, background: "rgba(255,255,255,0.2)",
+            display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 40, fontWeight: 900, color: "#fff" }}>
+              {store.name.slice(0, 2).toUpperCase()}
+            </span>
+          </div>
+        )}
+        <p style={{ marginTop: 20, color: "#fff", fontWeight: 800, fontSize: 22,
+          letterSpacing: "-0.02em", textAlign: "center", padding: "0 24px" }}>
+          {store.name}
+        </p>
+        {store.tagline && (
+          <p style={{ marginTop: 8, color: "rgba(255,255,255,0.75)", fontSize: 14, textAlign: "center", padding: "0 32px" }}>
+            {store.tagline}
+          </p>
+        )}
+      </div>
+    )}
     <div
       className={`min-h-screen ${isDark ? "bg-gray-950 text-white" : "text-gray-950"}`}
       style={{
@@ -2921,5 +2972,6 @@ export default function StorefrontClient({
         </div>
       )}
     </div>
+    </>
   );
 }

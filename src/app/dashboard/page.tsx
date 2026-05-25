@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import PublishToggle from "@/components/PublishToggle";
+import LogoUploadCard from "@/components/LogoUploadCard";
 import { getCurrentUser } from "@/lib/auth-session";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
@@ -77,6 +78,10 @@ export default async function DashboardPage() {
           </h1>
           <p className="text-gray-500 mt-1">Resumen de tu tienda <strong>{store?.name}</strong></p>
         </div>
+
+        {store && (
+          <LogoUploadCard storeName={store.name} initialLogo={store.logo} initialLogoColor={store.logoColor} />
+        )}
 
         {store && (
           <div className="mb-8 rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm">

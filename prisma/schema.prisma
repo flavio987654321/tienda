@@ -86,6 +86,7 @@ model Store {
   name           String
   description    String?
   logo           String?
+  logoColor      String?
   banner         String?
   tagline        String?
   primaryColor   String   @default("#6366f1")
