@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import CopyLinkButton from "@/components/CopyLinkButton";
+import ShareStoreButton from "@/components/ShareStoreButton";
 import PublishToggle from "@/components/PublishToggle";
 import LogoUploadCard from "@/components/LogoUploadCard";
 import { getCurrentUser } from "@/lib/auth-session";
@@ -98,9 +98,10 @@ export default async function DashboardPage() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <CopyLinkButton
-                  value={`/tienda/${store.slug}`}
-                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                <ShareStoreButton
+                  storeName={store.name}
+                  storeSlug={store.slug}
+                  storeLogo={store.logo}
                 />
                 <Link
                   href={`/tienda/${store.slug}`}
