@@ -125,7 +125,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
       { image:"", title:"Envíos gratis", subtitle:"En compras mayores a $X", buttonText:"Aprovechar", buttonUrl:"", focalX:50, focalY:50 },
     ], height:"md", autoplay:true, speed:4, showDots:true, showArrows:true, overlayColor:"#000000", overlayOpacity:35, textColor:"#ffffff", textAlign:"center" } },
   { type:"video",      emoji:"▶️", label:"Video",                    desc:"Video de YouTube, Vimeo o MP4 incrustado",
-    defaultProps:{ heading:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", headingSize:"lg" } },
+    defaultProps:{ heading:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", headingSize:"lg", videoWidth:80, videoAlign:"center" } },
   { type:"gallery",    emoji:"🖼️", label:"Galería de fotos",         desc:"Grilla de imágenes para mostrar tu trabajo o productos",
     defaultProps:{ heading:"Galería", images:[], columns:3, bgColor:"", headingSize:"lg" } },
   { type:"faq",        emoji:"❓", label:"Preguntas frecuentes",      desc:"Acordeón de preguntas y respuestas comunes",
@@ -1417,6 +1417,26 @@ function BlockEditor({
       <label className="block text-xs font-medium text-gray-600 mb-1">Proporción</label>
       <Chips options={[{id:"16:9",label:"16:9 (TV)"},{id:"4:3",label:"4:3"},{id:"1:1",label:"Cuadrado"}]} value={p.aspectRatio||"16:9"} onChange={v=>upd("aspectRatio",v)}/>
     </div>
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-xs font-medium text-gray-600">Tamaño del video</label>
+        <span className="text-xs font-bold text-indigo-600">{p.videoWidth||100}%</span>
+      </div>
+      <input type="range" min="20" max="100" step="5" value={p.videoWidth||100}
+        onChange={e=>upd("videoWidth",parseInt(e.target.value))}
+        onMouseDown={e=>e.stopPropagation()} onPointerDown={e=>e.stopPropagation()}
+        className="w-full accent-indigo-600"/>
+      <p className="text-[10px] text-gray-400 mt-1">También podés arrastrarlo desde el borde derecho en la preview</p>
+    </div>
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Alineación</label>
+      <div className="flex gap-2">
+        {[["left","Izq"],["center","Centro"],["right","Der"]].map(([v,l])=>(
+          <button key={v} onClick={()=>upd("videoAlign",v)}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${(p.videoAlign||"center")===v?"border-indigo-500 bg-indigo-50 text-indigo-700":"border-gray-200 text-gray-500 hover:border-gray-300"}`}>{l}</button>
+        ))}
+      </div>
+    </div>
     <ColorPicker label="Color de fondo (vacío = transparente)" value={p.bgColor||""} onChange={v=>upd("bgColor",v)}/>
   </div>;
 
@@ -1902,6 +1922,10 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
   const draggingHeightRef = useRef<number | null>(null);
   const [isResizing, setIsResizing] = useState(false);
   const [draggingHeight, setDraggingHeight] = useState<number | null>(null);
+  const videoResizeRef = useRef<{startX: number; containerW: number; startPct: number} | null>(null);
+  const draggingVideoWidthRef = useRef<number | null>(null);
+  const [isVideoResizing, setIsVideoResizing] = useState(false);
+  const [draggingVideoWidth, setDraggingVideoWidth] = useState<number | null>(null);
   const [hovered, setHovered] = useState(false);
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [focalMode, setFocalMode] = useState(false);
@@ -1947,6 +1971,33 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isResizing, p, onChangeProps]);
+
+  useEffect(() => {
+    if (!isVideoResizing || !videoResizeRef.current) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!videoResizeRef.current) return;
+      const { startX, containerW, startPct } = videoResizeRef.current;
+      const delta = e.clientX - startX;
+      const newPct = Math.round(Math.max(20, Math.min(100, startPct + (delta / containerW) * 100)));
+      draggingVideoWidthRef.current = newPct;
+      setDraggingVideoWidth(newPct);
+    };
+    const handleMouseUp = () => {
+      const final = draggingVideoWidthRef.current ?? videoResizeRef.current!.startPct;
+      onChangeProps({ ...p, videoWidth: final });
+      videoResizeRef.current = null;
+      draggingVideoWidthRef.current = null;
+      setIsVideoResizing(false);
+      setDraggingVideoWidth(null);
+      document.body.style.cursor = "auto";
+    };
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isVideoResizing, p, onChangeProps]);
 
   const SPACER_H: Record<string,string> = { xs:"8px",sm:"24px",md:"48px",lg:"80px",xl:"120px" };
   const FONT_SIZE: Record<string,string> = { sm:"18px",md:"24px",lg:"32px",xl:"36px" };
@@ -2699,6 +2750,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     }
 
     if (block.type === "video") {
+      const videoWidth = draggingVideoWidth ?? (Number(p.videoWidth) || 100);
+      const videoAlign = p.videoAlign || "center";
+      const justifyContent = videoAlign === "left" ? "flex-start" : videoAlign === "right" ? "flex-end" : "center";
       const url = String(p.videoUrl || "");
       let embedSrc = "";
       if (url) {
@@ -2718,26 +2772,64 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       const ratios: Record<string,string> = { "16:9":"56.25%", "4:3":"75%", "1:1":"100%" };
       const paddingBottom = ratios[String(p.aspectRatio||"16:9")] || "56.25%";
       const isDirectVideo = embedSrc && !embedSrc.includes("youtube") && !embedSrc.includes("vimeo");
+      const videoInner = embedSrc ? (
+        <div style={{position:"relative",paddingBottom,height:0,overflow:"hidden",borderRadius:"12px"}}>
+          {isDirectVideo
+            ? <video src={embedSrc} controls style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",borderRadius:"12px",pointerEvents:isVideoResizing?"none":"auto"}}/>
+            : <iframe src={embedSrc} title={String(p.heading||"Video")} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",border:"none",borderRadius:"12px",pointerEvents:isVideoResizing?"none":"auto"}} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/>
+          }
+        </div>
+      ) : (
+        <div style={{position:"relative",paddingBottom,background:"#111827",borderRadius:"12px",overflow:"hidden"}}>
+          <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"10px"}}>
+            <div style={{width:"56px",height:"56px",borderRadius:"50%",background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg viewBox="0 0 24 24" fill="white" width={24} height={24}><path d="M8 5v14l11-7z"/></svg>
+            </div>
+            <p style={{color:"rgba(255,255,255,0.5)",fontSize:"12px"}}>Pegá la URL del video en el panel</p>
+          </div>
+        </div>
+      );
       return (
-        <div style={{background:p.bgColor||"transparent",padding:"24px",fontFamily:c.fontFamily,minHeight:customMinHeight}}>
+        <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily}}>
           {p.heading && <h3 style={{fontSize:p.headingSize==="sm"?"14px":p.headingSize==="md"?"17px":p.headingSize==="xl"?"24px":"20px",fontWeight:800,color:c.primaryColor,textAlign:"center",marginBottom:"16px"}}>{p.heading}</h3>}
-          {embedSrc ? (
-            <div style={{position:"relative",paddingBottom,height:0,overflow:"hidden",borderRadius:"12px"}}>
-              {isDirectVideo
-                ? <video src={embedSrc} controls style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",borderRadius:"12px"}}/>
-                : <iframe src={embedSrc} title={String(p.heading||"Video")} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",border:"none",borderRadius:"12px"}} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/>
-              }
-            </div>
-          ) : (
-            <div style={{position:"relative",paddingBottom,background:"#111827",borderRadius:"12px",overflow:"hidden"}}>
-              <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"10px"}}>
-                <div style={{width:"56px",height:"56px",borderRadius:"50%",background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <svg viewBox="0 0 24 24" fill="white" width={24} height={24}><path d="M8 5v14l11-7z"/></svg>
+          <div style={{display:"flex",justifyContent,alignItems:"flex-start",position:"relative",userSelect:"none"}}>
+            <div style={{width:`${videoWidth}%`,position:"relative",flexShrink:0}}>
+              {videoInner}
+              {/* Resize handle — borde derecho */}
+              {selected && (
+                <div
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    const flexContainer = (e.currentTarget as HTMLDivElement).parentElement?.parentElement;
+                    if (!flexContainer) return;
+                    videoResizeRef.current = {
+                      startX: e.clientX,
+                      containerW: flexContainer.getBoundingClientRect().width,
+                      startPct: videoWidth,
+                    };
+                    setIsVideoResizing(true);
+                    document.body.style.cursor = "ew-resize";
+                  }}
+                  style={{
+                    position:"absolute",right:-8,top:"15%",bottom:"15%",width:16,
+                    cursor:"ew-resize",zIndex:10,
+                    display:"flex",alignItems:"center",justifyContent:"center",gap:"2px",
+                    background:"rgba(99,102,241,0.85)",borderRadius:"999px",
+                  }}
+                  title="Arrastrá para cambiar el tamaño del video"
+                >
+                  <div style={{width:2,height:14,background:"#fff",borderRadius:999}}/>
+                  <div style={{width:2,height:14,background:"#fff",borderRadius:999}}/>
                 </div>
-                <p style={{color:"rgba(255,255,255,0.5)",fontSize:"12px"}}>Pegá la URL del video en el panel</p>
-              </div>
+              )}
+              {/* Width indicator while resizing */}
+              {isVideoResizing && (
+                <div style={{position:"absolute",top:-28,left:"50%",transform:"translateX(-50%)",background:"#4f46e5",color:"#fff",fontSize:"11px",fontWeight:800,padding:"3px 10px",borderRadius:"999px",whiteSpace:"nowrap",pointerEvents:"none"}}>
+                  {videoWidth}%
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       );
     }
