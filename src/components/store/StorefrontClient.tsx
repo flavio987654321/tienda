@@ -1898,18 +1898,30 @@ export default function StorefrontClient({
             const txtColor = String(p.textColor || store.primaryColor);
             const txtShadow = p.textShadow ? "0 1px 4px rgba(0,0,0,0.55)" : "none";
             const txtAlign = (p.textAlign || "center") as "left" | "center" | "right";
+            const videoEl = embedSrc ? (
+              <div style={{ position:"relative", paddingBottom, height:0, overflow:"hidden", borderRadius:"12px" }}>
+                {isDirectVideo
+                  ? <video src={embedSrc} controls autoPlay={!!p.autoplay} muted={!!p.muted} loop={!!p.loop} style={{ position:"absolute", top:0, left:0, width:"100%", height:"100%", borderRadius:"12px" }}/>
+                  : <iframe src={embedSrc} title={String(p.heading||"Video")} style={{ position:"absolute", top:0, left:0, width:"100%", height:"100%", border:"none", borderRadius:"12px" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/>
+                }
+              </div>
+            ) : null;
+            // Mobile/tablet: stacked layout (text above, video full-width)
+            if (viewport !== "desktop") {
+              return (
+                <div key={block.id} id={block.id} style={{ fontFamily:store.fontFamily, backgroundColor:String(p.bgColor||"transparent"), padding:"16px" }}>
+                  {p.heading && <div style={{ fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px", fontWeight:700, color:txtColor, textAlign:txtAlign, marginBottom:"6px", lineHeight:1.3, textShadow:txtShadow }}>{String(p.heading)}</div>}
+                  {p.subtitle && <div style={{ fontSize:p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px", fontWeight:400, color:txtColor, opacity:0.85, textAlign:txtAlign, marginBottom:"10px", lineHeight:1.5, textShadow:p.textShadow?"0 1px 3px rgba(0,0,0,0.45)":"none" }}>{String(p.subtitle)}</div>}
+                  {videoEl}
+                </div>
+              );
+            }
+            // Desktop: overlay layout with positioned text
             return (
               <div key={block.id} id={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor||"transparent"), padding: "20px", position: "relative" }}>
                 <div style={{ display:"flex", alignItems:"flex-start" }}>
                   <div style={{ width:`${vWidth}%`, marginLeft:vMarginLeft, flexShrink:0, position:"relative" }}>
-                    {embedSrc ? (
-                      <div style={{ position:"relative", paddingBottom, height:0, overflow:"hidden", borderRadius:"12px" }}>
-                        {isDirectVideo
-                          ? <video src={embedSrc} controls autoPlay={!!p.autoplay} muted={!!p.muted} loop={!!p.loop} style={{ position:"absolute", top:0, left:0, width:"100%", height:"100%", borderRadius:"12px" }}/>
-                          : <iframe src={embedSrc} title={String(p.heading||"Video")} style={{ position:"absolute", top:0, left:0, width:"100%", height:"100%", border:"none", borderRadius:"12px" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/>
-                        }
-                      </div>
-                    ) : null}
+                    {videoEl}
                   </div>
                 </div>
                 {(p.heading || p.subtitle) && (

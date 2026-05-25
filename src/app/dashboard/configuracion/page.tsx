@@ -1846,8 +1846,15 @@ function MovableTextStage({
         const node = itemRefs.current[other.id];
         if (!node) return;
         const r = node.getBoundingClientRect();
-        guides.push({ axis: "x", px: r.left - stageRect.left + r.width / 2 });
-        guides.push({ axis: "y", px: r.top - stageRect.top + r.height / 2 });
+        const relLeft = r.left - stageRect.left;
+        const relTop  = r.top  - stageRect.top;
+        // center, left edge, right edge for X; center, top edge, bottom edge for Y
+        guides.push({ axis: "x", px: relLeft + r.width / 2 });
+        guides.push({ axis: "x", px: relLeft });
+        guides.push({ axis: "x", px: relLeft + r.width });
+        guides.push({ axis: "y", px: relTop + r.height / 2 });
+        guides.push({ axis: "y", px: relTop });
+        guides.push({ axis: "y", px: relTop + r.height });
       });
 
       const activeX: { axis: "x" | "y"; pct: number }[] = [];
@@ -1921,34 +1928,36 @@ function MovableTextStage({
       className={`relative ${className}`}
       style={{overflow: "visible", ...style}}
     >
-      {/* Alignment guides — visible only while dragging */}
+      {/* Guías de alineación — visibles mientras se arrastra */}
       {activeGuides.map((guide, i) =>
         guide.axis === "x" ? (
-          <div
-            key={`gx-${i}`}
-            style={{
-              position: "absolute", top: 0, bottom: 0,
-              left: `${guide.pct}%`,
-              width: "1px",
-              background: "#818cf8",
-              pointerEvents: "none",
-              zIndex: 20,
-              boxShadow: "0 0 4px rgba(129,140,248,0.6)",
-            }}
-          />
+          <div key={`gx-${i}`} style={{
+            position:"absolute", top:-9999, bottom:-9999,
+            left:`${guide.pct}%`,
+            width:"1px",
+            background:"#6366f1",
+            pointerEvents:"none",
+            zIndex:30,
+            boxShadow:"0 0 0 0.5px #6366f1",
+          }}>
+            <div style={{position:"absolute",top:"50%",left:4,transform:"translateY(-50%)",background:"#6366f1",color:"#fff",fontSize:"9px",fontWeight:700,padding:"1px 4px",borderRadius:3,whiteSpace:"nowrap"}}>
+              {Math.round(guide.pct)}%
+            </div>
+          </div>
         ) : (
-          <div
-            key={`gy-${i}`}
-            style={{
-              position: "absolute", left: 0, right: 0,
-              top: `${guide.pct}%`,
-              height: "1px",
-              background: "#818cf8",
-              pointerEvents: "none",
-              zIndex: 20,
-              boxShadow: "0 0 4px rgba(129,140,248,0.6)",
-            }}
-          />
+          <div key={`gy-${i}`} style={{
+            position:"absolute", left:-9999, right:-9999,
+            top:`${guide.pct}%`,
+            height:"1px",
+            background:"#6366f1",
+            pointerEvents:"none",
+            zIndex:30,
+            boxShadow:"0 0 0 0.5px #6366f1",
+          }}>
+            <div style={{position:"absolute",left:"50%",top:4,transform:"translateX(-50%)",background:"#6366f1",color:"#fff",fontSize:"9px",fontWeight:700,padding:"1px 4px",borderRadius:3,whiteSpace:"nowrap"}}>
+              {Math.round(guide.pct)}%
+            </div>
+          </div>
         )
       )}
       {items.map((item) => {
@@ -2860,6 +2869,20 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           </div>
         </div>
       );
+      // En mobile/tablet: layout apilado (texto arriba, video abajo a full ancho)
+      const txtColor = p.textColor || c.primaryColor;
+      const txtShadow = p.textShadow ? "0 1px 4px rgba(0,0,0,0.55)" : "none";
+      const txtAlign = (p.textAlign || "center") as "left" | "center" | "right";
+      if (viewport !== "desktop") {
+        return (
+          <div style={{background:p.bgColor||"transparent",padding:"16px",fontFamily:c.fontFamily}}>
+            {p.heading && <div style={{fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",fontWeight:700,color:txtColor,textAlign:txtAlign,marginBottom:"6px",lineHeight:1.3,textShadow:txtShadow}}>{p.heading}</div>}
+            {p.subtitle && <div style={{fontSize:p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px",fontWeight:400,color:txtColor,opacity:0.85,textAlign:txtAlign,marginBottom:"10px",lineHeight:1.5,textShadow:p.textShadow?"0 1px 3px rgba(0,0,0,0.45)":"none"}}>{p.subtitle}</div>}
+            {videoInner}
+          </div>
+        );
+      }
+
       return (
         <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily,position:"relative"}}>
           <div style={{display:"flex",alignItems:"flex-start",position:"relative",userSelect:"none"}}>
