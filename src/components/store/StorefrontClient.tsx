@@ -1892,26 +1892,47 @@ export default function StorefrontClient({
             const ratios: Record<string,string> = { "16:9":"56.25%", "4:3":"75%", "1:1":"100%" };
             const paddingBottom = ratios[String(p.aspectRatio||"16:9")] || "56.25%";
             const isDirectVideo = embedSrc && !embedSrc.includes("youtube") && !embedSrc.includes("vimeo");
+            const vWidth = Number(p.videoWidth || 100);
+            const vX = Number(p.videoX ?? 50);
+            const vMarginLeft = `${Math.max(0, (vX / 100) * Math.max(0, 100 - vWidth))}%`;
+            const txtColor = String(p.textColor || store.primaryColor);
+            const txtShadow = p.textShadow ? "0 1px 4px rgba(0,0,0,0.55)" : "none";
+            const txtAlign = (p.textAlign || "center") as "left" | "center" | "right";
             return (
-              <div key={block.id} id={block.id} className="px-4 py-8 sm:px-6" style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor||"transparent") }}>
-                <div className="mx-auto max-w-4xl">
-                  {p.heading && <h2 className={`mb-6 font-black text-center ${p.headingSize==="sm"?"text-xl":p.headingSize==="md"?"text-2xl":p.headingSize==="xl"?"text-4xl":"text-3xl"}`} style={{ color: store.primaryColor }}>{String(p.heading)}</h2>}
-                  {embedSrc ? (
-                    <div style={{ position:"relative", paddingBottom, height:0, overflow:"hidden", borderRadius:"16px" }}>
-                      {isDirectVideo
-                        ? <video src={embedSrc} controls style={{ position:"absolute", top:0, left:0, width:"100%", height:"100%", borderRadius:"16px" }}/>
-                        : <iframe src={embedSrc} title={String(p.heading||"Video")} style={{ position:"absolute", top:0, left:0, width:"100%", height:"100%", border:"none", borderRadius:"16px" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/>
-                      }
-                    </div>
-                  ) : (
-                    <div style={{ paddingBottom, position:"relative", background:"#f3f4f6", borderRadius:"16px" }}>
-                      <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:"8px" }}>
-                        <svg viewBox="0 0 24 24" fill="#9ca3af" width={48} height={48}><path d="M8 5v14l11-7z"/></svg>
-                        <p style={{ color:"#9ca3af", fontSize:"13px" }}>Pegá la URL del video en el panel</p>
+              <div key={block.id} id={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor||"transparent"), padding: "20px", position: "relative" }}>
+                <div style={{ display:"flex", alignItems:"flex-start" }}>
+                  <div style={{ width:`${vWidth}%`, marginLeft:vMarginLeft, flexShrink:0, position:"relative" }}>
+                    {embedSrc ? (
+                      <div style={{ position:"relative", paddingBottom, height:0, overflow:"hidden", borderRadius:"12px" }}>
+                        {isDirectVideo
+                          ? <video src={embedSrc} controls autoPlay={!!p.autoplay} muted={!!p.muted} loop={!!p.loop} style={{ position:"absolute", top:0, left:0, width:"100%", height:"100%", borderRadius:"12px" }}/>
+                          : <iframe src={embedSrc} title={String(p.heading||"Video")} style={{ position:"absolute", top:0, left:0, width:"100%", height:"100%", border:"none", borderRadius:"12px" }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/>
+                        }
                       </div>
-                    </div>
-                  )}
+                    ) : null}
+                  </div>
                 </div>
+                {(p.heading || p.subtitle) && (
+                  <PositionedTextLayer
+                    blockProps={p}
+                    viewport={viewport}
+                    style={{ position:"absolute", inset:0, pointerEvents:"none" }}
+                    items={[
+                      ...(p.heading ? [{
+                        id: "heading",
+                        defaultPos: { x: 50, y: 12 },
+                        style: { maxWidth:"260px", textAlign:txtAlign, wordBreak:"break-word" as const, pointerEvents:"none" as const },
+                        content: <div style={{ fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px", fontWeight:700, color:txtColor, lineHeight:1.3, textShadow:txtShadow }}>{String(p.heading)}</div>,
+                      }] : []),
+                      ...(p.subtitle ? [{
+                        id: "subtitle",
+                        defaultPos: { x: 50, y: 28 },
+                        style: { maxWidth:"260px", textAlign:txtAlign, wordBreak:"break-word" as const, pointerEvents:"none" as const },
+                        content: <div style={{ fontSize:p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px", fontWeight:400, color:txtColor, opacity:0.85, lineHeight:1.5, textShadow:p.textShadow?"0 1px 3px rgba(0,0,0,0.45)":"none" }}>{String(p.subtitle)}</div>,
+                      }] : []),
+                    ]}
+                  />
+                )}
               </div>
             );
           }

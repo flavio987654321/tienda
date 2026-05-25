@@ -126,7 +126,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
       { image:"", title:"Envíos gratis", subtitle:"En compras mayores a $X", buttonText:"Aprovechar", buttonUrl:"", focalX:50, focalY:50 },
     ], height:"md", autoplay:true, speed:4, showDots:true, showArrows:true, overlayColor:"#000000", overlayOpacity:35, textColor:"#ffffff", textAlign:"center" } },
   { type:"video",      emoji:"▶️", label:"Video",                    desc:"Video de YouTube, Vimeo o MP4 incrustado",
-    defaultProps:{ heading:"", subtitle:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", textColor:"", headingSize:"lg", textAlign:"center", videoWidth:80, videoX:50, autoplay:false, muted:false, loop:false, textShadow:false } },
+    defaultProps:{ heading:"", subtitle:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", textColor:"", headingSize:"lg", subtitleSize:"md", textAlign:"center", videoWidth:80, videoX:50, autoplay:false, muted:false, loop:false, textShadow:false } },
   { type:"gallery",    emoji:"🖼️", label:"Galería de fotos",         desc:"Grilla de imágenes para mostrar tu trabajo o productos",
     defaultProps:{ heading:"Galería", images:[], columns:3, bgColor:"", headingSize:"lg" } },
   { type:"faq",        emoji:"❓", label:"Preguntas frecuentes",      desc:"Acordeón de preguntas y respuestas comunes",
@@ -1391,10 +1391,14 @@ function BlockEditor({
         {ta("Subtítulo (opcional)","subtitle","")}
         {(p.heading || p.subtitle) && <>
           <ColorPicker label="Color del texto" value={p.textColor||""} onChange={v=>upd("textColor",v)}/>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño</label>
+          {p.heading && <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del título</label>
             <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
-          </div>
+          </div>}
+          {p.subtitle && <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño del subtítulo</label>
+            <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.subtitleSize||"md"} onChange={v=>upd("subtitleSize",v)}/>
+          </div>}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Alineación del texto</label>
             <div className="flex gap-1.5">
@@ -2922,7 +2926,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                   defaultPos: { x: 50, y: 28 },
                   style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: (p.textAlign||"center") as "left"|"center"|"right", wordBreak: "break-word" as const },
                   content: <div style={{
-                    fontSize: p.headingSize==="sm"?"11px":p.headingSize==="md"?"13px":p.headingSize==="xl"?"18px":"15px",
+                    fontSize: p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px",
                     fontWeight: 400,
                     color: p.textColor || c.primaryColor,
                     opacity: 0.85,
