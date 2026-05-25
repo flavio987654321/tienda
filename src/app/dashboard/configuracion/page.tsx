@@ -125,7 +125,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
       { image:"", title:"Envíos gratis", subtitle:"En compras mayores a $X", buttonText:"Aprovechar", buttonUrl:"", focalX:50, focalY:50 },
     ], height:"md", autoplay:true, speed:4, showDots:true, showArrows:true, overlayColor:"#000000", overlayOpacity:35, textColor:"#ffffff", textAlign:"center" } },
   { type:"video",      emoji:"▶️", label:"Video",                    desc:"Video de YouTube, Vimeo o MP4 incrustado",
-    defaultProps:{ heading:"", subtitle:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", textColor:"", textSize:"md", videoWidth:80, videoAlign:"center" } },
+    defaultProps:{ heading:"", subtitle:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", textColor:"", headingSize:"lg", textAlign:"center", videoWidth:80, videoX:50, autoplay:false, muted:false, loop:false, textShadow:false } },
   { type:"gallery",    emoji:"🖼️", label:"Galería de fotos",         desc:"Grilla de imágenes para mostrar tu trabajo o productos",
     defaultProps:{ heading:"Galería", images:[], columns:3, bgColor:"", headingSize:"lg" } },
   { type:"faq",        emoji:"❓", label:"Preguntas frecuentes",      desc:"Acordeón de preguntas y respuestas comunes",
@@ -1380,17 +1380,23 @@ function BlockEditor({
 
   if (block.type==="video") {
     const isDirectVideo = p.videoUrl && !String(p.videoUrl).includes("youtube") && !String(p.videoUrl).includes("youtu.be") && !String(p.videoUrl).includes("vimeo");
+    const videoX = Number(p.videoX ?? 50);
+    const videoWidth = Number(p.videoWidth || 100);
     return <div className="space-y-4">
       {/* ── TEXTO ── */}
       <div className="space-y-3">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 border-b border-gray-100 pb-1">Texto superpuesto</p>
         {inp("Título (opcional)","heading","")}
-        {inp("Subtítulo (opcional)","subtitle","")}
+        {ta("Subtítulo (opcional)","subtitle","")}
         {(p.heading || p.subtitle) && <>
           <ColorPicker label="Color del texto" value={p.textColor||""} onChange={v=>upd("textColor",v)}/>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Tamaño</label>
-            <Chips options={[{id:"sm",label:"Chico"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"}]} value={p.textSize||"md"} onChange={v=>upd("textSize",v)}/>
+            <Chips options={[{id:"sm",label:"Pequeño"},{id:"md",label:"Mediano"},{id:"lg",label:"Grande"},{id:"xl",label:"XL"}]} value={p.headingSize||"lg"} onChange={v=>upd("headingSize",v)}/>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Alineación del texto</label>
+            <Chips options={[{id:"left",label:"Izquierda"},{id:"center",label:"Centro"},{id:"right",label:"Derecha"}]} value={p.textAlign||"center"} onChange={v=>upd("textAlign",v)}/>
           </div>
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium text-gray-600">Sombra en el texto</label>
@@ -1440,23 +1446,24 @@ function BlockEditor({
         </div>
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-medium text-gray-600">Ancho del video</label>
-            <span className="text-xs font-bold text-indigo-600">{p.videoWidth||100}%</span>
+            <label className="text-xs font-medium text-gray-600">Ancho</label>
+            <span className="text-xs font-bold text-indigo-600">{videoWidth}%</span>
           </div>
-          <input type="range" min="20" max="100" step="5" value={p.videoWidth||100}
+          <input type="range" min="20" max="100" step="5" value={videoWidth}
             onChange={e=>upd("videoWidth",parseInt(e.target.value))}
             onMouseDown={e=>e.stopPropagation()} onPointerDown={e=>e.stopPropagation()}
             className="w-full accent-indigo-600"/>
           <p className="text-[10px] text-gray-400 mt-0.5">También podés arrastrarlo desde el borde derecho en la preview</p>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Alineación</label>
-          <div className="flex gap-2">
-            {[["left","Izquierda"],["center","Centro"],["right","Derecha"]].map(([v,l])=>(
-              <button key={v} onClick={()=>upd("videoAlign",v)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${(p.videoAlign||"center")===v?"border-indigo-500 bg-indigo-50 text-indigo-700":"border-gray-200 text-gray-500 hover:border-gray-300"}`}>{l}</button>
-            ))}
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-medium text-gray-600">Posición horizontal</label>
+            <span className="text-xs font-bold text-indigo-600">{videoX === 0 ? "Izquierda" : videoX === 100 ? "Derecha" : videoX === 50 ? "Centro" : `${videoX}%`}</span>
           </div>
+          <input type="range" min="0" max="100" step="5" value={videoX}
+            onChange={e=>upd("videoX",parseInt(e.target.value))}
+            onMouseDown={e=>e.stopPropagation()} onPointerDown={e=>e.stopPropagation()}
+            className="w-full accent-indigo-600"/>
         </div>
         {isDirectVideo && <>
           <div className="flex items-center justify-between">
@@ -1467,7 +1474,7 @@ function BlockEditor({
             </button>
           </div>
           <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-gray-600">Sin sonido (recomendado con autoplay)</label>
+            <label className="text-xs font-medium text-gray-600">Sin sonido</label>
             <button type="button" onClick={()=>upd("muted",!p.muted)}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${p.muted?"bg-indigo-600":"bg-gray-200"}`}>
               <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${p.muted?"translate-x-4":"translate-x-0.5"}`}/>
@@ -2801,8 +2808,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
 
     if (block.type === "video") {
       const videoWidth = draggingVideoWidth ?? (Number(p.videoWidth) || 100);
-      const videoAlign = p.videoAlign || "center";
-      const justifyContent = videoAlign === "left" ? "flex-start" : videoAlign === "right" ? "flex-end" : "center";
+      const videoX = Number(p.videoX ?? 50);
+      // map videoX (0-100) to a left margin so the video can be positioned freely
+      const videoMarginLeft = `${Math.max(0, (videoX / 100) * Math.max(0, 100 - videoWidth))}%`;
       const url = String(p.videoUrl || "");
       let embedSrc = "";
       if (url) {
@@ -2841,8 +2849,8 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       );
       return (
         <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily,position:"relative"}}>
-          <div style={{display:"flex",justifyContent,alignItems:"flex-start",position:"relative",userSelect:"none"}}>
-            <div style={{width:`${videoWidth}%`,position:"relative",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"flex-start",position:"relative",userSelect:"none"}}>
+            <div style={{width:`${videoWidth}%`,marginLeft:videoMarginLeft,position:"relative",flexShrink:0}}>
               {videoInner}
               {/* Borde derecho para redimensionar */}
               {selected && (
@@ -2891,9 +2899,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 ...(p.heading ? [{
                   id: "heading",
                   defaultPos: { x: 50, y: 12 },
-                  style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: "center" as const, wordBreak: "break-word" as const },
+                  style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: (p.textAlign||"center") as "left"|"center"|"right", wordBreak: "break-word" as const },
                   content: <div style={{
-                    fontSize: p.textSize==="sm"?"13px":p.textSize==="lg"?"22px":"17px",
+                    fontSize: p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",
                     fontWeight: 700,
                     color: p.textColor || c.primaryColor,
                     lineHeight: 1.3,
@@ -2903,9 +2911,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                 ...(p.subtitle ? [{
                   id: "subtitle",
                   defaultPos: { x: 50, y: 28 },
-                  style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: "center" as const, wordBreak: "break-word" as const },
+                  style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: (p.textAlign||"center") as "left"|"center"|"right", wordBreak: "break-word" as const },
                   content: <div style={{
-                    fontSize: p.textSize==="sm"?"11px":p.textSize==="lg"?"15px":"13px",
+                    fontSize: p.headingSize==="sm"?"11px":p.headingSize==="md"?"13px":p.headingSize==="xl"?"18px":"15px",
                     fontWeight: 400,
                     color: p.textColor || c.primaryColor,
                     opacity: 0.85,
