@@ -566,12 +566,14 @@ export default function StorefrontClient({
 }) {
   const [splashVisible, setSplashVisible] = useState(isPwa);
   const [splashFading, setSplashFading] = useState(false);
+  const [splashMounted, setSplashMounted] = useState(false);
 
   useEffect(() => {
     if (!isPwa) return;
-    const fadeTimer = setTimeout(() => setSplashFading(true), 1600);
-    const hideTimer = setTimeout(() => setSplashVisible(false), 2100);
-    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
+    const mountTimer = setTimeout(() => setSplashMounted(true), 50);
+    const fadeTimer = setTimeout(() => setSplashFading(true), 1700);
+    const hideTimer = setTimeout(() => setSplashVisible(false), 2250);
+    return () => { clearTimeout(mountTimer); clearTimeout(fadeTimer); clearTimeout(hideTimer); };
   }, [isPwa]);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -2098,8 +2100,9 @@ export default function StorefrontClient({
           position: "fixed", inset: 0, zIndex: 9999,
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
           background: store.logoColor || store.primaryColor || "#6366f1",
-          opacity: splashFading ? 0 : 1,
-          transition: "opacity 0.5s ease",
+          opacity: splashFading ? 0 : splashMounted ? 1 : 0,
+          transform: splashFading ? "scale(1.06)" : splashMounted ? "scale(1)" : "scale(0.92)",
+          transition: "opacity 0.5s ease, transform 0.5s ease",
           pointerEvents: "none",
         }}
       >
