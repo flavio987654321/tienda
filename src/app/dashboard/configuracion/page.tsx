@@ -2884,11 +2884,48 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       }
 
       return (
-        <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily,position:"relative"}}>
-          <div style={{display:"flex",alignItems:"flex-start",position:"relative",userSelect:"none"}}>
+        <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily}}>
+          <div style={{display:"flex",alignItems:"flex-start",userSelect:"none"}}>
             <div style={{width:`${videoWidth}%`,marginLeft:videoMarginLeft,position:"relative",flexShrink:0}}>
               {videoInner}
-              {/* Borde derecho para redimensionar */}
+              {/* Texto arrastrable – dentro del wrapper del video para que % sea relativo al video */}
+              {(p.heading || p.subtitle) && (
+                <MovableTextStage
+                  key={`video-${viewport}-${Boolean(p.heading)}-${Boolean(p.subtitle)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
+                  blockProps={p}
+                  viewport={viewport}
+                  onChange={onChangeProps}
+                  style={{position:"absolute",inset:0,pointerEvents:"none",zIndex:5}}
+                  items={[
+                    ...(p.heading ? [{
+                      id: "heading",
+                      defaultPos: { x: 50, y: 20 },
+                      style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: (p.textAlign||"center") as "left"|"center"|"right", wordBreak: "break-word" as const },
+                      content: <div style={{
+                        fontSize: p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",
+                        fontWeight: 700,
+                        color: p.textColor || c.primaryColor,
+                        lineHeight: 1.3,
+                        textShadow: p.textShadow ? "0 1px 4px rgba(0,0,0,0.55)" : "none",
+                      }}>{p.heading}</div>,
+                    }] : []),
+                    ...(p.subtitle ? [{
+                      id: "subtitle",
+                      defaultPos: { x: 50, y: 40 },
+                      style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: (p.textAlign||"center") as "left"|"center"|"right", wordBreak: "break-word" as const },
+                      content: <div style={{
+                        fontSize: p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px",
+                        fontWeight: 400,
+                        color: p.textColor || c.primaryColor,
+                        opacity: 0.85,
+                        lineHeight: 1.5,
+                        textShadow: p.textShadow ? "0 1px 3px rgba(0,0,0,0.45)" : "none",
+                      }}>{p.subtitle}</div>,
+                    }] : []),
+                  ]}
+                />
+              )}
+              {/* Borde derecho para redimensionar – z-index 10 para estar sobre el texto */}
               {selected && (
                 <div
                   onMouseDown={(e) => {
@@ -2923,43 +2960,6 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
               )}
             </div>
           </div>
-          {/* Texto arrastrable superpuesto sobre el bloque de video */}
-          {(p.heading || p.subtitle) && (
-            <MovableTextStage
-              key={`video-${viewport}-${Boolean(p.heading)}-${Boolean(p.subtitle)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
-              blockProps={p}
-              viewport={viewport}
-              onChange={onChangeProps}
-              style={{position:"absolute",inset:0,pointerEvents:"none"}}
-              items={[
-                ...(p.heading ? [{
-                  id: "heading",
-                  defaultPos: { x: 50, y: 12 },
-                  style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: (p.textAlign||"center") as "left"|"center"|"right", wordBreak: "break-word" as const },
-                  content: <div style={{
-                    fontSize: p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",
-                    fontWeight: 700,
-                    color: p.textColor || c.primaryColor,
-                    lineHeight: 1.3,
-                    textShadow: p.textShadow ? "0 1px 4px rgba(0,0,0,0.55)" : "none",
-                  }}>{p.heading}</div>,
-                }] : []),
-                ...(p.subtitle ? [{
-                  id: "subtitle",
-                  defaultPos: { x: 50, y: 28 },
-                  style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: (p.textAlign||"center") as "left"|"center"|"right", wordBreak: "break-word" as const },
-                  content: <div style={{
-                    fontSize: p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px",
-                    fontWeight: 400,
-                    color: p.textColor || c.primaryColor,
-                    opacity: 0.85,
-                    lineHeight: 1.5,
-                    textShadow: p.textShadow ? "0 1px 3px rgba(0,0,0,0.45)" : "none",
-                  }}>{p.subtitle}</div>,
-                }] : []),
-              ]}
-            />
-          )}
         </div>
       );
     }
