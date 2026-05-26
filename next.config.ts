@@ -48,6 +48,8 @@ const nextConfig: NextConfig = {
       { source: "/(.*)", headers: securityHeaders },
       // Páginas donde carga el SDK de MercadoPago (checkout de tienda + suscripciones)
       { source: "/(precios|tienda/.*)", headers: paymentHeaders },
+      // Preview de templates — necesita unsafe-eval en dev
+      { source: "/preview/(.*)", headers: paymentHeaders },
     ];
   },
   images: {
