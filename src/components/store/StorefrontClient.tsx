@@ -417,11 +417,16 @@ function PositionedTextLayer({
 }) {
   const stored = getViewportTextPositions(blockProps, viewport);
   const desktopFallback = viewport !== "desktop" ? getViewportTextPositions(blockProps, "desktop") : {};
+  function validPos(p: TextPosition | undefined): TextPosition | undefined {
+    if (!p) return undefined;
+    // Posiciones fuera de rango son del sistema anterior (stage = bloque completo); ignorar
+    return (p.x > 105 || p.x < -5 || p.y > 105 || p.y < -5) ? undefined : p;
+  }
 
   return (
     <div className={`relative ${className}`} style={style}>
       {items.map((item) => {
-        const pos = stored[item.id] ?? desktopFallback[item.id] ?? item.defaultPos;
+        const pos = validPos(stored[item.id]) ?? validPos(desktopFallback[item.id]) ?? item.defaultPos;
         return (
           <div
             key={item.id}

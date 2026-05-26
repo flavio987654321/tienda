@@ -1735,7 +1735,12 @@ function MovableTextStage({
   const [draftPositions, setDraftPositions] = useState<Record<string, TextPosition>>(() => {
     const stored = getViewportTextPositions(blockProps, viewport);
     return items.reduce<Record<string, TextPosition>>((acc, item) => {
-      acc[item.id] = stored[item.id] ?? item.defaultPos;
+      const saved = stored[item.id];
+      // Cuando noClamp, las posiciones se guardan relativas al video wrapper.
+      // Posiciones > 105% o < -5% indican datos del sistema anterior (relativas al bloque completo)
+      // y se resetean al defaultPos para que el usuario empiece desde cero.
+      const isStale = noClamp && saved && (saved.x > 105 || saved.x < -5 || saved.y > 105 || saved.y < -5);
+      acc[item.id] = (saved && !isStale) ? saved : item.defaultPos;
       return acc;
     }, {});
   });
