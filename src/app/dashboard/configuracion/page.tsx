@@ -2378,7 +2378,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     if (block.type==="banner-group") {
       const slides: any[] = Array.isArray(p.slides) ? p.slides : [];
       const RATIOS: Record<string,string> = { sm:"25%", md:"35%", lg:"47%", xl:"56.25%" };
+      const MIN_HEIGHTS: Record<string,string> = { sm:"180px", md:"240px", lg:"300px", xl:"360px" };
       const paddingBottom = RATIOS[String(p.height||"md")] || "35%";
+      const minHeight = MIN_HEIGHTS[String(p.height||"md")] || "240px";
       const idx = slides.length > 0 ? carouselIdx % slides.length : 0;
       const slide = slides[idx] || {};
       const overlayOpacity = Number(p.overlayOpacity ?? 35) / 100;
@@ -2398,7 +2400,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       };
 
       return (
-        <div style={{position:"relative", width:"100%", paddingBottom, overflow:"hidden", fontFamily:c.fontFamily, background:"#1f2937", userSelect:"none"}}>
+        <div style={{position:"relative", width:"100%", paddingBottom, minHeight, overflow:"hidden", fontFamily:c.fontFamily, background:"#1f2937", userSelect:"none"}}>
           <div style={{position:"absolute", inset:0}}>
             {slide.image && <img src={slide.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:`${fx}% ${fy}%`,transition:"object-position 0.15s"}}/>}
             {!slide.image && <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,#4f46e5,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:"48px"}}>🖼️</span></div>}

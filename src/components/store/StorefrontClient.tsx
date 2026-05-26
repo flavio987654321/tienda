@@ -35,9 +35,10 @@ function BannerCarouselBlock({ block, primaryColor, fontFamily }: { block: any; 
   const p = block.props;
   const slides: any[] = Array.isArray(p.slides) ? p.slides : [];
   const [idx, setIdx] = useState(0);
-  // Porcentaje de alto relativo al ancho — igual en cualquier pantalla
   const RATIOS: Record<string,string> = { sm:"25%", md:"35%", lg:"47%", xl:"56.25%" };
+  const MIN_HEIGHTS: Record<string,string> = { sm:"180px", md:"240px", lg:"300px", xl:"360px" };
   const paddingBottom = RATIOS[String(p.height||"md")] || "35%";
+  const minHeight = MIN_HEIGHTS[String(p.height||"md")] || "240px";
   const cur = slides[idx % Math.max(1, slides.length)] || {};
   const overlayOpacity = Number(p.overlayOpacity ?? 35) / 100;
   const textColor = String(p.textColor || "#ffffff");
@@ -50,7 +51,7 @@ function BannerCarouselBlock({ block, primaryColor, fontFamily }: { block: any; 
   }, [p.autoplay, p.speed, slides.length]);
 
   return (
-    <div style={{ position:"relative", width:"100%", paddingBottom, overflow:"hidden", fontFamily, background:"#1f2937", userSelect:"none" }}>
+    <div style={{ position:"relative", width:"100%", paddingBottom, minHeight, overflow:"hidden", fontFamily, background:"#1f2937", userSelect:"none" }}>
       <div style={{ position:"absolute", inset:0 }}>
         {/* Todas las imágenes apiladas — solo la activa tiene opacity:1, el resto opacity:0 */}
         {slides.length === 0 && <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,#4f46e5,#7c3aed)" }}/>}
