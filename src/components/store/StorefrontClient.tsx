@@ -1895,9 +1895,7 @@ export default function StorefrontClient({
             const isDirectVideo = embedSrc && !embedSrc.includes("youtube") && !embedSrc.includes("vimeo");
             const vWidth = Number(p.videoWidth || 100);
             const vX = Number(p.videoX ?? 50);
-            const rawVMarginPct = (vX / 100) * Math.max(0, 100 - vWidth);
-            const maxVMarginPct = Math.max(0, 100 - vWidth - 25);
-            const vMarginLeft = `${Math.min(rawVMarginPct, maxVMarginPct)}%`;
+            const vMarginLeft = `${Math.max(0, (vX / 100) * Math.max(0, 100 - vWidth))}%`;
             const txtColor = String(p.textColor || store.primaryColor);
             const txtShadow = p.textShadow ? "0 1px 4px rgba(0,0,0,0.55)" : "none";
             const txtAlign = (p.textAlign || "center") as "left" | "center" | "right";
@@ -1919,16 +1917,15 @@ export default function StorefrontClient({
                 </div>
               );
             }
-            // Desktop: flex side-by-side
-            const textPosition = String(p.textPosition || "right");
+            // Desktop: flex side-by-side (video left, text right column)
             return (
               <div key={block.id} id={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor||"transparent"), padding: "20px" }}>
-                <div style={{ display:"flex", flexDirection: textPosition==="left" ? "row-reverse" : "row", alignItems:"center", gap:"24px" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:"24px" }}>
                   <div style={{ width:`${vWidth}%`, marginLeft:vMarginLeft, flexShrink:0 }}>
                     {videoEl}
                   </div>
                   {(p.heading || p.subtitle) && (
-                    <div style={{ flex:1, minWidth:"150px", textAlign:txtAlign }}>
+                    <div style={{ flex:1, textAlign:txtAlign }}>
                       {p.heading && <div style={{ fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px", fontWeight:700, color:txtColor, lineHeight:1.3, textShadow:txtShadow, marginBottom: p.subtitle ? "10px" : 0 }}>{String(p.heading)}</div>}
                       {p.subtitle && <div style={{ fontSize:p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px", fontWeight:400, color:txtColor, opacity:0.85, lineHeight:1.5, textShadow:p.textShadow?"0 1px 3px rgba(0,0,0,0.45)":"none" }}>{String(p.subtitle)}</div>}
                     </div>

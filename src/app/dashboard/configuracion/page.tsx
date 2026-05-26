@@ -126,7 +126,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
       { image:"", title:"Envíos gratis", subtitle:"En compras mayores a $X", buttonText:"Aprovechar", buttonUrl:"", focalX:50, focalY:50 },
     ], height:"md", autoplay:true, speed:4, showDots:true, showArrows:true, overlayColor:"#000000", overlayOpacity:35, textColor:"#ffffff", textAlign:"center" } },
   { type:"video",      emoji:"▶️", label:"Video",                    desc:"Video de YouTube, Vimeo o MP4 incrustado",
-    defaultProps:{ heading:"", subtitle:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", textColor:"", headingSize:"lg", subtitleSize:"md", textAlign:"center", videoWidth:80, videoX:50, textPosition:"right", autoplay:false, muted:false, loop:false, textShadow:false } },
+    defaultProps:{ heading:"", subtitle:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", textColor:"", headingSize:"lg", subtitleSize:"md", textAlign:"center", videoWidth:80, videoX:50, autoplay:false, muted:false, loop:false, textShadow:false } },
   { type:"gallery",    emoji:"🖼️", label:"Galería de fotos",         desc:"Grilla de imágenes para mostrar tu trabajo o productos",
     defaultProps:{ heading:"Galería", images:[], columns:3, bgColor:"", headingSize:"lg" } },
   { type:"faq",        emoji:"❓", label:"Preguntas frecuentes",      desc:"Acordeón de preguntas y respuestas comunes",
@@ -1478,12 +1478,6 @@ function BlockEditor({
             onMouseDown={e=>e.stopPropagation()} onPointerDown={e=>e.stopPropagation()}
             className="w-full accent-indigo-600"/>
         </div>
-        {(p.heading || p.subtitle) && (
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Texto al lado del video</label>
-            <Chips options={[{id:"right",label:"Derecha"},{id:"left",label:"Izquierda"}]} value={p.textPosition||"right"} onChange={v=>upd("textPosition",v)}/>
-          </div>
-        )}
         {isDirectVideo && <>
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium text-gray-600">Reproducción automática</label>
@@ -2783,9 +2777,8 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     if (block.type === "video") {
       const videoWidth = draggingVideoWidth ?? (Number(p.videoWidth) || 100);
       const videoX = Number(p.videoX ?? 50);
-      const rawMarginPct = (videoX / 100) * Math.max(0, 100 - videoWidth);
-      const maxMarginPct = Math.max(0, 100 - videoWidth - 25);
-      const videoMarginLeft = `${Math.min(rawMarginPct, maxMarginPct)}%`;
+      // map videoX (0-100) to a left margin so the video can be positioned freely
+      const videoMarginLeft = `${Math.max(0, (videoX / 100) * Math.max(0, 100 - videoWidth))}%`;
       const url = String(p.videoUrl || "");
       let embedSrc = "";
       if (url) {
@@ -2836,10 +2829,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
         );
       }
 
-      const textPosition = String(p.textPosition || "right");
       return (
         <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily}}>
-          <div style={{display:"flex",flexDirection:textPosition==="left"?"row-reverse":"row",alignItems:"center",gap:"24px",userSelect:"none"}}>
+          <div style={{display:"flex",alignItems:"center",gap:"24px",userSelect:"none"}}>
             <div style={{width:`${videoWidth}%`,marginLeft:videoMarginLeft,flexShrink:0,position:"relative"}}>
               {videoInner}
               {/* Borde derecho para redimensionar */}
@@ -2876,7 +2868,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
               )}
             </div>
             {(p.heading || p.subtitle) && (
-              <div style={{flex:1,minWidth:"150px",textAlign:(p.textAlign||"center") as React.CSSProperties["textAlign"]}}>
+              <div style={{flex:1,textAlign:(p.textAlign||"center") as React.CSSProperties["textAlign"]}}>
                 {p.heading && <div style={{fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",fontWeight:700,color:p.textColor||c.primaryColor,lineHeight:1.3,textShadow:p.textShadow?"0 1px 4px rgba(0,0,0,0.55)":"none",marginBottom:p.subtitle?"10px":0}}>{p.heading}</div>}
                 {p.subtitle && <div style={{fontSize:p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px",fontWeight:400,color:p.textColor||c.primaryColor,opacity:0.85,lineHeight:1.5,textShadow:p.textShadow?"0 1px 3px rgba(0,0,0,0.45)":"none"}}>{p.subtitle}</div>}
               </div>
