@@ -417,16 +417,11 @@ function PositionedTextLayer({
 }) {
   const stored = getViewportTextPositions(blockProps, viewport);
   const desktopFallback = viewport !== "desktop" ? getViewportTextPositions(blockProps, "desktop") : {};
-  function validPos(p: TextPosition | undefined): TextPosition | undefined {
-    if (!p) return undefined;
-    // Posiciones fuera de rango son del sistema anterior (stage = bloque completo); ignorar
-    return (p.x > 105 || p.x < -5 || p.y > 105 || p.y < -5) ? undefined : p;
-  }
 
   return (
     <div className={`relative ${className}`} style={style}>
       {items.map((item) => {
-        const pos = validPos(stored[item.id]) ?? validPos(desktopFallback[item.id]) ?? item.defaultPos;
+        const pos = stored[item.id] ?? desktopFallback[item.id] ?? item.defaultPos;
         return (
           <div
             key={item.id}
@@ -1923,33 +1918,30 @@ export default function StorefrontClient({
             }
             // Desktop: overlay layout with positioned text
             return (
-              <div key={block.id} id={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor||"transparent"), padding: "20px" }}>
+              <div key={block.id} id={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor||"transparent"), padding: "20px", position:"relative" }}>
                 <div style={{ display:"flex", alignItems:"flex-start" }}>
                   <div style={{ width:`${vWidth}%`, marginLeft:vMarginLeft, flexShrink:0, position:"relative" }}>
                     {videoEl}
-                    {(p.heading || p.subtitle) && (
-                      <PositionedTextLayer
-                        blockProps={p}
-                        viewport={viewport}
-                        style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"visible" }}
-                        items={[
-                          ...(p.heading ? [{
-                            id: "heading",
-                            defaultPos: { x: 50, y: 30 },
-                            style: { maxWidth:"260px", textAlign:txtAlign, wordBreak:"break-word" as const, pointerEvents:"none" as const },
-                            content: <div style={{ fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px", fontWeight:700, color:txtColor, lineHeight:1.3, textShadow:txtShadow }}>{String(p.heading)}</div>,
-                          }] : []),
-                          ...(p.subtitle ? [{
-                            id: "subtitle",
-                            defaultPos: { x: 50, y: 55 },
-                            style: { maxWidth:"260px", textAlign:txtAlign, wordBreak:"break-word" as const, pointerEvents:"none" as const },
-                            content: <div style={{ fontSize:p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px", fontWeight:400, color:txtColor, opacity:0.85, lineHeight:1.5, textShadow:p.textShadow?"0 1px 3px rgba(0,0,0,0.45)":"none" }}>{String(p.subtitle)}</div>,
-                          }] : []),
-                        ]}
-                      />
-                    )}
                   </div>
                 </div>
+                {(p.heading || p.subtitle) && (
+                  <PositionedTextLayer
+                    blockProps={p} viewport={viewport}
+                    style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"visible" }}
+                    items={[
+                      ...(p.heading ? [{
+                        id:"heading", defaultPos:{x:50,y:40},
+                        style:{maxWidth:"260px",textAlign:txtAlign,wordBreak:"break-word" as const,pointerEvents:"none" as const},
+                        content:<div style={{fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",fontWeight:700,color:txtColor,lineHeight:1.3,textShadow:txtShadow}}>{String(p.heading)}</div>,
+                      }]:[]),
+                      ...(p.subtitle ? [{
+                        id:"subtitle", defaultPos:{x:50,y:58},
+                        style:{maxWidth:"260px",textAlign:txtAlign,wordBreak:"break-word" as const,pointerEvents:"none" as const},
+                        content:<div style={{fontSize:p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px",fontWeight:400,color:txtColor,opacity:0.85,lineHeight:1.5,textShadow:p.textShadow?"0 1px 3px rgba(0,0,0,0.45)":"none"}}>{String(p.subtitle)}</div>,
+                      }]:[]),
+                    ]}
+                  />
+                )}
               </div>
             );
           }
