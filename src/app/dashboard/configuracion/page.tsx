@@ -2777,8 +2777,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
     if (block.type === "video") {
       const videoWidth = draggingVideoWidth ?? (Number(p.videoWidth) || 100);
       const videoX = Number(p.videoX ?? 50);
-      // map videoX (0-100) to a left margin so the video can be positioned freely
-      const videoMarginLeft = `${Math.max(0, (videoX / 100) * Math.max(0, 100 - videoWidth))}%`;
+      const rawMarginPct = (videoX / 100) * Math.max(0, 100 - videoWidth);
+      const maxMarginPct = Math.max(0, 100 - videoWidth - 25);
+      const videoMarginLeft = `${Math.min(rawMarginPct, maxMarginPct)}%`;
       const url = String(p.videoUrl || "");
       let embedSrc = "";
       if (url) {
@@ -2868,7 +2869,7 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
               )}
             </div>
             {(p.heading || p.subtitle) && (
-              <div style={{flex:1,textAlign:(p.textAlign||"center") as React.CSSProperties["textAlign"]}}>
+              <div style={{flex:1,minWidth:"150px",textAlign:(p.textAlign||"center") as React.CSSProperties["textAlign"]}}>
                 {p.heading && <div style={{fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",fontWeight:700,color:p.textColor||c.primaryColor,lineHeight:1.3,textShadow:p.textShadow?"0 1px 4px rgba(0,0,0,0.55)":"none",marginBottom:p.subtitle?"10px":0}}>{p.heading}</div>}
                 {p.subtitle && <div style={{fontSize:p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px",fontWeight:400,color:p.textColor||c.primaryColor,opacity:0.85,lineHeight:1.5,textShadow:p.textShadow?"0 1px 3px rgba(0,0,0,0.45)":"none"}}>{p.subtitle}</div>}
               </div>
