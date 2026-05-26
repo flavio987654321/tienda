@@ -1919,10 +1919,11 @@ export default function StorefrontClient({
                 </div>
               );
             }
-            // Desktop: flex side-by-side (video left, text right column)
+            // Desktop: flex side-by-side
+            const textPosition = String(p.textPosition || "right");
             return (
               <div key={block.id} id={block.id} style={{ fontFamily: store.fontFamily, backgroundColor: String(p.bgColor||"transparent"), padding: "20px" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:"24px" }}>
+                <div style={{ display:"flex", flexDirection: textPosition==="left" ? "row-reverse" : "row", alignItems:"center", gap:"24px" }}>
                   <div style={{ width:`${vWidth}%`, marginLeft:vMarginLeft, flexShrink:0 }}>
                     {videoEl}
                   </div>

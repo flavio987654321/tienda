@@ -126,7 +126,7 @@ const BLOCK_LIBRARY: { type:BlockType; emoji:string; label:string; desc:string; 
       { image:"", title:"Envíos gratis", subtitle:"En compras mayores a $X", buttonText:"Aprovechar", buttonUrl:"", focalX:50, focalY:50 },
     ], height:"md", autoplay:true, speed:4, showDots:true, showArrows:true, overlayColor:"#000000", overlayOpacity:35, textColor:"#ffffff", textAlign:"center" } },
   { type:"video",      emoji:"▶️", label:"Video",                    desc:"Video de YouTube, Vimeo o MP4 incrustado",
-    defaultProps:{ heading:"", subtitle:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", textColor:"", headingSize:"lg", subtitleSize:"md", textAlign:"center", videoWidth:80, videoX:50, autoplay:false, muted:false, loop:false, textShadow:false } },
+    defaultProps:{ heading:"", subtitle:"", videoUrl:"", aspectRatio:"16:9", bgColor:"", textColor:"", headingSize:"lg", subtitleSize:"md", textAlign:"center", videoWidth:80, videoX:50, textPosition:"right", autoplay:false, muted:false, loop:false, textShadow:false } },
   { type:"gallery",    emoji:"🖼️", label:"Galería de fotos",         desc:"Grilla de imágenes para mostrar tu trabajo o productos",
     defaultProps:{ heading:"Galería", images:[], columns:3, bgColor:"", headingSize:"lg" } },
   { type:"faq",        emoji:"❓", label:"Preguntas frecuentes",      desc:"Acordeón de preguntas y respuestas comunes",
@@ -1478,6 +1478,12 @@ function BlockEditor({
             onMouseDown={e=>e.stopPropagation()} onPointerDown={e=>e.stopPropagation()}
             className="w-full accent-indigo-600"/>
         </div>
+        {(p.heading || p.subtitle) && (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Texto al lado del video</label>
+            <Chips options={[{id:"right",label:"Derecha"},{id:"left",label:"Izquierda"}]} value={p.textPosition||"right"} onChange={v=>upd("textPosition",v)}/>
+          </div>
+        )}
         {isDirectVideo && <>
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium text-gray-600">Reproducción automática</label>
@@ -2830,9 +2836,10 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
         );
       }
 
+      const textPosition = String(p.textPosition || "right");
       return (
         <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily}}>
-          <div style={{display:"flex",alignItems:"center",gap:"24px",userSelect:"none"}}>
+          <div style={{display:"flex",flexDirection:textPosition==="left"?"row-reverse":"row",alignItems:"center",gap:"24px",userSelect:"none"}}>
             <div style={{width:`${videoWidth}%`,marginLeft:videoMarginLeft,flexShrink:0,position:"relative"}}>
               {videoInner}
               {/* Borde derecho para redimensionar */}
