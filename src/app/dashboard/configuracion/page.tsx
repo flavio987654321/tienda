@@ -371,7 +371,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function blockSupportsMovableText(type: BlockType) {
-  return ["hero", "text", "banner", "cta", "image-text", "video"].includes(type);
+  return ["hero", "text", "banner", "cta", "image-text"].includes(type);
 }
 
 function getViewportTextPositions(props: Record<string, any>, viewport: PreviewViewport): Record<string, TextPosition> {
@@ -2828,9 +2828,9 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       }
 
       return (
-        <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily,position:"relative"}}>
-          <div style={{display:"flex",alignItems:"flex-start",userSelect:"none"}}>
-            <div style={{width:`${videoWidth}%`,marginLeft:videoMarginLeft,position:"relative",flexShrink:0}}>
+        <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily}}>
+          <div style={{display:"flex",alignItems:"center",gap:"24px",userSelect:"none"}}>
+            <div style={{width:`${videoWidth}%`,marginLeft:videoMarginLeft,flexShrink:0,position:"relative"}}>
               {videoInner}
               {/* Borde derecho para redimensionar */}
               {selected && (
@@ -2859,34 +2859,19 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
                   <div style={{width:2,height:14,background:"#fff",borderRadius:999}}/>
                 </div>
               )}
-              {/* Indicador de ancho mientras se redimensiona */}
               {isVideoResizing && (
                 <div style={{position:"absolute",top:-28,left:"50%",transform:"translateX(-50%)",background:"#4f46e5",color:"#fff",fontSize:"11px",fontWeight:800,padding:"3px 10px",borderRadius:"999px",whiteSpace:"nowrap",pointerEvents:"none"}}>
                   {videoWidth}%
                 </div>
               )}
             </div>
+            {(p.heading || p.subtitle) && (
+              <div style={{flex:1,textAlign:(p.textAlign||"center") as React.CSSProperties["textAlign"]}}>
+                {p.heading && <div style={{fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",fontWeight:700,color:p.textColor||c.primaryColor,lineHeight:1.3,textShadow:p.textShadow?"0 1px 4px rgba(0,0,0,0.55)":"none",marginBottom:p.subtitle?"10px":0}}>{p.heading}</div>}
+                {p.subtitle && <div style={{fontSize:p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px",fontWeight:400,color:p.textColor||c.primaryColor,opacity:0.85,lineHeight:1.5,textShadow:p.textShadow?"0 1px 3px rgba(0,0,0,0.45)":"none"}}>{p.subtitle}</div>}
+              </div>
+            )}
           </div>
-          {/* Texto arrastrable: cubre todo el bloque, stage = bloque completo */}
-          {(p.heading || p.subtitle) && (
-            <MovableTextStage
-              key={`video-${viewport}-${Boolean(p.heading)}-${Boolean(p.subtitle)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
-              blockProps={p} viewport={viewport} onChange={onChangeProps}
-              style={{position:"absolute",inset:0,pointerEvents:"none"}}
-              items={[
-                ...(p.heading ? [{
-                  id:"heading", defaultPos:{x:50,y:40},
-                  style:{pointerEvents:"auto" as const,maxWidth:"260px",textAlign:(p.textAlign||"center") as "left"|"center"|"right",wordBreak:"break-word" as const},
-                  content:<div style={{fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",fontWeight:700,color:p.textColor||c.primaryColor,lineHeight:1.3,textShadow:p.textShadow?"0 1px 4px rgba(0,0,0,0.55)":"none"}}>{p.heading}</div>,
-                }]:[]),
-                ...(p.subtitle ? [{
-                  id:"subtitle", defaultPos:{x:50,y:58},
-                  style:{pointerEvents:"auto" as const,maxWidth:"260px",textAlign:(p.textAlign||"center") as "left"|"center"|"right",wordBreak:"break-word" as const},
-                  content:<div style={{fontSize:p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px",fontWeight:400,color:p.textColor||c.primaryColor,opacity:0.85,lineHeight:1.5,textShadow:p.textShadow?"0 1px 3px rgba(0,0,0,0.45)":"none"}}>{p.subtitle}</div>,
-                }]:[]),
-              ]}
-            />
-          )}
         </div>
       );
     }
