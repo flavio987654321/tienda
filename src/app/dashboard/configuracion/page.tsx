@@ -2815,65 +2815,62 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
           </div>
         </div>
       );
-      // En mobile/tablet: layout apilado (texto arriba, video abajo a full ancho)
       const txtColor = p.textColor || c.primaryColor;
       const txtShadow = p.textShadow ? "0 1px 4px rgba(0,0,0,0.55)" : "none";
-      const txtAlign = (p.textAlign || "center") as "left" | "center" | "right";
+      const headingFs = p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px";
+      const subtitleFs = p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px";
+      const txtAlign = (p.textAlign||"left") as React.CSSProperties["textAlign"];
+      const videoTextItems: MovableTextItem[] = [
+        ...(p.heading ? [{ id:"heading", defaultPos:{x:20,y:40}, style:{pointerEvents:"auto" as const,maxWidth:"42%"},
+          content:<div style={{fontSize:headingFs,fontWeight:700,color:txtColor,lineHeight:1.3,textShadow:txtShadow,textAlign:txtAlign}}>{p.heading}</div> }] : []),
+        ...(p.subtitle ? [{ id:"subtitle", defaultPos:{x:20,y:62}, style:{pointerEvents:"auto" as const,maxWidth:"42%"},
+          content:<div style={{fontSize:subtitleFs,fontWeight:400,color:txtColor,opacity:0.85,lineHeight:1.5,textShadow:p.textShadow?"0 1px 3px rgba(0,0,0,0.45)":"none",textAlign:txtAlign}}>{p.subtitle}</div> }] : []),
+      ];
+      const textStageKey = `video-${viewport}-${Boolean(p.heading)}-${Boolean(p.subtitle)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`;
+
       if (viewport !== "desktop") {
         return (
-          <div style={{background:p.bgColor||"transparent",padding:"16px",fontFamily:c.fontFamily}}>
-            {p.heading && <div style={{fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",fontWeight:700,color:txtColor,textAlign:txtAlign,marginBottom:"6px",lineHeight:1.3,textShadow:txtShadow}}>{p.heading}</div>}
-            {p.subtitle && <div style={{fontSize:p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px",fontWeight:400,color:txtColor,opacity:0.85,textAlign:txtAlign,marginBottom:"10px",lineHeight:1.5,textShadow:p.textShadow?"0 1px 3px rgba(0,0,0,0.45)":"none"}}>{p.subtitle}</div>}
+          <div style={{background:p.bgColor||"transparent",padding:"16px",fontFamily:c.fontFamily,position:"relative",overflow:"hidden"}}>
             {videoInner}
+            {videoTextItems.length > 0 && (
+              <MovableTextStage key={textStageKey} blockProps={p} viewport={viewport} onChange={onChangeProps}
+                style={{position:"absolute",inset:0,pointerEvents:"none"}} items={videoTextItems}/>
+            )}
           </div>
         );
       }
 
       return (
-        <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily}}>
-          <div style={{display:"flex",alignItems:"center",gap:"24px",userSelect:"none"}}>
-            <div style={{width:`${videoWidth}%`,marginLeft:videoMarginLeft,flexShrink:0,position:"relative"}}>
-              {videoInner}
-              {/* Borde derecho para redimensionar */}
-              {selected && (
-                <div
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    const flexContainer = (e.currentTarget as HTMLDivElement).parentElement?.parentElement;
-                    if (!flexContainer) return;
-                    videoResizeRef.current = {
-                      startX: e.clientX,
-                      containerW: flexContainer.getBoundingClientRect().width,
-                      startPct: videoWidth,
-                    };
-                    setIsVideoResizing(true);
-                    document.body.style.cursor = "ew-resize";
-                  }}
-                  style={{
-                    position:"absolute",right:-8,top:"15%",bottom:"15%",width:16,
-                    cursor:"ew-resize",zIndex:10,
-                    display:"flex",alignItems:"center",justifyContent:"center",gap:"2px",
-                    background:"rgba(99,102,241,0.85)",borderRadius:"999px",
-                  }}
-                  title="Arrastrá para cambiar el tamaño del video"
-                >
-                  <div style={{width:2,height:14,background:"#fff",borderRadius:999}}/>
-                  <div style={{width:2,height:14,background:"#fff",borderRadius:999}}/>
-                </div>
-              )}
-              {isVideoResizing && (
-                <div style={{position:"absolute",top:-28,left:"50%",transform:"translateX(-50%)",background:"#4f46e5",color:"#fff",fontSize:"11px",fontWeight:800,padding:"3px 10px",borderRadius:"999px",whiteSpace:"nowrap",pointerEvents:"none"}}>
-                  {videoWidth}%
-                </div>
-              )}
-            </div>
-            {(p.heading || p.subtitle) && (
-              <div style={{flex:1,textAlign:(p.textAlign||"center") as React.CSSProperties["textAlign"]}}>
-                {p.heading && <div style={{fontSize:p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",fontWeight:700,color:p.textColor||c.primaryColor,lineHeight:1.3,textShadow:p.textShadow?"0 1px 4px rgba(0,0,0,0.55)":"none",marginBottom:p.subtitle?"10px":0}}>{p.heading}</div>}
-                {p.subtitle && <div style={{fontSize:p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px",fontWeight:400,color:p.textColor||c.primaryColor,opacity:0.85,lineHeight:1.5,textShadow:p.textShadow?"0 1px 3px rgba(0,0,0,0.45)":"none"}}>{p.subtitle}</div>}
+        <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily,position:"relative",overflow:"hidden"}}>
+          <div style={{width:`${videoWidth}%`,marginLeft:videoMarginLeft,position:"relative",userSelect:"none"}}>
+            {videoInner}
+            {selected && (
+              <div
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  const container = (e.currentTarget as HTMLDivElement).parentElement?.parentElement;
+                  if (!container) return;
+                  videoResizeRef.current = { startX: e.clientX, containerW: container.getBoundingClientRect().width, startPct: videoWidth };
+                  setIsVideoResizing(true);
+                  document.body.style.cursor = "ew-resize";
+                }}
+                style={{position:"absolute",right:-8,top:"15%",bottom:"15%",width:16,cursor:"ew-resize",zIndex:10,display:"flex",alignItems:"center",justifyContent:"center",gap:"2px",background:"rgba(99,102,241,0.85)",borderRadius:"999px"}}
+                title="Arrastrá para cambiar el tamaño del video"
+              >
+                <div style={{width:2,height:14,background:"#fff",borderRadius:999}}/>
+                <div style={{width:2,height:14,background:"#fff",borderRadius:999}}/>
+              </div>
+            )}
+            {isVideoResizing && (
+              <div style={{position:"absolute",top:-28,left:"50%",transform:"translateX(-50%)",background:"#4f46e5",color:"#fff",fontSize:"11px",fontWeight:800,padding:"3px 10px",borderRadius:"999px",whiteSpace:"nowrap",pointerEvents:"none"}}>
+                {videoWidth}%
               </div>
             )}
           </div>
+          {videoTextItems.length > 0 && (
+            <MovableTextStage key={textStageKey} blockProps={p} viewport={viewport} onChange={onChangeProps}
+              style={{position:"absolute",inset:0,pointerEvents:"none"}} items={videoTextItems}/>
+          )}
         </div>
       );
     }
