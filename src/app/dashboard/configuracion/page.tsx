@@ -1717,6 +1717,7 @@ function MovableTextStage({
   onChange,
   style,
   className = "",
+  noClamp = false,
 }: {
   blockProps: Record<string, any>;
   viewport: PreviewViewport;
@@ -1724,6 +1725,7 @@ function MovableTextStage({
   onChange: (props: Record<string, any>) => void;
   style?: CSSProperties;
   className?: string;
+  noClamp?: boolean;
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -1744,6 +1746,7 @@ function MovableTextStage({
 
   function normalizePositions(source: Record<string, TextPosition>) {
     if (!stageRef.current) return source;
+    if (noClamp) return source;
     const stageRect = stageRef.current.getBoundingClientRect();
     let changed = false;
     const next = { ...source };
@@ -1826,16 +1829,20 @@ function MovableTextStage({
       const halfH = itemRect.height / 2;
       const SNAP = 8;
 
-      let centerX = clamp(
-        event.clientX - stageRect.left - dragRef.current.offsetX + halfW,
-        halfW,
-        Math.max(halfW, stageRect.width - halfW),
-      );
-      let centerY = clamp(
-        event.clientY - stageRect.top - dragRef.current.offsetY + halfH,
-        halfH,
-        Math.max(halfH, stageRect.height - halfH),
-      );
+      let centerX = noClamp
+        ? event.clientX - stageRect.left - dragRef.current.offsetX + halfW
+        : clamp(
+            event.clientX - stageRect.left - dragRef.current.offsetX + halfW,
+            halfW,
+            Math.max(halfW, stageRect.width - halfW),
+          );
+      let centerY = noClamp
+        ? event.clientY - stageRect.top - dragRef.current.offsetY + halfH
+        : clamp(
+            event.clientY - stageRect.top - dragRef.current.offsetY + halfH,
+            halfH,
+            Math.max(halfH, stageRect.height - halfH),
+          );
 
       // Build guide candidates: stage center + other elements' centers
       const guides: { axis: "x" | "y"; px: number }[] = [
@@ -2885,10 +2892,48 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
       }
 
       return (
-        <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily,position:"relative"}}>
+        <div style={{background:p.bgColor||"transparent",padding:"20px",fontFamily:c.fontFamily}}>
           <div style={{display:"flex",alignItems:"flex-start",position:"relative",userSelect:"none"}}>
             <div style={{width:`${videoWidth}%`,marginLeft:videoMarginLeft,position:"relative",flexShrink:0}}>
               {videoInner}
+              {/* Texto arrastrable superpuesto sobre el video */}
+              {(p.heading || p.subtitle) && (
+                <MovableTextStage
+                  key={`video-${viewport}-${Boolean(p.heading)}-${Boolean(p.subtitle)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
+                  blockProps={p}
+                  viewport={viewport}
+                  onChange={onChangeProps}
+                  noClamp={true}
+                  style={{position:"absolute",inset:0,pointerEvents:"none"}}
+                  items={[
+                    ...(p.heading ? [{
+                      id: "heading",
+                      defaultPos: { x: 50, y: 30 },
+                      style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: (p.textAlign||"center") as "left"|"center"|"right", wordBreak: "break-word" as const },
+                      content: <div style={{
+                        fontSize: p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",
+                        fontWeight: 700,
+                        color: p.textColor || c.primaryColor,
+                        lineHeight: 1.3,
+                        textShadow: p.textShadow ? "0 1px 4px rgba(0,0,0,0.55)" : "none",
+                      }}>{p.heading}</div>,
+                    }] : []),
+                    ...(p.subtitle ? [{
+                      id: "subtitle",
+                      defaultPos: { x: 50, y: 55 },
+                      style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: (p.textAlign||"center") as "left"|"center"|"right", wordBreak: "break-word" as const },
+                      content: <div style={{
+                        fontSize: p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px",
+                        fontWeight: 400,
+                        color: p.textColor || c.primaryColor,
+                        opacity: 0.85,
+                        lineHeight: 1.5,
+                        textShadow: p.textShadow ? "0 1px 3px rgba(0,0,0,0.45)" : "none",
+                      }}>{p.subtitle}</div>,
+                    }] : []),
+                  ]}
+                />
+              )}
               {/* Borde derecho para redimensionar */}
               {selected && (
                 <div
@@ -2924,43 +2969,6 @@ function BlockPreview({ block, config, selected, onSelect, onMoveUp, onMoveDown,
               )}
             </div>
           </div>
-          {/* Texto arrastrable superpuesto sobre el bloque completo */}
-          {(p.heading || p.subtitle) && (
-            <MovableTextStage
-              key={`video-${viewport}-${Boolean(p.heading)}-${Boolean(p.subtitle)}-${JSON.stringify(getViewportTextPositions(p, viewport))}`}
-              blockProps={p}
-              viewport={viewport}
-              onChange={onChangeProps}
-              style={{position:"absolute",inset:0,pointerEvents:"none"}}
-              items={[
-                ...(p.heading ? [{
-                  id: "heading",
-                  defaultPos: { x: 50, y: 30 },
-                  style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: (p.textAlign||"center") as "left"|"center"|"right", wordBreak: "break-word" as const },
-                  content: <div style={{
-                    fontSize: p.headingSize==="sm"?"13px":p.headingSize==="md"?"16px":p.headingSize==="xl"?"26px":"20px",
-                    fontWeight: 700,
-                    color: p.textColor || c.primaryColor,
-                    lineHeight: 1.3,
-                    textShadow: p.textShadow ? "0 1px 4px rgba(0,0,0,0.55)" : "none",
-                  }}>{p.heading}</div>,
-                }] : []),
-                ...(p.subtitle ? [{
-                  id: "subtitle",
-                  defaultPos: { x: 50, y: 50 },
-                  style: { pointerEvents: "auto" as const, maxWidth: "260px", textAlign: (p.textAlign||"center") as "left"|"center"|"right", wordBreak: "break-word" as const },
-                  content: <div style={{
-                    fontSize: p.subtitleSize==="sm"?"11px":p.subtitleSize==="md"?"13px":p.subtitleSize==="xl"?"18px":"15px",
-                    fontWeight: 400,
-                    color: p.textColor || c.primaryColor,
-                    opacity: 0.85,
-                    lineHeight: 1.5,
-                    textShadow: p.textShadow ? "0 1px 3px rgba(0,0,0,0.45)" : "none",
-                  }}>{p.subtitle}</div>,
-                }] : []),
-              ]}
-            />
-          )}
         </div>
       );
     }
