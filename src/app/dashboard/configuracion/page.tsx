@@ -1,9 +1,10 @@
 "use client";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TemplateId } from "@/types/store-config";
 import { TEMPLATE_DEFAULTS, DEFAULT_CONFIG } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
+import { EditContext } from "@/contexts/EditContext";
 import FashionNoir from "@/components/store/templates/FashionNoir";
 import BohoTerra from "@/components/store/templates/BohoTerra";
 import UrbanPulse from "@/components/store/templates/UrbanPulse";
@@ -204,6 +205,31 @@ export default function ConfiguracionPage() {
   const [openSection, setOpenSection] = useState<string>("info");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [activeField, setActiveField] = useState<string | null>(null);
+
+  const storeNameRef = useRef<HTMLInputElement>(null);
+  const storeTaglineRef = useRef<HTMLInputElement>(null);
+  const accentRef = useRef<HTMLInputElement>(null);
+  const whatsappNumberRef = useRef<HTMLInputElement>(null);
+
+  const FIELD_MAP: Record<string, { section: string; ref: React.RefObject<HTMLInputElement | null> }> = {
+    storeName:    { section: "info",      ref: storeNameRef },
+    storeTagline: { section: "info",      ref: storeTaglineRef },
+    "colors.accent": { section: "colores", ref: accentRef },
+    whatsapp:     { section: "whatsapp", ref: whatsappNumberRef },
+  };
+
+  useEffect(() => {
+    if (!activeField) return;
+    const mapping = FIELD_MAP[activeField];
+    if (!mapping) return;
+    setOpenSection(mapping.section);
+    setTimeout(() => {
+      mapping.ref.current?.focus();
+      mapping.ref.current?.select();
+    }, 180);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeField]);
 
   const update = useCallback(<K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => {
     setConfig(c => ({ ...c, [key]: value }));
@@ -405,17 +431,19 @@ export default function ConfiguracionPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div>
                   <label style={labelStyle}>Nombre de la tienda</label>
-                  <input style={inputStyle} value={config.storeName} placeholder="Mi Tienda"
+                  <input ref={storeNameRef} style={{ ...inputStyle, boxShadow: activeField === "storeName" ? "0 0 0 3px rgba(99,102,241,0.25)" : "none" }}
+                    value={config.storeName} placeholder="Mi Tienda"
                     onChange={e => update("storeName", e.target.value)}
                     onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                    onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                    onBlur={e => { e.target.style.borderColor = "#e2e8f0"; setActiveField(null); }} />
                 </div>
                 <div>
                   <label style={labelStyle}>Tagline</label>
-                  <input style={inputStyle} value={config.storeTagline} placeholder="Tu tienda online"
+                  <input ref={storeTaglineRef} style={{ ...inputStyle, boxShadow: activeField === "storeTagline" ? "0 0 0 3px rgba(99,102,241,0.25)" : "none" }}
+                    value={config.storeTagline} placeholder="Tu tienda online"
                     onChange={e => update("storeTagline", e.target.value)}
                     onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                    onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                    onBlur={e => { e.target.style.borderColor = "#e2e8f0"; setActiveField(null); }} />
                 </div>
               </div>
             </Section>
@@ -428,11 +456,11 @@ export default function ConfiguracionPage() {
                     onChange={e => update("colors", { ...config.colors, accent: e.target.value })}
                     style={{ width: 40, height: 38, padding: 2, border: "1px solid #e2e8f0",
                       borderRadius: 8, cursor: "pointer", flexShrink: 0 }} />
-                  <input style={{ ...inputStyle, fontFamily: "monospace", flex: 1 }}
+                  <input ref={accentRef} style={{ ...inputStyle, fontFamily: "monospace", flex: 1, boxShadow: activeField === "colors.accent" ? "0 0 0 3px rgba(99,102,241,0.25)" : "none" }}
                     value={config.colors.accent}
                     onChange={e => update("colors", { ...config.colors, accent: e.target.value })}
                     onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                    onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                    onBlur={e => { e.target.style.borderColor = "#e2e8f0"; setActiveField(null); }} />
                 </div>
                 <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>
                   Afecta botones, precios y elementos destacados.
@@ -453,11 +481,12 @@ export default function ConfiguracionPage() {
                 {config.whatsapp.enabled && (
                   <div>
                     <label style={labelStyle}>Número</label>
-                    <input style={inputStyle} value={config.whatsapp.number}
+                    <input ref={whatsappNumberRef} style={{ ...inputStyle, boxShadow: activeField === "whatsapp" ? "0 0 0 3px rgba(99,102,241,0.25)" : "none" }}
+                      value={config.whatsapp.number}
                       placeholder="+54 9 11 0000-0000"
                       onChange={e => update("whatsapp", { ...config.whatsapp, number: e.target.value })}
                       onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                      onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                      onBlur={e => { e.target.style.borderColor = "#e2e8f0"; setActiveField(null); }} />
                   </div>
                 )}
               </div>
@@ -554,11 +583,13 @@ export default function ConfiguracionPage() {
 
         {/* Right: template preview */}
         <main style={{ flex: 1, height: "100%", overflow: "hidden" }}>
-          <StoreConfigContext.Provider value={config}>
-            <BrowserFrame storeName={config.storeName}>
-              <TemplateComponent />
-            </BrowserFrame>
-          </StoreConfigContext.Provider>
+          <EditContext.Provider value={{ editMode: true, activeField, setActiveField }}>
+            <StoreConfigContext.Provider value={config}>
+              <BrowserFrame storeName={config.storeName}>
+                <TemplateComponent />
+              </BrowserFrame>
+            </StoreConfigContext.Provider>
+          </EditContext.Provider>
         </main>
 
       </div>
