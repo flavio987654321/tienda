@@ -197,7 +197,7 @@ export default function BohoTerra() {
       {announcementVisible && (
         <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:110, height:ANNOUNCEMENT_BAR_H, background:A, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <span style={{ fontSize:12, fontWeight:600, color:"#fff", letterSpacing:1 }}>
-            <EditableZone field="announcementText" label="Barra de anuncios">{ANNOUNCEMENT_MESSAGES[announcementIdx]}</EditableZone>
+            <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{ANNOUNCEMENT_MESSAGES[announcementIdx]}</EditableZone>
           </span>
           {/* Dots */}
           <div style={{ position:"absolute", bottom:5, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5 }}>

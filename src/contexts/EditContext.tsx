@@ -28,12 +28,13 @@ export function useEditContext() { return useContext(EditContext); }
    both in edit mode and in live preview.
 ──────────────────────────────────────────────────────────────── */
 export function EditableZone({
-  field, label, children, block = false,
+  field, label, children, block = false, noBadge = false,
 }: {
   field: string;
   label: string;
   children: React.ReactNode;
   block?: boolean;
+  noBadge?: boolean;
 }) {
   const { editMode, activeField, setActiveField, overrides } = useEditContext();
   const [hovered, setHovered] = useState(false);
@@ -81,7 +82,7 @@ export function EditableZone({
       } as React.CSSProperties}
     >
       {displayContent}
-      {hovered && !isActive && (
+      {hovered && !isActive && !noBadge && (
         <span style={{
           position: "absolute", top: 0, left: 0,
           transform: "translateY(-100%)",

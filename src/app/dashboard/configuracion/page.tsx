@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TemplateId, TextOverride } from "@/types/store-config";
 import { TEMPLATE_DEFAULTS, DEFAULT_CONFIG } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
-import { EditContext } from "@/contexts/EditContext";
+import { EditContext, useEditContext } from "@/contexts/EditContext";
 import FashionNoir from "@/components/store/templates/FashionNoir";
 import BohoTerra from "@/components/store/templates/BohoTerra";
 import UrbanPulse from "@/components/store/templates/UrbanPulse";
@@ -162,6 +162,12 @@ const TEXT_FIELD_LABELS: Record<string, string> = {
   heroCtaSecondary:  "Botón secundario",
   categoriesHeading: "Sección categorías",
   quoteText:         "Frase destacada",
+  aboutKicker:       "Etiqueta 'Nosotros'",
+  aboutHeading:      "Título 'Nosotros'",
+  aboutParagraph1:   "Párrafo 1 'Nosotros'",
+  aboutParagraph2:   "Párrafo 2 'Nosotros'",
+  contactHeading:    "Título contacto",
+  contactSubtext:    "Subtítulo contacto",
   footerDescription: "Descripción footer",
   footerCopyright:   "Copyright",
   footerMadeIn:      "Hecho en",
@@ -287,6 +293,86 @@ function TextEditorPanel({ field, label, overrides, setOverride, resetOverride, 
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Floating text editor — sticky at bottom of preview ───── */
+function FloatingTextEditor({ textFieldLabels }: { textFieldLabels: Record<string, string> }) {
+  const { activeField, setActiveField, overrides, setOverride, resetOverride } = useEditContext();
+  if (!activeField || !textFieldLabels[activeField]) return null;
+
+  const label = textFieldLabels[activeField];
+  const ov = overrides[activeField] ?? {};
+  const hasOverride = Object.entries(ov).some(([, v]) => v !== undefined);
+
+  const btnBase: React.CSSProperties = {
+    width: 30, height: 30, border: "1.5px solid #e2e8f0", borderRadius: 6,
+    background: "white", cursor: "pointer", fontSize: 13, color: "#374151",
+    flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+  };
+  const btnActive: React.CSSProperties = {
+    borderColor: "#6366f1", background: "#e0e7ff", color: "#6366f1",
+  };
+
+  return (
+    <div style={{
+      position: "sticky", bottom: 0, zIndex: 99999,
+      background: "white", borderTop: "2px solid #6366f1",
+      boxShadow: "0 -4px 20px rgba(99,102,241,0.15)",
+      padding: "10px 14px",
+      display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+      fontFamily: "system-ui, -apple-system, sans-serif",
+    }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", whiteSpace: "nowrap" }}>
+        ✏ {label}
+      </span>
+
+      <input
+        value={ov.text ?? ""}
+        placeholder="Texto (vacío = original del template)"
+        onChange={e => setOverride(activeField, { text: e.target.value || undefined })}
+        style={{ flex: 1, minWidth: 160, border: "1px solid #d1d5db", borderRadius: 7, padding: "5px 10px", fontSize: 12, outline: "none", fontFamily: "inherit" }}
+        onFocus={e => (e.target.style.borderColor = "#6366f1")}
+        onBlur={e => (e.target.style.borderColor = "#d1d5db")}
+      />
+
+      <input type="color" value={ov.color ?? "#000000"}
+        onChange={e => setOverride(activeField, { color: e.target.value })}
+        title="Color del texto"
+        style={{ width: 32, height: 30, padding: 2, border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
+
+      <select value={ov.fontFamily ?? ""}
+        onChange={e => setOverride(activeField, { fontFamily: e.target.value || undefined })}
+        style={{ fontSize: 11, padding: "5px 6px", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: "#374151", height: 30 }}>
+        <option value="">Fuente auto</option>
+        <option value="system-ui, -apple-system, sans-serif">Sans-serif</option>
+        <option value="Georgia, Cambria, serif">Serif</option>
+        <option value="ui-monospace, monospace">Mono</option>
+      </select>
+
+      <select value={ov.fontSize ?? ""}
+        onChange={e => setOverride(activeField, { fontSize: e.target.value ? Number(e.target.value) : undefined })}
+        style={{ fontSize: 11, padding: "5px 6px", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: "#374151", width: 68, height: 30 }}>
+        <option value="">Tam.</option>
+        {[10,12,13,14,15,16,18,20,24,28,32,36,42,48,56,64].map(s => <option key={s} value={s}>{s}px</option>)}
+      </select>
+
+      {([["bold","B",{ fontWeight: 700 }],["italic","I",{ fontStyle: "italic" as const }],["underline","U",{ textDecoration: "underline" as const }]] as const).map(([key, lbl, st]) => (
+        <button key={key} type="button"
+          onClick={() => setOverride(activeField, { [key]: !ov[key as keyof TextOverride] })}
+          style={{ ...btnBase, ...(ov[key as keyof TextOverride] ? btnActive : {}), ...st }}>
+          {lbl}
+        </button>
+      ))}
+
+      {hasOverride && (
+        <button type="button" onClick={() => resetOverride(activeField)}
+          title="Restablecer" style={{ ...btnBase, fontSize: 14 }}>↺</button>
+      )}
+
+      <button type="button" onClick={() => setActiveField(null)}
+        style={{ ...btnBase, border: "none", fontSize: 18, color: "#94a3b8" }}>×</button>
     </div>
   );
 }
@@ -558,18 +644,6 @@ export default function ConfiguracionPage() {
             <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Personalizá tu tienda</p>
           </div>
 
-          {/* Text editor panel — appears when a text zone is clicked */}
-          {activeField && TEXT_FIELD_LABELS[activeField] && (
-            <TextEditorPanel
-              field={activeField}
-              label={TEXT_FIELD_LABELS[activeField]}
-              overrides={config.textOverrides}
-              setOverride={setOverride}
-              resetOverride={resetOverride}
-              onClose={() => setActiveField(null)}
-            />
-          )}
-
           <div style={{ flex: 1, overflowY: "auto" }}>
 
             <Section id="info" label="Información" icon="🏪" open={openSection === "info"} onToggle={toggleSection}>
@@ -739,6 +813,7 @@ export default function ConfiguracionPage() {
             <StoreConfigContext.Provider value={config}>
               <BrowserFrame storeName={config.storeName}>
                 <TemplateComponent />
+                <FloatingTextEditor textFieldLabels={TEXT_FIELD_LABELS} />
               </BrowserFrame>
             </StoreConfigContext.Provider>
           </EditContext.Provider>

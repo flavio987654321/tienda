@@ -223,7 +223,7 @@ export default function FashionNoir() {
       {announcementVisible && (
         <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <span style={{ fontSize:12, fontWeight:600, color:BG, letterSpacing:1 }}>
-            <EditableZone field="announcementText" label="Barra de anuncios">{ANNOUNCEMENT_MESSAGES[announcementIdx]}</EditableZone>
+            <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{ANNOUNCEMENT_MESSAGES[announcementIdx]}</EditableZone>
           </span>
           {/* Dots */}
           <div style={{ position:"absolute", bottom:5, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5 }}>
@@ -497,11 +497,19 @@ export default function FashionNoir() {
           </div>
           <div style={{ padding:"80px 72px", display:"flex", flexDirection:"column", justifyContent:"center", gap:24 }}>
             <div>
-              <p style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", marginBottom:16 }}>Nuestra historia</p>
-              <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(28px,3vw,42px)", lineHeight:1.2, margin:"0 0 24px", color:T }}>Creados para quienes<br/>eligen con intención.</h2>
+              <p style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", marginBottom:16 }}>
+                <EditableZone field="aboutKicker" label="Kicker 'Nosotros'">Nuestra historia</EditableZone>
+              </p>
+              <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(28px,3vw,42px)", lineHeight:1.2, margin:"0 0 24px", color:T }}>
+                <EditableZone field="aboutHeading" label="Título 'Nosotros'">Creados para quienes eligen con intención.</EditableZone>
+              </h2>
             </div>
-            <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85 }}>NOIR nació en 2018 con una premisa simple: crear piezas que duren más que una temporada. En un mundo saturado de fast fashion, apostamos por la confección artesanal, las telas de origen responsable y los diseños que no envejecen.</p>
-            <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85 }}>Cada prenda pasa por un proceso riguroso de selección de materiales y control de calidad. Trabajamos con talleres locales y artesanos que comparten nuestra filosofía: menos piezas, más valor.</p>
+            <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85 }}>
+              <EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'">NOIR nació en 2018 con una premisa simple: crear piezas que duren más que una temporada. En un mundo saturado de fast fashion, apostamos por la confección artesanal, las telas de origen responsable y los diseños que no envejecen.</EditableZone>
+            </p>
+            <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85 }}>
+              <EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'">Cada prenda pasa por un proceso riguroso de selección de materiales y control de calidad. Trabajamos con talleres locales y artesanos que comparten nuestra filosofía: menos piezas, más valor.</EditableZone>
+            </p>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, paddingTop:8 }}>
               {[["2018","Año de fundación"],["100%","Producción local"],["30+","Artesanos que trabajan con nosotros"],["8 años","De trayectoria"]].map(([n, label]) => (
                 <div key={label}>
@@ -518,8 +526,12 @@ export default function FashionNoir() {
       <section id="contacto" style={{ padding:"80px 32px", borderTop:`1px solid rgba(201,168,76,0.1)` }}>
         <div style={{ maxWidth:640, margin:"0 auto" }}>
           <p style={{ fontSize:10, letterSpacing:5, color:G, textAlign:"center", textTransform:"uppercase", marginBottom:12 }}>Contacto</p>
-          <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,3vw,38px)", textAlign:"center", margin:"0 0 12px", color:T }}>¿Tenés alguna consulta?</h2>
-          <p style={{ fontSize:14, opacity:0.5, textAlign:"center", marginBottom:48, lineHeight:1.7 }}>Respondemos todos los mensajes en menos de 24 horas hábiles.</p>
+          <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,3vw,38px)", textAlign:"center", margin:"0 0 12px", color:T }}>
+            <EditableZone field="contactHeading" label="Título contacto">¿Tenés alguna consulta?</EditableZone>
+          </h2>
+          <p style={{ fontSize:14, opacity:0.5, textAlign:"center", marginBottom:48, lineHeight:1.7 }}>
+            <EditableZone field="contactSubtext" label="Subtítulo contacto">Respondemos todos los mensajes en menos de 24 horas hábiles.</EditableZone>
+          </p>
 
           {contactStatus === "sent" ? (
             <div style={{ textAlign:"center", padding:"60px 0" }}>
