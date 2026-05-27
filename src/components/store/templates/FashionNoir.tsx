@@ -1,5 +1,6 @@
-"use client";
-import { useState, useEffect } from "react";
+﻿"use client";
+import { useState, useEffect, useRef } from "react";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
 
 /* ── Mock data ─────────────────────────────────────────── */
 const CATEGORIES = ["Todos", "Mujer", "Hombre", "Accesorios"];
@@ -25,40 +26,120 @@ const MOCK_PRODUCTS = [
 type Product = typeof MOCK_PRODUCTS[0];
 type CartItem = { product: Product; size: string; color: string; qty: number };
 type ContactStatus = "idle" | "sending" | "sent";
+type CheckoutStatus = "idle" | "placing" | "done";
 
-const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
+const ENVIO_OPTIONS = [
+  { id:"retiro",   label:"Retiro en local / acordar", price:0 },
+  { id:"estandar", label:"Envío estándar",             price:3500 },
+  { id:"nacional", label:"Envío nacional",             price:6500 },
+];
+const PAGO_OPTIONS = [
+  { id:"transferencia", label:"Transferencia bancaria" },
+  { id:"retirar",       label:"Pago al retirar / acordar" },
+];
+
+
+const ANNOUNCEMENT_MESSAGES = [
+  "🚚 Envío gratis en compras mayores a $30.000",
+  "🔄 Cambios sin cargo hasta 30 días",
+  "💳 6 cuotas sin interés",
+  "✨ Nueva colección disponible",
+];
+
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
 
 /* ── Garantías ─────────────────────────────────────────── */
 const GARANTIAS = [
-  { icon:"🚚", title:"Envío gratis", desc:"En compras mayores a $30.000" },
-  { icon:"🔄", title:"Cambios sin cargo", desc:"Hasta 30 días después de la compra" },
-  { icon:"🔒", title:"Pago seguro", desc:"Todos los medios de pago protegidos" },
-  { icon:"💬", title:"Atención personalizada", desc:"Respondemos en menos de 24 hs" },
+  {
+    title:"Envío gratis", desc:"En compras mayores a $30.000",
+    svg: <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+  },
+  {
+    title:"Cambios sin cargo", desc:"Hasta 30 días después de la compra",
+    svg: <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16"/><polyline points="21 3 21 8 16 8"/><polyline points="3 21 3 16 8 16"/></svg>,
+  },
+  {
+    title:"Pago seguro", desc:"Todos los medios de pago protegidos",
+    svg: <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>,
+  },
+  {
+    title:"Atención personalizada", desc:"Respondemos en menos de 24 hs",
+    svg: <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+  },
 ];
 
 /* ── Component ─────────────────────────────────────────── */
 export default function FashionNoir() {
-  const [scrolled,       setScrolled]       = useState(false);
-  const [activeCategory, setActiveCategory] = useState("Todos");
-  const [cartItems,      setCartItems]      = useState<CartItem[]>([]);
-  const [cartOpen,       setCartOpen]       = useState(false);
-  const [modalProduct,   setModalProduct]   = useState<Product | null>(null);
-  const [modalImg,       setModalImg]       = useState(0);
-  const [selectedSize,   setSelectedSize]   = useState("");
-  const [selectedColor,  setSelectedColor]  = useState("");
-  const [qty,            setQty]            = useState(1);
-  const [hoveredId,      setHoveredId]      = useState<string | null>(null);
-  const [contactStatus,  setContactStatus]  = useState<ContactStatus>("idle");
-  const [contactForm,    setContactForm]    = useState({ nombre:"", email:"", mensaje:"" });
-  const [toastMsg,       setToastMsg]       = useState<string | null>(null);
-  const [visibleCount,   setVisibleCount]   = useState(8);
+  const [scrolled,            setScrolled]            = useState(false);
+  const [activeCategory,      setActiveCategory]      = useState("Todos");
+  const [cartItems,           setCartItems]           = useState<CartItem[]>([]);
+  const [cartOpen,            setCartOpen]            = useState(false);
+  const [modalProduct,        setModalProduct]        = useState<Product | null>(null);
+  const [modalImg,            setModalImg]            = useState(0);
+  const [selectedSize,        setSelectedSize]        = useState("");
+  const [selectedColor,       setSelectedColor]       = useState("");
+  const [qty,                 setQty]                 = useState(1);
+  const [hoveredId,           setHoveredId]           = useState<string | null>(null);
+  const [contactStatus,       setContactStatus]       = useState<ContactStatus>("idle");
+  const [contactForm,         setContactForm]         = useState({ nombre:"", email:"", mensaje:"" });
+  const [toastMsg,            setToastMsg]            = useState<string | null>(null);
+  const [visibleCount,        setVisibleCount]        = useState(8);
+  const [checkoutOpen,        setCheckoutOpen]        = useState(false);
+  const [checkoutStatus,      setCheckoutStatus]      = useState<CheckoutStatus>("idle");
+  const [envioId,             setEnvioId]             = useState("retiro");
+  const [pagoId,              setPagoId]              = useState("transferencia");
+  const [coupon,              setCoupon]              = useState("");
+  const [notas,               setNotas]               = useState("");
+  const [rememberData,        setRememberData]        = useState(false);
+  const [buyerForm,           setBuyerForm]           = useState({ nombre:"", email:"", telefono:"", direccion:"", ciudad:"", provincia:"", cp:"" });
+  // New states
+  const [announcementVisible, setAnnouncementVisible] = useState(true);
+  const [announcementIdx,     setAnnouncementIdx]     = useState(0);
+  const [searchOpen,          setSearchOpen]          = useState(false);
+  const [searchQuery,         setSearchQuery]         = useState("");
+  const [favorites,           setFavorites]           = useState<string[]>([]);
+  const [favoritesOpen,       setFavoritesOpen]       = useState(false);
+  const [userDropdownOpen,    setUserDropdownOpen]    = useState(false);
+
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+
+  const ANNOUNCEMENT_BAR_H = 36;
+  const announcementBarHeight = announcementVisible ? ANNOUNCEMENT_BAR_H : 0;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Rotating announcement messages
+  useEffect(() => {
+    if (!announcementVisible) return;
+    const interval = setInterval(() => {
+      setAnnouncementIdx(i => (i + 1) % ANNOUNCEMENT_MESSAGES.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [announcementVisible]);
+
+  // Close user dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    if (userDropdownOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [userDropdownOpen]);
+
+  // Close search on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setSearchOpen(false); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -71,6 +152,7 @@ export default function FashionNoir() {
     setSelectedSize(p.sizes[0]);
     setSelectedColor(p.colors[0]);
     setQty(1);
+    setSearchOpen(false);
   };
 
   const addToCart = () => {
@@ -88,8 +170,17 @@ export default function FashionNoir() {
   const removeFromCart = (idx: number) => setCartItems(prev => prev.filter((_, i) => i !== idx));
   const updateQty = (idx: number, delta: number) => setCartItems(prev => prev.map((item, i) => i === idx ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
 
-  const cartTotal = cartItems.reduce((s, i) => s + i.product.price * i.qty, 0);
-  const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
+  const cartTotal  = cartItems.reduce((s, i) => s + i.product.price * i.qty, 0);
+  const cartCount  = cartItems.reduce((s, i) => s + i.qty, 0);
+  const envioPrice = ENVIO_OPTIONS.find(o => o.id === envioId)?.price ?? 0;
+  const orderTotal = cartTotal + envioPrice;
+
+  const openCheckout = () => { setCartOpen(false); setCheckoutStatus("idle"); setCheckoutOpen(true); };
+  const handlePlaceOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCheckoutStatus("placing");
+    setTimeout(() => { setCheckoutStatus("done"); setCartItems([]); }, 1600);
+  };
 
   const changeCategory = (cat: string) => { setActiveCategory(cat); setVisibleCount(8); };
 
@@ -103,14 +194,46 @@ export default function FashionNoir() {
     setTimeout(() => { setContactStatus("sent"); setContactForm({ nombre:"", email:"", mensaje:"" }); }, 1400);
   };
 
+  const toggleFavorite = (id: string) => {
+    setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
+  };
+
+  const searchResults = searchQuery.trim().length > 0
+    ? MOCK_PRODUCTS.filter(p =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.category.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
+
+  const favoriteProducts = MOCK_PRODUCTS.filter(p => favorites.includes(p.id));
+
+  const storeConfig = useStoreConfig();
+
   /* ─ Colores base ─ */
-  const G = "#c9a84c";  // gold
-  const BG = "#0a0a0a"; // background
-  const S  = "#111";    // surface
-  const T  = "#f0ebe3"; // text
+  const G  = storeConfig?.colors.accent ?? "#c9a84c";  // gold / accent
+  const BG = "#0a0a0a";  // background
+  const S  = "#111";     // surface
+  const T  = "#f0ebe3";  // text
 
   return (
     <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
+
+      {/* ── ANNOUNCEMENT BAR ───────────────────────────────── */}
+      {announcementVisible && (
+        <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <span style={{ fontSize:12, fontWeight:600, color:BG, letterSpacing:1 }}>{ANNOUNCEMENT_MESSAGES[announcementIdx]}</span>
+          {/* Dots */}
+          <div style={{ position:"absolute", bottom:5, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5 }}>
+            {ANNOUNCEMENT_MESSAGES.map((_, i) => (
+              <button key={i} onClick={() => setAnnouncementIdx(i)}
+                style={{ width: i === announcementIdx ? 16 : 6, height:4, border:"none", borderRadius:2, background: i === announcementIdx ? BG : "rgba(10,10,10,0.35)", cursor:"pointer", padding:0, transition:"all 0.3s" }}/>
+            ))}
+          </div>
+          {/* Close */}
+          <button onClick={() => setAnnouncementVisible(false)}
+            style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:BG, cursor:"pointer", fontSize:16, lineHeight:1, opacity:0.7 }}>×</button>
+        </div>
+      )}
 
       {/* ── TOAST ──────────────────────────────────────────── */}
       {toastMsg && (
@@ -119,10 +242,46 @@ export default function FashionNoir() {
         </div>
       )}
 
+      {/* ── SEARCH OVERLAY ─────────────────────────────────── */}
+      {searchOpen && (
+        <div style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(10,10,10,0.92)", backdropFilter:"blur(8px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:120 }}>
+          <button onClick={() => setSearchOpen(false)}
+            style={{ position:"absolute", top:24, right:32, background:"none", border:"none", color:T, fontSize:28, cursor:"pointer", lineHeight:1 }}>×</button>
+          <div style={{ width:"100%", maxWidth:640, padding:"0 24px" }}>
+            <input
+              autoFocus
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder={"Buscar productos..."}
+              style={{ width:"100%", background:"transparent", border:"none", borderBottom:`2px solid ${G}`, color:T, fontSize:24, padding:"12px 0", outline:"none", fontFamily:"'Helvetica Neue', Arial, sans-serif", boxSizing:"border-box" }}
+            />
+          </div>
+          {searchResults.length > 0 && (
+            <div style={{ width:"100%", maxWidth:640, padding:"24px 24px 0", overflowY:"auto", maxHeight:"calc(100vh - 260px)" }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+                {searchResults.map(p => (
+                  <button key={p.id} onClick={() => openModal(p)}
+                    style={{ background:"none", border:`1px solid rgba(201,168,76,0.2)`, cursor:"pointer", textAlign:"left", padding:0, color:T }}>
+                    <img src={p.images[0]} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}/>
+                    <div style={{ padding:"10px 12px" }}>
+                      <p style={{ fontSize:12, margin:"0 0 4px", fontWeight:500 }}>{p.name}</p>
+                      <p style={{ fontSize:13, color:G, fontWeight:700, margin:0 }}>{fmt(p.price)}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {searchQuery.trim().length > 0 && searchResults.length === 0 && (
+            <p style={{ color:"rgba(240,235,227,0.4)", marginTop:32, fontSize:14 }}>Sin resultados para "{searchQuery}"</p>
+          )}
+        </div>
+      )}
+
       {/* ── NAVBAR ─────────────────────────────────────────── */}
-      <nav style={{ position:"fixed", top:0, left:0, right:0, zIndex:100, transition:"background 0.4s", background: scrolled ? "rgba(10,10,10,0.97)" : "transparent", backdropFilter: scrolled ? "blur(12px)" : "none", borderBottom: scrolled ? `1px solid rgba(201,168,76,0.15)` : "none" }}>
+      <nav style={{ position:"fixed", top:announcementBarHeight, left:0, right:0, zIndex:100, transition:"background 0.4s, top 0.3s", background: scrolled ? "rgba(10,10,10,0.97)" : "transparent", backdropFilter: scrolled ? "blur(12px)" : "none", borderBottom: scrolled ? `1px solid rgba(201,168,76,0.15)` : "none" }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 32px", height:72, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <button onClick={() => scrollTo("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:26, fontWeight:700, letterSpacing:6, color:G }}>NOIR</button>
+          <button onClick={() => scrollTo("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:26, fontWeight:700, letterSpacing:6, color:G }}>{storeConfig?.storeName ?? "NOIR"}</button>
           <div style={{ display:"flex", gap:32 }}>
             {[["Mujer","productos"],["Hombre","productos"],["Accesorios","productos"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([label, target]) => (
               <button key={label} onClick={() => { if (label === "Mujer" || label === "Hombre" || label === "Accesorios") changeCategory(label); scrollTo(target); }}
@@ -132,10 +291,44 @@ export default function FashionNoir() {
               >{label}</button>
             ))}
           </div>
-          <button onClick={() => setCartOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4 }}>
-            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-            {cartCount > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:G, color:BG, borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
-          </button>
+          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            {/* Search icon */}
+            <button onClick={() => setSearchOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            {/* Favorites icon */}
+            <button onClick={() => setFavoritesOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? G : "none"} stroke={favorites.length > 0 ? G : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              {favorites.length > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:G, color:BG, borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
+            </button>
+            {/* User icon */}
+            <div ref={userDropdownRef} style={{ position:"relative" }}>
+              <button onClick={() => setUserDropdownOpen(o => !o)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+                <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </button>
+              {userDropdownOpen && (
+                <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#1a1a1a", border:`1px solid rgba(201,168,76,0.2)`, minWidth:180, zIndex:200, boxShadow:"0 8px 32px rgba(0,0,0,0.5)" }}>
+                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:"rgba(201,168,76,0.6)", padding:"10px 16px 4px", margin:0 }}>{"Mi cuenta"}</p>
+                  {["Iniciar sesión", "Registrarse"].map(item => (
+                    <button key={item} style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"10px 16px", fontSize:13, textAlign:"left", cursor:"pointer", transition:"background 0.2s" }}
+                      onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
+                      onMouseLeave={e => (e.currentTarget.style.background="none")}>{item}</button>
+                  ))}
+                  <div style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, margin:"4px 0" }}/>
+                  {["Mis pedidos", "Mi perfil"].map(item => (
+                    <button key={item} style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"10px 16px", fontSize:13, textAlign:"left", cursor:"pointer", transition:"background 0.2s" }}
+                      onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
+                      onMouseLeave={e => (e.currentTarget.style.background="none")}>{item}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Cart icon */}
+            <button onClick={() => setCartOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4 }}>
+              <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+              {cartCount > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:G, color:BG, borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -149,8 +342,8 @@ export default function FashionNoir() {
             <h1 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(42px,6vw,80px)", fontWeight:700, lineHeight:1.05, margin:"0 0 20px", color:T }}>Vestí<br/>tu esencia.</h1>
             <p style={{ fontSize:16, opacity:0.75, lineHeight:1.7, marginBottom:40, maxWidth:380 }}>Piezas diseñadas para quienes eligen calidad sobre cantidad. Colecciones cápsula para cada estilo de vida.</p>
             <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
-              <button onClick={() => scrollTo("productos")} style={{ background:G, color:BG, border:"none", padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>Ver Colección</button>
-              <button onClick={() => scrollTo("nosotros")} style={{ background:"transparent", color:T, border:`1px solid rgba(240,235,227,0.4)`, padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:500, textTransform:"uppercase", cursor:"pointer" }}>Nuestra Historia</button>
+              <button onClick={() => scrollTo("productos")} style={{ background:G, color:BG, border:"none", padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>{"Ver Colección"}</button>
+              <button onClick={() => scrollTo("nosotros")} style={{ background:"transparent", color:T, border:`1px solid rgba(240,235,227,0.4)`, padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:500, textTransform:"uppercase", cursor:"pointer" }}>{"Nuestra Historia"}</button>
             </div>
           </div>
         </div>
@@ -165,7 +358,7 @@ export default function FashionNoir() {
         <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns:"repeat(4,1fr)" }}>
           {GARANTIAS.map((g, i) => (
             <div key={i} style={{ padding:"28px 32px", display:"flex", alignItems:"center", gap:16, borderRight: i < 3 ? `1px solid rgba(201,168,76,0.1)` : "none" }}>
-              <span style={{ fontSize:28 }}>{g.icon}</span>
+              <span style={{ color:G, flexShrink:0 }}>{g.svg}</span>
               <div>
                 <p style={{ fontSize:13, fontWeight:700, color:T, margin:"0 0 4px" }}>{g.title}</p>
                 <p style={{ fontSize:11, opacity:0.45, margin:0, lineHeight:1.5 }}>{g.desc}</p>
@@ -192,7 +385,7 @@ export default function FashionNoir() {
               <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(10,10,10,0.75) 30%, transparent)" }}/>
               <div style={{ position:"absolute", bottom:32, left:0, right:0, textAlign:"center" }}>
                 <p style={{ fontFamily:"Georgia, serif", fontSize:24, color:T, margin:0, fontWeight:700 }}>{cat.label}</p>
-                <p style={{ fontSize:10, letterSpacing:4, color:G, marginTop:8, textTransform:"uppercase" }}>Ver más →</p>
+                <p style={{ fontSize:10, letterSpacing:4, color:G, marginTop:8, textTransform:"uppercase" }}>{"Ver más"} →</p>
               </div>
             </button>
           ))}
@@ -218,7 +411,7 @@ export default function FashionNoir() {
             {CATEGORIES.map(cat => (
               <button key={cat} onClick={() => changeCategory(cat)}
                 style={{ background: activeCategory===cat ? G : "transparent", color: activeCategory===cat ? BG : T, border:`1px solid ${activeCategory===cat ? G : "rgba(240,235,227,0.2)"}`, padding:"8px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", transition:"all 0.2s" }}>
-                {cat}
+                {cat === "Todos" ? "Todos" : cat}
               </button>
             ))}
           </div>
@@ -235,6 +428,14 @@ export default function FashionNoir() {
                 </div>
                 {product.comparePrice && <div style={{ position:"absolute", top:12, left:12, background:G, color:BG, fontSize:9, fontWeight:800, letterSpacing:2, padding:"4px 10px", textTransform:"uppercase" }}>Oferta</div>}
                 <div style={{ position:"absolute", top:12, right:12, background:"rgba(10,10,10,0.7)", color:T, fontSize:9, letterSpacing:2, padding:"4px 10px", textTransform:"uppercase" }}>{product.category}</div>
+                {/* Favorite button */}
+                <button
+                  onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
+                  style={{ position:"absolute", bottom:12, right:12, background:"rgba(10,10,10,0.65)", border:"none", borderRadius:"50%", width:32, height:32, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"transform 0.2s" }}
+                  onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
+                  onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
+                  <svg width={16} height={16} viewBox="0 0 24 24" fill={favorites.includes(product.id) ? G : "none"} stroke={favorites.includes(product.id) ? G : T} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </button>
               </div>
               <p style={{ fontSize:11, color:"#666", letterSpacing:2, textTransform:"uppercase", margin:"0 0 6px" }}>{product.category}</p>
               <p style={{ fontSize:16, color:T, margin:"0 0 8px", fontWeight:500 }}>{product.name}</p>
@@ -256,7 +457,7 @@ export default function FashionNoir() {
               style={{ background:"transparent", color:T, border:`1px solid rgba(240,235,227,0.25)`, padding:"14px 48px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:600, cursor:"pointer", transition:"all 0.25s" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor=G; e.currentTarget.style.color=G; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(240,235,227,0.25)"; e.currentTarget.style.color=T; }}>
-              Ver más
+              {"Ver más"}
             </button>
           )}
           {!hasMore && allFiltered.length > 8 && (
@@ -448,9 +649,151 @@ export default function FashionNoir() {
               </div>
 
               <button onClick={addToCart} style={{ background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginTop:"auto" }}>
-                Agregar al Carrito · {fmt(modalProduct.price * qty)}
+                {"Agregar al Carrito"} · {fmt(modalProduct.price * qty)}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CHECKOUT ───────────────────────────────────────── */}
+      {checkoutOpen && (
+        <div style={{ position:"fixed", inset:0, zIndex:300, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
+          <div onClick={() => setCheckoutOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.72)", backdropFilter:"blur(6px)" }}/>
+          <div style={{ position:"relative", width:480, maxWidth:"100vw", height:"100vh", background:"#0e0e0e", display:"flex", flexDirection:"column", overflowY:"auto", borderLeft:`1px solid rgba(201,168,76,0.12)` }}>
+
+            {/* header */}
+            <div style={{ padding:"24px 28px 16px", borderBottom:`1px solid rgba(240,235,227,0.06)`, display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexShrink:0 }}>
+              <div>
+                <p style={{ fontFamily:"Georgia, serif", fontSize:20, margin:"0 0 4px", color:T }}>Checkout</p>
+                <p style={{ fontSize:11, opacity:0.35, margin:0, letterSpacing:1 }}>Pedido para Tiendaapps</p>
+              </div>
+              <button onClick={() => setCheckoutOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
+            </div>
+
+            {checkoutStatus === "done" ? (
+              <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:48, textAlign:"center" }}>
+                <div style={{ width:64, height:64, borderRadius:"50%", border:`2px solid ${G}`, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:24 }}>
+                  <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={G} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <p style={{ fontFamily:"Georgia, serif", fontSize:24, color:T, marginBottom:12 }}>¡Pedido recibido!</p>
+                <p style={{ fontSize:13, opacity:0.5, lineHeight:1.8, marginBottom:32 }}>Te contactamos a la brevedad para confirmar y coordinar el envío o retiro.</p>
+                <button onClick={() => { setCheckoutOpen(false); setCheckoutStatus("idle"); }}
+                  style={{ background:G, color:BG, border:"none", padding:"14px 36px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                  Seguir comprando
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handlePlaceOrder} style={{ flex:1, display:"flex", flexDirection:"column" }}>
+                <div style={{ flex:1, overflowY:"auto", padding:"24px 28px" }}>
+
+                  {/* resumen de items */}
+                  <div style={{ marginBottom:28 }}>
+                    {cartItems.map((item, idx) => (
+                      <div key={idx} style={{ display:"flex", gap:14, padding:"12px 0", borderBottom:`1px solid rgba(240,235,227,0.05)` }}>
+                        <img src={item.product.images[0]} alt="" style={{ width:56, height:74, objectFit:"cover", flexShrink:0 }}/>
+                        <div style={{ flex:1 }}>
+                          <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500, color:T }}>{item.product.name}</p>
+                          <p style={{ fontSize:11, opacity:0.4, margin:"0 0 6px" }}>Talle: {item.size} · Color: {item.color}</p>
+                          <p style={{ fontSize:13, color:G, fontWeight:700 }}>{fmt(item.product.price)}</p>
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", border:`1px solid rgba(240,235,227,0.13)`, height:28, flexShrink:0 }}>
+                          <button type="button" onClick={() => updateQty(idx,-1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>−</button>
+                          <span style={{ width:24, textAlign:"center", fontSize:13, color:T }}>{item.qty}</span>
+                          <button type="button" onClick={() => updateQty(idx,1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>+</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* datos del comprador */}
+                  <p style={{ fontSize:13, fontWeight:700, color:T, marginBottom:14, letterSpacing:1 }}>Datos del comprador</p>
+                  {([ ["nombre","Nombre y apellido","text"], ["email","Email","email"], ["telefono","Teléfono","tel"], ["direccion","Dirección","text"], ] as const).map(([field, ph, type]) => (
+                    <input key={field} required type={type} placeholder={ph}
+                      value={buyerForm[field]} onChange={e => setBuyerForm(f => ({...f, [field]:e.target.value}))}
+                      style={{ display:"block", width:"100%", marginBottom:10, background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                      onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
+                  ))}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
+                    {([ ["ciudad","Ciudad"], ["provincia","Provincia"] ] as const).map(([field, ph]) => (
+                      <input key={field} required placeholder={ph}
+                        value={buyerForm[field]} onChange={e => setBuyerForm(f => ({...f, [field]:e.target.value}))}
+                        style={{ background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                        onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
+                    ))}
+                  </div>
+                  <input placeholder="Código postal" value={buyerForm.cp} onChange={e => setBuyerForm(f => ({...f, cp:e.target.value}))}
+                    style={{ display:"block", width:"100%", marginBottom:10, background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                    onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
+                  <label style={{ display:"flex", alignItems:"center", gap:10, fontSize:12, opacity:0.5, cursor:"pointer", marginBottom:28 }}>
+                    <input type="checkbox" checked={rememberData} onChange={e => setRememberData(e.target.checked)} style={{ accentColor:G }}/>
+                    Recordar mis datos para la próxima compra
+                  </label>
+
+                  {/* envío */}
+                  <p style={{ fontSize:13, fontWeight:700, color:T, marginBottom:14, letterSpacing:1 }}>Envío</p>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:28 }}>
+                    {ENVIO_OPTIONS.map(opt => (
+                      <label key={opt.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", border:`1px solid ${envioId===opt.id ? G : "rgba(240,235,227,0.1)"}`, cursor:"pointer", transition:"border-color 0.2s" }}>
+                        <span style={{ display:"flex", alignItems:"center", gap:12 }}>
+                          <input type="radio" name="envio" value={opt.id} checked={envioId===opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor:G }}/>
+                          <span style={{ fontSize:13, color:T }}>{opt.label}</span>
+                        </span>
+                        <span style={{ fontSize:13, fontWeight:700, color: opt.price===0 ? G : T }}>{opt.price===0 ? "Gratis" : fmt(opt.price)}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  {/* pago */}
+                  <p style={{ fontSize:13, fontWeight:700, color:T, marginBottom:14, letterSpacing:1 }}>Pago</p>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:28 }}>
+                    {PAGO_OPTIONS.map(opt => (
+                      <label key={opt.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", border:`1px solid ${pagoId===opt.id ? G : "rgba(240,235,227,0.1)"}`, cursor:"pointer", transition:"border-color 0.2s" }}>
+                        <input type="radio" name="pago" value={opt.id} checked={pagoId===opt.id} onChange={() => setPagoId(opt.id)} style={{ accentColor:G }}/>
+                        <span style={{ fontSize:13, color:T }}>{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  {/* notas */}
+                  <textarea placeholder="Notas para la tienda" rows={3} value={notas} onChange={e => setNotas(e.target.value)}
+                    style={{ display:"block", width:"100%", marginBottom:20, background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"11px 14px", fontSize:13, outline:"none", resize:"vertical", fontFamily:"inherit", boxSizing:"border-box" }}
+                    onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
+
+                  {/* cupón */}
+                  <div style={{ display:"flex", gap:0, marginBottom:28 }}>
+                    <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
+                      style={{ flex:1, background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, borderRight:"none", color:T, padding:"11px 14px", fontSize:11, letterSpacing:2, outline:"none" }}
+                      onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
+                    <button type="button" style={{ background:"transparent", border:`1px solid rgba(201,168,76,0.15)`, color:"#666", padding:"11px 18px", fontSize:11, letterSpacing:2, cursor:"pointer" }}>Aplicar</button>
+                  </div>
+
+                  {/* resumen de totales */}
+                  <div style={{ borderTop:`1px solid rgba(240,235,227,0.07)`, paddingTop:20 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                      <span style={{ fontSize:13, opacity:0.55 }}>Subtotal</span>
+                      <span style={{ fontSize:13, opacity:0.55 }}>{fmt(cartTotal)}</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:16 }}>
+                      <span style={{ fontSize:13, opacity:0.55 }}>Envío</span>
+                      <span style={{ fontSize:13, opacity:0.55 }}>{envioPrice===0 ? "Gratis" : fmt(envioPrice)}</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between" }}>
+                      <span style={{ fontSize:16, fontWeight:700, color:T }}>Total</span>
+                      <span style={{ fontSize:20, fontWeight:800, color:G }}>{fmt(orderTotal)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* botón crear pedido */}
+                <div style={{ padding:"16px 28px 28px", borderTop:`1px solid rgba(240,235,227,0.06)`, flexShrink:0 }}>
+                  <button type="submit" disabled={checkoutStatus==="placing"}
+                    style={{ width:"100%", background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", opacity:checkoutStatus==="placing"?0.7:1, transition:"opacity 0.2s" }}>
+                    {checkoutStatus==="placing" ? "Procesando..." : "Crear pedido"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
@@ -498,8 +841,8 @@ export default function FashionNoir() {
                 <span style={{ fontSize:13, opacity:0.6 }}>Total</span>
                 <span style={{ fontSize:22, fontWeight:700, color:G }}>{fmt(cartTotal)}</span>
               </div>
-              <button style={{ width:"100%", background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
-                Finalizar Compra
+              <button onClick={openCheckout} style={{ width:"100%", background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
+                {"Finalizar Compra"}
               </button>
               <button onClick={() => setCartOpen(false)} style={{ width:"100%", background:"transparent", color:T, border:`1px solid rgba(240,235,227,0.15)`, padding:"12px", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
                 Seguir Comprando
@@ -508,6 +851,57 @@ export default function FashionNoir() {
           )}
         </div>
       </div>
+
+      {/* ── FAVORITES DRAWER ───────────────────────────────── */}
+      <div style={{ position:"fixed", inset:0, zIndex:155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
+        <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.6)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }}/>
+        <div style={{ position:"absolute", top:0, right:0, bottom:0, width:420, background:S, transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
+          <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid rgba(240,235,227,0.07)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <p style={{ fontFamily:"Georgia, serif", fontSize:18, margin:0 }}>{"Favoritos"} <span style={{ fontSize:13, color:"#555" }}>({favorites.length})</span></p>
+            <button onClick={() => setFavoritesOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
+          </div>
+          <div style={{ flex:1, overflowY:"auto", padding:"16px 24px" }}>
+            {favoriteProducts.length === 0
+              ? <div style={{ textAlign:"center", padding:"60px 0", opacity:0.35 }}>
+                  <p style={{ fontSize:36, marginBottom:12 }}>♡</p>
+                  <p style={{ fontSize:13, lineHeight:1.8 }}>No tenés favoritos aún.<br/>Guardá piezas que te gusten.</p>
+                </div>
+              : favoriteProducts.map(product => (
+                <div key={product.id} style={{ display:"flex", gap:14, padding:"16px 0", borderBottom:`1px solid rgba(240,235,227,0.06)` }}>
+                  <img src={product.images[0]} alt="" style={{ width:70, height:93, objectFit:"cover", flexShrink:0 }}/>
+                  <div style={{ flex:1 }}>
+                    <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500 }}>{product.name}</p>
+                    <p style={{ fontSize:13, color:G, fontWeight:700, margin:"0 0 10px" }}>{fmt(product.price)}</p>
+                    <div style={{ display:"flex", gap:8 }}>
+                      <button onClick={() => { setFavoritesOpen(false); openModal(product); }}
+                        style={{ background:G, color:BG, border:"none", padding:"7px 14px", fontSize:10, letterSpacing:2, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>
+                        Ver producto
+                      </button>
+                      <button onClick={() => toggleFavorite(product.id)}
+                        style={{ background:"transparent", color:"#666", border:"1px solid rgba(240,235,227,0.15)", padding:"7px 14px", fontSize:10, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", transition:"color 0.2s" }}
+                        onMouseEnter={e => (e.currentTarget.style.color=T)}
+                        onMouseLeave={e => (e.currentTarget.style.color="#666")}>
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+
+      {/* ── WHATSAPP BUTTON ────────────────────────────────── */}
+      {(!storeConfig || storeConfig.whatsapp.enabled) && (
+        <button
+          onClick={() => window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}`, "_blank")}
+          style={{ position:"fixed", bottom:24, right:24, zIndex:500, width:52, height:52, borderRadius:"50%", background:"#25D366", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(37,211,102,0.4)", transition:"transform 0.2s" }}
+          onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
+          onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
+          <svg width={28} height={28} viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </button>
+      )}
 
     </div>
   );

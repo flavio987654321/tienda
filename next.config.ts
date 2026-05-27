@@ -37,6 +37,19 @@ const paymentHeaders = securityHeaders.map((h) =>
   h.key === "Content-Security-Policy" ? { key: h.key, value: cspPayment } : h
 );
 
+// Preview de templates — permite ser embebido en iframe same-origin (editor de diseño)
+const cspPreview = csp
+  .replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+  .replace(
+    "script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com"
+  );
+const previewHeaders = securityHeaders.map((h) => {
+  if (h.key === "Content-Security-Policy") return { key: h.key, value: cspPreview };
+  if (h.key === "X-Frame-Options") return { key: h.key, value: "SAMEORIGIN" };
+  return h;
+});
+
 const nextConfig: NextConfig = {
   experimental: {
     staleTimes: {
@@ -45,11 +58,11 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
-      { source: "/(.*)", headers: securityHeaders },
+      { source: "/((?!preview\\/).*)", headers: securityHeaders },
       // Páginas donde carga el SDK de MercadoPago (checkout de tienda + suscripciones)
       { source: "/(precios|tienda/.*)", headers: paymentHeaders },
-      // Preview de templates — necesita unsafe-eval en dev
-      { source: "/preview/(.*)", headers: paymentHeaders },
+      // Preview de templates — permite iframe same-origin para el editor de diseño
+      { source: "/preview/(.*)", headers: previewHeaders },
     ];
   },
   images: {

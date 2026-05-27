@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import FashionNoir from "@/components/store/templates/FashionNoir";
+import UrbanPulse from "@/components/store/templates/UrbanPulse";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import type { StoreConfig } from "@/types/store-config";
 
-export default function PreviewFashionNoir() {
+export default function PreviewUrbanPulse() {
   const [config, setConfig] = useState<StoreConfig | null>(null);
 
   useEffect(() => {
@@ -17,7 +17,7 @@ export default function PreviewFashionNoir() {
 
   return (
     <StoreConfigContext.Provider value={config}>
-      <FashionNoir />
+      <UrbanPulse />
     </StoreConfigContext.Provider>
   );
 }
