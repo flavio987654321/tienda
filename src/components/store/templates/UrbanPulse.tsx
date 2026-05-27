@@ -222,7 +222,7 @@ export default function UrbanPulse() {
 
       {/* NAVBAR */}
       <nav style={{ position:"sticky", top:0, zIndex:100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"all 0.3s", padding:"0 40px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <div style={{ fontWeight:900, fontSize:18, letterSpacing:4, textTransform:"uppercase" }}>
+        <div style={{ fontWeight:900, fontSize:18, letterSpacing:4, textTransform:"uppercase", maxWidth:220, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
           <EditableZone field="storeName" label="Nombre de la tienda">
             {storeConfig?.storeName ?? <span>URBAN<span style={{ background:DARK, color:ACC, padding:"3px 7px", marginLeft:2 }}>PULSE</span></span>}
           </EditableZone>
@@ -485,10 +485,10 @@ export default function UrbanPulse() {
             <EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'">Sin compromisos. Sin excusas. Solo movimiento.</EditableZone>
           </p>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:24 }}>
-            {[["+5K","Clientes"],["98%","Satisfacción"],["48hs","Envío promedio"]].map(([n,l]) => (
+            {([["aboutStat1","aboutStatLabel1","+5K","Clientes"],["aboutStat2","aboutStatLabel2","98%","Satisfacción"],["aboutStat3","aboutStatLabel3","48hs","Envío promedio"]] as const).map(([fv,fl,n,l]) => (
               <div key={l}>
-                <p style={{ fontSize:40, fontWeight:900, margin:"0 0 4px" }}>{n}</p>
-                <p style={{ fontSize:10, color:MID, fontWeight:800, letterSpacing:2, textTransform:"uppercase", margin:0 }}>{l}</p>
+                <p style={{ fontSize:40, fontWeight:900, margin:"0 0 4px" }}><EditableZone field={fv} label={`Stat: ${n}`}>{n}</EditableZone></p>
+                <p style={{ fontSize:10, color:MID, fontWeight:800, letterSpacing:2, textTransform:"uppercase", margin:0 }}><EditableZone field={fl} label={`Etiqueta stat: ${l}`}>{l}</EditableZone></p>
               </div>
             ))}
           </div>
@@ -496,8 +496,8 @@ export default function UrbanPulse() {
         <div style={{ position:"relative" }}>
           <img src="https://picsum.photos/seed/up_about/600/700" alt="Nosotros" style={{ width:"100%", aspectRatio:"4/5", objectFit:"cover", display:"block" }} />
           <div style={{ position:"absolute", bottom:-16, left:-16, background:ACC, padding:"20px 28px" }}>
-            <p style={{ margin:0, fontSize:12, fontWeight:900, textTransform:"uppercase", letterSpacing:2 }}>Desde 2021</p>
-            <p style={{ margin:"4px 0 0", fontSize:11, opacity:0.6 }}>Vistiendo a Argentina</p>
+            <p style={{ margin:0, fontSize:12, fontWeight:900, textTransform:"uppercase", letterSpacing:2 }}><EditableZone field="aboutStat4" label="Stat: Desde 2021">Desde 2021</EditableZone></p>
+            <p style={{ margin:"4px 0 0", fontSize:11, opacity:0.6 }}><EditableZone field="aboutStatLabel4" label="Etiqueta stat: Vistiendo">Vistiendo a Argentina</EditableZone></p>
           </div>
         </div>
       </section>

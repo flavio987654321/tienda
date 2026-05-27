@@ -169,6 +169,14 @@ const TEXT_FIELD_LABELS: Record<string, string> = {
   aboutHeading:        "Título 'Nosotros'",
   aboutParagraph1:     "Párrafo 1 'Nosotros'",
   aboutParagraph2:     "Párrafo 2 'Nosotros'",
+  aboutStat1:          "Stat 1 (número)",
+  aboutStatLabel1:     "Stat 1 (etiqueta)",
+  aboutStat2:          "Stat 2 (número)",
+  aboutStatLabel2:     "Stat 2 (etiqueta)",
+  aboutStat3:          "Stat 3 (número)",
+  aboutStatLabel3:     "Stat 3 (etiqueta)",
+  aboutStat4:          "Stat 4 (número)",
+  aboutStatLabel4:     "Stat 4 (etiqueta)",
   contactKicker:       "Etiqueta contacto",
   contactHeading:      "Título contacto",
   contactSubtext:      "Subtítulo contacto",
@@ -307,9 +315,9 @@ function TextEditorPanel({ field, label, overrides, setOverride, resetOverride, 
 /* ── Floating text editor — sticky at bottom of preview ───── */
 function FloatingTextEditor({ textFieldLabels }: { textFieldLabels: Record<string, string> }) {
   const { activeField, setActiveField, overrides, setOverride, resetOverride } = useEditContext();
-  if (!activeField || !textFieldLabels[activeField]) return null;
+  if (!activeField) return null;
 
-  const label = textFieldLabels[activeField];
+  const label = textFieldLabels[activeField] ?? activeField;
   const ov = overrides[activeField] ?? {};
   const hasOverride = Object.entries(ov).some(([, v]) => v !== undefined);
 
@@ -324,7 +332,7 @@ function FloatingTextEditor({ textFieldLabels }: { textFieldLabels: Record<strin
 
   return (
     <div style={{
-      position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 99999,
+      position: "fixed", bottom: 0, left: 320, right: 0, zIndex: 99999,
       background: "white", borderTop: "2px solid #6366f1",
       boxShadow: "0 -4px 20px rgba(99,102,241,0.15)",
       padding: "10px 14px",

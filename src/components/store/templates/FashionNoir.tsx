@@ -284,7 +284,7 @@ export default function FashionNoir() {
       {/* ── NAVBAR ─────────────────────────────────────────── */}
       <nav style={{ position:"fixed", top:announcementBarHeight, left:0, right:0, zIndex:100, transition:"background 0.4s, top 0.3s", background: scrolled ? "rgba(10,10,10,0.97)" : "transparent", backdropFilter: scrolled ? "blur(12px)" : "none", borderBottom: scrolled ? `1px solid rgba(201,168,76,0.15)` : "none" }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 32px", height:72, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <button onClick={() => scrollTo("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:26, fontWeight:700, letterSpacing:6, color:G }}>
+          <button onClick={() => scrollTo("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:26, fontWeight:700, letterSpacing:6, color:G, maxWidth:240, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
             <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "NOIR"}</EditableZone>
           </button>
           <div style={{ display:"flex", gap:32 }}>
@@ -511,10 +511,10 @@ export default function FashionNoir() {
               <EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'">Cada prenda pasa por un proceso riguroso de selección de materiales y control de calidad. Trabajamos con talleres locales y artesanos que comparten nuestra filosofía: menos piezas, más valor.</EditableZone>
             </p>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, paddingTop:8 }}>
-              {[["2018","Año de fundación"],["100%","Producción local"],["30+","Artesanos que trabajan con nosotros"],["8 años","De trayectoria"]].map(([n, label]) => (
+              {([["aboutStat1","aboutStatLabel1","2018","Año de fundación"],["aboutStat2","aboutStatLabel2","100%","Producción local"],["aboutStat3","aboutStatLabel3","30+","Artesanos"],["aboutStat4","aboutStatLabel4","8 años","De trayectoria"]] as const).map(([fv,fl,n,label]) => (
                 <div key={label}>
-                  <p style={{ fontFamily:"Georgia, serif", fontSize:32, color:G, margin:"0 0 4px", fontWeight:700 }}>{n}</p>
-                  <p style={{ fontSize:11, opacity:0.5, margin:0, lineHeight:1.4 }}>{label}</p>
+                  <p style={{ fontFamily:"Georgia, serif", fontSize:32, color:G, margin:"0 0 4px", fontWeight:700 }}><EditableZone field={fv} label={`Stat: ${n}`}>{n}</EditableZone></p>
+                  <p style={{ fontSize:11, opacity:0.5, margin:0, lineHeight:1.4 }}><EditableZone field={fl} label={`Etiqueta stat: ${label}`}>{label}</EditableZone></p>
                 </div>
               ))}
             </div>

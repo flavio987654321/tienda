@@ -258,7 +258,7 @@ export default function BohoTerra() {
       {/* ── NAVBAR */}
       <nav style={{ position:"fixed", top:announcementBarHeight, left:0, right:0, zIndex:100, background: scrolled ? "rgba(250,247,242,0.96)" : BG, borderBottom:`1px solid rgba(44,34,24,0.07)`, backdropFilter: scrolled ? "blur(10px)" : "none", transition:"all 0.3s" }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 40px", height:60, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <button onClick={()=>scrollTo("inicio")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:20, fontStyle:"italic", color:T, letterSpacing:2 }}>
+          <button onClick={()=>scrollTo("inicio")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:20, fontStyle:"italic", color:T, letterSpacing:2, maxWidth:200, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
             <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "Terra"}</EditableZone>
           </button>
           <div style={{ display:"flex", gap:8 }}>
@@ -455,10 +455,10 @@ export default function BohoTerra() {
             <p style={{ fontSize:15, color:MID, lineHeight:1.9 }}><EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'" block>Trabajamos con productores locales de lino, alpaca y algodón orgánico. Nuestras tinturas son 100% vegetales: cúrcuma, añil, madreselva y cochinilla.</EditableZone></p>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:32 }}>
-            {[["2019","Año de fundación"],["100%","Fibras naturales"],["12","Artesanas"],["Mendoza","Origen"]].map(([n,label])=>(
+            {([["aboutStat1","aboutStatLabel1","2019","Año de fundación"],["aboutStat2","aboutStatLabel2","100%","Fibras naturales"],["aboutStat3","aboutStatLabel3","12","Artesanas"],["aboutStat4","aboutStatLabel4","Mendoza","Origen"]] as const).map(([fv,fl,n,label])=>(
               <div key={label} style={{ borderTop:`2px solid ${A}`, paddingTop:16 }}>
-                <p style={{ fontFamily:"Georgia, serif", fontSize:36, fontStyle:"italic", color:A, margin:"0 0 6px" }}>{n}</p>
-                <p style={{ fontSize:12, color:MID, margin:0, letterSpacing:1, textTransform:"uppercase" }}>{label}</p>
+                <p style={{ fontFamily:"Georgia, serif", fontSize:36, fontStyle:"italic", color:A, margin:"0 0 6px" }}><EditableZone field={fv} label={`Stat: ${n}`}>{n}</EditableZone></p>
+                <p style={{ fontSize:12, color:MID, margin:0, letterSpacing:1, textTransform:"uppercase" }}><EditableZone field={fl} label={`Etiqueta stat: ${label}`}>{label}</EditableZone></p>
               </div>
             ))}
           </div>
