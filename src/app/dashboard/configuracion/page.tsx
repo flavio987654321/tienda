@@ -80,6 +80,29 @@ function Section({ id, label, icon, open, onToggle, children }: {
   );
 }
 
+/* ── Real template thumbnail (scaled render) ───────────── */
+const THUMB_W = 200;
+const VIRTUAL_W = 1080;
+const SCALE = THUMB_W / VIRTUAL_W;
+const THUMB_H = 140;
+const VIRTUAL_H = THUMB_H / SCALE;
+
+function TemplateThumbnail({ component: Component }: { component: React.ComponentType }) {
+  return (
+    <div style={{ width: THUMB_W, height: THUMB_H, overflow: "hidden", position: "relative",
+      borderRadius: "8px 8px 0 0", background: "#f8fafc" }}>
+      <div style={{
+        position: "absolute", top: 0, left: 0,
+        width: VIRTUAL_W, height: VIRTUAL_H,
+        transform: `scale(${SCALE})`, transformOrigin: "top left",
+        pointerEvents: "none", userSelect: "none",
+      }}>
+        <Component />
+      </div>
+    </div>
+  );
+}
+
 /* ── Template card (in carousel) ───────────────────────── */
 function TemplateCard({ t, onSelect }: { t: TemplateInfo; onSelect: () => void }) {
   const [hovered, setHovered] = useState(false);
@@ -89,44 +112,17 @@ function TemplateCard({ t, onSelect }: { t: TemplateInfo; onSelect: () => void }
       onMouseLeave={() => setHovered(false)}
       onClick={onSelect}
       style={{
-        flexShrink: 0, width: 180, borderRadius: 12, overflow: "hidden", cursor: "pointer",
+        flexShrink: 0, width: THUMB_W, borderRadius: 12, overflow: "hidden", cursor: "pointer",
         border: "2px solid", borderColor: hovered ? "#6366f1" : "#e2e8f0",
         background: "white", transition: "all 0.2s",
         boxShadow: hovered ? "0 8px 24px rgba(99,102,241,0.18)" : "0 2px 8px rgba(0,0,0,0.07)",
         transform: hovered ? "translateY(-3px)" : "none",
       }}>
-      {/* Mini screen preview using palette */}
-      <div style={{ height: 110, position: "relative", overflow: "hidden" }}>
-        {/* Background */}
-        <div style={{ position: "absolute", inset: 0, background: t.palette[0] }} />
-        {/* Fake navbar */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 22,
-          background: t.palette[0], borderBottom: `2px solid ${t.palette[1]}20`,
-          display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ width: 50, height: 6, borderRadius: 3, background: t.palette[1], opacity: 0.9 }} />
-        </div>
-        {/* Fake hero */}
-        <div style={{ position: "absolute", top: 22, left: 0, right: 0, height: 44,
-          background: `linear-gradient(135deg, ${t.palette[0]}, ${t.palette[1]}40)`,
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-          <div style={{ width: 30, height: 7, borderRadius: 4, background: t.palette[2], opacity: 0.85 }} />
-          <div style={{ width: 18, height: 7, borderRadius: 4, background: t.palette[1] }} />
-        </div>
-        {/* Fake product cards */}
-        <div style={{ position: "absolute", bottom: 6, left: 6, right: 6, display: "flex", gap: 4 }}>
-          {[0,1,2].map(i => (
-            <div key={i} style={{ flex: 1, height: 30, borderRadius: 5,
-              background: i === 0 ? t.palette[1] + "30" : t.palette[2] + "20",
-              border: `1px solid ${t.palette[1]}20` }} />
-          ))}
-        </div>
-        {/* Accent bar at top */}
-        <div style={{ position: "absolute", top: 0, left: 0, width: 3, height: "100%", background: t.palette[1] }} />
-      </div>
+      {/* Real template render scaled down */}
+      <TemplateThumbnail component={t.component} />
 
       {/* Card footer */}
       <div style={{ padding: "10px 12px 12px" }}>
-        {/* Palette dots */}
         <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
           {t.palette.map((c, i) => (
             <div key={i} style={{ width: 14, height: 14, borderRadius: "50%", background: c,
