@@ -60,12 +60,12 @@ export default function BohoTerra() {
   const A = storeConfig?.colors.accent ?? "#b5652a";
   const sc = storeConfig?.sectionColors ?? {};
   const heroLeftBg = sc["bgHeroLeft"] ?? BG;
-  const heroLeftText = getContrastColor(heroLeftBg) === "light" ? "#2c2218" : "#faf7f2";
-  const heroLeftMid = getContrastColor(heroLeftBg) === "light" ? "#9a8070" : "#d5c9be";
+  const heroLeftText = getContrastColor(heroLeftBg) === "light" ? "#faf7f2" : "#2c2218";
+  const heroLeftMid = getContrastColor(heroLeftBg) === "light" ? "#d5c9be" : "#9a8070";
   const coleccionBg = sc["bgColeccion"] ?? BG;
   const nosotrosBg = sc["bgNosotros"] ?? S;
-  const nosotrosText = getContrastColor(nosotrosBg) === "light" ? "#2c2218" : "#faf7f2";
-  const nosotrosMid = getContrastColor(nosotrosBg) === "light" ? "#9a8070" : "#d5c9be";
+  const nosotrosText = getContrastColor(nosotrosBg) === "light" ? "#faf7f2" : "#2c2218";
+  const nosotrosMid = getContrastColor(nosotrosBg) === "light" ? "#d5c9be" : "#9a8070";
   const footerBg = sc["bgFooter"] ?? S;
 
   const [scrolled,            setScrolled]            = useState(false);

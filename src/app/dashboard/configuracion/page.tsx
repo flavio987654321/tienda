@@ -40,7 +40,7 @@ const CATEGORIES: Category[] = [
 const IMAGE_FIELD_INFO: Record<string, { label: string; tip: string }> = {
   heroBackground: {
     label: "Imagen de fondo del hero",
-    tip: "Recomendado: 1920×1080px horizontal. Overlay oscuro para fotos claras, overlay claro para fotos oscuras.",
+    tip: "Recomendado: 1920×1080px horizontal. Capa oscura para fotos claras, capa clara para fotos oscuras.",
   },
   heroImage: {
     label: "Imagen del hero",
@@ -570,8 +570,8 @@ function ImageFieldEditor({
           <span style={{ fontSize: 11, color: "#ef4444", whiteSpace: "nowrap" }}>⚠ {uploadError}</span>
         )}
 
-        {/* Overlay type */}
-        <span style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap" }}>Overlay:</span>
+        {/* Capa / overlay */}
+        <span style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap" }}>Capa:</span>
         {(["none", "dark", "light"] as const).map(t => (
           <button key={t} onClick={() => setImageOverride(field, { overlayType: t })}
             style={{
@@ -581,7 +581,7 @@ function ImageFieldEditor({
               color: currentOverlay === t ? "#6366f1" : "#374151",
               cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
             }}>
-            {t === "none" ? "Sin overlay" : t === "dark" ? "🌑 Oscuro" : "☀️ Claro"}
+            {t === "none" ? "Sin capa" : t === "dark" ? "🌑 Oscura" : "☀️ Clara"}
           </button>
         ))}
 

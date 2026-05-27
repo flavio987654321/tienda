@@ -100,14 +100,14 @@ export default function UrbanPulse() {
 
   const scu = storeConfig?.sectionColors ?? {};
   const garantiasUpBg   = scu["bgGarantias"]  ?? WHITE;
-  const garantiasUpText = getContrastColor(garantiasUpBg) === "light" ? DARK : WHITE;
+  const garantiasUpText = getContrastColor(garantiasUpBg) === "light" ? WHITE : DARK;
   const featuredBg      = scu["bgFeatured"]   ?? DARK;
-  const featuredText    = getContrastColor(featuredBg) === "light" ? DARK : WHITE;
+  const featuredText    = getContrastColor(featuredBg) === "light" ? WHITE : DARK;
   const nosotrosBgUp    = scu["bgNosotros"]   ?? BG;
-  const nosotrosTextUp  = getContrastColor(nosotrosBgUp) === "light" ? DARK : WHITE;
-  const nosotrosMidUp   = getContrastColor(nosotrosBgUp) === "light" ? MID : "rgba(255,255,255,0.5)";
+  const nosotrosTextUp  = getContrastColor(nosotrosBgUp) === "light" ? WHITE : DARK;
+  const nosotrosMidUp   = getContrastColor(nosotrosBgUp) === "light" ? "rgba(255,255,255,0.5)" : MID;
   const contactUpBg     = scu["bgContacto"]   ?? DARK;
-  const contactUpText   = getContrastColor(contactUpBg) === "light" ? DARK : WHITE;
+  const contactUpText   = getContrastColor(contactUpBg) === "light" ? WHITE : DARK;
   const footerUpBg      = scu["bgFooter"]     ?? "#080808";
 
   const fmt = (n: number) => "$" + n.toLocaleString("es-AR");

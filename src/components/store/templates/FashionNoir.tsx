@@ -238,11 +238,11 @@ export default function FashionNoir() {
 
   const scn = storeConfig?.sectionColors ?? {};
   const garantiasBg    = scn["bgGarantias"]   ?? BG;
-  const garantiasText  = getContrastColor(garantiasBg)   === "light" ? "#0a0a0a" : T;
+  const garantiasText  = getContrastColor(garantiasBg)   === "light" ? T : "#0a0a0a";
   const statementBg    = scn["bgStatement"]   ?? BG;
-  const statementText  = getContrastColor(statementBg)   === "light" ? "#0a0a0a" : T;
+  const statementText  = getContrastColor(statementBg)   === "light" ? T : "#0a0a0a";
   const nosotrosPanelBg= scn["bgNosotrosPanel"] ?? S;
-  const nosotrosPanelText = getContrastColor(nosotrosPanelBg) === "light" ? "#0a0a0a" : T;
+  const nosotrosPanelText = getContrastColor(nosotrosPanelBg) === "light" ? T : "#0a0a0a";
   const footerBg       = scn["bgFooter"]      ?? BG;
 
   return (
