@@ -27,6 +27,13 @@ export type StoreConfig = {
     enabled: boolean;
     number: string;
   };
+  socialLinks: {
+    instagram: string;
+    facebook: string;
+    tiktok: string;
+    youtube: string;
+    pinterest: string;
+  };
   currency: "ARS" | "USD";
   language: "ES" | "EN";
   seo: {
@@ -36,6 +43,7 @@ export type StoreConfig = {
   };
   textOverrides: Record<string, TextOverride>;
   imageOverrides: Record<string, ImageOverride>;
+  sectionColors: Record<string, string>;
 };
 
 export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: string }> = {
@@ -50,9 +58,11 @@ export const DEFAULT_CONFIG: StoreConfig = {
   storeTagline:  "Tu tienda online",
   colors:        { accent: "#c9a84c" },
   whatsapp:      { enabled: true, number: "+54 9 11 0000-0000" },
+  socialLinks:   { instagram: "", facebook: "", tiktok: "", youtube: "", pinterest: "" },
   currency:      "ARS",
   language:      "ES",
   seo:           { enabled: false, title: "", description: "" },
   textOverrides: {},
   imageOverrides: {},
+  sectionColors: {},
 };

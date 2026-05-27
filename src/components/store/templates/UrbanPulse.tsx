@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { EditableZone, EditableFixed, EditableImageButton } from "@/contexts/EditContext";
+import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, getContrastColor } from "@/contexts/EditContext";
 
 type Product = {
   id: string; name: string; price: number; comparePrice?: number;
@@ -97,6 +97,18 @@ export default function UrbanPulse() {
   const WHITE = "#ffffff";
   const MID   = "#777777";
   const RED   = "#e63329";
+
+  const scu = storeConfig?.sectionColors ?? {};
+  const garantiasUpBg   = scu["bgGarantias"]  ?? WHITE;
+  const garantiasUpText = getContrastColor(garantiasUpBg) === "light" ? DARK : WHITE;
+  const featuredBg      = scu["bgFeatured"]   ?? DARK;
+  const featuredText    = getContrastColor(featuredBg) === "light" ? DARK : WHITE;
+  const nosotrosBgUp    = scu["bgNosotros"]   ?? BG;
+  const nosotrosTextUp  = getContrastColor(nosotrosBgUp) === "light" ? DARK : WHITE;
+  const nosotrosMidUp   = getContrastColor(nosotrosBgUp) === "light" ? MID : "rgba(255,255,255,0.5)";
+  const contactUpBg     = scu["bgContacto"]   ?? DARK;
+  const contactUpText   = getContrastColor(contactUpBg) === "light" ? DARK : WHITE;
+  const footerUpBg      = scu["bgFooter"]     ?? "#080808";
 
   const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 
@@ -306,14 +318,15 @@ export default function UrbanPulse() {
       </section>
 
       {/* GARANTÍAS */}
-      <section style={{ background:WHITE, borderTop:`3px solid ${DARK}`, borderBottom:`3px solid ${DARK}` }}>
+      <section style={{ background:garantiasUpBg, borderTop:`3px solid ${DARK}`, borderBottom:`3px solid ${DARK}`, position:"relative" }}>
+        <EditableSectionBg field="bgGarantias" label="Fondo garantías" />
         <div style={{ maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns:"repeat(4,1fr)" }}>
           {GARANTIAS.map((g, i) => (
             <div key={g.title} style={{ display:"flex", alignItems:"center", gap:12, padding:"18px 24px", borderRight: i < 3 ? `1px solid rgba(0,0,0,0.1)` : "none" }}>
-              <span>{g.svg}</span>
+              <span style={{ color:garantiasUpText }}>{g.svg}</span>
               <div>
-                <p style={{ margin:0, fontSize:11, fontWeight:900, letterSpacing:1, textTransform:"uppercase" }}><EditableZone field={`garantia${i+1}Title`} label={`Título garantía ${i+1}`}>{g.title}</EditableZone></p>
-                <p style={{ margin:0, fontSize:11, color:MID }}><EditableZone field={`garantia${i+1}Desc`} label={`Descripción garantía ${i+1}`}>{g.desc}</EditableZone></p>
+                <p style={{ margin:0, fontSize:11, fontWeight:900, letterSpacing:1, textTransform:"uppercase", color:garantiasUpText }}><EditableZone field={`garantia${i+1}Title`} label={`Título garantía ${i+1}`}>{g.title}</EditableZone></p>
+                <p style={{ margin:0, fontSize:11, color:garantiasUpText, opacity:0.6 }}><EditableZone field={`garantia${i+1}Desc`} label={`Descripción garantía ${i+1}`}>{g.desc}</EditableZone></p>
               </div>
             </div>
           ))}
@@ -352,7 +365,8 @@ export default function UrbanPulse() {
       </section>
 
       {/* FEATURED DROP */}
-      <section id="featured" style={{ background:DARK, padding:"80px 40px" }}>
+      <section id="featured" style={{ background:featuredBg, padding:"80px 40px", position:"relative" }}>
+        <EditableSectionBg field="bgFeatured" label="Fondo featured" />
         <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:0, alignItems:"center" }}>
           <div style={{ position:"relative" }}>
             <img src={featuredProduct.images[0]} alt={featuredProduct.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
@@ -366,23 +380,23 @@ export default function UrbanPulse() {
             <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>
               <EditableZone field="featuredLabel" label="Etiqueta featured">▶ Featured Drop</EditableZone>
             </span>
-  <h2 style={{ color:WHITE, fontSize:"clamp(32px,4vw,50px)", fontWeight:900, textTransform:"uppercase", lineHeight:1.05, margin:"0 0 20px", letterSpacing:"-1px" }}>
+            <h2 style={{ color:featuredText, fontSize:"clamp(32px,4vw,50px)", fontWeight:900, textTransform:"uppercase", lineHeight:1.05, margin:"0 0 20px", letterSpacing:"-1px" }}>
               {featuredProduct.name}
             </h2>
-            <p style={{ color:"rgba(255,255,255,0.45)", fontSize:14, lineHeight:1.8, marginBottom:28 }}>
+            <p style={{ color:featuredText, opacity:0.45, fontSize:14, lineHeight:1.8, marginBottom:28 }}>
               <EditableZone field="featuredDescription" label="Descripción featured">Tecnología de compresión avanzada para máximo soporte muscular y recuperación activa. Perfecto para entrenamiento de alta intensidad.</EditableZone>
             </p>
             <div style={{ marginBottom:32 }}>
               {[["Material","87% Nylon · 13% Elastane"],["Tecnología","4-Way Stretch"],["Uso","Gym · Running · Training"]].map(([k,v]) => (
-                <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
-                  <span style={{ color:"rgba(255,255,255,0.35)", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase" }}>{k}</span>
-                  <span style={{ color:WHITE, fontSize:12 }}>{v}</span>
+                <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:`1px solid ${featuredText === WHITE ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}` }}>
+                  <span style={{ color:featuredText, opacity:0.35, fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase" }}>{k}</span>
+                  <span style={{ color:featuredText, fontSize:12 }}>{v}</span>
                 </div>
               ))}
             </div>
             <div style={{ display:"flex", alignItems:"baseline", gap:16, marginBottom:32 }}>
               <span style={{ color:ACC, fontSize:36, fontWeight:900 }}>{fmt(featuredProduct.price)}</span>
-              {featuredProduct.comparePrice && <span style={{ color:"rgba(255,255,255,0.25)", fontSize:20, textDecoration:"line-through" }}>{fmt(featuredProduct.comparePrice)}</span>}
+              {featuredProduct.comparePrice && <span style={{ color:featuredText, opacity:0.25, fontSize:20, textDecoration:"line-through" }}>{fmt(featuredProduct.comparePrice)}</span>}
             </div>
             <button onClick={() => openModal(featuredProduct)}
               style={{ width:"100%", background:ACC, color:DARK, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
@@ -472,18 +486,19 @@ export default function UrbanPulse() {
       </section>
 
       {/* NOSOTROS */}
-      <section id="nosotros" style={{ padding:"100px 40px", maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"center" }}>
+      <section id="nosotros" style={{ padding:"100px 40px", maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"center", background:nosotrosBgUp, position:"relative" }}>
+        <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
         <div>
-          <span style={{ color:MID, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>
+          <span style={{ color:nosotrosMidUp, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>
             <EditableZone field="aboutKicker" label="Kicker 'Nosotros'">▶ Nuestra Historia</EditableZone>
           </span>
-          <h2 style={{ fontSize:"clamp(36px,4vw,50px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", lineHeight:1.05, margin:"0 0 28px" }}>
+          <h2 style={{ fontSize:"clamp(36px,4vw,50px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", lineHeight:1.05, margin:"0 0 28px", color:nosotrosTextUp }}>
             <EditableZone field="aboutHeading" label="Título 'Nosotros'">Hacemos ropa para los que no paran.</EditableZone>
           </h2>
-          <p style={{ fontSize:15, color:MID, lineHeight:1.8, marginBottom:16 }}>
+          <p style={{ fontSize:15, color:nosotrosMidUp, lineHeight:1.8, marginBottom:16 }}>
             <EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'">Nacimos con una sola misión: crear ropa que no te frene. Cada prenda está diseñada con tecnología de alta performance para acompañarte desde el primer kilómetro hasta el último rep.</EditableZone>
           </p>
-          <p style={{ fontSize:15, color:MID, lineHeight:1.8, marginBottom:40 }}>
+          <p style={{ fontSize:15, color:nosotrosMidUp, lineHeight:1.8, marginBottom:40 }}>
             <EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'">Sin compromisos. Sin excusas. Solo movimiento.</EditableZone>
           </p>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:24 }}>
@@ -506,14 +521,15 @@ export default function UrbanPulse() {
       </section>
 
       {/* CONTACT */}
-      <section id="contacto" style={{ background:DARK, padding:"80px 40px" }}>
+      <section id="contacto" style={{ background:contactUpBg, padding:"80px 40px", position:"relative" }}>
+        <EditableSectionBg field="bgContacto" label="Fondo contacto" />
         <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80 }}>
           <div>
             <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}><EditableZone field="contactKicker" label="Etiqueta contacto">▶ Contacto</EditableZone></span>
-            <h2 style={{ color:WHITE, fontSize:"clamp(36px,4vw,48px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", lineHeight:1, margin:"0 0 28px" }}>
+            <h2 style={{ color:contactUpText, fontSize:"clamp(36px,4vw,48px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", lineHeight:1, margin:"0 0 28px" }}>
               <EditableZone field="contactHeading" label="Título contacto">Hablemos.</EditableZone>
             </h2>
-            <p style={{ color:"rgba(255,255,255,0.45)", fontSize:14, lineHeight:1.8, marginBottom:40 }}>
+            <p style={{ color:contactUpText, opacity:0.45, fontSize:14, lineHeight:1.8, marginBottom:40 }}>
               <EditableZone field="contactSubtext" label="Subtítulo contacto">Consultas sobre talles, materiales o envíos. Respondemos en menos de 24hs.</EditableZone>
             </p>
             {[
@@ -522,8 +538,8 @@ export default function UrbanPulse() {
               ["WhatsApp","+54 9 11 0000-0000","contactWhatsApp"],
             ].map(([l,v,f]) => (
               <div key={l} style={{ marginBottom:20 }}>
-                <p style={{ margin:0, color:"rgba(255,255,255,0.3)", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase" }}>{l}</p>
-                <p style={{ margin:"4px 0 0", color:WHITE, fontSize:14 }}><EditableZone field={f} label={l}>{v}</EditableZone></p>
+                <p style={{ margin:0, color:contactUpText, opacity:0.3, fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase" }}>{l}</p>
+                <p style={{ margin:"4px 0 0", color:contactUpText, fontSize:14 }}><EditableZone field={f} label={l}>{v}</EditableZone></p>
               </div>
             ))}
           </div>
@@ -531,8 +547,8 @@ export default function UrbanPulse() {
             {contactStatus === "sent" ? (
               <div style={{ height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center", border:`2px solid ${ACC}`, padding:40 }}>
                 <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom:16 }}><polyline points="20 6 9 17 4 12"/></svg>
-                <p style={{ color:WHITE, fontSize:20, fontWeight:900, textTransform:"uppercase", margin:"0 0 8px" }}>¡Mensaje enviado!</p>
-                <p style={{ color:"rgba(255,255,255,0.45)", fontSize:13, margin:0 }}>Te respondemos pronto.</p>
+                <p style={{ color:contactUpText, fontSize:20, fontWeight:900, textTransform:"uppercase", margin:"0 0 8px" }}>¡Mensaje enviado!</p>
+                <p style={{ color:contactUpText, opacity:0.45, fontSize:13, margin:0 }}>Te respondemos pronto.</p>
               </div>
             ) : (
               <form onSubmit={handleContact} style={{ display:"flex", flexDirection:"column", gap:14 }}>
@@ -556,7 +572,8 @@ export default function UrbanPulse() {
       </section>
 
       {/* FOOTER */}
-      <footer style={{ background:"#080808", padding:"60px 40px 28px", borderTop:`3px solid ${ACC}` }}>
+      <footer style={{ background:footerUpBg, padding:"60px 40px 28px", borderTop:`3px solid ${ACC}`, position:"relative" }}>
+        <EditableSectionBg field="bgFooter" label="Fondo footer" />
         <div style={{ maxWidth:1200, margin:"0 auto" }}>
           <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:40, marginBottom:48 }}>
             <div>

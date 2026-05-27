@@ -1,7 +1,7 @@
 ﻿"use client";
 import { useState, useEffect, useRef } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { EditableZone, EditableFixed, EditableImageButton } from "@/contexts/EditContext";
+import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, getContrastColor } from "@/contexts/EditContext";
 
 const BG  = "#faf7f2";
 const S   = "#f0e9df";
@@ -58,6 +58,15 @@ export default function BohoTerra() {
   const storeConfig = useStoreConfig();
   // eslint-disable-next-line @typescript-eslint/no-shadow
   const A = storeConfig?.colors.accent ?? "#b5652a";
+  const sc = storeConfig?.sectionColors ?? {};
+  const heroLeftBg = sc["bgHeroLeft"] ?? BG;
+  const heroLeftText = getContrastColor(heroLeftBg) === "light" ? "#2c2218" : "#faf7f2";
+  const heroLeftMid = getContrastColor(heroLeftBg) === "light" ? "#9a8070" : "#d5c9be";
+  const coleccionBg = sc["bgColeccion"] ?? BG;
+  const nosotrosBg = sc["bgNosotros"] ?? S;
+  const nosotrosText = getContrastColor(nosotrosBg) === "light" ? "#2c2218" : "#faf7f2";
+  const nosotrosMid = getContrastColor(nosotrosBg) === "light" ? "#9a8070" : "#d5c9be";
+  const footerBg = sc["bgFooter"] ?? S;
 
   const [scrolled,            setScrolled]            = useState(false);
   const [activeCategory,      setActiveCategory]      = useState("Todos");
@@ -315,19 +324,20 @@ export default function BohoTerra() {
 
       {/* ── HERO — fondo crema con tipografía grande + foto al costado */}
       <section id="inicio" style={{ paddingTop: 60 + announcementBarHeight, minHeight:"100vh", display:"flex", alignItems:"stretch" }}>
-        <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"80px 80px 80px 80px", maxWidth:600 }}>
+        <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"80px 80px 80px 80px", maxWidth:600, background:heroLeftBg, position:"relative" }}>
+          <EditableSectionBg field="bgHeroLeft" label="Fondo hero" />
           <p style={{ fontSize:11, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:24 }}>
             <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva temporada · 2025"}</EditableZone>
           </p>
-          <h1 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(52px,6vw,90px)", fontWeight:400, lineHeight:1, margin:"0 0 32px", color:T, fontStyle:"italic" }}>
+          <h1 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(52px,6vw,90px)", fontWeight:400, lineHeight:1, margin:"0 0 32px", color:heroLeftText, fontStyle:"italic" }}>
             <EditableZone field="heroHeading" label="Título principal">Lo natural siempre vuelve.</EditableZone>
           </h1>
-          <p style={{ fontSize:15, color:MID, lineHeight:1.8, marginBottom:48, maxWidth:380 }}>
+          <p style={{ fontSize:15, color:heroLeftMid, lineHeight:1.8, marginBottom:48, maxWidth:380 }}>
             <EditableZone field="heroSubtext" label="Subtítulo hero">Ropa hecha con fibras naturales y tinturas vegetales. Artesanal, local, consciente.</EditableZone>
           </p>
-          <button onClick={()=>scrollTo("coleccion")} style={{ alignSelf:"flex-start", background:"none", color:T, border:`1.5px solid ${T}`, padding:"14px 40px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", transition:"all 0.25s" }}
-            onMouseEnter={e=>{ e.currentTarget.style.background=T; e.currentTarget.style.color=BG; }}
-            onMouseLeave={e=>{ e.currentTarget.style.background="none"; e.currentTarget.style.color=T; }}>
+          <button onClick={()=>scrollTo("coleccion")} style={{ alignSelf:"flex-start", background:"none", color:heroLeftText, border:`1.5px solid ${heroLeftText}`, padding:"14px 40px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", transition:"all 0.25s" }}
+            onMouseEnter={e=>{ e.currentTarget.style.background=heroLeftText; e.currentTarget.style.color=heroLeftBg; }}
+            onMouseLeave={e=>{ e.currentTarget.style.background="none"; e.currentTarget.style.color=heroLeftText; }}>
             <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
           </button>
         </div>
@@ -349,7 +359,8 @@ export default function BohoTerra() {
       </section>
 
       {/* ── COLECCIÓN — carrusel */}
-      <section id="coleccion" style={{ padding:"80px 0", background:BG }}>
+      <section id="coleccion" style={{ padding:"80px 0", background:coleccionBg, position:"relative" }}>
+        <EditableSectionBg field="bgColeccion" label="Fondo colección" />
         {/* encabezado */}
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 40px", display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:40, borderBottom:`1px solid rgba(44,34,24,0.1)`, paddingBottom:24 }}>
           <div>
@@ -439,7 +450,8 @@ export default function BohoTerra() {
       </section>
 
       {/* ── NOSOTROS — imagen full width + texto encima */}
-      <section id="nosotros" style={{ background:S }}>
+      <section id="nosotros" style={{ background:nosotrosBg, position:"relative" }}>
+        <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
         {/* foto ancha */}
         <div style={{ position:"relative", height:400, overflow:"hidden" }}>
           <img src={storeConfig?.imageOverrides?.["nosotrosImage"]?.url ?? "https://picsum.photos/seed/terra-about/1920/600"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }}/>
@@ -455,8 +467,8 @@ export default function BohoTerra() {
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"72px 40px", display:"grid", gridTemplateColumns:"1.2fr 1fr", gap:80, alignItems:"start" }}>
           <div>
             <p style={{ fontSize:10, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:16 }}><EditableZone field="aboutKicker" label="Etiqueta 'Nosotros'">Nuestra historia</EditableZone></p>
-            <p style={{ fontSize:15, color:T, lineHeight:1.9, marginBottom:20 }}><EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'" block>Terra nació en Mendoza en 2019 como un pequeño taller de confección artesanal. Hoy somos un equipo de 12 personas que diseña, tiñe y cose cada prenda con materiales de origen responsable.</EditableZone></p>
-            <p style={{ fontSize:15, color:MID, lineHeight:1.9 }}><EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'" block>Trabajamos con productores locales de lino, alpaca y algodón orgánico. Nuestras tinturas son 100% vegetales: cúrcuma, añil, madreselva y cochinilla.</EditableZone></p>
+            <p style={{ fontSize:15, color:nosotrosText, lineHeight:1.9, marginBottom:20 }}><EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'" block>Terra nació en Mendoza en 2019 como un pequeño taller de confección artesanal. Hoy somos un equipo de 12 personas que diseña, tiñe y cose cada prenda con materiales de origen responsable.</EditableZone></p>
+            <p style={{ fontSize:15, color:nosotrosMid, lineHeight:1.9 }}><EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'" block>Trabajamos con productores locales de lino, alpaca y algodón orgánico. Nuestras tinturas son 100% vegetales: cúrcuma, añil, madreselva y cochinilla.</EditableZone></p>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:32 }}>
             {([["aboutStat1","aboutStatLabel1","2019","Año de fundación"],["aboutStat2","aboutStatLabel2","100%","Fibras naturales"],["aboutStat3","aboutStatLabel3","12","Artesanas"],["aboutStat4","aboutStatLabel4","Mendoza","Origen"]] as const).map(([fv,fl,n,label])=>(
@@ -525,7 +537,8 @@ export default function BohoTerra() {
       </section>
 
       {/* ── FOOTER — franja mínima con newsletter prominente */}
-      <footer style={{ background:S, borderTop:`1px solid rgba(44,34,24,0.1)` }}>
+      <footer style={{ background:footerBg, borderTop:`1px solid rgba(44,34,24,0.1)`, position:"relative" }}>
+        <EditableSectionBg field="bgFooter" label="Fondo footer" />
         {/* newsletter strip */}
         <div style={{ background:A, padding:"36px 40px" }}>
           <div style={{ maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", gap:32, flexWrap:"wrap" }}>
@@ -552,13 +565,18 @@ export default function BohoTerra() {
             ))}
           </div>
           <div style={{ display:"flex", gap:8 }}>
-            {["IG","FB","PT"].map(s=>(
-              <button key={s} style={{ background:"none", border:`1px solid rgba(44,34,24,0.2)`, color:MID, width:32, height:32, fontSize:9, fontWeight:700, cursor:"pointer", letterSpacing:1, transition:"all 0.2s" }}
-                onMouseEnter={e=>{ e.currentTarget.style.borderColor=A; e.currentTarget.style.color=A; }}
-                onMouseLeave={e=>{ e.currentTarget.style.borderColor="rgba(44,34,24,0.2)"; e.currentTarget.style.color=MID; }}>
-                {s}
-              </button>
-            ))}
+            {([["IG","instagram"],["FB","facebook"],["PT","pinterest"]] as const).map(([label, key]) => {
+              const url = storeConfig?.socialLinks?.[key];
+              return (
+                <button key={label}
+                  onClick={() => url && window.open(url, "_blank")}
+                  style={{ background:"none", border:`1px solid rgba(44,34,24,0.2)`, color:MID, width:32, height:32, fontSize:9, fontWeight:700, cursor: url ? "pointer" : "default", letterSpacing:1, transition:"all 0.2s", opacity: url ? 1 : 0.35 }}
+                  onMouseEnter={e=>{ if(url){ e.currentTarget.style.borderColor=A; e.currentTarget.style.color=A; }}}
+                  onMouseLeave={e=>{ e.currentTarget.style.borderColor="rgba(44,34,24,0.2)"; e.currentTarget.style.color=MID; }}>
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
         <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, padding:"16px 40px", maxWidth:1280, margin:"0 auto" }}>

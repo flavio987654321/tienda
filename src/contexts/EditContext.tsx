@@ -11,6 +11,8 @@ type EditContextType = {
   resetOverride: (field: string) => void;
   imageOverrides: Record<string, ImageOverride>;
   setImageOverride: (field: string, partial: Partial<ImageOverride>) => void;
+  sectionColors: Record<string, string>;
+  setSectionColor: (field: string, color: string) => void;
 };
 
 export const EditContext = createContext<EditContextType>({
@@ -22,7 +24,18 @@ export const EditContext = createContext<EditContextType>({
   resetOverride: () => {},
   imageOverrides: {},
   setImageOverride: () => {},
+  sectionColors: {},
+  setSectionColor: () => {},
 });
+
+export function getContrastColor(hex: string): "light" | "dark" {
+  if (!hex || hex.length < 7) return "dark";
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return lum > 0.5 ? "dark" : "light";
+}
 
 export function useEditContext() { return useContext(EditContext); }
 
@@ -150,6 +163,50 @@ export function EditableImageButton({
         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
       </svg>
       {label}
+    </button>
+  );
+}
+
+/* ── EditableSectionBg ────────────────────────────────────────
+   Drop inside any section with position:relative to allow the
+   owner to change the section background color. Smart contrast
+   is computed automatically when bg changes.
+──────────────────────────────────────────────────────────────── */
+export function EditableSectionBg({ field, label }: { field: string; label: string }) {
+  const { editMode, activeField, setActiveField, sectionColors } = useEditContext();
+  const [hovered, setHovered] = useState(false);
+  const bgKey = `bg:${field}`;
+  const isActive = activeField === bgKey;
+  const currentColor = sectionColors[field];
+
+  if (!editMode) return null;
+
+  return (
+    <button
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={(e) => { e.stopPropagation(); setActiveField(isActive ? null : bgKey); }}
+      title={`Editar fondo: ${label}`}
+      style={{
+        position: "absolute", top: 16, left: 16, zIndex: 9998,
+        display: "flex", alignItems: "center", gap: 5,
+        padding: "6px 12px", borderRadius: 9, cursor: "pointer",
+        fontSize: 11, fontWeight: 700,
+        background: isActive ? "#6366f1" : hovered ? "rgba(20,20,20,0.9)" : "rgba(20,20,20,0.65)",
+        color: "white",
+        border: isActive ? "2px solid #6366f1" : "1.5px solid rgba(255,255,255,0.25)",
+        backdropFilter: "blur(6px)",
+        transition: "all 0.15s",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+      }}
+    >
+      <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="13.5" cy="6.5" r="2.5"/><path d="M17 13H7a5 5 0 0 0 0 10h10a5 5 0 0 0 0-10z"/><line x1="9" y1="18" x2="15" y2="18"/>
+      </svg>
+      {currentColor && (
+        <span style={{ width: 10, height: 10, borderRadius: 2, background: currentColor, border: "1px solid rgba(255,255,255,0.4)", flexShrink: 0 }} />
+      )}
+      Fondo
     </button>
   );
 }

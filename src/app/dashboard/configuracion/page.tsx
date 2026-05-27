@@ -5,7 +5,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TemplateId, TextOverride, ImageOverride } from "@/types/store-config";
 import { TEMPLATE_DEFAULTS, DEFAULT_CONFIG } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
-import { EditContext, useEditContext } from "@/contexts/EditContext";
+import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
 import FashionNoir from "@/components/store/templates/FashionNoir";
 import BohoTerra from "@/components/store/templates/BohoTerra";
 import UrbanPulse from "@/components/store/templates/UrbanPulse";
@@ -383,6 +383,31 @@ function ConfigModal({ config, update, onClose }: {
             </div>
           </div>
 
+          {/* Redes sociales */}
+          <div style={sec}>
+            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+              🔗 Redes sociales
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {([
+                ["instagram", "📸 Instagram",  "https://instagram.com/tutienda"],
+                ["facebook",  "👤 Facebook",   "https://facebook.com/tutienda"],
+                ["tiktok",    "🎵 TikTok",     "https://tiktok.com/@tutienda"],
+                ["youtube",   "▶ YouTube",     "https://youtube.com/@tutienda"],
+                ["pinterest", "📌 Pinterest",  "https://pinterest.com/tutienda"],
+              ] as const).map(([key, label, ph]) => (
+                <div key={key}>
+                  <label style={lbl}>{label}</label>
+                  <input style={inp} value={config.socialLinks?.[key] ?? ""}
+                    placeholder={ph}
+                    onChange={e => update("socialLinks", { ...config.socialLinks, [key]: e.target.value })}
+                    onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                    onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Moneda & Idioma */}
           <div style={sec}>
             <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
@@ -597,11 +622,12 @@ function ImageFieldEditor({
 
 /* ── Floating editor (text + image) ─────────────────────────── */
 function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, string> }) {
-  const { activeField, setActiveField, overrides, setOverride, resetOverride, imageOverrides, setImageOverride } = useEditContext();
+  const { activeField, setActiveField, overrides, setOverride, resetOverride, imageOverrides, setImageOverride, sectionColors, setSectionColor } = useEditContext();
 
   if (!activeField) return null;
 
   const isImageField = activeField.startsWith("img:");
+  const isBgField = activeField.startsWith("bg:");
   const FONT_OPTIONS = [
     { label: "Predeterminada", value: "" },
     { label: "Sans-serif",     value: "system-ui, -apple-system, sans-serif" },
@@ -617,6 +643,46 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
     boxShadow: "0 -4px 24px rgba(99,102,241,0.18)",
     fontFamily: "system-ui, -apple-system, sans-serif",
   };
+
+  /* ── Background color editor ── */
+  if (isBgField) {
+    const field = activeField.slice(3);
+    const currentColor = sectionColors[field] ?? "#ffffff";
+    const contrast = getContrastColor(currentColor);
+    return (
+      <div style={{ ...base, padding: "10px 16px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", whiteSpace: "nowrap" }}>
+            🎨 Fondo de sección
+          </span>
+          <input type="color" value={currentColor}
+            onChange={e => setSectionColor(field, e.target.value)}
+            style={{ width: 34, height: 28, padding: 2, border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
+          <input value={currentColor}
+            onChange={e => setSectionColor(field, e.target.value)}
+            placeholder="#ffffff"
+            style={{ width: 88, border: "1px solid #d1d5db", borderRadius: 7, padding: "5px 10px", fontSize: 12, outline: "none", fontFamily: "monospace" }}
+            onFocus={e => (e.target.style.borderColor = "#6366f1")}
+            onBlur={e => (e.target.style.borderColor = "#d1d5db")} />
+          <span style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap" }}>
+            Texto auto: <strong style={{ color: contrast === "light" ? "#6366f1" : "#374151" }}>
+              {contrast === "light" ? "☀ claro" : "🌑 oscuro"}
+            </strong>
+          </span>
+          {sectionColors[field] && (
+            <button onClick={() => setSectionColor(field, "")}
+              style={{ width: 30, height: 30, border: "1px solid #e2e8f0", borderRadius: 7, background: "white", cursor: "pointer", fontSize: 14, color: "#94a3b8" }}
+              title="Restablecer">↺</button>
+          )}
+          <button onClick={() => setActiveField(null)}
+            style={{ width: 30, height: 30, border: "none", background: "white", cursor: "pointer", fontSize: 18, color: "#94a3b8" }}>×</button>
+        </div>
+        <p style={{ margin: "6px 0 0", fontSize: 10, color: "#94a3b8" }}>
+          💡 El contraste de texto se ajusta automáticamente según el color de fondo elegido.
+        </p>
+      </div>
+    );
+  }
 
   /* ── Image editor ── */
   if (isImageField) {
@@ -734,6 +800,16 @@ export default function ConfiguracionPage() {
       ...c,
       imageOverrides: { ...c.imageOverrides, [field]: { ...(c.imageOverrides[field] ?? {}), ...partial } },
     }));
+  }, []);
+
+  /* Section color helpers */
+  const setSectionColor = useCallback((field: string, color: string) => {
+    setConfig(c => {
+      const next = { ...c.sectionColors };
+      if (color) next[field] = color;
+      else delete next[field];
+      return { ...c, sectionColors: next };
+    });
   }, []);
 
   const update = useCallback(<K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => {
@@ -898,33 +974,42 @@ export default function ConfiguracionPage() {
     <DashboardLayout fullHeight>
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "#f1f5f9" }}>
 
-        {/* Top bar */}
-        <div style={{ background: "#1e293b", padding: "10px 20px", display: "flex",
-          alignItems: "center", gap: 12, flexShrink: 0, zIndex: 50 }}>
+        {/* Top bar — editor toolbar, visualmente separado del template */}
+        <div style={{ background: "white", borderBottom: "2px solid #6366f1", padding: "8px 20px", display: "flex",
+          alignItems: "center", gap: 12, flexShrink: 0, zIndex: 50,
+          boxShadow: "0 2px 8px rgba(99,102,241,0.12)" }}>
           <button onClick={handleBackToPreview}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
-              border: "1px solid #334155", borderRadius: 8, background: "transparent",
-              color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+              border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
+              color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
             ← Cambiar diseño
           </button>
           <div style={{ display: "flex", gap: 4 }}>
             {selected!.palette.map((c, i) => (
               <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c,
-                border: "1px solid rgba(255,255,255,0.15)" }} />
+                border: "1px solid rgba(0,0,0,0.12)" }} />
             ))}
           </div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{selected!.name}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{selected!.name}</span>
+          {/* Badge "Modo edición" */}
+          <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 9px",
+            background: "#ede9fe", borderRadius: 20, fontSize: 10, fontWeight: 700,
+            color: "#6366f1", letterSpacing: 0.5 }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#6366f1",
+              animation: "pulse 2s infinite" }} />
+            EDITANDO
+          </span>
           <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 11, color: "#475569" }}>Paso 3 de 3</span>
+          <span style={{ fontSize: 11, color: "#94a3b8" }}>Paso 3 de 3</span>
 
           {/* Config avanzada */}
           <button onClick={() => setConfigModalOpen(true)}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
-              border: "1px solid #334155", borderRadius: 8, background: "rgba(255,255,255,0.05)",
-              color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer",
+              border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
+              color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer",
               transition: "all 0.15s", whiteSpace: "nowrap" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "white"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#94a3b8"; }}>
+            onMouseEnter={e => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#0f172a"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "white"; e.currentTarget.style.color = "#64748b"; }}>
             <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
@@ -944,7 +1029,8 @@ export default function ConfiguracionPage() {
         {/* Preview — full width */}
         <div style={{ flex: 1, overflow: "hidden", position: "relative", padding: "12px 16px 0" }}>
           <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column" }}>
+            boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
+            transform: "translate(0,0)" }}>
             <EditContext.Provider value={{
               editMode: true,
               activeField,
@@ -954,6 +1040,8 @@ export default function ConfiguracionPage() {
               resetOverride,
               imageOverrides: config.imageOverrides,
               setImageOverride,
+              sectionColors: config.sectionColors,
+              setSectionColor,
             }}>
               <StoreConfigContext.Provider value={config}>
                 <BrowserFrame storeName={config.storeName}>

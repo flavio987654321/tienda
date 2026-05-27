@@ -1,7 +1,7 @@
 ﻿"use client";
 import { useState, useEffect, useRef } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { EditableZone, EditableFixed, EditableImageButton } from "@/contexts/EditContext";
+import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, getContrastColor } from "@/contexts/EditContext";
 
 /* ── Mock data ─────────────────────────────────────────── */
 const CATEGORIES = ["Todos", "Mujer", "Hombre", "Accesorios"];
@@ -236,6 +236,15 @@ export default function FashionNoir() {
   const catAccesoriosUrl = storeConfig?.imageOverrides?.["catAccesorios"]?.url ?? "https://picsum.photos/seed/noir-cat3/800/1200";
   const nosotrosImageUrl = storeConfig?.imageOverrides?.["nosotrosImage"]?.url ?? "https://picsum.photos/seed/noir-about/900/700";
 
+  const scn = storeConfig?.sectionColors ?? {};
+  const garantiasBg    = scn["bgGarantias"]   ?? BG;
+  const garantiasText  = getContrastColor(garantiasBg)   === "light" ? "#0a0a0a" : T;
+  const statementBg    = scn["bgStatement"]   ?? BG;
+  const statementText  = getContrastColor(statementBg)   === "light" ? "#0a0a0a" : T;
+  const nosotrosPanelBg= scn["bgNosotrosPanel"] ?? S;
+  const nosotrosPanelText = getContrastColor(nosotrosPanelBg) === "light" ? "#0a0a0a" : T;
+  const footerBg       = scn["bgFooter"]      ?? BG;
+
   return (
     <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
 
@@ -392,14 +401,15 @@ export default function FashionNoir() {
       </section>
 
       {/* ── GARANTÍAS ──────────────────────────────────────── */}
-      <section style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, borderBottom:`1px solid rgba(201,168,76,0.12)` }}>
+      <section style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, borderBottom:`1px solid rgba(201,168,76,0.12)`, background:garantiasBg, position:"relative" }}>
+        <EditableSectionBg field="bgGarantias" label="Fondo garantías" />
         <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns:"repeat(4,1fr)" }}>
           {GARANTIAS.map((g, i) => (
             <div key={i} style={{ padding:"28px 32px", display:"flex", alignItems:"center", gap:16, borderRight: i < 3 ? `1px solid rgba(201,168,76,0.1)` : "none" }}>
               <span style={{ color:G, flexShrink:0 }}>{g.svg}</span>
               <div>
-                <p style={{ fontSize:13, fontWeight:700, color:T, margin:"0 0 4px" }}><EditableZone field={`garantia${i+1}Title`} label={`Título garantía ${i+1}`}>{g.title}</EditableZone></p>
-                <p style={{ fontSize:11, opacity:0.45, margin:0, lineHeight:1.5 }}><EditableZone field={`garantia${i+1}Desc`} label={`Descripción garantía ${i+1}`}>{g.desc}</EditableZone></p>
+                <p style={{ fontSize:13, fontWeight:700, color:garantiasText, margin:"0 0 4px" }}><EditableZone field={`garantia${i+1}Title`} label={`Título garantía ${i+1}`}>{g.title}</EditableZone></p>
+                <p style={{ fontSize:11, opacity:0.45, margin:0, lineHeight:1.5, color:garantiasText }}><EditableZone field={`garantia${i+1}Desc`} label={`Descripción garantía ${i+1}`}>{g.desc}</EditableZone></p>
               </div>
             </div>
           ))}
@@ -434,8 +444,9 @@ export default function FashionNoir() {
       </section>
 
       {/* ── STATEMENT ──────────────────────────────────────── */}
-      <section style={{ padding:"72px 32px", borderTop:`1px solid rgba(201,168,76,0.1)`, borderBottom:`1px solid rgba(201,168,76,0.1)`, textAlign:"center" }}>
-        <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(20px,3.5vw,40px)", color:T, opacity:0.88, maxWidth:760, margin:"0 auto", lineHeight:1.5, fontStyle:"italic" }}>
+      <section style={{ padding:"72px 32px", borderTop:`1px solid rgba(201,168,76,0.1)`, borderBottom:`1px solid rgba(201,168,76,0.1)`, textAlign:"center", background:statementBg, position:"relative" }}>
+        <EditableSectionBg field="bgStatement" label="Fondo frase" />
+        <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(20px,3.5vw,40px)", color:statementText, opacity:0.88, maxWidth:760, margin:"0 auto", lineHeight:1.5, fontStyle:"italic" }}>
           <EditableZone field="quoteText" label="Frase destacada">"No compramos ropa. Compramos la versión de nosotros mismos que queremos ser."</EditableZone>
         </p>
         <div style={{ width:56, height:1, background:G, margin:"28px auto 0" }}/>
@@ -520,26 +531,27 @@ export default function FashionNoir() {
             <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
             <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.25)" }}/>
           </div>
-          <div style={{ padding:"80px 72px", display:"flex", flexDirection:"column", justifyContent:"center", gap:24 }}>
+          <div style={{ padding:"80px 72px", display:"flex", flexDirection:"column", justifyContent:"center", gap:24, background:nosotrosPanelBg, position:"relative" }}>
+            <EditableSectionBg field="bgNosotrosPanel" label="Fondo nosotros" />
             <div>
               <p style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", marginBottom:16 }}>
                 <EditableZone field="aboutKicker" label="Kicker 'Nosotros'">Nuestra historia</EditableZone>
               </p>
-              <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(28px,3vw,42px)", lineHeight:1.2, margin:"0 0 24px", color:T }}>
+              <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(28px,3vw,42px)", lineHeight:1.2, margin:"0 0 24px", color:nosotrosPanelText }}>
                 <EditableZone field="aboutHeading" label="Título 'Nosotros'">Creados para quienes eligen con intención.</EditableZone>
               </h2>
             </div>
-            <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85 }}>
+            <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85, color:nosotrosPanelText }}>
               <EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'">NOIR nació en 2018 con una premisa simple: crear piezas que duren más que una temporada. En un mundo saturado de fast fashion, apostamos por la confección artesanal, las telas de origen responsable y los diseños que no envejecen.</EditableZone>
             </p>
-            <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85 }}>
+            <p style={{ fontSize:14, opacity:0.65, lineHeight:1.85, color:nosotrosPanelText }}>
               <EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'">Cada prenda pasa por un proceso riguroso de selección de materiales y control de calidad. Trabajamos con talleres locales y artesanos que comparten nuestra filosofía: menos piezas, más valor.</EditableZone>
             </p>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, paddingTop:8 }}>
               {([["aboutStat1","aboutStatLabel1","2018","Año de fundación"],["aboutStat2","aboutStatLabel2","100%","Producción local"],["aboutStat3","aboutStatLabel3","30+","Artesanos"],["aboutStat4","aboutStatLabel4","8 años","De trayectoria"]] as const).map(([fv,fl,n,label]) => (
                 <div key={label}>
                   <p style={{ fontFamily:"Georgia, serif", fontSize:32, color:G, margin:"0 0 4px", fontWeight:700 }}><EditableZone field={fv} label={`Stat: ${n}`}>{n}</EditableZone></p>
-                  <p style={{ fontSize:11, opacity:0.5, margin:0, lineHeight:1.4 }}><EditableZone field={fl} label={`Etiqueta stat: ${label}`}>{label}</EditableZone></p>
+                  <p style={{ fontSize:11, opacity:0.5, margin:0, lineHeight:1.4, color:nosotrosPanelText }}><EditableZone field={fl} label={`Etiqueta stat: ${label}`}>{label}</EditableZone></p>
                 </div>
               ))}
             </div>
@@ -597,21 +609,27 @@ export default function FashionNoir() {
       </section>
 
       {/* ── FOOTER ─────────────────────────────────────────── */}
-      <footer style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, padding:"60px 32px 32px", marginTop:0 }}>
+      <footer style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, padding:"60px 32px 32px", marginTop:0, background:footerBg, position:"relative" }}>
+        <EditableSectionBg field="bgFooter" label="Fondo footer" />
         <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1.5fr", gap:48, marginBottom:48 }}>
           <div>
-            <span style={{ fontFamily:"Georgia, serif", fontSize:28, fontWeight:700, letterSpacing:6, color:G, display:"block", marginBottom:16 }}>NOIR</span>
+            <span style={{ fontFamily:"Georgia, serif", fontSize:28, fontWeight:700, letterSpacing:6, color:G, display:"block", marginBottom:16 }}><EditableZone field="footerBrandName" label="Nombre en footer">NOIR</EditableZone></span>
             <p style={{ fontSize:13, opacity:0.45, lineHeight:1.8, maxWidth:260 }}>
               <EditableZone field="footerDescription" label="Descripción del footer">Piezas de calidad para personas que saben lo que quieren. Diseño atemporal, confección impecable.</EditableZone>
             </p>
             <div style={{ display:"flex", gap:12, marginTop:24 }}>
-              {["IG","FB","TK","YT"].map(s => (
-                <button key={s} style={{ background:"none", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:34, height:34, fontSize:10, fontWeight:700, cursor:"pointer", letterSpacing:1, transition:"all 0.2s" }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor=G; e.currentTarget.style.color=G; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(240,235,227,0.15)"; e.currentTarget.style.color=T; }}>
-                  {s}
-                </button>
-              ))}
+              {([["IG","instagram"],["FB","facebook"],["TK","tiktok"],["YT","youtube"]] as const).map(([label, key]) => {
+                const url = storeConfig?.socialLinks?.[key];
+                return (
+                  <button key={label}
+                    onClick={() => url && window.open(url, "_blank")}
+                    style={{ background:"none", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:34, height:34, fontSize:10, fontWeight:700, cursor: url ? "pointer" : "default", letterSpacing:1, transition:"all 0.2s", opacity: url ? 1 : 0.35 }}
+                    onMouseEnter={e => { if(url){ e.currentTarget.style.borderColor=G; e.currentTarget.style.color=G; }}}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(240,235,227,0.15)"; e.currentTarget.style.color=T; }}>
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
           {[
