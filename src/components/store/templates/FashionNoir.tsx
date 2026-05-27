@@ -231,6 +231,11 @@ export default function FashionNoir() {
     ? "none"
     : `linear-gradient(to right, rgba(10,10,10,${heroOverlayOpacity}) 45%, rgba(10,10,10,${heroOverlayOpacity * 0.2}))`;
 
+  const catMujerUrl      = storeConfig?.imageOverrides?.["catMujer"]?.url ?? "https://picsum.photos/seed/noir-cat1/800/1200";
+  const catHombreUrl     = storeConfig?.imageOverrides?.["catHombre"]?.url ?? "https://picsum.photos/seed/noir-cat2/800/1200";
+  const catAccesoriosUrl = storeConfig?.imageOverrides?.["catAccesorios"]?.url ?? "https://picsum.photos/seed/noir-cat3/800/1200";
+  const nosotrosImageUrl = storeConfig?.imageOverrides?.["nosotrosImage"]?.url ?? "https://picsum.photos/seed/noir-about/900/700";
+
   return (
     <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
 
@@ -393,8 +398,8 @@ export default function FashionNoir() {
             <div key={i} style={{ padding:"28px 32px", display:"flex", alignItems:"center", gap:16, borderRight: i < 3 ? `1px solid rgba(201,168,76,0.1)` : "none" }}>
               <span style={{ color:G, flexShrink:0 }}>{g.svg}</span>
               <div>
-                <p style={{ fontSize:13, fontWeight:700, color:T, margin:"0 0 4px" }}>{g.title}</p>
-                <p style={{ fontSize:11, opacity:0.45, margin:0, lineHeight:1.5 }}>{g.desc}</p>
+                <p style={{ fontSize:13, fontWeight:700, color:T, margin:"0 0 4px" }}><EditableZone field={`garantia${i+1}Title`} label={`Título garantía ${i+1}`}>{g.title}</EditableZone></p>
+                <p style={{ fontSize:11, opacity:0.45, margin:0, lineHeight:1.5 }}><EditableZone field={`garantia${i+1}Desc`} label={`Descripción garantía ${i+1}`}>{g.desc}</EditableZone></p>
               </div>
             </div>
           ))}
@@ -408,15 +413,16 @@ export default function FashionNoir() {
         </p>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
           {[
-            { label:"Mujer",      img:"https://picsum.photos/seed/noir-cat1/800/1200" },
-            { label:"Hombre",     img:"https://picsum.photos/seed/noir-cat2/800/1200" },
-            { label:"Accesorios", img:"https://picsum.photos/seed/noir-cat3/800/1200" },
+            { label:"Mujer",      img: catMujerUrl,      field:"catMujer" },
+            { label:"Hombre",     img: catHombreUrl,     field:"catHombre" },
+            { label:"Accesorios", img: catAccesoriosUrl, field:"catAccesorios" },
           ].map(cat => (
             <button key={cat.label} onClick={() => { changeCategory(cat.label); scrollTo("productos"); }}
               style={{ position:"relative", aspectRatio:"2/3", overflow:"hidden", background:S, cursor:"pointer", border:"none", display:"block" }}>
               <img src={cat.img} alt={cat.label} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", transition:"transform 0.6s ease" }}
                 onMouseEnter={e => (e.currentTarget.style.transform="scale(1.06)")}
                 onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}/>
+              <EditableImageButton field={cat.field} label={`Imagen ${cat.label}`} />
               <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(10,10,10,0.75) 30%, transparent)" }}/>
               <div style={{ position:"absolute", bottom:32, left:0, right:0, textAlign:"center" }}>
                 <p style={{ fontFamily:"Georgia, serif", fontSize:24, color:T, margin:0, fontWeight:700 }}>{cat.label}</p>
@@ -510,7 +516,8 @@ export default function FashionNoir() {
       <section id="nosotros" style={{ borderTop:`1px solid rgba(201,168,76,0.1)` }}>
         <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr" }}>
           <div style={{ position:"relative", minHeight:560, overflow:"hidden" }}>
-            <img src="https://picsum.photos/seed/noir-about/900/700" alt="Nuestra historia" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+            <img src={nosotrosImageUrl} alt="Nuestra historia" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+            <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
             <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.25)" }}/>
           </div>
           <div style={{ padding:"80px 72px", display:"flex", flexDirection:"column", justifyContent:"center", gap:24 }}>

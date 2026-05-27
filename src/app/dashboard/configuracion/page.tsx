@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useRef } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TemplateId, TextOverride, ImageOverride } from "@/types/store-config";
 import { TEMPLATE_DEFAULTS, DEFAULT_CONFIG } from "@/types/store-config";
@@ -41,6 +42,42 @@ const IMAGE_FIELD_INFO: Record<string, { label: string; tip: string }> = {
     label: "Imagen de fondo del hero",
     tip: "Recomendado: 1920×1080px horizontal. Overlay oscuro para fotos claras, overlay claro para fotos oscuras.",
   },
+  heroImage: {
+    label: "Imagen del hero",
+    tip: "Foto principal junto al titular. Recomendado: 800×900px vertical.",
+  },
+  heroImage1: {
+    label: "Imagen hero izquierda",
+    tip: "Columna izquierda del hero (vertical). Recomendado: 600×900px.",
+  },
+  heroImage2: {
+    label: "Imagen hero superior",
+    tip: "Foto superior derecha del hero. Recomendado: 600×500px.",
+  },
+  heroImage3: {
+    label: "Imagen hero inferior",
+    tip: "Foto inferior derecha del hero. Recomendado: 600×500px.",
+  },
+  catMujer: {
+    label: "Imagen categoría Mujer",
+    tip: "Foto representativa de la categoría Mujer. Recomendado: 800×1200px vertical.",
+  },
+  catHombre: {
+    label: "Imagen categoría Hombre",
+    tip: "Foto representativa de la categoría Hombre. Recomendado: 800×1200px vertical.",
+  },
+  catAccesorios: {
+    label: "Imagen categoría Accesorios",
+    tip: "Foto representativa de la categoría Accesorios. Recomendado: 800×1200px vertical.",
+  },
+  nosotrosImage: {
+    label: "Imagen sección Nosotros",
+    tip: "Foto de tu equipo, taller o espacio. Recomendado: 900×700px horizontal.",
+  },
+  contactBackground: {
+    label: "Imagen de fondo contacto",
+    tip: "Fondo de la sección de contacto. Recomendado: 1920×700px horizontal.",
+  },
 };
 
 /* ── Text field labels ─────────────────────────────────────── */
@@ -78,6 +115,28 @@ const TEXT_FIELD_LABELS: Record<string, string> = {
   footerMadeIn:        "Hecho en",
   storeName:           "Nombre de la tienda",
   storeTagline:        "Tagline",
+  // Garantías (compartido en los 3 templates)
+  garantia1Title:      "Garantía 1 — Título",
+  garantia1Desc:       "Garantía 1 — Descripción",
+  garantia2Title:      "Garantía 2 — Título",
+  garantia2Desc:       "Garantía 2 — Descripción",
+  garantia3Title:      "Garantía 3 — Título",
+  garantia3Desc:       "Garantía 3 — Descripción",
+  garantia4Title:      "Garantía 4 — Título",
+  garantia4Desc:       "Garantía 4 — Descripción",
+  // BohoTerra
+  navHistoriaLabel:    "Enlace Nuestra Historia",
+  footerBrandName:     "Nombre en footer",
+  contactEmail:        "Email de contacto",
+  contactUbicacion:    "Ubicación",
+  contactInstagram:    "Instagram",
+  contactHorario:      "Horario de atención",
+  // UrbanPulse
+  heroNewDropBadge:    "Badge hero",
+  categoryViewAll:     "Botón ver todo",
+  collectionHeading:   "Título sección productos",
+  contactDireccion:    "Dirección",
+  contactWhatsApp:     "WhatsApp de contacto",
 };
 
 /* ── Thumbnail (real template scaled) ─────────────────────── */
@@ -415,6 +474,127 @@ function ConfigModal({ config, update, onClose }: {
   );
 }
 
+/* ── Image field editor (sub-componente con su propio estado) ── */
+function ImageFieldEditor({
+  field, ov, info, currentOverlay, hasChanges, base, setImageOverride, setActiveField,
+}: {
+  field: string;
+  ov: ImageOverride;
+  info: { label: string; tip: string } | undefined;
+  currentOverlay: string;
+  hasChanges: boolean;
+  base: React.CSSProperties;
+  setImageOverride: (field: string, partial: Partial<ImageOverride>) => void;
+  setActiveField: (f: string | null) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `tienda-imagenes/${field}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("tienda-imagenes").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("tienda-imagenes").getPublicUrl(path);
+      setImageOverride(field, { url: data.publicUrl });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error al subir la imagen";
+      setUploadError(msg);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }, [field, setImageOverride]);
+
+  return (
+    <div style={{ ...base, padding: "10px 16px 12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        {/* Label */}
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", whiteSpace: "nowrap" }}>
+          📷 {info?.label ?? field}
+        </span>
+
+        {/* Preview de imagen actual */}
+        {ov.url && (
+          <img src={ov.url} alt="" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6, border: "1px solid #e2e8f0", flexShrink: 0 }} />
+        )}
+
+        {/* Selector de archivo */}
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "6px 14px", borderRadius: 7, border: "1.5px solid #6366f1",
+            background: uploading ? "#e0e7ff" : "#6366f1", color: "white",
+            fontSize: 12, fontWeight: 700, cursor: uploading ? "default" : "pointer",
+            whiteSpace: "nowrap", opacity: uploading ? 0.7 : 1,
+          }}>
+          {uploading ? "Subiendo..." : ov.url ? "Cambiar imagen" : "Elegir imagen"}
+        </button>
+
+        {uploadError && (
+          <span style={{ fontSize: 11, color: "#ef4444", whiteSpace: "nowrap" }}>⚠ {uploadError}</span>
+        )}
+
+        {/* Overlay type */}
+        <span style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap" }}>Overlay:</span>
+        {(["none", "dark", "light"] as const).map(t => (
+          <button key={t} onClick={() => setImageOverride(field, { overlayType: t })}
+            style={{
+              padding: "5px 10px", borderRadius: 6, border: "1.5px solid",
+              borderColor: currentOverlay === t ? "#6366f1" : "#e2e8f0",
+              background: currentOverlay === t ? "#e0e7ff" : "white",
+              color: currentOverlay === t ? "#6366f1" : "#374151",
+              cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+            }}>
+            {t === "none" ? "Sin overlay" : t === "dark" ? "🌑 Oscuro" : "☀️ Claro"}
+          </button>
+        ))}
+
+        {/* Opacity slider */}
+        {currentOverlay !== "none" && (
+          <>
+            <input type="range" min={10} max={90} step={5}
+              value={Math.round((ov.overlayOpacity ?? 0.6) * 100)}
+              onChange={e => setImageOverride(field, { overlayOpacity: Number(e.target.value) / 100 })}
+              style={{ width: 70, accentColor: "#6366f1" }} />
+            <span style={{ fontSize: 11, color: "#374151", minWidth: 28 }}>
+              {Math.round((ov.overlayOpacity ?? 0.6) * 100)}%
+            </span>
+          </>
+        )}
+
+        {/* Reset */}
+        {hasChanges && (
+          <button onClick={() => setImageOverride(field, { url: undefined, overlayType: undefined, overlayOpacity: undefined })}
+            style={{ width: 30, height: 30, border: "1px solid #e2e8f0", borderRadius: 7, background: "white", cursor: "pointer", fontSize: 14, color: "#94a3b8" }}
+            title="Restablecer">↺</button>
+        )}
+
+        {/* Close */}
+        <button onClick={() => setActiveField(null)}
+          style={{ width: 30, height: 30, border: "none", background: "white", cursor: "pointer", fontSize: 18, color: "#94a3b8" }}>×</button>
+      </div>
+
+      {/* Tip */}
+      {info?.tip && (
+        <p style={{ margin: "6px 0 0", fontSize: 10, color: "#94a3b8" }}>
+          💡 {info.tip}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /* ── Floating editor (text + image) ─────────────────────────── */
 function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, string> }) {
   const { activeField, setActiveField, overrides, setOverride, resetOverride, imageOverrides, setImageOverride } = useEditContext();
@@ -446,72 +626,16 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
     const currentOverlay = ov.overlayType ?? "dark";
     const hasChanges = ov.url !== undefined || ov.overlayType !== undefined || ov.overlayOpacity !== undefined;
 
-    return (
-      <div style={{ ...base, padding: "10px 16px 12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          {/* Label */}
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", whiteSpace: "nowrap" }}>
-            📷 {info?.label ?? field}
-          </span>
-
-          {/* URL input */}
-          <input
-            value={ov.url ?? ""}
-            placeholder="URL de la imagen  (ej: https://ejemplo.com/foto.jpg)"
-            onChange={e => setImageOverride(field, { url: e.target.value || undefined })}
-            style={{ flex: 1, minWidth: 220, border: "1px solid #d1d5db", borderRadius: 7, padding: "5px 10px", fontSize: 12, outline: "none" }}
-            onFocus={e => (e.target.style.borderColor = "#6366f1")}
-            onBlur={e => (e.target.style.borderColor = "#d1d5db")}
-          />
-
-          {/* Overlay type */}
-          <span style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap" }}>Overlay:</span>
-          {(["none", "dark", "light"] as const).map(t => (
-            <button key={t} onClick={() => setImageOverride(field, { overlayType: t })}
-              style={{
-                padding: "5px 10px", borderRadius: 6, border: "1.5px solid",
-                borderColor: currentOverlay === t ? "#6366f1" : "#e2e8f0",
-                background: currentOverlay === t ? "#e0e7ff" : "white",
-                color: currentOverlay === t ? "#6366f1" : "#374151",
-                cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
-              }}>
-              {t === "none" ? "Sin overlay" : t === "dark" ? "🌑 Oscuro" : "☀️ Claro"}
-            </button>
-          ))}
-
-          {/* Opacity slider */}
-          {currentOverlay !== "none" && (
-            <>
-              <input type="range" min={10} max={90} step={5}
-                value={Math.round((ov.overlayOpacity ?? 0.6) * 100)}
-                onChange={e => setImageOverride(field, { overlayOpacity: Number(e.target.value) / 100 })}
-                style={{ width: 70, accentColor: "#6366f1" }} />
-              <span style={{ fontSize: 11, color: "#374151", minWidth: 28 }}>
-                {Math.round((ov.overlayOpacity ?? 0.6) * 100)}%
-              </span>
-            </>
-          )}
-
-          {/* Reset */}
-          {hasChanges && (
-            <button onClick={() => setImageOverride(field, { url: undefined, overlayType: undefined, overlayOpacity: undefined })}
-              style={{ width: 30, height: 30, border: "1px solid #e2e8f0", borderRadius: 7, background: "white", cursor: "pointer", fontSize: 14, color: "#94a3b8" }}
-              title="Restablecer">↺</button>
-          )}
-
-          {/* Close */}
-          <button onClick={() => setActiveField(null)}
-            style={{ width: 30, height: 30, border: "none", background: "white", cursor: "pointer", fontSize: 18, color: "#94a3b8" }}>×</button>
-        </div>
-
-        {/* Tip */}
-        {info?.tip && (
-          <p style={{ margin: "6px 0 0", fontSize: 10, color: "#94a3b8" }}>
-            💡 {info.tip}
-          </p>
-        )}
-      </div>
-    );
+    return <ImageFieldEditor
+      field={field}
+      ov={ov}
+      info={info}
+      currentOverlay={currentOverlay}
+      hasChanges={hasChanges}
+      base={base}
+      setImageOverride={setImageOverride}
+      setActiveField={setActiveField}
+    />;
   }
 
   /* ── Text editor ── */

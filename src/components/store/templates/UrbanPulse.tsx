@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { EditableZone, EditableFixed } from "@/contexts/EditContext";
+import { EditableZone, EditableFixed, EditableImageButton } from "@/contexts/EditContext";
 
 type Product = {
   id: string; name: string; price: number; comparePrice?: number;
@@ -297,9 +297,10 @@ export default function UrbanPulse() {
           </div>
         </div>
         <div style={{ position:"relative", overflow:"hidden" }}>
-          <img src="https://picsum.photos/seed/up_hero/800/900" alt="Hero" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+          <img src={storeConfig?.imageOverrides?.["heroImage"]?.url ?? "https://picsum.photos/seed/up_hero/800/900"} alt="Hero" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+          <EditableImageButton field="heroImage" label="Imagen hero" />
           <div style={{ position:"absolute", top:36, right:36, background:ACC, color:DARK, padding:"12px 20px", fontWeight:900, fontSize:10, letterSpacing:4, textTransform:"uppercase" }}>
-            New Drop
+            <EditableZone field="heroNewDropBadge" label="Badge hero">New Drop</EditableZone>
           </div>
         </div>
       </section>
@@ -311,8 +312,8 @@ export default function UrbanPulse() {
             <div key={g.title} style={{ display:"flex", alignItems:"center", gap:12, padding:"18px 24px", borderRight: i < 3 ? `1px solid rgba(0,0,0,0.1)` : "none" }}>
               <span>{g.svg}</span>
               <div>
-                <p style={{ margin:0, fontSize:11, fontWeight:900, letterSpacing:1, textTransform:"uppercase" }}>{g.title}</p>
-                <p style={{ margin:0, fontSize:11, color:MID }}>{g.desc}</p>
+                <p style={{ margin:0, fontSize:11, fontWeight:900, letterSpacing:1, textTransform:"uppercase" }}><EditableZone field={`garantia${i+1}Title`} label={`Título garantía ${i+1}`}>{g.title}</EditableZone></p>
+                <p style={{ margin:0, fontSize:11, color:MID }}><EditableZone field={`garantia${i+1}Desc`} label={`Descripción garantía ${i+1}`}>{g.desc}</EditableZone></p>
               </div>
             </div>
           ))}
@@ -327,18 +328,19 @@ export default function UrbanPulse() {
           </h2>
           <button onClick={() => scrollTo("productos")}
             style={{ background:"none", border:`2px solid ${DARK}`, padding:"10px 24px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
-            Ver todo →
+            <EditableZone field="categoryViewAll" label="Botón ver todo">Ver todo →</EditableZone>
           </button>
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:4 }}>
           {[
-            { label:"Mujer",       cat:"Mujer",       img:"https://picsum.photos/seed/up_cat1/600/700" },
-            { label:"Hombre",      cat:"Hombre",      img:"https://picsum.photos/seed/up_cat2/600/700" },
-            { label:"Accesorios",  cat:"Accesorios",  img:"https://picsum.photos/seed/up_cat3/600/700" },
+            { label:"Mujer",      cat:"Mujer",      img: storeConfig?.imageOverrides?.["catMujer"]?.url ?? "https://picsum.photos/seed/up_cat1/600/700",      field:"catMujer" },
+            { label:"Hombre",     cat:"Hombre",     img: storeConfig?.imageOverrides?.["catHombre"]?.url ?? "https://picsum.photos/seed/up_cat2/600/700",     field:"catHombre" },
+            { label:"Accesorios", cat:"Accesorios", img: storeConfig?.imageOverrides?.["catAccesorios"]?.url ?? "https://picsum.photos/seed/up_cat3/600/700", field:"catAccesorios" },
           ].map(c => (
             <div key={c.label} className="up-cat" onClick={() => { changeCategory(c.cat); scrollTo("productos"); }}
               style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", cursor:"pointer" }}>
               <img src={c.img} alt={c.label} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              <EditableImageButton field={c.field} label={`Imagen ${c.label}`} />
               <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 55%)" }} />
               <div style={{ position:"absolute", bottom:24, left:24 }}>
                 <p style={{ color:WHITE, fontSize:26, fontWeight:900, textTransform:"uppercase", letterSpacing:2, margin:"0 0 6px" }}>{c.label}</p>
@@ -393,7 +395,7 @@ export default function UrbanPulse() {
       {/* PRODUCTS */}
       <section id="productos" style={{ padding:"80px 40px", maxWidth:1200, margin:"0 auto" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:40 }}>
-          <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0 }}>Colección</h2>
+          <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0 }}><EditableZone field="collectionHeading" label="Título sección productos">Colección</EditableZone></h2>
           <div style={{ display:"flex", border:`2px solid ${DARK}` }}>
             {CATEGORIES.map((cat, i) => (
               <button key={cat} onClick={() => changeCategory(cat)}
@@ -494,7 +496,8 @@ export default function UrbanPulse() {
           </div>
         </div>
         <div style={{ position:"relative" }}>
-          <img src="https://picsum.photos/seed/up_about/600/700" alt="Nosotros" style={{ width:"100%", aspectRatio:"4/5", objectFit:"cover", display:"block" }} />
+          <img src={storeConfig?.imageOverrides?.["nosotrosImage"]?.url ?? "https://picsum.photos/seed/up_about/600/700"} alt="Nosotros" style={{ width:"100%", aspectRatio:"4/5", objectFit:"cover", display:"block" }} />
+          <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
           <div style={{ position:"absolute", bottom:-16, left:-16, background:ACC, padding:"20px 28px" }}>
             <p style={{ margin:0, fontSize:12, fontWeight:900, textTransform:"uppercase", letterSpacing:2 }}><EditableZone field="aboutStat4" label="Stat: Desde 2021">Desde 2021</EditableZone></p>
             <p style={{ margin:"4px 0 0", fontSize:11, opacity:0.6 }}><EditableZone field="aboutStatLabel4" label="Etiqueta stat: Vistiendo">Vistiendo a Argentina</EditableZone></p>
@@ -513,10 +516,14 @@ export default function UrbanPulse() {
             <p style={{ color:"rgba(255,255,255,0.45)", fontSize:14, lineHeight:1.8, marginBottom:40 }}>
               <EditableZone field="contactSubtext" label="Subtítulo contacto">Consultas sobre talles, materiales o envíos. Respondemos en menos de 24hs.</EditableZone>
             </p>
-            {[["Dirección","Buenos Aires, Argentina"],["Email","hola@urbanpulse.com"],["WhatsApp","+54 9 11 0000-0000"]].map(([l,v]) => (
+            {[
+              ["Dirección","Buenos Aires, Argentina","contactDireccion"],
+              ["Email","hola@urbanpulse.com","contactEmail"],
+              ["WhatsApp","+54 9 11 0000-0000","contactWhatsApp"],
+            ].map(([l,v,f]) => (
               <div key={l} style={{ marginBottom:20 }}>
                 <p style={{ margin:0, color:"rgba(255,255,255,0.3)", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase" }}>{l}</p>
-                <p style={{ margin:"4px 0 0", color:WHITE, fontSize:14 }}>{v}</p>
+                <p style={{ margin:"4px 0 0", color:WHITE, fontSize:14 }}><EditableZone field={f} label={l}>{v}</EditableZone></p>
               </div>
             ))}
           </div>

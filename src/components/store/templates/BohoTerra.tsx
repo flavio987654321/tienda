@@ -1,7 +1,7 @@
 ﻿"use client";
 import { useState, useEffect, useRef } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { EditableZone, EditableFixed } from "@/contexts/EditContext";
+import { EditableZone, EditableFixed, EditableImageButton } from "@/contexts/EditContext";
 
 const BG  = "#faf7f2";
 const S   = "#f0e9df";
@@ -272,7 +272,7 @@ export default function BohoTerra() {
             ))}
           </div>
           <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-            <button onClick={()=>scrollTo("nosotros")} style={{ background:"none", border:"none", color:MID, fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>{"Nuestra Historia"}</button>
+            <button onClick={()=>scrollTo("nosotros")} style={{ background:"none", border:"none", color:MID, fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="navHistoriaLabel" label="Enlace Nuestra Historia">Nuestra Historia</EditableZone></button>
             {/* Search icon */}
             <button onClick={() => setSearchOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -333,14 +333,17 @@ export default function BohoTerra() {
         </div>
         {/* fotos apiladas */}
         <div style={{ flex:1, display:"grid", gridTemplateRows:"1fr 1fr", gridTemplateColumns:"1fr 1fr", gap:4, padding:4 }}>
-          <div style={{ overflow:"hidden", gridRow:"1/3" }}>
-            <img src="https://picsum.photos/seed/terra-h1/600/900" alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+          <div style={{ overflow:"hidden", gridRow:"1/3", position:"relative" }}>
+            <img src={storeConfig?.imageOverrides?.["heroImage1"]?.url ?? "https://picsum.photos/seed/terra-h1/600/900"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+            <EditableImageButton field="heroImage1" label="Imagen hero izquierda" />
           </div>
-          <div style={{ overflow:"hidden" }}>
-            <img src="https://picsum.photos/seed/terra-h2/600/500" alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+          <div style={{ overflow:"hidden", position:"relative" }}>
+            <img src={storeConfig?.imageOverrides?.["heroImage2"]?.url ?? "https://picsum.photos/seed/terra-h2/600/500"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+            <EditableImageButton field="heroImage2" label="Imagen hero superior" />
           </div>
-          <div style={{ overflow:"hidden" }}>
-            <img src="https://picsum.photos/seed/terra-h3/600/500" alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+          <div style={{ overflow:"hidden", position:"relative" }}>
+            <img src={storeConfig?.imageOverrides?.["heroImage3"]?.url ?? "https://picsum.photos/seed/terra-h3/600/500"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+            <EditableImageButton field="heroImage3" label="Imagen hero inferior" />
           </div>
         </div>
       </section>
@@ -439,7 +442,8 @@ export default function BohoTerra() {
       <section id="nosotros" style={{ background:S }}>
         {/* foto ancha */}
         <div style={{ position:"relative", height:400, overflow:"hidden" }}>
-          <img src="https://picsum.photos/seed/terra-about/1920/600" alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }}/>
+          <img src={storeConfig?.imageOverrides?.["nosotrosImage"]?.url ?? "https://picsum.photos/seed/terra-about/1920/600"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }}/>
+          <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
           <div style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.45)" }}/>
           <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
             <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,4vw,54px)", fontStyle:"italic", color:"#faf7f2", textAlign:"center", lineHeight:1.3 }}>
@@ -467,7 +471,8 @@ export default function BohoTerra() {
 
       {/* ── CONTACTO — imagen de fondo + form superpuesto */}
       <section id="contacto" style={{ position:"relative", overflow:"hidden" }}>
-        <img src="https://picsum.photos/seed/terra-contact/1920/700" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 60%" }}/>
+        <img src={storeConfig?.imageOverrides?.["contactBackground"]?.url ?? "https://picsum.photos/seed/terra-contact/1920/700"} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 60%" }}/>
+        <EditableImageButton field="contactBackground" label="Imagen fondo contacto" />
         <div style={{ position:"absolute", inset:0, background:"rgba(250,247,242,0.88)" }}/>
         <div style={{ position:"relative", maxWidth:1280, margin:"0 auto", padding:"80px 40px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"center", minHeight:500 }}>
           {/* izq — texto e info */}
@@ -476,14 +481,14 @@ export default function BohoTerra() {
             <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(30px,4vw,56px)", fontStyle:"italic", fontWeight:400, margin:"0 0 28px", color:T, lineHeight:1.1 }}><EditableZone field="contactHeading" label="Título contacto" block>Estamos para ayudarte.</EditableZone></h2>
             <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
               {[
-                { label:"Email", val:"hola@terra.com.ar" },
-                { label:"Ubicación", val:"Belgrano 456, Mendoza" },
-                { label:"Instagram", val:"@terra.indumentaria" },
-                { label:"Horario", val:"Lun–Vie 9 a 18 hs" },
+                { label:"Email",     val:"hola@terra.com.ar",       field:"contactEmail" },
+                { label:"Ubicación", val:"Belgrano 456, Mendoza",   field:"contactUbicacion" },
+                { label:"Instagram", val:"@terra.indumentaria",     field:"contactInstagram" },
+                { label:"Horario",   val:"Lun–Vie 9 a 18 hs",      field:"contactHorario" },
               ].map(item=>(
                 <div key={item.label} style={{ display:"flex", gap:20, alignItems:"baseline", borderBottom:`1px solid rgba(44,34,24,0.08)`, paddingBottom:14 }}>
                   <span style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:A, minWidth:80 }}>{item.label}</span>
-                  <span style={{ fontSize:14, color:MID }}>{item.val}</span>
+                  <span style={{ fontSize:14, color:MID }}><EditableZone field={item.field} label={item.label}>{item.val}</EditableZone></span>
                 </div>
               ))}
             </div>
@@ -536,7 +541,7 @@ export default function BohoTerra() {
         </div>
         {/* links + copyright */}
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"28px 40px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:20 }}>
-          <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:T, letterSpacing:2 }}>Terra</span>
+          <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:T, letterSpacing:2 }}><EditableZone field="footerBrandName" label="Nombre en footer">Terra</EditableZone></span>
           <div style={{ display:"flex", gap:24 }}>
             {[["Colección","coleccion"],["Nosotros","nosotros"],["Contacto","contacto"],["Envíos","contacto"],["Devoluciones","contacto"]].map(([l,t])=>(
               <button key={l} onClick={()=>scrollTo(t)} style={{ background:"none", border:"none", color:MID, fontSize:12, cursor:"pointer", transition:"color 0.2s" }}
