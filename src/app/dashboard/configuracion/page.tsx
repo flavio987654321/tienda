@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TemplateId } from "@/types/store-config";
 import { TEMPLATE_DEFAULTS, DEFAULT_CONFIG } from "@/types/store-config";
@@ -8,20 +8,35 @@ import FashionNoir from "@/components/store/templates/FashionNoir";
 import BohoTerra from "@/components/store/templates/BohoTerra";
 import UrbanPulse from "@/components/store/templates/UrbanPulse";
 
-/* ── Template metadata ─────────────────────────────────── */
-const TEMPLATES: { id: TemplateId; name: string; desc: string; palette: string[] }[] = [
-  { id: "fashion-noir", name: "Fashion Noir", desc: "Lujo · Moda · Oscuro",        palette: ["#0a0a0a", "#c9a84c", "#f0ebe3"] },
-  { id: "boho-terra",   name: "Boho Terra",   desc: "Orgánico · Natural · Cálido", palette: ["#faf7f2", "#b5652a", "#2c2218"] },
-  { id: "urban-pulse",  name: "Urban Pulse",  desc: "Deportivo · Energético",      palette: ["#0f0f0f", "#d4ff00", "#f5f5f5"] },
-];
-
-const TEMPLATE_COMPONENTS: Record<TemplateId, React.ComponentType> = {
-  "fashion-noir": FashionNoir,
-  "boho-terra":   BohoTerra,
-  "urban-pulse":  UrbanPulse,
+/* ── Template registry ─────────────────────────────────── */
+type TemplateInfo = {
+  id: TemplateId;
+  name: string;
+  desc: string;
+  palette: string[];
+  component: React.ComponentType;
 };
 
-/* ── Helpers ───────────────────────────────────────────── */
+type Category = {
+  id: string;
+  name: string;
+  templates: TemplateInfo[];
+};
+
+const CATEGORIES: Category[] = [
+  {
+    id: "moda",
+    name: "Moda & Ropa",
+    templates: [
+      { id: "fashion-noir", name: "Fashion Noir", desc: "Lujo · Oscuro · Editorial",   palette: ["#0a0a0a", "#c9a84c", "#f0ebe3"], component: FashionNoir },
+      { id: "boho-terra",   name: "Boho Terra",   desc: "Orgánico · Natural · Cálido", palette: ["#faf7f2", "#b5652a", "#2c2218"], component: BohoTerra  },
+      { id: "urban-pulse",  name: "Urban Pulse",  desc: "Deportivo · Energético",       palette: ["#0f0f0f", "#d4ff00", "#f5f5f5"], component: UrbanPulse },
+    ],
+  },
+  // Próximas categorías se agregan aquí
+];
+
+/* ── Config form helpers ────────────────────────────────── */
 const labelStyle: React.CSSProperties = {
   display: "block", fontSize: 11, fontWeight: 600, color: "#555",
   marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5,
@@ -65,10 +80,208 @@ function Section({ id, label, icon, open, onToggle, children }: {
   );
 }
 
+/* ── Template card (in carousel) ───────────────────────── */
+function TemplateCard({ t, onSelect }: { t: TemplateInfo; onSelect: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={onSelect}
+      style={{
+        flexShrink: 0, width: 180, borderRadius: 12, overflow: "hidden", cursor: "pointer",
+        border: "2px solid", borderColor: hovered ? "#6366f1" : "#e2e8f0",
+        background: "white", transition: "all 0.2s",
+        boxShadow: hovered ? "0 8px 24px rgba(99,102,241,0.18)" : "0 2px 8px rgba(0,0,0,0.07)",
+        transform: hovered ? "translateY(-3px)" : "none",
+      }}>
+      {/* Mini screen preview using palette */}
+      <div style={{ height: 110, position: "relative", overflow: "hidden" }}>
+        {/* Background */}
+        <div style={{ position: "absolute", inset: 0, background: t.palette[0] }} />
+        {/* Fake navbar */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 22,
+          background: t.palette[0], borderBottom: `2px solid ${t.palette[1]}20`,
+          display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 50, height: 6, borderRadius: 3, background: t.palette[1], opacity: 0.9 }} />
+        </div>
+        {/* Fake hero */}
+        <div style={{ position: "absolute", top: 22, left: 0, right: 0, height: 44,
+          background: `linear-gradient(135deg, ${t.palette[0]}, ${t.palette[1]}40)`,
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+          <div style={{ width: 30, height: 7, borderRadius: 4, background: t.palette[2], opacity: 0.85 }} />
+          <div style={{ width: 18, height: 7, borderRadius: 4, background: t.palette[1] }} />
+        </div>
+        {/* Fake product cards */}
+        <div style={{ position: "absolute", bottom: 6, left: 6, right: 6, display: "flex", gap: 4 }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ flex: 1, height: 30, borderRadius: 5,
+              background: i === 0 ? t.palette[1] + "30" : t.palette[2] + "20",
+              border: `1px solid ${t.palette[1]}20` }} />
+          ))}
+        </div>
+        {/* Accent bar at top */}
+        <div style={{ position: "absolute", top: 0, left: 0, width: 3, height: "100%", background: t.palette[1] }} />
+      </div>
+
+      {/* Card footer */}
+      <div style={{ padding: "10px 12px 12px" }}>
+        {/* Palette dots */}
+        <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+          {t.palette.map((c, i) => (
+            <div key={i} style={{ width: 14, height: 14, borderRadius: "50%", background: c,
+              border: "1.5px solid rgba(0,0,0,0.1)" }} />
+          ))}
+        </div>
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#1e293b" }}>{t.name}</p>
+        <p style={{ margin: "3px 0 8px", fontSize: 10, color: "#94a3b8", lineHeight: 1.3 }}>{t.desc}</p>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "6px", borderRadius: 7, fontSize: 11, fontWeight: 700,
+          background: hovered ? "#6366f1" : "#f1f5f9",
+          color: hovered ? "white" : "#64748b", transition: "all 0.2s",
+        }}>
+          {hovered ? "Elegir diseño →" : "Ver diseño"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Carousel row ───────────────────────────────────────── */
+function CarouselRow({ templates, onSelect }: { templates: TemplateInfo[]; onSelect: (t: TemplateInfo) => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scroll = (dir: "l" | "r") => {
+    scrollRef.current?.scrollBy({ left: dir === "l" ? -220 : 220, behavior: "smooth" });
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button onClick={() => scroll("l")} style={{
+        position: "absolute", left: -18, top: "50%", transform: "translateY(-50%)",
+        width: 34, height: 34, borderRadius: "50%", border: "1px solid #e2e8f0",
+        background: "white", cursor: "pointer", zIndex: 2, fontSize: 14, color: "#64748b",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
+      }}>‹</button>
+
+      <div ref={scrollRef} style={{
+        display: "flex", gap: 16, overflowX: "auto", paddingBottom: 8,
+        scrollSnapType: "x mandatory",
+        scrollbarWidth: "none", msOverflowStyle: "none",
+      }}>
+        {templates.map(t => (
+          <div key={t.id} style={{ scrollSnapAlign: "start" }}>
+            <TemplateCard t={t} onSelect={() => onSelect(t)} />
+          </div>
+        ))}
+      </div>
+
+      <button onClick={() => scroll("r")} style={{
+        position: "absolute", right: -18, top: "50%", transform: "translateY(-50%)",
+        width: 34, height: 34, borderRadius: "50%", border: "1px solid #e2e8f0",
+        background: "white", cursor: "pointer", zIndex: 2, fontSize: 14, color: "#64748b",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
+      }}>›</button>
+    </div>
+  );
+}
+
+/* ── Gallery view (computer screen) ────────────────────── */
+function GalleryView({ onSelect }: { onSelect: (t: TemplateInfo) => void }) {
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+      justifyContent: "center", background: "#f1f5f9", padding: "24px 40px 0" }}>
+
+      {/* Monitor frame */}
+      <div style={{
+        width: "100%", maxWidth: 860, flex: 1,
+        borderRadius: "14px 14px 0 0",
+        background: "#1e293b",
+        boxShadow: "0 0 0 2px #334155, 0 20px 60px rgba(0,0,0,0.35)",
+        display: "flex", flexDirection: "column", overflow: "hidden",
+        minHeight: 0,
+      }}>
+        {/* Screen bezel top */}
+        <div style={{ height: 36, background: "#1e293b", display: "flex", alignItems: "center",
+          justifyContent: "center", flexShrink: 0 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#334155" }} />
+        </div>
+
+        {/* Screen content */}
+        <div style={{
+          flex: 1, background: "white", overflowY: "auto", overflowX: "hidden",
+          padding: "32px 48px",
+        }}>
+          <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "#94a3b8",
+            textTransform: "uppercase", letterSpacing: 1 }}>
+            Paso 1
+          </p>
+          <h1 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 800, color: "#0f172a" }}>
+            Elegí el diseño de tu tienda
+          </h1>
+          <p style={{ margin: "0 0 36px", fontSize: 13, color: "#64748b" }}>
+            Después vas a poder personalizar colores, texto y más.
+          </p>
+
+          {CATEGORIES.map(cat => (
+            <div key={cat.id} style={{ marginBottom: 40 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: "#0f172a",
+                  textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  {cat.name}
+                </span>
+                <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+                <span style={{ fontSize: 11, color: "#94a3b8" }}>{cat.templates.length} diseños</span>
+              </div>
+              <CarouselRow templates={cat.templates} onSelect={onSelect} />
+            </div>
+          ))}
+
+          {/* Coming soon placeholder */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: "#cbd5e1",
+                textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Más rubros próximamente
+              </span>
+              <div style={{ flex: 1, height: 1, background: "#f1f5f9" }} />
+            </div>
+            <div style={{ display: "flex", gap: 16 }}>
+              {["Gastronomía", "Accesorios", "Belleza", "Tecnología"].map(label => (
+                <div key={label} style={{
+                  width: 180, height: 160, borderRadius: 12, border: "2px dashed #e2e8f0",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  color: "#cbd5e1", gap: 8,
+                }}>
+                  <span style={{ fontSize: 28 }}>+</span>
+                  <span style={{ fontSize: 11, fontWeight: 600 }}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Monitor stand */}
+      <div style={{ width: "100%", maxWidth: 860, display: "flex", justifyContent: "center",
+        flexShrink: 0 }}>
+        <div style={{ width: 120, height: 18, background: "#1e293b",
+          borderRadius: "0 0 4px 4px", boxShadow: "0 4px 0 #334155" }} />
+      </div>
+      <div style={{ width: "100%", maxWidth: 860, display: "flex", justifyContent: "center",
+        flexShrink: 0 }}>
+        <div style={{ width: 220, height: 10, background: "#334155",
+          borderRadius: "0 0 8px 8px" }} />
+      </div>
+    </div>
+  );
+}
+
 /* ── Main page ─────────────────────────────────────────── */
 export default function ConfiguracionPage() {
+  const [selected, setSelected] = useState<TemplateInfo | null>(null);
   const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
-  const [openSection, setOpenSection] = useState<string>("template");
+  const [openSection, setOpenSection] = useState<string>("info");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -78,10 +291,15 @@ export default function ConfiguracionPage() {
 
   const toggleSection = (id: string) => setOpenSection(s => s === id ? "" : id);
 
-  const selectTemplate = (id: TemplateId) => {
-    const defaults = TEMPLATE_DEFAULTS[id];
-    setConfig(c => ({ ...c, template: id, colors: { accent: defaults.accent } }));
+  const handleSelect = (t: TemplateInfo) => {
+    const defaults = TEMPLATE_DEFAULTS[t.id];
+    setSelected(t);
+    setConfig(c => ({ ...c, template: t.id, colors: { accent: defaults.accent },
+      storeName: defaults.storeName }));
+    setOpenSection("info");
   };
+
+  const handleBack = () => setSelected(null);
 
   const handleSave = async () => {
     setSaving(true);
@@ -91,7 +309,19 @@ export default function ConfiguracionPage() {
     setTimeout(() => setSaved(false), 2200);
   };
 
-  const TemplateComponent = TEMPLATE_COMPONENTS[config.template];
+  /* ── Gallery mode ── */
+  if (!selected) {
+    return (
+      <DashboardLayout>
+        <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
+          <GalleryView onSelect={handleSelect} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  /* ── Editing mode ── */
+  const TemplateComponent = selected.component;
 
   return (
     <DashboardLayout>
@@ -103,40 +333,17 @@ export default function ConfiguracionPage() {
           flexDirection: "column", background: "white",
           borderRight: "1px solid #e2e8f0", boxShadow: "2px 0 12px rgba(0,0,0,0.04)",
         }}>
-          {/* Header */}
           <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid #f1f5f9" }}>
-            <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#0f172a" }}>Diseñá tu tienda</h1>
-            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#94a3b8" }}>Preview en vivo mientras editás</p>
+            <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
+              {selected.name}
+            </h1>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#94a3b8" }}>
+              {selected.desc}
+            </p>
           </div>
 
-          {/* Scrollable sections */}
           <div style={{ flex: 1, overflowY: "auto" }}>
 
-            {/* Template selector */}
-            <Section id="template" label="Template" icon="🎨" open={openSection === "template"} onToggle={toggleSection}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {TEMPLATES.map(t => (
-                  <button key={t.id} type="button" onClick={() => selectTemplate(t.id)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 12, padding: "10px 12px",
-                      border: `2px solid ${config.template === t.id ? "#6366f1" : "#e2e8f0"}`,
-                      borderRadius: 10, background: config.template === t.id ? "#f0f0ff" : "white",
-                      cursor: "pointer", textAlign: "left", transition: "all 0.15s",
-                    }}>
-                    <div style={{ display: "flex", borderRadius: 6, overflow: "hidden", flexShrink: 0, border: "1px solid rgba(0,0,0,0.08)" }}>
-                      {t.palette.map((c, i) => <div key={i} style={{ width: 16, height: 34, background: c }} />)}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>{t.name}</p>
-                      <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.desc}</p>
-                    </div>
-                    {config.template === t.id && <span style={{ color: "#6366f1", fontSize: 16, flexShrink: 0 }}>✓</span>}
-                  </button>
-                ))}
-              </div>
-            </Section>
-
-            {/* Información */}
             <Section id="info" label="Información" icon="🏪" open={openSection === "info"} onToggle={toggleSection}>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div>
@@ -156,14 +363,14 @@ export default function ConfiguracionPage() {
               </div>
             </Section>
 
-            {/* Colores */}
             <Section id="colores" label="Colores" icon="🎨" open={openSection === "colores"} onToggle={toggleSection}>
               <div>
                 <label style={labelStyle}>Color de acento</label>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   <input type="color" value={config.colors.accent}
                     onChange={e => update("colors", { ...config.colors, accent: e.target.value })}
-                    style={{ width: 40, height: 38, padding: 2, border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", flexShrink: 0 }} />
+                    style={{ width: 40, height: 38, padding: 2, border: "1px solid #e2e8f0",
+                      borderRadius: 8, cursor: "pointer", flexShrink: 0 }} />
                   <input style={{ ...inputStyle, fontFamily: "monospace", flex: 1 }}
                     value={config.colors.accent}
                     onChange={e => update("colors", { ...config.colors, accent: e.target.value })}
@@ -171,12 +378,11 @@ export default function ConfiguracionPage() {
                     onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
                 </div>
                 <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>
-                  Afecta botones, precios y elementos destacados del template.
+                  Afecta botones, precios y elementos destacados.
                 </p>
               </div>
             </Section>
 
-            {/* WhatsApp */}
             <Section id="whatsapp" label="WhatsApp" icon="💬" open={openSection === "whatsapp"} onToggle={toggleSection}>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -200,7 +406,6 @@ export default function ConfiguracionPage() {
               </div>
             </Section>
 
-            {/* Moneda & Idioma */}
             <Section id="moneda" label="Moneda & Idioma" icon="💱" open={openSection === "moneda"} onToggle={toggleSection}>
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div>
@@ -238,7 +443,6 @@ export default function ConfiguracionPage() {
               </div>
             </Section>
 
-            {/* SEO */}
             <Section id="seo" label="SEO / Google" icon="🔍" open={openSection === "seo"} onToggle={toggleSection}>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -275,34 +479,42 @@ export default function ConfiguracionPage() {
 
           </div>
 
-          {/* Save button */}
-          <div style={{ padding: "14px 20px", borderTop: "1px solid #f1f5f9" }}>
+          <div style={{ padding: "14px 20px", borderTop: "1px solid #f1f5f9", display: "flex", flexDirection: "column", gap: 8 }}>
             <button type="button" onClick={handleSave} disabled={saving}
               style={{
-                width: "100%", padding: "12px", border: "none", borderRadius: 10, cursor: saving ? "not-allowed" : "pointer",
+                width: "100%", padding: "12px", border: "none", borderRadius: 10,
+                cursor: saving ? "not-allowed" : "pointer",
                 fontSize: 13, fontWeight: 700, transition: "background 0.25s",
                 background: saved ? "#10b981" : "#6366f1", color: "white",
               }}>
               {saving ? "Guardando..." : saved ? "✓ Cambios guardados" : "Guardar cambios"}
+            </button>
+            <button type="button" onClick={handleBack}
+              style={{
+                width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 10,
+                cursor: "pointer", fontSize: 12, fontWeight: 600, background: "white",
+                color: "#64748b", transition: "all 0.15s",
+              }}>
+              ← Ver otros diseños
             </button>
           </div>
         </aside>
 
         {/* ── RIGHT PANEL — Preview ────────────────────────── */}
         <main style={{ flex: 1, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          {/* Browser chrome */}
-          <div style={{ background: "#1e293b", padding: "10px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+          <div style={{ background: "#1e293b", padding: "10px 16px", display: "flex",
+            alignItems: "center", gap: 12, flexShrink: 0 }}>
             <div style={{ display: "flex", gap: 6 }}>
               <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff5f57" }} />
               <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ffbd2e" }} />
               <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#28ca41" }} />
             </div>
-            <div style={{ flex: 1, background: "#0f172a", borderRadius: 6, padding: "5px 14px", fontSize: 12, color: "#64748b", textAlign: "center", userSelect: "none" }}>
+            <div style={{ flex: 1, background: "#0f172a", borderRadius: 6, padding: "5px 14px",
+              fontSize: 12, color: "#64748b", textAlign: "center", userSelect: "none" }}>
               mitienda.com/tienda/{config.storeName.toLowerCase().replace(/\s+/g, "-")}
             </div>
           </div>
 
-          {/* Template preview — rendered inline, no iframe */}
           <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
             <StoreConfigContext.Provider value={config}>
               <TemplateComponent />
