@@ -10,6 +10,12 @@ export type TextOverride = {
   underline?: boolean;
 };
 
+export type ImageOverride = {
+  url?: string;
+  overlayType?: "none" | "dark" | "light";
+  overlayOpacity?: number;
+};
+
 export type StoreConfig = {
   template: TemplateId;
   storeName: string;
@@ -29,6 +35,7 @@ export type StoreConfig = {
     description: string;
   };
   textOverrides: Record<string, TextOverride>;
+  imageOverrides: Record<string, ImageOverride>;
 };
 
 export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: string }> = {
@@ -47,4 +54,5 @@ export const DEFAULT_CONFIG: StoreConfig = {
   language:      "ES",
   seo:           { enabled: false, title: "", description: "" },
   textOverrides: {},
+  imageOverrides: {},
 };

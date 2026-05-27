@@ -1,7 +1,7 @@
 ﻿"use client";
 import { useState, useEffect, useRef } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { EditableZone, EditableFixed } from "@/contexts/EditContext";
+import { EditableZone, EditableFixed, EditableImageButton } from "@/contexts/EditContext";
 
 /* ── Mock data ─────────────────────────────────────────── */
 const CATEGORIES = ["Todos", "Mujer", "Hombre", "Accesorios"];
@@ -216,6 +216,21 @@ export default function FashionNoir() {
   const S  = "#111";     // surface
   const T  = "#f0ebe3";  // text
 
+  /* ─ Hero image con override dinámico ─ */
+  const heroImageOv       = storeConfig?.imageOverrides?.["heroBackground"];
+  const heroImageUrl      = heroImageOv?.url ?? "https://picsum.photos/seed/noir-hero/1920/1080";
+  const heroOverlayType   = heroImageOv?.overlayType ?? "dark";
+  const heroOverlayOpacity = heroImageOv?.overlayOpacity ?? 0.6;
+
+  // Contraste inteligente: overlay claro → texto oscuro
+  const heroTextColor = heroOverlayType === "light" ? "#0f0f0f" : T;
+  const heroAccentColor = heroOverlayType === "light" ? "#333" : G;
+  const heroGradient = heroOverlayType === "light"
+    ? `linear-gradient(to right, rgba(255,255,255,${heroOverlayOpacity}) 45%, rgba(255,255,255,${heroOverlayOpacity * 0.3}))`
+    : heroOverlayType === "none"
+    ? "none"
+    : `linear-gradient(to right, rgba(10,10,10,${heroOverlayOpacity}) 45%, rgba(10,10,10,${heroOverlayOpacity * 0.2}))`;
+
   return (
     <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
 
@@ -339,32 +354,35 @@ export default function FashionNoir() {
 
       {/* ── HERO ───────────────────────────────────────────── */}
       <section id="hero" style={{ position:"relative", height:"100vh", minHeight:600, overflow:"hidden" }}>
-        <img src="https://picsum.photos/seed/noir-hero/1920/1080" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }}/>
-        <div style={{ position:"absolute", inset:0, background:"linear-gradient(to right, rgba(10,10,10,0.8) 45%, rgba(10,10,10,0.15))" }}/>
+        <img src={heroImageUrl} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }}/>
+        {heroOverlayType !== "none" && (
+          <div style={{ position:"absolute", inset:0, background:heroGradient }}/>
+        )}
+        <EditableImageButton field="heroBackground" label="Cambiar imagen" />
         <div style={{ position:"relative", height:"100%", display:"flex", alignItems:"center", padding:"0 80px", maxWidth:1280, margin:"0 auto" }}>
           <div style={{ maxWidth:520 }}>
-            <p style={{ fontSize:11, letterSpacing:5, color:G, marginBottom:20, textTransform:"uppercase" }}>
+            <p style={{ fontSize:11, letterSpacing:5, color:heroAccentColor, marginBottom:20, textTransform:"uppercase" }}>
               <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva Temporada · Otoño 2025"}</EditableZone>
             </p>
-            <h1 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(42px,6vw,80px)", fontWeight:700, lineHeight:1.05, margin:"0 0 20px", color:T }}>
+            <h1 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(42px,6vw,80px)", fontWeight:700, lineHeight:1.05, margin:"0 0 20px", color:heroTextColor }}>
               <EditableZone field="heroHeading" label="Título principal">Vestí tu esencia.</EditableZone>
             </h1>
-            <p style={{ fontSize:16, opacity:0.75, lineHeight:1.7, marginBottom:40, maxWidth:380 }}>
+            <p style={{ fontSize:16, opacity:0.75, lineHeight:1.7, marginBottom:40, maxWidth:380, color:heroTextColor }}>
               <EditableZone field="heroSubtext" label="Subtítulo hero">Piezas diseñadas para quienes eligen calidad sobre cantidad. Colecciones cápsula para cada estilo de vida.</EditableZone>
             </p>
             <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
               <button onClick={() => scrollTo("productos")} style={{ background:G, color:BG, border:"none", padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>
                 <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
               </button>
-              <button onClick={() => scrollTo("nosotros")} style={{ background:"transparent", color:T, border:`1px solid rgba(240,235,227,0.4)`, padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:500, textTransform:"uppercase", cursor:"pointer" }}>
+              <button onClick={() => scrollTo("nosotros")} style={{ background:"transparent", color:heroTextColor, border:`1px solid rgba(240,235,227,0.4)`, padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:500, textTransform:"uppercase", cursor:"pointer" }}>
                 <EditableZone field="heroCtaSecondary" label="Botón secundario">Nuestra Historia</EditableZone>
               </button>
             </div>
           </div>
         </div>
         <div style={{ position:"absolute", bottom:32, left:"50%", transform:"translateX(-50%)", display:"flex", flexDirection:"column", alignItems:"center", gap:8, opacity:0.45 }}>
-          <span style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase" }}>Scroll</span>
-          <div style={{ width:1, height:40, background:T }}/>
+          <span style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:heroTextColor }}>Scroll</span>
+          <div style={{ width:1, height:40, background:heroTextColor }}/>
         </div>
       </section>
 

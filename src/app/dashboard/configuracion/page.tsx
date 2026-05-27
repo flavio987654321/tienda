@@ -1,7 +1,7 @@
 "use client";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import type { StoreConfig, TemplateId, TextOverride } from "@/types/store-config";
+import type { StoreConfig, TemplateId, TextOverride, ImageOverride } from "@/types/store-config";
 import { TEMPLATE_DEFAULTS, DEFAULT_CONFIG } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext, useEditContext } from "@/contexts/EditContext";
@@ -9,7 +9,7 @@ import FashionNoir from "@/components/store/templates/FashionNoir";
 import BohoTerra from "@/components/store/templates/BohoTerra";
 import UrbanPulse from "@/components/store/templates/UrbanPulse";
 
-/* ── Types ─────────────────────────────────────────────── */
+/* ── Types ─────────────────────────────────────────────────── */
 type Mode = "gallery" | "preview" | "editing";
 
 type TemplateInfo = {
@@ -22,20 +22,65 @@ type TemplateInfo = {
 
 type Category = { id: string; name: string; templates: TemplateInfo[] };
 
-/* ── Template registry ─────────────────────────────────── */
+/* ── Template registry ─────────────────────────────────────── */
 const CATEGORIES: Category[] = [
   {
     id: "moda",
     name: "Moda & Ropa",
     templates: [
-      { id: "fashion-noir", name: "Fashion Noir", desc: "Lujo · Oscuro · Editorial",   palette: ["#0a0a0a", "#c9a84c", "#f0ebe3"], component: FashionNoir },
-      { id: "boho-terra",   name: "Boho Terra",   desc: "Orgánico · Natural · Cálido", palette: ["#faf7f2", "#b5652a", "#2c2218"], component: BohoTerra  },
-      { id: "urban-pulse",  name: "Urban Pulse",  desc: "Deportivo · Energético",       palette: ["#0f0f0f", "#d4ff00", "#f5f5f5"], component: UrbanPulse },
+      { id: "fashion-noir", name: "Fashion Noir", desc: "Lujo · Oscuro · Editorial",    palette: ["#0a0a0a", "#c9a84c", "#f0ebe3"], component: FashionNoir },
+      { id: "boho-terra",   name: "Boho Terra",   desc: "Orgánico · Natural · Cálido",  palette: ["#faf7f2", "#b5652a", "#2c2218"], component: BohoTerra  },
+      { id: "urban-pulse",  name: "Urban Pulse",  desc: "Deportivo · Energético",        palette: ["#0f0f0f", "#d4ff00", "#f5f5f5"], component: UrbanPulse },
     ],
   },
 ];
 
-/* ── Thumbnail (real template scaled) ─────────────────── */
+/* ── Image field info ──────────────────────────────────────── */
+const IMAGE_FIELD_INFO: Record<string, { label: string; tip: string }> = {
+  heroBackground: {
+    label: "Imagen de fondo del hero",
+    tip: "Recomendado: 1920×1080px horizontal. Overlay oscuro para fotos claras, overlay claro para fotos oscuras.",
+  },
+};
+
+/* ── Text field labels ─────────────────────────────────────── */
+const TEXT_FIELD_LABELS: Record<string, string> = {
+  announcementText:    "Barra de anuncios",
+  heroHeading:         "Título principal",
+  heroSubtext:         "Subtítulo hero",
+  heroCta:             "Botón principal",
+  heroCtaSecondary:    "Botón secundario",
+  featuredLabel:       "Etiqueta destacado",
+  featuredDescription: "Descripción destacado",
+  categoriesHeading:   "Sección categorías",
+  testimonialsHeading: "Sección testimonios",
+  quoteText:           "Frase destacada",
+  aboutKicker:         "Etiqueta 'Nosotros'",
+  aboutHeading:        "Título 'Nosotros'",
+  aboutParagraph1:     "Párrafo 1 'Nosotros'",
+  aboutParagraph2:     "Párrafo 2 'Nosotros'",
+  aboutStat1:          "Stat 1 (número)",
+  aboutStatLabel1:     "Stat 1 (etiqueta)",
+  aboutStat2:          "Stat 2 (número)",
+  aboutStatLabel2:     "Stat 2 (etiqueta)",
+  aboutStat3:          "Stat 3 (número)",
+  aboutStatLabel3:     "Stat 3 (etiqueta)",
+  aboutStat4:          "Stat 4 (número)",
+  aboutStatLabel4:     "Stat 4 (etiqueta)",
+  contactKicker:       "Etiqueta contacto",
+  contactHeading:      "Título contacto",
+  contactSubtext:      "Subtítulo contacto",
+  contactFormHeading:  "Subtítulo formulario",
+  newsletterText:      "Título newsletter",
+  newsletterSubtext:   "Subtítulo newsletter",
+  footerDescription:   "Descripción footer",
+  footerCopyright:     "Copyright",
+  footerMadeIn:        "Hecho en",
+  storeName:           "Nombre de la tienda",
+  storeTagline:        "Tagline",
+};
+
+/* ── Thumbnail (real template scaled) ─────────────────────── */
 const THUMB_W = 200;
 const VIRTUAL_W = 1080;
 const SCALE = THUMB_W / VIRTUAL_W;
@@ -58,7 +103,7 @@ function TemplateThumbnail({ component: Component }: { component: React.Componen
   );
 }
 
-/* ── Template card ──────────────────────────────────────── */
+/* ── Template card ──────────────────────────────────────────── */
 function TemplateCard({ t, onSelect }: { t: TemplateInfo; onSelect: () => void }) {
   const [hovered, setHovered] = useState(false);
   return (
@@ -96,7 +141,7 @@ function TemplateCard({ t, onSelect }: { t: TemplateInfo; onSelect: () => void }
   );
 }
 
-/* ── Carousel row ───────────────────────────────────────── */
+/* ── Carousel row ───────────────────────────────────────────── */
 function CarouselRow({ templates, onSelect }: { templates: TemplateInfo[]; onSelect: (t: TemplateInfo) => void }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const scroll = (dir: "l" | "r") =>
@@ -130,7 +175,7 @@ function CarouselRow({ templates, onSelect }: { templates: TemplateInfo[]; onSel
   );
 }
 
-/* ── Browser frame wrapper (shared by preview + editing) ── */
+/* ── Browser frame wrapper ──────────────────────────────────── */
 function BrowserFrame({ storeName, children }: { storeName: string; children: React.ReactNode }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
@@ -153,53 +198,7 @@ function BrowserFrame({ storeName, children }: { storeName: string; children: Re
   );
 }
 
-/* ── Text field labels (editable zones that open the text editor) ── */
-const TEXT_FIELD_LABELS: Record<string, string> = {
-  announcementText:    "Barra de anuncios",
-  heroHeading:         "Título principal",
-  heroSubtext:         "Subtítulo hero",
-  heroCta:             "Botón principal",
-  heroCtaSecondary:    "Botón secundario",
-  featuredLabel:       "Etiqueta destacado",
-  featuredDescription: "Descripción destacado",
-  categoriesHeading:   "Sección categorías",
-  testimonialsHeading: "Sección testimonios",
-  quoteText:           "Frase destacada",
-  aboutKicker:         "Etiqueta 'Nosotros'",
-  aboutHeading:        "Título 'Nosotros'",
-  aboutParagraph1:     "Párrafo 1 'Nosotros'",
-  aboutParagraph2:     "Párrafo 2 'Nosotros'",
-  aboutStat1:          "Stat 1 (número)",
-  aboutStatLabel1:     "Stat 1 (etiqueta)",
-  aboutStat2:          "Stat 2 (número)",
-  aboutStatLabel2:     "Stat 2 (etiqueta)",
-  aboutStat3:          "Stat 3 (número)",
-  aboutStatLabel3:     "Stat 3 (etiqueta)",
-  aboutStat4:          "Stat 4 (número)",
-  aboutStatLabel4:     "Stat 4 (etiqueta)",
-  contactKicker:       "Etiqueta contacto",
-  contactHeading:      "Título contacto",
-  contactSubtext:      "Subtítulo contacto",
-  contactFormHeading:  "Subtítulo formulario",
-  newsletterText:      "Título newsletter",
-  newsletterSubtext:   "Subtítulo newsletter",
-  footerDescription:   "Descripción footer",
-  footerCopyright:     "Copyright",
-  footerMadeIn:        "Hecho en",
-};
-
-/* ── Config form helpers ────────────────────────────────── */
-const labelStyle: React.CSSProperties = {
-  display: "block", fontSize: 11, fontWeight: 600, color: "#555",
-  marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5,
-};
-const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0",
-  borderRadius: 8, fontSize: 13, outline: "none", fontFamily: "inherit",
-  boxSizing: "border-box", color: "#111", background: "white",
-  transition: "border-color 0.15s",
-};
-
+/* ── Toggle ─────────────────────────────────────────────────── */
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button type="button" onClick={() => onChange(!value)} aria-label="toggle"
@@ -213,110 +212,308 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
   );
 }
 
-const FONT_OPTIONS = [
-  { label: "Predeterminada", value: "" },
-  { label: "Sans-serif",     value: "system-ui, -apple-system, sans-serif" },
-  { label: "Serif",          value: "Georgia, Cambria, serif" },
-  { label: "Monoespaciada",  value: "ui-monospace, monospace" },
-];
-const FONT_SIZES = [10, 12, 13, 14, 15, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64];
-
-function TextEditorPanel({ field, label, overrides, setOverride, resetOverride, onClose }: {
-  field: string; label: string;
-  overrides: Record<string, TextOverride>;
-  setOverride: (f: string, p: Partial<TextOverride>) => void;
-  resetOverride: (f: string) => void;
+/* ── Config avanzada modal ──────────────────────────────────── */
+function ConfigModal({ config, update, onClose }: {
+  config: StoreConfig;
+  update: <K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => void;
   onClose: () => void;
 }) {
-  const ov = overrides[field] ?? {};
-  const hasOverride = Object.entries(ov).some(([, v]) => v !== undefined);
+  const inp: React.CSSProperties = {
+    width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0",
+    borderRadius: 8, fontSize: 13, outline: "none", fontFamily: "inherit",
+    boxSizing: "border-box", color: "#111", background: "white",
+    transition: "border-color 0.15s",
+  };
+  const lbl: React.CSSProperties = {
+    display: "block", fontSize: 11, fontWeight: 600, color: "#555",
+    marginBottom: 5, textTransform: "uppercase", letterSpacing: 0.4,
+  };
+  const sec: React.CSSProperties = {
+    background: "#f8fafc", borderRadius: 12, padding: "16px 18px", marginBottom: 12,
+  };
 
   return (
-    <div style={{ background: "linear-gradient(135deg,#f0f0ff,#fafafe)", borderBottom: "2px solid #6366f1", padding: "14px 20px", flexShrink: 0 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 15 }}>✏</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#6366f1" }}>{label}</span>
-        </div>
-        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 20, lineHeight: 1, padding: "0 4px" }}>×</button>
-      </div>
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 99990,
+      background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+      fontFamily: "system-ui, -apple-system, sans-serif",
+    }} onClick={onClose}>
+      <div style={{
+        background: "white", borderRadius: 18, width: "100%", maxWidth: 480,
+        maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
+      }} onClick={e => e.stopPropagation()}>
 
-      {/* Text content */}
-      <div style={{ marginBottom: 10 }}>
-        <label style={labelStyle}>Texto</label>
-        <textarea
-          value={ov.text ?? ""}
-          placeholder="Vacío = texto original del template"
-          rows={2}
-          onChange={e => setOverride(field, { text: e.target.value || undefined })}
-          style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }}
-        />
-      </div>
-
-      {/* Font + Size */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-        <div style={{ flex: 1 }}>
-          <label style={labelStyle}>Fuente</label>
-          <select value={ov.fontFamily ?? ""} onChange={e => setOverride(field, { fontFamily: e.target.value || undefined })}
-            style={{ ...inputStyle, cursor: "pointer", paddingRight: 8 }}>
-            {FONT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-          </select>
-        </div>
-        <div style={{ width: 90 }}>
-          <label style={labelStyle}>Tamaño</label>
-          <select value={ov.fontSize ?? ""} onChange={e => setOverride(field, { fontSize: e.target.value ? Number(e.target.value) : undefined })}
-            style={{ ...inputStyle, cursor: "pointer", paddingRight: 4 }}>
-            <option value="">Auto</option>
-            {FONT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
-          </select>
-        </div>
-      </div>
-
-      {/* Color + B/I/U + Reset */}
-      <div style={{ display: "flex", gap: 6, alignItems: "flex-end" }}>
-        <div>
-          <label style={labelStyle}>Color</label>
-          <input type="color" value={ov.color ?? "#000000"}
-            onChange={e => setOverride(field, { color: e.target.value })}
-            style={{ width: 40, height: 34, padding: 2, border: "1px solid #e2e8f0", borderRadius: 7, cursor: "pointer", display: "block" }} />
-        </div>
-        <div>
-          <label style={labelStyle}>Estilo</label>
-          <div style={{ display: "flex", gap: 4 }}>
-            {([["bold","B",{ fontWeight:700 }],["italic","I",{ fontStyle:"italic" }],["underline","U",{ textDecoration:"underline" }]] as const).map(([key, lbl, st]) => (
-              <button key={key} type="button"
-                onClick={() => setOverride(field, { [key]: !ov[key as keyof TextOverride] })}
-                style={{
-                  width: 34, height: 34, border: "1.5px solid",
-                  borderColor: ov[key as keyof TextOverride] ? "#6366f1" : "#e2e8f0",
-                  borderRadius: 7,
-                  background: ov[key as keyof TextOverride] ? "#e0e7ff" : "white",
-                  cursor: "pointer", fontSize: 13,
-                  color: ov[key as keyof TextOverride] ? "#6366f1" : "#374151",
-                  ...(st as React.CSSProperties),
-                }}>
-                {lbl}
-              </button>
-            ))}
+        {/* Header */}
+        <div style={{ padding: "18px 24px 14px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a" }}>Configuración avanzada</h2>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Los cambios se reflejan en el preview al instante</p>
           </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, border: "1px solid #e2e8f0", borderRadius: 8, background: "white", cursor: "pointer", fontSize: 18, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
         </div>
-        {hasOverride && (
-          <button type="button" onClick={() => resetOverride(field)}
-            title="Restablecer todo"
-            style={{ width: 34, height: 34, border: "1px solid #e2e8f0", borderRadius: 7, background: "white", cursor: "pointer", fontSize: 16, color: "#94a3b8", marginTop: "auto" }}>
-            ↺
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px 24px" }}>
+
+          {/* Información */}
+          <div style={sec}>
+            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+              🏪 Información
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <label style={lbl}>Nombre de la tienda</label>
+                <input style={inp} value={config.storeName} placeholder="Mi Tienda"
+                  onChange={e => update("storeName", e.target.value)}
+                  onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                  onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+              </div>
+              <div>
+                <label style={lbl}>Tagline</label>
+                <input style={inp} value={config.storeTagline} placeholder="Tu tienda online"
+                  onChange={e => update("storeTagline", e.target.value)}
+                  onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                  onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+              </div>
+            </div>
+          </div>
+
+          {/* Colores */}
+          <div style={sec}>
+            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+              🎨 Color de acento
+            </p>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <input type="color" value={config.colors.accent}
+                onChange={e => update("colors", { ...config.colors, accent: e.target.value })}
+                style={{ width: 40, height: 38, padding: 2, border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", flexShrink: 0 }} />
+              <input style={{ ...inp, fontFamily: "monospace" }} value={config.colors.accent}
+                onChange={e => update("colors", { ...config.colors, accent: e.target.value })}
+                onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+            </div>
+            <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>Afecta botones, precios y elementos destacados.</p>
+          </div>
+
+          {/* WhatsApp */}
+          <div style={sec}>
+            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+              💬 WhatsApp
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Botón flotante</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Visible en todas las páginas</p>
+                </div>
+                <Toggle value={config.whatsapp.enabled}
+                  onChange={v => update("whatsapp", { ...config.whatsapp, enabled: v })} />
+              </div>
+              {config.whatsapp.enabled && (
+                <div>
+                  <label style={lbl}>Número</label>
+                  <input style={inp} value={config.whatsapp.number}
+                    placeholder="+54 9 11 0000-0000"
+                    onChange={e => update("whatsapp", { ...config.whatsapp, number: e.target.value })}
+                    onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                    onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Moneda & Idioma */}
+          <div style={sec}>
+            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+              💱 Moneda &amp; Idioma
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <label style={lbl}>Moneda</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {(["ARS", "USD"] as const).map(c => (
+                    <button key={c} type="button" onClick={() => update("currency", c)}
+                      style={{ flex: 1, padding: "9px",
+                        border: `2px solid ${config.currency === c ? "#6366f1" : "#e2e8f0"}`,
+                        borderRadius: 8, background: config.currency === c ? "#f0f0ff" : "white",
+                        fontSize: 13, fontWeight: 700, cursor: "pointer",
+                        color: config.currency === c ? "#6366f1" : "#64748b" }}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={lbl}>Idioma</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {([["ES", "🇦🇷 Español"], ["EN", "🇺🇸 English"]] as const).map(([l, label]) => (
+                    <button key={l} type="button" onClick={() => update("language", l)}
+                      style={{ flex: 1, padding: "9px 6px",
+                        border: `2px solid ${config.language === l ? "#6366f1" : "#e2e8f0"}`,
+                        borderRadius: 8, background: config.language === l ? "#f0f0ff" : "white",
+                        fontSize: 12, fontWeight: 600, cursor: "pointer",
+                        color: config.language === l ? "#6366f1" : "#64748b" }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SEO */}
+          <div style={sec}>
+            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+              🔍 SEO / Google
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Activar SEO</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Mejora la visibilidad en Google</p>
+                </div>
+                <Toggle value={config.seo.enabled}
+                  onChange={v => update("seo", { ...config.seo, enabled: v })} />
+              </div>
+              {config.seo.enabled && (
+                <>
+                  <div>
+                    <label style={lbl}>Título SEO</label>
+                    <input style={inp} value={config.seo.title}
+                      placeholder="Mi Tienda - Ropa y Accesorios"
+                      onChange={e => update("seo", { ...config.seo, title: e.target.value })}
+                      onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                      onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                  </div>
+                  <div>
+                    <label style={lbl}>Descripción</label>
+                    <textarea style={{ ...inp, resize: "vertical" }} rows={3}
+                      value={config.seo.description}
+                      placeholder="Encontrá los mejores productos en nuestra tienda..."
+                      onChange={e => update("seo", { ...config.seo, description: e.target.value })}
+                      onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                      onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "12px 24px 16px", borderTop: "1px solid #f1f5f9" }}>
+          <button onClick={onClose}
+            style={{ width: "100%", padding: "11px", border: "none", borderRadius: 10, background: "#6366f1", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+            Listo
           </button>
-        )}
+        </div>
       </div>
     </div>
   );
 }
 
-/* ── Floating text editor — sticky at bottom of preview ───── */
-function FloatingTextEditor({ textFieldLabels }: { textFieldLabels: Record<string, string> }) {
-  const { activeField, setActiveField, overrides, setOverride, resetOverride } = useEditContext();
+/* ── Floating editor (text + image) ─────────────────────────── */
+function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, string> }) {
+  const { activeField, setActiveField, overrides, setOverride, resetOverride, imageOverrides, setImageOverride } = useEditContext();
+
   if (!activeField) return null;
 
+  const isImageField = activeField.startsWith("img:");
+  const FONT_OPTIONS = [
+    { label: "Predeterminada", value: "" },
+    { label: "Sans-serif",     value: "system-ui, -apple-system, sans-serif" },
+    { label: "Serif",          value: "Georgia, Cambria, serif" },
+    { label: "Monoespaciada",  value: "ui-monospace, monospace" },
+  ];
+  const FONT_SIZES = [10, 12, 13, 14, 15, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64];
+
+  const base: React.CSSProperties = {
+    position: "fixed", bottom: 0, left: 56, right: 0, zIndex: 99999,
+    background: "white", borderTop: "2px solid #6366f1",
+    boxShadow: "0 -4px 20px rgba(99,102,241,0.15)",
+    fontFamily: "system-ui, -apple-system, sans-serif",
+  };
+
+  /* ── Image editor ── */
+  if (isImageField) {
+    const field = activeField.slice(4);
+    const ov = imageOverrides[field] ?? {};
+    const info = IMAGE_FIELD_INFO[field];
+    const currentOverlay = ov.overlayType ?? "dark";
+    const hasChanges = ov.url !== undefined || ov.overlayType !== undefined || ov.overlayOpacity !== undefined;
+
+    return (
+      <div style={{ ...base, padding: "10px 16px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {/* Label */}
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", whiteSpace: "nowrap" }}>
+            📷 {info?.label ?? field}
+          </span>
+
+          {/* URL input */}
+          <input
+            value={ov.url ?? ""}
+            placeholder="URL de la imagen  (ej: https://ejemplo.com/foto.jpg)"
+            onChange={e => setImageOverride(field, { url: e.target.value || undefined })}
+            style={{ flex: 1, minWidth: 220, border: "1px solid #d1d5db", borderRadius: 7, padding: "5px 10px", fontSize: 12, outline: "none" }}
+            onFocus={e => (e.target.style.borderColor = "#6366f1")}
+            onBlur={e => (e.target.style.borderColor = "#d1d5db")}
+          />
+
+          {/* Overlay type */}
+          <span style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap" }}>Overlay:</span>
+          {(["none", "dark", "light"] as const).map(t => (
+            <button key={t} onClick={() => setImageOverride(field, { overlayType: t })}
+              style={{
+                padding: "5px 10px", borderRadius: 6, border: "1.5px solid",
+                borderColor: currentOverlay === t ? "#6366f1" : "#e2e8f0",
+                background: currentOverlay === t ? "#e0e7ff" : "white",
+                color: currentOverlay === t ? "#6366f1" : "#374151",
+                cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+              }}>
+              {t === "none" ? "Sin overlay" : t === "dark" ? "🌑 Oscuro" : "☀️ Claro"}
+            </button>
+          ))}
+
+          {/* Opacity slider */}
+          {currentOverlay !== "none" && (
+            <>
+              <input type="range" min={10} max={90} step={5}
+                value={Math.round((ov.overlayOpacity ?? 0.6) * 100)}
+                onChange={e => setImageOverride(field, { overlayOpacity: Number(e.target.value) / 100 })}
+                style={{ width: 70, accentColor: "#6366f1" }} />
+              <span style={{ fontSize: 11, color: "#374151", minWidth: 28 }}>
+                {Math.round((ov.overlayOpacity ?? 0.6) * 100)}%
+              </span>
+            </>
+          )}
+
+          {/* Reset */}
+          {hasChanges && (
+            <button onClick={() => setImageOverride(field, { url: undefined, overlayType: undefined, overlayOpacity: undefined })}
+              style={{ width: 30, height: 30, border: "1px solid #e2e8f0", borderRadius: 7, background: "white", cursor: "pointer", fontSize: 14, color: "#94a3b8" }}
+              title="Restablecer">↺</button>
+          )}
+
+          {/* Close */}
+          <button onClick={() => setActiveField(null)}
+            style={{ width: 30, height: 30, border: "none", background: "white", cursor: "pointer", fontSize: 18, color: "#94a3b8" }}>×</button>
+        </div>
+
+        {/* Tip */}
+        {info?.tip && (
+          <p style={{ margin: "6px 0 0", fontSize: 10, color: "#94a3b8" }}>
+            💡 {info.tip}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  /* ── Text editor ── */
   const label = textFieldLabels[activeField] ?? activeField;
   const ov = overrides[activeField] ?? {};
   const hasOverride = Object.entries(ov).some(([, v]) => v !== undefined);
@@ -326,19 +523,10 @@ function FloatingTextEditor({ textFieldLabels }: { textFieldLabels: Record<strin
     background: "white", cursor: "pointer", fontSize: 13, color: "#374151",
     flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
   };
-  const btnActive: React.CSSProperties = {
-    borderColor: "#6366f1", background: "#e0e7ff", color: "#6366f1",
-  };
+  const btnActive: React.CSSProperties = { borderColor: "#6366f1", background: "#e0e7ff", color: "#6366f1" };
 
   return (
-    <div style={{
-      position: "fixed", bottom: 0, left: 320, right: 0, zIndex: 99999,
-      background: "white", borderTop: "2px solid #6366f1",
-      boxShadow: "0 -4px 20px rgba(99,102,241,0.15)",
-      padding: "10px 14px",
-      display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-      fontFamily: "system-ui, -apple-system, sans-serif",
-    }}>
+    <div style={{ ...base, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", whiteSpace: "nowrap" }}>
         ✏ {label}
       </span>
@@ -360,17 +548,14 @@ function FloatingTextEditor({ textFieldLabels }: { textFieldLabels: Record<strin
       <select value={ov.fontFamily ?? ""}
         onChange={e => setOverride(activeField, { fontFamily: e.target.value || undefined })}
         style={{ fontSize: 11, padding: "5px 6px", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: "#374151", height: 30 }}>
-        <option value="">Fuente auto</option>
-        <option value="system-ui, -apple-system, sans-serif">Sans-serif</option>
-        <option value="Georgia, Cambria, serif">Serif</option>
-        <option value="ui-monospace, monospace">Mono</option>
+        {FONT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
       </select>
 
       <select value={ov.fontSize ?? ""}
         onChange={e => setOverride(activeField, { fontSize: e.target.value ? Number(e.target.value) : undefined })}
         style={{ fontSize: 11, padding: "5px 6px", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: "#374151", width: 68, height: 30 }}>
         <option value="">Tam.</option>
-        {[10,12,13,14,15,16,18,20,24,28,32,36,42,48,56,64].map(s => <option key={s} value={s}>{s}px</option>)}
+        {FONT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
       </select>
 
       {([["bold","B",{ fontWeight: 700 }],["italic","I",{ fontStyle: "italic" as const }],["underline","U",{ textDecoration: "underline" as const }]] as const).map(([key, lbl, st]) => (
@@ -392,56 +577,21 @@ function FloatingTextEditor({ textFieldLabels }: { textFieldLabels: Record<strin
   );
 }
 
-function Section({ id, label, icon, open, onToggle, children }: {
-  id: string; label: string; icon: string;
-  open: boolean; onToggle: (id: string) => void; children: React.ReactNode;
-}) {
-  return (
-    <div style={{ borderBottom: "1px solid #f1f5f9" }}>
-      <button type="button" onClick={() => onToggle(id)}
-        style={{ width: "100%", padding: "13px 20px", display: "flex", alignItems: "center",
-          gap: 10, background: "none", border: "none", cursor: "pointer", textAlign: "left" }}>
-        <span style={{ fontSize: 16 }}>{icon}</span>
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>{label}</span>
-        <span style={{ fontSize: 11, color: "#94a3b8", display: "inline-block",
-          transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▾</span>
-      </button>
-      {open && <div style={{ padding: "4px 20px 20px" }}>{children}</div>}
-    </div>
-  );
-}
-
-/* ── Main page ─────────────────────────────────────────── */
+/* ── Main page ─────────────────────────────────────────────── */
 export default function ConfiguracionPage() {
   const [mode, setMode] = useState<Mode>("gallery");
   const [selected, setSelected] = useState<TemplateInfo | null>(null);
   const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
-  const [openSection, setOpenSection] = useState<string>("info");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [activeField, setActiveField] = useState<string | null>(null);
-
-  const storeNameRef = useRef<HTMLInputElement>(null);
-  const storeTaglineRef = useRef<HTMLInputElement>(null);
-  const accentRef = useRef<HTMLInputElement>(null);
-  const whatsappNumberRef = useRef<HTMLInputElement>(null);
-
-  /* Config fields: clicking them opens a sidebar section + focuses input */
-  const CONFIG_FIELD_MAP: Record<string, { section: string; ref: React.RefObject<HTMLInputElement | null> }> = {
-    storeName:       { section: "info",      ref: storeNameRef },
-    storeTagline:    { section: "info",      ref: storeTaglineRef },
-    "colors.accent": { section: "colores",   ref: accentRef },
-    whatsapp:        { section: "whatsapp",  ref: whatsappNumberRef },
-  };
+  const [configModalOpen, setConfigModalOpen] = useState(false);
 
   /* Text override helpers */
   const setOverride = useCallback((field: string, partial: Partial<TextOverride>) => {
     setConfig(c => ({
       ...c,
-      textOverrides: {
-        ...c.textOverrides,
-        [field]: { ...(c.textOverrides[field] ?? {}), ...partial },
-      },
+      textOverrides: { ...c.textOverrides, [field]: { ...(c.textOverrides[field] ?? {}), ...partial } },
     }));
   }, []);
 
@@ -453,23 +603,17 @@ export default function ConfiguracionPage() {
     });
   }, []);
 
-  useEffect(() => {
-    if (!activeField) return;
-    const mapping = CONFIG_FIELD_MAP[activeField];
-    if (!mapping) return; // text fields are handled by TextEditorPanel
-    setOpenSection(mapping.section);
-    setTimeout(() => {
-      mapping.ref.current?.focus();
-      mapping.ref.current?.select();
-    }, 180);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeField]);
+  /* Image override helpers */
+  const setImageOverride = useCallback((field: string, partial: Partial<ImageOverride>) => {
+    setConfig(c => ({
+      ...c,
+      imageOverrides: { ...c.imageOverrides, [field]: { ...(c.imageOverrides[field] ?? {}), ...partial } },
+    }));
+  }, []);
 
   const update = useCallback(<K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => {
     setConfig(c => ({ ...c, [key]: value }));
   }, []);
-
-  const toggleSection = (id: string) => setOpenSection(s => s === id ? "" : id);
 
   /* Step 1 → 2 */
   const handlePreview = (t: TemplateInfo) => {
@@ -486,7 +630,7 @@ export default function ConfiguracionPage() {
   const handleBackToGallery = () => { setMode("gallery"); setSelected(null); };
 
   /* Step 3 → 2 */
-  const handleBackToPreview = () => setMode("preview");
+  const handleBackToPreview = () => { setMode("preview"); setActiveField(null); };
 
   const handleSave = async () => {
     setSaving(true);
@@ -504,19 +648,16 @@ export default function ConfiguracionPage() {
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
             justifyContent: "center", background: "#f1f5f9", padding: "24px 40px 0" }}>
 
-            {/* Monitor frame */}
             <div style={{
               width: "100%", maxWidth: 860, flex: 1,
               borderRadius: "14px 14px 0 0", background: "#1e293b",
               boxShadow: "0 0 0 2px #334155, 0 20px 60px rgba(0,0,0,0.35)",
               display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0,
             }}>
-              {/* Bezel */}
               <div style={{ height: 36, background: "#1e293b", display: "flex", alignItems: "center",
                 justifyContent: "center", flexShrink: 0 }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#334155" }} />
               </div>
-              {/* Screen */}
               <div style={{ flex: 1, background: "white", overflowY: "auto", overflowX: "hidden",
                 padding: "32px 48px" }}>
                 <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "#94a3b8",
@@ -540,7 +681,6 @@ export default function ConfiguracionPage() {
                   </div>
                 ))}
 
-                {/* Coming soon */}
                 <div style={{ marginBottom: 32 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
                     <span style={{ fontSize: 13, fontWeight: 800, color: "#cbd5e1",
@@ -563,7 +703,6 @@ export default function ConfiguracionPage() {
               </div>
             </div>
 
-            {/* Monitor stand */}
             <div style={{ width: "100%", maxWidth: 860, display: "flex", justifyContent: "center", flexShrink: 0 }}>
               <div style={{ width: 120, height: 18, background: "#1e293b", borderRadius: "0 0 4px 4px",
                 boxShadow: "0 4px 0 #334155" }} />
@@ -587,7 +726,6 @@ export default function ConfiguracionPage() {
         <div style={{ display: "flex", height: "100%", overflow: "hidden",
           flexDirection: "column", background: "#f1f5f9" }}>
 
-          {/* Top bar */}
           <div style={{ background: "#1e293b", padding: "12px 24px", display: "flex",
             alignItems: "center", gap: 16, flexShrink: 0 }}>
             <button onClick={handleBackToGallery}
@@ -606,10 +744,7 @@ export default function ConfiguracionPage() {
               <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{selected!.name}</span>
               <span style={{ fontSize: 12, color: "#64748b" }}>— {selected!.desc}</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11,
-              color: "#64748b", marginRight: 8 }}>
-              <span>Paso 2 de 3</span>
-            </div>
+            <span style={{ fontSize: 11, color: "#64748b" }}>Paso 2 de 3</span>
             <button onClick={handleUseTemplate}
               style={{ padding: "8px 20px", border: "none", borderRadius: 8,
                 background: "#6366f1", color: "white", fontSize: 13, fontWeight: 700,
@@ -618,9 +753,7 @@ export default function ConfiguracionPage() {
             </button>
           </div>
 
-          {/* Browser window */}
-          <div style={{ flex: 1, display: "flex", alignItems: "stretch", padding: "16px 24px 24px",
-            minHeight: 0 }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "stretch", padding: "16px 24px 24px", minHeight: 0 }}>
             <div style={{ flex: 1, borderRadius: 12, overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.25)", display: "flex", flexDirection: "column" }}>
               <StoreConfigContext.Provider value={config}>
@@ -637,205 +770,82 @@ export default function ConfiguracionPage() {
 
   /* ── STEP 3: Editing ── */
   return (
-    <DashboardLayout>
-      <div style={{ display: "flex", height: "100%", overflow: "hidden", background: "#f8fafc" }}>
+    <DashboardLayout fullHeight>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "#f1f5f9" }}>
 
-        {/* Left panel */}
-        <aside style={{ width: 320, flexShrink: 0, height: "100%", display: "flex",
-          flexDirection: "column", background: "white",
-          borderRight: "1px solid #e2e8f0", boxShadow: "2px 0 12px rgba(0,0,0,0.04)" }}>
-
-          <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid #f1f5f9" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              <div style={{ display: "flex", gap: 3 }}>
-                {selected!.palette.map((c, i) => (
-                  <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c,
-                    border: "1px solid rgba(0,0,0,0.1)" }} />
-                ))}
-              </div>
-              <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>Paso 3 de 3</span>
-            </div>
-            <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#0f172a" }}>{selected!.name}</h1>
-            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Personalizá tu tienda</p>
+        {/* Top bar */}
+        <div style={{ background: "#1e293b", padding: "10px 20px", display: "flex",
+          alignItems: "center", gap: 12, flexShrink: 0, zIndex: 50 }}>
+          <button onClick={handleBackToPreview}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
+              border: "1px solid #334155", borderRadius: 8, background: "transparent",
+              color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+            ← Cambiar diseño
+          </button>
+          <div style={{ display: "flex", gap: 4 }}>
+            {selected!.palette.map((c, i) => (
+              <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c,
+                border: "1px solid rgba(255,255,255,0.15)" }} />
+            ))}
           </div>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{selected!.name}</span>
+          <span style={{ flex: 1 }} />
+          <span style={{ fontSize: 11, color: "#475569" }}>Paso 3 de 3</span>
 
-          <div style={{ flex: 1, overflowY: "auto" }}>
+          {/* Config avanzada */}
+          <button onClick={() => setConfigModalOpen(true)}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
+              border: "1px solid #334155", borderRadius: 8, background: "rgba(255,255,255,0.05)",
+              color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer",
+              transition: "all 0.15s", whiteSpace: "nowrap" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "white"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#94a3b8"; }}>
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            Config avanzada
+          </button>
 
-            <Section id="info" label="Información" icon="🏪" open={openSection === "info"} onToggle={toggleSection}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div>
-                  <label style={labelStyle}>Nombre de la tienda</label>
-                  <input ref={storeNameRef} style={{ ...inputStyle, boxShadow: activeField === "storeName" ? "0 0 0 3px rgba(99,102,241,0.25)" : "none" }}
-                    value={config.storeName} placeholder="Mi Tienda"
-                    onChange={e => update("storeName", e.target.value)}
-                    onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                    onBlur={e => { e.target.style.borderColor = "#e2e8f0"; setActiveField(null); }} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Tagline</label>
-                  <input ref={storeTaglineRef} style={{ ...inputStyle, boxShadow: activeField === "storeTagline" ? "0 0 0 3px rgba(99,102,241,0.25)" : "none" }}
-                    value={config.storeTagline} placeholder="Tu tienda online"
-                    onChange={e => update("storeTagline", e.target.value)}
-                    onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                    onBlur={e => { e.target.style.borderColor = "#e2e8f0"; setActiveField(null); }} />
-                </div>
-              </div>
-            </Section>
+          {/* Guardar */}
+          <button onClick={handleSave} disabled={saving}
+            style={{ padding: "7px 18px", border: "none", borderRadius: 8,
+              background: saved ? "#10b981" : "#6366f1", color: "white",
+              fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer",
+              transition: "background 0.25s", whiteSpace: "nowrap", opacity: saving ? 0.7 : 1 }}>
+            {saving ? "Guardando..." : saved ? "✓ Guardado" : "Guardar"}
+          </button>
+        </div>
 
-            <Section id="colores" label="Colores" icon="🎨" open={openSection === "colores"} onToggle={toggleSection}>
-              <div>
-                <label style={labelStyle}>Color de acento</label>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <input type="color" value={config.colors.accent}
-                    onChange={e => update("colors", { ...config.colors, accent: e.target.value })}
-                    style={{ width: 40, height: 38, padding: 2, border: "1px solid #e2e8f0",
-                      borderRadius: 8, cursor: "pointer", flexShrink: 0 }} />
-                  <input ref={accentRef} style={{ ...inputStyle, fontFamily: "monospace", flex: 1, boxShadow: activeField === "colors.accent" ? "0 0 0 3px rgba(99,102,241,0.25)" : "none" }}
-                    value={config.colors.accent}
-                    onChange={e => update("colors", { ...config.colors, accent: e.target.value })}
-                    onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                    onBlur={e => { e.target.style.borderColor = "#e2e8f0"; setActiveField(null); }} />
-                </div>
-                <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>
-                  Afecta botones, precios y elementos destacados.
-                </p>
-              </div>
-            </Section>
-
-            <Section id="whatsapp" label="WhatsApp" icon="💬" open={openSection === "whatsapp"} onToggle={toggleSection}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Botón flotante</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Visible en todas las páginas</p>
-                  </div>
-                  <Toggle value={config.whatsapp.enabled}
-                    onChange={v => update("whatsapp", { ...config.whatsapp, enabled: v })} />
-                </div>
-                {config.whatsapp.enabled && (
-                  <div>
-                    <label style={labelStyle}>Número</label>
-                    <input ref={whatsappNumberRef} style={{ ...inputStyle, boxShadow: activeField === "whatsapp" ? "0 0 0 3px rgba(99,102,241,0.25)" : "none" }}
-                      value={config.whatsapp.number}
-                      placeholder="+54 9 11 0000-0000"
-                      onChange={e => update("whatsapp", { ...config.whatsapp, number: e.target.value })}
-                      onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                      onBlur={e => { e.target.style.borderColor = "#e2e8f0"; setActiveField(null); }} />
-                  </div>
-                )}
-              </div>
-            </Section>
-
-            <Section id="moneda" label="Moneda & Idioma" icon="💱" open={openSection === "moneda"} onToggle={toggleSection}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <div>
-                  <label style={labelStyle}>Moneda</label>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {(["ARS", "USD"] as const).map(c => (
-                      <button key={c} type="button" onClick={() => update("currency", c)}
-                        style={{ flex: 1, padding: "9px",
-                          border: `2px solid ${config.currency === c ? "#6366f1" : "#e2e8f0"}`,
-                          borderRadius: 8, background: config.currency === c ? "#f0f0ff" : "white",
-                          fontSize: 13, fontWeight: 700, cursor: "pointer",
-                          color: config.currency === c ? "#6366f1" : "#64748b", transition: "all 0.15s" }}>
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label style={labelStyle}>Idioma</label>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {([["ES", "🇦🇷 Español"], ["EN", "🇺🇸 English"]] as const).map(([l, label]) => (
-                      <button key={l} type="button" onClick={() => update("language", l)}
-                        style={{ flex: 1, padding: "9px 6px",
-                          border: `2px solid ${config.language === l ? "#6366f1" : "#e2e8f0"}`,
-                          borderRadius: 8, background: config.language === l ? "#f0f0ff" : "white",
-                          fontSize: 12, fontWeight: 600, cursor: "pointer",
-                          color: config.language === l ? "#6366f1" : "#64748b", transition: "all 0.15s" }}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Section>
-
-            <Section id="seo" label="SEO / Google" icon="🔍" open={openSection === "seo"} onToggle={toggleSection}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Activar SEO</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Mejora la visibilidad en Google</p>
-                  </div>
-                  <Toggle value={config.seo.enabled}
-                    onChange={v => update("seo", { ...config.seo, enabled: v })} />
-                </div>
-                {config.seo.enabled && (
-                  <>
-                    <div>
-                      <label style={labelStyle}>Título SEO</label>
-                      <input style={inputStyle} value={config.seo.title}
-                        placeholder="Mi Tienda - Ropa y Accesorios"
-                        onChange={e => update("seo", { ...config.seo, title: e.target.value })}
-                        onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                        onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Descripción</label>
-                      <textarea style={{ ...inputStyle, resize: "vertical" }} rows={3}
-                        value={config.seo.description}
-                        placeholder="Encontrá los mejores productos en nuestra tienda..."
-                        onChange={e => update("seo", { ...config.seo, description: e.target.value })}
-                        onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                        onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-                    </div>
-                  </>
-                )}
-              </div>
-            </Section>
-
+        {/* Preview — full width */}
+        <div style={{ flex: 1, overflow: "hidden", position: "relative", padding: "12px 16px 0" }}>
+          <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column" }}>
+            <EditContext.Provider value={{
+              editMode: true,
+              activeField,
+              setActiveField,
+              overrides: config.textOverrides,
+              setOverride,
+              resetOverride,
+              imageOverrides: config.imageOverrides,
+              setImageOverride,
+            }}>
+              <StoreConfigContext.Provider value={config}>
+                <BrowserFrame storeName={config.storeName}>
+                  <TemplateComponent />
+                </BrowserFrame>
+              </StoreConfigContext.Provider>
+              <FloatingEditor textFieldLabels={TEXT_FIELD_LABELS} />
+            </EditContext.Provider>
           </div>
-
-          <div style={{ padding: "14px 20px", borderTop: "1px solid #f1f5f9",
-            display: "flex", flexDirection: "column", gap: 8 }}>
-            <button type="button" onClick={handleSave} disabled={saving}
-              style={{ width: "100%", padding: "12px", border: "none", borderRadius: 10,
-                cursor: saving ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 700,
-                transition: "background 0.25s",
-                background: saved ? "#10b981" : "#6366f1", color: "white" }}>
-              {saving ? "Guardando..." : saved ? "✓ Cambios guardados" : "Guardar cambios"}
-            </button>
-            <button type="button" onClick={handleBackToPreview}
-              style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 10,
-                cursor: "pointer", fontSize: 12, fontWeight: 600, background: "white",
-                color: "#64748b", transition: "all 0.15s" }}>
-              ← Cambiar diseño
-            </button>
-          </div>
-        </aside>
-
-        {/* Right: template preview */}
-        <main style={{ flex: 1, height: "100%", overflow: "hidden", position: "relative" }}>
-          <EditContext.Provider value={{
-            editMode: true,
-            activeField,
-            setActiveField,
-            overrides: config.textOverrides,
-            setOverride,
-            resetOverride,
-          }}>
-            <StoreConfigContext.Provider value={config}>
-              <BrowserFrame storeName={config.storeName}>
-                <TemplateComponent />
-              </BrowserFrame>
-            </StoreConfigContext.Provider>
-            {/* Floating editor — absolute at bottom of preview, always visible */}
-            <FloatingTextEditor textFieldLabels={TEXT_FIELD_LABELS} />
-          </EditContext.Provider>
-        </main>
+        </div>
 
       </div>
+
+      {/* Config modal */}
+      {configModalOpen && (
+        <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} />
+      )}
     </DashboardLayout>
   );
 }

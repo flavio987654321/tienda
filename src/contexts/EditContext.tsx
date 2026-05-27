@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useState } from "react";
-import type { TextOverride } from "@/types/store-config";
+import type { TextOverride, ImageOverride } from "@/types/store-config";
 
 type EditContextType = {
   editMode: boolean;
@@ -9,6 +9,8 @@ type EditContextType = {
   overrides: Record<string, TextOverride>;
   setOverride: (field: string, partial: Partial<TextOverride>) => void;
   resetOverride: (field: string) => void;
+  imageOverrides: Record<string, ImageOverride>;
+  setImageOverride: (field: string, partial: Partial<ImageOverride>) => void;
 };
 
 export const EditContext = createContext<EditContextType>({
@@ -18,6 +20,8 @@ export const EditContext = createContext<EditContextType>({
   overrides: {},
   setOverride: () => {},
   resetOverride: () => {},
+  imageOverrides: {},
+  setImageOverride: () => {},
 });
 
 export function useEditContext() { return useContext(EditContext); }
@@ -102,6 +106,51 @@ export function EditableZone({
         </span>
       )}
     </Tag>
+  );
+}
+
+/* ── EditableImageButton ──────────────────────────────────────
+   Drop this inside any section that has position:relative.
+   Shows a floating camera button in edit mode to change the
+   background image of that section.
+──────────────────────────────────────────────────────────────── */
+export function EditableImageButton({
+  field,
+  label,
+}: {
+  field: string;
+  label: string;
+}) {
+  const { editMode, activeField, setActiveField } = useEditContext();
+  const [hovered, setHovered] = useState(false);
+  const imageKey = `img:${field}`;
+  const isActive = activeField === imageKey;
+
+  if (!editMode) return null;
+
+  return (
+    <button
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={(e) => { e.stopPropagation(); setActiveField(isActive ? null : imageKey); }}
+      style={{
+        position: "absolute", top: 16, right: 16, zIndex: 9998,
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "7px 14px", borderRadius: 9, cursor: "pointer",
+        fontSize: 12, fontWeight: 700,
+        background: isActive ? "#6366f1" : hovered ? "rgba(20,20,20,0.9)" : "rgba(20,20,20,0.65)",
+        color: "white",
+        border: isActive ? "2px solid #6366f1" : "1.5px solid rgba(255,255,255,0.25)",
+        backdropFilter: "blur(6px)",
+        transition: "all 0.15s",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+      }}
+    >
+      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+      </svg>
+      {label}
+    </button>
   );
 }
 

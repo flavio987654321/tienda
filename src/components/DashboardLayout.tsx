@@ -194,7 +194,7 @@ export default function DashboardLayout({
         <div className="flex justify-end items-center px-4 pt-3 pb-0 shrink-0">
           {userId && <NotificationBell userId={userId} />}
         </div>
-        <div className={`flex-1 p-4 pt-2 ${fullHeight ? "overflow-hidden min-h-0" : ""}`}>
+        <div className={`flex-1 ${fullHeight ? "overflow-hidden min-h-0" : "p-4 pt-2"}`}>
           {children}
         </div>
       </main>
