@@ -146,7 +146,7 @@ function BrowserFrame({ storeName, children }: { storeName: string; children: Re
           mitienda.com/tienda/{storeName.toLowerCase().replace(/\s+/g, "-")}
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", transform: "translate(0, 0)" }}>
         {children}
       </div>
     </div>
