@@ -1,8 +1,12 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TemplateId } from "@/types/store-config";
 import { TEMPLATE_DEFAULTS, DEFAULT_CONFIG } from "@/types/store-config";
+import { StoreConfigContext } from "@/contexts/StoreConfigContext";
+import FashionNoir from "@/components/store/templates/FashionNoir";
+import BohoTerra from "@/components/store/templates/BohoTerra";
+import UrbanPulse from "@/components/store/templates/UrbanPulse";
 
 /* ── Template metadata ─────────────────────────────────── */
 const TEMPLATES: { id: TemplateId; name: string; desc: string; palette: string[] }[] = [
@@ -10,6 +14,12 @@ const TEMPLATES: { id: TemplateId; name: string; desc: string; palette: string[]
   { id: "boho-terra",   name: "Boho Terra",   desc: "Orgánico · Natural · Cálido", palette: ["#faf7f2", "#b5652a", "#2c2218"] },
   { id: "urban-pulse",  name: "Urban Pulse",  desc: "Deportivo · Energético",      palette: ["#0f0f0f", "#d4ff00", "#f5f5f5"] },
 ];
+
+const TEMPLATE_COMPONENTS: Record<TemplateId, React.ComponentType> = {
+  "fashion-noir": FashionNoir,
+  "boho-terra":   BohoTerra,
+  "urban-pulse":  UrbanPulse,
+};
 
 /* ── Helpers ───────────────────────────────────────────── */
 const labelStyle: React.CSSProperties = {
@@ -61,9 +71,6 @@ export default function ConfiguracionPage() {
   const [openSection, setOpenSection] = useState<string>("template");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const iframeReady = useRef(false);
-  const pendingConfig = useRef<StoreConfig | null>(null);
 
   const update = useCallback(<K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => {
     setConfig(c => ({ ...c, [key]: value }));
@@ -71,26 +78,8 @@ export default function ConfiguracionPage() {
 
   const toggleSection = (id: string) => setOpenSection(s => s === id ? "" : id);
 
-  /* Send config to iframe via postMessage */
-  const sendConfig = useCallback((cfg: StoreConfig) => {
-    iframeRef.current?.contentWindow?.postMessage({ type: "STORE_CONFIG_UPDATE", config: cfg }, "*");
-  }, []);
-
-  useEffect(() => {
-    if (iframeReady.current) sendConfig(config);
-    else pendingConfig.current = config;
-  }, [config, sendConfig]);
-
-  const handleIframeLoad = () => {
-    iframeReady.current = true;
-    const toSend = pendingConfig.current ?? config;
-    sendConfig(toSend);
-    pendingConfig.current = null;
-  };
-
   const selectTemplate = (id: TemplateId) => {
     const defaults = TEMPLATE_DEFAULTS[id];
-    iframeReady.current = false;
     setConfig(c => ({ ...c, template: id, colors: { accent: defaults.accent } }));
   };
 
@@ -102,7 +91,7 @@ export default function ConfiguracionPage() {
     setTimeout(() => setSaved(false), 2200);
   };
 
-  const previewSrc = `/preview/${config.template}`;
+  const TemplateComponent = TEMPLATE_COMPONENTS[config.template];
 
   return (
     <DashboardLayout>
@@ -134,7 +123,6 @@ export default function ConfiguracionPage() {
                       borderRadius: 10, background: config.template === t.id ? "#f0f0ff" : "white",
                       cursor: "pointer", textAlign: "left", transition: "all 0.15s",
                     }}>
-                    {/* Palette swatch */}
                     <div style={{ display: "flex", borderRadius: 6, overflow: "hidden", flexShrink: 0, border: "1px solid rgba(0,0,0,0.08)" }}>
                       {t.palette.map((c, i) => <div key={i} style={{ width: 16, height: 34, background: c }} />)}
                     </div>
@@ -314,15 +302,12 @@ export default function ConfiguracionPage() {
             </div>
           </div>
 
-          {/* iframe */}
-          <iframe
-            ref={iframeRef}
-            key={config.template}
-            src={previewSrc}
-            onLoad={handleIframeLoad}
-            style={{ flex: 1, width: "100%", border: "none" }}
-            title="Preview de la tienda"
-          />
+          {/* Template preview — rendered inline, no iframe */}
+          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+            <StoreConfigContext.Provider value={config}>
+              <TemplateComponent />
+            </StoreConfigContext.Provider>
+          </div>
         </main>
 
       </div>
