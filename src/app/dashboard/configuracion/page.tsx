@@ -8,7 +8,9 @@ import FashionNoir from "@/components/store/templates/FashionNoir";
 import BohoTerra from "@/components/store/templates/BohoTerra";
 import UrbanPulse from "@/components/store/templates/UrbanPulse";
 
-/* ── Template registry ─────────────────────────────────── */
+/* ── Types ─────────────────────────────────────────────── */
+type Mode = "gallery" | "preview" | "editing";
+
 type TemplateInfo = {
   id: TemplateId;
   name: string;
@@ -17,12 +19,9 @@ type TemplateInfo = {
   component: React.ComponentType;
 };
 
-type Category = {
-  id: string;
-  name: string;
-  templates: TemplateInfo[];
-};
+type Category = { id: string; name: string; templates: TemplateInfo[] };
 
+/* ── Template registry ─────────────────────────────────── */
 const CATEGORIES: Category[] = [
   {
     id: "moda",
@@ -33,8 +32,125 @@ const CATEGORIES: Category[] = [
       { id: "urban-pulse",  name: "Urban Pulse",  desc: "Deportivo · Energético",       palette: ["#0f0f0f", "#d4ff00", "#f5f5f5"], component: UrbanPulse },
     ],
   },
-  // Próximas categorías se agregan aquí
 ];
+
+/* ── Thumbnail (real template scaled) ─────────────────── */
+const THUMB_W = 200;
+const VIRTUAL_W = 1080;
+const SCALE = THUMB_W / VIRTUAL_W;
+const THUMB_H = 140;
+const VIRTUAL_H = THUMB_H / SCALE;
+
+function TemplateThumbnail({ component: Component }: { component: React.ComponentType }) {
+  return (
+    <div style={{ width: THUMB_W, height: THUMB_H, overflow: "hidden", position: "relative",
+      borderRadius: "8px 8px 0 0", background: "#f8fafc" }}>
+      <div style={{
+        position: "absolute", top: 0, left: 0,
+        width: VIRTUAL_W, height: VIRTUAL_H,
+        transform: `scale(${SCALE})`, transformOrigin: "top left",
+        pointerEvents: "none", userSelect: "none",
+      }}>
+        <Component />
+      </div>
+    </div>
+  );
+}
+
+/* ── Template card ──────────────────────────────────────── */
+function TemplateCard({ t, onSelect }: { t: TemplateInfo; onSelect: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={onSelect}
+      style={{
+        flexShrink: 0, width: THUMB_W, borderRadius: 12, overflow: "hidden", cursor: "pointer",
+        border: "2px solid", borderColor: hovered ? "#6366f1" : "#e2e8f0",
+        background: "white", transition: "all 0.2s",
+        boxShadow: hovered ? "0 8px 24px rgba(99,102,241,0.18)" : "0 2px 8px rgba(0,0,0,0.07)",
+        transform: hovered ? "translateY(-3px)" : "none",
+      }}>
+      <TemplateThumbnail component={t.component} />
+      <div style={{ padding: "10px 12px 12px" }}>
+        <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+          {t.palette.map((c, i) => (
+            <div key={i} style={{ width: 14, height: 14, borderRadius: "50%", background: c,
+              border: "1.5px solid rgba(0,0,0,0.1)" }} />
+          ))}
+        </div>
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#1e293b" }}>{t.name}</p>
+        <p style={{ margin: "3px 0 8px", fontSize: 10, color: "#94a3b8", lineHeight: 1.3 }}>{t.desc}</p>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "6px", borderRadius: 7, fontSize: 11, fontWeight: 700,
+          background: hovered ? "#6366f1" : "#f1f5f9",
+          color: hovered ? "white" : "#64748b", transition: "all 0.2s",
+        }}>
+          {hovered ? "Ver diseño →" : "Ver diseño"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Carousel row ───────────────────────────────────────── */
+function CarouselRow({ templates, onSelect }: { templates: TemplateInfo[]; onSelect: (t: TemplateInfo) => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scroll = (dir: "l" | "r") =>
+    scrollRef.current?.scrollBy({ left: dir === "l" ? -240 : 240, behavior: "smooth" });
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button onClick={() => scroll("l")} style={{
+        position: "absolute", left: -18, top: "50%", transform: "translateY(-50%)",
+        width: 34, height: 34, borderRadius: "50%", border: "1px solid #e2e8f0",
+        background: "white", cursor: "pointer", zIndex: 2, fontSize: 16, color: "#64748b",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
+      }}>‹</button>
+      <div ref={scrollRef} style={{
+        display: "flex", gap: 16, overflowX: "auto", paddingBottom: 8,
+        scrollSnapType: "x mandatory", scrollbarWidth: "none",
+      }}>
+        {templates.map(t => (
+          <div key={t.id} style={{ scrollSnapAlign: "start" }}>
+            <TemplateCard t={t} onSelect={() => onSelect(t)} />
+          </div>
+        ))}
+      </div>
+      <button onClick={() => scroll("r")} style={{
+        position: "absolute", right: -18, top: "50%", transform: "translateY(-50%)",
+        width: 34, height: 34, borderRadius: "50%", border: "1px solid #e2e8f0",
+        background: "white", cursor: "pointer", zIndex: 2, fontSize: 16, color: "#64748b",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
+      }}>›</button>
+    </div>
+  );
+}
+
+/* ── Browser frame wrapper (shared by preview + editing) ── */
+function BrowserFrame({ storeName, children }: { storeName: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      <div style={{ background: "#1e293b", padding: "10px 16px", display: "flex",
+        alignItems: "center", gap: 12, flexShrink: 0 }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff5f57" }} />
+          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ffbd2e" }} />
+          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#28ca41" }} />
+        </div>
+        <div style={{ flex: 1, background: "#0f172a", borderRadius: 6, padding: "5px 14px",
+          fontSize: 12, color: "#64748b", textAlign: "center", userSelect: "none" }}>
+          mitienda.com/tienda/{storeName.toLowerCase().replace(/\s+/g, "-")}
+        </div>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 /* ── Config form helpers ────────────────────────────────── */
 const labelStyle: React.CSSProperties = {
@@ -80,201 +196,9 @@ function Section({ id, label, icon, open, onToggle, children }: {
   );
 }
 
-/* ── Real template thumbnail (scaled render) ───────────── */
-const THUMB_W = 200;
-const VIRTUAL_W = 1080;
-const SCALE = THUMB_W / VIRTUAL_W;
-const THUMB_H = 140;
-const VIRTUAL_H = THUMB_H / SCALE;
-
-function TemplateThumbnail({ component: Component }: { component: React.ComponentType }) {
-  return (
-    <div style={{ width: THUMB_W, height: THUMB_H, overflow: "hidden", position: "relative",
-      borderRadius: "8px 8px 0 0", background: "#f8fafc" }}>
-      <div style={{
-        position: "absolute", top: 0, left: 0,
-        width: VIRTUAL_W, height: VIRTUAL_H,
-        transform: `scale(${SCALE})`, transformOrigin: "top left",
-        pointerEvents: "none", userSelect: "none",
-      }}>
-        <Component />
-      </div>
-    </div>
-  );
-}
-
-/* ── Template card (in carousel) ───────────────────────── */
-function TemplateCard({ t, onSelect }: { t: TemplateInfo; onSelect: () => void }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={onSelect}
-      style={{
-        flexShrink: 0, width: THUMB_W, borderRadius: 12, overflow: "hidden", cursor: "pointer",
-        border: "2px solid", borderColor: hovered ? "#6366f1" : "#e2e8f0",
-        background: "white", transition: "all 0.2s",
-        boxShadow: hovered ? "0 8px 24px rgba(99,102,241,0.18)" : "0 2px 8px rgba(0,0,0,0.07)",
-        transform: hovered ? "translateY(-3px)" : "none",
-      }}>
-      {/* Real template render scaled down */}
-      <TemplateThumbnail component={t.component} />
-
-      {/* Card footer */}
-      <div style={{ padding: "10px 12px 12px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-          {t.palette.map((c, i) => (
-            <div key={i} style={{ width: 14, height: 14, borderRadius: "50%", background: c,
-              border: "1.5px solid rgba(0,0,0,0.1)" }} />
-          ))}
-        </div>
-        <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#1e293b" }}>{t.name}</p>
-        <p style={{ margin: "3px 0 8px", fontSize: 10, color: "#94a3b8", lineHeight: 1.3 }}>{t.desc}</p>
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "6px", borderRadius: 7, fontSize: 11, fontWeight: 700,
-          background: hovered ? "#6366f1" : "#f1f5f9",
-          color: hovered ? "white" : "#64748b", transition: "all 0.2s",
-        }}>
-          {hovered ? "Elegir diseño →" : "Ver diseño"}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Carousel row ───────────────────────────────────────── */
-function CarouselRow({ templates, onSelect }: { templates: TemplateInfo[]; onSelect: (t: TemplateInfo) => void }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const scroll = (dir: "l" | "r") => {
-    scrollRef.current?.scrollBy({ left: dir === "l" ? -220 : 220, behavior: "smooth" });
-  };
-
-  return (
-    <div style={{ position: "relative" }}>
-      <button onClick={() => scroll("l")} style={{
-        position: "absolute", left: -18, top: "50%", transform: "translateY(-50%)",
-        width: 34, height: 34, borderRadius: "50%", border: "1px solid #e2e8f0",
-        background: "white", cursor: "pointer", zIndex: 2, fontSize: 14, color: "#64748b",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
-      }}>‹</button>
-
-      <div ref={scrollRef} style={{
-        display: "flex", gap: 16, overflowX: "auto", paddingBottom: 8,
-        scrollSnapType: "x mandatory",
-        scrollbarWidth: "none", msOverflowStyle: "none",
-      }}>
-        {templates.map(t => (
-          <div key={t.id} style={{ scrollSnapAlign: "start" }}>
-            <TemplateCard t={t} onSelect={() => onSelect(t)} />
-          </div>
-        ))}
-      </div>
-
-      <button onClick={() => scroll("r")} style={{
-        position: "absolute", right: -18, top: "50%", transform: "translateY(-50%)",
-        width: 34, height: 34, borderRadius: "50%", border: "1px solid #e2e8f0",
-        background: "white", cursor: "pointer", zIndex: 2, fontSize: 14, color: "#64748b",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
-      }}>›</button>
-    </div>
-  );
-}
-
-/* ── Gallery view (computer screen) ────────────────────── */
-function GalleryView({ onSelect }: { onSelect: (t: TemplateInfo) => void }) {
-  return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-      justifyContent: "center", background: "#f1f5f9", padding: "24px 40px 0" }}>
-
-      {/* Monitor frame */}
-      <div style={{
-        width: "100%", maxWidth: 860, flex: 1,
-        borderRadius: "14px 14px 0 0",
-        background: "#1e293b",
-        boxShadow: "0 0 0 2px #334155, 0 20px 60px rgba(0,0,0,0.35)",
-        display: "flex", flexDirection: "column", overflow: "hidden",
-        minHeight: 0,
-      }}>
-        {/* Screen bezel top */}
-        <div style={{ height: 36, background: "#1e293b", display: "flex", alignItems: "center",
-          justifyContent: "center", flexShrink: 0 }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#334155" }} />
-        </div>
-
-        {/* Screen content */}
-        <div style={{
-          flex: 1, background: "white", overflowY: "auto", overflowX: "hidden",
-          padding: "32px 48px",
-        }}>
-          <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "#94a3b8",
-            textTransform: "uppercase", letterSpacing: 1 }}>
-            Paso 1
-          </p>
-          <h1 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 800, color: "#0f172a" }}>
-            Elegí el diseño de tu tienda
-          </h1>
-          <p style={{ margin: "0 0 36px", fontSize: 13, color: "#64748b" }}>
-            Después vas a poder personalizar colores, texto y más.
-          </p>
-
-          {CATEGORIES.map(cat => (
-            <div key={cat.id} style={{ marginBottom: 40 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: "#0f172a",
-                  textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  {cat.name}
-                </span>
-                <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
-                <span style={{ fontSize: 11, color: "#94a3b8" }}>{cat.templates.length} diseños</span>
-              </div>
-              <CarouselRow templates={cat.templates} onSelect={onSelect} />
-            </div>
-          ))}
-
-          {/* Coming soon placeholder */}
-          <div style={{ marginBottom: 32 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-              <span style={{ fontSize: 13, fontWeight: 800, color: "#cbd5e1",
-                textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Más rubros próximamente
-              </span>
-              <div style={{ flex: 1, height: 1, background: "#f1f5f9" }} />
-            </div>
-            <div style={{ display: "flex", gap: 16 }}>
-              {["Gastronomía", "Accesorios", "Belleza", "Tecnología"].map(label => (
-                <div key={label} style={{
-                  width: 180, height: 160, borderRadius: 12, border: "2px dashed #e2e8f0",
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  color: "#cbd5e1", gap: 8,
-                }}>
-                  <span style={{ fontSize: 28 }}>+</span>
-                  <span style={{ fontSize: 11, fontWeight: 600 }}>{label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Monitor stand */}
-      <div style={{ width: "100%", maxWidth: 860, display: "flex", justifyContent: "center",
-        flexShrink: 0 }}>
-        <div style={{ width: 120, height: 18, background: "#1e293b",
-          borderRadius: "0 0 4px 4px", boxShadow: "0 4px 0 #334155" }} />
-      </div>
-      <div style={{ width: "100%", maxWidth: 860, display: "flex", justifyContent: "center",
-        flexShrink: 0 }}>
-        <div style={{ width: 220, height: 10, background: "#334155",
-          borderRadius: "0 0 8px 8px" }} />
-      </div>
-    </div>
-  );
-}
-
 /* ── Main page ─────────────────────────────────────────── */
 export default function ConfiguracionPage() {
+  const [mode, setMode] = useState<Mode>("gallery");
   const [selected, setSelected] = useState<TemplateInfo | null>(null);
   const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
   const [openSection, setOpenSection] = useState<string>("info");
@@ -287,15 +211,22 @@ export default function ConfiguracionPage() {
 
   const toggleSection = (id: string) => setOpenSection(s => s === id ? "" : id);
 
-  const handleSelect = (t: TemplateInfo) => {
+  /* Step 1 → 2 */
+  const handlePreview = (t: TemplateInfo) => {
     const defaults = TEMPLATE_DEFAULTS[t.id];
     setSelected(t);
-    setConfig(c => ({ ...c, template: t.id, colors: { accent: defaults.accent },
-      storeName: defaults.storeName }));
-    setOpenSection("info");
+    setConfig(c => ({ ...c, template: t.id, colors: { accent: defaults.accent }, storeName: defaults.storeName }));
+    setMode("preview");
   };
 
-  const handleBack = () => setSelected(null);
+  /* Step 2 → 3 */
+  const handleUseTemplate = () => setMode("editing");
+
+  /* Any → 1 */
+  const handleBackToGallery = () => { setMode("gallery"); setSelected(null); };
+
+  /* Step 3 → 2 */
+  const handleBackToPreview = () => setMode("preview");
 
   const handleSave = async () => {
     setSaving(true);
@@ -305,37 +236,167 @@ export default function ConfiguracionPage() {
     setTimeout(() => setSaved(false), 2200);
   };
 
-  /* ── Gallery mode ── */
-  if (!selected) {
+  /* ── STEP 1: Gallery ── */
+  if (mode === "gallery") {
     return (
       <DashboardLayout>
         <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
-          <GalleryView onSelect={handleSelect} />
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", background: "#f1f5f9", padding: "24px 40px 0" }}>
+
+            {/* Monitor frame */}
+            <div style={{
+              width: "100%", maxWidth: 860, flex: 1,
+              borderRadius: "14px 14px 0 0", background: "#1e293b",
+              boxShadow: "0 0 0 2px #334155, 0 20px 60px rgba(0,0,0,0.35)",
+              display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0,
+            }}>
+              {/* Bezel */}
+              <div style={{ height: 36, background: "#1e293b", display: "flex", alignItems: "center",
+                justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#334155" }} />
+              </div>
+              {/* Screen */}
+              <div style={{ flex: 1, background: "white", overflowY: "auto", overflowX: "hidden",
+                padding: "32px 48px" }}>
+                <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "#94a3b8",
+                  textTransform: "uppercase", letterSpacing: 1 }}>Paso 1 de 3</p>
+                <h1 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 800, color: "#0f172a" }}>
+                  Elegí el diseño de tu tienda
+                </h1>
+                <p style={{ margin: "0 0 36px", fontSize: 13, color: "#64748b" }}>
+                  Hacé click en un diseño para verlo en detalle.
+                </p>
+
+                {CATEGORIES.map(cat => (
+                  <div key={cat.id} style={{ marginBottom: 40 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: "#0f172a",
+                        textTransform: "uppercase", letterSpacing: 0.5 }}>{cat.name}</span>
+                      <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+                      <span style={{ fontSize: 11, color: "#94a3b8" }}>{cat.templates.length} diseños</span>
+                    </div>
+                    <CarouselRow templates={cat.templates} onSelect={handlePreview} />
+                  </div>
+                ))}
+
+                {/* Coming soon */}
+                <div style={{ marginBottom: 32 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#cbd5e1",
+                      textTransform: "uppercase", letterSpacing: 0.5 }}>Más rubros próximamente</span>
+                    <div style={{ flex: 1, height: 1, background: "#f1f5f9" }} />
+                  </div>
+                  <div style={{ display: "flex", gap: 16 }}>
+                    {["Gastronomía", "Accesorios", "Belleza", "Tecnología"].map(label => (
+                      <div key={label} style={{
+                        width: 180, height: 160, borderRadius: 12, border: "2px dashed #e2e8f0",
+                        display: "flex", flexDirection: "column", alignItems: "center",
+                        justifyContent: "center", color: "#cbd5e1", gap: 8,
+                      }}>
+                        <span style={{ fontSize: 28 }}>+</span>
+                        <span style={{ fontSize: 11, fontWeight: 600 }}>{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Monitor stand */}
+            <div style={{ width: "100%", maxWidth: 860, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ width: 120, height: 18, background: "#1e293b", borderRadius: "0 0 4px 4px",
+                boxShadow: "0 4px 0 #334155" }} />
+            </div>
+            <div style={{ width: "100%", maxWidth: 860, display: "flex", justifyContent: "center",
+              flexShrink: 0, paddingBottom: 24 }}>
+              <div style={{ width: 220, height: 10, background: "#334155", borderRadius: "0 0 8px 8px" }} />
+            </div>
+          </div>
         </div>
       </DashboardLayout>
     );
   }
 
-  /* ── Editing mode ── */
-  const TemplateComponent = selected.component;
+  const TemplateComponent = selected!.component;
 
+  /* ── STEP 2: Preview ── */
+  if (mode === "preview") {
+    return (
+      <DashboardLayout>
+        <div style={{ display: "flex", height: "100%", overflow: "hidden",
+          flexDirection: "column", background: "#f1f5f9" }}>
+
+          {/* Top bar */}
+          <div style={{ background: "#1e293b", padding: "12px 24px", display: "flex",
+            alignItems: "center", gap: 16, flexShrink: 0 }}>
+            <button onClick={handleBackToGallery}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px",
+                border: "1px solid #334155", borderRadius: 8, background: "transparent",
+                color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              ← Volver
+            </button>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ display: "flex", gap: 4 }}>
+                {selected!.palette.map((c, i) => (
+                  <div key={i} style={{ width: 12, height: 12, borderRadius: "50%", background: c,
+                    border: "1px solid rgba(255,255,255,0.15)" }} />
+                ))}
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{selected!.name}</span>
+              <span style={{ fontSize: 12, color: "#64748b" }}>— {selected!.desc}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11,
+              color: "#64748b", marginRight: 8 }}>
+              <span>Paso 2 de 3</span>
+            </div>
+            <button onClick={handleUseTemplate}
+              style={{ padding: "8px 20px", border: "none", borderRadius: 8,
+                background: "#6366f1", color: "white", fontSize: 13, fontWeight: 700,
+                cursor: "pointer" }}>
+              Usar este diseño →
+            </button>
+          </div>
+
+          {/* Browser window */}
+          <div style={{ flex: 1, display: "flex", alignItems: "stretch", padding: "16px 24px 24px",
+            minHeight: 0 }}>
+            <div style={{ flex: 1, borderRadius: 12, overflow: "hidden",
+              boxShadow: "0 8px 40px rgba(0,0,0,0.25)", display: "flex", flexDirection: "column" }}>
+              <StoreConfigContext.Provider value={config}>
+                <BrowserFrame storeName={config.storeName}>
+                  <TemplateComponent />
+                </BrowserFrame>
+              </StoreConfigContext.Provider>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  /* ── STEP 3: Editing ── */
   return (
     <DashboardLayout>
       <div style={{ display: "flex", height: "100%", overflow: "hidden", background: "#f8fafc" }}>
 
-        {/* ── LEFT PANEL ──────────────────────────────────── */}
-        <aside style={{
-          width: 320, flexShrink: 0, height: "100%", display: "flex",
+        {/* Left panel */}
+        <aside style={{ width: 320, flexShrink: 0, height: "100%", display: "flex",
           flexDirection: "column", background: "white",
-          borderRight: "1px solid #e2e8f0", boxShadow: "2px 0 12px rgba(0,0,0,0.04)",
-        }}>
+          borderRight: "1px solid #e2e8f0", boxShadow: "2px 0 12px rgba(0,0,0,0.04)" }}>
+
           <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid #f1f5f9" }}>
-            <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
-              {selected.name}
-            </h1>
-            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#94a3b8" }}>
-              {selected.desc}
-            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <div style={{ display: "flex", gap: 3 }}>
+                {selected!.palette.map((c, i) => (
+                  <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c,
+                    border: "1px solid rgba(0,0,0,0.1)" }} />
+                ))}
+              </div>
+              <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>Paso 3 de 3</span>
+            </div>
+            <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#0f172a" }}>{selected!.name}</h1>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Personalizá tu tienda</p>
           </div>
 
           <div style={{ flex: 1, overflowY: "auto" }}>
@@ -409,12 +470,11 @@ export default function ConfiguracionPage() {
                   <div style={{ display: "flex", gap: 8 }}>
                     {(["ARS", "USD"] as const).map(c => (
                       <button key={c} type="button" onClick={() => update("currency", c)}
-                        style={{
-                          flex: 1, padding: "9px", border: `2px solid ${config.currency === c ? "#6366f1" : "#e2e8f0"}`,
+                        style={{ flex: 1, padding: "9px",
+                          border: `2px solid ${config.currency === c ? "#6366f1" : "#e2e8f0"}`,
                           borderRadius: 8, background: config.currency === c ? "#f0f0ff" : "white",
                           fontSize: 13, fontWeight: 700, cursor: "pointer",
-                          color: config.currency === c ? "#6366f1" : "#64748b", transition: "all 0.15s",
-                        }}>
+                          color: config.currency === c ? "#6366f1" : "#64748b", transition: "all 0.15s" }}>
                         {c}
                       </button>
                     ))}
@@ -425,12 +485,11 @@ export default function ConfiguracionPage() {
                   <div style={{ display: "flex", gap: 8 }}>
                     {([["ES", "🇦🇷 Español"], ["EN", "🇺🇸 English"]] as const).map(([l, label]) => (
                       <button key={l} type="button" onClick={() => update("language", l)}
-                        style={{
-                          flex: 1, padding: "9px 6px", border: `2px solid ${config.language === l ? "#6366f1" : "#e2e8f0"}`,
+                        style={{ flex: 1, padding: "9px 6px",
+                          border: `2px solid ${config.language === l ? "#6366f1" : "#e2e8f0"}`,
                           borderRadius: 8, background: config.language === l ? "#f0f0ff" : "white",
                           fontSize: 12, fontWeight: 600, cursor: "pointer",
-                          color: config.language === l ? "#6366f1" : "#64748b", transition: "all 0.15s",
-                        }}>
+                          color: config.language === l ? "#6366f1" : "#64748b", transition: "all 0.15s" }}>
                         {label}
                       </button>
                     ))}
@@ -475,47 +534,31 @@ export default function ConfiguracionPage() {
 
           </div>
 
-          <div style={{ padding: "14px 20px", borderTop: "1px solid #f1f5f9", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ padding: "14px 20px", borderTop: "1px solid #f1f5f9",
+            display: "flex", flexDirection: "column", gap: 8 }}>
             <button type="button" onClick={handleSave} disabled={saving}
-              style={{
-                width: "100%", padding: "12px", border: "none", borderRadius: 10,
-                cursor: saving ? "not-allowed" : "pointer",
-                fontSize: 13, fontWeight: 700, transition: "background 0.25s",
-                background: saved ? "#10b981" : "#6366f1", color: "white",
-              }}>
+              style={{ width: "100%", padding: "12px", border: "none", borderRadius: 10,
+                cursor: saving ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 700,
+                transition: "background 0.25s",
+                background: saved ? "#10b981" : "#6366f1", color: "white" }}>
               {saving ? "Guardando..." : saved ? "✓ Cambios guardados" : "Guardar cambios"}
             </button>
-            <button type="button" onClick={handleBack}
-              style={{
-                width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 10,
+            <button type="button" onClick={handleBackToPreview}
+              style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 10,
                 cursor: "pointer", fontSize: 12, fontWeight: 600, background: "white",
-                color: "#64748b", transition: "all 0.15s",
-              }}>
-              ← Ver otros diseños
+                color: "#64748b", transition: "all 0.15s" }}>
+              ← Cambiar diseño
             </button>
           </div>
         </aside>
 
-        {/* ── RIGHT PANEL — Preview ────────────────────────── */}
-        <main style={{ flex: 1, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <div style={{ background: "#1e293b", padding: "10px 16px", display: "flex",
-            alignItems: "center", gap: 12, flexShrink: 0 }}>
-            <div style={{ display: "flex", gap: 6 }}>
-              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff5f57" }} />
-              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ffbd2e" }} />
-              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#28ca41" }} />
-            </div>
-            <div style={{ flex: 1, background: "#0f172a", borderRadius: 6, padding: "5px 14px",
-              fontSize: 12, color: "#64748b", textAlign: "center", userSelect: "none" }}>
-              mitienda.com/tienda/{config.storeName.toLowerCase().replace(/\s+/g, "-")}
-            </div>
-          </div>
-
-          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-            <StoreConfigContext.Provider value={config}>
+        {/* Right: template preview */}
+        <main style={{ flex: 1, height: "100%", overflow: "hidden" }}>
+          <StoreConfigContext.Provider value={config}>
+            <BrowserFrame storeName={config.storeName}>
               <TemplateComponent />
-            </StoreConfigContext.Provider>
-          </div>
+            </BrowserFrame>
+          </StoreConfigContext.Provider>
         </main>
 
       </div>
