@@ -1,7 +1,7 @@
 "use client";
 import { useState, useCallback, useRef, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import type { StoreConfig, TemplateId } from "@/types/store-config";
+import type { StoreConfig, TemplateId, TextOverride } from "@/types/store-config";
 import { TEMPLATE_DEFAULTS, DEFAULT_CONFIG } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext } from "@/contexts/EditContext";
@@ -153,6 +153,20 @@ function BrowserFrame({ storeName, children }: { storeName: string; children: Re
   );
 }
 
+/* ── Text field labels (editable zones that open the text editor) ── */
+const TEXT_FIELD_LABELS: Record<string, string> = {
+  announcementText:  "Barra de anuncios",
+  heroHeading:       "Título principal",
+  heroSubtext:       "Subtítulo hero",
+  heroCta:           "Botón principal",
+  heroCtaSecondary:  "Botón secundario",
+  categoriesHeading: "Sección categorías",
+  quoteText:         "Frase destacada",
+  footerDescription: "Descripción footer",
+  footerCopyright:   "Copyright",
+  footerMadeIn:      "Hecho en",
+};
+
 /* ── Config form helpers ────────────────────────────────── */
 const labelStyle: React.CSSProperties = {
   display: "block", fontSize: 11, fontWeight: 600, color: "#555",
@@ -175,6 +189,105 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
         position: "absolute", top: 2, left: value ? 22 : 2, transition: "left 0.2s",
         boxShadow: "0 1px 3px rgba(0,0,0,0.2)", display: "block" }} />
     </button>
+  );
+}
+
+const FONT_OPTIONS = [
+  { label: "Predeterminada", value: "" },
+  { label: "Sans-serif",     value: "system-ui, -apple-system, sans-serif" },
+  { label: "Serif",          value: "Georgia, Cambria, serif" },
+  { label: "Monoespaciada",  value: "ui-monospace, monospace" },
+];
+const FONT_SIZES = [10, 12, 13, 14, 15, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64];
+
+function TextEditorPanel({ field, label, overrides, setOverride, resetOverride, onClose }: {
+  field: string; label: string;
+  overrides: Record<string, TextOverride>;
+  setOverride: (f: string, p: Partial<TextOverride>) => void;
+  resetOverride: (f: string) => void;
+  onClose: () => void;
+}) {
+  const ov = overrides[field] ?? {};
+  const hasOverride = Object.entries(ov).some(([, v]) => v !== undefined);
+
+  return (
+    <div style={{ background: "linear-gradient(135deg,#f0f0ff,#fafafe)", borderBottom: "2px solid #6366f1", padding: "14px 20px", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 15 }}>✏</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#6366f1" }}>{label}</span>
+        </div>
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 20, lineHeight: 1, padding: "0 4px" }}>×</button>
+      </div>
+
+      {/* Text content */}
+      <div style={{ marginBottom: 10 }}>
+        <label style={labelStyle}>Texto</label>
+        <textarea
+          value={ov.text ?? ""}
+          placeholder="Vacío = texto original del template"
+          rows={2}
+          onChange={e => setOverride(field, { text: e.target.value || undefined })}
+          style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }}
+        />
+      </div>
+
+      {/* Font + Size */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <div style={{ flex: 1 }}>
+          <label style={labelStyle}>Fuente</label>
+          <select value={ov.fontFamily ?? ""} onChange={e => setOverride(field, { fontFamily: e.target.value || undefined })}
+            style={{ ...inputStyle, cursor: "pointer", paddingRight: 8 }}>
+            {FONT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+          </select>
+        </div>
+        <div style={{ width: 90 }}>
+          <label style={labelStyle}>Tamaño</label>
+          <select value={ov.fontSize ?? ""} onChange={e => setOverride(field, { fontSize: e.target.value ? Number(e.target.value) : undefined })}
+            style={{ ...inputStyle, cursor: "pointer", paddingRight: 4 }}>
+            <option value="">Auto</option>
+            {FONT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Color + B/I/U + Reset */}
+      <div style={{ display: "flex", gap: 6, alignItems: "flex-end" }}>
+        <div>
+          <label style={labelStyle}>Color</label>
+          <input type="color" value={ov.color ?? "#000000"}
+            onChange={e => setOverride(field, { color: e.target.value })}
+            style={{ width: 40, height: 34, padding: 2, border: "1px solid #e2e8f0", borderRadius: 7, cursor: "pointer", display: "block" }} />
+        </div>
+        <div>
+          <label style={labelStyle}>Estilo</label>
+          <div style={{ display: "flex", gap: 4 }}>
+            {([["bold","B",{ fontWeight:700 }],["italic","I",{ fontStyle:"italic" }],["underline","U",{ textDecoration:"underline" }]] as const).map(([key, lbl, st]) => (
+              <button key={key} type="button"
+                onClick={() => setOverride(field, { [key]: !ov[key as keyof TextOverride] })}
+                style={{
+                  width: 34, height: 34, border: "1.5px solid",
+                  borderColor: ov[key as keyof TextOverride] ? "#6366f1" : "#e2e8f0",
+                  borderRadius: 7,
+                  background: ov[key as keyof TextOverride] ? "#e0e7ff" : "white",
+                  cursor: "pointer", fontSize: 13,
+                  color: ov[key as keyof TextOverride] ? "#6366f1" : "#374151",
+                  ...(st as React.CSSProperties),
+                }}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+        </div>
+        {hasOverride && (
+          <button type="button" onClick={() => resetOverride(field)}
+            title="Restablecer todo"
+            style={{ width: 34, height: 34, border: "1px solid #e2e8f0", borderRadius: 7, background: "white", cursor: "pointer", fontSize: 16, color: "#94a3b8", marginTop: "auto" }}>
+            ↺
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -212,17 +325,37 @@ export default function ConfiguracionPage() {
   const accentRef = useRef<HTMLInputElement>(null);
   const whatsappNumberRef = useRef<HTMLInputElement>(null);
 
-  const FIELD_MAP: Record<string, { section: string; ref: React.RefObject<HTMLInputElement | null> }> = {
-    storeName:    { section: "info",      ref: storeNameRef },
-    storeTagline: { section: "info",      ref: storeTaglineRef },
-    "colors.accent": { section: "colores", ref: accentRef },
-    whatsapp:     { section: "whatsapp", ref: whatsappNumberRef },
+  /* Config fields: clicking them opens a sidebar section + focuses input */
+  const CONFIG_FIELD_MAP: Record<string, { section: string; ref: React.RefObject<HTMLInputElement | null> }> = {
+    storeName:       { section: "info",      ref: storeNameRef },
+    storeTagline:    { section: "info",      ref: storeTaglineRef },
+    "colors.accent": { section: "colores",   ref: accentRef },
+    whatsapp:        { section: "whatsapp",  ref: whatsappNumberRef },
   };
+
+  /* Text override helpers */
+  const setOverride = useCallback((field: string, partial: Partial<TextOverride>) => {
+    setConfig(c => ({
+      ...c,
+      textOverrides: {
+        ...c.textOverrides,
+        [field]: { ...(c.textOverrides[field] ?? {}), ...partial },
+      },
+    }));
+  }, []);
+
+  const resetOverride = useCallback((field: string) => {
+    setConfig(c => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [field]: _, ...rest } = c.textOverrides;
+      return { ...c, textOverrides: rest };
+    });
+  }, []);
 
   useEffect(() => {
     if (!activeField) return;
-    const mapping = FIELD_MAP[activeField];
-    if (!mapping) return;
+    const mapping = CONFIG_FIELD_MAP[activeField];
+    if (!mapping) return; // text fields are handled by TextEditorPanel
     setOpenSection(mapping.section);
     setTimeout(() => {
       mapping.ref.current?.focus();
@@ -425,6 +558,18 @@ export default function ConfiguracionPage() {
             <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Personalizá tu tienda</p>
           </div>
 
+          {/* Text editor panel — appears when a text zone is clicked */}
+          {activeField && TEXT_FIELD_LABELS[activeField] && (
+            <TextEditorPanel
+              field={activeField}
+              label={TEXT_FIELD_LABELS[activeField]}
+              overrides={config.textOverrides}
+              setOverride={setOverride}
+              resetOverride={resetOverride}
+              onClose={() => setActiveField(null)}
+            />
+          )}
+
           <div style={{ flex: 1, overflowY: "auto" }}>
 
             <Section id="info" label="Información" icon="🏪" open={openSection === "info"} onToggle={toggleSection}>
@@ -583,7 +728,14 @@ export default function ConfiguracionPage() {
 
         {/* Right: template preview */}
         <main style={{ flex: 1, height: "100%", overflow: "hidden" }}>
-          <EditContext.Provider value={{ editMode: true, activeField, setActiveField }}>
+          <EditContext.Provider value={{
+            editMode: true,
+            activeField,
+            setActiveField,
+            overrides: config.textOverrides,
+            setOverride,
+            resetOverride,
+          }}>
             <StoreConfigContext.Provider value={config}>
               <BrowserFrame storeName={config.storeName}>
                 <TemplateComponent />

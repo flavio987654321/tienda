@@ -1,5 +1,15 @@
 export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse";
 
+export type TextOverride = {
+  text?: string;
+  color?: string;
+  fontFamily?: string;
+  fontSize?: number;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+};
+
 export type StoreConfig = {
   template: TemplateId;
   storeName: string;
@@ -18,6 +28,7 @@ export type StoreConfig = {
     title: string;
     description: string;
   };
+  textOverrides: Record<string, TextOverride>;
 };
 
 export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: string }> = {
@@ -35,4 +46,5 @@ export const DEFAULT_CONFIG: StoreConfig = {
   currency:      "ARS",
   language:      "ES",
   seo:           { enabled: false, title: "", description: "" },
+  textOverrides: {},
 };

@@ -280,19 +280,19 @@ export default function UrbanPulse() {
             <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "▶ Nueva Colección 2025"}</EditableZone>
           </span>
           <h1 style={{ color:WHITE, fontSize:"clamp(58px,7.5vw,108px)", fontWeight:900, lineHeight:0.88, margin:"0 0 28px", textTransform:"uppercase", letterSpacing:"-2px" }}>
-            MOVE<br/>FASTER.<br/><span style={{ color:ACC }}>GO<br/>HARDER.</span>
+            <EditableZone field="heroHeading" label="Título principal">MOVE FASTER. GO HARDER.</EditableZone>
           </h1>
           <p style={{ color:"rgba(255,255,255,0.5)", fontSize:15, maxWidth:360, marginBottom:40, lineHeight:1.7 }}>
-            Ropa deportiva de alta performance para quienes no conocen los límites.
+            <EditableZone field="heroSubtext" label="Subtítulo hero">Ropa deportiva de alta performance para quienes no conocen los límites.</EditableZone>
           </p>
           <div style={{ display:"flex", gap:12 }}>
             <button onClick={() => scrollTo("productos")}
               style={{ background:ACC, color:DARK, border:"none", padding:"16px 36px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
-              Ver Colección
+              <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
             </button>
             <button onClick={() => scrollTo("featured")}
               style={{ background:"none", color:WHITE, border:`2px solid rgba(255,255,255,0.4)`, padding:"16px 36px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
-              Featured Drop
+              <EditableZone field="heroCtaSecondary" label="Botón secundario">Featured Drop</EditableZone>
             </button>
           </div>
         </div>

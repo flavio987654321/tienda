@@ -196,7 +196,9 @@ export default function BohoTerra() {
       {/* ── ANNOUNCEMENT BAR ───────────────────────────────── */}
       {announcementVisible && (
         <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:110, height:ANNOUNCEMENT_BAR_H, background:A, display:"flex", alignItems:"center", justifyContent:"center" }}>
-          <span style={{ fontSize:12, fontWeight:600, color:"#fff", letterSpacing:1 }}>{ANNOUNCEMENT_MESSAGES[announcementIdx]}</span>
+          <span style={{ fontSize:12, fontWeight:600, color:"#fff", letterSpacing:1 }}>
+            <EditableZone field="announcementText" label="Barra de anuncios">{ANNOUNCEMENT_MESSAGES[announcementIdx]}</EditableZone>
+          </span>
           {/* Dots */}
           <div style={{ position:"absolute", bottom:5, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5 }}>
             {ANNOUNCEMENT_MESSAGES.map((_, i) => (
@@ -318,15 +320,15 @@ export default function BohoTerra() {
             <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva temporada · 2025"}</EditableZone>
           </p>
           <h1 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(52px,6vw,90px)", fontWeight:400, lineHeight:1, margin:"0 0 32px", color:T, fontStyle:"italic" }}>
-            Lo natural<br/>siempre<br/>vuelve.
+            <EditableZone field="heroHeading" label="Título principal">Lo natural siempre vuelve.</EditableZone>
           </h1>
           <p style={{ fontSize:15, color:MID, lineHeight:1.8, marginBottom:48, maxWidth:380 }}>
-            Ropa hecha con fibras naturales y tinturas vegetales. Artesanal, local, consciente.
+            <EditableZone field="heroSubtext" label="Subtítulo hero">Ropa hecha con fibras naturales y tinturas vegetales. Artesanal, local, consciente.</EditableZone>
           </p>
           <button onClick={()=>scrollTo("coleccion")} style={{ alignSelf:"flex-start", background:"none", color:T, border:`1.5px solid ${T}`, padding:"14px 40px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", transition:"all 0.25s" }}
             onMouseEnter={e=>{ e.currentTarget.style.background=T; e.currentTarget.style.color=BG; }}
             onMouseLeave={e=>{ e.currentTarget.style.background="none"; e.currentTarget.style.color=T; }}>
-            {"Ver Colección"}
+            <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
           </button>
         </div>
         {/* fotos apiladas */}
@@ -441,7 +443,7 @@ export default function BohoTerra() {
           <div style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.45)" }}/>
           <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
             <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,4vw,54px)", fontStyle:"italic", color:"#faf7f2", textAlign:"center", lineHeight:1.3 }}>
-              Hechas con<br/>las manos y el corazón.
+              <EditableZone field="quoteText" label="Frase destacada">Hechas con las manos y el corazón.</EditableZone>
             </p>
           </div>
         </div>
@@ -555,7 +557,9 @@ export default function BohoTerra() {
           </div>
         </div>
         <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, padding:"16px 40px", maxWidth:1280, margin:"0 auto" }}>
-          <p style={{ fontSize:11, color:MID, margin:0, opacity:0.6 }}>© 2025 Terra · Moda consciente · Mendoza, Argentina</p>
+          <p style={{ fontSize:11, color:MID, margin:0, opacity:0.6 }}>
+            <EditableZone field="footerCopyright" label="Copyright">© 2025 Terra · Moda consciente · Mendoza, Argentina</EditableZone>
+          </p>
         </div>
       </footer>
 

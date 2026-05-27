@@ -222,7 +222,9 @@ export default function FashionNoir() {
       {/* ── ANNOUNCEMENT BAR ───────────────────────────────── */}
       {announcementVisible && (
         <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center" }}>
-          <span style={{ fontSize:12, fontWeight:600, color:BG, letterSpacing:1 }}>{ANNOUNCEMENT_MESSAGES[announcementIdx]}</span>
+          <span style={{ fontSize:12, fontWeight:600, color:BG, letterSpacing:1 }}>
+            <EditableZone field="announcementText" label="Barra de anuncios">{ANNOUNCEMENT_MESSAGES[announcementIdx]}</EditableZone>
+          </span>
           {/* Dots */}
           <div style={{ position:"absolute", bottom:5, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5 }}>
             {ANNOUNCEMENT_MESSAGES.map((_, i) => (
@@ -344,11 +346,19 @@ export default function FashionNoir() {
             <p style={{ fontSize:11, letterSpacing:5, color:G, marginBottom:20, textTransform:"uppercase" }}>
               <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva Temporada · Otoño 2025"}</EditableZone>
             </p>
-            <h1 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(42px,6vw,80px)", fontWeight:700, lineHeight:1.05, margin:"0 0 20px", color:T }}>Vestí<br/>tu esencia.</h1>
-            <p style={{ fontSize:16, opacity:0.75, lineHeight:1.7, marginBottom:40, maxWidth:380 }}>Piezas diseñadas para quienes eligen calidad sobre cantidad. Colecciones cápsula para cada estilo de vida.</p>
+            <h1 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(42px,6vw,80px)", fontWeight:700, lineHeight:1.05, margin:"0 0 20px", color:T }}>
+              <EditableZone field="heroHeading" label="Título principal">Vestí tu esencia.</EditableZone>
+            </h1>
+            <p style={{ fontSize:16, opacity:0.75, lineHeight:1.7, marginBottom:40, maxWidth:380 }}>
+              <EditableZone field="heroSubtext" label="Subtítulo hero">Piezas diseñadas para quienes eligen calidad sobre cantidad. Colecciones cápsula para cada estilo de vida.</EditableZone>
+            </p>
             <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
-              <button onClick={() => scrollTo("productos")} style={{ background:G, color:BG, border:"none", padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>{"Ver Colección"}</button>
-              <button onClick={() => scrollTo("nosotros")} style={{ background:"transparent", color:T, border:`1px solid rgba(240,235,227,0.4)`, padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:500, textTransform:"uppercase", cursor:"pointer" }}>{"Nuestra Historia"}</button>
+              <button onClick={() => scrollTo("productos")} style={{ background:G, color:BG, border:"none", padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>
+                <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
+              </button>
+              <button onClick={() => scrollTo("nosotros")} style={{ background:"transparent", color:T, border:`1px solid rgba(240,235,227,0.4)`, padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:500, textTransform:"uppercase", cursor:"pointer" }}>
+                <EditableZone field="heroCtaSecondary" label="Botón secundario">Nuestra Historia</EditableZone>
+              </button>
             </div>
           </div>
         </div>
@@ -375,7 +385,9 @@ export default function FashionNoir() {
 
       {/* ── CATEGORÍAS ─────────────────────────────────────── */}
       <section id="categorias" style={{ padding:"80px 32px", maxWidth:1280, margin:"0 auto" }}>
-        <p style={{ fontSize:11, letterSpacing:5, color:G, textAlign:"center", marginBottom:48, textTransform:"uppercase" }}>Colecciones</p>
+        <p style={{ fontSize:11, letterSpacing:5, color:G, textAlign:"center", marginBottom:48, textTransform:"uppercase" }}>
+          <EditableZone field="categoriesHeading" label="Título sección categorías">Colecciones</EditableZone>
+        </p>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
           {[
             { label:"Mujer",      img:"https://picsum.photos/seed/noir-cat1/800/1200" },
@@ -400,7 +412,7 @@ export default function FashionNoir() {
       {/* ── STATEMENT ──────────────────────────────────────── */}
       <section style={{ padding:"72px 32px", borderTop:`1px solid rgba(201,168,76,0.1)`, borderBottom:`1px solid rgba(201,168,76,0.1)`, textAlign:"center" }}>
         <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(20px,3.5vw,40px)", color:T, opacity:0.88, maxWidth:760, margin:"0 auto", lineHeight:1.5, fontStyle:"italic" }}>
-          "No compramos ropa. Compramos la versión de nosotros mismos que queremos ser."
+          <EditableZone field="quoteText" label="Frase destacada">"No compramos ropa. Compramos la versión de nosotros mismos que queremos ser."</EditableZone>
         </p>
         <div style={{ width:56, height:1, background:G, margin:"28px auto 0" }}/>
       </section>
@@ -552,7 +564,9 @@ export default function FashionNoir() {
         <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1.5fr", gap:48, marginBottom:48 }}>
           <div>
             <span style={{ fontFamily:"Georgia, serif", fontSize:28, fontWeight:700, letterSpacing:6, color:G, display:"block", marginBottom:16 }}>NOIR</span>
-            <p style={{ fontSize:13, opacity:0.45, lineHeight:1.8, maxWidth:260 }}>Piezas de calidad para personas que saben lo que quieren. Diseño atemporal, confección impecable.</p>
+            <p style={{ fontSize:13, opacity:0.45, lineHeight:1.8, maxWidth:260 }}>
+              <EditableZone field="footerDescription" label="Descripción del footer">Piezas de calidad para personas que saben lo que quieren. Diseño atemporal, confección impecable.</EditableZone>
+            </p>
             <div style={{ display:"flex", gap:12, marginTop:24 }}>
               {["IG","FB","TK","YT"].map(s => (
                 <button key={s} style={{ background:"none", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:34, height:34, fontSize:10, fontWeight:700, cursor:"pointer", letterSpacing:1, transition:"all 0.2s" }}
@@ -588,8 +602,12 @@ export default function FashionNoir() {
           </div>
         </div>
         <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:24, display:"flex", justifyContent:"space-between", alignItems:"center", maxWidth:1280, margin:"0 auto" }}>
-          <p style={{ fontSize:11, opacity:0.25, margin:0 }}>© 2025 NOIR Fashion. Todos los derechos reservados.</p>
-          <p style={{ fontSize:11, opacity:0.25, margin:0 }}>Hecho con ♥ en Argentina</p>
+          <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
+            <EditableZone field="footerCopyright" label="Copyright">© 2025 NOIR Fashion. Todos los derechos reservados.</EditableZone>
+          </p>
+          <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
+            <EditableZone field="footerMadeIn" label="Hecho en">Hecho con ♥ en Argentina</EditableZone>
+          </p>
         </div>
       </footer>
 
