@@ -525,7 +525,7 @@ export default function FashionNoir() {
       {/* ── CONTACTO ───────────────────────────────────────── */}
       <section id="contacto" style={{ padding:"80px 32px", borderTop:`1px solid rgba(201,168,76,0.1)` }}>
         <div style={{ maxWidth:640, margin:"0 auto" }}>
-          <p style={{ fontSize:10, letterSpacing:5, color:G, textAlign:"center", textTransform:"uppercase", marginBottom:12 }}>Contacto</p>
+          <p style={{ fontSize:10, letterSpacing:5, color:G, textAlign:"center", textTransform:"uppercase", marginBottom:12 }}><EditableZone field="contactKicker" label="Etiqueta contacto">Contacto</EditableZone></p>
           <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,3vw,38px)", textAlign:"center", margin:"0 0 12px", color:T }}>
             <EditableZone field="contactHeading" label="Título contacto">¿Tenés alguna consulta?</EditableZone>
           </h2>
@@ -606,7 +606,9 @@ export default function FashionNoir() {
           ))}
           <div>
             <p style={{ fontSize:10, letterSpacing:4, color:G, textTransform:"uppercase", marginBottom:20, fontWeight:700 }}>Newsletter</p>
-            <p style={{ fontSize:12, opacity:0.45, marginBottom:16, lineHeight:1.6 }}>Suscribite y recibí novedades antes que nadie. Sin spam.</p>
+            <p style={{ fontSize:12, opacity:0.45, marginBottom:16, lineHeight:1.6 }}>
+              <EditableZone field="newsletterText" label="Texto newsletter">Suscribite y recibí novedades antes que nadie. Sin spam.</EditableZone>
+            </p>
             <div style={{ display:"flex" }}>
               <input placeholder="tu@email.com" style={{ flex:1, background:S, border:`1px solid rgba(201,168,76,0.25)`, borderRight:"none", color:T, padding:"11px 14px", fontSize:12, outline:"none" }}/>
               <button style={{ background:G, color:BG, border:"none", padding:"11px 18px", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:1 }}>OK</button>

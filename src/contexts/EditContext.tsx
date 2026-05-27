@@ -78,6 +78,9 @@ export function EditableZone({
         outlineOffset: 4,
         borderRadius: 3,
         transition: "outline-color 0.15s",
+        overflowWrap: "break-word",
+        wordBreak: "break-word",
+        maxWidth: "100%",
         ...overrideStyle,
       } as React.CSSProperties}
     >

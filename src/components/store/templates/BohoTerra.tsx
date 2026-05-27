@@ -450,9 +450,9 @@ export default function BohoTerra() {
         {/* texto + stats */}
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"72px 40px", display:"grid", gridTemplateColumns:"1.2fr 1fr", gap:80, alignItems:"start" }}>
           <div>
-            <p style={{ fontSize:10, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:16 }}>Nuestra historia</p>
-            <p style={{ fontSize:15, color:T, lineHeight:1.9, marginBottom:20 }}>Terra nació en Mendoza en 2019 como un pequeño taller de confección artesanal. Hoy somos un equipo de 12 personas que diseña, tiñe y cose cada prenda con materiales de origen responsable.</p>
-            <p style={{ fontSize:15, color:MID, lineHeight:1.9 }}>Trabajamos con productores locales de lino, alpaca y algodón orgánico. Nuestras tinturas son 100% vegetales: cúrcuma, añil, madreselva y cochinilla.</p>
+            <p style={{ fontSize:10, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:16 }}><EditableZone field="aboutKicker" label="Etiqueta 'Nosotros'">Nuestra historia</EditableZone></p>
+            <p style={{ fontSize:15, color:T, lineHeight:1.9, marginBottom:20 }}><EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'" block>Terra nació en Mendoza en 2019 como un pequeño taller de confección artesanal. Hoy somos un equipo de 12 personas que diseña, tiñe y cose cada prenda con materiales de origen responsable.</EditableZone></p>
+            <p style={{ fontSize:15, color:MID, lineHeight:1.9 }}><EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'" block>Trabajamos con productores locales de lino, alpaca y algodón orgánico. Nuestras tinturas son 100% vegetales: cúrcuma, añil, madreselva y cochinilla.</EditableZone></p>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:32 }}>
             {[["2019","Año de fundación"],["100%","Fibras naturales"],["12","Artesanas"],["Mendoza","Origen"]].map(([n,label])=>(
@@ -472,8 +472,8 @@ export default function BohoTerra() {
         <div style={{ position:"relative", maxWidth:1280, margin:"0 auto", padding:"80px 40px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"center", minHeight:500 }}>
           {/* izq — texto e info */}
           <div>
-            <p style={{ fontSize:10, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:20 }}>Escribinos</p>
-            <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(30px,4vw,56px)", fontStyle:"italic", fontWeight:400, margin:"0 0 28px", color:T, lineHeight:1.1 }}>Estamos<br/>para ayudarte.</h2>
+            <p style={{ fontSize:10, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:20 }}><EditableZone field="contactKicker" label="Etiqueta contacto">Escribinos</EditableZone></p>
+            <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(30px,4vw,56px)", fontStyle:"italic", fontWeight:400, margin:"0 0 28px", color:T, lineHeight:1.1 }}><EditableZone field="contactHeading" label="Título contacto" block>Estamos para ayudarte.</EditableZone></h2>
             <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
               {[
                 { label:"Email", val:"hola@terra.com.ar" },
@@ -501,7 +501,7 @@ export default function BohoTerra() {
               </div>
             ) : (
               <form onSubmit={handleContact}>
-                <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:18, color:T, margin:"0 0 24px" }}>Mandanos un mensaje</p>
+                <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:18, color:T, margin:"0 0 24px" }}><EditableZone field="contactFormHeading" label="Subtítulo formulario">Mandanos un mensaje</EditableZone></p>
                 <input required placeholder="Tu nombre" value={contactForm.nombre} onChange={e=>setContactForm(f=>({...f,nombre:e.target.value}))}
                   style={{...iStyle, marginBottom:12}} onFocus={onFI} onBlur={onBI}/>
                 <input required type="email" placeholder="tu@email.com" value={contactForm.email} onChange={e=>setContactForm(f=>({...f,email:e.target.value}))}
@@ -525,8 +525,8 @@ export default function BohoTerra() {
         <div style={{ background:A, padding:"36px 40px" }}>
           <div style={{ maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", gap:32, flexWrap:"wrap" }}>
             <div>
-              <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:"#fff", margin:"0 0 4px" }}>Suscribite al newsletter</p>
-              <p style={{ fontSize:12, color:"rgba(255,255,255,0.65)", margin:0, letterSpacing:1 }}>Novedades, lanzamientos y descuentos exclusivos</p>
+              <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:"#fff", margin:"0 0 4px" }}><EditableZone field="newsletterText" label="Título newsletter">Suscribite al newsletter</EditableZone></p>
+              <p style={{ fontSize:12, color:"rgba(255,255,255,0.65)", margin:0, letterSpacing:1 }}><EditableZone field="newsletterSubtext" label="Subtítulo newsletter">Novedades, lanzamientos y descuentos exclusivos</EditableZone></p>
             </div>
             <div style={{ display:"flex", flexShrink:0 }}>
               <input placeholder="tu@email.com" style={{ width:260, background:"rgba(255,255,255,0.15)", border:"1px solid rgba(255,255,255,0.3)", borderRight:"none", color:"#fff", padding:"12px 16px", fontSize:13, outline:"none" }}/>

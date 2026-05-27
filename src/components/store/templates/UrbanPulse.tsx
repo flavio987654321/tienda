@@ -323,7 +323,7 @@ export default function UrbanPulse() {
       <section style={{ padding:"80px 40px", maxWidth:1200, margin:"0 auto" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:40 }}>
           <h2 style={{ fontSize:"clamp(36px,4vw,52px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, lineHeight:1 }}>
-            Explorá<br/><span className="up-stroke">la tienda</span>
+            <EditableZone field="categoriesHeading" label="Título sección categorías">Explorá la tienda</EditableZone>
           </h2>
           <button onClick={() => scrollTo("productos")}
             style={{ background:"none", border:`2px solid ${DARK}`, padding:"10px 24px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
@@ -361,12 +361,14 @@ export default function UrbanPulse() {
             )}
           </div>
           <div style={{ padding:"60px 56px" }}>
-            <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>▶ Featured Drop</span>
-            <h2 style={{ color:WHITE, fontSize:"clamp(32px,4vw,50px)", fontWeight:900, textTransform:"uppercase", lineHeight:1.05, margin:"0 0 20px", letterSpacing:"-1px" }}>
+            <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>
+              <EditableZone field="featuredLabel" label="Etiqueta featured">▶ Featured Drop</EditableZone>
+            </span>
+  <h2 style={{ color:WHITE, fontSize:"clamp(32px,4vw,50px)", fontWeight:900, textTransform:"uppercase", lineHeight:1.05, margin:"0 0 20px", letterSpacing:"-1px" }}>
               {featuredProduct.name}
             </h2>
             <p style={{ color:"rgba(255,255,255,0.45)", fontSize:14, lineHeight:1.8, marginBottom:28 }}>
-              Tecnología de compresión avanzada para máximo soporte muscular y recuperación activa. Perfecto para entrenamiento de alta intensidad.
+              <EditableZone field="featuredDescription" label="Descripción featured">Tecnología de compresión avanzada para máximo soporte muscular y recuperación activa. Perfecto para entrenamiento de alta intensidad.</EditableZone>
             </p>
             <div style={{ marginBottom:32 }}>
               {[["Material","87% Nylon · 13% Elastane"],["Tecnología","4-Way Stretch"],["Uso","Gym · Running · Training"]].map(([k,v]) => (
@@ -449,7 +451,7 @@ export default function UrbanPulse() {
       <section style={{ background:DARK, padding:"80px 0" }}>
         <div style={{ padding:"0 40px", marginBottom:36 }}>
           <h2 style={{ color:WHITE, fontSize:"clamp(30px,3.5vw,42px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0 }}>
-            Lo que dicen<br/><span style={{ color:ACC }}>nuestros clientes</span>
+            <EditableZone field="testimonialsHeading" label="Título testimonios">Lo que dicen nuestros clientes</EditableZone>
           </h2>
         </div>
         <div style={{ display:"flex", gap:4, overflowX:"auto", padding:"0 40px 4px", scrollbarWidth:"none" }}>
@@ -470,14 +472,18 @@ export default function UrbanPulse() {
       {/* NOSOTROS */}
       <section id="nosotros" style={{ padding:"100px 40px", maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"center" }}>
         <div>
-          <span style={{ color:MID, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>▶ Nuestra Historia</span>
+          <span style={{ color:MID, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>
+            <EditableZone field="aboutKicker" label="Kicker 'Nosotros'">▶ Nuestra Historia</EditableZone>
+          </span>
           <h2 style={{ fontSize:"clamp(36px,4vw,50px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", lineHeight:1.05, margin:"0 0 28px" }}>
-            Hacemos ropa<br/>para los que<br/><span className="up-stroke">no paran.</span>
+            <EditableZone field="aboutHeading" label="Título 'Nosotros'">Hacemos ropa para los que no paran.</EditableZone>
           </h2>
           <p style={{ fontSize:15, color:MID, lineHeight:1.8, marginBottom:16 }}>
-            Nacimos con una sola misión: crear ropa que no te frene. Cada prenda está diseñada con tecnología de alta performance para acompañarte desde el primer kilómetro hasta el último rep.
+            <EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'">Nacimos con una sola misión: crear ropa que no te frene. Cada prenda está diseñada con tecnología de alta performance para acompañarte desde el primer kilómetro hasta el último rep.</EditableZone>
           </p>
-          <p style={{ fontSize:15, color:MID, lineHeight:1.8, marginBottom:40 }}>Sin compromisos. Sin excusas. Solo movimiento.</p>
+          <p style={{ fontSize:15, color:MID, lineHeight:1.8, marginBottom:40 }}>
+            <EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'">Sin compromisos. Sin excusas. Solo movimiento.</EditableZone>
+          </p>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:24 }}>
             {[["+5K","Clientes"],["98%","Satisfacción"],["48hs","Envío promedio"]].map(([n,l]) => (
               <div key={l}>
@@ -500,10 +506,12 @@ export default function UrbanPulse() {
       <section id="contacto" style={{ background:DARK, padding:"80px 40px" }}>
         <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80 }}>
           <div>
-            <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>▶ Contacto</span>
-            <h2 style={{ color:WHITE, fontSize:"clamp(36px,4vw,48px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", lineHeight:1, margin:"0 0 28px" }}>Hablemos.</h2>
+            <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}><EditableZone field="contactKicker" label="Etiqueta contacto">▶ Contacto</EditableZone></span>
+            <h2 style={{ color:WHITE, fontSize:"clamp(36px,4vw,48px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", lineHeight:1, margin:"0 0 28px" }}>
+              <EditableZone field="contactHeading" label="Título contacto">Hablemos.</EditableZone>
+            </h2>
             <p style={{ color:"rgba(255,255,255,0.45)", fontSize:14, lineHeight:1.8, marginBottom:40 }}>
-              Consultas sobre talles, materiales o envíos. Respondemos en menos de 24hs.
+              <EditableZone field="contactSubtext" label="Subtítulo contacto">Consultas sobre talles, materiales o envíos. Respondemos en menos de 24hs.</EditableZone>
             </p>
             {[["Dirección","Buenos Aires, Argentina"],["Email","hola@urbanpulse.com"],["WhatsApp","+54 9 11 0000-0000"]].map(([l,v]) => (
               <div key={l} style={{ marginBottom:20 }}>
@@ -549,7 +557,7 @@ export default function UrbanPulse() {
                 URBAN<span style={{ color:ACC }}>PULSE</span>
               </div>
               <p style={{ color:"rgba(255,255,255,0.35)", fontSize:13, lineHeight:1.8, maxWidth:260 }}>
-                Ropa deportiva de alta performance. Para quienes van más rápido.
+                <EditableZone field="footerDescription" label="Descripción footer">Ropa deportiva de alta performance. Para quienes van más rápido.</EditableZone>
               </p>
             </div>
             {[
@@ -570,8 +578,8 @@ export default function UrbanPulse() {
             ))}
           </div>
           <div style={{ borderTop:"1px solid rgba(255,255,255,0.08)", paddingTop:22, display:"flex", justifyContent:"space-between" }}>
-            <p style={{ color:"rgba(255,255,255,0.25)", fontSize:12, margin:0 }}>© 2025 UrbanPulse. Todos los derechos reservados.</p>
-            <p style={{ color:"rgba(255,255,255,0.25)", fontSize:12, margin:0 }}>Hecho en Argentina</p>
+            <p style={{ color:"rgba(255,255,255,0.25)", fontSize:12, margin:0 }}><EditableZone field="footerCopyright" label="Copyright">© 2025 UrbanPulse. Todos los derechos reservados.</EditableZone></p>
+            <p style={{ color:"rgba(255,255,255,0.25)", fontSize:12, margin:0 }}><EditableZone field="footerMadeIn" label="Hecho en">Hecho en Argentina</EditableZone></p>
           </div>
         </div>
       </footer>

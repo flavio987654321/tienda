@@ -155,22 +155,29 @@ function BrowserFrame({ storeName, children }: { storeName: string; children: Re
 
 /* ── Text field labels (editable zones that open the text editor) ── */
 const TEXT_FIELD_LABELS: Record<string, string> = {
-  announcementText:  "Barra de anuncios",
-  heroHeading:       "Título principal",
-  heroSubtext:       "Subtítulo hero",
-  heroCta:           "Botón principal",
-  heroCtaSecondary:  "Botón secundario",
-  categoriesHeading: "Sección categorías",
-  quoteText:         "Frase destacada",
-  aboutKicker:       "Etiqueta 'Nosotros'",
-  aboutHeading:      "Título 'Nosotros'",
-  aboutParagraph1:   "Párrafo 1 'Nosotros'",
-  aboutParagraph2:   "Párrafo 2 'Nosotros'",
-  contactHeading:    "Título contacto",
-  contactSubtext:    "Subtítulo contacto",
-  footerDescription: "Descripción footer",
-  footerCopyright:   "Copyright",
-  footerMadeIn:      "Hecho en",
+  announcementText:    "Barra de anuncios",
+  heroHeading:         "Título principal",
+  heroSubtext:         "Subtítulo hero",
+  heroCta:             "Botón principal",
+  heroCtaSecondary:    "Botón secundario",
+  featuredLabel:       "Etiqueta destacado",
+  featuredDescription: "Descripción destacado",
+  categoriesHeading:   "Sección categorías",
+  testimonialsHeading: "Sección testimonios",
+  quoteText:           "Frase destacada",
+  aboutKicker:         "Etiqueta 'Nosotros'",
+  aboutHeading:        "Título 'Nosotros'",
+  aboutParagraph1:     "Párrafo 1 'Nosotros'",
+  aboutParagraph2:     "Párrafo 2 'Nosotros'",
+  contactKicker:       "Etiqueta contacto",
+  contactHeading:      "Título contacto",
+  contactSubtext:      "Subtítulo contacto",
+  contactFormHeading:  "Subtítulo formulario",
+  newsletterText:      "Título newsletter",
+  newsletterSubtext:   "Subtítulo newsletter",
+  footerDescription:   "Descripción footer",
+  footerCopyright:     "Copyright",
+  footerMadeIn:        "Hecho en",
 };
 
 /* ── Config form helpers ────────────────────────────────── */
@@ -317,7 +324,7 @@ function FloatingTextEditor({ textFieldLabels }: { textFieldLabels: Record<strin
 
   return (
     <div style={{
-      position: "sticky", bottom: 0, zIndex: 99999,
+      position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 99999,
       background: "white", borderTop: "2px solid #6366f1",
       boxShadow: "0 -4px 20px rgba(99,102,241,0.15)",
       padding: "10px 14px",
@@ -801,7 +808,7 @@ export default function ConfiguracionPage() {
         </aside>
 
         {/* Right: template preview */}
-        <main style={{ flex: 1, height: "100%", overflow: "hidden" }}>
+        <main style={{ flex: 1, height: "100%", overflow: "hidden", position: "relative" }}>
           <EditContext.Provider value={{
             editMode: true,
             activeField,
@@ -813,9 +820,10 @@ export default function ConfiguracionPage() {
             <StoreConfigContext.Provider value={config}>
               <BrowserFrame storeName={config.storeName}>
                 <TemplateComponent />
-                <FloatingTextEditor textFieldLabels={TEXT_FIELD_LABELS} />
               </BrowserFrame>
             </StoreConfigContext.Provider>
+            {/* Floating editor — absolute at bottom of preview, always visible */}
+            <FloatingTextEditor textFieldLabels={TEXT_FIELD_LABELS} />
           </EditContext.Provider>
         </main>
 
