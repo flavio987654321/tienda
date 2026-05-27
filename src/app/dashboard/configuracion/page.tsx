@@ -431,9 +431,10 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
   const FONT_SIZES = [10, 12, 13, 14, 15, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64];
 
   const base: React.CSSProperties = {
-    position: "fixed", bottom: 0, left: 56, right: 0, zIndex: 99999,
+    position: "fixed", bottom: 0, left: 72, right: 16, zIndex: 99999,
     background: "white", borderTop: "2px solid #6366f1",
-    boxShadow: "0 -4px 20px rgba(99,102,241,0.15)",
+    borderRadius: "12px 12px 0 0",
+    boxShadow: "0 -4px 24px rgba(99,102,241,0.18)",
     fontFamily: "system-ui, -apple-system, sans-serif",
   };
 
