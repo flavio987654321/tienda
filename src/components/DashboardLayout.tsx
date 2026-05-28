@@ -101,7 +101,7 @@ export default function DashboardLayout({
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden text-gray-900 [color-scheme:light]">
       {/* Sidebar — collapsed (w-14) por defecto, se expande al hover (w-60) como overlay */}
-      <aside className="group fixed left-0 top-0 h-full w-14 hover:w-60 bg-white border-r border-gray-100 flex flex-col z-40 transition-[width] duration-200 overflow-hidden hover:shadow-xl">
+      <aside className="group fixed left-0 top-0 h-full w-14 hover:w-60 bg-white border-r border-gray-100 flex flex-col z-[60] transition-[width] duration-200 overflow-hidden hover:shadow-xl">
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 shrink-0 hover:bg-gray-50 transition-colors">
