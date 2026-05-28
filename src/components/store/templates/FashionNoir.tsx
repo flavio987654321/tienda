@@ -2,30 +2,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor } from "@/contexts/EditContext";
+import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 
-/* ── Mock data ─────────────────────────────────────────── */
 const CATEGORIES = ["Todos", "Mujer", "Hombre", "Accesorios"];
 
-const MOCK_PRODUCTS = [
-  { id:"1",  name:"Blazer Estructurado",    price:58000, comparePrice:75000,  category:"Mujer",      description:"Blazer de corte sastre con hombreras sutiles. Tela italiana 100% lana virgen. Cierre con un botón dorado.",                   images:["https://picsum.photos/seed/noir1a/800/1067","https://picsum.photos/seed/noir1b/800/1067"],  sizes:["XS","S","M","L","XL"],   colors:["Negro","Camel","Gris"] },
-  { id:"2",  name:"Pantalón Wide Leg",      price:42000, comparePrice:null,   category:"Mujer",      description:"Pantalón palazzo de tiro alto con caída impecable. Composición: 70% viscosa, 30% poliéster.",                                 images:["https://picsum.photos/seed/noir2a/800/1067","https://picsum.photos/seed/noir2b/800/1067"],  sizes:["XS","S","M","L"],        colors:["Negro","Crema"] },
-  { id:"3",  name:"Trench Coat Premium",    price:95000, comparePrice:120000, category:"Mujer",      description:"Gabardina clásica con cinturón regulable. Ideal para entretiempo. Impermeable al agua.",                                       images:["https://picsum.photos/seed/noir3a/800/1067","https://picsum.photos/seed/noir3b/800/1067"],  sizes:["S","M","L","XL"],        colors:["Camel","Negro"] },
-  { id:"4",  name:"Camisa Oxford",          price:29000, comparePrice:null,   category:"Hombre",     description:"Camisa de algodón Oxford 100%. Corte slim fit con cuello button-down. Lavable en lavarropas.",                                 images:["https://picsum.photos/seed/noir4a/800/1067","https://picsum.photos/seed/noir4b/800/1067"],  sizes:["S","M","L","XL","XXL"],  colors:["Blanco","Celeste","Negro"] },
-  { id:"5",  name:"Chaqueta Denim",         price:48000, comparePrice:62000,  category:"Hombre",     description:"Chaqueta de jean stonewashed con detalles en contraste. Corte regular con bolsillos delanteros.",                              images:["https://picsum.photos/seed/noir5a/800/1067","https://picsum.photos/seed/noir5b/800/1067"],  sizes:["S","M","L","XL"],        colors:["Indigo","Negro"] },
-  { id:"6",  name:"Vestido Lencero",        price:38000, comparePrice:null,   category:"Mujer",      description:"Vestido estilo lencero en seda artificial con tiritas finas. Largo midi. Perfecto para salidas nocturnas.",                    images:["https://picsum.photos/seed/noir6a/800/1067","https://picsum.photos/seed/noir6b/800/1067"],  sizes:["XS","S","M","L"],        colors:["Negro","Champagne","Bordo"] },
-  { id:"7",  name:"Cinturón Cuero",         price:18000, comparePrice:null,   category:"Accesorios", description:"Cinturón de cuero vacuno con hebilla metálica dorada. Ancho 3cm. Disponible en varios colores.",                                images:["https://picsum.photos/seed/noir7a/800/1067","https://picsum.photos/seed/noir7b/800/1067"],  sizes:["S/M","L/XL"],            colors:["Negro","Marrón","Camel"] },
-  { id:"8",  name:"Sweater Cashmere",       price:72000, comparePrice:89000,  category:"Hombre",     description:"Sweater de cashmere puro con cuello redondo. Tejido suave y cálido, ideal para capas.",                                        images:["https://picsum.photos/seed/noir8a/800/1067","https://picsum.photos/seed/noir8b/800/1067"],  sizes:["S","M","L","XL"],        colors:["Camel","Gris","Negro","Crema"] },
-  { id:"9",  name:"Falda Plisada",          price:34000, comparePrice:42000,  category:"Mujer",      description:"Falda midi plisada en gasa de seda. Cintura elástica. Movimiento fluido perfecto para cualquier ocasión.",                     images:["https://picsum.photos/seed/noir9a/800/1067","https://picsum.photos/seed/noir9b/800/1067"],  sizes:["XS","S","M","L"],        colors:["Negro","Vino","Verde"] },
-  { id:"10", name:"Mocasín Cuero Italiano", price:64000, comparePrice:null,   category:"Accesorios", description:"Mocasín artesanal en cuero vacuno italiano. Suela de cuero cosida a mano. Duración garantizada.",                              images:["https://picsum.photos/seed/noir10a/800/1067","https://picsum.photos/seed/noir10b/800/1067"],sizes:["36","37","38","39","40","41"],colors:["Negro","Marrón","Cognac"] },
-  { id:"11", name:"Remera Premium Supima",  price:19000, comparePrice:null,   category:"Hombre",     description:"Remera de algodón Supima con corte boxy. El algodón más fino y suave del mercado. Lavado a 30°C.",                             images:["https://picsum.photos/seed/noir11a/800/1067","https://picsum.photos/seed/noir11b/800/1067"],sizes:["S","M","L","XL","XXL"],  colors:["Blanco","Negro","Gris"] },
-  { id:"12", name:"Bolso Estructurado",     price:87000, comparePrice:110000, category:"Accesorios", description:"Bolso de mano en cuero genuino con herrajes dorados. Compartimento principal con cierre y bolsillo exterior.",                  images:["https://picsum.photos/seed/noir12a/800/1067","https://picsum.photos/seed/noir12b/800/1067"],sizes:["Único"],                 colors:["Negro","Cognac","Crema"] },
-  { id:"13", name:"Cardigan Oversize",      price:46000, comparePrice:58000,  category:"Mujer",      description:"Cardigan de punto grueso con caída holgada. Ideal como capa sobre vestidos o con jeans. 100% algodón orgánico.",               images:["https://picsum.photos/seed/noir13a/800/1067","https://picsum.photos/seed/noir13b/800/1067"],sizes:["S/M","L/XL"],            colors:["Crema","Gris","Negro","Terracota"] },
-  { id:"14", name:"Pantalón Chino Slim",    price:36000, comparePrice:null,   category:"Hombre",     description:"Pantalón chino en gabardina stretch. Corte slim con pinzas. Versátil para formal y casual.",                                   images:["https://picsum.photos/seed/noir14a/800/1067","https://picsum.photos/seed/noir14b/800/1067"],sizes:["S","M","L","XL","XXL"],  colors:["Beige","Verde Militar","Negro"] },
-  { id:"15", name:"Gafas Sol Acetato",      price:28000, comparePrice:35000,  category:"Accesorios", description:"Gafas de sol en acetato italiano con lentes polarizados UV400. Estuche de cuero incluido.",                                    images:["https://picsum.photos/seed/noir15a/800/1067","https://picsum.photos/seed/noir15b/800/1067"],sizes:["Único"],                 colors:["Negro","Tortoise","Carey"] },
-];
-
-type Product = typeof MOCK_PRODUCTS[0];
-type CartItem = { product: Product; size: string; color: string; qty: number };
+type Product = StorefrontProduct;
+type CartItem = { product: Product; size: string; color: string; variantId: string | null; qty: number };
 type ContactStatus = "idle" | "sending" | "sent";
 type CheckoutStatus = "idle" | "placing" | "done";
 
@@ -90,6 +72,9 @@ export default function FashionNoir() {
   const [envioId,             setEnvioId]             = useState("retiro");
   const [pagoId,              setPagoId]              = useState("transferencia");
   const [coupon,              setCoupon]              = useState("");
+  const [couponError,         setCouponError]         = useState("");
+  const [appliedCoupon,       setAppliedCoupon]       = useState<{ id: string; code: string; discount: number } | null>(null);
+  const [checkoutError,       setCheckoutError]       = useState("");
   const [notas,               setNotas]               = useState("");
   const [rememberData,        setRememberData]        = useState(false);
   const [buyerForm,           setBuyerForm]           = useState({ nombre:"", email:"", telefono:"", direccion:"", ciudad:"", provincia:"", cp:"" });
@@ -103,6 +88,9 @@ export default function FashionNoir() {
   const [userDropdownOpen,    setUserDropdownOpen]    = useState(false);
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
+
+  const storeConfig = useStoreConfig();
+  const { products, loadingProducts, resolveVariantId, validateCoupon, placeOrder } = useStorefront();
 
   const ANNOUNCEMENT_BAR_H = 36;
   const announcementBarHeight = announcementVisible ? ANNOUNCEMENT_BAR_H : 0;
@@ -158,10 +146,11 @@ export default function FashionNoir() {
 
   const addToCart = () => {
     if (!modalProduct) return;
+    const variantId = resolveVariantId(modalProduct, selectedSize, selectedColor);
     setCartItems(prev => {
       const existing = prev.find(i => i.product.id === modalProduct.id && i.size === selectedSize && i.color === selectedColor);
       if (existing) return prev.map(i => i === existing ? { ...i, qty: i.qty + qty } : i);
-      return [...prev, { product: modalProduct, size: selectedSize, color: selectedColor, qty }];
+      return [...prev, { product: modalProduct, size: selectedSize, color: selectedColor, variantId, qty }];
     });
     setModalProduct(null);
     showToast(`${modalProduct.name} agregado al carrito`);
@@ -171,21 +160,57 @@ export default function FashionNoir() {
   const removeFromCart = (idx: number) => setCartItems(prev => prev.filter((_, i) => i !== idx));
   const updateQty = (idx: number, delta: number) => setCartItems(prev => prev.map((item, i) => i === idx ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
 
-  const cartTotal  = cartItems.reduce((s, i) => s + i.product.price * i.qty, 0);
-  const cartCount  = cartItems.reduce((s, i) => s + i.qty, 0);
-  const envioPrice = ENVIO_OPTIONS.find(o => o.id === envioId)?.price ?? 0;
-  const orderTotal = cartTotal + envioPrice;
+  const cartTotal    = cartItems.reduce((s, i) => s + i.product.price * i.qty, 0);
+  const cartCount    = cartItems.reduce((s, i) => s + i.qty, 0);
+  const envioPrice   = ENVIO_OPTIONS.find(o => o.id === envioId)?.price ?? 0;
+  const couponDiscount = appliedCoupon?.discount ?? 0;
+  const orderTotal   = cartTotal + envioPrice - couponDiscount;
 
-  const openCheckout = () => { setCartOpen(false); setCheckoutStatus("idle"); setCheckoutOpen(true); };
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const openCheckout = () => { setCartOpen(false); setCheckoutStatus("idle"); setCheckoutError(""); setCheckoutOpen(true); };
+
+  const handleApplyCoupon = async () => {
+    setCouponError("");
+    if (!coupon.trim()) return;
+    const subtotal = cartItems.reduce((s, i) => s + i.product.price * i.qty, 0);
+    const res = await validateCoupon(coupon, subtotal);
+    if ("error" in res) { setCouponError(res.error); return; }
+    setAppliedCoupon({ id: res.coupon.id, code: res.coupon.code, discount: res.discount });
+    setCoupon("");
+  };
+
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setCheckoutStatus("placing");
-    setTimeout(() => { setCheckoutStatus("done"); setCartItems([]); }, 1600);
+    setCheckoutError("");
+    const res = await placeOrder({
+      cartItems: cartItems.map(item => ({
+        productId: item.product.id,
+        variantId: item.variantId,
+        quantity: item.qty,
+      })),
+      customer: {
+        name:       buyerForm.nombre,
+        email:      buyerForm.email,
+        phone:      buyerForm.telefono,
+        street:     buyerForm.direccion,
+        city:       buyerForm.ciudad,
+        province:   buyerForm.provincia,
+        postalCode: buyerForm.cp,
+        notes:      notas,
+      },
+      shippingMethod:  envioId === "retiro" ? "pickup" : envioId === "estandar" ? "standard" : "national",
+      paymentProvider: pagoId,
+      couponId:        appliedCoupon?.id ?? null,
+    });
+    if (!res.ok) { setCheckoutStatus("idle"); setCheckoutError(res.error ?? "Error al procesar"); return; }
+    setCheckoutStatus("done");
+    setCartItems([]);
+    setAppliedCoupon(null);
   };
 
   const changeCategory = (cat: string) => { setActiveCategory(cat); setVisibleCount(8); };
 
-  const allFiltered = activeCategory === "Todos" ? MOCK_PRODUCTS : MOCK_PRODUCTS.filter(p => p.category === activeCategory);
+  const allFiltered = activeCategory === "Todos" ? products : products.filter(p => p.category === activeCategory);
   const filtered    = allFiltered.slice(0, visibleCount);
   const hasMore     = visibleCount < allFiltered.length;
 
@@ -200,15 +225,13 @@ export default function FashionNoir() {
   };
 
   const searchResults = searchQuery.trim().length > 0
-    ? MOCK_PRODUCTS.filter(p =>
+    ? products.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.category.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : [];
 
-  const favoriteProducts = MOCK_PRODUCTS.filter(p => favorites.includes(p.id));
-
-  const storeConfig = useStoreConfig();
+  const favoriteProducts = products.filter(p => favorites.includes(p.id));
 
   /* ─ Colores base ─ */
   const G  = storeConfig?.colors.accent ?? "#c9a84c";  // gold / accent
@@ -897,8 +920,15 @@ export default function FashionNoir() {
                     <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
                       style={{ flex:1, background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, borderRight:"none", color:T, padding:"11px 14px", fontSize:11, letterSpacing:2, outline:"none" }}
                       onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
-                    <button type="button" style={{ background:"transparent", border:`1px solid rgba(201,168,76,0.15)`, color:"#666", padding:"11px 18px", fontSize:11, letterSpacing:2, cursor:"pointer" }}>Aplicar</button>
+                    <button type="button" onClick={handleApplyCoupon} style={{ background:"transparent", border:`1px solid rgba(201,168,76,0.15)`, color:G, padding:"11px 18px", fontSize:11, letterSpacing:2, cursor:"pointer" }}>Aplicar</button>
                   </div>
+                  {couponError && <p style={{ fontSize:11, color:"#f87171", marginBottom:8, marginTop:-20 }}>{couponError}</p>}
+                  {appliedCoupon && (
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"8px 12px", background:"rgba(201,168,76,0.08)", border:`1px solid rgba(201,168,76,0.2)` }}>
+                      <span style={{ fontSize:12, color:G }}>Cupón {appliedCoupon.code} aplicado</span>
+                      <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background:"none", border:"none", color:"#666", cursor:"pointer", fontSize:12 }}>✕</button>
+                    </div>
+                  )}
 
                   {/* resumen de totales */}
                   <div style={{ borderTop:`1px solid rgba(240,235,227,0.07)`, paddingTop:20 }}>
@@ -906,6 +936,12 @@ export default function FashionNoir() {
                       <span style={{ fontSize:13, opacity:0.55 }}>Subtotal</span>
                       <span style={{ fontSize:13, opacity:0.55 }}>{fmt(cartTotal)}</span>
                     </div>
+                    {couponDiscount > 0 && (
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                        <span style={{ fontSize:13, color:G }}>Descuento cupón</span>
+                        <span style={{ fontSize:13, color:G }}>-{fmt(couponDiscount)}</span>
+                      </div>
+                    )}
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:16 }}>
                       <span style={{ fontSize:13, opacity:0.55 }}>Envío</span>
                       <span style={{ fontSize:13, opacity:0.55 }}>{envioPrice===0 ? "Gratis" : fmt(envioPrice)}</span>
@@ -915,6 +951,7 @@ export default function FashionNoir() {
                       <span style={{ fontSize:20, fontWeight:800, color:G }}>{fmt(orderTotal)}</span>
                     </div>
                   </div>
+                  {checkoutError && <p style={{ fontSize:12, color:"#f87171", marginTop:12 }}>{checkoutError}</p>}
                 </div>
 
                 {/* botón crear pedido */}

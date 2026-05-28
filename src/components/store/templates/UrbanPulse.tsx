@@ -2,32 +2,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor } from "@/contexts/EditContext";
+import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 
-type Product = {
-  id: string; name: string; price: number; comparePrice?: number;
-  category: string; sizes: string[]; colors: string[]; images: string[]; badge?: string;
-};
-type CartItem = { product: Product; size: string; color: string; qty: number };
+type Product = StorefrontProduct;
+type CartItem = { product: Product; size: string; color: string; variantId: string | null; qty: number };
 type ContactStatus = "idle" | "sending" | "sent";
 type CheckoutStatus = "idle" | "placing" | "done";
-
-const MOCK_PRODUCTS: Product[] = [
-  { id:"p01", name:"Running Pro Elite", price:28500, comparePrice:34000, category:"Mujer", sizes:["XS","S","M","L","XL"], colors:["Negro","Blanco","Rosa"], images:["https://picsum.photos/seed/up01/600/800","https://picsum.photos/seed/up01b/600/800"], badge:"Nuevo" },
-  { id:"p02", name:"Training Flex Tee", price:12900, category:"Mujer", sizes:["XS","S","M","L"], colors:["Negro","Gris","Coral"], images:["https://picsum.photos/seed/up02/600/800"] },
-  { id:"p03", name:"Leggings Seamless", price:19800, comparePrice:24000, category:"Mujer", sizes:["XS","S","M","L","XL"], colors:["Negro","Azul Marino","Morado"], images:["https://picsum.photos/seed/up03/600/800","https://picsum.photos/seed/up03b/600/800"], badge:"Sale" },
-  { id:"p04", name:"Sports Bra Ultra", price:14500, category:"Mujer", sizes:["XS","S","M","L"], colors:["Negro","Blanco","Verde Lima"], images:["https://picsum.photos/seed/up04/600/800"] },
-  { id:"p05", name:"Windbreaker Light", price:35900, category:"Mujer", sizes:["S","M","L","XL"], colors:["Negro","Azul"], images:["https://picsum.photos/seed/up05/600/800","https://picsum.photos/seed/up05b/600/800"] },
-  { id:"p06", name:"Performance Short", price:11200, category:"Hombre", sizes:["S","M","L","XL","XXL"], colors:["Negro","Gris","Azul"], images:["https://picsum.photos/seed/up06/600/800","https://picsum.photos/seed/up06b/600/800"] },
-  { id:"p07", name:"Muscle Tank Pro", price:9800, category:"Hombre", sizes:["S","M","L","XL"], colors:["Negro","Blanco","Gris"], images:["https://picsum.photos/seed/up07/600/800"] },
-  { id:"p08", name:"Compression Tights", price:22500, comparePrice:27000, category:"Hombre", sizes:["S","M","L","XL","XXL"], colors:["Negro","Azul Marino"], images:["https://picsum.photos/seed/up08/600/800","https://picsum.photos/seed/up08b/600/800"], badge:"Nuevo" },
-  { id:"p09", name:"Training Hoodie", price:31500, category:"Hombre", sizes:["S","M","L","XL","XXL"], colors:["Negro","Gris Oscuro","Azul Marino"], images:["https://picsum.photos/seed/up09/600/800","https://picsum.photos/seed/up09b/600/800"] },
-  { id:"p10", name:"Track Jacket Classic", price:38000, comparePrice:45000, category:"Hombre", sizes:["S","M","L","XL"], colors:["Negro/Blanco","Azul/Blanco"], images:["https://picsum.photos/seed/up10/600/800","https://picsum.photos/seed/up10b/600/800"], badge:"Sale" },
-  { id:"p11", name:"Sport Duffel Bag", price:24900, category:"Accesorios", sizes:["Único"], colors:["Negro","Gris","Azul Marino"], images:["https://picsum.photos/seed/up11/600/800","https://picsum.photos/seed/up11b/600/800"] },
-  { id:"p12", name:"Running Belt Pro", price:8500, category:"Accesorios", sizes:["Único"], colors:["Negro","Naranja"], images:["https://picsum.photos/seed/up12/600/800"] },
-  { id:"p13", name:"Resistance Bands Set", price:6900, category:"Accesorios", sizes:["Único"], colors:["Multicolor"], images:["https://picsum.photos/seed/up13/600/800"] },
-  { id:"p14", name:"Sport Bottle 750ml", price:4500, category:"Accesorios", sizes:["Único"], colors:["Negro","Blanco","Lima"], images:["https://picsum.photos/seed/up14/600/600"] },
-  { id:"p15", name:"Training Gloves", price:7200, comparePrice:9500, category:"Accesorios", sizes:["S","M","L","XL"], colors:["Negro","Rojo"], images:["https://picsum.photos/seed/up15/600/600","https://picsum.photos/seed/up15b/600/600"], badge:"Sale" },
-];
 
 const CATEGORIES = ["Todos", "Mujer", "Hombre", "Accesorios"];
 
@@ -78,6 +58,9 @@ export default function UrbanPulse() {
   const [envioId,          setEnvioId]          = useState("retiro");
   const [pagoId,           setPagoId]           = useState("transferencia");
   const [coupon,           setCoupon]           = useState("");
+  const [couponError,      setCouponError]      = useState("");
+  const [appliedCoupon,    setAppliedCoupon]    = useState<{ id: string; code: string; discount: number } | null>(null);
+  const [checkoutError,    setCheckoutError]    = useState("");
   const [notas,            setNotas]            = useState("");
   const [rememberData,     setRememberData]     = useState(false);
   const [buyerForm,        setBuyerForm]        = useState({ nombre:"", email:"", telefono:"", direccion:"", ciudad:"", provincia:"", cp:"" });
@@ -90,6 +73,7 @@ export default function UrbanPulse() {
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
   const storeConfig = useStoreConfig();
+  const { products, resolveVariantId, validateCoupon, placeOrder } = useStorefront();
 
   const DARK  = "#0f0f0f";
   const ACC   = storeConfig?.colors.accent ?? "#d4ff00";
@@ -163,10 +147,11 @@ export default function UrbanPulse() {
 
   const addToCart = () => {
     if (!modalProduct) return;
+    const variantId = resolveVariantId(modalProduct, selectedSize, selectedColor);
     setCartItems(prev => {
       const ex = prev.find(i => i.product.id === modalProduct.id && i.size === selectedSize && i.color === selectedColor);
       if (ex) return prev.map(i => i === ex ? { ...i, qty: i.qty + qty } : i);
-      return [...prev, { product: modalProduct, size: selectedSize, color: selectedColor, qty }];
+      return [...prev, { product: modalProduct, size: selectedSize, color: selectedColor, variantId, qty }];
     });
     showToast(`${modalProduct.name} agregado`);
     setModalProduct(null);
@@ -177,21 +162,40 @@ export default function UrbanPulse() {
   const updateQty = (idx: number, delta: number) =>
     setCartItems(prev => prev.map((item, i) => i === idx ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
 
-  const cartTotal  = cartItems.reduce((s, i) => s + i.product.price * i.qty, 0);
-  const cartCount  = cartItems.reduce((s, i) => s + i.qty, 0);
-  const envioPrice = ENVIO_OPTIONS.find(o => o.id === envioId)?.price ?? 0;
-  const orderTotal = cartTotal + envioPrice;
+  const cartTotal      = cartItems.reduce((s, i) => s + i.product.price * i.qty, 0);
+  const cartCount      = cartItems.reduce((s, i) => s + i.qty, 0);
+  const envioPrice     = ENVIO_OPTIONS.find(o => o.id === envioId)?.price ?? 0;
+  const couponDiscount = appliedCoupon?.discount ?? 0;
+  const orderTotal     = cartTotal + envioPrice - couponDiscount;
 
-  const openCheckout = () => { setCartOpen(false); setCheckoutStatus("idle"); setCheckoutOpen(true); };
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const openCheckout = () => { setCartOpen(false); setCheckoutStatus("idle"); setCheckoutError(""); setCheckoutOpen(true); };
+
+  const handleApplyCoupon = async () => {
+    setCouponError("");
+    if (!coupon.trim()) return;
+    const subtotal = cartItems.reduce((s, i) => s + i.product.price * i.qty, 0);
+    const res = await validateCoupon(coupon, subtotal);
+    if ("error" in res) { setCouponError(res.error); return; }
+    setAppliedCoupon({ id: res.coupon.id, code: res.coupon.code, discount: res.discount });
+    setCoupon("");
+  };
+
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCheckoutStatus("placing");
-    setTimeout(() => { setCheckoutStatus("done"); setCartItems([]); }, 1600);
+    setCheckoutStatus("placing"); setCheckoutError("");
+    const res = await placeOrder({
+      cartItems: cartItems.map(item => ({ productId: item.product.id, variantId: item.variantId, quantity: item.qty })),
+      customer: { name: buyerForm.nombre, email: buyerForm.email, phone: buyerForm.telefono, street: buyerForm.direccion, city: buyerForm.ciudad, province: buyerForm.provincia, postalCode: buyerForm.cp, notes: notas },
+      shippingMethod: envioId === "retiro" ? "pickup" : envioId === "estandar" ? "standard" : "national",
+      paymentProvider: pagoId, couponId: appliedCoupon?.id ?? null,
+    });
+    if (!res.ok) { setCheckoutStatus("idle"); setCheckoutError(res.error ?? "Error al procesar"); return; }
+    setCheckoutStatus("done"); setCartItems([]); setAppliedCoupon(null);
   };
 
   const changeCategory = (cat: string) => { setActiveCategory(cat); setVisibleCount(8); };
 
-  const allFiltered = activeCategory === "Todos" ? MOCK_PRODUCTS : MOCK_PRODUCTS.filter(p => p.category === activeCategory);
+  const allFiltered = activeCategory === "Todos" ? products : products.filter(p => p.category === activeCategory);
   const filtered    = allFiltered.slice(0, visibleCount);
   const hasMore     = visibleCount < allFiltered.length;
 
@@ -205,13 +209,13 @@ export default function UrbanPulse() {
     setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
 
   const searchResults = searchQuery.trim().length > 0
-    ? MOCK_PRODUCTS.filter(p =>
+    ? products.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.category.toLowerCase().includes(searchQuery.toLowerCase()))
     : [];
 
-  const favoriteProducts = MOCK_PRODUCTS.filter(p => favorites.includes(p.id));
-  const featuredProduct  = MOCK_PRODUCTS[7];
+  const favoriteProducts = products.filter(p => favorites.includes(p.id));
+  const featuredProduct  = products[7] ?? products[0] ?? null;
 
   const iconBtn = { background:"none", border:"none", cursor:"pointer", color:DARK, padding:6, display:"flex", alignItems:"center" } as const;
 
@@ -672,7 +676,7 @@ export default function UrbanPulse() {
             <input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Buscar productos..."
               style={{ width:"100%", background:"none", border:"none", borderBottom:`3px solid ${ACC}`, color:WHITE, fontSize:32, fontWeight:900, padding:"12px 0", outline:"none", fontFamily:"inherit", letterSpacing:"-0.5px" }} />
             <div style={{ marginTop:40, display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-              {(searchQuery.trim() ? searchResults : MOCK_PRODUCTS.slice(0,4)).map(p => (
+              {(searchQuery.trim() ? searchResults : products.slice(0,4)).map(p => (
                 <div key={p.id} onClick={() => { openModal(p); setSearchQuery(""); }}
                   style={{ display:"flex", gap:14, cursor:"pointer", padding:14, background:"rgba(255,255,255,0.05)" }}>
                   <img src={p.images[0]} alt={p.name} style={{ width:56, height:72, objectFit:"cover", flexShrink:0 }} />
@@ -895,8 +899,15 @@ export default function UrbanPulse() {
                   <div style={{ display:"flex", gap:8, marginBottom:20 }}>
                     <input value={coupon} onChange={e => setCoupon(e.target.value)} placeholder="Código de descuento"
                       style={{ flex:1, padding:"11px", border:`1px solid #ddd`, fontSize:13, outline:"none", fontFamily:"inherit" }} />
-                    <button type="button" style={{ background:DARK, color:ACC, border:"none", padding:"0 18px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>Aplicar</button>
+                    <button type="button" onClick={handleApplyCoupon} style={{ background:DARK, color:ACC, border:"none", padding:"0 18px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>Aplicar</button>
                   </div>
+                  {couponError && <p style={{ fontSize:11, color:RED, marginBottom:8, marginTop:-12 }}>{couponError}</p>}
+                  {appliedCoupon && (
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"8px 12px", background:`rgba(212,255,0,0.08)`, border:`1px solid rgba(212,255,0,0.3)` }}>
+                      <span style={{ fontSize:12, color:ACC }}>Cupón {appliedCoupon.code} aplicado</span>
+                      <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:12 }}>✕</button>
+                    </div>
+                  )}
                   <textarea value={notas} onChange={e => setNotas(e.target.value)} placeholder="Notas adicionales (opcional)" rows={3}
                     style={{ width:"100%", padding:"11px", border:`1px solid #ddd`, fontSize:13, outline:"none", resize:"none", fontFamily:"inherit", boxSizing:"border-box", marginBottom:20 }} />
                   <div style={{ background:BG, padding:14, marginBottom:8 }}>
@@ -906,6 +917,12 @@ export default function UrbanPulse() {
                         <span style={{ fontWeight:700 }}>{fmt(item.product.price * item.qty)}</span>
                       </div>
                     ))}
+                    {couponDiscount > 0 && (
+                      <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, paddingTop:6 }}>
+                        <span style={{ color:ACC }}>Descuento cupón</span>
+                        <span style={{ fontWeight:700, color:ACC }}>-{fmt(couponDiscount)}</span>
+                      </div>
+                    )}
                     <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, paddingTop:8, borderTop:`1px solid #ddd` }}>
                       <span style={{ color:MID }}>Envío</span>
                       <span style={{ fontWeight:700 }}>{envioPrice === 0 ? "Gratis" : fmt(envioPrice)}</span>
@@ -921,6 +938,7 @@ export default function UrbanPulse() {
                     <span style={{ fontSize:12, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>Total</span>
                     <span style={{ fontSize:22, fontWeight:900 }}>{fmt(orderTotal)}</span>
                   </div>
+                  {checkoutError && <p style={{ fontSize:12, color:RED, marginBottom:10 }}>{checkoutError}</p>}
                   <button type="submit" disabled={checkoutStatus === "placing"}
                     style={{ width:"100%", background: checkoutStatus === "placing" ? MID : DARK, color:ACC, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
                     {checkoutStatus === "placing" ? "Procesando..." : "Crear Pedido →"}

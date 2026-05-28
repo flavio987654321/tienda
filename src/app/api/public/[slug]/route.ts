@@ -17,9 +17,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
           images: true,
           category: true,
           subcategory: true,
+          variants: {
+            select: { id: true, name: true, value: true, stock: true, price: true },
+            orderBy: { id: "asc" },
+          },
         },
         orderBy: { createdAt: "desc" },
-        take: 30,
+        take: 60,
       },
     },
   });

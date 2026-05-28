@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: TiendaPageProps): Promise<Met
   const { slug } = await params;
 
   const store = await prisma.store.findFirst({
-    where: { slug, isActive: true },
+    where: { slug, isActive: true, isPublished: true },
     select: { name: true, description: true, logo: true, tagline: true, storeConfig: true },
   });
 
@@ -42,8 +42,8 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
   const { slug } = await params;
 
   const store = await prisma.store.findFirst({
-    where: { slug, isActive: true },
-    select: { storeConfig: true },
+    where: { slug, isActive: true, isPublished: true },
+    select: { id: true, storeConfig: true },
   });
 
   if (!store) notFound();
@@ -52,7 +52,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
   try {
     const parsed = JSON.parse(store.storeConfig || "{}");
     if (!parsed?.template) notFound();
-    config = { ...DEFAULT_CONFIG, ...parsed };
+    config = { ...DEFAULT_CONFIG, ...parsed, storeId: store.id, slug };
   } catch {
     notFound();
   }

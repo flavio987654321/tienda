@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor } from "@/contexts/EditContext";
+import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 
 const BG  = "#faf7f2";
 const S   = "#f0e9df";
@@ -11,26 +12,8 @@ const MID = "#9a8070";
 
 const CATEGORIES = ["Todos", "Mujer", "Hombre", "Accesorios"];
 
-const MOCK_PRODUCTS = [
-  { id:"1",  name:"Vestido Lino Natural",    price:52000, comparePrice:65000,  category:"Mujer",      description:"Vestido midi en lino 100% natural sin teñir. Corte amplio, mangas cortas. Lavable a mano con agua fría.",                images:["https://picsum.photos/seed/terra1a/800/1067","https://picsum.photos/seed/terra1b/800/1067"],  sizes:["XS","S","M","L","XL"],   colors:["Natural","Arena","Terracota"] },
-  { id:"2",  name:"Pantalón Fluido Batik",   price:38000, comparePrice:null,   category:"Mujer",      description:"Pantalón ancho en gasa con estampado batik artesanal. Elástico en cintura, caída perfecta.",                            images:["https://picsum.photos/seed/terra2a/800/1067","https://picsum.photos/seed/terra2b/800/1067"],  sizes:["XS","S","M","L"],        colors:["Ocre","Bordo","Verde Salvia"] },
-  { id:"3",  name:"Kimono Bordado",          price:74000, comparePrice:90000,  category:"Mujer",      description:"Kimono artesanal con bordados a mano en hilo de seda. Cada pieza es única y viene con bolsa de regalo.",               images:["https://picsum.photos/seed/terra3a/800/1067","https://picsum.photos/seed/terra3b/800/1067"],  sizes:["S/M","L/XL"],            colors:["Crema","Terracota","Índigo"] },
-  { id:"4",  name:"Camisa Gauze",            price:31000, comparePrice:null,   category:"Hombre",     description:"Camisa de gasa de algodón orgánico. Muy liviana y transpirable, ideal para el calor.",                                  images:["https://picsum.photos/seed/terra4a/800/1067","https://picsum.photos/seed/terra4b/800/1067"],  sizes:["S","M","L","XL","XXL"],  colors:["Blanco","Beige","Azul Cielo"] },
-  { id:"5",  name:"Bermuda Lino Hombre",     price:34000, comparePrice:42000,  category:"Hombre",     description:"Bermuda de lino con bolsillos laterales y cordón ajustable. Corte relajado para el día a día.",                         images:["https://picsum.photos/seed/terra5a/800/1067","https://picsum.photos/seed/terra5b/800/1067"],  sizes:["S","M","L","XL"],        colors:["Beige","Kaki","Blanco"] },
-  { id:"6",  name:"Top Crochet",             price:22000, comparePrice:null,   category:"Mujer",      description:"Top tejido en crochet a mano con hilo de algodón reciclado. Flecos en el borde inferior.",                             images:["https://picsum.photos/seed/terra6a/800/1067","https://picsum.photos/seed/terra6b/800/1067"],  sizes:["XS","S","M","L"],        colors:["Natural","Terracota","Negro"] },
-  { id:"7",  name:"Bolso Palma Tejida",      price:29000, comparePrice:null,   category:"Accesorios", description:"Bolso tote tejido a mano en palma natural. Con forro interior de algodón y asa larga.",                               images:["https://picsum.photos/seed/terra7a/800/1067","https://picsum.photos/seed/terra7b/800/1067"],  sizes:["Único"],                 colors:["Natural","Terracota"] },
-  { id:"8",  name:"Poncho Alpaca",           price:88000, comparePrice:110000, category:"Mujer",      description:"Poncho tejido en alpaca 100% peruano. Flecos laterales. Abrigo liviano y elegante.",                                   images:["https://picsum.photos/seed/terra8a/800/1067","https://picsum.photos/seed/terra8b/800/1067"],  sizes:["Único"],                 colors:["Crema","Gris","Ocre","Bordo"] },
-  { id:"9",  name:"Falda Wrap Floral",       price:41000, comparePrice:52000,  category:"Mujer",      description:"Falda cruzada con estampado floral en seda artificial. Cintura regulable, largo midi.",                                images:["https://picsum.photos/seed/terra9a/800/1067","https://picsum.photos/seed/terra9b/800/1067"],  sizes:["XS","S","M","L"],        colors:["Floral Ocre","Floral Verde","Floral Azul"] },
-  { id:"10", name:"Sombrero Artesanal",      price:18000, comparePrice:null,   category:"Accesorios", description:"Sombrero de paja elaborado a mano con cinta de cuero natural. Ala ancha.",                                             images:["https://picsum.photos/seed/terra10a/800/1067","https://picsum.photos/seed/terra10b/800/1067"],sizes:["S/M","L/XL"],            colors:["Natural","Tabaco"] },
-  { id:"11", name:"Remera Tie Dye",          price:17000, comparePrice:null,   category:"Hombre",     description:"Remera teñida con plantas y flores, técnica tie-dye natural. Cada pieza es irrepetible.",                              images:["https://picsum.photos/seed/terra11a/800/1067","https://picsum.photos/seed/terra11b/800/1067"],sizes:["S","M","L","XL","XXL"],  colors:["Índigo","Tierra","Verde"] },
-  { id:"12", name:"Cartera Cuero Vegano",    price:47000, comparePrice:58000,  category:"Accesorios", description:"Cartera pequeña en cuero vegano de cactus. Con bandolera intercambiable.",                                             images:["https://picsum.photos/seed/terra12a/800/1067","https://picsum.photos/seed/terra12b/800/1067"],sizes:["Único"],                 colors:["Tabaco","Negro","Oliva"] },
-  { id:"13", name:"Jumpsuit Lino",           price:63000, comparePrice:78000,  category:"Mujer",      description:"Jumpsuit amplio en lino lavado. Cuello V, bolsillos laterales, cinturón incluido.",                                   images:["https://picsum.photos/seed/terra13a/800/1067","https://picsum.photos/seed/terra13b/800/1067"],sizes:["XS","S","M","L"],        colors:["Arcilla","Arena","Blanco"] },
-  { id:"14", name:"Pantalón Lino Hombre",    price:39000, comparePrice:null,   category:"Hombre",     description:"Pantalón de lino recto con bolsillos cargo. Muy cómodo para el verano completo.",                                      images:["https://picsum.photos/seed/terra14a/800/1067","https://picsum.photos/seed/terra14b/800/1067"],sizes:["S","M","L","XL","XXL"],  colors:["Beige","Blanco","Kaki"] },
-  { id:"15", name:"Pañuelo Seda Natural",    price:14000, comparePrice:18000,  category:"Accesorios", description:"Pañuelo en seda natural con estampado floral pintado a mano. Múltiples usos.",                                         images:["https://picsum.photos/seed/terra15a/800/1067","https://picsum.photos/seed/terra15b/800/1067"],sizes:["Único"],                 colors:["Ocre y Verde","Índigo","Terracota"] },
-];
-
-type Product = typeof MOCK_PRODUCTS[0];
-type CartItem = { product:Product; size:string; color:string; qty:number };
+type Product = StorefrontProduct;
+type CartItem = { product:Product; size:string; color:string; variantId:string|null; qty:number };
 type ContactStatus  = "idle"|"sending"|"sent";
 type CheckoutStatus = "idle"|"placing"|"done";
 
@@ -56,6 +39,7 @@ const scrollTo = (id:string) => document.getElementById(id)?.scrollIntoView({ be
 
 export default function BohoTerra() {
   const storeConfig = useStoreConfig();
+  const { products, resolveVariantId, validateCoupon, placeOrder } = useStorefront();
   // eslint-disable-next-line @typescript-eslint/no-shadow
   const A = storeConfig?.colors.accent ?? "#b5652a";
   const sc = storeConfig?.sectionColors ?? {};
@@ -109,6 +93,9 @@ export default function BohoTerra() {
   const [envioId,             setEnvioId]             = useState("retiro");
   const [pagoId,              setPagoId]              = useState("transferencia");
   const [coupon,              setCoupon]              = useState("");
+  const [couponError,         setCouponError]         = useState("");
+  const [appliedCoupon,       setAppliedCoupon]       = useState<{ id: string; code: string; discount: number } | null>(null);
+  const [checkoutError,       setCheckoutError]       = useState("");
   const [notas,               setNotas]               = useState("");
   const [rememberData,        setRememberData]        = useState(false);
   const [buyerForm,           setBuyerForm]           = useState({ nombre:"", email:"", telefono:"", direccion:"", ciudad:"", provincia:"", cp:"" });
@@ -170,10 +157,11 @@ export default function BohoTerra() {
 
   const addToCart = () => {
     if (!modalProduct) return;
+    const variantId = resolveVariantId(modalProduct, selectedSize, selectedColor);
     setCartItems(prev => {
       const ex = prev.find(i=>i.product.id===modalProduct.id&&i.size===selectedSize&&i.color===selectedColor);
       if (ex) return prev.map(i=>i===ex?{...i,qty:i.qty+qty}:i);
-      return [...prev,{product:modalProduct,size:selectedSize,color:selectedColor,qty}];
+      return [...prev,{product:modalProduct,size:selectedSize,color:selectedColor,variantId,qty}];
     });
     setModalProduct(null);
     showToast(`${modalProduct.name} agregado`);
@@ -182,22 +170,41 @@ export default function BohoTerra() {
   const removeFromCart = (idx:number) => setCartItems(prev=>prev.filter((_,i)=>i!==idx));
   const updateQty = (idx:number, d:number) => setCartItems(prev=>prev.map((item,i)=>i===idx?{...item,qty:Math.max(1,item.qty+d)}:item));
 
-  const cartTotal  = cartItems.reduce((s,i)=>s+i.product.price*i.qty,0);
-  const cartCount  = cartItems.reduce((s,i)=>s+i.qty,0);
-  const envioPrice = ENVIO_OPTIONS.find(o=>o.id===envioId)?.price??0;
-  const orderTotal = cartTotal + envioPrice;
+  const cartTotal      = cartItems.reduce((s,i)=>s+i.product.price*i.qty,0);
+  const cartCount      = cartItems.reduce((s,i)=>s+i.qty,0);
+  const envioPrice     = ENVIO_OPTIONS.find(o=>o.id===envioId)?.price??0;
+  const couponDiscount = appliedCoupon?.discount ?? 0;
+  const orderTotal     = cartTotal + envioPrice - couponDiscount;
 
   const CARDS_PER_VIEW = 3;
   const changeCategory = (cat:string) => { setActiveCategory(cat); setCarouselIdx(0); };
-  const allFiltered = activeCategory==="Todos" ? MOCK_PRODUCTS : MOCK_PRODUCTS.filter(p=>p.category===activeCategory);
+  const allFiltered = activeCategory==="Todos" ? products : products.filter(p=>p.category===activeCategory);
   const maxIdx      = Math.max(0, allFiltered.length - CARDS_PER_VIEW);
   const prevSlide   = () => setCarouselIdx(i => Math.max(0, i - 1));
   const nextSlide   = () => setCarouselIdx(i => Math.min(maxIdx, i + 1));
 
-  const openCheckout = () => { setCartOpen(false); setCheckoutStatus("idle"); setCheckoutOpen(true); };
-  const handlePlaceOrder = (e:React.FormEvent) => {
-    e.preventDefault(); setCheckoutStatus("placing");
-    setTimeout(()=>{ setCheckoutStatus("done"); setCartItems([]); }, 1600);
+  const openCheckout = () => { setCartOpen(false); setCheckoutStatus("idle"); setCheckoutError(""); setCheckoutOpen(true); };
+
+  const handleApplyCoupon = async () => {
+    setCouponError("");
+    if (!coupon.trim()) return;
+    const subtotal = cartItems.reduce((s,i)=>s+i.product.price*i.qty,0);
+    const res = await validateCoupon(coupon, subtotal);
+    if ("error" in res) { setCouponError(res.error); return; }
+    setAppliedCoupon({ id: res.coupon.id, code: res.coupon.code, discount: res.discount });
+    setCoupon("");
+  };
+
+  const handlePlaceOrder = async (e:React.FormEvent) => {
+    e.preventDefault(); setCheckoutStatus("placing"); setCheckoutError("");
+    const res = await placeOrder({
+      cartItems: cartItems.map(item => ({ productId: item.product.id, variantId: item.variantId, quantity: item.qty })),
+      customer: { name: buyerForm.nombre, email: buyerForm.email, phone: buyerForm.telefono, street: buyerForm.direccion, city: buyerForm.ciudad, province: buyerForm.provincia, postalCode: buyerForm.cp, notes: notas },
+      shippingMethod: envioId === "retiro" ? "pickup" : envioId === "estandar" ? "standard" : "national",
+      paymentProvider: pagoId, couponId: appliedCoupon?.id ?? null,
+    });
+    if (!res.ok) { setCheckoutStatus("idle"); setCheckoutError(res.error ?? "Error al procesar"); return; }
+    setCheckoutStatus("done"); setCartItems([]); setAppliedCoupon(null);
   };
   const handleContact = (e:React.FormEvent) => {
     e.preventDefault(); setContactStatus("sending");
@@ -209,13 +216,13 @@ export default function BohoTerra() {
   };
 
   const searchResults = searchQuery.trim().length > 0
-    ? MOCK_PRODUCTS.filter(p =>
+    ? products.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.category.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : [];
 
-  const favoriteProducts = MOCK_PRODUCTS.filter(p => favorites.includes(p.id));
+  const favoriteProducts = products.filter(p => favorites.includes(p.id));
 
   const iStyle:React.CSSProperties = { display:"block", width:"100%", marginBottom:10, background:"#fff", border:`1px solid #d5c9be`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:"inherit" };
   const onFI = (e:React.FocusEvent<HTMLInputElement|HTMLTextAreaElement>) => (e.target.style.borderColor=A);
@@ -857,12 +864,24 @@ export default function BohoTerra() {
                     <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e=>setCoupon(e.target.value)}
                       style={{ flex:1, background:"#fff", border:`1px solid #d5c9be`, borderRight:"none", color:T, padding:"11px 14px", fontSize:11, letterSpacing:2, outline:"none" }}
                       onFocus={onFI} onBlur={onBI}/>
-                    <button type="button" style={{ background:"transparent", border:`1px solid #d5c9be`, color:MID, padding:"11px 16px", fontSize:11, letterSpacing:2, cursor:"pointer" }}>Aplicar</button>
+                    <button type="button" onClick={handleApplyCoupon} style={{ background:"transparent", border:`1px solid #d5c9be`, color:A, padding:"11px 16px", fontSize:11, letterSpacing:2, cursor:"pointer" }}>Aplicar</button>
                   </div>
+                  {couponError && <p style={{ fontSize:11, color:"#dc2626", marginBottom:8, marginTop:-12 }}>{couponError}</p>}
+                  {appliedCoupon && (
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"8px 12px", background:`rgba(181,101,42,0.08)`, border:`1px solid rgba(181,101,42,0.2)` }}>
+                      <span style={{ fontSize:12, color:A }}>Cupón {appliedCoupon.code} aplicado</span>
+                      <button type="button" onClick={()=>setAppliedCoupon(null)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:12 }}>✕</button>
+                    </div>
+                  )}
                   <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, paddingTop:16 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
                       <span style={{ fontSize:13, color:MID }}>Subtotal</span><span style={{ fontSize:13, color:MID }}>{fmt(cartTotal)}</span>
                     </div>
+                    {couponDiscount > 0 && (
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                        <span style={{ fontSize:13, color:A }}>Descuento cupón</span><span style={{ fontSize:13, color:A }}>-{fmt(couponDiscount)}</span>
+                      </div>
+                    )}
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14 }}>
                       <span style={{ fontSize:13, color:MID }}>Envío</span><span style={{ fontSize:13, color:MID }}>{envioPrice===0?"Gratis":fmt(envioPrice)}</span>
                     </div>
@@ -870,6 +889,7 @@ export default function BohoTerra() {
                       <span style={{ fontSize:16, fontWeight:700, color:T }}>Total</span>
                       <span style={{ fontSize:20, fontWeight:800, color:A }}>{fmt(orderTotal)}</span>
                     </div>
+                    {checkoutError && <p style={{ fontSize:12, color:"#dc2626", marginTop:10 }}>{checkoutError}</p>}
                   </div>
                 </div>
                 <div style={{ padding:"14px 28px 24px", borderTop:`1px solid rgba(44,34,24,0.07)`, flexShrink:0 }}>

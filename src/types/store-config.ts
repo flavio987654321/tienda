@@ -20,6 +20,8 @@ export type ImageOverride = {
 
 export type StoreConfig = {
   template: TemplateId;
+  storeId?: string;
+  slug?: string;
   storeName: string;
   storeTagline: string;
   colors: {
