@@ -984,16 +984,25 @@ export default function ConfiguracionPage() {
       .then(({ store }) => {
         if (!store) return;
         if (store.slug) setStoreSlug(store.slug);
+        // Campos de la tienda que siempre deben estar en el config del preview
+        const storeFields: Partial<StoreConfig> = {
+          ...(store.id   && { storeId: store.id }),
+          ...(store.slug && { slug:    store.slug }),
+        };
         try {
           const saved: StoreConfig = JSON.parse(store.storeConfig || "{}");
           if (saved.template) {
             const tmpl = allTemplates.find(t => t.id === saved.template) ?? null;
-            const loaded = { ...DEFAULT_CONFIG, ...saved };
+            const loaded = { ...DEFAULT_CONFIG, ...saved, ...storeFields };
             setSelected(tmpl);
             setConfig(loaded);
             setSavedConfig(loaded);
             setSavedTemplateId(saved.template);
             setMode("gallery");
+          } else {
+            // Sin template guardado aún: igual inyectamos storeId/slug para que
+            // el preview muestre los productos reales al elegir un diseño
+            setConfig(c => ({ ...c, ...storeFields }));
           }
         } catch { /* config vacía o inválida, mostrar galería */ }
       })
