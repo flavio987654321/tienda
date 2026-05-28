@@ -1141,6 +1141,7 @@ export default function ConfiguracionPage() {
             background: "white", borderBottom: "1px solid #e2e8f0",
             padding: "10px 20px", display: "flex", alignItems: "center",
             gap: 12, flexShrink: 0, boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+            position: "relative", zIndex: 50,
           }}>
             {/* Izquierda */}
             <button onClick={handleBackToGallery}
@@ -1206,7 +1207,7 @@ export default function ConfiguracionPage() {
         <div style={{
           background: "white", borderBottom: "1px solid #e2e8f0",
           padding: "10px 20px", display: "flex", alignItems: "center",
-          gap: 12, flexShrink: 0, zIndex: 50,
+          gap: 12, flexShrink: 0, position: "relative", zIndex: 50,
           boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
         }}>
           {/* Izquierda: volver */}

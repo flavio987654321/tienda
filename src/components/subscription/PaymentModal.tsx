@@ -74,23 +74,34 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
   }, [isFreeMonth]);
 
   function initMP() {
-    const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY!;
-    mpRef.current = new window.MercadoPago(publicKey, { locale: "es-AR" });
+    try {
+      const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
+      if (!publicKey) {
+        setError("Error de configuración: clave de pago no disponible. Contactá al soporte.");
+        return;
+      }
+      mpRef.current = new window.MercadoPago(publicKey, { locale: "es-AR" });
 
-    cardFormRef.current = mpRef.current.cardForm({
-      amount: String(amount),
-      autoMount: true,
-      form: {
-        id: "mp-card-form",
-        cardholderName: { id: "mp-cardholder-name", placeholder: "Nombre como aparece en la tarjeta" },
-        cardNumber: { id: "mp-card-number", placeholder: "Número de tarjeta" },
-        cardExpirationMonth: { id: "mp-card-exp-month", placeholder: "MM" },
-        cardExpirationYear: { id: "mp-card-exp-year", placeholder: "AA" },
-        securityCode: { id: "mp-security-code", placeholder: "CVV" },
-        installments: { id: "mp-installments" },
-      },
-      callbacks: {
-        onFormMounted: (err: any) => { if (!err) setMpReady(true); },
+      cardFormRef.current = mpRef.current.cardForm({
+        amount: String(amount),
+        autoMount: true,
+        form: {
+          id: "mp-card-form",
+          cardholderName: { id: "mp-cardholder-name", placeholder: "Nombre como aparece en la tarjeta" },
+          cardNumber: { id: "mp-card-number", placeholder: "Número de tarjeta" },
+          cardExpirationMonth: { id: "mp-card-exp-month", placeholder: "MM" },
+          cardExpirationYear: { id: "mp-card-exp-year", placeholder: "AA" },
+          securityCode: { id: "mp-security-code", placeholder: "CVV" },
+          installments: { id: "mp-installments" },
+        },
+        callbacks: {
+          onFormMounted: (err: any) => {
+            if (err) {
+              setError("No se pudo cargar el formulario de pago. Recargá la página e intentá de nuevo.");
+            } else {
+              setMpReady(true);
+            }
+          },
         onSubmit: async (event: any) => {
           event.preventDefault();
           const {
@@ -142,6 +153,9 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
         },
       },
     });
+    } catch (e: any) {
+      setError("No se pudo inicializar el formulario de pago. Recargá la página e intentá de nuevo.");
+    }
   }
 
   if (success) {
@@ -273,7 +287,7 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
             </div>
           )}
 
-          <form id="mp-card-form" className={`space-y-4 ${!mpReady || isFreeMonth ? "hidden" : ""}`}>
+          <form id="mp-card-form" className="space-y-4" style={!mpReady || isFreeMonth ? { visibility: "hidden", pointerEvents: "none", position: "absolute", height: 0, overflow: "hidden" } : {}}>
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Nombre en la tarjeta</label>
               <div id="mp-cardholder-name" className="h-11 rounded-xl border border-white/10 bg-white/5 px-3 flex items-center" />
