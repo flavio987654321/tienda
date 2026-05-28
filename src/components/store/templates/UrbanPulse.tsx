@@ -76,6 +76,11 @@ export default function UrbanPulse() {
   const productosTextUp = getContrastColor(productosBgUp) === "light" ? WHITE : DARK;
   const productosMidUp  = getContrastColor(productosBgUp) === "light" ? "rgba(255,255,255,0.5)" : MID;
 
+  const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
+  const tickerContent = (storeConfig?.textOverrides?.["announcementText"]?.text
+    ? storeConfig.textOverrides["announcementText"].text + " · "
+    : TICKER);
+
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", fn);
@@ -133,20 +138,22 @@ export default function UrbanPulse() {
       )}
 
       {/* TICKER */}
-      <div style={{ background:DARK, overflow:"hidden", height:36, display:"flex", alignItems:"center" }}>
-        <div className="up-ticker">
-          {[TICKER, TICKER].map((t, ri) => (
-            <span key={ri}>
-              {t.split("·").map((seg, i, arr) => (
-                <span key={i}>
-                  <span style={{ color:"rgba(255,255,255,0.85)", fontSize:11, fontWeight:700, letterSpacing:2 }}>{seg}</span>
-                  {i < arr.length - 1 && <span style={{ color:ACC, fontSize:11, fontWeight:900, margin:"0 8px" }}>·</span>}
-                </span>
-              ))}
-            </span>
-          ))}
+      {promoBannerEnabled && (
+        <div style={{ background:DARK, overflow:"hidden", height:36, display:"flex", alignItems:"center" }}>
+          <div className="up-ticker">
+            {[tickerContent, tickerContent].map((t, ri) => (
+              <span key={ri}>
+                {t.split("·").map((seg, i, arr) => (
+                  <span key={i}>
+                    <span style={{ color:"rgba(255,255,255,0.85)", fontSize:11, fontWeight:700, letterSpacing:2 }}>{seg}</span>
+                    {i < arr.length - 1 && <span style={{ color:ACC, fontSize:11, fontWeight:900, margin:"0 8px" }}>·</span>}
+                  </span>
+                ))}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* NAVBAR */}
       <nav style={{ position:"sticky", top:0, zIndex:100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"all 0.3s", padding:"0 40px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>

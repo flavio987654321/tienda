@@ -51,6 +51,9 @@ export type StoreConfig = {
   imageOverrides: Record<string, ImageOverride>;
   sectionColors: Record<string, string>;
   bannerInterval?: number;
+  promoBanner?: {
+    enabled: boolean;
+  };
 };
 
 export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: string }> = {
@@ -73,4 +76,5 @@ export const DEFAULT_CONFIG: StoreConfig = {
   textOverrides: {},
   imageOverrides: {},
   sectionColors: {},
+  promoBanner: { enabled: true },
 };

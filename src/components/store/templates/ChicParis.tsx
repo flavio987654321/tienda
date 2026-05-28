@@ -28,6 +28,8 @@ export default function ChicParis() {
   const ACC   = storeConfig?.colors.accent ?? "#c0392b";
   const sc    = storeConfig?.sectionColors ?? {};
   const bannerMs = storeConfig?.bannerInterval ?? 4000;
+  const PROMO_BAR_H = 36;
+  const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
 
   const stripBg   = sc["bgStrip"]    ?? "#f5f5f3";
   const stripText = getContrastColor(stripBg) === "light" ? "#fff" : "#111";
@@ -109,9 +111,24 @@ export default function ChicParis() {
         @keyframes cp-toast { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
 
+      {/* ── PROMO BAR ── */}
+      {promoBannerEnabled && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 1001,
+          height: PROMO_BAR_H, background: "#111",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", letterSpacing: 1 }}>
+            <EditableZone field="announcementText" label="Barra de anuncios" noBadge>
+              🚚 Envío gratis · 🔄 Cambios sin cargo · 💳 6 cuotas sin interés
+            </EditableZone>
+          </span>
+        </div>
+      )}
+
       {/* ── NAVBAR ── */}
       <header style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
+        position: "fixed", top: promoBannerEnabled ? PROMO_BAR_H : 0, left: 0, right: 0, zIndex: 1000,
         background: scrolled ? "rgba(255,255,255,0.97)" : "transparent",
         borderBottom: scrolled ? "1px solid #e8e8e8" : "none",
         backdropFilter: scrolled ? "blur(12px)" : "none",

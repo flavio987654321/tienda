@@ -73,7 +73,9 @@ export default function FashionNoir() {
   } = useCartLogic(storefront);
 
   const ANNOUNCEMENT_BAR_H = 36;
-  const announcementBarHeight = announcementVisible ? ANNOUNCEMENT_BAR_H : 0;
+  const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
+  const showAnnouncement = promoBannerEnabled && announcementVisible;
+  const announcementBarHeight = showAnnouncement ? ANNOUNCEMENT_BAR_H : 0;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -82,12 +84,13 @@ export default function FashionNoir() {
   }, []);
 
   useEffect(() => {
-    if (!announcementVisible) return;
+    if (!showAnnouncement) return;
     const interval = setInterval(() => {
       setAnnouncementIdx(i => (i + 1) % ANNOUNCEMENT_MESSAGES.length);
     }, 3500);
     return () => clearInterval(interval);
-  }, [announcementVisible]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAnnouncement]);
 
   const changeCategory = (cat: string) => { setActiveCategory(cat); setVisibleCount(8); };
 
@@ -161,7 +164,7 @@ export default function FashionNoir() {
     <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
 
       {/* ── ANNOUNCEMENT BAR ───────────────────────────────── */}
-      {announcementVisible && (
+      {showAnnouncement && (
         <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <span style={{ fontSize:12, fontWeight:600, color:BG, letterSpacing:1 }}>
             <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{ANNOUNCEMENT_MESSAGES[announcementIdx]}</EditableZone>

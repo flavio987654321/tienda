@@ -92,7 +92,9 @@ export default function BohoTerra() {
   } = useCartLogic(storefront);
 
   const ANNOUNCEMENT_BAR_H = 36;
-  const announcementBarHeight = announcementVisible ? ANNOUNCEMENT_BAR_H : 0;
+  const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
+  const showAnnouncement = promoBannerEnabled && announcementVisible;
+  const announcementBarHeight = showAnnouncement ? ANNOUNCEMENT_BAR_H : 0;
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40);
@@ -101,12 +103,13 @@ export default function BohoTerra() {
   }, []);
 
   useEffect(() => {
-    if (!announcementVisible) return;
+    if (!showAnnouncement) return;
     const interval = setInterval(() => {
       setAnnouncementIdx(i => (i + 1) % ANNOUNCEMENT_MESSAGES.length);
     }, 3500);
     return () => clearInterval(interval);
-  }, [announcementVisible]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAnnouncement]);
 
   const CARDS_PER_VIEW = 3;
   const changeCategory = (cat:string) => { setActiveCategory(cat); setCarouselIdx(0); };
@@ -123,7 +126,7 @@ export default function BohoTerra() {
     <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
 
       {/* ── ANNOUNCEMENT BAR ───────────────────────────────── */}
-      {announcementVisible && (
+      {showAnnouncement && (
         <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:110, height:ANNOUNCEMENT_BAR_H, background:A, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <span style={{ fontSize:12, fontWeight:600, color:"#fff", letterSpacing:1 }}>
             <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{ANNOUNCEMENT_MESSAGES[announcementIdx]}</EditableZone>

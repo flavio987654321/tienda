@@ -416,6 +416,38 @@ function ConfigModal({ config, update, onClose, onDelete }: {
             </div>
           </div>
 
+          {/* Barra de promoción */}
+          <div style={sec}>
+            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+              📢 Barra de promoción
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Mostrar barra</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Franja promocional en la parte superior</p>
+                </div>
+                <Toggle value={config.promoBanner?.enabled !== false}
+                  onChange={v => update("promoBanner", { enabled: v })} />
+              </div>
+              {config.promoBanner?.enabled !== false && (
+                <div>
+                  <label style={lbl}>Texto de la barra</label>
+                  <input style={inp}
+                    value={config.textOverrides?.["announcementText"]?.text ?? ""}
+                    placeholder="🚚 Envío gratis · 🔄 Cambios sin cargo · 💳 6 cuotas sin interés"
+                    onChange={e => update("textOverrides", {
+                      ...config.textOverrides,
+                      announcementText: { ...(config.textOverrides?.["announcementText"] ?? {}), text: e.target.value }
+                    })}
+                    onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                    onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>También podés hacer clic en la barra del preview para editar el texto.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Redes sociales */}
           <div style={sec}>
             <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
@@ -1076,7 +1108,7 @@ export default function ConfiguracionPage() {
             justifyContent: "center", background: "#f1f5f9", padding: "24px 40px 0" }}>
 
             <div style={{
-              width: "100%", maxWidth: 860, flex: 1,
+              width: "100%", maxWidth: 960, flex: 1,
               borderRadius: "14px 14px 0 0", background: "#1e293b",
               boxShadow: "0 0 0 2px #334155, 0 20px 60px rgba(0,0,0,0.35)",
               display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0,
@@ -1135,11 +1167,11 @@ export default function ConfiguracionPage() {
               </div>
             </div>
 
-            <div style={{ width: "100%", maxWidth: 860, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+            <div style={{ width: "100%", maxWidth: 960, display: "flex", justifyContent: "center", flexShrink: 0 }}>
               <div style={{ width: 120, height: 18, background: "#1e293b", borderRadius: "0 0 4px 4px",
                 boxShadow: "0 4px 0 #334155" }} />
             </div>
-            <div style={{ width: "100%", maxWidth: 860, display: "flex", justifyContent: "center",
+            <div style={{ width: "100%", maxWidth: 960, display: "flex", justifyContent: "center",
               flexShrink: 0, paddingBottom: 24 }}>
               <div style={{ width: 220, height: 10, background: "#334155", borderRadius: "0 0 8px 8px" }} />
             </div>
