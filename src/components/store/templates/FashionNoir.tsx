@@ -253,7 +253,7 @@ export default function FashionNoir() {
   const footerBg       = scn["bgFooter"]      ?? BG;
   const footerText     = footerBgImg?.url
     ? (footerBgImg.overlayType === "light" ? "#0a0a0a" : T)
-    : (getContrastColor(footerBg) === "light" ? "#0a0a0a" : T);
+    : (getContrastColor(footerBg) === "light" ? T : "#0a0a0a");
   const footerSubtleBorder = footerText === T ? "rgba(240,235,227,0.15)" : "rgba(0,0,0,0.15)";
   const footerInputBg  = footerText === T ? S : "rgba(0,0,0,0.06)";
   const categoriasBg   = scn["bgCategorias"]  ?? BG;
@@ -593,7 +593,7 @@ export default function FashionNoir() {
       </section>
 
       {/* ── CONTACTO ───────────────────────────────────────── */}
-      <section id="contacto" style={{ position:"relative", borderTop:`1px solid rgba(201,168,76,0.1)`, ...(contactoBgImg?.url ? { backgroundImage:`url(${contactoBgImg.url})`, backgroundSize:"cover", backgroundPosition:"center" } : { background:contactoBg }) }}>
+      <section id="contacto" style={{ position:"relative", borderTop:`1px solid rgba(201,168,76,0.1)`, color:contactoText, ...(contactoBgImg?.url ? { backgroundImage:`url(${contactoBgImg.url})`, backgroundSize:"cover", backgroundPosition:"center" } : { background:contactoBg }) }}>
         <EditableSectionBg field="bgContacto" label="Fondo contacto" />
         {contactoBgImg?.url && contactoBgImg.overlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: contactoBgImg.overlayType === "light" ? `rgba(255,255,255,${contactoBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${contactoBgImg.overlayOpacity ?? 0.45})` }} />
@@ -610,7 +610,7 @@ export default function FashionNoir() {
           {contactStatus === "sent" ? (
             <div style={{ textAlign:"center", padding:"60px 0" }}>
               <p style={{ fontSize:40, marginBottom:16 }}>✓</p>
-              <p style={{ fontFamily:"Georgia, serif", fontSize:22, color:T, marginBottom:8 }}>¡Mensaje enviado!</p>
+              <p style={{ fontFamily:"Georgia, serif", fontSize:22, color:contactoText, marginBottom:8 }}>¡Mensaje enviado!</p>
               <p style={{ fontSize:13, opacity:0.5 }}>Te respondemos a la brevedad.</p>
               <button onClick={() => setContactStatus("idle")} style={{ marginTop:24, background:"transparent", color:G, border:`1px solid ${G}`, padding:"10px 28px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro mensaje</button>
             </div>
