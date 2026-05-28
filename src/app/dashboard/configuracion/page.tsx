@@ -964,6 +964,7 @@ export default function ConfiguracionPage() {
   const [mode, setMode] = useState<Mode>("gallery");
   const [selected, setSelected] = useState<TemplateInfo | null>(null);
   const [savedTemplateId, setSavedTemplateId] = useState<string | null>(null);
+  const [savedConfig, setSavedConfig] = useState<StoreConfig | null>(null);
   const [storeSlug, setStoreSlug] = useState<string | null>(null);
   const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
   const [saving, setSaving] = useState(false);
@@ -987,8 +988,10 @@ export default function ConfiguracionPage() {
           const saved: StoreConfig = JSON.parse(store.storeConfig || "{}");
           if (saved.template) {
             const tmpl = allTemplates.find(t => t.id === saved.template) ?? null;
+            const loaded = { ...DEFAULT_CONFIG, ...saved };
             setSelected(tmpl);
-            setConfig({ ...DEFAULT_CONFIG, ...saved });
+            setConfig(loaded);
+            setSavedConfig(loaded);
             setSavedTemplateId(saved.template);
             setMode("gallery");
           }
@@ -1041,7 +1044,18 @@ export default function ConfiguracionPage() {
   const handlePreview = (t: TemplateInfo) => {
     const defaults = TEMPLATE_DEFAULTS[t.id];
     setSelected(t);
-    setConfig(c => ({ ...c, template: t.id, colors: { accent: defaults.accent }, storeName: defaults.storeName }));
+    setConfig(c => ({
+      // Mantener datos globales de la tienda, resetear overrides del template anterior
+      ...c,
+      template: t.id,
+      colors: { accent: defaults.accent },
+      storeName: defaults.storeName,
+      textOverrides: {},
+      imageOverrides: {},
+      sectionColors: {},
+      bannerInterval: undefined,
+      promoBanner: { enabled: true },
+    }));
     setMode("preview");
   };
 
@@ -1051,8 +1065,12 @@ export default function ConfiguracionPage() {
   /* Any → 1 */
   const handleBackToGallery = () => { setMode("gallery"); };
 
-  /* Gallery → editing (click on saved template) */
-  const handleGoToEditing = (t: TemplateInfo) => { setSelected(t); setMode("editing"); };
+  /* Gallery → editing (click on saved template) — restaura config guardado */
+  const handleGoToEditing = (t: TemplateInfo) => {
+    setSelected(t);
+    if (savedConfig && savedConfig.template === t.id) setConfig(savedConfig);
+    setMode("editing");
+  };
 
   /* Step 3 → 2 */
   const handleBackToPreview = () => { setMode("preview"); setActiveField(null); };
@@ -1068,6 +1086,7 @@ export default function ConfiguracionPage() {
       });
       if (!res.ok) throw new Error("Error al guardar");
       setSavedTemplateId(config.template);
+      setSavedConfig(config);
       setSaved(true);
       setTimeout(() => setSaved(false), 2200);
     } catch {
