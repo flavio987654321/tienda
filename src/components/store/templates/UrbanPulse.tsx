@@ -395,6 +395,7 @@ export default function UrbanPulse() {
       </section>
 
       {/* FEATURED DROP */}
+      {featuredProduct && (
       <section id="featured" style={{ background:featuredBg, padding:"80px 40px", position:"relative" }}>
         <EditableSectionBg field="bgFeatured" label="Fondo featured" />
         <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:0, alignItems:"center" }}>
@@ -435,6 +436,7 @@ export default function UrbanPulse() {
           </div>
         </div>
       </section>
+      )}
 
       {/* PRODUCTS */}
       <section id="productos" style={{ background:productosBgUp, position:"relative" }}>
