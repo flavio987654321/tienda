@@ -1,4 +1,6 @@
-export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse";
+export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse" | "chic-paris";
+
+export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = ["chic-paris"];
 
 export type TextOverride = {
   text?: string;
@@ -48,12 +50,14 @@ export type StoreConfig = {
   textOverrides: Record<string, TextOverride>;
   imageOverrides: Record<string, ImageOverride>;
   sectionColors: Record<string, string>;
+  bannerInterval?: number;
 };
 
 export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: string }> = {
   "fashion-noir": { accent: "#c9a84c", storeName: "FASHION NOIR" },
   "boho-terra":   { accent: "#b5652a", storeName: "BOHO TERRA"   },
   "urban-pulse":  { accent: "#d4ff00", storeName: "URBAN PULSE"  },
+  "chic-paris":   { accent: "#c0392b", storeName: "CHIC PARIS"   },
 };
 
 export const DEFAULT_CONFIG: StoreConfig = {

@@ -3,12 +3,13 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TemplateId, TextOverride, ImageOverride } from "@/types/store-config";
-import { TEMPLATE_DEFAULTS, DEFAULT_CONFIG } from "@/types/store-config";
+import { TEMPLATE_DEFAULTS, DEFAULT_CONFIG, TEMPLATES_WITH_CAROUSEL } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
 import FashionNoir from "@/components/store/templates/FashionNoir";
 import BohoTerra from "@/components/store/templates/BohoTerra";
 import UrbanPulse from "@/components/store/templates/UrbanPulse";
+import ChicParis from "@/components/store/templates/ChicParis";
 
 /* ── Types ─────────────────────────────────────────────────── */
 type Mode = "gallery" | "preview" | "editing";
@@ -32,6 +33,7 @@ const CATEGORIES: Category[] = [
       { id: "fashion-noir", name: "Fashion Noir", desc: "Lujo · Oscuro · Editorial",    palette: ["#0a0a0a", "#c9a84c", "#f0ebe3"], component: FashionNoir },
       { id: "boho-terra",   name: "Boho Terra",   desc: "Orgánico · Natural · Cálido",  palette: ["#faf7f2", "#b5652a", "#2c2218"], component: BohoTerra  },
       { id: "urban-pulse",  name: "Urban Pulse",  desc: "Deportivo · Energético",        palette: ["#0f0f0f", "#d4ff00", "#f5f5f5"], component: UrbanPulse },
+      { id: "chic-paris",   name: "Chic Paris",   desc: "Editorial · Carousel · Limpio", palette: ["#ffffff", "#c0392b", "#111111"], component: ChicParis  },
     ],
   },
 ];
@@ -477,6 +479,26 @@ function ConfigModal({ config, update, onClose, onDelete }: {
               </div>
             </div>
           </div>
+
+          {/* Carrusel de banner — solo si el template lo tiene */}
+          {TEMPLATES_WITH_CAROUSEL.includes(config.template) && (
+            <div style={sec}>
+              <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+                🎠 Carrusel de banner
+              </p>
+              <div>
+                <label style={lbl}>Velocidad de avance: {((config.bannerInterval ?? 4000) / 1000).toFixed(0)}s</label>
+                <input type="range" min={2000} max={10000} step={500}
+                  value={config.bannerInterval ?? 4000}
+                  onChange={e => update("bannerInterval", Number(e.target.value))}
+                  style={{ width: "100%", accentColor: "#6366f1" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                  <span style={{ fontSize: 11, color: "#94a3b8" }}>2s (rápido)</span>
+                  <span style={{ fontSize: 11, color: "#94a3b8" }}>10s (lento)</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* SEO */}
           <div style={sec}>
