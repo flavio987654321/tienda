@@ -213,7 +213,7 @@ export default function FashionNoir() {
   /* ─ Colores base ─ */
   const G  = storeConfig?.colors.accent ?? "#c9a84c";  // gold / accent
   const BG = "#0a0a0a";  // background
-  const S  = "#111";     // surface
+  const S  = "#111111";  // surface
   const T  = "#f0ebe3";  // text
 
   /* ─ Hero image con override dinámico ─ */
@@ -236,20 +236,36 @@ export default function FashionNoir() {
   const catAccesoriosUrl = storeConfig?.imageOverrides?.["catAccesorios"]?.url ?? "https://picsum.photos/seed/noir-cat3/800/1200";
   const nosotrosImageUrl = storeConfig?.imageOverrides?.["nosotrosImage"]?.url ?? "https://picsum.photos/seed/noir-about/900/700";
 
+  // Section background images (stored as "sectionbg_<field>" in imageOverrides)
+  const statementBgImg = storeConfig?.imageOverrides?.["sectionbg_bgStatement"];
+  const contactoBgImg  = storeConfig?.imageOverrides?.["sectionbg_bgContacto"];
+  const footerBgImg    = storeConfig?.imageOverrides?.["sectionbg_bgFooter"];
+
   const scn = storeConfig?.sectionColors ?? {};
   const garantiasBg    = scn["bgGarantias"]   ?? BG;
   const garantiasText  = getContrastColor(garantiasBg)   === "light" ? T : "#0a0a0a";
   const statementBg    = scn["bgStatement"]   ?? BG;
-  const statementText  = getContrastColor(statementBg)   === "light" ? T : "#0a0a0a";
+  const statementText  = statementBgImg?.url
+    ? (statementBgImg.overlayType === "light" ? "#0a0a0a" : T)
+    : (getContrastColor(statementBg) === "light" ? T : "#0a0a0a");
   const nosotrosPanelBg= scn["bgNosotrosPanel"] ?? S;
   const nosotrosPanelText = getContrastColor(nosotrosPanelBg) === "light" ? T : "#0a0a0a";
   const footerBg       = scn["bgFooter"]      ?? BG;
+  const footerText     = footerBgImg?.url
+    ? (footerBgImg.overlayType === "light" ? "#0a0a0a" : T)
+    : (getContrastColor(footerBg) === "light" ? "#0a0a0a" : T);
+  const footerSubtleBorder = footerText === T ? "rgba(240,235,227,0.15)" : "rgba(0,0,0,0.15)";
+  const footerInputBg  = footerText === T ? S : "rgba(0,0,0,0.06)";
   const categoriasBg   = scn["bgCategorias"]  ?? BG;
   const productosBg    = scn["bgProductos"]   ?? BG;
   const productosText  = getContrastColor(productosBg)  === "light" ? T : "#0a0a0a";
   const productosMid   = getContrastColor(productosBg)  === "light" ? "#888" : "#555";
   const contactoBg     = scn["bgContacto"]    ?? BG;
-  const contactoText   = getContrastColor(contactoBg)   === "light" ? T : "#0a0a0a";
+  const contactoText   = contactoBgImg?.url
+    ? (contactoBgImg.overlayType === "light" ? "#0a0a0a" : T)
+    : (getContrastColor(contactoBg) === "light" ? T : "#0a0a0a");
+  const contactoInputBg     = contactoText === T ? S : "rgba(0,0,0,0.06)";
+  const contactoInputBorder = contactoText === T ? "rgba(201,168,76,0.2)" : "rgba(0,0,0,0.12)";
 
   return (
     <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
@@ -453,12 +469,17 @@ export default function FashionNoir() {
       </section>
 
       {/* ── STATEMENT ──────────────────────────────────────── */}
-      <section style={{ padding:"72px 32px", borderTop:`1px solid rgba(201,168,76,0.1)`, borderBottom:`1px solid rgba(201,168,76,0.1)`, textAlign:"center", background:statementBg, position:"relative" }}>
+      <section style={{ borderTop:`1px solid rgba(201,168,76,0.1)`, borderBottom:`1px solid rgba(201,168,76,0.1)`, textAlign:"center", position:"relative", ...(statementBgImg?.url ? { backgroundImage:`url(${statementBgImg.url})`, backgroundSize:"cover", backgroundPosition:"center" } : { background:statementBg }) }}>
         <EditableSectionBg field="bgStatement" label="Fondo frase" />
-        <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(20px,3.5vw,40px)", color:statementText, opacity:0.88, maxWidth:760, margin:"0 auto", lineHeight:1.5, fontStyle:"italic" }}>
-          <EditableZone field="quoteText" label="Frase destacada">"No compramos ropa. Compramos la versión de nosotros mismos que queremos ser."</EditableZone>
-        </p>
-        <div style={{ width:56, height:1, background:G, margin:"28px auto 0" }}/>
+        {statementBgImg?.url && statementBgImg.overlayType !== "none" && (
+          <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: statementBgImg.overlayType === "light" ? `rgba(255,255,255,${statementBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${statementBgImg.overlayOpacity ?? 0.45})` }} />
+        )}
+        <div style={{ position:"relative", zIndex:1, padding:"72px 32px" }}>
+          <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(20px,3.5vw,40px)", color:statementText, opacity:0.88, maxWidth:760, margin:"0 auto", lineHeight:1.5, fontStyle:"italic" }}>
+            <EditableZone field="quoteText" label="Frase destacada">"No compramos ropa. Compramos la versión de nosotros mismos que queremos ser."</EditableZone>
+          </p>
+          <div style={{ width:56, height:1, background:G, margin:"28px auto 0" }}/>
+        </div>
       </section>
 
       {/* ── PRODUCTOS ──────────────────────────────────────── */}
@@ -572,9 +593,12 @@ export default function FashionNoir() {
       </section>
 
       {/* ── CONTACTO ───────────────────────────────────────── */}
-      <section id="contacto" style={{ background:contactoBg, position:"relative", borderTop:`1px solid rgba(201,168,76,0.1)` }}>
+      <section id="contacto" style={{ position:"relative", borderTop:`1px solid rgba(201,168,76,0.1)`, ...(contactoBgImg?.url ? { backgroundImage:`url(${contactoBgImg.url})`, backgroundSize:"cover", backgroundPosition:"center" } : { background:contactoBg }) }}>
         <EditableSectionBg field="bgContacto" label="Fondo contacto" />
-        <div style={{ padding:"80px 32px", maxWidth:640, margin:"0 auto" }}>
+        {contactoBgImg?.url && contactoBgImg.overlayType !== "none" && (
+          <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: contactoBgImg.overlayType === "light" ? `rgba(255,255,255,${contactoBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${contactoBgImg.overlayOpacity ?? 0.45})` }} />
+        )}
+        <div style={{ padding:"80px 32px", maxWidth:640, margin:"0 auto", position:"relative", zIndex:1 }}>
           <p style={{ fontSize:10, letterSpacing:5, color:G, textAlign:"center", textTransform:"uppercase", marginBottom:12 }}><EditableZone field="contactKicker" label="Etiqueta contacto">Contacto</EditableZone></p>
           <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,3vw,38px)", textAlign:"center", margin:"0 0 12px", color:contactoText }}>
             <EditableZone field="contactHeading" label="Título contacto">¿Tenés alguna consulta?</EditableZone>
@@ -596,21 +620,21 @@ export default function FashionNoir() {
                 <div>
                   <label style={{ display:"block", fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.6, marginBottom:8 }}>Nombre</label>
                   <input required value={contactForm.nombre} onChange={e => setContactForm(f => ({...f, nombre:e.target.value}))}
-                    placeholder="Tu nombre" style={{ width:"100%", background:S, border:`1px solid rgba(201,168,76,0.2)`, color:T, padding:"12px 16px", fontSize:13, outline:"none", boxSizing:"border-box" }}
-                    onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.2)")}/>
+                    placeholder="Tu nombre" style={{ width:"100%", background:contactoInputBg, border:`1px solid ${contactoInputBorder}`, color:contactoText, padding:"12px 16px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                    onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=contactoInputBorder)}/>
                 </div>
                 <div>
                   <label style={{ display:"block", fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.6, marginBottom:8 }}>Email</label>
                   <input required type="email" value={contactForm.email} onChange={e => setContactForm(f => ({...f, email:e.target.value}))}
-                    placeholder="tu@email.com" style={{ width:"100%", background:S, border:`1px solid rgba(201,168,76,0.2)`, color:T, padding:"12px 16px", fontSize:13, outline:"none", boxSizing:"border-box" }}
-                    onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.2)")}/>
+                    placeholder="tu@email.com" style={{ width:"100%", background:contactoInputBg, border:`1px solid ${contactoInputBorder}`, color:contactoText, padding:"12px 16px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                    onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=contactoInputBorder)}/>
                 </div>
               </div>
               <div>
                 <label style={{ display:"block", fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.6, marginBottom:8 }}>Mensaje</label>
                 <textarea required rows={5} value={contactForm.mensaje} onChange={e => setContactForm(f => ({...f, mensaje:e.target.value}))}
-                  placeholder="¿En qué podemos ayudarte?" style={{ width:"100%", background:S, border:`1px solid rgba(201,168,76,0.2)`, color:T, padding:"12px 16px", fontSize:13, outline:"none", resize:"vertical", fontFamily:"inherit", boxSizing:"border-box" }}
-                  onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.2)")}/>
+                  placeholder="¿En qué podemos ayudarte?" style={{ width:"100%", background:contactoInputBg, border:`1px solid ${contactoInputBorder}`, color:contactoText, padding:"12px 16px", fontSize:13, outline:"none", resize:"vertical", fontFamily:"inherit", boxSizing:"border-box" }}
+                  onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=contactoInputBorder)}/>
               </div>
               <button type="submit" disabled={contactStatus==="sending"}
                 style={{ background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", opacity: contactStatus==="sending" ? 0.6 : 1, transition:"opacity 0.2s" }}>
@@ -622,8 +646,12 @@ export default function FashionNoir() {
       </section>
 
       {/* ── FOOTER ─────────────────────────────────────────── */}
-      <footer style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, padding:"60px 32px 32px", marginTop:0, background:footerBg, position:"relative" }}>
+      <footer style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, marginTop:0, position:"relative", color:footerText, ...(footerBgImg?.url ? { backgroundImage:`url(${footerBgImg.url})`, backgroundSize:"cover", backgroundPosition:"center" } : { background:footerBg }) }}>
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        {footerBgImg?.url && footerBgImg.overlayType !== "none" && (
+          <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: footerBgImg.overlayType === "light" ? `rgba(255,255,255,${footerBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${footerBgImg.overlayOpacity ?? 0.45})` }} />
+        )}
+        <div style={{ padding:"60px 32px 32px", position:"relative", zIndex:1 }}>
         <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1.5fr", gap:48, marginBottom:48 }}>
           <div>
             <span style={{ fontFamily:"Georgia, serif", fontSize:28, fontWeight:700, letterSpacing:6, color:G, display:"block", marginBottom:16 }}><EditableZone field="footerBrandName" label="Nombre en footer">NOIR</EditableZone></span>
@@ -636,9 +664,9 @@ export default function FashionNoir() {
                 return (
                   <button key={label}
                     onClick={() => url && window.open(url, "_blank")}
-                    style={{ background:"none", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:34, height:34, fontSize:10, fontWeight:700, cursor: url ? "pointer" : "default", letterSpacing:1, transition:"all 0.2s", opacity: url ? 1 : 0.35 }}
+                    style={{ background:"none", border:`1px solid ${footerSubtleBorder}`, color:footerText, width:34, height:34, fontSize:10, fontWeight:700, cursor: url ? "pointer" : "default", letterSpacing:1, transition:"all 0.2s", opacity: url ? 1 : 0.35 }}
                     onMouseEnter={e => { if(url){ e.currentTarget.style.borderColor=G; e.currentTarget.style.color=G; }}}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(240,235,227,0.15)"; e.currentTarget.style.color=T; }}>
+                    onMouseLeave={e => { e.currentTarget.style.borderColor=footerSubtleBorder; e.currentTarget.style.color=footerText; }}>
                     {label}
                   </button>
                 );
@@ -666,7 +694,7 @@ export default function FashionNoir() {
               <EditableZone field="newsletterText" label="Texto newsletter">Suscribite y recibí novedades antes que nadie. Sin spam.</EditableZone>
             </p>
             <div style={{ display:"flex" }}>
-              <input placeholder="tu@email.com" style={{ flex:1, background:S, border:`1px solid rgba(201,168,76,0.25)`, borderRight:"none", color:T, padding:"11px 14px", fontSize:12, outline:"none" }}/>
+              <input placeholder="tu@email.com" style={{ flex:1, background:footerInputBg, border:`1px solid ${footerSubtleBorder}`, borderRight:"none", color:footerText, padding:"11px 14px", fontSize:12, outline:"none" }}/>
               <button style={{ background:G, color:BG, border:"none", padding:"11px 18px", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:1 }}>OK</button>
             </div>
           </div>
@@ -678,6 +706,7 @@ export default function FashionNoir() {
           <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
             <EditableZone field="footerMadeIn" label="Hecho en">Hecho con ♥ en Argentina</EditableZone>
           </p>
+        </div>
         </div>
       </footer>
 

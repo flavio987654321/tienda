@@ -29,10 +29,16 @@ export const EditContext = createContext<EditContextType>({
 });
 
 export function getContrastColor(hex: string): "light" | "dark" {
-  if (!hex || hex.length < 7) return "dark";
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  if (!hex) return "dark";
+  let full = hex.startsWith("#") ? hex : "#" + hex;
+  // Expand shorthand #RGB → #RRGGBB
+  if (full.length === 4) {
+    full = "#" + full[1] + full[1] + full[2] + full[2] + full[3] + full[3];
+  }
+  if (full.length < 7) return "dark";
+  const r = parseInt(full.slice(1, 3), 16) / 255;
+  const g = parseInt(full.slice(3, 5), 16) / 255;
+  const b = parseInt(full.slice(5, 7), 16) / 255;
   const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
   return lum > 0.5 ? "dark" : "light";
 }

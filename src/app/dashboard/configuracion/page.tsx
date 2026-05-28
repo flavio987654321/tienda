@@ -620,6 +620,132 @@ function ImageFieldEditor({
   );
 }
 
+/* ── Background + image editor for section bg fields ────────── */
+function BgFieldEditor({ field, base, setActiveField }: {
+  field: string;
+  base: React.CSSProperties;
+  setActiveField: (f: string | null) => void;
+}) {
+  const { sectionColors, setSectionColor, imageOverrides, setImageOverride } = useEditContext();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const imgKey = `sectionbg_${field}`;
+  const currentColor = sectionColors[field] ?? "#0a0a0a";
+  const ov: ImageOverride = imageOverrides[imgKey] ?? {};
+  const currentOverlay = ov.overlayType ?? "dark";
+  const hasImage = !!ov.url;
+
+  const contrast = hasImage
+    ? (currentOverlay === "light" ? "dark" : "light")
+    : getContrastColor(currentColor);
+
+  const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `tienda-imagenes/${imgKey}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("tienda-imagenes").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("tienda-imagenes").getPublicUrl(path);
+      setImageOverride(imgKey, { url: data.publicUrl, overlayType: "dark", overlayOpacity: 0.45 });
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : "Error al subir la imagen");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }, [imgKey, setImageOverride]);
+
+  return (
+    <div style={{ ...base, padding: "10px 16px 12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", whiteSpace: "nowrap" }}>🎨 Fondo de sección</span>
+
+        {/* Color */}
+        <input type="color" value={currentColor}
+          onChange={e => setSectionColor(field, e.target.value)}
+          style={{ width: 34, height: 28, padding: 2, border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
+        <input value={currentColor}
+          onChange={e => setSectionColor(field, e.target.value)}
+          placeholder="#ffffff"
+          style={{ width: 88, border: "1px solid #d1d5db", borderRadius: 7, padding: "5px 10px", fontSize: 12, outline: "none", fontFamily: "monospace" }}
+          onFocus={e => (e.target.style.borderColor = "#6366f1")}
+          onBlur={e => (e.target.style.borderColor = "#d1d5db")} />
+
+        <span style={{ color: "#e2e8f0", fontSize: 18, lineHeight: 1 }}>|</span>
+
+        {/* Image upload */}
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
+        {ov.url && (
+          <img src={ov.url} alt="" style={{ width: 36, height: 28, objectFit: "cover", borderRadius: 6, border: "1px solid #e2e8f0", flexShrink: 0 }} />
+        )}
+        <button onClick={() => fileRef.current?.click()} disabled={uploading}
+          style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 7,
+            border: `1.5px solid ${ov.url ? "#6366f1" : "#d1d5db"}`,
+            background: ov.url ? "#e0e7ff" : "white", color: ov.url ? "#6366f1" : "#374151",
+            fontSize: 11, fontWeight: 700, cursor: uploading ? "default" : "pointer", whiteSpace: "nowrap" }}>
+          📷 {uploading ? "Subiendo..." : ov.url ? "Cambiar foto" : "Foto de fondo"}
+        </button>
+
+        {/* Overlay controls (only when image set) */}
+        {hasImage && (<>
+          <span style={{ fontSize: 11, color: "#64748b" }}>Capa:</span>
+          {(["dark", "light", "none"] as const).map(t => (
+            <button key={t} onClick={() => setImageOverride(imgKey, { overlayType: t })}
+              style={{ padding: "4px 8px", borderRadius: 6, border: "1.5px solid",
+                borderColor: currentOverlay === t ? "#6366f1" : "#e2e8f0",
+                background: currentOverlay === t ? "#e0e7ff" : "white",
+                color: currentOverlay === t ? "#6366f1" : "#374151",
+                cursor: "pointer", fontSize: 10, fontWeight: 600 }}>
+              {t === "none" ? "Sin capa" : t === "dark" ? "🌑 Oscura" : "☀️ Clara"}
+            </button>
+          ))}
+          {currentOverlay !== "none" && (<>
+            <input type="range" min={10} max={80} step={5}
+              value={Math.round((ov.overlayOpacity ?? 0.45) * 100)}
+              onChange={e => setImageOverride(imgKey, { overlayOpacity: Number(e.target.value) / 100 })}
+              style={{ width: 60, accentColor: "#6366f1" }} />
+            <span style={{ fontSize: 10, color: "#374151", minWidth: 28 }}>
+              {Math.round((ov.overlayOpacity ?? 0.45) * 100)}%
+            </span>
+          </>)}
+          <button onClick={() => setImageOverride(imgKey, { url: undefined, overlayType: undefined, overlayOpacity: undefined })}
+            style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #fee2e2", background: "#fff7f7", color: "#ef4444", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+            ✕ Quitar foto
+          </button>
+        </>)}
+
+        {/* Contrast indicator */}
+        <span style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap" }}>
+          Texto: <strong style={{ color: contrast === "light" ? "#6366f1" : "#374151" }}>
+            {contrast === "light" ? "☀ claro" : "🌑 oscuro"}
+          </strong>
+        </span>
+
+        {sectionColors[field] && !hasImage && (
+          <button onClick={() => setSectionColor(field, "")}
+            style={{ width: 28, height: 28, border: "1px solid #e2e8f0", borderRadius: 7, background: "white", cursor: "pointer", fontSize: 13, color: "#94a3b8" }}
+            title="Restablecer color">↺</button>
+        )}
+
+        <button onClick={() => setActiveField(null)}
+          style={{ width: 28, height: 28, border: "none", background: "white", cursor: "pointer", fontSize: 18, color: "#94a3b8" }}>×</button>
+
+        {uploadError && <span style={{ fontSize: 11, color: "#ef4444" }}>⚠ {uploadError}</span>}
+      </div>
+      <p style={{ margin: "6px 0 0", fontSize: 10, color: "#94a3b8" }}>
+        💡 El contraste de texto se ajusta automáticamente.{hasImage && " La capa oscura/clara garantiza que el texto sea siempre legible."}
+      </p>
+    </div>
+  );
+}
+
 /* ── Floating editor (text + image) ─────────────────────────── */
 function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, string> }) {
   const { activeField, setActiveField, overrides, setOverride, resetOverride, imageOverrides, setImageOverride, sectionColors, setSectionColor } = useEditContext();
@@ -644,44 +770,10 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
     fontFamily: "system-ui, -apple-system, sans-serif",
   };
 
-  /* ── Background color editor ── */
+  /* ── Background color + image editor ── */
   if (isBgField) {
     const field = activeField.slice(3);
-    const currentColor = sectionColors[field] ?? "#ffffff";
-    const contrast = getContrastColor(currentColor);
-    return (
-      <div style={{ ...base, padding: "10px 16px 12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", whiteSpace: "nowrap" }}>
-            🎨 Fondo de sección
-          </span>
-          <input type="color" value={currentColor}
-            onChange={e => setSectionColor(field, e.target.value)}
-            style={{ width: 34, height: 28, padding: 2, border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
-          <input value={currentColor}
-            onChange={e => setSectionColor(field, e.target.value)}
-            placeholder="#ffffff"
-            style={{ width: 88, border: "1px solid #d1d5db", borderRadius: 7, padding: "5px 10px", fontSize: 12, outline: "none", fontFamily: "monospace" }}
-            onFocus={e => (e.target.style.borderColor = "#6366f1")}
-            onBlur={e => (e.target.style.borderColor = "#d1d5db")} />
-          <span style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap" }}>
-            Texto auto: <strong style={{ color: contrast === "light" ? "#6366f1" : "#374151" }}>
-              {contrast === "light" ? "☀ claro" : "🌑 oscuro"}
-            </strong>
-          </span>
-          {sectionColors[field] && (
-            <button onClick={() => setSectionColor(field, "")}
-              style={{ width: 30, height: 30, border: "1px solid #e2e8f0", borderRadius: 7, background: "white", cursor: "pointer", fontSize: 14, color: "#94a3b8" }}
-              title="Restablecer">↺</button>
-          )}
-          <button onClick={() => setActiveField(null)}
-            style={{ width: 30, height: 30, border: "none", background: "white", cursor: "pointer", fontSize: 18, color: "#94a3b8" }}>×</button>
-        </div>
-        <p style={{ margin: "6px 0 0", fontSize: 10, color: "#94a3b8" }}>
-          💡 El contraste de texto se ajusta automáticamente según el color de fondo elegido.
-        </p>
-      </div>
-    );
+    return <BgFieldEditor field={field} base={base} setActiveField={setActiveField} />;
   }
 
   /* ── Image editor ── */
