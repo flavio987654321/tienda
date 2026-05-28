@@ -68,7 +68,20 @@ export default function BohoTerra() {
   const nosotrosBg = sc["bgNosotros"] ?? S;
   const nosotrosText = getContrastColor(nosotrosBg) === "light" ? "#faf7f2" : "#2c2218";
   const nosotrosMid = getContrastColor(nosotrosBg) === "light" ? "#d5c9be" : "#9a8070";
-  const footerBg = sc["bgFooter"] ?? S;
+  const footerBg   = sc["bgFooter"]      ?? S;
+  const footerText = getContrastColor(footerBg) === "light" ? "#faf7f2" : T;
+  const footerMid  = getContrastColor(footerBg) === "light" ? "#d5c9be" : MID;
+
+  // Newsletter strip — fondo propio, separado del footer
+  const newsletterBg    = sc["bgNewsletter"]  ?? A;
+  const newsletterBgImg = storeConfig?.imageOverrides?.["sectionbg_bgNewsletter"];
+  const newsletterText  = newsletterBgImg?.url
+    ? (newsletterBgImg.overlayType === "light" ? T : "#faf7f2")
+    : (getContrastColor(newsletterBg) === "light" ? "#faf7f2" : T);
+  const isDarkNewsletter = newsletterText === "#faf7f2";
+  const newsletterMid   = isDarkNewsletter ? "rgba(255,255,255,0.65)" : "rgba(44,34,24,0.55)";
+  const newsletterInputBg     = isDarkNewsletter ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.06)";
+  const newsletterInputBorder = isDarkNewsletter ? "rgba(255,255,255,0.3)"  : "rgba(0,0,0,0.15)";
 
   const [scrolled,            setScrolled]            = useState(false);
   const [activeCategory,      setActiveCategory]      = useState("Todos");
@@ -542,26 +555,32 @@ export default function BohoTerra() {
       <footer style={{ background:footerBg, borderTop:`1px solid rgba(44,34,24,0.1)`, position:"relative" }}>
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
         {/* newsletter strip */}
-        <div style={{ background:A, padding:"36px 40px" }}>
+        <div style={{ position:"relative", ...(newsletterBgImg?.url ? { backgroundImage:`url(${newsletterBgImg.url})`, backgroundSize:"cover", backgroundPosition:"center" } : { background:newsletterBg }) }}>
+          <EditableSectionBg field="bgNewsletter" label="Fondo newsletter" />
+          {newsletterBgImg?.url && newsletterBgImg.overlayType !== "none" && (
+            <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: newsletterBgImg.overlayType === "light" ? `rgba(255,255,255,${newsletterBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${newsletterBgImg.overlayOpacity ?? 0.45})` }} />
+          )}
+          <div style={{ position:"relative", zIndex:1, padding:"36px 40px" }}>
           <div style={{ maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", gap:32, flexWrap:"wrap" }}>
             <div>
-              <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:"#fff", margin:"0 0 4px" }}><EditableZone field="newsletterText" label="Título newsletter">Suscribite al newsletter</EditableZone></p>
-              <p style={{ fontSize:12, color:"rgba(255,255,255,0.65)", margin:0, letterSpacing:1 }}><EditableZone field="newsletterSubtext" label="Subtítulo newsletter">Novedades, lanzamientos y descuentos exclusivos</EditableZone></p>
+              <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:newsletterText, margin:"0 0 4px" }}><EditableZone field="newsletterText" label="Título newsletter">Suscribite al newsletter</EditableZone></p>
+              <p style={{ fontSize:12, color:newsletterMid, margin:0, letterSpacing:1 }}><EditableZone field="newsletterSubtext" label="Subtítulo newsletter">Novedades, lanzamientos y descuentos exclusivos</EditableZone></p>
             </div>
             <div style={{ display:"flex", flexShrink:0 }}>
-              <input placeholder="tu@email.com" style={{ width:260, background:"rgba(255,255,255,0.15)", border:"1px solid rgba(255,255,255,0.3)", borderRight:"none", color:"#fff", padding:"12px 16px", fontSize:13, outline:"none" }}/>
+              <input placeholder="tu@email.com" style={{ width:260, background:newsletterInputBg, border:`1px solid ${newsletterInputBorder}`, borderRight:"none", color:newsletterText, padding:"12px 16px", fontSize:13, outline:"none" }}/>
               <button style={{ background:T, color:BG, border:"none", padding:"12px 24px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", fontWeight:600 }}>Suscribirse</button>
             </div>
+          </div>
           </div>
         </div>
         {/* links + copyright */}
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"28px 40px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:20 }}>
-          <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:T, letterSpacing:2 }}><EditableZone field="footerBrandName" label="Nombre en footer">Terra</EditableZone></span>
+          <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:footerText, letterSpacing:2 }}><EditableZone field="footerBrandName" label="Nombre en footer">Terra</EditableZone></span>
           <div style={{ display:"flex", gap:24 }}>
             {[["Colección","coleccion"],["Nosotros","nosotros"],["Contacto","contacto"],["Envíos","contacto"],["Devoluciones","contacto"]].map(([l,t])=>(
-              <button key={l} onClick={()=>scrollTo(t)} style={{ background:"none", border:"none", color:MID, fontSize:12, cursor:"pointer", transition:"color 0.2s" }}
-                onMouseEnter={e=>(e.currentTarget.style.color=T)}
-                onMouseLeave={e=>(e.currentTarget.style.color=MID)}>
+              <button key={l} onClick={()=>scrollTo(t)} style={{ background:"none", border:"none", color:footerMid, fontSize:12, cursor:"pointer", transition:"color 0.2s" }}
+                onMouseEnter={e=>(e.currentTarget.style.color=footerText)}
+                onMouseLeave={e=>(e.currentTarget.style.color=footerMid)}>
                 {l}
               </button>
             ))}
@@ -572,9 +591,9 @@ export default function BohoTerra() {
               return (
                 <button key={label}
                   onClick={() => url && window.open(url, "_blank")}
-                  style={{ background:"none", border:`1px solid rgba(44,34,24,0.2)`, color:MID, width:32, height:32, fontSize:9, fontWeight:700, cursor: url ? "pointer" : "default", letterSpacing:1, transition:"all 0.2s", opacity: url ? 1 : 0.35 }}
+                  style={{ background:"none", border:`1px solid ${footerMid}33`, color:footerMid, width:32, height:32, fontSize:9, fontWeight:700, cursor: url ? "pointer" : "default", letterSpacing:1, transition:"all 0.2s", opacity: url ? 1 : 0.35 }}
                   onMouseEnter={e=>{ if(url){ e.currentTarget.style.borderColor=A; e.currentTarget.style.color=A; }}}
-                  onMouseLeave={e=>{ e.currentTarget.style.borderColor="rgba(44,34,24,0.2)"; e.currentTarget.style.color=MID; }}>
+                  onMouseLeave={e=>{ e.currentTarget.style.borderColor=`${footerMid}33`; e.currentTarget.style.color=footerMid; }}>
                   {label}
                 </button>
               );
@@ -582,7 +601,7 @@ export default function BohoTerra() {
           </div>
         </div>
         <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, padding:"16px 40px", maxWidth:1280, margin:"0 auto" }}>
-          <p style={{ fontSize:11, color:MID, margin:0, opacity:0.6 }}>
+          <p style={{ fontSize:11, color:footerMid, margin:0, opacity:0.6 }}>
             <EditableZone field="footerCopyright" label="Copyright">© 2025 Terra · Moda consciente · Mendoza, Argentina</EditableZone>
           </p>
         </div>
