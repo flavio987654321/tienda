@@ -23,13 +23,13 @@ export default function ChicParis() {
 
   const storeConfig = useStoreConfig();
   const storefront  = useStorefront();
-  const { products } = storefront;
+  const { products, loadingProducts } = storefront;
 
   const ACC   = storeConfig?.colors.accent ?? "#c0392b";
   const sc    = storeConfig?.sectionColors ?? {};
   const bannerMs = storeConfig?.bannerInterval ?? 4000;
 
-  const stripBg   = sc["bgStrip"]    ?? ACC;
+  const stripBg   = sc["bgStrip"]    ?? "#f5f5f3";
   const stripText = getContrastColor(stripBg) === "light" ? "#fff" : "#111";
   const prodBg    = sc["bgProductos"] ?? "#fafaf8";
   const prodText  = getContrastColor(prodBg) === "light" ? "#fff" : "#111";
@@ -240,15 +240,20 @@ export default function ChicParis() {
       </section>
 
       {/* ── STRIP ── */}
-      <section style={{ background: stripBg, padding: "14px 0", position: "relative" }}>
-        <EditableSectionBg field="bgStrip" label="Fondo franja" />
-        <div style={{ display: "flex", justifyContent: "center", gap: 48, flexWrap: "wrap" }}>
-          {[["🚚", "Envío gratis", "+$30.000"], ["🔄", "Cambios sin cargo", "Hasta 30 días"], ["🔒", "Pago seguro", "Todos los medios"], ["💬", "Atención rápida", "Respondemos en 24hs"]].map(([icon, title, sub]) => (
-            <div key={title} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 20 }}>{icon}</span>
+      <section style={{ background: stripBg, borderTop: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, borderBottom: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, padding: "20px 40px", position: "relative" }}>
+        <EditableSectionBg field="bgStrip" label="Fondo franja garantías" />
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+          {[
+            { svg: <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>, title: "Envío gratis", sub: <EditableZone field="garantia1Desc" label="Garantía 1 — Descripción">En compras mayores a $30.000</EditableZone> },
+            { svg: <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16"/><polyline points="21 3 21 8 16 8"/><polyline points="3 21 3 16 8 16"/></svg>, title: "Cambios sin cargo", sub: <EditableZone field="garantia2Desc" label="Garantía 2 — Descripción">Hasta 30 días después de la compra</EditableZone> },
+            { svg: <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>, title: "Pago seguro", sub: <EditableZone field="garantia3Desc" label="Garantía 3 — Descripción">Todos los medios de pago protegidos</EditableZone> },
+            { svg: <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, title: "Atención rápida", sub: <EditableZone field="garantia4Desc" label="Garantía 4 — Descripción">Respondemos en menos de 24hs</EditableZone> },
+          ].map(({ svg, title, sub }) => (
+            <div key={title} style={{ display: "flex", alignItems: "center", gap: 14, flex: "1 1 200px" }}>
+              <div style={{ color: ACC, flexShrink: 0 }}>{svg}</div>
               <div>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: stripText, letterSpacing: 0.5 }}>{title}</p>
-                <p style={{ margin: 0, fontSize: 11, color: stripText, opacity: 0.7 }}>{sub}</p>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: stripText, letterSpacing: 0.3 }}>{title}</p>
+                <p style={{ margin: 0, fontSize: 11, color: stripText, opacity: 0.6, lineHeight: 1.4 }}>{sub}</p>
               </div>
             </div>
           ))}
@@ -282,9 +287,14 @@ export default function ChicParis() {
             ))}
           </div>
 
-          {products.length === 0 ? (
+          {loadingProducts ? (
             <div style={{ textAlign: "center", padding: "60px 0", color: prodText, opacity: 0.4 }}>
               <p style={{ fontSize: 15 }}>Cargando productos...</p>
+            </div>
+          ) : products.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "60px 0", color: prodText, opacity: 0.35 }}>
+              <svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.2} style={{ marginBottom: 12, opacity: 0.5 }}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              <p style={{ fontSize: 14, margin: 0 }}>Todavía no hay productos. Agregá productos desde el dashboard.</p>
             </div>
           ) : (
             <>
@@ -337,15 +347,17 @@ export default function ChicParis() {
             {(() => {
               const ov = storeConfig?.imageOverrides?.["nosotrosImage"];
               return (
-                <div style={{ aspectRatio: "4/5", background: "#d8d0c8", overflow: "hidden" }}>
+                <div style={{ aspectRatio: "4/5", background: "#d8d0c8", overflow: "hidden", position: "relative" }}>
                   {ov?.url
                     ? <img src={ov.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` }} />
-                    : <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #e8e0d8, #c8bcb0)" }} />
+                    : <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #e8e0d8, #c8bcb0)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontSize: 11, color: "#a09080", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Subí tu foto</span>
+                      </div>
                   }
-                  <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
                 </div>
               );
             })()}
+            <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
           </div>
           <div>
             <span style={{ fontSize: 10, letterSpacing: 5, fontWeight: 700, color: ACC, textTransform: "uppercase", display: "block", marginBottom: 16 }}>
