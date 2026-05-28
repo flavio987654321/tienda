@@ -1,234 +1,61 @@
 import { prisma } from "@/lib/prisma";
-import StorefrontClient from "@/components/store/StorefrontClient";
+import StorefrontTemplateRenderer from "@/components/store/StorefrontTemplateRenderer";
 import { notFound } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
-import { getCurrentUser } from "@/lib/auth-session";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import type { StoreConfig } from "@/types/store-config";
+import { DEFAULT_CONFIG } from "@/types/store-config";
 
 export const dynamic = "force-dynamic";
 
 type TiendaPageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ ref?: string; producto?: string; source?: string }>;
 };
 
-function parseImages(images: string): string[] {
-  try {
-    const parsed = JSON.parse(images);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(Boolean)
-      .map((item) => (typeof item === "string" ? item : (item as any)?.url ?? ""))
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-
-export async function generateMetadata({ params, searchParams }: TiendaPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: TiendaPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const { producto } = await searchParams;
 
   const store = await prisma.store.findFirst({
     where: { slug, isActive: true },
-    select: {
-      name: true,
-      description: true,
-      logo: true,
-      primaryColor: true,
-      tagline: true,
-      products: producto
-        ? {
-            where: { id: producto, isActive: true },
-            select: { name: true, description: true, images: true, price: true },
-            take: 1,
-          }
-        : false,
-    },
+    select: { name: true, description: true, logo: true, tagline: true, storeConfig: true },
   });
 
   if (!store) return {};
 
-  const product = Array.isArray(store.products) ? store.products[0] : null;
-  const image = product ? parseImages(product.images)[0] : store.logo || null;
-  const title = product ? `${product.name} | ${store.name}` : store.name;
-  const description =
-    product?.description ||
-    store.description ||
-    store.tagline ||
-    `Comprá en ${store.name} — Envíos a todo el país`;
+  let config: Partial<StoreConfig> = {};
+  try { config = JSON.parse(store.storeConfig || "{}"); } catch { /* noop */ }
 
-  // For product pages use the product image directly; for the base store
-  // page, opengraph-image.tsx generates a 1200×630 branded image automatically.
-  const ogImages =
-    product && image
-      ? [{ url: image, alt: product.name, width: 800, height: 800 }]
-      : undefined;
+  const title = (config.storeName || store.name) ?? "Tienda";
+  const description = store.description || store.tagline || `Comprá en ${title}`;
 
   return {
     title,
     description,
     manifest: `/api/manifest/${slug}`,
-    appleWebApp: {
-      capable: true,
-      title: store.name,
-      statusBarStyle: "default",
-    },
-    openGraph: {
-      title,
-      description,
-      type: "website",
-      siteName: store.name,
-      ...(ogImages ? { images: ogImages } : {}),
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      ...(ogImages ? { images: [ogImages[0].url] } : {}),
-    },
-    icons: store.logo
-      ? { apple: [{ url: store.logo, sizes: "180x180" }] }
-      : undefined,
+    openGraph: { title, description, type: "website", siteName: title },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
-export default async function TiendaPage({ params, searchParams }: TiendaPageProps) {
+export default async function TiendaPage({ params }: TiendaPageProps) {
   noStore();
   const { slug } = await params;
-  const { ref, producto, source } = await searchParams;
 
   const store = await prisma.store.findFirst({
     where: { slug, isActive: true },
-    include: {
-      owner: { select: { name: true, email: true } },
-      products: {
-        where: { isActive: true },
-        include: { variants: true },
-        orderBy: { createdAt: "desc" },
-      },
-    },
+    select: { storeConfig: true },
   });
 
   if (!store) notFound();
 
-  let affiliateId: string | undefined;
-  if (ref) {
-    const affiliate = await prisma.affiliate.findFirst({
-      where: { id: ref, storeId: store.id, isActive: true },
-      select: { id: true },
-    });
-    affiliateId = affiliate?.id;
-    if (affiliateId) {
-      const trackedAffiliateId = affiliateId;
-      const hdrs = await headers();
-      const ip = (
-        hdrs.get("x-forwarded-for")?.split(",")[0] ??
-        hdrs.get("x-real-ip") ??
-        "unknown"
-      ).trim().slice(0, 45);
-
-      // Deduplicar: máximo 1 click por IP por afiliada por hora
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-      prisma.affiliateClick.findFirst({
-        where: { affiliateId: trackedAffiliateId, ip, createdAt: { gte: oneHourAgo } },
-        select: { id: true },
-      }).then((existing) => {
-        if (!existing) {
-          prisma.affiliateClick.create({
-            data: { affiliateId: trackedAffiliateId, storeId: store.id, ip },
-          }).catch(() => {});
-        }
-      }).catch(() => {});
-    }
+  let config: StoreConfig;
+  try {
+    const parsed = JSON.parse(store.storeConfig || "{}");
+    if (!parsed?.template) notFound();
+    config = { ...DEFAULT_CONFIG, ...parsed };
+  } catch {
+    notFound();
   }
 
-  const currentUser = await getCurrentUser();
-  let initialFavoriteIds: string[] = [];
-  if (currentUser) {
-    const productIds = store.products.map((p) => p.id);
-    const favs = await prisma.favorite.findMany({
-      where: { userId: currentUser.id, productId: { in: productIds } },
-      select: { productId: true },
-    });
-    initialFavoriteIds = favs.map((f) => f.productId);
-  }
-
-  return (
-    <StorefrontClient
-      affiliateId={affiliateId}
-      initialProductId={producto}
-      userId={currentUser?.id}
-      initialFavoriteIds={initialFavoriteIds}
-      isPwa={source === "pwa"}
-      store={{
-        id: store.id,
-        slug: store.slug,
-        pageBlocks: store.pageBlocks,
-        name: store.name,
-        description: store.description,
-        logo: store.logo,
-        logoColor: store.logoColor,
-        banner: store.banner,
-        tagline: store.tagline,
-        primaryColor: store.primaryColor,
-        secondaryColor: store.secondaryColor,
-        accentColor: store.accentColor,
-        fontFamily: store.fontFamily,
-        templateId: store.templateId,
-        productLayout: store.productLayout,
-        heroStyle: store.heroStyle,
-        showPrices: store.showPrices,
-        showStock: store.showStock,
-        showRatings: store.showRatings,
-        announcementBar: store.announcementBar,
-        announcementBarColor: store.announcementBarColor,
-        navbarStyle: store.navbarStyle,
-        buttonStyle: store.buttonStyle,
-        cardRadius: store.cardRadius,
-        cardShadow: store.cardShadow,
-        backgroundStyle: store.backgroundStyle,
-        instagramUrl: store.instagramUrl,
-        facebookUrl: store.facebookUrl,
-        tiktokUrl: store.tiktokUrl,
-        whatsappNumber: store.whatsappNumber,
-        showWhatsappButton: store.showWhatsappButton,
-        footerText: store.footerText,
-        footerDescription: (store as any).footerDescription ?? null,
-        footerShowLegal: (store as any).footerShowLegal ?? true,
-        policyReturns: (store as any).policyReturns ?? null,
-        policyShipping: (store as any).policyShipping ?? null,
-        policyTerms: (store as any).policyTerms ?? null,
-        policyReturnsActive: (store as any).policyReturnsActive ?? true,
-        policyShippingActive: (store as any).policyShippingActive ?? true,
-        policyTermsActive: (store as any).policyTermsActive ?? true,
-        currency: store.currency,
-        tipoTienda: (store as any).tipoTienda ?? null,
-        navLinks: (store as any).navLinks ?? "[]",
-        mpConnected: !!store.mpConnectedAt,
-        owner: store.owner,
-        products: store.products.map((product) => ({
-          id: product.id,
-          name: product.name,
-          description: product.description,
-          price: product.price,
-          comparePrice: product.comparePrice,
-          precioMayorista: product.precioMayorista ?? null,
-          cantMinMayorista: product.cantMinMayorista ?? null,
-          images: product.images,
-          reelUrls: (product as any).reelUrls,
-          category: product.category,
-          subcategory: product.subcategory,
-          variants: product.variants.map((variant) => ({
-            id: variant.id,
-            name: variant.name,
-            value: variant.value,
-            stock: variant.stock,
-            price: variant.price,
-          })),
-        })),
-      }}
-    />
-  );
+  return <StorefrontTemplateRenderer config={config} />;
 }
