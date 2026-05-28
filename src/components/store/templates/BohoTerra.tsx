@@ -62,7 +62,9 @@ export default function BohoTerra() {
   const heroLeftBg = sc["bgHeroLeft"] ?? BG;
   const heroLeftText = getContrastColor(heroLeftBg) === "light" ? "#faf7f2" : "#2c2218";
   const heroLeftMid = getContrastColor(heroLeftBg) === "light" ? "#d5c9be" : "#9a8070";
-  const coleccionBg = sc["bgColeccion"] ?? BG;
+  const coleccionBg   = sc["bgColeccion"] ?? BG;
+  const coleccionText = getContrastColor(coleccionBg) === "light" ? "#faf7f2" : "#2c2218";
+  const coleccionMid  = getContrastColor(coleccionBg) === "light" ? "#d5c9be" : "#9a8070";
   const nosotrosBg = sc["bgNosotros"] ?? S;
   const nosotrosText = getContrastColor(nosotrosBg) === "light" ? "#faf7f2" : "#2c2218";
   const nosotrosMid = getContrastColor(nosotrosBg) === "light" ? "#d5c9be" : "#9a8070";
@@ -364,16 +366,16 @@ export default function BohoTerra() {
         {/* encabezado */}
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 40px", display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:40, borderBottom:`1px solid rgba(44,34,24,0.1)`, paddingBottom:24 }}>
           <div>
-            <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(22px,2.5vw,32px)", fontWeight:400, fontStyle:"italic", margin:0, color:T }}>
+            <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(22px,2.5vw,32px)", fontWeight:400, fontStyle:"italic", margin:0, color:coleccionText }}>
               {activeCategory==="Todos" ? "Toda la colección" : activeCategory}
             </h2>
-            <p style={{ fontSize:12, color:MID, margin:"6px 0 0" }}>{allFiltered.length} piezas</p>
+            <p style={{ fontSize:12, color:coleccionMid, margin:"6px 0 0" }}>{allFiltered.length} piezas</p>
           </div>
           {/* filtros de categoría */}
           <div style={{ display:"flex", gap:4 }}>
             {CATEGORIES.map(cat=>(
               <button key={cat} onClick={()=>changeCategory(cat)}
-                style={{ background:activeCategory===cat ? T : "transparent", color:activeCategory===cat ? BG : MID, border:`1px solid ${activeCategory===cat ? T : "rgba(44,34,24,0.18)"}`, padding:"7px 18px", fontSize:10, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", transition:"all 0.2s" }}>
+                style={{ background:activeCategory===cat ? coleccionText : "transparent", color:activeCategory===cat ? coleccionBg : coleccionMid, border:`1px solid ${activeCategory===cat ? coleccionText : "rgba(44,34,24,0.18)"}`, padding:"7px 18px", fontSize:10, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", transition:"all 0.2s" }}>
                 {cat === "Todos" ? "Todos" : cat}
               </button>
             ))}
@@ -411,10 +413,10 @@ export default function BohoTerra() {
                   </div>
                   {/* info */}
                   <p style={{ fontSize:10, color:A, letterSpacing:3, textTransform:"uppercase", margin:"0 0 5px" }}>{product.category}</p>
-                  <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:17, color:T, margin:"0 0 8px", lineHeight:1.3 }}>{product.name}</p>
+                  <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:17, color:coleccionText, margin:"0 0 8px", lineHeight:1.3 }}>{product.name}</p>
                   <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                    <span style={{ fontSize:16, fontWeight:700, color:T }}>{fmt(product.price)}</span>
-                    {product.comparePrice && <span style={{ fontSize:13, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
+                    <span style={{ fontSize:16, fontWeight:700, color:coleccionText }}>{fmt(product.price)}</span>
+                    {product.comparePrice && <span style={{ fontSize:13, color:coleccionMid, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
                   </div>
                 </div>
               ))}

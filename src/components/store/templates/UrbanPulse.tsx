@@ -109,6 +109,9 @@ export default function UrbanPulse() {
   const contactUpBg     = scu["bgContacto"]   ?? DARK;
   const contactUpText   = getContrastColor(contactUpBg) === "light" ? WHITE : DARK;
   const footerUpBg      = scu["bgFooter"]     ?? "#080808";
+  const productosBgUp   = scu["bgProductos"]  ?? BG;
+  const productosTextUp = getContrastColor(productosBgUp) === "light" ? WHITE : DARK;
+  const productosMidUp  = getContrastColor(productosBgUp) === "light" ? "rgba(255,255,255,0.5)" : MID;
 
   const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 
@@ -407,10 +410,12 @@ export default function UrbanPulse() {
       </section>
 
       {/* PRODUCTS */}
-      <section id="productos" style={{ padding:"80px 40px", maxWidth:1200, margin:"0 auto" }}>
+      <section id="productos" style={{ background:productosBgUp, position:"relative" }}>
+        <EditableSectionBg field="bgProductos" label="Fondo productos" />
+        <div style={{ padding:"80px 40px", maxWidth:1200, margin:"0 auto" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:40 }}>
-          <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0 }}><EditableZone field="collectionHeading" label="Título sección productos">Colección</EditableZone></h2>
-          <div style={{ display:"flex", border:`2px solid ${DARK}` }}>
+          <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, color:productosTextUp }}><EditableZone field="collectionHeading" label="Título sección productos">Colección</EditableZone></h2>
+          <div style={{ display:"flex", border:`2px solid ${productosTextUp}` }}>
             {CATEGORIES.map((cat, i) => (
               <button key={cat} onClick={() => changeCategory(cat)}
                 style={{ background: activeCategory === cat ? DARK : WHITE, color: activeCategory === cat ? ACC : DARK, border:"none", borderRight: i < CATEGORIES.length - 1 ? `1px solid ${DARK}` : "none", padding:"10px 18px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", transition:"all 0.2s" }}>
@@ -456,11 +461,12 @@ export default function UrbanPulse() {
         {hasMore && (
           <div style={{ textAlign:"center", marginTop:40 }}>
             <button onClick={() => setVisibleCount(v => v + 4)}
-              style={{ background:"none", border:`3px solid ${DARK}`, padding:"16px 52px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
+              style={{ background:"none", border:`3px solid ${productosTextUp}`, color:productosTextUp, padding:"16px 52px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
               Cargar más
             </button>
           </div>
         )}
+        </div>
       </section>
 
       {/* TESTIMONIALS */}

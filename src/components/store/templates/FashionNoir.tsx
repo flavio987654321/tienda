@@ -244,6 +244,12 @@ export default function FashionNoir() {
   const nosotrosPanelBg= scn["bgNosotrosPanel"] ?? S;
   const nosotrosPanelText = getContrastColor(nosotrosPanelBg) === "light" ? T : "#0a0a0a";
   const footerBg       = scn["bgFooter"]      ?? BG;
+  const categoriasBg   = scn["bgCategorias"]  ?? BG;
+  const productosBg    = scn["bgProductos"]   ?? BG;
+  const productosText  = getContrastColor(productosBg)  === "light" ? T : "#0a0a0a";
+  const productosMid   = getContrastColor(productosBg)  === "light" ? "#888" : "#555";
+  const contactoBg     = scn["bgContacto"]    ?? BG;
+  const contactoText   = getContrastColor(contactoBg)   === "light" ? T : "#0a0a0a";
 
   return (
     <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
@@ -417,29 +423,32 @@ export default function FashionNoir() {
       </section>
 
       {/* ── CATEGORÍAS ─────────────────────────────────────── */}
-      <section id="categorias" style={{ padding:"80px 32px", maxWidth:1280, margin:"0 auto" }}>
-        <p style={{ fontSize:11, letterSpacing:5, color:G, textAlign:"center", marginBottom:48, textTransform:"uppercase" }}>
-          <EditableZone field="categoriesHeading" label="Título sección categorías">Colecciones</EditableZone>
-        </p>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
-          {[
-            { label:"Mujer",      img: catMujerUrl,      field:"catMujer" },
-            { label:"Hombre",     img: catHombreUrl,     field:"catHombre" },
-            { label:"Accesorios", img: catAccesoriosUrl, field:"catAccesorios" },
-          ].map(cat => (
-            <button key={cat.label} onClick={() => { changeCategory(cat.label); scrollTo("productos"); }}
-              style={{ position:"relative", aspectRatio:"2/3", overflow:"hidden", background:S, cursor:"pointer", border:"none", display:"block" }}>
-              <img src={cat.img} alt={cat.label} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", transition:"transform 0.6s ease" }}
-                onMouseEnter={e => (e.currentTarget.style.transform="scale(1.06)")}
-                onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}/>
-              <EditableImageButton field={cat.field} label={`Imagen ${cat.label}`} />
-              <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(10,10,10,0.75) 30%, transparent)" }}/>
-              <div style={{ position:"absolute", bottom:32, left:0, right:0, textAlign:"center" }}>
-                <p style={{ fontFamily:"Georgia, serif", fontSize:24, color:T, margin:0, fontWeight:700 }}>{cat.label}</p>
-                <p style={{ fontSize:10, letterSpacing:4, color:G, marginTop:8, textTransform:"uppercase" }}>{"Ver más"} →</p>
-              </div>
-            </button>
-          ))}
+      <section id="categorias" style={{ background:categoriasBg, position:"relative" }}>
+        <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
+        <div style={{ padding:"80px 32px", maxWidth:1280, margin:"0 auto" }}>
+          <p style={{ fontSize:11, letterSpacing:5, color:G, textAlign:"center", marginBottom:48, textTransform:"uppercase" }}>
+            <EditableZone field="categoriesHeading" label="Título sección categorías">Colecciones</EditableZone>
+          </p>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+            {[
+              { label:"Mujer",      img: catMujerUrl,      field:"catMujer" },
+              { label:"Hombre",     img: catHombreUrl,     field:"catHombre" },
+              { label:"Accesorios", img: catAccesoriosUrl, field:"catAccesorios" },
+            ].map(cat => (
+              <button key={cat.label} onClick={() => { changeCategory(cat.label); scrollTo("productos"); }}
+                style={{ position:"relative", aspectRatio:"2/3", overflow:"hidden", background:S, cursor:"pointer", border:"none", display:"block" }}>
+                <img src={cat.img} alt={cat.label} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", transition:"transform 0.6s ease" }}
+                  onMouseEnter={e => (e.currentTarget.style.transform="scale(1.06)")}
+                  onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}/>
+                <EditableImageButton field={cat.field} label={`Imagen ${cat.label}`} />
+                <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(10,10,10,0.75) 30%, transparent)" }}/>
+                <div style={{ position:"absolute", bottom:32, left:0, right:0, textAlign:"center" }}>
+                  <p style={{ fontFamily:"Georgia, serif", fontSize:24, color:T, margin:0, fontWeight:700 }}>{cat.label}</p>
+                  <p style={{ fontSize:10, letterSpacing:4, color:G, marginTop:8, textTransform:"uppercase" }}>{"Ver más"} →</p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -453,16 +462,18 @@ export default function FashionNoir() {
       </section>
 
       {/* ── PRODUCTOS ──────────────────────────────────────── */}
-      <section id="productos" style={{ padding:"80px 32px", maxWidth:1280, margin:"0 auto" }}>
+      <section id="productos" style={{ background:productosBg, position:"relative" }}>
+        <EditableSectionBg field="bgProductos" label="Fondo productos" />
+        <div style={{ padding:"80px 32px", maxWidth:1280, margin:"0 auto" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:40, flexWrap:"wrap", gap:16 }}>
-          <p style={{ fontFamily:"Georgia, serif", fontSize:28, color:T, margin:0 }}>
+          <p style={{ fontFamily:"Georgia, serif", fontSize:28, color:productosText, margin:0 }}>
             {activeCategory === "Todos" ? "Toda la Colección" : activeCategory}
-            <span style={{ fontSize:14, color:"#555", fontFamily:"sans-serif", fontWeight:400, marginLeft:12 }}>({allFiltered.length} piezas)</span>
+            <span style={{ fontSize:14, color:productosMid, fontFamily:"sans-serif", fontWeight:400, marginLeft:12 }}>({allFiltered.length} piezas)</span>
           </p>
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
             {CATEGORIES.map(cat => (
               <button key={cat} onClick={() => changeCategory(cat)}
-                style={{ background: activeCategory===cat ? G : "transparent", color: activeCategory===cat ? BG : T, border:`1px solid ${activeCategory===cat ? G : "rgba(240,235,227,0.2)"}`, padding:"8px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", transition:"all 0.2s" }}>
+                style={{ background: activeCategory===cat ? G : "transparent", color: activeCategory===cat ? BG : productosText, border:`1px solid ${activeCategory===cat ? G : "rgba(240,235,227,0.2)"}`, padding:"8px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", transition:"all 0.2s" }}>
                 {cat === "Todos" ? "Todos" : cat}
               </button>
             ))}
@@ -489,11 +500,11 @@ export default function FashionNoir() {
                   <svg width={16} height={16} viewBox="0 0 24 24" fill={favorites.includes(product.id) ? G : "none"} stroke={favorites.includes(product.id) ? G : T} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </button>
               </div>
-              <p style={{ fontSize:11, color:"#666", letterSpacing:2, textTransform:"uppercase", margin:"0 0 6px" }}>{product.category}</p>
-              <p style={{ fontSize:16, color:T, margin:"0 0 8px", fontWeight:500 }}>{product.name}</p>
+              <p style={{ fontSize:11, color:productosMid, letterSpacing:2, textTransform:"uppercase", margin:"0 0 6px" }}>{product.category}</p>
+              <p style={{ fontSize:16, color:productosText, margin:"0 0 8px", fontWeight:500 }}>{product.name}</p>
               <div style={{ display:"flex", gap:10, alignItems:"center" }}>
                 <span style={{ fontSize:17, fontWeight:700, color:G }}>{fmt(product.price)}</span>
-                {product.comparePrice && <span style={{ fontSize:13, color:"#444", textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
+                {product.comparePrice && <span style={{ fontSize:13, color:productosMid, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
               </div>
             </div>
           ))}
@@ -506,20 +517,21 @@ export default function FashionNoir() {
           </p>
           {hasMore && (
             <button onClick={() => setVisibleCount(v => v + 4)}
-              style={{ background:"transparent", color:T, border:`1px solid rgba(240,235,227,0.25)`, padding:"14px 48px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:600, cursor:"pointer", transition:"all 0.25s" }}
+              style={{ background:"transparent", color:productosText, border:`1px solid rgba(240,235,227,0.25)`, padding:"14px 48px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:600, cursor:"pointer", transition:"all 0.25s" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor=G; e.currentTarget.style.color=G; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(240,235,227,0.25)"; e.currentTarget.style.color=T; }}>
+              onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(240,235,227,0.25)"; e.currentTarget.style.color=productosText; }}>
               {"Ver más"}
             </button>
           )}
           {!hasMore && allFiltered.length > 8 && (
             <button onClick={() => { setVisibleCount(8); scrollTo("productos"); }}
-              style={{ background:"transparent", color:"#444", border:"1px solid rgba(240,235,227,0.08)", padding:"12px 36px", fontSize:10, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", transition:"all 0.25s" }}
-              onMouseEnter={e => (e.currentTarget.style.color=T)}
-              onMouseLeave={e => (e.currentTarget.style.color="#444")}>
+              style={{ background:"transparent", color:productosMid, border:"1px solid rgba(240,235,227,0.08)", padding:"12px 36px", fontSize:10, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", transition:"all 0.25s" }}
+              onMouseEnter={e => (e.currentTarget.style.color=productosText)}
+              onMouseLeave={e => (e.currentTarget.style.color=productosMid)}>
               ↑ Volver al inicio
             </button>
           )}
+        </div>
         </div>
       </section>
 
@@ -560,10 +572,11 @@ export default function FashionNoir() {
       </section>
 
       {/* ── CONTACTO ───────────────────────────────────────── */}
-      <section id="contacto" style={{ padding:"80px 32px", borderTop:`1px solid rgba(201,168,76,0.1)` }}>
-        <div style={{ maxWidth:640, margin:"0 auto" }}>
+      <section id="contacto" style={{ background:contactoBg, position:"relative", borderTop:`1px solid rgba(201,168,76,0.1)` }}>
+        <EditableSectionBg field="bgContacto" label="Fondo contacto" />
+        <div style={{ padding:"80px 32px", maxWidth:640, margin:"0 auto" }}>
           <p style={{ fontSize:10, letterSpacing:5, color:G, textAlign:"center", textTransform:"uppercase", marginBottom:12 }}><EditableZone field="contactKicker" label="Etiqueta contacto">Contacto</EditableZone></p>
-          <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,3vw,38px)", textAlign:"center", margin:"0 0 12px", color:T }}>
+          <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,3vw,38px)", textAlign:"center", margin:"0 0 12px", color:contactoText }}>
             <EditableZone field="contactHeading" label="Título contacto">¿Tenés alguna consulta?</EditableZone>
           </h2>
           <p style={{ fontSize:14, opacity:0.5, textAlign:"center", marginBottom:48, lineHeight:1.7 }}>

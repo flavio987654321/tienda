@@ -1027,31 +1027,31 @@ export default function ConfiguracionPage() {
         </div>
 
         {/* Preview — full width */}
-        <div style={{ flex: 1, overflow: "hidden", position: "relative", padding: "12px 16px 0" }}>
-          <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
-            transform: "translate(0,0)" }}>
-            <EditContext.Provider value={{
-              editMode: true,
-              activeField,
-              setActiveField,
-              overrides: config.textOverrides,
-              setOverride,
-              resetOverride,
-              imageOverrides: config.imageOverrides,
-              setImageOverride,
-              sectionColors: config.sectionColors,
-              setSectionColor,
-            }}>
+        <EditContext.Provider value={{
+          editMode: true,
+          activeField,
+          setActiveField,
+          overrides: config.textOverrides,
+          setOverride,
+          resetOverride,
+          imageOverrides: config.imageOverrides,
+          setImageOverride,
+          sectionColors: config.sectionColors,
+          setSectionColor,
+        }}>
+          <div style={{ flex: 1, overflow: "hidden", position: "relative", padding: "12px 16px 0" }}>
+            <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
+              boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
+              transform: "translate(0,0)" }}>
               <StoreConfigContext.Provider value={config}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>
               </StoreConfigContext.Provider>
-              <FloatingEditor textFieldLabels={TEXT_FIELD_LABELS} />
-            </EditContext.Provider>
+            </div>
           </div>
-        </div>
+          <FloatingEditor textFieldLabels={TEXT_FIELD_LABELS} />
+        </EditContext.Provider>
 
       </div>
 
