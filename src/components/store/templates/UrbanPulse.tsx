@@ -103,12 +103,29 @@ export default function UrbanPulse() {
   const garantiasUpText = getContrastColor(garantiasUpBg) === "light" ? WHITE : DARK;
   const featuredBg      = scu["bgFeatured"]   ?? DARK;
   const featuredText    = getContrastColor(featuredBg) === "light" ? WHITE : DARK;
+  const heroLeftUpBg    = scu["bgHeroLeft"]   ?? DARK;
+  const heroLeftUpText  = getContrastColor(heroLeftUpBg) === "light" ? WHITE : DARK;
+  const heroLeftUpMid   = getContrastColor(heroLeftUpBg) === "light" ? "rgba(255,255,255,0.5)" : MID;
+  const categoriesBgUp  = scu["bgCategorias"] ?? BG;
+  const categoriasText  = getContrastColor(categoriesBgUp) === "light" ? WHITE : DARK;
+  const testimonialsBgUp     = scu["bgTestimonios"] ?? DARK;
+  const testimonialsText     = getContrastColor(testimonialsBgUp) === "light" ? WHITE : DARK;
+  const testimonialsMid      = getContrastColor(testimonialsBgUp) === "light" ? "rgba(255,255,255,0.75)" : "rgba(0,0,0,0.6)";
+  const testimonialsCardBg   = getContrastColor(testimonialsBgUp) === "light" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
+  const testimonialsCardBorder = getContrastColor(testimonialsBgUp) === "light" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)";
   const nosotrosBgUp    = scu["bgNosotros"]   ?? BG;
   const nosotrosTextUp  = getContrastColor(nosotrosBgUp) === "light" ? WHITE : DARK;
   const nosotrosMidUp   = getContrastColor(nosotrosBgUp) === "light" ? "rgba(255,255,255,0.5)" : MID;
   const contactUpBg     = scu["bgContacto"]   ?? DARK;
   const contactUpText   = getContrastColor(contactUpBg) === "light" ? WHITE : DARK;
+  const contactUpMid    = getContrastColor(contactUpBg) === "light" ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.45)";
+  const contactInputBg  = getContrastColor(contactUpBg) === "light" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+  const contactInputBorder = getContrastColor(contactUpBg) === "light" ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.15)";
+  const contactBgImg    = storeConfig?.imageOverrides?.["sectionbg_bgContacto"];
   const footerUpBg      = scu["bgFooter"]     ?? "#080808";
+  const footerUpText    = getContrastColor(footerUpBg) === "light" ? WHITE : DARK;
+  const footerUpMid     = getContrastColor(footerUpBg) === "light" ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.4)";
+  const footerBgImg     = storeConfig?.imageOverrides?.["sectionbg_bgFooter"];
   const productosBgUp   = scu["bgProductos"]  ?? BG;
   const productosTextUp = getContrastColor(productosBgUp) === "light" ? WHITE : DARK;
   const productosMidUp  = getContrastColor(productosBgUp) === "light" ? "rgba(255,255,255,0.5)" : MID;
@@ -290,14 +307,15 @@ export default function UrbanPulse() {
 
       {/* HERO — diagonal split */}
       <section style={{ display:"grid", gridTemplateColumns:"55% 45%", minHeight:"calc(100vh - 100px)", overflow:"hidden" }}>
-        <div style={{ background:DARK, display:"flex", flexDirection:"column", justifyContent:"flex-end", padding:"80px 64px", clipPath:"polygon(0 0, 100% 0, 91% 100%, 0 100%)", position:"relative" }}>
+        <div style={{ background:heroLeftUpBg, display:"flex", flexDirection:"column", justifyContent:"flex-end", padding:"80px 64px", clipPath:"polygon(0 0, 100% 0, 91% 100%, 0 100%)", position:"relative" }}>
+          <EditableSectionBg field="bgHeroLeft" label="Fondo hero" />
           <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", marginBottom:20, display:"block" }}>
             <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "▶ Nueva Colección 2025"}</EditableZone>
           </span>
-          <h1 style={{ color:WHITE, fontSize:"clamp(58px,7.5vw,108px)", fontWeight:900, lineHeight:0.88, margin:"0 0 28px", textTransform:"uppercase", letterSpacing:"-2px" }}>
+          <h1 style={{ color:heroLeftUpText, fontSize:"clamp(58px,7.5vw,108px)", fontWeight:900, lineHeight:0.88, margin:"0 0 28px", textTransform:"uppercase", letterSpacing:"-2px" }}>
             <EditableZone field="heroHeading" label="Título principal">MOVE FASTER. GO HARDER.</EditableZone>
           </h1>
-          <p style={{ color:"rgba(255,255,255,0.5)", fontSize:15, maxWidth:360, marginBottom:40, lineHeight:1.7 }}>
+          <p style={{ color:heroLeftUpMid, fontSize:15, maxWidth:360, marginBottom:40, lineHeight:1.7 }}>
             <EditableZone field="heroSubtext" label="Subtítulo hero">Ropa deportiva de alta performance para quienes no conocen los límites.</EditableZone>
           </p>
           <div style={{ display:"flex", gap:12 }}>
@@ -306,7 +324,7 @@ export default function UrbanPulse() {
               <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
             </button>
             <button onClick={() => scrollTo("featured")}
-              style={{ background:"none", color:WHITE, border:`2px solid rgba(255,255,255,0.4)`, padding:"16px 36px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+              style={{ background:"none", color:heroLeftUpText, border:`2px solid ${heroLeftUpMid}`, padding:"16px 36px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
               <EditableZone field="heroCtaSecondary" label="Botón secundario">Featured Drop</EditableZone>
             </button>
           </div>
@@ -338,13 +356,15 @@ export default function UrbanPulse() {
       </section>
 
       {/* CATEGORY TILES */}
-      <section style={{ padding:"80px 40px", maxWidth:1200, margin:"0 auto" }}>
+      <section style={{ background:categoriesBgUp, position:"relative" }}>
+        <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
+        <div style={{ padding:"80px 40px", maxWidth:1200, margin:"0 auto" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:40 }}>
-          <h2 style={{ fontSize:"clamp(36px,4vw,52px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, lineHeight:1 }}>
+          <h2 style={{ fontSize:"clamp(36px,4vw,52px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, lineHeight:1, color:categoriasText }}>
             <EditableZone field="categoriesHeading" label="Título sección categorías">Explorá la tienda</EditableZone>
           </h2>
           <button onClick={() => scrollTo("productos")}
-            style={{ background:"none", border:`2px solid ${DARK}`, padding:"10px 24px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+            style={{ background:"none", border:`2px solid ${categoriasText}`, color:categoriasText, padding:"10px 24px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
             <EditableZone field="categoryViewAll" label="Botón ver todo">Ver todo →</EditableZone>
           </button>
         </div>
@@ -366,6 +386,7 @@ export default function UrbanPulse() {
               </div>
             </div>
           ))}
+        </div>
         </div>
       </section>
 
@@ -472,21 +493,22 @@ export default function UrbanPulse() {
       </section>
 
       {/* TESTIMONIALS */}
-      <section style={{ background:DARK, padding:"80px 0" }}>
-        <div style={{ padding:"0 40px", marginBottom:36 }}>
-          <h2 style={{ color:WHITE, fontSize:"clamp(30px,3.5vw,42px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0 }}>
+      <section style={{ background:testimonialsBgUp, padding:"80px 0", position:"relative" }}>
+        <EditableSectionBg field="bgTestimonios" label="Fondo testimonios" />
+        <div style={{ padding:"0 40px", marginBottom:36, position:"relative", zIndex:1 }}>
+          <h2 style={{ color:testimonialsText, fontSize:"clamp(30px,3.5vw,42px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0 }}>
             <EditableZone field="testimonialsHeading" label="Título testimonios">Lo que dicen nuestros clientes</EditableZone>
           </h2>
         </div>
-        <div style={{ display:"flex", gap:4, overflowX:"auto", padding:"0 40px 4px", scrollbarWidth:"none" }}>
+        <div style={{ display:"flex", gap:4, overflowX:"auto", padding:"0 40px 4px", scrollbarWidth:"none", position:"relative", zIndex:1 }}>
           {TESTIMONIALS.map((t, i) => (
-            <div key={i} style={{ flex:"0 0 300px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", padding:"28px" }}>
+            <div key={i} style={{ flex:"0 0 300px", background:testimonialsCardBg, border:`1px solid ${testimonialsCardBorder}`, padding:"28px" }}>
               <div style={{ display:"flex", gap:3, marginBottom:14 }}>
                 {Array.from({length:5}).map((_,si) => (
-                  <svg key={si} width={13} height={13} viewBox="0 0 24 24" fill={si < t.stars ? ACC : "rgba(255,255,255,0.15)"} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <svg key={si} width={13} height={13} viewBox="0 0 24 24" fill={si < t.stars ? ACC : testimonialsMid} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 ))}
               </div>
-              <p style={{ color:"rgba(255,255,255,0.75)", fontSize:13, lineHeight:1.7, margin:"0 0 18px" }}>"{t.text}"</p>
+              <p style={{ color:testimonialsMid, fontSize:13, lineHeight:1.7, margin:"0 0 18px" }}>"{t.text}"</p>
               <p style={{ color:ACC, fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:0 }}>{t.name}</p>
             </div>
           ))}
@@ -494,8 +516,9 @@ export default function UrbanPulse() {
       </section>
 
       {/* NOSOTROS */}
-      <section id="nosotros" style={{ padding:"100px 40px", maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"center", background:nosotrosBgUp, position:"relative" }}>
+      <section id="nosotros" style={{ background:nosotrosBgUp, position:"relative" }}>
         <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
+        <div style={{ padding:"100px 40px", maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"center", position:"relative", zIndex:1 }}>
         <div>
           <span style={{ color:nosotrosMidUp, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>
             <EditableZone field="aboutKicker" label="Kicker 'Nosotros'">▶ Nuestra Historia</EditableZone>
@@ -527,11 +550,17 @@ export default function UrbanPulse() {
             <p style={{ margin:"4px 0 0", fontSize:11, opacity:0.6 }}><EditableZone field="aboutStatLabel4" label="Etiqueta stat: Vistiendo">Vistiendo a Argentina</EditableZone></p>
           </div>
         </div>
+        </div>
       </section>
 
       {/* CONTACT */}
-      <section id="contacto" style={{ background:contactUpBg, padding:"80px 40px", position:"relative" }}>
+      <section id="contacto" style={{ position:"relative", ...(contactBgImg?.url ? { backgroundImage:`url(${contactBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${contactBgImg.posX ?? 50}% ${contactBgImg.posY ?? 50}%` } : { background:contactUpBg }) }}>
+        <BgDragHandle imgKey="sectionbg_bgContacto" />
         <EditableSectionBg field="bgContacto" label="Fondo contacto" />
+        {contactBgImg?.url && contactBgImg.overlayType !== "none" && (
+          <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: contactBgImg.overlayType === "light" ? `rgba(255,255,255,${contactBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${contactBgImg.overlayOpacity ?? 0.45})` }} />
+        )}
+        <div style={{ position:"relative", zIndex:1, padding:"80px 40px" }}>
         <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80 }}>
           <div>
             <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}><EditableZone field="contactKicker" label="Etiqueta contacto">▶ Contacto</EditableZone></span>
@@ -563,13 +592,13 @@ export default function UrbanPulse() {
               <form onSubmit={handleContact} style={{ display:"flex", flexDirection:"column", gap:14 }}>
                 <input type="text" placeholder="Tu nombre *" required
                   value={contactForm.nombre} onChange={e => setContactForm(f => ({ ...f, nombre:e.target.value }))}
-                  style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.15)", color:WHITE, padding:"16px 20px", fontSize:14, outline:"none", fontFamily:"inherit" }} />
+                  style={{ background:contactInputBg, border:`1px solid ${contactInputBorder}`, color:contactUpText, padding:"16px 20px", fontSize:14, outline:"none", fontFamily:"inherit" }} />
                 <input type="email" placeholder="Tu email *" required
                   value={contactForm.email} onChange={e => setContactForm(f => ({ ...f, email:e.target.value }))}
-                  style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.15)", color:WHITE, padding:"16px 20px", fontSize:14, outline:"none", fontFamily:"inherit" }} />
+                  style={{ background:contactInputBg, border:`1px solid ${contactInputBorder}`, color:contactUpText, padding:"16px 20px", fontSize:14, outline:"none", fontFamily:"inherit" }} />
                 <textarea placeholder="Tu mensaje *" required rows={5}
                   value={contactForm.mensaje} onChange={e => setContactForm(f => ({ ...f, mensaje:e.target.value }))}
-                  style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.15)", color:WHITE, padding:"16px 20px", fontSize:14, outline:"none", resize:"vertical", fontFamily:"inherit" }} />
+                  style={{ background:contactInputBg, border:`1px solid ${contactInputBorder}`, color:contactUpText, padding:"16px 20px", fontSize:14, outline:"none", resize:"vertical", fontFamily:"inherit" }} />
                 <button type="submit" disabled={contactStatus === "sending"}
                   style={{ background:ACC, color:DARK, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
                   {contactStatus === "sending" ? "Enviando..." : "Enviar Mensaje →"}
@@ -578,18 +607,24 @@ export default function UrbanPulse() {
             )}
           </div>
         </div>
+        </div>
       </section>
 
       {/* FOOTER */}
-      <footer style={{ background:footerUpBg, padding:"60px 40px 28px", borderTop:`3px solid ${ACC}`, position:"relative" }}>
+      <footer style={{ position:"relative", borderTop:`3px solid ${ACC}`, ...(footerBgImg?.url ? { backgroundImage:`url(${footerBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${footerBgImg.posX ?? 50}% ${footerBgImg.posY ?? 50}%` } : { background:footerUpBg }) }}>
+        <BgDragHandle imgKey="sectionbg_bgFooter" />
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        {footerBgImg?.url && footerBgImg.overlayType !== "none" && (
+          <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: footerBgImg.overlayType === "light" ? `rgba(255,255,255,${footerBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${footerBgImg.overlayOpacity ?? 0.45})` }} />
+        )}
+        <div style={{ padding:"60px 40px 28px", position:"relative", zIndex:1 }}>
         <div style={{ maxWidth:1200, margin:"0 auto" }}>
           <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:40, marginBottom:48 }}>
             <div>
-              <div style={{ fontWeight:900, fontSize:24, letterSpacing:4, textTransform:"uppercase", color:WHITE, marginBottom:16 }}>
+              <div style={{ fontWeight:900, fontSize:24, letterSpacing:4, textTransform:"uppercase", color:footerUpText, marginBottom:16 }}>
                 URBAN<span style={{ color:ACC }}>PULSE</span>
               </div>
-              <p style={{ color:"rgba(255,255,255,0.35)", fontSize:13, lineHeight:1.8, maxWidth:260 }}>
+              <p style={{ color:footerUpMid, fontSize:13, lineHeight:1.8, maxWidth:260 }}>
                 <EditableZone field="footerDescription" label="Descripción footer">Ropa deportiva de alta performance. Para quienes van más rápido.</EditableZone>
               </p>
             </div>
@@ -599,21 +634,22 @@ export default function UrbanPulse() {
               { title:"Empresa", links:["Nosotros","Prensa","Empleo","Sustentabilidad"] },
             ].map(col => (
               <div key={col.title}>
-                <p style={{ color:WHITE, fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:"0 0 18px" }}>{col.title}</p>
+                <p style={{ color:footerUpText, fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:"0 0 18px" }}>{col.title}</p>
                 {col.links.map(link => (
-                  <a key={link} href="#" style={{ display:"block", color:"rgba(255,255,255,0.35)", fontSize:13, textDecoration:"none", marginBottom:10 }}
+                  <a key={link} href="#" style={{ display:"block", color:footerUpMid, fontSize:13, textDecoration:"none", marginBottom:10 }}
                     onMouseEnter={e => { (e.target as HTMLElement).style.color = ACC; }}
-                    onMouseLeave={e => { (e.target as HTMLElement).style.color = "rgba(255,255,255,0.35)"; }}>
+                    onMouseLeave={e => { (e.target as HTMLElement).style.color = footerUpMid; }}>
                     {link}
                   </a>
                 ))}
               </div>
             ))}
           </div>
-          <div style={{ borderTop:"1px solid rgba(255,255,255,0.08)", paddingTop:22, display:"flex", justifyContent:"space-between" }}>
-            <p style={{ color:"rgba(255,255,255,0.25)", fontSize:12, margin:0 }}><EditableZone field="footerCopyright" label="Copyright">© 2025 UrbanPulse. Todos los derechos reservados.</EditableZone></p>
-            <p style={{ color:"rgba(255,255,255,0.25)", fontSize:12, margin:0 }}><EditableZone field="footerMadeIn" label="Hecho en">Hecho en Argentina</EditableZone></p>
+          <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22, display:"flex", justifyContent:"space-between" }}>
+            <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerCopyright" label="Copyright">© 2025 UrbanPulse. Todos los derechos reservados.</EditableZone></p>
+            <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerMadeIn" label="Hecho en">Hecho en Argentina</EditableZone></p>
           </div>
+        </div>
         </div>
       </footer>
 
