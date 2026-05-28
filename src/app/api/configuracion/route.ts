@@ -13,6 +13,34 @@ export async function GET() {
   return NextResponse.json({ store });
 }
 
+export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const { storeConfig } = await req.json();
+  if (!storeConfig || typeof storeConfig !== "object") {
+    return NextResponse.json({ error: "Config inválida" }, { status: 400 });
+  }
+  const store = await prisma.store.update({
+    where: { ownerId: user.id },
+    data: { storeConfig: JSON.stringify(storeConfig) },
+    select: { slug: true },
+  });
+  revalidatePath(`/tienda/${store.slug}`, "layout");
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE() {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const store = await prisma.store.update({
+    where: { ownerId: user.id },
+    data: { storeConfig: "{}" },
+    select: { slug: true },
+  });
+  revalidatePath(`/tienda/${store.slug}`, "layout");
+  return NextResponse.json({ ok: true });
+}
+
 function isValidHex(color: string): boolean {
   return /^#[0-9A-Fa-f]{6}$/.test(color);
 }

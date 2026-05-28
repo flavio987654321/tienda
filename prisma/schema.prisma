@@ -148,6 +148,8 @@ model Store {
   tipoTienda          String   @default("ROPA")
   tipoTiendaConfigurado Boolean @default(false)
   tieneVentaMayorista Boolean  @default(false)
+  // Config visual del nuevo editor de templates
+  storeConfig     String   @default("{}")
   // MercadoPago Marketplace — credenciales del dueño de la tienda (cifradas)
   mpAccessToken   String?
   mpRefreshToken  String?

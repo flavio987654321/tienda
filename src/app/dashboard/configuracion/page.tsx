@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TemplateId, TextOverride, ImageOverride } from "@/types/store-config";
@@ -272,10 +272,11 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 }
 
 /* ── Config avanzada modal ──────────────────────────────────── */
-function ConfigModal({ config, update, onClose }: {
+function ConfigModal({ config, update, onClose, onDelete }: {
   config: StoreConfig;
   update: <K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => void;
   onClose: () => void;
+  onDelete: () => void;
 }) {
   const inp: React.CSSProperties = {
     width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0",
@@ -488,10 +489,17 @@ function ConfigModal({ config, update, onClose }: {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "12px 24px 16px", borderTop: "1px solid #f1f5f9" }}>
+        <div style={{ padding: "12px 24px 16px", borderTop: "1px solid #f1f5f9", display: "flex", flexDirection: "column", gap: 8 }}>
           <button onClick={onClose}
             style={{ width: "100%", padding: "11px", border: "none", borderRadius: 10, background: "#6366f1", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
             Listo
+          </button>
+          <button onClick={onDelete}
+            style={{ width: "100%", padding: "9px", border: "1px solid #fecaca", borderRadius: 10,
+              background: "white", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#fef2f2"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "white"; }}>
+            Eliminar diseño y volver a la galería
           </button>
         </div>
       </div>
@@ -867,8 +875,34 @@ export default function ConfiguracionPage() {
   const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [activeField, setActiveField] = useState<string | null>(null);
   const [configModalOpen, setConfigModalOpen] = useState(false);
+  const [loadingConfig, setLoadingConfig] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  /* Cargar config guardada al montar */
+  const allTemplates = CATEGORIES.flatMap(c => c.templates);
+  useEffect(() => {
+    fetch("/api/configuracion")
+      .then(r => r.json())
+      .then(({ store }) => {
+        if (!store) return;
+        try {
+          const saved: StoreConfig = JSON.parse(store.storeConfig || "{}");
+          if (saved.template) {
+            const tmpl = allTemplates.find(t => t.id === saved.template) ?? null;
+            setSelected(tmpl);
+            setConfig({ ...DEFAULT_CONFIG, ...saved });
+            setMode("editing");
+          }
+        } catch { /* config vacía o inválida, mostrar galería */ }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingConfig(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* Text override helpers */
   const setOverride = useCallback((field: string, partial: Partial<TextOverride>) => {
@@ -927,11 +961,50 @@ export default function ConfiguracionPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    await new Promise(r => setTimeout(r, 700));
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2200);
+    setSaveError(null);
+    try {
+      const res = await fetch("/api/configuracion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeConfig: config }),
+      });
+      if (!res.ok) throw new Error("Error al guardar");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2200);
+    } catch {
+      setSaveError("No se pudo guardar. Intentá de nuevo.");
+      setTimeout(() => setSaveError(null), 3000);
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await fetch("/api/configuracion", { method: "DELETE" });
+      setConfig(DEFAULT_CONFIG);
+      setSelected(null);
+      setMode("gallery");
+      setConfirmDelete(false);
+    } catch { /* ignorar */ }
+    finally { setDeleting(false); }
+  };
+
+  /* ── Loading ── */
+  if (loadingConfig) {
+    return (
+      <DashboardLayout>
+        <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center",
+          flexDirection: "column", gap: 16, color: "#64748b", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+          <div style={{ width: 36, height: 36, border: "3px solid #e2e8f0", borderTopColor: "#6366f1",
+            borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+          <p style={{ margin: 0, fontSize: 14 }}>Cargando tu tienda...</p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   /* ── STEP 1: Gallery ── */
   if (mode === "gallery") {
@@ -1017,38 +1090,61 @@ export default function ConfiguracionPage() {
     return (
       <DashboardLayout>
         <div style={{ display: "flex", height: "100%", overflow: "hidden",
-          flexDirection: "column", background: "#f1f5f9" }}>
+          flexDirection: "column", background: "#0f172a" }}>
 
-          <div style={{ background: "#1e293b", padding: "12px 24px", display: "flex",
-            alignItems: "center", gap: 16, flexShrink: 0 }}>
+          {/* Barra paso 2 */}
+          <div style={{
+            background: "#1e293b", borderBottom: "1px solid #334155",
+            padding: "10px 20px", display: "flex", alignItems: "center",
+            gap: 12, flexShrink: 0,
+          }}>
+            {/* Izquierda */}
             <button onClick={handleBackToGallery}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px",
-                border: "1px solid #334155", borderRadius: 8, background: "transparent",
-                color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-              ← Volver
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
+                border: "1px solid #334155", borderRadius: 7, background: "transparent",
+                color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                whiteSpace: "nowrap", flexShrink: 0 }}>
+              ← Galería
             </button>
-            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ display: "flex", gap: 4 }}>
+
+            {/* Info template — se achica si falta espacio */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1, overflow: "hidden" }}>
+              <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                 {selected!.palette.map((c, i) => (
-                  <div key={i} style={{ width: 12, height: 12, borderRadius: "50%", background: c,
-                    border: "1px solid rgba(255,255,255,0.15)" }} />
+                  <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c,
+                    border: "1px solid rgba(255,255,255,0.12)" }} />
                 ))}
               </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{selected!.name}</span>
-              <span style={{ fontSize: 12, color: "#64748b" }}>— {selected!.desc}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "white", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {selected!.name}
+              </span>
+              <span style={{ fontSize: 11, color: "#475569", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {selected!.desc}
+              </span>
             </div>
-            <span style={{ fontSize: 11, color: "#64748b" }}>Paso 2 de 3</span>
-            <button onClick={handleUseTemplate}
-              style={{ padding: "8px 20px", border: "none", borderRadius: 8,
-                background: "#6366f1", color: "white", fontSize: 13, fontWeight: 700,
-                cursor: "pointer" }}>
-              Usar este diseño →
-            </button>
+
+            {/* Derecha — paso + acción */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+              <span style={{ fontSize: 10, color: "#475569", fontWeight: 600, letterSpacing: 0.5,
+                background: "#0f172a", padding: "3px 8px", borderRadius: 20, whiteSpace: "nowrap" }}>
+                PASO 2 / 3
+              </span>
+              <button onClick={handleUseTemplate}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 18px",
+                  border: "none", borderRadius: 8, background: "#6366f1", color: "white",
+                  fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+                  boxShadow: "0 2px 8px rgba(99,102,241,0.35)" }}>
+                Usar este diseño
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </div>
           </div>
 
-          <div style={{ flex: 1, display: "flex", alignItems: "stretch", padding: "16px 24px 24px", minHeight: 0 }}>
-            <div style={{ flex: 1, borderRadius: 12, overflow: "hidden",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.25)", display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "stretch", padding: "12px 20px 20px", minHeight: 0 }}>
+            <div style={{ flex: 1, borderRadius: 10, overflow: "hidden",
+              boxShadow: "0 8px 40px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column" }}>
               <StoreConfigContext.Provider value={config}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
@@ -1066,56 +1162,92 @@ export default function ConfiguracionPage() {
     <DashboardLayout fullHeight>
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "#f1f5f9" }}>
 
-        {/* Top bar — editor toolbar, visualmente separado del template */}
-        <div style={{ background: "white", borderBottom: "2px solid #6366f1", padding: "8px 20px", display: "flex",
-          alignItems: "center", gap: 12, flexShrink: 0, zIndex: 50,
-          boxShadow: "0 2px 8px rgba(99,102,241,0.12)" }}>
-          <button onClick={handleBackToPreview}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
-              border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
-              color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
-            ← Cambiar diseño
+        {/* Barra paso 3 */}
+        <div style={{
+          background: "#1e293b", borderBottom: "3px solid #6366f1",
+          padding: "10px 20px", display: "flex", alignItems: "center",
+          gap: 12, flexShrink: 0, zIndex: 50,
+        }}>
+          {/* Izquierda: volver */}
+          <button onClick={handleBackToGallery}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
+              border: "1px solid #334155", borderRadius: 7, background: "transparent",
+              color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer",
+              whiteSpace: "nowrap", flexShrink: 0 }}>
+            ← Galería
           </button>
-          <div style={{ display: "flex", gap: 4 }}>
-            {selected!.palette.map((c, i) => (
-              <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c,
-                border: "1px solid rgba(0,0,0,0.12)" }} />
-            ))}
+
+          {/* Info template */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1, overflow: "hidden" }}>
+            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+              {selected!.palette.map((c, i) => (
+                <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c,
+                  border: "1px solid rgba(255,255,255,0.12)" }} />
+              ))}
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "white", whiteSpace: "nowrap",
+              overflow: "hidden", textOverflow: "ellipsis" }}>
+              {selected!.name}
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 8px",
+              background: "#312e81", borderRadius: 20, fontSize: 10, fontWeight: 700,
+              color: "#a5b4fc", letterSpacing: 0.4, whiteSpace: "nowrap", flexShrink: 0 }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#818cf8",
+                display: "inline-block" }} />
+              EDITANDO
+            </span>
           </div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{selected!.name}</span>
-          {/* Badge "Modo edición" */}
-          <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 9px",
-            background: "#ede9fe", borderRadius: 20, fontSize: 10, fontWeight: 700,
-            color: "#6366f1", letterSpacing: 0.5 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#6366f1",
-              animation: "pulse 2s infinite" }} />
-            EDITANDO
-          </span>
-          <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 11, color: "#94a3b8" }}>Paso 3 de 3</span>
 
-          {/* Config avanzada */}
-          <button onClick={() => setConfigModalOpen(true)}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
-              border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
-              color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer",
-              transition: "all 0.15s", whiteSpace: "nowrap" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#0f172a"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "white"; e.currentTarget.style.color = "#64748b"; }}>
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-            </svg>
-            Config avanzada
-          </button>
+          {/* Derecha: acciones */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <span style={{ fontSize: 10, color: "#475569", fontWeight: 600, letterSpacing: 0.5,
+              background: "#0f172a", padding: "3px 8px", borderRadius: 20, whiteSpace: "nowrap" }}>
+              PASO 3 / 3
+            </span>
 
-          {/* Guardar */}
-          <button onClick={handleSave} disabled={saving}
-            style={{ padding: "7px 18px", border: "none", borderRadius: 8,
-              background: saved ? "#10b981" : "#6366f1", color: "white",
-              fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer",
-              transition: "background 0.25s", whiteSpace: "nowrap", opacity: saving ? 0.7 : 1 }}>
-            {saving ? "Guardando..." : saved ? "✓ Guardado" : "Guardar"}
-          </button>
+            {/* Config avanzada — solo ícono en pantallas chicas */}
+            <button onClick={() => setConfigModalOpen(true)}
+              title="Configuración avanzada"
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px",
+                border: "1px solid #334155", borderRadius: 7, background: "transparent",
+                color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                whiteSpace: "nowrap", transition: "all 0.15s" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#334155"; e.currentTarget.style.color = "white"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94a3b8"; }}>
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+              <span style={{ display: "none" }} className="btn-label">Configuración</span>
+            </button>
+
+            {/* Guardar */}
+            {saveError ? (
+              <span style={{ fontSize: 11, color: "#fca5a5", fontWeight: 600, whiteSpace: "nowrap",
+                background: "#450a0a", padding: "7px 12px", borderRadius: 7 }}>
+                ✕ {saveError}
+              </span>
+            ) : (
+              <button onClick={handleSave} disabled={saving}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 18px",
+                  border: "none", borderRadius: 8,
+                  background: saved ? "#059669" : "#6366f1",
+                  color: "white", fontSize: 13, fontWeight: 700,
+                  cursor: saving ? "not-allowed" : "pointer",
+                  transition: "background 0.25s", whiteSpace: "nowrap",
+                  opacity: saving ? 0.7 : 1,
+                  boxShadow: saved ? "0 2px 8px rgba(5,150,105,0.4)" : "0 2px 8px rgba(99,102,241,0.35)" }}>
+                {saving ? (
+                  <>
+                    <span style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)",
+                      borderTopColor: "white", borderRadius: "50%", animation: "spin 0.7s linear infinite",
+                      display: "inline-block" }} />
+                    Guardando
+                  </>
+                ) : saved ? "✓ Guardado" : "Guardar cambios"}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Preview — full width */}
@@ -1149,7 +1281,7 @@ export default function ConfiguracionPage() {
 
       {/* Config modal */}
       {configModalOpen && (
-        <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} />
+        <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} onDelete={() => { setConfigModalOpen(false); handleDelete(); }} />
       )}
     </DashboardLayout>
   );
