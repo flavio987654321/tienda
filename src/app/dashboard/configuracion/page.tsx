@@ -903,6 +903,7 @@ export default function ConfiguracionPage() {
   const [mode, setMode] = useState<Mode>("gallery");
   const [selected, setSelected] = useState<TemplateInfo | null>(null);
   const [savedTemplateId, setSavedTemplateId] = useState<string | null>(null);
+  const [storeSlug, setStoreSlug] = useState<string | null>(null);
   const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -920,6 +921,7 @@ export default function ConfiguracionPage() {
       .then(r => r.json())
       .then(({ store }) => {
         if (!store) return;
+        if (store.slug) setStoreSlug(store.slug);
         try {
           const saved: StoreConfig = JSON.parse(store.storeConfig || "{}");
           if (saved.template) {
@@ -1243,7 +1245,7 @@ export default function ConfiguracionPage() {
             {/* Ver tienda */}
             {savedTemplateId && (
               <a
-                href={`/tienda/${config.storeName.toLowerCase().replace(/\s+/g, "-")}`}
+                href={`/tienda/${storeSlug ?? config.storeName.toLowerCase().replace(/\s+/g, "-")}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px",
                   border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
