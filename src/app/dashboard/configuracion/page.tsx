@@ -929,7 +929,7 @@ export default function ConfiguracionPage() {
             setSelected(tmpl);
             setConfig({ ...DEFAULT_CONFIG, ...saved });
             setSavedTemplateId(saved.template);
-            setMode("editing");
+            setMode("gallery");
           }
         } catch { /* config vacía o inválida, mostrar galería */ }
       })
