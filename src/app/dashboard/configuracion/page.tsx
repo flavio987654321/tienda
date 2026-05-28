@@ -434,6 +434,7 @@ function ConfigModal({ config, update, onClose, onDelete }: {
                 <div>
                   <label style={lbl}>Texto de la barra</label>
                   <input style={inp}
+                    maxLength={120}
                     value={config.textOverrides?.["announcementText"]?.text ?? ""}
                     placeholder="🚚 Envío gratis · 🔄 Cambios sin cargo · 💳 6 cuotas sin interés"
                     onChange={e => update("textOverrides", {
@@ -442,7 +443,12 @@ function ConfigModal({ config, update, onClose, onDelete }: {
                     })}
                     onFocus={e => (e.target.style.borderColor = "#6366f1")}
                     onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>También podés hacer clic en la barra del preview para editar el texto.</p>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                    <p style={{ margin: 0, fontSize: 11, color: "#94a3b8" }}>También podés hacer clic en la barra del preview para editar el texto.</p>
+                    <span style={{ fontSize: 11, color: (config.textOverrides?.["announcementText"]?.text?.length ?? 0) > 100 ? "#f59e0b" : "#94a3b8", flexShrink: 0, marginLeft: 8 }}>
+                      {config.textOverrides?.["announcementText"]?.text?.length ?? 0}/120
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
