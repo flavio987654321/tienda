@@ -14,6 +14,8 @@ export type ImageOverride = {
   url?: string;
   overlayType?: "none" | "dark" | "light";
   overlayOpacity?: number;
+  posX?: number; // focal point X, 0-100, default 50
+  posY?: number; // focal point Y, 0-100, default 50
 };
 
 export type StoreConfig = {

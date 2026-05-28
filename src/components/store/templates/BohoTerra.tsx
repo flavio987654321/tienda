@@ -1,7 +1,7 @@
 ﻿"use client";
 import { useState, useEffect, useRef } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, getContrastColor } from "@/contexts/EditContext";
+import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor } from "@/contexts/EditContext";
 
 const BG  = "#faf7f2";
 const S   = "#f0e9df";
@@ -71,6 +71,13 @@ export default function BohoTerra() {
   const footerBg   = sc["bgFooter"]      ?? S;
   const footerText = getContrastColor(footerBg) === "light" ? "#faf7f2" : T;
   const footerMid  = getContrastColor(footerBg) === "light" ? "#d5c9be" : MID;
+
+  // Image overrides with focal point positions
+  const heroImage1Ov      = storeConfig?.imageOverrides?.["heroImage1"];
+  const heroImage2Ov      = storeConfig?.imageOverrides?.["heroImage2"];
+  const heroImage3Ov      = storeConfig?.imageOverrides?.["heroImage3"];
+  const nosotrosImageOv   = storeConfig?.imageOverrides?.["nosotrosImage"];
+  const contactBgOv       = storeConfig?.imageOverrides?.["contactBackground"];
 
   // Newsletter strip — fondo propio, separado del footer
   const newsletterBg    = sc["bgNewsletter"]  ?? A;
@@ -359,15 +366,18 @@ export default function BohoTerra() {
         {/* fotos apiladas */}
         <div style={{ flex:1, display:"grid", gridTemplateRows:"1fr 1fr", gridTemplateColumns:"1fr 1fr", gap:4, padding:4 }}>
           <div style={{ overflow:"hidden", gridRow:"1/3", position:"relative" }}>
-            <img src={storeConfig?.imageOverrides?.["heroImage1"]?.url ?? "https://picsum.photos/seed/terra-h1/600/900"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+            <img src={heroImage1Ov?.url ?? "https://picsum.photos/seed/terra-h1/600/900"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${heroImage1Ov?.posX ?? 50}% ${heroImage1Ov?.posY ?? 50}%`, display:"block" }}/>
+            <BgDragHandle imgKey="heroImage1" />
             <EditableImageButton field="heroImage1" label="Imagen hero izquierda" />
           </div>
           <div style={{ overflow:"hidden", position:"relative" }}>
-            <img src={storeConfig?.imageOverrides?.["heroImage2"]?.url ?? "https://picsum.photos/seed/terra-h2/600/500"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+            <img src={heroImage2Ov?.url ?? "https://picsum.photos/seed/terra-h2/600/500"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${heroImage2Ov?.posX ?? 50}% ${heroImage2Ov?.posY ?? 50}%`, display:"block" }}/>
+            <BgDragHandle imgKey="heroImage2" />
             <EditableImageButton field="heroImage2" label="Imagen hero superior" />
           </div>
           <div style={{ overflow:"hidden", position:"relative" }}>
-            <img src={storeConfig?.imageOverrides?.["heroImage3"]?.url ?? "https://picsum.photos/seed/terra-h3/600/500"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+            <img src={heroImage3Ov?.url ?? "https://picsum.photos/seed/terra-h3/600/500"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${heroImage3Ov?.posX ?? 50}% ${heroImage3Ov?.posY ?? 50}%`, display:"block" }}/>
+            <BgDragHandle imgKey="heroImage3" />
             <EditableImageButton field="heroImage3" label="Imagen hero inferior" />
           </div>
         </div>
@@ -469,7 +479,8 @@ export default function BohoTerra() {
         <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
         {/* foto ancha */}
         <div style={{ position:"relative", height:400, overflow:"hidden" }}>
-          <img src={storeConfig?.imageOverrides?.["nosotrosImage"]?.url ?? "https://picsum.photos/seed/terra-about/1920/600"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 35%" }}/>
+          <img src={nosotrosImageOv?.url ?? "https://picsum.photos/seed/terra-about/1920/600"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${nosotrosImageOv?.posX ?? 50}% ${nosotrosImageOv?.posY ?? 35}%` }}/>
+          <BgDragHandle imgKey="nosotrosImage" />
           <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
           <div style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.45)" }}/>
           <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -498,7 +509,8 @@ export default function BohoTerra() {
 
       {/* ── CONTACTO — imagen de fondo + form superpuesto */}
       <section id="contacto" style={{ position:"relative", overflow:"hidden" }}>
-        <img src={storeConfig?.imageOverrides?.["contactBackground"]?.url ?? "https://picsum.photos/seed/terra-contact/1920/700"} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 60%" }}/>
+        <img src={contactBgOv?.url ?? "https://picsum.photos/seed/terra-contact/1920/700"} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:`${contactBgOv?.posX ?? 50}% ${contactBgOv?.posY ?? 60}%` }}/>
+        <BgDragHandle imgKey="contactBackground" />
         <EditableImageButton field="contactBackground" label="Imagen fondo contacto" />
         <div style={{ position:"absolute", inset:0, background:"rgba(250,247,242,0.88)" }}/>
         <div style={{ position:"relative", maxWidth:1280, margin:"0 auto", padding:"80px 40px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"center", minHeight:500 }}>
@@ -554,7 +566,8 @@ export default function BohoTerra() {
       {/* ── FOOTER — franja mínima con newsletter prominente */}
       <footer style={{ background:footerBg, borderTop:`1px solid rgba(44,34,24,0.1)` }}>
         {/* newsletter strip */}
-        <div style={{ position:"relative", ...(newsletterBgImg?.url ? { backgroundImage:`url(${newsletterBgImg.url})`, backgroundSize:"cover", backgroundPosition:"center" } : { background:newsletterBg }) }}>
+        <div style={{ position:"relative", ...(newsletterBgImg?.url ? { backgroundImage:`url(${newsletterBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${newsletterBgImg.posX ?? 50}% ${newsletterBgImg.posY ?? 50}%` } : { background:newsletterBg }) }}>
+          <BgDragHandle imgKey="sectionbg_bgNewsletter" />
           <EditableSectionBg field="bgNewsletter" label="Fondo newsletter" />
           {newsletterBgImg?.url && newsletterBgImg.overlayType !== "none" && (
             <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: newsletterBgImg.overlayType === "light" ? `rgba(255,255,255,${newsletterBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${newsletterBgImg.overlayOpacity ?? 0.45})` }} />

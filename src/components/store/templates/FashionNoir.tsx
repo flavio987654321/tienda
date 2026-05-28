@@ -1,7 +1,7 @@
 ﻿"use client";
 import { useState, useEffect, useRef } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, getContrastColor } from "@/contexts/EditContext";
+import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor } from "@/contexts/EditContext";
 
 /* ── Mock data ─────────────────────────────────────────── */
 const CATEGORIES = ["Todos", "Mujer", "Hombre", "Accesorios"];
@@ -217,10 +217,12 @@ export default function FashionNoir() {
   const T  = "#f0ebe3";  // text
 
   /* ─ Hero image con override dinámico ─ */
-  const heroImageOv       = storeConfig?.imageOverrides?.["heroBackground"];
-  const heroImageUrl      = heroImageOv?.url ?? "https://picsum.photos/seed/noir-hero/1920/1080";
-  const heroOverlayType   = heroImageOv?.overlayType ?? "dark";
+  const heroImageOv        = storeConfig?.imageOverrides?.["heroBackground"];
+  const heroImageUrl       = heroImageOv?.url ?? "https://picsum.photos/seed/noir-hero/1920/1080";
+  const heroOverlayType    = heroImageOv?.overlayType ?? "dark";
   const heroOverlayOpacity = heroImageOv?.overlayOpacity ?? 0.6;
+  const heroPosX           = heroImageOv?.posX ?? 50;
+  const heroPosY           = heroImageOv?.posY ?? 50;
 
   // Contraste inteligente: overlay claro → texto oscuro
   const heroTextColor = heroOverlayType === "light" ? "#0f0f0f" : T;
@@ -234,7 +236,10 @@ export default function FashionNoir() {
   const catMujerUrl      = storeConfig?.imageOverrides?.["catMujer"]?.url ?? "https://picsum.photos/seed/noir-cat1/800/1200";
   const catHombreUrl     = storeConfig?.imageOverrides?.["catHombre"]?.url ?? "https://picsum.photos/seed/noir-cat2/800/1200";
   const catAccesoriosUrl = storeConfig?.imageOverrides?.["catAccesorios"]?.url ?? "https://picsum.photos/seed/noir-cat3/800/1200";
-  const nosotrosImageUrl = storeConfig?.imageOverrides?.["nosotrosImage"]?.url ?? "https://picsum.photos/seed/noir-about/900/700";
+  const nosotrosImageOv  = storeConfig?.imageOverrides?.["nosotrosImage"];
+  const nosotrosImageUrl = nosotrosImageOv?.url ?? "https://picsum.photos/seed/noir-about/900/700";
+  const nosotrosPosX     = nosotrosImageOv?.posX ?? 50;
+  const nosotrosPosY     = nosotrosImageOv?.posY ?? 50;
 
   // Section background images (stored as "sectionbg_<field>" in imageOverrides)
   const statementBgImg = storeConfig?.imageOverrides?.["sectionbg_bgStatement"];
@@ -390,10 +395,11 @@ export default function FashionNoir() {
 
       {/* ── HERO ───────────────────────────────────────────── */}
       <section id="hero" style={{ position:"relative", height:"100vh", minHeight:600, overflow:"hidden" }}>
-        <img src={heroImageUrl} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }}/>
+        <img src={heroImageUrl} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:`${heroPosX}% ${heroPosY}%` }}/>
         {heroOverlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, background:heroGradient }}/>
         )}
+        <BgDragHandle imgKey="heroBackground" />
         <EditableImageButton field="heroBackground" label="Cambiar imagen" />
         <div style={{ position:"relative", height:"100%", display:"flex", alignItems:"center", padding:"0 80px", maxWidth:1280, margin:"0 auto" }}>
           <div style={{ maxWidth:520 }}>
@@ -469,7 +475,8 @@ export default function FashionNoir() {
       </section>
 
       {/* ── STATEMENT ──────────────────────────────────────── */}
-      <section style={{ borderTop:`1px solid rgba(201,168,76,0.1)`, borderBottom:`1px solid rgba(201,168,76,0.1)`, textAlign:"center", position:"relative", ...(statementBgImg?.url ? { backgroundImage:`url(${statementBgImg.url})`, backgroundSize:"cover", backgroundPosition:"center" } : { background:statementBg }) }}>
+      <section style={{ borderTop:`1px solid rgba(201,168,76,0.1)`, borderBottom:`1px solid rgba(201,168,76,0.1)`, textAlign:"center", position:"relative", ...(statementBgImg?.url ? { backgroundImage:`url(${statementBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${statementBgImg.posX ?? 50}% ${statementBgImg.posY ?? 50}%` } : { background:statementBg }) }}>
+        <BgDragHandle imgKey="sectionbg_bgStatement" />
         <EditableSectionBg field="bgStatement" label="Fondo frase" />
         {statementBgImg?.url && statementBgImg.overlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: statementBgImg.overlayType === "light" ? `rgba(255,255,255,${statementBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${statementBgImg.overlayOpacity ?? 0.45})` }} />
@@ -560,7 +567,8 @@ export default function FashionNoir() {
       <section id="nosotros" style={{ borderTop:`1px solid rgba(201,168,76,0.1)` }}>
         <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr" }}>
           <div style={{ position:"relative", minHeight:560, overflow:"hidden" }}>
-            <img src={nosotrosImageUrl} alt="Nuestra historia" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+            <img src={nosotrosImageUrl} alt="Nuestra historia" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${nosotrosPosX}% ${nosotrosPosY}%`, display:"block" }}/>
+            <BgDragHandle imgKey="nosotrosImage" />
             <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
             <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.25)" }}/>
           </div>
@@ -593,7 +601,8 @@ export default function FashionNoir() {
       </section>
 
       {/* ── CONTACTO ───────────────────────────────────────── */}
-      <section id="contacto" style={{ position:"relative", borderTop:`1px solid rgba(201,168,76,0.1)`, color:contactoText, ...(contactoBgImg?.url ? { backgroundImage:`url(${contactoBgImg.url})`, backgroundSize:"cover", backgroundPosition:"center" } : { background:contactoBg }) }}>
+      <section id="contacto" style={{ position:"relative", borderTop:`1px solid rgba(201,168,76,0.1)`, color:contactoText, ...(contactoBgImg?.url ? { backgroundImage:`url(${contactoBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${contactoBgImg.posX ?? 50}% ${contactoBgImg.posY ?? 50}%` } : { background:contactoBg }) }}>
+        <BgDragHandle imgKey="sectionbg_bgContacto" />
         <EditableSectionBg field="bgContacto" label="Fondo contacto" />
         {contactoBgImg?.url && contactoBgImg.overlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: contactoBgImg.overlayType === "light" ? `rgba(255,255,255,${contactoBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${contactoBgImg.overlayOpacity ?? 0.45})` }} />
@@ -646,7 +655,8 @@ export default function FashionNoir() {
       </section>
 
       {/* ── FOOTER ─────────────────────────────────────────── */}
-      <footer style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, marginTop:0, position:"relative", color:footerText, ...(footerBgImg?.url ? { backgroundImage:`url(${footerBgImg.url})`, backgroundSize:"cover", backgroundPosition:"center" } : { background:footerBg }) }}>
+      <footer style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, marginTop:0, position:"relative", color:footerText, ...(footerBgImg?.url ? { backgroundImage:`url(${footerBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${footerBgImg.posX ?? 50}% ${footerBgImg.posY ?? 50}%` } : { background:footerBg }) }}>
+        <BgDragHandle imgKey="sectionbg_bgFooter" />
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
         {footerBgImg?.url && footerBgImg.overlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: footerBgImg.overlayType === "light" ? `rgba(255,255,255,${footerBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${footerBgImg.overlayOpacity ?? 0.45})` }} />

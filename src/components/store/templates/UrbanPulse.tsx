@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, getContrastColor } from "@/contexts/EditContext";
+import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor } from "@/contexts/EditContext";
 
 type Product = {
   id: string; name: string; price: number; comparePrice?: number;
@@ -312,7 +312,8 @@ export default function UrbanPulse() {
           </div>
         </div>
         <div style={{ position:"relative", overflow:"hidden" }}>
-          <img src={storeConfig?.imageOverrides?.["heroImage"]?.url ?? "https://picsum.photos/seed/up_hero/800/900"} alt="Hero" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+          <img src={storeConfig?.imageOverrides?.["heroImage"]?.url ?? "https://picsum.photos/seed/up_hero/800/900"} alt="Hero" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.["heroImage"]?.posX ?? 50}% ${storeConfig?.imageOverrides?.["heroImage"]?.posY ?? 50}%`, display:"block" }} />
+          <BgDragHandle imgKey="heroImage" />
           <EditableImageButton field="heroImage" label="Imagen hero" />
           <div style={{ position:"absolute", top:36, right:36, background:ACC, color:DARK, padding:"12px 20px", fontWeight:900, fontSize:10, letterSpacing:4, textTransform:"uppercase" }}>
             <EditableZone field="heroNewDropBadge" label="Badge hero">New Drop</EditableZone>
@@ -355,7 +356,8 @@ export default function UrbanPulse() {
           ].map(c => (
             <div key={c.label} className="up-cat" onClick={() => { changeCategory(c.cat); scrollTo("productos"); }}
               style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", cursor:"pointer" }}>
-              <img src={c.img} alt={c.label} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              <img src={c.img} alt={c.label} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.[c.field]?.posX ?? 50}% ${storeConfig?.imageOverrides?.[c.field]?.posY ?? 50}%`, display:"block" }} />
+              <BgDragHandle imgKey={c.field} />
               <EditableImageButton field={c.field} label={`Imagen ${c.label}`} />
               <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 55%)" }} />
               <div style={{ position:"absolute", bottom:24, left:24 }}>
@@ -516,8 +518,9 @@ export default function UrbanPulse() {
             ))}
           </div>
         </div>
-        <div style={{ position:"relative" }}>
-          <img src={storeConfig?.imageOverrides?.["nosotrosImage"]?.url ?? "https://picsum.photos/seed/up_about/600/700"} alt="Nosotros" style={{ width:"100%", aspectRatio:"4/5", objectFit:"cover", display:"block" }} />
+        <div style={{ position:"relative", overflow:"hidden" }}>
+          <img src={storeConfig?.imageOverrides?.["nosotrosImage"]?.url ?? "https://picsum.photos/seed/up_about/600/700"} alt="Nosotros" style={{ width:"100%", aspectRatio:"4/5", objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.["nosotrosImage"]?.posX ?? 50}% ${storeConfig?.imageOverrides?.["nosotrosImage"]?.posY ?? 50}%`, display:"block" }} />
+          <BgDragHandle imgKey="nosotrosImage" />
           <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
           <div style={{ position:"absolute", bottom:-16, left:-16, background:ACC, padding:"20px 28px" }}>
             <p style={{ margin:0, fontSize:12, fontWeight:900, textTransform:"uppercase", letterSpacing:2 }}><EditableZone field="aboutStat4" label="Stat: Desde 2021">Desde 2021</EditableZone></p>
