@@ -552,8 +552,7 @@ export default function BohoTerra() {
       </section>
 
       {/* ── FOOTER — franja mínima con newsletter prominente */}
-      <footer style={{ background:footerBg, borderTop:`1px solid rgba(44,34,24,0.1)`, position:"relative" }}>
-        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+      <footer style={{ background:footerBg, borderTop:`1px solid rgba(44,34,24,0.1)` }}>
         {/* newsletter strip */}
         <div style={{ position:"relative", ...(newsletterBgImg?.url ? { backgroundImage:`url(${newsletterBgImg.url})`, backgroundSize:"cover", backgroundPosition:"center" } : { background:newsletterBg }) }}>
           <EditableSectionBg field="bgNewsletter" label="Fondo newsletter" />
@@ -573,7 +572,9 @@ export default function BohoTerra() {
           </div>
           </div>
         </div>
-        {/* links + copyright */}
+        {/* links + copyright — este div es el fondo del footer propiamente dicho */}
+        <div style={{ position:"relative" }}>
+        <EditableSectionBg field="bgFooter" label="Fondo footer" />
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"28px 40px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:20 }}>
           <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:footerText, letterSpacing:2 }}><EditableZone field="footerBrandName" label="Nombre en footer">Terra</EditableZone></span>
           <div style={{ display:"flex", gap:24 }}>
@@ -604,6 +605,7 @@ export default function BohoTerra() {
           <p style={{ fontSize:11, color:footerMid, margin:0, opacity:0.6 }}>
             <EditableZone field="footerCopyright" label="Copyright">© 2025 Terra · Moda consciente · Mendoza, Argentina</EditableZone>
           </p>
+        </div>
         </div>
       </footer>
 
