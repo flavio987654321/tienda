@@ -433,7 +433,8 @@ function ConfigModal({ config, update, onClose, onDelete }: {
               {config.promoBanner?.enabled !== false && (
                 <div>
                   <label style={lbl}>Texto de la barra</label>
-                  <input style={inp}
+                  <textarea style={{ ...inp, resize: "none", lineHeight: 1.5 }}
+                    rows={2}
                     maxLength={120}
                     value={config.textOverrides?.["announcementText"]?.text ?? ""}
                     placeholder="🚚 Envío gratis · 🔄 Cambios sin cargo · 💳 6 cuotas sin interés"
