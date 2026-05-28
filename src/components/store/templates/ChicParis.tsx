@@ -379,44 +379,104 @@ export default function ChicParis() {
         </div>
       </section>
 
-      {/* ── CONTACT ── */}
-      <section id="contacto" style={{ background: "#fff", padding: "72px 40px" }}>
-        <div style={{ maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
-          <span style={{ fontSize: 10, letterSpacing: 5, fontWeight: 700, color: ACC, textTransform: "uppercase", display: "block", marginBottom: 12 }}>
-            <EditableZone field="contactKicker" label="Kicker contacto">Contacto</EditableZone>
-          </span>
-          <h2 style={{ fontSize: 32, fontWeight: 900, color: "#111", margin: "0 0 12px", textTransform: "uppercase" }}>
-            <EditableZone field="contactHeading" label="Título contacto">¿Hablamos?</EditableZone>
-          </h2>
-          <p style={{ fontSize: 14, color: "#777", margin: "0 0 36px", lineHeight: 1.7 }}>
-            <EditableZone field="contactSubtext" label="Subtítulo contacto">Respondemos todos los mensajes en menos de 24 horas.</EditableZone>
-          </p>
+      {/* ── CONTACT — split editorial ── */}
+      <section id="contacto" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: 540 }}>
+
+        {/* Panel izquierdo — info */}
+        <div style={{ background: "#111", padding: "72px 56px", display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative" }}>
+          <div>
+            <span style={{ fontSize: 10, letterSpacing: 5, fontWeight: 700, color: ACC, textTransform: "uppercase", display: "block", marginBottom: 24 }}>
+              <EditableZone field="contactKicker" label="Kicker contacto">Contacto</EditableZone>
+            </span>
+            <h2 style={{ fontSize: "clamp(32px,3.5vw,52px)", fontWeight: 900, color: "#fff", margin: "0 0 24px", lineHeight: 1.05, textTransform: "uppercase", letterSpacing: "-1px" }}>
+              <EditableZone field="contactHeading" label="Título contacto">Escribinos,<br/>te respondemos.</EditableZone>
+            </h2>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", lineHeight: 1.8, margin: 0, maxWidth: 320 }}>
+              <EditableZone field="contactSubtext" label="Subtítulo contacto">Estamos disponibles para consultas sobre pedidos, talles, envíos y colaboraciones.</EditableZone>
+            </p>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Línea decorativa */}
+            <div style={{ width: 40, height: 2, background: ACC, margin: "8px 0" }} />
+
+            {/* Info items */}
+            {[
+              { icon: <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>, label: "Email", value: "hola@tutienda.com" },
+              { icon: <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.56 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>, label: "WhatsApp", value: storeConfig?.whatsapp?.number ?? "+54 9 11 0000-0000" },
+            ].map(({ icon, label, value }) => (
+              <div key={label} style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                <div style={{ color: ACC, marginTop: 1, flexShrink: 0 }}>{icon}</div>
+                <div>
+                  <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: 2, textTransform: "uppercase" }}>{label}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 13, color: "rgba(255,255,255,0.8)" }}>{value}</p>
+                </div>
+              </div>
+            ))}
+
+            {/* Social links */}
+            {storeConfig?.socialLinks && Object.entries(storeConfig.socialLinks).some(([, v]) => v) && (
+              <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
+                {Object.entries(storeConfig.socialLinks).filter(([, v]) => v).map(([net, url]) => (
+                  <a key={net} href={url} target="_blank" rel="noopener"
+                    style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", textDecoration: "none", transition: "color 0.2s" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = ACC)}
+                    onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}>
+                    {net}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Panel derecho — formulario */}
+        <div style={{ background: "#fafaf8", padding: "72px 56px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
           {contactStatus === "sent" ? (
-            <div style={{ padding: "32px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8 }}>
-              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#166534" }}>¡Mensaje enviado! Te respondemos pronto.</p>
-              <button onClick={() => setContactStatus("idle")} style={{ marginTop: 16, background: "transparent", color: "#166534", border: "1px solid #86efac", padding: "8px 20px", fontSize: 11, letterSpacing: 2, cursor: "pointer", textTransform: "uppercase" }}>Enviar otro</button>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: `${ACC}15`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <h3 style={{ margin: "0 0 10px", fontSize: 20, fontWeight: 900, color: "#111", textTransform: "uppercase" }}>¡Mensaje enviado!</h3>
+              <p style={{ fontSize: 14, color: "#777", margin: "0 0 28px" }}>Te respondemos a la brevedad.</p>
+              <button onClick={() => setContactStatus("idle")}
+                style={{ background: "transparent", color: "#111", border: "2px solid #ddd", padding: "10px 28px", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
+                Enviar otro
+              </button>
             </div>
           ) : (
-            <form onSubmit={handleContact} style={{ display: "flex", flexDirection: "column", gap: 12, textAlign: "left" }}>
-              {[["nombre", "Tu nombre", "text"], ["email", "Tu email", "email"]].map(([field, ph, type]) => (
-                <input key={field} required type={type} placeholder={ph}
-                  value={contactForm[field as keyof typeof contactForm]}
-                  onChange={e => setContactForm(f => ({ ...f, [field]: e.target.value }))}
-                  style={iStyle}
+            <>
+              <p style={{ margin: "0 0 32px", fontSize: 11, fontWeight: 700, color: "#999", letterSpacing: 3, textTransform: "uppercase" }}>Envianos un mensaje</p>
+              <form onSubmit={handleContact} style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {/* Nombre + Email en fila */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  {[["nombre", "Nombre", "text"], ["email", "Email", "email"]].map(([field, ph, type]) => (
+                    <div key={field}>
+                      <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#999", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>{ph}</label>
+                      <input required type={type} placeholder={`Tu ${ph.toLowerCase()}`}
+                        value={contactForm[field as keyof typeof contactForm]}
+                        onChange={e => setContactForm(f => ({ ...f, [field]: e.target.value }))}
+                        style={{ ...iStyle, borderColor: "#e0e0e0" }}
+                        onFocus={e => (e.target.style.borderColor = ACC)}
+                        onBlur={e => (e.target.style.borderColor = "#e0e0e0")} />
+                    </div>
+                  ))}
+                </div>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#999", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>Mensaje</label>
+                <textarea required placeholder="¿En qué te podemos ayudar?" rows={5}
+                  value={contactForm.mensaje}
+                  onChange={e => setContactForm(f => ({ ...f, mensaje: e.target.value }))}
+                  style={{ ...iStyle, resize: "none", borderColor: "#e0e0e0", marginBottom: 20 }}
                   onFocus={e => (e.target.style.borderColor = ACC)}
-                  onBlur={e => (e.target.style.borderColor = "#ddd")} />
-              ))}
-              <textarea required placeholder="Tu mensaje" rows={4}
-                value={contactForm.mensaje}
-                onChange={e => setContactForm(f => ({ ...f, mensaje: e.target.value }))}
-                style={{ ...iStyle, resize: "vertical" }}
-                onFocus={e => (e.target.style.borderColor = ACC)}
-                onBlur={e => (e.target.style.borderColor = "#ddd")} />
-              <button type="submit" disabled={contactStatus === "sending"}
-                style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "14px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", opacity: contactStatus === "sending" ? 0.6 : 1 }}>
-                {contactStatus === "sending" ? "Enviando..." : "Enviar mensaje"}
-              </button>
-            </form>
+                  onBlur={e => (e.target.style.borderColor = "#e0e0e0")} />
+                <button type="submit" disabled={contactStatus === "sending"}
+                  style={{ background: "#111", color: "#fff", border: "none", padding: "15px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", alignSelf: "flex-start", opacity: contactStatus === "sending" ? 0.6 : 1, transition: "background 0.2s" }}
+                  onMouseEnter={e => { if (contactStatus !== "sending") e.currentTarget.style.background = ACC; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#111"; }}>
+                  {contactStatus === "sending" ? "Enviando..." : "Enviar mensaje →"}
+                </button>
+              </form>
+            </>
           )}
         </div>
       </section>
