@@ -163,20 +163,39 @@ function TemplateThumbnail({ component: Component }: { component: React.Componen
 }
 
 /* ── Template card ──────────────────────────────────────────── */
-function TemplateCard({ t, onSelect }: { t: TemplateInfo; onSelect: () => void }) {
+function TemplateCard({ t, isSaved, onSelect, onGoToEditing }: {
+  t: TemplateInfo;
+  isSaved?: boolean;
+  onSelect: () => void;
+  onGoToEditing?: () => void;
+}) {
   const [hovered, setHovered] = useState(false);
+  const handleClick = () => isSaved && onGoToEditing ? onGoToEditing() : onSelect();
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={onSelect}
+      onClick={handleClick}
       style={{
         flexShrink: 0, width: THUMB_W, borderRadius: 12, overflow: "hidden", cursor: "pointer",
-        border: "2px solid", borderColor: hovered ? "#6366f1" : "#e2e8f0",
+        border: "2px solid", borderColor: isSaved ? "#059669" : hovered ? "#6366f1" : "#e2e8f0",
         background: "white", transition: "all 0.2s",
-        boxShadow: hovered ? "0 8px 24px rgba(99,102,241,0.18)" : "0 2px 8px rgba(0,0,0,0.07)",
+        boxShadow: isSaved
+          ? "0 4px 16px rgba(5,150,105,0.2)"
+          : hovered ? "0 8px 24px rgba(99,102,241,0.18)" : "0 2px 8px rgba(0,0,0,0.07)",
         transform: hovered ? "translateY(-3px)" : "none",
+        position: "relative",
       }}>
+      {isSaved && (
+        <div style={{
+          position: "absolute", top: 8, right: 8, zIndex: 2,
+          background: "#059669", color: "white", borderRadius: 20,
+          fontSize: 9, fontWeight: 800, padding: "3px 7px", letterSpacing: 0.3,
+          boxShadow: "0 2px 6px rgba(5,150,105,0.4)",
+        }}>
+          ✓ Tu diseño
+        </div>
+      )}
       <TemplateThumbnail component={t.component} />
       <div style={{ padding: "10px 12px 12px" }}>
         <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
@@ -190,10 +209,11 @@ function TemplateCard({ t, onSelect }: { t: TemplateInfo; onSelect: () => void }
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "6px", borderRadius: 7, fontSize: 11, fontWeight: 700,
-          background: hovered ? "#6366f1" : "#f1f5f9",
-          color: hovered ? "white" : "#64748b", transition: "all 0.2s",
+          background: isSaved ? (hovered ? "#059669" : "#dcfce7") : hovered ? "#6366f1" : "#f1f5f9",
+          color: isSaved ? (hovered ? "white" : "#059669") : hovered ? "white" : "#64748b",
+          transition: "all 0.2s",
         }}>
-          {hovered ? "Ver diseño →" : "Ver diseño"}
+          {isSaved ? (hovered ? "Editar →" : "Editar diseño") : hovered ? "Ver diseño →" : "Ver diseño"}
         </div>
       </div>
     </div>
@@ -201,7 +221,12 @@ function TemplateCard({ t, onSelect }: { t: TemplateInfo; onSelect: () => void }
 }
 
 /* ── Carousel row ───────────────────────────────────────────── */
-function CarouselRow({ templates, onSelect }: { templates: TemplateInfo[]; onSelect: (t: TemplateInfo) => void }) {
+function CarouselRow({ templates, savedTemplateId, onSelect, onGoToEditing }: {
+  templates: TemplateInfo[];
+  savedTemplateId?: string | null;
+  onSelect: (t: TemplateInfo) => void;
+  onGoToEditing?: (t: TemplateInfo) => void;
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const scroll = (dir: "l" | "r") =>
     scrollRef.current?.scrollBy({ left: dir === "l" ? -240 : 240, behavior: "smooth" });
@@ -220,7 +245,12 @@ function CarouselRow({ templates, onSelect }: { templates: TemplateInfo[]; onSel
       }}>
         {templates.map(t => (
           <div key={t.id} style={{ scrollSnapAlign: "start" }}>
-            <TemplateCard t={t} onSelect={() => onSelect(t)} />
+            <TemplateCard
+              t={t}
+              isSaved={savedTemplateId === t.id}
+              onSelect={() => onSelect(t)}
+              onGoToEditing={onGoToEditing ? () => onGoToEditing(t) : undefined}
+            />
           </div>
         ))}
       </div>
@@ -872,6 +902,7 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
 export default function ConfiguracionPage() {
   const [mode, setMode] = useState<Mode>("gallery");
   const [selected, setSelected] = useState<TemplateInfo | null>(null);
+  const [savedTemplateId, setSavedTemplateId] = useState<string | null>(null);
   const [config, setConfig] = useState<StoreConfig>(DEFAULT_CONFIG);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -895,6 +926,7 @@ export default function ConfiguracionPage() {
             const tmpl = allTemplates.find(t => t.id === saved.template) ?? null;
             setSelected(tmpl);
             setConfig({ ...DEFAULT_CONFIG, ...saved });
+            setSavedTemplateId(saved.template);
             setMode("editing");
           }
         } catch { /* config vacía o inválida, mostrar galería */ }
@@ -954,7 +986,10 @@ export default function ConfiguracionPage() {
   const handleUseTemplate = () => setMode("editing");
 
   /* Any → 1 */
-  const handleBackToGallery = () => { setMode("gallery"); setSelected(null); };
+  const handleBackToGallery = () => { setMode("gallery"); };
+
+  /* Gallery → editing (click on saved template) */
+  const handleGoToEditing = (t: TemplateInfo) => { setSelected(t); setMode("editing"); };
 
   /* Step 3 → 2 */
   const handleBackToPreview = () => { setMode("preview"); setActiveField(null); };
@@ -969,6 +1004,7 @@ export default function ConfiguracionPage() {
         body: JSON.stringify({ storeConfig: config }),
       });
       if (!res.ok) throw new Error("Error al guardar");
+      setSavedTemplateId(config.template);
       setSaved(true);
       setTimeout(() => setSaved(false), 2200);
     } catch {
@@ -985,6 +1021,7 @@ export default function ConfiguracionPage() {
       await fetch("/api/configuracion", { method: "DELETE" });
       setConfig(DEFAULT_CONFIG);
       setSelected(null);
+      setSavedTemplateId(null);
       setMode("gallery");
       setConfirmDelete(false);
     } catch { /* ignorar */ }
@@ -1043,7 +1080,12 @@ export default function ConfiguracionPage() {
                       <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
                       <span style={{ fontSize: 11, color: "#94a3b8" }}>{cat.templates.length} diseños</span>
                     </div>
-                    <CarouselRow templates={cat.templates} onSelect={handlePreview} />
+                    <CarouselRow
+                      templates={cat.templates}
+                      savedTemplateId={savedTemplateId}
+                      onSelect={handlePreview}
+                      onGoToEditing={handleGoToEditing}
+                    />
                   </div>
                 ))}
 
@@ -1094,52 +1136,48 @@ export default function ConfiguracionPage() {
 
           {/* Barra paso 2 */}
           <div style={{
-            background: "#1e293b", borderBottom: "1px solid #334155",
+            background: "white", borderBottom: "1px solid #e2e8f0",
             padding: "10px 20px", display: "flex", alignItems: "center",
-            gap: 12, flexShrink: 0,
+            gap: 12, flexShrink: 0, boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
           }}>
             {/* Izquierda */}
             <button onClick={handleBackToGallery}
               style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
-                border: "1px solid #334155", borderRadius: 7, background: "transparent",
-                color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                whiteSpace: "nowrap", flexShrink: 0 }}>
-              ← Galería
+                border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
+                color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                whiteSpace: "nowrap", flexShrink: 0, transition: "all 0.15s" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.color = "#374151"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#64748b"; }}>
+              ← Diseños
             </button>
 
-            {/* Info template — se achica si falta espacio */}
+            {/* Info template */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1, overflow: "hidden" }}>
               <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                 {selected!.palette.map((c, i) => (
                   <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c,
-                    border: "1px solid rgba(255,255,255,0.12)" }} />
+                    border: "1.5px solid rgba(0,0,0,0.08)" }} />
                 ))}
               </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "white", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap" }}>
                 {selected!.name}
               </span>
-              <span style={{ fontSize: 11, color: "#475569", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {selected!.desc}
               </span>
             </div>
 
-            {/* Derecha — paso + acción */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-              <span style={{ fontSize: 10, color: "#475569", fontWeight: 600, letterSpacing: 0.5,
-                background: "#0f172a", padding: "3px 8px", borderRadius: 20, whiteSpace: "nowrap" }}>
-                PASO 2 / 3
-              </span>
-              <button onClick={handleUseTemplate}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 18px",
-                  border: "none", borderRadius: 8, background: "#6366f1", color: "white",
-                  fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
-                  boxShadow: "0 2px 8px rgba(99,102,241,0.35)" }}>
-                Usar este diseño
-                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-              </button>
-            </div>
+            {/* Derecha */}
+            <button onClick={handleUseTemplate}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 20px",
+                border: "none", borderRadius: 8, background: "#6366f1", color: "white",
+                fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
+                boxShadow: "0 2px 8px rgba(99,102,241,0.35)" }}>
+              Personalizar diseño
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </button>
           </div>
 
           <div style={{ flex: 1, display: "flex", alignItems: "stretch", padding: "12px 20px 20px", minHeight: 0 }}>
@@ -1164,17 +1202,20 @@ export default function ConfiguracionPage() {
 
         {/* Barra paso 3 */}
         <div style={{
-          background: "#1e293b", borderBottom: "3px solid #6366f1",
+          background: "white", borderBottom: "1px solid #e2e8f0",
           padding: "10px 20px", display: "flex", alignItems: "center",
           gap: 12, flexShrink: 0, zIndex: 50,
+          boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
         }}>
           {/* Izquierda: volver */}
           <button onClick={handleBackToGallery}
             style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
-              border: "1px solid #334155", borderRadius: 7, background: "transparent",
-              color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer",
-              whiteSpace: "nowrap", flexShrink: 0 }}>
-            ← Galería
+              border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
+              color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer",
+              whiteSpace: "nowrap", flexShrink: 0, transition: "all 0.15s" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.color = "#374151"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#64748b"; }}>
+            ← Diseños
           </button>
 
           {/* Info template */}
@@ -1182,61 +1223,72 @@ export default function ConfiguracionPage() {
             <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
               {selected!.palette.map((c, i) => (
                 <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c,
-                  border: "1px solid rgba(255,255,255,0.12)" }} />
+                  border: "1.5px solid rgba(0,0,0,0.08)" }} />
               ))}
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "white", whiteSpace: "nowrap",
-              overflow: "hidden", textOverflow: "ellipsis" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap" }}>
               {selected!.name}
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 8px",
-              background: "#312e81", borderRadius: 20, fontSize: 10, fontWeight: 700,
-              color: "#a5b4fc", letterSpacing: 0.4, whiteSpace: "nowrap", flexShrink: 0 }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#818cf8",
+              background: "#ede9fe", borderRadius: 20, fontSize: 10, fontWeight: 700,
+              color: "#7c3aed", letterSpacing: 0.3, whiteSpace: "nowrap", flexShrink: 0 }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#8b5cf6",
                 display: "inline-block" }} />
-              EDITANDO
+              Editando
             </span>
           </div>
 
           {/* Derecha: acciones */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <span style={{ fontSize: 10, color: "#475569", fontWeight: 600, letterSpacing: 0.5,
-              background: "#0f172a", padding: "3px 8px", borderRadius: 20, whiteSpace: "nowrap" }}>
-              PASO 3 / 3
-            </span>
+            {/* Ver tienda */}
+            {savedTemplateId && (
+              <a
+                href={`/tienda/${config.storeName.toLowerCase().replace(/\s+/g, "-")}`}
+                target="_blank" rel="noopener noreferrer"
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px",
+                  border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
+                  color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  whiteSpace: "nowrap", textDecoration: "none", transition: "all 0.15s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.color = "#374151"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#64748b"; }}>
+                Ver tienda
+                <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+              </a>
+            )}
 
-            {/* Config avanzada — solo ícono en pantallas chicas */}
+            {/* Config avanzada */}
             <button onClick={() => setConfigModalOpen(true)}
               title="Configuración avanzada"
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px",
-                border: "1px solid #334155", borderRadius: 7, background: "transparent",
-                color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                whiteSpace: "nowrap", transition: "all 0.15s" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#334155"; e.currentTarget.style.color = "white"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94a3b8"; }}>
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              style={{ display: "flex", alignItems: "center", justifyContent: "center",
+                width: 36, height: 36,
+                border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
+                color: "#64748b", cursor: "pointer", transition: "all 0.15s" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.color = "#374151"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#64748b"; }}>
+              <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
-              <span style={{ display: "none" }} className="btn-label">Configuración</span>
             </button>
 
             {/* Guardar */}
             {saveError ? (
-              <span style={{ fontSize: 11, color: "#fca5a5", fontWeight: 600, whiteSpace: "nowrap",
-                background: "#450a0a", padding: "7px 12px", borderRadius: 7 }}>
+              <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 600, whiteSpace: "nowrap",
+                background: "#fef2f2", border: "1px solid #fecaca", padding: "7px 12px", borderRadius: 8 }}>
                 ✕ {saveError}
               </span>
             ) : (
               <button onClick={handleSave} disabled={saving}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 18px",
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 20px",
                   border: "none", borderRadius: 8,
                   background: saved ? "#059669" : "#6366f1",
                   color: "white", fontSize: 13, fontWeight: 700,
                   cursor: saving ? "not-allowed" : "pointer",
                   transition: "background 0.25s", whiteSpace: "nowrap",
                   opacity: saving ? 0.7 : 1,
-                  boxShadow: saved ? "0 2px 8px rgba(5,150,105,0.4)" : "0 2px 8px rgba(99,102,241,0.35)" }}>
+                  boxShadow: saved ? "0 2px 8px rgba(5,150,105,0.35)" : "0 2px 8px rgba(99,102,241,0.3)" }}>
                 {saving ? (
                   <>
                     <span style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)",
