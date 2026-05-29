@@ -22,7 +22,7 @@ export default async function ProductosPage() {
   // Máximo 200 productos por carga — suficiente para cualquier tienda real
   const products = store
     ? await prisma.product.findMany({
-        where: { storeId: store.id },
+        where: { storeId: store.id, deletedAt: null },
         include: { variants: true },
         orderBy: { createdAt: "desc" },
         take: 200,

@@ -1,7 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Phone, User, MessageCircle, ChevronDown, Tag, TrendingUp } from "lucide-react";
+import { Check, X, Phone, User, MessageCircle, ChevronDown, Tag, TrendingUp, Copy, ExternalLink } from "lucide-react";
+
+const TEMPLATES = [
+  {
+    label: "Saludo inicial",
+    text: (name: string, product: string) =>
+      `Hola ${name}! 👋 Te contacto por tu consulta sobre *${product}*. ¿En qué te puedo ayudar?`,
+  },
+  {
+    label: "Consulta stock",
+    text: (name: string, product: string) =>
+      `Hola ${name}! Tenemos stock disponible de *${product}*. ¿Cuántas unidades necesitás?`,
+  },
+  {
+    label: "Envío info",
+    text: (name: string, product: string) =>
+      `Hola ${name}! Te comento que *${product}* tiene envío a todo el país. ¿Querés que te cuente más detalles?`,
+  },
+  {
+    label: "Cerrar venta",
+    text: (name: string, product: string) =>
+      `Hola ${name}! ¿Seguís interesado/a en *${product}*? Podemos coordinar el pago y envío cuando quieras 😊`,
+  },
+];
 
 type Lead = {
   id: string;
@@ -26,6 +49,71 @@ function statusLabel(s: string) {
   if (s === "CONFIRMED") return { label: "Confirmada", cls: "bg-green-100 text-green-700" };
   if (s === "REJECTED") return { label: "Rechazada", cls: "bg-red-100 text-red-700" };
   return { label: "Pendiente", cls: "bg-yellow-100 text-yellow-700" };
+}
+
+function QuickReplyTemplates({
+  phone,
+  name,
+  product,
+}: {
+  phone: string;
+  name: string;
+  product: string;
+}) {
+  const [copied, setCopied] = useState<number | null>(null);
+
+  function whatsappUrl(text: string) {
+    const digits = phone.replace(/\D/g, "");
+    return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+  }
+
+  function copyText(text: string, idx: number) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(idx);
+      setTimeout(() => setCopied(null), 1500);
+    });
+  }
+
+  const displayName = name || "cliente";
+
+  return (
+    <div className="rounded-xl border border-green-100 bg-green-50/50 p-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-green-700">
+        Respuesta rápida
+      </p>
+      <div className="space-y-2">
+        {TEMPLATES.map((tpl, idx) => {
+          const text = tpl.text(displayName, product);
+          return (
+            <div key={idx} className="flex items-start gap-2">
+              <p className="flex-1 rounded-lg border border-green-100 bg-white px-3 py-2 text-xs text-gray-700 leading-relaxed">
+                <span className="mb-0.5 block font-semibold text-gray-500">{tpl.label}</span>
+                {text}
+              </p>
+              <div className="flex shrink-0 flex-col gap-1">
+                <button
+                  onClick={() => copyText(text, idx)}
+                  title="Copiar texto"
+                  className="flex items-center justify-center rounded-lg bg-white border border-gray-200 p-1.5 text-gray-400 hover:text-gray-700 transition-colors"
+                >
+                  <Copy className={`h-3.5 w-3.5 ${copied === idx ? "text-green-600" : ""}`} />
+                </button>
+                <a
+                  href={whatsappUrl(text)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Abrir en WhatsApp"
+                  className="flex items-center justify-center rounded-lg bg-green-600 p-1.5 text-white hover:bg-green-700 transition-colors"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default function LeadsClient({
@@ -179,57 +267,68 @@ export default function LeadsClient({
 
               {/* Detalles expandibles */}
               {isExpanded && (
-                <div className="mt-4 pt-4 border-t border-gray-50 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {lead.customerName && (
-                    <div className="flex items-start gap-2.5">
-                      <div className="p-1.5 bg-gray-50 rounded-lg shrink-0">
-                        <User className="h-3.5 w-3.5 text-gray-500" />
+                <div className="mt-4 pt-4 border-t border-gray-50 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {lead.customerName && (
+                      <div className="flex items-start gap-2.5">
+                        <div className="p-1.5 bg-gray-50 rounded-lg shrink-0">
+                          <User className="h-3.5 w-3.5 text-gray-500" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400">Cliente</p>
+                          <p className="text-sm font-medium text-gray-900">{lead.customerName}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-400">Cliente</p>
-                        <p className="text-sm font-medium text-gray-900">{lead.customerName}</p>
+                    )}
+                    {lead.customerPhone && (
+                      <div className="flex items-start gap-2.5">
+                        <div className="p-1.5 bg-green-50 rounded-lg shrink-0">
+                          <Phone className="h-3.5 w-3.5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400">Teléfono</p>
+                          <a href={`tel:${lead.customerPhone}`} className="text-sm font-medium text-green-600 hover:underline">
+                            {lead.customerPhone}
+                          </a>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                    {lead.customerMessage && (
+                      <div className="flex items-start gap-2.5 sm:col-span-2">
+                        <div className="p-1.5 bg-indigo-50 rounded-lg shrink-0">
+                          <MessageCircle className="h-3.5 w-3.5 text-indigo-500" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400">Mensaje</p>
+                          <p className="text-sm text-gray-700">{lead.customerMessage}</p>
+                        </div>
+                      </div>
+                    )}
+                    {lead.affiliate && (
+                      <div className="flex items-start gap-2.5">
+                        <div className="p-1.5 bg-indigo-50 rounded-lg shrink-0">
+                          <Tag className="h-3.5 w-3.5 text-indigo-500" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400">Afiliado</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {lead.affiliate.userName || lead.affiliate.userEmail}
+                          </p>
+                          {lead.commissionRate && (
+                            <p className="text-xs text-gray-400">{lead.commissionRate}% de comisión</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Respuesta rápida — solo si hay teléfono */}
                   {lead.customerPhone && (
-                    <div className="flex items-start gap-2.5">
-                      <div className="p-1.5 bg-green-50 rounded-lg shrink-0">
-                        <Phone className="h-3.5 w-3.5 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400">Teléfono</p>
-                        <a href={`tel:${lead.customerPhone}`} className="text-sm font-medium text-green-600 hover:underline">
-                          {lead.customerPhone}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  {lead.customerMessage && (
-                    <div className="flex items-start gap-2.5 sm:col-span-2">
-                      <div className="p-1.5 bg-indigo-50 rounded-lg shrink-0">
-                        <MessageCircle className="h-3.5 w-3.5 text-indigo-500" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400">Mensaje</p>
-                        <p className="text-sm text-gray-700">{lead.customerMessage}</p>
-                      </div>
-                    </div>
-                  )}
-                  {lead.affiliate && (
-                    <div className="flex items-start gap-2.5">
-                      <div className="p-1.5 bg-indigo-50 rounded-lg shrink-0">
-                        <Tag className="h-3.5 w-3.5 text-indigo-500" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400">Afiliado</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {lead.affiliate.userName || lead.affiliate.userEmail}
-                        </p>
-                        {lead.commissionRate && (
-                          <p className="text-xs text-gray-400">{lead.commissionRate}% de comisión</p>
-                        )}
-                      </div>
-                    </div>
+                    <QuickReplyTemplates
+                      phone={lead.customerPhone}
+                      name={lead.customerName || ""}
+                      product={lead.productName}
+                    />
                   )}
                 </div>
               )}

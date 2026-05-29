@@ -3,17 +3,20 @@
 import { useEffect, useState, useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle, Loader2, MessageCircle } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
+import PushNotificationToggle from "@/components/PushNotificationToggle";
 
-const navItems = [
+const LEADS_STORE_TYPES = ["VEHICULOS", "INMOBILIARIA"];
+
+const allNavItems = [
   { href: "/dashboard", label: "Inicio", icon: TrendingUp },
   { href: "/dashboard/metricas", label: "Métricas", icon: BarChart2 },
   { href: "/dashboard/productos", label: "Productos", icon: Package },
   { href: "/dashboard/pedidos", label: "Pedidos", icon: ShoppingBag },
-  { href: "/dashboard/consultas", label: "Consultas", icon: MessageCircle },
+  { href: "/dashboard/consultas", label: "Consultas", icon: MessageCircle, onlyFor: LEADS_STORE_TYPES },
   { href: "/dashboard/vendedoras", label: "Afiliados", icon: Users },
   { href: "/dashboard/cupones", label: "Cupones", icon: Tag },
   { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store },
@@ -37,11 +40,19 @@ export default function DashboardLayout({
   fullHeight?: boolean;
 }) {
   const pathname = usePathname();
-  const { signOut } = useAuth();
+  const router = useRouter();
+  const { signOut, status } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
   const [pendingAffiliateCount, setPendingAffiliateCount] = useState(initialPendingAffiliateCount);
   const [lowStockCount, setLowStockCount] = useState(initialLowStockCount);
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
+  const [storeType, setStoreType] = useState<string | null>(null);
 
   useEffect(() => {
     setPendingAffiliateCount(initialPendingAffiliateCount);
@@ -79,7 +90,10 @@ export default function DashboardLayout({
   useEffect(() => {
     fetch("/api/pedidos")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setPendingOrderCount(data?.pendingCount ?? 0))
+      .then((data) => {
+        setPendingOrderCount(data?.pendingCount ?? 0);
+        if (data?.tipoTienda) setStoreType(data.tipoTienda);
+      })
       .catch(() => {});
   }, []);
 
@@ -113,7 +127,7 @@ export default function DashboardLayout({
 
         {/* Nav items */}
         <nav className="flex-1 p-2 space-y-0.5 overflow-hidden">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {allNavItems.filter(({ onlyFor }) => !onlyFor || (storeType && onlyFor.includes(storeType))).map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             const showAffiliateBadge = href === "/dashboard/vendedoras" && pendingAffiliateCount > 0;
             const showStockBadge = href === "/dashboard/productos" && lowStockCount > 0;
@@ -172,7 +186,7 @@ export default function DashboardLayout({
             </span>
           </button>
           {/* Info de usuario — solo visible expandido */}
-          <div className="max-h-0 group-hover:max-h-16 overflow-hidden transition-[max-height] duration-200 px-3 pt-2">
+          <div className="max-h-0 group-hover:max-h-32 overflow-hidden transition-[max-height] duration-200 px-3 pt-2 space-y-2">
             <div className="flex items-center gap-2">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-700 truncate">{userName}</p>
@@ -186,6 +200,7 @@ export default function DashboardLayout({
                 <UserCircle className="h-4 w-4" />
               </Link>
             </div>
+            <PushNotificationToggle />
           </div>
         </div>
       </aside>

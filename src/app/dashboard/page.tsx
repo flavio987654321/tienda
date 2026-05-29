@@ -45,6 +45,7 @@ export default async function DashboardPage() {
     ? await prisma.product.count({
         where: {
           storeId: store.id,
+          deletedAt: null,
           variants: {
             every: { stock: 0 },
           },

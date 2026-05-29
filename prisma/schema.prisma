@@ -33,9 +33,22 @@ model User {
   asAffiliate   Affiliate[] @relation("AffiliateUser")
   favorites     Favorite[]
   reviews       Review[]
-  notifications Notification[]
-  subscription  Subscription?
-  rewardCoupons AffiliateRewardCoupon[]
+  notifications     Notification[]
+  subscription      Subscription?
+  rewardCoupons     AffiliateRewardCoupon[]
+  pushSubscriptions PushSubscription[]
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  auth      String
+  p256dh    String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Account {
@@ -184,9 +197,11 @@ model Product {
   reelUrls         String   @default("[]")
   precioMayorista  Float?
   cantMinMayorista Int?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isActive     Boolean   @default(true)
+  deletedAt    DateTime?
+  publishAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -196,6 +211,8 @@ model Product {
   favorites      Favorite[]
   reviews        Review[]
   publicReviews  PublicReview[]
+
+  @@index([deletedAt])
 }
 
 model ProductVariant {
@@ -244,6 +261,19 @@ model Order {
   shipping   Shipping?
   commission Commission?
   reviews    Review[]
+  statusLogs OrderStatusLog[]
+}
+
+model OrderStatusLog {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus String
+  toStatus   String
+  changedBy  String
+  changedAt  DateTime @default(now())
+
+  @@index([orderId])
 }
 
 model OrderItem {

@@ -79,7 +79,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
               ownerName: owner.name || "vendedora",
               storeName: order.store.name,
               products: stockAlerts,
-            }).catch(() => {});
+            }).catch((err) => console.error("[email] sendLowStockEmail failed:", err));
           }
         }
 
@@ -130,7 +130,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
               orderTotal: order.total,
               commissionRate: rate,
               newBalance: updatedWallet.balance,
-            }).catch(() => {});
+            }).catch((err) => console.error("[email] sendCommissionEarnedEmail failed:", err));
           }
 
           const owner = await tx.user.findUnique({
@@ -148,7 +148,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
               commissionAmount: amount,
               commissionRate: rate,
               itemCount: order.items.length,
-            }).catch(() => {});
+            }).catch((err) => console.error("[email] sendAffiliateOrderNotificationEmail failed:", err));
           }
         }
 
@@ -157,11 +157,15 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           data: { status: "APPROVED" },
         });
 
-        return tx.order.update({
+        const confirmed = await tx.order.update({
           where: { id: order.id },
           data: { status: "CONFIRMED" },
           include: { payment: true, shipping: true, items: true, commission: true },
         });
+        await tx.orderStatusLog.create({
+          data: { orderId: order.id, fromStatus: order.status, toStatus: "CONFIRMED", changedBy: ownerId },
+        });
+        return confirmed;
       }
 
       if (action === "markShipped") {
@@ -169,11 +173,15 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           where: { orderId: order.id },
           data: { status: "SHIPPED", trackingCode: trackingCode || order.trackingCode },
         });
-        return tx.order.update({
+        const shipped = await tx.order.update({
           where: { id: order.id },
           data: { status: "SHIPPED", trackingCode: trackingCode || order.trackingCode },
           include: { payment: true, shipping: true, items: true, commission: true },
         });
+        await tx.orderStatusLog.create({
+          data: { orderId: order.id, fromStatus: order.status, toStatus: "SHIPPED", changedBy: ownerId },
+        });
+        return shipped;
       }
 
       if (action === "markDelivered") {
@@ -186,13 +194,16 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           data: { status: "DELIVERED" },
           include: { payment: true, shipping: true, items: true, commission: true },
         });
+        await tx.orderStatusLog.create({
+          data: { orderId: order.id, fromStatus: order.status, toStatus: "DELIVERED", changedBy: ownerId },
+        });
         sendReviewRequestEmail({
           buyerEmail: order.buyer.email,
           buyerName: order.buyer.name || "",
           storeName: order.store.name,
           storeSlug: order.store.slug,
           products: order.items.map((i) => ({ id: i.product.id, name: i.product.name })),
-        }).catch(() => {});
+        }).catch((err) => console.error("[email] sendReviewRequestEmail failed:", err));
         return delivered;
       }
 
@@ -214,11 +225,15 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           where: { orderId: order.id },
           data: { status: "CANCELLED" },
         });
-        return tx.order.update({
+        const cancelled = await tx.order.update({
           where: { id: order.id },
           data: { status: "CANCELLED" },
           include: { payment: true, shipping: true, items: true, commission: true },
         });
+        await tx.orderStatusLog.create({
+          data: { orderId: order.id, fromStatus: order.status, toStatus: "CANCELLED", changedBy: ownerId },
+        });
+        return cancelled;
       }
 
       // No debería llegar acá — el guard de arriba cubre todos los casos

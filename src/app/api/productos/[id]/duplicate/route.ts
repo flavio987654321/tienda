@@ -11,7 +11,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   const { id } = await ctx.params;
 
   const source = await prisma.product.findFirst({
-    where: { id, storeId: auth.storeId },
+    where: { id, storeId: auth.storeId, deletedAt: null },
     include: { variants: true },
   });
 

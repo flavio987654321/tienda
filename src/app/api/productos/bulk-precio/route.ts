@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
 
   const where = {
     storeId: store.id,
+    deletedAt: null,
     ...(category && category !== "all" ? { category } : {}),
   };
 

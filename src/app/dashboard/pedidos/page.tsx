@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import OrderActions from "@/components/orders/OrderActions";
 import { prisma } from "@/lib/prisma";
-import { ArrowUpRight, Package, ShoppingBag, Truck, UserRound } from "lucide-react";
+import { ArrowUpRight, Clock, Download, Package, ShoppingBag, Truck, UserRound } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 
 function money(value: number) {
@@ -56,6 +56,7 @@ export default async function PedidosPage() {
           shipping: true,
           affiliate: { include: { user: { select: { name: true, email: true } } } },
           commission: true,
+          statusLogs: { orderBy: { changedAt: "asc" } },
         },
         orderBy: { createdAt: "desc" },
       })
@@ -77,6 +78,16 @@ export default async function PedidosPage() {
           <h1 className="text-2xl font-bold text-gray-900">Pedidos</h1>
           <p className="mt-1 text-gray-500">Gestiona pagos, stock, comisiones y envios de {store?.name ?? "tu tienda"}</p>
         </div>
+        {orders.length > 0 && (
+          <a
+            href="/api/pedidos/export"
+            download
+            className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Exportar CSV
+          </a>
+        )}
       </div>
 
       <div className="mb-8 grid grid-cols-3 gap-4">
@@ -195,6 +206,27 @@ export default async function PedidosPage() {
                     </div>
                   </div>
                 </div>
+
+                {order.statusLogs.length > 0 && (
+                  <div className="mt-4 border-t border-gray-50 pt-4">
+                    <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400">
+                      <Clock className="h-3.5 w-3.5" />
+                      Historial de cambios
+                    </p>
+                    <ol className="relative ml-2 border-l border-gray-100">
+                      {order.statusLogs.map((log) => (
+                        <li key={log.id} className="mb-2 ml-4">
+                          <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border-2 border-white bg-indigo-300" />
+                          <p className="text-xs text-gray-500">
+                            <span className="font-semibold text-gray-700">{log.fromStatus} → {log.toStatus}</span>
+                            {" · "}
+                            {new Date(log.changedAt).toLocaleString("es-AR")}
+                          </p>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
               </div>
             );
           })}

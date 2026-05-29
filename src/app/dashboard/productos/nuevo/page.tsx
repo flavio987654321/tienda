@@ -6,7 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import {
   Plus, Trash2, Loader2, ArrowLeft, ChevronLeft, ChevronRight,
-  Upload, X, Star, ShoppingCart, Heart, Tag, Package, HelpCircle,
+  Upload, X, Star, ShoppingCart, Heart, Tag, Package, HelpCircle, Calendar,
 } from "lucide-react";
 import Link from "next/link";
 import { getStoreType } from "@/lib/storeTypes";
@@ -252,6 +252,7 @@ function ProductoFormPage() {
   const [condicion, setCondicion] = useState<"Nuevo" | "Usado">("Usado");
   const [precioMayorista, setPrecioMayorista] = useState("");
   const [cantMinMayorista, setCantMinMayorista] = useState("");
+  const [publishAt, setPublishAt] = useState<string>("");
   const [images, setImages] = useState<ImageItem[]>([]);
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [uploadingImg, setUploadingImg] = useState(false);
@@ -357,6 +358,11 @@ function ProductoFormPage() {
         setAttributes(allAttrs.filter((a) => a.key !== "Condición"));
         setPrecioMayorista(product.precioMayorista?.toString() || "");
         setCantMinMayorista(product.cantMinMayorista?.toString() || "");
+        if (product.publishAt) {
+          const d = new Date(product.publishAt);
+          const pad = (n: number) => String(n).padStart(2, "0");
+          setPublishAt(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+        }
       })
       .catch((err) => setError(err instanceof Error ? err.message : "No se pudo cargar el producto"))
       .finally(() => { setLoadingProduct(false); loadedRef.current = true; });
@@ -548,6 +554,7 @@ function ProductoFormPage() {
         attributes: finalAttrs,
         precioMayorista: precioMayorista || null,
         cantMinMayorista: cantMinMayorista || null,
+        publishAt: publishAt || null,
       }),
     });
 
@@ -1139,6 +1146,41 @@ function ProductoFormPage() {
                     </button>
                   </div>
                 ))}
+            </div>
+
+            {/* Programar publicación */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-indigo-500" />
+                <h2 className="font-semibold text-gray-900">Programar publicación</h2>
+              </div>
+              <p className="text-xs text-gray-400">
+                Si elegís una fecha futura, el producto se guardará oculto y se publicará automáticamente en esa fecha y hora.
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="datetime-local"
+                  value={publishAt}
+                  min={new Date().toISOString().slice(0, 16)}
+                  onChange={(e) => { setPublishAt(e.target.value); markDirty(); }}
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                {publishAt && (
+                  <button
+                    type="button"
+                    onClick={() => { setPublishAt(""); markDirty(); }}
+                    className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                    title="Quitar fecha programada"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              {publishAt && new Date(publishAt) > new Date() && (
+                <p className="text-xs text-indigo-600 font-medium">
+                  Este producto se publicará el {new Date(publishAt).toLocaleString("es-AR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              )}
             </div>
 
             {/* Actions */}

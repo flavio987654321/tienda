@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { sendNewAffiliateApplicationEmail } from "@/lib/email";
 import { isSafeExternalUrl } from "@/lib/url-utils";
+import { sendPushToUser } from "@/lib/push";
 
 // GET - afiliado: ver tiendas disponibles / tienda: ver sus afiliados
 export async function GET(req: NextRequest) {
@@ -180,7 +181,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Notificar a la dueña por email (fire-and-forget)
+  // Notificar a la dueña por email + push (fire-and-forget)
   prisma.user.findUnique({ where: { id: store.ownerId }, select: { email: true, name: true } })
     .then((owner) => {
       if (owner?.email) {
@@ -191,10 +192,16 @@ export async function POST(req: NextRequest) {
           applicantName: user.name || "Una usuaria",
           applicantEmail: user.email,
           applicationMessage: appMsg,
-        }).catch(() => {});
+        }).catch((err) => console.error("[email] sendNewAffiliateApplicationEmail failed:", err));
       }
     })
-    .catch(() => {});
+    .catch((err) => console.error("[notify] affiliate application owner lookup failed:", err));
+
+  sendPushToUser(store.ownerId, {
+    title: "Nueva solicitud de afiliada",
+    body: `${user.name || user.email} quiere unirse a ${store.name}`,
+    url: "/dashboard/vendedoras",
+  }).catch((err) => console.error("[push] affiliate application:", err));
 
   // El rol se asigna solo cuando la dueña aprueba, no al postular
   return NextResponse.json({ affiliate, message: "Solicitud enviada" });

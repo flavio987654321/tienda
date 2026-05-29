@@ -19,13 +19,13 @@ export async function GET(req: NextRequest) {
 
   const [products, total] = await prisma.$transaction([
     prisma.product.findMany({
-      where: { storeId: store.id },
+      where: { storeId: store.id, deletedAt: null },
       include: { variants: true },
       orderBy: { createdAt: "desc" },
       take,
       skip,
     }),
-    prisma.product.count({ where: { storeId: store.id } }),
+    prisma.product.count({ where: { storeId: store.id, deletedAt: null } }),
   ]);
 
   return NextResponse.json({ products, total, take, skip });
@@ -41,11 +41,14 @@ export async function POST(req: NextRequest) {
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
   const body = await req.json();
-  const { description, category, subcategory, tags, images, reelUrls, attributes } = body;
+  const { description, category, subcategory, tags, images, reelUrls, attributes, publishAt } = body;
 
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;
   const { name, parsedPrice, parsedComparePrice, parsedPrecioMayorista, parsedCantMinMayorista, normalizedVariants } = validated;
+
+  const parsedPublishAt = publishAt ? new Date(publishAt) : null;
+  const scheduledInFuture = parsedPublishAt && parsedPublishAt > new Date();
 
   const product = await prisma.product.create({
     data: {
@@ -61,6 +64,8 @@ export async function POST(req: NextRequest) {
       attributes: JSON.stringify(Array.isArray(attributes) ? attributes : []),
       precioMayorista: parsedPrecioMayorista,
       cantMinMayorista: parsedCantMinMayorista,
+      publishAt: parsedPublishAt,
+      isActive: scheduledInFuture ? false : true,
       storeId: store.id,
       variants: {
         create: normalizedVariants.map((v) => ({
@@ -91,7 +96,7 @@ export async function POST(req: NextRequest) {
           link: "/vendedoras",
         }))
       );
-    }).catch(() => {});
+    }).catch((err) => console.error("[notify] new product affiliate notification failed:", err));
   }
 
   return NextResponse.json({ product });

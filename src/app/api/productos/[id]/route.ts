@@ -11,7 +11,7 @@ export async function GET(_req: NextRequest, ctx: ProductRouteContext) {
 
   const { id } = await ctx.params;
   const product = await prisma.product.findFirst({
-    where: { id, storeId: auth.storeId },
+    where: { id, storeId: auth.storeId, deletedAt: null },
     include: { variants: true },
   });
 
@@ -25,18 +25,21 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
 
   const { id } = await ctx.params;
   const existing = await prisma.product.findFirst({
-    where: { id, storeId: auth.storeId },
+    where: { id, storeId: auth.storeId, deletedAt: null },
     select: { id: true, name: true, price: true, variants: { select: { stock: true } } },
   });
 
   if (!existing) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
   const body = await req.json();
-  const { description, category, subcategory, tags, images, reelUrls, attributes } = body;
+  const { description, category, subcategory, tags, images, reelUrls, attributes, publishAt } = body;
 
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;
   const { name, parsedPrice, parsedComparePrice, parsedPrecioMayorista, parsedCantMinMayorista, normalizedVariants } = validated;
+
+  const parsedPublishAt = publishAt !== undefined ? (publishAt ? new Date(publishAt) : null) : undefined;
+  const scheduledInFuture = parsedPublishAt && parsedPublishAt > new Date();
 
   const product = await prisma.$transaction(async (tx) => {
     // Cargar variantes existentes para hacer merge en lugar de borrar y recrear
@@ -97,6 +100,10 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         attributes: JSON.stringify(Array.isArray(attributes) ? attributes : []),
         precioMayorista: parsedPrecioMayorista,
         cantMinMayorista: parsedCantMinMayorista,
+        ...(parsedPublishAt !== undefined && {
+          publishAt: parsedPublishAt,
+          ...(scheduledInFuture ? { isActive: false } : {}),
+        }),
       } as any,
       include: { variants: true },
     });
@@ -169,20 +176,12 @@ export async function DELETE(_req: NextRequest, ctx: ProductRouteContext) {
 
   const { id } = await ctx.params;
   const exists = await prisma.product.findFirst({
-    where: { id, storeId: auth.storeId },
+    where: { id, storeId: auth.storeId, deletedAt: null },
     select: { id: true },
   });
 
   if (!exists) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
-  const orderItemCount = await prisma.orderItem.count({ where: { productId: id } });
-  if (orderItemCount > 0) {
-    return NextResponse.json(
-      { error: "Este producto tiene pedidos asociados y no puede eliminarse. Podés ocultarlo en su lugar." },
-      { status: 409 }
-    );
-  }
-
-  await prisma.product.delete({ where: { id } });
+  await prisma.product.update({ where: { id }, data: { deletedAt: new Date(), isActive: false } });
   return NextResponse.json({ ok: true });
 }

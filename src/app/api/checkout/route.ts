@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createNotification } from "@/lib/notifications";
 import { sendOrderConfirmationEmail } from "@/lib/email";
+import { sendPushToUser } from "@/lib/push";
 
 type CheckoutItem = {
   productId: string;
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest) {
 
       const productIds = [...new Set(normalizedItems.map((item) => item.productId))];
       const products = await tx.product.findMany({
-        where: { id: { in: productIds }, storeId, isActive: true },
+        where: { id: { in: productIds }, storeId, isActive: true, deletedAt: null },
         include: { variants: true },
       });
 
@@ -270,13 +271,19 @@ export async function POST(req: NextRequest) {
       select: { ownerId: true, name: true },
     });
     if (storeOwner) {
+      const notifBody = `$${order.total.toLocaleString("es-AR")} — ${order.items.length} producto${order.items.length !== 1 ? "s" : ""}`;
       createNotification({
         userId: storeOwner.ownerId,
         type: "NEW_ORDER",
         title: "Nuevo pedido recibido",
-        body: `$${order.total.toLocaleString("es-AR")} — ${order.items.length} producto${order.items.length !== 1 ? "s" : ""}`,
+        body: notifBody,
         link: `/dashboard/pedidos/${order.id}`,
       });
+      sendPushToUser(storeOwner.ownerId, {
+        title: "Nuevo pedido recibido",
+        body: notifBody,
+        url: `/dashboard/pedidos`,
+      }).catch((err) => console.error("[push] new order:", err));
     }
 
     // Email de confirmación al comprador (no bloquea la respuesta si falla)

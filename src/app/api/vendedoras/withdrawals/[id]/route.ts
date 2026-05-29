@@ -5,15 +5,15 @@ import { createNotification } from "@/lib/notifications";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// PATCH - solo el admin de la plataforma marca un retiro como completado
 export async function PATCH(req: NextRequest, context: RouteContext) {
   const user = await getCurrentUser();
-  if (!user || user.role !== "ADMIN") {
+  if (!user || (user.role !== "ADMIN" && user.role !== "OWNER")) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
   const { id } = await context.params;
-  const { notes } = await req.json();
+  const body = await req.json().catch(() => ({}));
+  const notes: string | undefined = body.notes;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -21,24 +21,32 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         where: { id },
         include: {
           wallet: {
-            include: { affiliate: { select: { userId: true } } },
+            include: {
+              affiliate: {
+                select: {
+                  userId: true,
+                  store: { select: { ownerId: true } },
+                },
+              },
+            },
           },
         },
       });
 
       if (!withdrawal) throw new Error("Retiro no encontrado");
-      if (withdrawal.status !== "PENDING") {
-        throw new Error("Este retiro ya fue procesado");
+      if (withdrawal.status !== "PENDING") throw new Error("Este retiro ya fue procesado");
+
+      if (user.role === "OWNER" && withdrawal.wallet.affiliate.store.ownerId !== user.id) {
+        throw new Error("No autorizado");
       }
 
-      // Notificar a la afiliada que su retiro fue procesado
       await createNotification({
         userId: withdrawal.wallet.affiliate.userId,
         type: "WITHDRAWAL_COMPLETED",
         title: "Tu retiro fue procesado",
         body: `$${withdrawal.amount.toLocaleString("es-AR")} transferidos a tu cuenta bancaria.`,
         link: "/vendedoras/billetera",
-      });
+      }).catch((err) => console.error("[notify] withdrawal paid", err));
 
       return tx.walletWithdrawal.update({
         where: { id },

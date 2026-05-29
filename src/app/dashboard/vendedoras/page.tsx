@@ -23,6 +23,7 @@ import {
 import { getCurrentUser } from "@/lib/auth-session";
 import AffiliateToggle from "./AffiliateToggle";
 import MetasWidget from "./MetasWidget";
+import WithdrawalPayButton from "@/components/affiliates/WithdrawalPayButton";
 
 function statusClass(status: string) {
   if (status === "APPROVED") return "bg-green-100 text-green-700";
@@ -91,6 +92,35 @@ export default async function VendedorasPage() {
   const teamAffiliates = affiliates.filter((affiliate) => affiliate.status !== "PENDING" && affiliate.status !== "REMOVED");
   const approved = affiliates.filter((affiliate) => affiliate.status === "APPROVED");
   const active = approved.filter((affiliate) => affiliate.isActive);
+  const now = new Date();
+  const startThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const endLastMonth   = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const rankingData = approved
+    .map((a) => {
+      const thisMonth = a.commissions
+        .filter((c) => c.status === "PAID" && new Date(c.createdAt) >= startThisMonth)
+        .reduce((s, c) => s + c.amount, 0);
+      const lastMonth = a.commissions
+        .filter((c) => c.status === "PAID" && new Date(c.createdAt) >= startLastMonth && new Date(c.createdAt) < endLastMonth)
+        .reduce((s, c) => s + c.amount, 0);
+      const confirmedOrders = a.orders.filter((o) =>
+        ["CONFIRMED", "SHIPPED", "DELIVERED"].includes(o.status)
+      );
+      return {
+        id: a.id,
+        name: a.user.name || a.user.email,
+        thisMonth,
+        lastMonth,
+        change: lastMonth > 0 ? Math.round(((thisMonth - lastMonth) / lastMonth) * 100) : null,
+        confirmedOrders: confirmedOrders.length,
+        grossSales: confirmedOrders.reduce((s, o) => s + o.total, 0),
+      };
+    })
+    .sort((a, b) => b.thisMonth - a.thisMonth);
+  const topThisMonth = rankingData[0]?.thisMonth ?? 0;
+
   const totalComisionesPagadas = affiliates.reduce(
     (sum, affiliate) => sum + affiliate.commissions.filter((commission) => commission.status === "PAID").reduce((s, commission) => s + commission.amount, 0),
     0
@@ -154,6 +184,7 @@ export default async function VendedorasPage() {
                     {w.notes}
                   </div>
                 )}
+                <WithdrawalPayButton withdrawalId={w.id} amount={w.amount} />
               </div>
             ))}
           </div>
@@ -227,6 +258,48 @@ export default async function VendedorasPage() {
                     affiliateName={affiliate.user.name || undefined}
                     walletBalance={affiliate.wallet?.balance ?? 0}
                   />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {rankingData.length >= 2 && (
+        <section className="mb-8">
+          <h2 className="font-bold text-gray-900 mb-1">Ranking del mes</h2>
+          <p className="text-sm text-gray-400 mb-4">
+            {now.toLocaleString("es-AR", { month: "long", year: "numeric" })} — comisiones pagadas por afiliada
+          </p>
+          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+            {rankingData.map((r, i) => (
+              <div key={r.id} className={`flex items-center gap-4 px-5 py-3 ${i < rankingData.length - 1 ? "border-b border-gray-50" : ""}`}>
+                <span className={`w-6 text-center text-sm font-black ${i === 0 ? "text-amber-500" : i === 1 ? "text-gray-400" : i === 2 ? "text-amber-800" : "text-gray-300"}`}>
+                  {i + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-gray-900">{r.name}</p>
+                  <div className="mt-1 h-1.5 w-full rounded-full bg-gray-100">
+                    <div
+                      className="h-1.5 rounded-full bg-indigo-400 transition-all"
+                      style={{ width: topThisMonth > 0 ? `${Math.round((r.thisMonth / topThisMonth) * 100)}%` : "0%" }}
+                    />
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-gray-900">{money(r.thisMonth)}</p>
+                  {r.change !== null && (
+                    <p className={`text-xs font-semibold ${r.change >= 0 ? "text-green-600" : "text-red-500"}`}>
+                      {r.change >= 0 ? "+" : ""}{r.change}% vs mes ant.
+                    </p>
+                  )}
+                  {r.change === null && r.lastMonth === 0 && (
+                    <p className="text-xs text-gray-300">sin historial</p>
+                  )}
+                </div>
+                <div className="text-right text-xs text-gray-400 hidden sm:block">
+                  <p>{r.confirmedOrders} ventas</p>
+                  <p>{money(r.grossSales)} generado</p>
                 </div>
               </div>
             ))}
