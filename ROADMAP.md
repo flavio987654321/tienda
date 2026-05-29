@@ -86,7 +86,7 @@
 | E-02 | ✅ | 🔴 | **Página completa `/tienda/[slug]/productos`** creada con paginación de 24 por página. El template muestra 8 + botón "Ver toda la colección →" que lleva a esa página |
 | E-03 | ✅ | 🔴 | **Buscador** — existe en FashionNoir (overlay con resultados en grilla). La página `/productos` tiene búsqueda inline con filtro en tiempo real |
 | E-04 | ✅ | 🟠 | **Dropdown de subcategorías** implementado en FashionNoir y en la página `/productos`. Aparece al hover sobre cada categoría si tiene subcategorías cargadas |
-| E-05 | 🔲 | 🟠 | El editor debe permitir activar/desactivar qué categorías mostrar como sección destacada |
+| E-05 | ✅ | 🟠 | El editor permite activar/desactivar qué categorías mostrar como sección destacada: sección "Categorías destacadas" en el ConfigModal con checkboxes por categoría (cargadas desde la tienda real). Si no se selecciona ninguna, se muestran todas. Los 4 templates filtran `categoryList` por `featuredCategories`. |
 | E-06 | 🔲 | 🟠 | Templates adaptativos para mayorista: ocultar precios al público, mostrar "Solicitá tu lista de precios" |
 | E-07 | ✅ | 🟡 | **Ordenamiento** en la página /productos: más recientes, precio ↑↓, nombre A→Z, mayor descuento |
 

@@ -248,6 +248,7 @@ export function useStorefront() {
   const isWholesale        = config?.tieneVentaMayorista ?? false;
   const ocultarPrecios     = config?.ocultarPreciosPublico ?? false;
   const defaultCategories  = storeTypeConfig.categorias;
+  const featuredCategories = config?.featuredCategories ?? [];
 
-  return { products, loadingProducts, affiliateId, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories };
+  return { products, loadingProducts, affiliateId, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories };
 }

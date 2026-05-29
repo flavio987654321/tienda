@@ -305,12 +305,37 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 }
 
 /* ── Config avanzada modal ──────────────────────────────────── */
-function ConfigModal({ config, update, onClose, onDelete }: {
+function ConfigModal({ config, update, onClose, onDelete, storeSlug }: {
   config: StoreConfig;
   update: <K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => void;
   onClose: () => void;
   onDelete: () => void;
+  storeSlug?: string | null;
 }) {
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!storeSlug) return;
+    fetch(`/api/public/${storeSlug}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const cats: string[] = [...new Set(
+          (data?.store?.products ?? [])
+            .map((p: { category?: string }) => p.category)
+            .filter((c: string | undefined) => c && c !== "general")
+        )] as string[];
+        setAvailableCategories(cats);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeSlug]);
+
+  function toggleFeaturedCategory(cat: string) {
+    const current = config.featuredCategories ?? [];
+    const next = current.includes(cat) ? current.filter(c => c !== cat) : [...current, cat];
+    update("featuredCategories", next);
+  }
+
   const inp: React.CSSProperties = {
     width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0",
     borderRadius: 8, fontSize: 13, outline: "none", fontFamily: "inherit",
@@ -561,6 +586,38 @@ function ConfigModal({ config, update, onClose, onDelete }: {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Categorías destacadas */}
+          {availableCategories.length > 0 && (
+            <div style={sec}>
+              <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+                📌 Categorías destacadas
+              </p>
+              <p style={{ margin: "0 0 12px", fontSize: 11, color: "#94a3b8" }}>
+                Elegí cuáles aparecen como secciones en el inicio. Si no seleccionás ninguna, se muestran todas.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {availableCategories.map(cat => {
+                  const active = (config.featuredCategories ?? []).includes(cat);
+                  return (
+                    <button key={cat} type="button" onClick={() => toggleFeaturedCategory(cat)}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${active ? "#6366f1" : "#e2e8f0"}`, background: active ? "#eef2ff" : "white", cursor: "pointer", textAlign: "left", transition: "all 0.15s" }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: active ? "#4338ca" : "#374151" }}>{cat}</span>
+                      <span style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${active ? "#6366f1" : "#cbd5e1"}`, background: active ? "#6366f1" : "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {active && <svg width={10} height={10} viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {(config.featuredCategories ?? []).length > 0 && (
+                <button type="button" onClick={() => update("featuredCategories", [])}
+                  style={{ marginTop: 8, width: "100%", padding: "6px", border: "1px solid #e2e8f0", borderRadius: 7, background: "white", color: "#94a3b8", fontSize: 11, cursor: "pointer" }}>
+                  Mostrar todas las categorías
+                </button>
+              )}
             </div>
           )}
 
@@ -1462,7 +1519,7 @@ export default function ConfiguracionPage() {
 
       {/* Config modal */}
       {configModalOpen && (
-        <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} onDelete={() => { setConfigModalOpen(false); handleDelete(); }} />
+        <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} onDelete={() => { setConfigModalOpen(false); handleDelete(); }} storeSlug={storeSlug} />
       )}
 
       {/* Confirmar salir sin guardar */}

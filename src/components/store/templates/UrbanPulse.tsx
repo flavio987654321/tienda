@@ -41,14 +41,15 @@ export default function UrbanPulse() {
 
   const storeConfig = useStoreConfig();
   const storefront  = useStorefront();
-  const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
+  const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const { editMode } = useEditContext();
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
-    return cats.length > 0 ? cats : defaultCategories.slice(0, 6);
-  }, [products, defaultCategories]);
+    const base = cats.length > 0 ? cats : defaultCategories.slice(0, 6);
+    return featuredCategories.length > 0 ? base.filter(c => featuredCategories.includes(c)) : base;
+  }, [products, defaultCategories, featuredCategories]);
   const CATEGORIES = useMemo(() => ["Todos", ...categoryList], [categoryList]);
 
   const DARK  = "#0f0f0f";
