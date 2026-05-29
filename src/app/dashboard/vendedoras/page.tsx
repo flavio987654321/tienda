@@ -249,9 +249,9 @@ export default async function VendedorasPage() {
             <div className="bg-purple-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Users className="h-8 w-8 text-purple-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Todavia no hay afiliados en el equipo</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Todavía no hay afiliados en el equipo</h3>
             <p className="text-gray-400 mb-4">
-              Cuando apruebes una solicitud, esa persona pasa a esta seccion con sus links, ventas y comisiones.
+              Cuando apruebes una solicitud, esa persona pasa a esta sección con sus links, ventas y comisiones.
             </p>
           </div>
         ) : (

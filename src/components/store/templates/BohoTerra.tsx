@@ -516,6 +516,20 @@ export default function BohoTerra() {
           </div>
         </div>
         <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, padding:"16px 40px", maxWidth:1280, margin:"0 auto" }}>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px", marginBottom:10 }}>
+            {[
+              { label: "Política de devoluciones", tipo: "devoluciones" },
+              { label: "Política de envíos", tipo: "envios" },
+              { label: "Términos y condiciones", tipo: "terminos" },
+            ].map(({ label, tipo }) => (
+              <a key={tipo} href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=${tipo}`}
+                style={{ fontSize:11, color:footerMid, opacity:0.55, textDecoration:"none" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.55"; }}>
+                {label}
+              </a>
+            ))}
+          </div>
           <p style={{ fontSize:11, color:footerMid, margin:0, opacity:0.6 }}>
             <EditableZone field="footerCopyright" label="Copyright">© 2025 Terra · Moda consciente · Mendoza, Argentina</EditableZone>
           </p>

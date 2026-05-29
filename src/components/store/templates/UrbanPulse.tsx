@@ -550,9 +550,25 @@ export default function UrbanPulse() {
               </div>
             ))}
           </div>
-          <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22, display:"flex", justifyContent:"space-between" }}>
-            <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerCopyright" label="Copyright">© 2025 UrbanPulse. Todos los derechos reservados.</EditableZone></p>
-            <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerMadeIn" label="Hecho en">Hecho en Argentina</EditableZone></p>
+          <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22 }}>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px", marginBottom:14 }}>
+              {[
+                { label: "Devoluciones", tipo: "devoluciones" },
+                { label: "Envíos", tipo: "envios" },
+                { label: "Términos", tipo: "terminos" },
+              ].map(({ label, tipo }) => (
+                <a key={tipo} href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=${tipo}`}
+                  style={{ color:footerUpMid, fontSize:11, textDecoration:"none", opacity:0.6, letterSpacing:1, textTransform:"uppercase", fontWeight:600 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.6"; }}>
+                  {label}
+                </a>
+              ))}
+            </div>
+            <div style={{ display:"flex", justifyContent:"space-between" }}>
+              <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerCopyright" label="Copyright">© 2025 UrbanPulse. Todos los derechos reservados.</EditableZone></p>
+              <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerMadeIn" label="Hecho en">Hecho en Argentina</EditableZone></p>
+            </div>
           </div>
         </div>
         </div>

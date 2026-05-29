@@ -55,7 +55,7 @@ export default function ProductsTable({ products: initialProducts }: Props) {
       if (statusFilter === "active" && !p.isActive) return false;
       if (statusFilter === "hidden" && p.isActive) return false;
       if (stockFilter === "out" && totalStock !== 0) return false;
-      if (stockFilter === "low" && (totalStock === 0 || totalStock >= 5)) return false;
+      if (stockFilter === "low" && (totalStock === 0 || totalStock > 4)) return false;
       if (stockFilter === "critical" && totalStock >= 5) return false;
       return true;
     });

@@ -6,6 +6,7 @@ import Link from "next/link";
 import DangerZone from "@/app/dashboard/configuracion/DangerZone";
 import AjustesClient from "./AjustesClient";
 import MpConnectButton from "./MpConnectButton";
+import PoliticasForm from "./PoliticasForm";
 
 export default async function AjustesPage() {
   const user = await getCurrentUser();
@@ -14,7 +15,10 @@ export default async function AjustesPage() {
 
   const [sub, store] = await Promise.all([
     getUserSubscription(user.id),
-    prisma.store.findUnique({ where: { ownerId: user.id }, select: { slug: true, customDomain: true, mpConnectedAt: true, mpSellerId: true } }),
+    prisma.store.findUnique({
+      where: { ownerId: user.id },
+      select: { slug: true, customDomain: true, mpConnectedAt: true, mpSellerId: true, policyReturns: true, policyShipping: true, policyTerms: true },
+    }),
   ]);
 
   const tier = (sub as any)?.tier ?? "BASIC";
@@ -40,6 +44,14 @@ export default async function AjustesPage() {
           connected={!!store?.mpConnectedAt}
           connectedAt={store?.mpConnectedAt?.toISOString() ?? null}
           mpSellerId={store?.mpSellerId ?? null}
+        />
+      </div>
+      <div className="mt-5">
+        <PoliticasForm
+          slug={store?.slug ?? ""}
+          initialReturns={store?.policyReturns ?? null}
+          initialShipping={store?.policyShipping ?? null}
+          initialTerms={store?.policyTerms ?? null}
         />
       </div>
       <div className="mt-5">

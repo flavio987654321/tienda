@@ -597,13 +597,29 @@ export default function FashionNoir() {
             </div>
           </div>
         </div>
-        <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:24, display:"flex", justifyContent:"space-between", alignItems:"center", maxWidth:1280, margin:"0 auto" }}>
-          <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
-            <EditableZone field="footerCopyright" label="Copyright">© 2025 NOIR Fashion. Todos los derechos reservados.</EditableZone>
-          </p>
-          <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
-            <EditableZone field="footerMadeIn" label="Hecho en">Hecho con ♥ en Argentina</EditableZone>
-          </p>
+        <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:24, maxWidth:1280, margin:"0 auto" }}>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:"6px 20px", marginBottom:16 }}>
+            {[
+              { label: "Política de devoluciones", tipo: "devoluciones" },
+              { label: "Política de envíos", tipo: "envios" },
+              { label: "Términos y condiciones", tipo: "terminos" },
+            ].map(({ label, tipo }) => (
+              <a key={tipo} href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=${tipo}`}
+                style={{ fontSize:11, color:"inherit", opacity:0.3, textDecoration:"none", letterSpacing:1 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.3"; }}>
+                {label}
+              </a>
+            ))}
+          </div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
+              <EditableZone field="footerCopyright" label="Copyright">© 2025 NOIR Fashion. Todos los derechos reservados.</EditableZone>
+            </p>
+            <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
+              <EditableZone field="footerMadeIn" label="Hecho en">Hecho con ♥ en Argentina</EditableZone>
+            </p>
+          </div>
         </div>
         </div>
       </footer>

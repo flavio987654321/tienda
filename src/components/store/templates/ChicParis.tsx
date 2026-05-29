@@ -526,9 +526,18 @@ export default function ChicParis() {
               ))}
             </div>
             <div>
-              <p style={{ margin: "0 0 16px", fontSize: 10, fontWeight: 800, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>Info</p>
-              {["Sobre nosotros", "Contacto", "Devoluciones", "Términos"].map(l => (
-                <p key={l} style={{ margin: "0 0 8px", fontSize: 13, color: footerText, opacity: 0.55 }}>{l}</p>
+              <p style={{ margin: "0 0 16px", fontSize: 10, fontWeight: 800, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>Legal</p>
+              {[
+                { label: "Política de devoluciones", tipo: "devoluciones" },
+                { label: "Política de envíos", tipo: "envios" },
+                { label: "Términos y condiciones", tipo: "terminos" },
+              ].map(({ label, tipo }) => (
+                <a key={tipo} href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=${tipo}`}
+                  style={{ display: "block", margin: "0 0 8px", fontSize: 13, color: footerText, opacity: 0.55, textDecoration: "none" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.55"; }}>
+                  {label}
+                </a>
               ))}
             </div>
           </div>

@@ -169,9 +169,7 @@ export default function DangerZone() {
 
                   <div>
                     <label className="block text-sm text-gray-700 mb-2">
-                      {isOwner && target === "store"
-                        ? <>Escribí el nombre de tu tienda para confirmar: <strong className="text-gray-900">{info?.storeName}</strong></>
-                        : isOwner
+                      {isOwner
                         ? <>Escribí el nombre de tu tienda para confirmar: <strong className="text-gray-900">{info?.storeName}</strong></>
                         : <>Escribí tu email para confirmar: <strong className="text-gray-900">{info?.email}</strong></>
                       }
