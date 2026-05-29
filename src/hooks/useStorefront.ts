@@ -122,7 +122,12 @@ function mapProduct(raw: any): StorefrontProduct {
   const sizes  = [...new Set(variants.filter(v => isSize(v.name)).map(v => v.value))];
   const colors = [...new Set(variants.filter(v => isColor(v.name)).map(v => v.value))];
   let images: string[] = [];
-  try { images = JSON.parse(raw.images || "[]"); } catch { images = []; }
+  try {
+    const parsed = JSON.parse(raw.images || "[]");
+    images = parsed
+      .map((img: string | { url: string }) => (typeof img === "string" ? img : img?.url ?? ""))
+      .filter(Boolean);
+  } catch { images = []; }
 
   return {
     id: raw.id,

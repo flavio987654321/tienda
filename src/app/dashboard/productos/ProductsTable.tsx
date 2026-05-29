@@ -316,7 +316,10 @@ export default function ProductsTable({ products: initialProducts }: Props) {
             <tbody className="divide-y divide-gray-50">
               {filtered.map((product) => {
                 const totalStock = product.variants.reduce((s, v) => s + v.stock, 0);
-                const images = JSON.parse(product.images || "[]");
+                const rawImgs = JSON.parse(product.images || "[]");
+                const images: string[] = rawImgs.map((img: string | { url: string }) =>
+                  typeof img === "string" ? img : img?.url ?? ""
+                ).filter(Boolean);
                 return (
                   <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
