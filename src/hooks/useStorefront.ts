@@ -140,8 +140,9 @@ function mapProduct(raw: any): StorefrontProduct {
 
 export function useStorefront() {
   const config = useStoreConfig();
-  const storeId = config?.storeId ?? null;
-  const slug    = config?.slug ?? null;
+  const storeId    = config?.storeId ?? null;
+  const slug       = config?.slug ?? null;
+  const previewFill = config?.previewFill ?? false;
 
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -164,15 +165,20 @@ export function useStorefront() {
     fetch(`/api/public/${slug}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (data?.store?.products?.length) {
-          setProducts(data.store.products.map(mapProduct));
+        const real: StorefrontProduct[] = data?.store?.products?.length
+          ? data.store.products.map(mapProduct)
+          : [];
+        if (previewFill) {
+          // En el editor: productos reales primero, demos para completar hasta 8
+          const needed = Math.max(0, 8 - real.length);
+          setProducts([...real, ...DEMO_PRODUCTS.slice(0, needed)]);
         } else {
-          setProducts([]);
+          setProducts(real);
         }
       })
       .catch(() => {})
       .finally(() => setLoadingProducts(false));
-  }, [slug]);
+  }, [slug, previewFill]);
 
   // Encuentra el variantId que coincide con el valor seleccionado
   function resolveVariantId(product: StorefrontProduct, sizeValue: string, colorValue: string): string | null {

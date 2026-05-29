@@ -54,6 +54,7 @@ export type StoreConfig = {
   promoBanner?: {
     enabled: boolean;
   };
+  previewFill?: boolean;
 };
 
 export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: string }> = {

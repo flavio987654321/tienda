@@ -283,7 +283,7 @@ function BrowserFrame({ storeName, children }: { storeName: string; children: Re
           mitienda.com/tienda/{storeName.toLowerCase().replace(/\s+/g, "-")}
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", transform: "translate(0, 0)" }}>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
         {children}
       </div>
     </div>
@@ -1288,7 +1288,7 @@ export default function ConfiguracionPage() {
           <div style={{ flex: 1, display: "flex", alignItems: "stretch", padding: "12px 20px 20px", minHeight: 0 }}>
             <div style={{ flex: 1, borderRadius: 10, overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column" }}>
-              <StoreConfigContext.Provider value={{ ...config, slug: undefined }}>
+              <StoreConfigContext.Provider value={{ ...config, previewFill: true }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>
@@ -1422,9 +1422,8 @@ export default function ConfiguracionPage() {
         }}>
           <div style={{ flex: 1, overflow: "hidden", position: "relative", padding: "12px 16px 0" }}>
             <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
-              transform: "translate(0,0)" }}>
-              <StoreConfigContext.Provider value={{ ...config, slug: undefined }}>
+              boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column" }}>
+              <StoreConfigContext.Provider value={{ ...config, previewFill: true }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>

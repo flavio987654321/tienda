@@ -401,8 +401,8 @@ export default function FashionNoir() {
 
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:24, marginBottom:48 }}>
           {filtered.map(product => (
-            <div key={product.id} onClick={() => { if (!editMode) openModal(product); }} onMouseEnter={() => setHoveredId(product.id)} onMouseLeave={() => setHoveredId(null)}
-              style={{ cursor: editMode ? "default" : "pointer" }}>
+            <div key={product.id} onClick={() => openModal(product)} onMouseEnter={() => setHoveredId(product.id)} onMouseLeave={() => setHoveredId(null)}
+              style={{ cursor:"pointer" }}>
               <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:16 }}>
                 <img src={product.images[0] || ""} alt={product.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", transition:"transform 0.5s ease", transform: hoveredId===product.id ? "scale(1.05)" : "scale(1)" }} onError={e => { e.currentTarget.style.opacity="0"; }}/>
                 <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"flex-end", justifyContent:"center", padding:16, opacity: hoveredId===product.id ? 1 : 0, transition:"opacity 0.3s", background:"linear-gradient(to top, rgba(10,10,10,0.65) 30%, transparent)", pointerEvents:"none" }}>
