@@ -1,13 +1,11 @@
 ﻿"use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
-
-const CATEGORIES = ["Todos", "Mujer", "Hombre", "Accesorios"];
 
 type Product = StorefrontProduct;
 
@@ -50,10 +48,30 @@ export default function FashionNoir() {
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [announcementIdx,    setAnnouncementIdx]    = useState(0);
   const [openPolicyField,    setOpenPolicyField]    = useState<string | null>(null);
+  const [activeSubcategory,  setActiveSubcategory]  = useState<string | null>(null);
+  const [hoveredCatMenu,     setHoveredCatMenu]     = useState<string | null>(null);
 
   const storeConfig = useStoreConfig();
   const storefront  = useStorefront();
   const { products } = storefront;
+
+  const categoryList = useMemo(() => {
+    const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
+    return cats.length > 0 ? cats : ["Mujer", "Hombre", "Accesorios"];
+  }, [products]);
+
+  const CATEGORIES = useMemo(() => ["Todos", ...categoryList], [categoryList]);
+
+  const subcategoriesFor = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    products.forEach(p => {
+      if (p.subcategory && p.category) {
+        if (!map[p.category]) map[p.category] = [];
+        if (!map[p.category].includes(p.subcategory)) map[p.category].push(p.subcategory);
+      }
+    });
+    return map;
+  }, [products]);
   const { editMode } = useEditContext();
   const {
     cartItems, cartOpen, setCartOpen,
@@ -95,9 +113,17 @@ export default function FashionNoir() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAnnouncement]);
 
-  const changeCategory = (cat: string) => { setActiveCategory(cat); setVisibleCount(8); };
+  const changeCategory = (cat: string, sub: string | null = null) => {
+    setActiveCategory(cat);
+    setActiveSubcategory(sub);
+    setVisibleCount(8);
+  };
 
-  const allFiltered = activeCategory === "Todos" ? products : products.filter(p => p.category === activeCategory);
+  const allFiltered = products.filter(p => {
+    if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
+    if (activeSubcategory && p.subcategory !== activeSubcategory) return false;
+    return true;
+  });
   const filtered    = allFiltered.slice(0, visibleCount);
   const hasMore     = visibleCount < allFiltered.length;
 
@@ -235,8 +261,12 @@ export default function FashionNoir() {
             <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "NOIR"}</EditableZone>
           </button>
           <div style={{ display:"flex", gap:32 }}>
-            {[["Mujer","productos"],["Hombre","productos"],["Accesorios","productos"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([label, target]) => (
-              <button key={label} onClick={() => { if (label === "Mujer" || label === "Hombre" || label === "Accesorios") changeCategory(label); scrollTo(target); }}
+            {([
+              ...categoryList.slice(0, 3).map(c => [c, "productos"]),
+              ["Nosotros","nosotros"],
+              ["Contacto","contacto"],
+            ] as [string,string][]).map(([label, target]) => (
+              <button key={label} onClick={() => { if (target === "productos") changeCategory(label); scrollTo(target); }}
                 style={{ background:"none", border:"none", color:T, fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", opacity:0.8, transition:"opacity 0.2s, color 0.2s" }}
                 onMouseEnter={e => { e.currentTarget.style.opacity="1"; e.currentTarget.style.color=G; }}
                 onMouseLeave={e => { e.currentTarget.style.opacity="0.8"; e.currentTarget.style.color=T; }}
@@ -387,15 +417,37 @@ export default function FashionNoir() {
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:40, flexWrap:"wrap", gap:16 }}>
           <p style={{ fontFamily:"Georgia, serif", fontSize:28, color:productosText, margin:0 }}>
             {activeCategory === "Todos" ? "Toda la Colección" : activeCategory}
+            {activeSubcategory && <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", opacity:0.6 }}> › {activeSubcategory}</span>}
             <span style={{ fontSize:14, color:productosMid, fontFamily:"sans-serif", fontWeight:400, marginLeft:12 }}>({allFiltered.length} piezas)</span>
           </p>
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-            {CATEGORIES.map(cat => (
-              <button key={cat} onClick={() => changeCategory(cat)}
-                style={{ background: activeCategory===cat ? G : "transparent", color: activeCategory===cat ? BG : productosText, border:`1px solid ${activeCategory===cat ? G : "rgba(240,235,227,0.2)"}`, padding:"8px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", transition:"all 0.2s" }}>
-                {cat === "Todos" ? "Todos" : cat}
-              </button>
-            ))}
+            {CATEGORIES.map(cat => {
+              const subcats = cat !== "Todos" ? (subcategoriesFor[cat] || []) : [];
+              const isActive = activeCategory === cat;
+              return (
+                <div key={cat} style={{ position:"relative" }}
+                  onMouseEnter={() => subcats.length > 0 && setHoveredCatMenu(cat)}
+                  onMouseLeave={() => setHoveredCatMenu(null)}>
+                  <button onClick={() => changeCategory(cat)}
+                    style={{ background: isActive ? G : "transparent", color: isActive ? BG : productosText, border:`1px solid ${isActive ? G : "rgba(240,235,227,0.2)"}`, padding:"8px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", transition:"all 0.2s", display:"flex", alignItems:"center", gap:5 }}>
+                    {cat}
+                    {subcats.length > 0 && <span style={{ opacity:0.6, fontSize:9 }}>▾</span>}
+                  </button>
+                  {subcats.length > 0 && hoveredCatMenu === cat && (
+                    <div style={{ position:"absolute", top:"100%", left:0, background:"#1a1a1a", border:`1px solid rgba(201,168,76,0.2)`, minWidth:160, zIndex:300, padding:"4px 0", boxShadow:"0 8px 24px rgba(0,0,0,0.5)" }}>
+                      {subcats.map(sub => (
+                        <button key={sub} onClick={() => { changeCategory(cat, sub); setHoveredCatMenu(null); }}
+                          style={{ display:"block", width:"100%", background: activeSubcategory===sub ? "rgba(201,168,76,0.1)" : "none", border:"none", color: activeSubcategory===sub ? G : productosText, padding:"8px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"background 0.15s" }}
+                          onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
+                          onMouseLeave={e => (e.currentTarget.style.background=activeSubcategory===sub?"rgba(201,168,76,0.1)":"none")}>
+                          {sub}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -429,27 +481,27 @@ export default function FashionNoir() {
           ))}
         </div>
 
-        {/* Ver más / contador */}
+        {/* Ver más / Ver toda la colección */}
         <div style={{ textAlign:"center" }}>
-          <p style={{ fontSize:11, opacity:0.35, letterSpacing:2, marginBottom:20 }}>
+          <p style={{ fontSize:11, opacity:0.35, letterSpacing:2, marginBottom:24 }}>
             Mostrando {Math.min(visibleCount, allFiltered.length)} de {allFiltered.length} piezas
           </p>
-          {hasMore && (
-            <button onClick={() => setVisibleCount(v => v + 4)}
-              style={{ background:"transparent", color:productosText, border:`1px solid rgba(240,235,227,0.25)`, padding:"14px 48px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:600, cursor:"pointer", transition:"all 0.25s" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor=G; e.currentTarget.style.color=G; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(240,235,227,0.25)"; e.currentTarget.style.color=productosText; }}>
-              {"Ver más"}
-            </button>
-          )}
-          {!hasMore && allFiltered.length > 8 && (
-            <button onClick={() => { setVisibleCount(8); scrollTo("productos"); }}
-              style={{ background:"transparent", color:productosMid, border:"1px solid rgba(240,235,227,0.08)", padding:"12px 36px", fontSize:10, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", transition:"all 0.25s" }}
-              onMouseEnter={e => (e.currentTarget.style.color=productosText)}
-              onMouseLeave={e => (e.currentTarget.style.color=productosMid)}>
-              ↑ Volver al inicio
-            </button>
-          )}
+          <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
+            {hasMore && (
+              <button onClick={() => setVisibleCount(v => v + 8)}
+                style={{ background:"transparent", color:productosText, border:`1px solid rgba(240,235,227,0.25)`, padding:"14px 36px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:600, cursor:"pointer", transition:"all 0.25s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor=G; e.currentTarget.style.color=G; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(240,235,227,0.25)"; e.currentTarget.style.color=productosText; }}>
+                Ver 8 más
+              </button>
+            )}
+            <a href={`/tienda/${storeConfig?.slug ?? ""}/productos`}
+              style={{ background:G, color:BG, padding:"14px 36px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:700, cursor:"pointer", textDecoration:"none", display:"inline-block", transition:"opacity 0.2s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity="0.85"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity="1"; }}>
+              Ver toda la colección →
+            </a>
+          </div>
         </div>
         </div>
       </section>

@@ -17,6 +17,7 @@ export type StorefrontProduct = {
   price: number;
   comparePrice: number | null;
   category: string;
+  subcategory?: string;
   description: string | null;
   images: string[];
   sizes: string[];
@@ -135,6 +136,7 @@ function mapProduct(raw: any): StorefrontProduct {
     price: raw.price,
     comparePrice: raw.comparePrice ?? null,
     category: raw.category ?? "general",
+    subcategory: raw.subcategory ?? undefined,
     description: raw.description ?? null,
     images,
     sizes,
