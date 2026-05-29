@@ -304,13 +304,11 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 }
 
 /* ── Config avanzada modal ──────────────────────────────────── */
-function ConfigModal({ config, update, onClose, onDelete, policies, onPoliciesChange }: {
+function ConfigModal({ config, update, onClose, onDelete }: {
   config: StoreConfig;
   update: <K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => void;
   onClose: () => void;
   onDelete: () => void;
-  policies: { returns: string; shipping: string; terms: string };
-  onPoliciesChange: (p: { returns: string; shipping: string; terms: string }) => void;
 }) {
   const inp: React.CSSProperties = {
     width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0",
@@ -576,45 +574,6 @@ function ConfigModal({ config, update, onClose, onDelete, policies, onPoliciesCh
                   </div>
                 </>
               )}
-            </div>
-          </div>
-
-          {/* Legal */}
-          <div style={sec}>
-            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
-              📋 Información legal
-            </p>
-            <p style={{ margin: "0 0 12px", fontSize: 11, color: "#94a3b8" }}>
-              Se muestra en el footer de tu tienda. Dejá vacío lo que no aplique.
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={lbl}>↩️ Política de devoluciones</label>
-                <textarea style={{ ...inp, resize: "vertical" }} rows={4}
-                  value={policies.returns}
-                  placeholder={"Aceptamos devoluciones dentro de los 30 días...\n- El producto debe estar en su estado original\n- Contactanos por WhatsApp con tu número de pedido"}
-                  onChange={e => onPoliciesChange({ ...policies, returns: e.target.value })}
-                  onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                  onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-              </div>
-              <div>
-                <label style={lbl}>📦 Política de envíos</label>
-                <textarea style={{ ...inp, resize: "vertical" }} rows={4}
-                  value={policies.shipping}
-                  placeholder={"Enviamos a todo el país.\n- CABA y GBA: 2 a 4 días hábiles\n- Interior: 5 a 10 días hábiles"}
-                  onChange={e => onPoliciesChange({ ...policies, shipping: e.target.value })}
-                  onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                  onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-              </div>
-              <div>
-                <label style={lbl}>📄 Términos y condiciones</label>
-                <textarea style={{ ...inp, resize: "vertical" }} rows={4}
-                  value={policies.terms}
-                  placeholder={"Al comprar aceptás nuestros términos.\n- Los precios incluyen IVA\n- Los pagos se procesan via Mercado Pago"}
-                  onChange={e => onPoliciesChange({ ...policies, terms: e.target.value })}
-                  onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                  onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-              </div>
             </div>
           </div>
 
@@ -940,6 +899,7 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
   const label = textFieldLabels[activeField] ?? activeField;
   const ov = overrides[activeField] ?? {};
   const hasOverride = Object.entries(ov).some(([, v]) => v !== undefined);
+  const isLongTextField = activeField.startsWith("policy");
 
   const btnBase: React.CSSProperties = {
     width: 30, height: 30, border: "1.5px solid #e2e8f0", borderRadius: 6,
@@ -947,6 +907,36 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
     flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
   };
   const btnActive: React.CSSProperties = { borderColor: "#6366f1", background: "#e0e7ff", color: "#6366f1" };
+
+  if (isLongTextField) {
+    return (
+      <div style={{ ...base, padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#6366f1" }}>✏ {label}</span>
+          <div style={{ display: "flex", gap: 6 }}>
+            {hasOverride && (
+              <button type="button" onClick={() => resetOverride(activeField)}
+                style={{ ...btnBase, fontSize: 14 }} title="Restablecer texto original">↺</button>
+            )}
+            <button type="button" onClick={() => setActiveField(null)}
+              style={{ ...btnBase, border: "none", fontSize: 18, color: "#94a3b8" }}>×</button>
+          </div>
+        </div>
+        <textarea
+          value={ov.text ?? ""}
+          placeholder="Escribí el texto de esta política. Usá guiones (-) al inicio de línea para listas."
+          rows={6}
+          onChange={e => setOverride(activeField, { text: e.target.value || undefined })}
+          style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 7, padding: "8px 10px", fontSize: 12, outline: "none", fontFamily: "inherit", resize: "vertical", boxSizing: "border-box" }}
+          onFocus={e => (e.target.style.borderColor = "#6366f1")}
+          onBlur={e => (e.target.style.borderColor = "#d1d5db")}
+        />
+        <p style={{ margin: 0, fontSize: 10, color: "#94a3b8" }}>
+          💡 Usá <strong>-</strong> al inicio de cada línea para crear una lista con bullets. El cambio se guarda con el botón Guardar del template.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ ...base, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -1016,7 +1006,6 @@ export default function ConfiguracionPage() {
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [policies, setPolicies] = useState({ returns: "", shipping: "", terms: "" });
 
   /* Cargar config guardada al montar */
   const allTemplates = CATEGORIES.flatMap(c => c.templates);
@@ -1026,11 +1015,6 @@ export default function ConfiguracionPage() {
       .then(({ store }) => {
         if (!store) return;
         if (store.slug) setStoreSlug(store.slug);
-        setPolicies({
-          returns: store.policyReturns ?? "",
-          shipping: store.policyShipping ?? "",
-          terms: store.policyTerms ?? "",
-        });
         // Campos de la tienda que siempre deben estar en el config del preview
         const storeFields: Partial<StoreConfig> = {
           ...(store.id   && { storeId: store.id }),
@@ -1135,22 +1119,11 @@ export default function ConfiguracionPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const [res] = await Promise.all([
-        fetch("/api/configuracion", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ storeConfig: config }),
-        }),
-        fetch("/api/ajustes/politicas", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            policyReturns: policies.returns,
-            policyShipping: policies.shipping,
-            policyTerms: policies.terms,
-          }),
-        }),
-      ]);
+      const res = await fetch("/api/configuracion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeConfig: config }),
+      });
       if (!res.ok) throw new Error("Error al guardar");
       setSavedTemplateId(config.template);
       setSavedConfig(config);
@@ -1483,7 +1456,7 @@ export default function ConfiguracionPage() {
 
       {/* Config modal */}
       {configModalOpen && (
-        <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} onDelete={() => { setConfigModalOpen(false); handleDelete(); }} policies={policies} onPoliciesChange={setPolicies} />
+        <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} onDelete={() => { setConfigModalOpen(false); handleDelete(); }} />
       )}
     </DashboardLayout>
   );

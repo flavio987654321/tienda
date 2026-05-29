@@ -1,7 +1,7 @@
 ﻿"use client";
 import { useState, useEffect } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor } from "@/contexts/EditContext";
+import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
@@ -52,6 +52,7 @@ export default function FashionNoir() {
   const storeConfig = useStoreConfig();
   const storefront  = useStorefront();
   const { products } = storefront;
+  const { editMode } = useEditContext();
   const {
     cartItems, cartOpen, setCartOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
@@ -620,6 +621,26 @@ export default function FashionNoir() {
               <EditableZone field="footerMadeIn" label="Hecho en">Hecho con ♥ en Argentina</EditableZone>
             </p>
           </div>
+
+          {editMode && (
+            <div style={{ marginTop:28, padding:"16px 20px", background:"rgba(99,102,241,0.08)", border:"1.5px dashed rgba(99,102,241,0.35)", borderRadius:12 }}>
+              <p style={{ margin:"0 0 14px", fontSize:10, fontWeight:800, color:"#6366f1", textTransform:"uppercase", letterSpacing:2 }}>POLÍTICAS LEGALES</p>
+              <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                {([
+                  { field:"policyReturns", label:"Política de devoluciones" },
+                  { field:"policyShipping", label:"Política de envíos" },
+                  { field:"policyTerms",   label:"Términos y condiciones" },
+                ] as const).map(({ field, label }) => (
+                  <div key={field}>
+                    <p style={{ margin:"0 0 4px", fontSize:10, fontWeight:700, color:"#6366f1", opacity:0.8 }}>{label}</p>
+                    <EditableZone field={field} label={label} block>
+                      {"Sin contenido — hacé click para agregar"}
+                    </EditableZone>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         </div>
       </footer>

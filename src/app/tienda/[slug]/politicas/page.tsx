@@ -15,11 +15,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: `Información legal — ${store.name}` };
 }
 
-const TIPOS = [
-  { id: "devoluciones", label: "Devoluciones", icon: "↩️", field: "policyReturns" as const },
-  { id: "envios",       label: "Envíos",        icon: "📦", field: "policyShipping" as const },
-  { id: "terminos",     label: "Términos",      icon: "📋", field: "policyTerms" as const },
-];
+function groupContent(text: string) {
+  const lines = text.split("\n").filter(l => l.trim());
+  const groups: { type: "p" | "ul"; items: string[] }[] = [];
+  for (const line of lines) {
+    const isBullet = line.trimStart().startsWith("-");
+    if (isBullet) {
+      if (groups.length && groups[groups.length - 1].type === "ul") {
+        groups[groups.length - 1].items.push(line.replace(/^\s*-\s*/, ""));
+      } else {
+        groups.push({ type: "ul", items: [line.replace(/^\s*-\s*/, "")] });
+      }
+    } else {
+      groups.push({ type: "p", items: [line] });
+    }
+  }
+  return groups;
+}
 
 export default async function PoliticasPage({ params, searchParams }: Props) {
   const { slug } = await params;
@@ -32,6 +44,7 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
       slug: true,
       primaryColor: true,
       logo: true,
+      storeConfig: true,
       policyReturns: true,
       policyShipping: true,
       policyTerms: true,
@@ -42,47 +55,28 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
 
   const acc = store.primaryColor || "#6366f1";
 
-  // Determinar tab activo — si el tipo pedido no existe o no tiene contenido, caer al primero que tenga contenido
-  const available = TIPOS.filter(t => store[t.field]);
-  const activeTipo = available.find(t => t.id === tipo) ?? available[0] ?? TIPOS[0];
-  const activeContent = store[activeTipo.field];
+  // textOverrides tienen prioridad; si no, caemos a los campos legados de DB
+  let parsedConfig: { textOverrides?: Record<string, { text?: string }> } = {};
+  try { parsedConfig = JSON.parse(store.storeConfig || "{}"); } catch { /* ignore */ }
+  const ov = parsedConfig.textOverrides ?? {};
 
-  // Separar el contenido en párrafos/líneas para renderizar
-  function renderContent(text: string) {
-    return text.split("\n").filter(l => l.trim()).map((line, i) => {
-      const isBullet = line.trimStart().startsWith("-");
-      if (isBullet) {
-        return (
-          <li key={i} className="text-sm leading-relaxed text-gray-300 pl-1">
-            {line.replace(/^\s*-\s*/, "")}
-          </li>
-        );
-      }
-      return (
-        <p key={i} className="text-sm leading-relaxed text-gray-300">
-          {line}
-        </p>
-      );
-    });
-  }
+  const policies = {
+    devoluciones: ov["policyReturns"]?.text  || store.policyReturns  || null,
+    envios:       ov["policyShipping"]?.text || store.policyShipping || null,
+    terminos:     ov["policyTerms"]?.text    || store.policyTerms    || null,
+  };
 
-  function groupContent(text: string) {
-    const lines = text.split("\n").filter(l => l.trim());
-    const groups: { type: "p" | "ul"; items: string[] }[] = [];
-    for (const line of lines) {
-      const isBullet = line.trimStart().startsWith("-");
-      if (isBullet) {
-        if (groups.length && groups[groups.length - 1].type === "ul") {
-          groups[groups.length - 1].items.push(line.replace(/^\s*-\s*/, ""));
-        } else {
-          groups.push({ type: "ul", items: [line.replace(/^\s*-\s*/, "")] });
-        }
-      } else {
-        groups.push({ type: "p", items: [line] });
-      }
-    }
-    return groups;
-  }
+  const TABS = [
+    { id: "devoluciones", label: "Devoluciones", icon: "↩️" },
+    { id: "envios",       label: "Envíos",        icon: "📦" },
+    { id: "terminos",     label: "Términos",      icon: "📋" },
+  ] as const;
+
+  const activeId = (tipo && policies[tipo as keyof typeof policies])
+    ? tipo as keyof typeof policies
+    : (Object.entries(policies).find(([, v]) => v)?.[0] as keyof typeof policies | undefined) ?? "devoluciones";
+
+  const activeContent = policies[activeId];
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -103,11 +97,7 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
       <div className="pt-28 pb-20 px-6">
         <div className="max-w-3xl mx-auto">
 
-          {/* Back */}
-          <Link
-            href={`/tienda/${slug}`}
-            className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-8"
-          >
+          <Link href={`/tienda/${slug}`} className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-8">
             <ArrowLeft className="h-4 w-4" /> Volver a la tienda
           </Link>
 
@@ -116,9 +106,9 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
 
           {/* Tabs */}
           <div className="flex gap-2 mb-10 flex-wrap">
-            {TIPOS.map(t => {
-              const hasContent = !!store[t.field];
-              const isActive = t.id === activeTipo.id;
+            {TABS.map(t => {
+              const hasContent = !!policies[t.id];
+              const isActive = t.id === activeId;
               return (
                 <Link
                   key={t.id}
@@ -160,7 +150,7 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
             </div>
           )}
 
-          {/* Bloque derechos del consumidor */}
+          {/* Derechos del consumidor */}
           <div className="mt-12 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-5 space-y-3">
             <p className="text-sm font-bold text-yellow-400">📋 Tus derechos como consumidor (Ley 24.240 — Argentina)</p>
             <ul className="list-disc list-inside space-y-1.5 text-xs text-yellow-200/70">
@@ -178,7 +168,7 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
           </div>
 
           {/* Contacto */}
-          <div className="mt-4 rounded-2xl border border-white/5 bg-white/3 p-5">
+          <div className="mt-4 rounded-2xl border border-white/5 bg-white/[0.03] p-5">
             <p className="text-xs font-bold text-gray-400 mb-1">📬 Contacto con la tienda</p>
             <p className="text-xs text-gray-500">
               Para consultas sobre devoluciones o envíos contactá directamente a <strong className="text-gray-300">{store.name}</strong>
