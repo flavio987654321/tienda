@@ -443,6 +443,25 @@ export default function FashionNoir() {
         </div>
       </section>
 
+      {/* ── MAYORISTA — banner "Solicitá tu lista de precios" ── */}
+      {isWholesale && (
+        <section style={{ background:S, borderTop:`1px solid rgba(201,168,76,0.2)`, borderBottom:`1px solid rgba(201,168,76,0.2)` }}>
+          <div style={{ maxWidth:1280, margin:"0 auto", padding:"60px 32px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:24 }}>
+            <span style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", fontWeight:700, border:`1px solid ${G}`, padding:"4px 12px", borderRadius:2 }}>Tienda mayorista</span>
+            <h2 style={{ fontSize:"clamp(28px,4vw,48px)", fontWeight:300, color:T, margin:0, letterSpacing:"-0.5px", fontFamily:"Georgia, 'Times New Roman', serif", lineHeight:1.2 }}>
+              Solicitá tu lista<br/><em style={{ color:G }}>de precios</em>
+            </h2>
+            <p style={{ fontSize:14, color:"rgba(240,235,227,0.55)", maxWidth:480, margin:0, lineHeight:1.7 }}>
+              Precios exclusivos para revendedores y distribuidores. Completá el formulario de contacto y te respondemos con tu lista personalizada en menos de 24 hs.
+            </p>
+            <button onClick={() => scrollTo("contacto")}
+              style={{ background:G, color:BG, border:"none", padding:"14px 40px", fontSize:11, fontWeight:700, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", borderRadius:2, marginTop:4 }}>
+              Consultar ahora →
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* ── CATEGORÍAS ─────────────────────────────────────── */}
       <section id="categorias" style={{ background:categoriasBg, position:"relative" }}>
         <EditableSectionBg field="bgCategorias" label="Fondo categorías" />

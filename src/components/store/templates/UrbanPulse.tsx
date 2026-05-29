@@ -366,6 +366,25 @@ export default function UrbanPulse() {
         </div>
       </section>
 
+      {/* MAYORISTA — banner "Solicitá tu lista de precios" */}
+      {isWholesale && (
+        <section style={{ background:DARK, borderTop:`2px solid ${ACC}` }}>
+          <div style={{ maxWidth:1200, margin:"0 auto", padding:"64px 40px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:20 }}>
+            <span style={{ fontSize:9, letterSpacing:5, color:ACC, textTransform:"uppercase", fontWeight:900, background:"rgba(212,255,0,0.1)", padding:"5px 14px", borderRadius:2 }}>⚡ Tienda mayorista</span>
+            <h2 style={{ fontSize:"clamp(28px,4vw,52px)", fontWeight:900, color:WHITE, margin:0, textTransform:"uppercase", letterSpacing:"-1px", lineHeight:1.05 }}>
+              SOLICITÁ TU<br/><span style={{ color:ACC }}>LISTA DE PRECIOS</span>
+            </h2>
+            <p style={{ fontSize:13, color:"rgba(255,255,255,0.5)", maxWidth:460, margin:0, lineHeight:1.7, letterSpacing:"0.2px" }}>
+              Precios exclusivos para revendedores y distribuidores. Completá el formulario de contacto y te respondemos con tu lista personalizada en menos de 24 hs.
+            </p>
+            <button onClick={() => scrollTo("contacto")}
+              style={{ background:ACC, color:DARK, border:"none", padding:"14px 44px", fontSize:10, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", borderRadius:2, marginTop:4 }}>
+              CONSULTAR AHORA →
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* FEATURED DROP */}
       {featuredProduct && (
       <section id="featured" style={{ background:featuredBg, padding:"80px 40px", position:"relative" }}>

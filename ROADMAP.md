@@ -87,7 +87,7 @@
 | E-03 | ✅ | 🔴 | **Buscador** — existe en FashionNoir (overlay con resultados en grilla). La página `/productos` tiene búsqueda inline con filtro en tiempo real |
 | E-04 | ✅ | 🟠 | **Dropdown de subcategorías** implementado en FashionNoir y en la página `/productos`. Aparece al hover sobre cada categoría si tiene subcategorías cargadas |
 | E-05 | ✅ | 🟠 | El editor permite activar/desactivar qué categorías mostrar como sección destacada: sección "Categorías destacadas" en el ConfigModal con checkboxes por categoría (cargadas desde la tienda real). Si no se selecciona ninguna, se muestran todas. Los 4 templates filtran `categoryList` por `featuredCategories`. |
-| E-06 | 🔲 | 🟠 | Templates adaptativos para mayorista: ocultar precios al público, mostrar "Solicitá tu lista de precios" |
+| E-06 | ✅ | 🟠 | Templates adaptativos para mayorista: sección "Solicitá tu lista de precios" aparece cuando `isWholesale=true` en los 4 templates, entre el hero y el primer bloque de productos. Incluye badge "Tienda mayorista", título editorial, descripción y CTA → #contacto. Estilizado según la paleta de cada template. |
 | E-07 | ✅ | 🟡 | **Ordenamiento** en la página /productos: más recientes, precio ↑↓, nombre A→Z, mayor descuento |
 
 ---

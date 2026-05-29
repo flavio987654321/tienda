@@ -359,6 +359,25 @@ export default function BohoTerra() {
         </div>
       </section>
 
+      {/* ── MAYORISTA — banner "Solicitá tu lista de precios" ── */}
+      {isWholesale && (
+        <section style={{ background:S, borderTop:`1px solid rgba(181,101,42,0.2)`, borderBottom:`1px solid rgba(181,101,42,0.2)` }}>
+          <div style={{ maxWidth:1280, margin:"0 auto", padding:"60px 40px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:20 }}>
+            <span style={{ fontSize:10, letterSpacing:4, color:A, textTransform:"uppercase", fontWeight:700, border:`1px solid ${A}`, padding:"4px 12px", borderRadius:20 }}>Tienda mayorista</span>
+            <h2 style={{ fontSize:"clamp(26px,3.5vw,44px)", fontWeight:400, color:T, margin:0, fontFamily:"Georgia, 'Times New Roman', serif", lineHeight:1.25, fontStyle:"italic" }}>
+              Solicitá tu lista de <strong style={{ fontStyle:"normal", color:A }}>precios</strong>
+            </h2>
+            <p style={{ fontSize:14, color:MID, maxWidth:480, margin:0, lineHeight:1.7 }}>
+              Precios exclusivos para revendedores y distribuidores. Completá el formulario de contacto y te respondemos con tu lista personalizada en menos de 24 hs.
+            </p>
+            <button onClick={() => scrollTo("contacto")}
+              style={{ background:A, color:"#fff", border:"none", padding:"13px 36px", fontSize:12, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", borderRadius:30, marginTop:4 }}>
+              Consultar ahora
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* ── COLECCIÓN — carrusel */}
       <section id="coleccion" style={{ padding:"80px 0", background:coleccionBg, position:"relative" }}>
         <EditableSectionBg field="bgColeccion" label="Fondo colección" />

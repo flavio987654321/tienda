@@ -351,6 +351,25 @@ export default function ChicParis() {
         </div>
       </section>
 
+      {/* ── MAYORISTA — banner "Solicitá tu lista de precios" ── */}
+      {isWholesale && (
+        <section style={{ background: "#f8f5f0", borderTop: `3px solid ${ACC}` }}>
+          <div style={{ maxWidth: 1280, margin: "0 auto", padding: "72px 40px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 20 }}>
+            <span style={{ fontSize: 10, letterSpacing: 4, color: ACC, textTransform: "uppercase", fontWeight: 700 }}>Tienda mayorista</span>
+            <h2 style={{ fontSize: "clamp(28px,4vw,52px)", fontWeight: 300, color: "#111", margin: 0, fontFamily: "'Playfair Display', Georgia, serif", letterSpacing: "-0.5px", lineHeight: 1.2 }}>
+              Solicitá tu lista<br/><span style={{ fontStyle: "italic", fontWeight: 600, color: ACC }}>de precios</span>
+            </h2>
+            <p style={{ fontSize: 14, color: "#888", maxWidth: 460, margin: 0, lineHeight: 1.75 }}>
+              Precios exclusivos para revendedores y distribuidores. Completá el formulario de contacto y te respondemos con tu lista personalizada en menos de 24 hs.
+            </p>
+            <button onClick={() => scrollTo("contacto")}
+              style={{ background: ACC, color: "#fff", border: "none", padding: "14px 40px", fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", borderRadius: 2, marginTop: 4 }}>
+              Consultar ahora →
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* ── PRODUCTOS ── */}
       <section id="productos" style={{ background: prodBg, padding: "72px 40px", position: "relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
