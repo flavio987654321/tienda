@@ -38,7 +38,7 @@
 | B-01 | ✅ | 🔴 | Campo de **dirección de envío** (calle, ciudad, provincia, CP) — ya implementado en el panel de checkout (se abre al presionar "Finalizar Compra") |
 | B-02 | ✅ | 🔴 | Selector de **método de envío** — ya implementado con `ENVIO_OPTIONS` en el checkout (retiro, envío estándar, express) |
 | B-03 | ✅ | 🔴 | Campo de **código de cupón** — ya implementado con validación y descuento en el checkout |
-| B-04 | 🔲 | 🟠 | Mostrar **datos de contacto del vendedor** en el panel del carrito (WhatsApp, email) para consultas antes de hacer checkout |
+| B-04 | ✅ | 🟠 | Mostrar **datos de contacto del vendedor** en el panel del carrito (WhatsApp, email) para consultas antes de hacer checkout — link directo a WhatsApp en todos los templates si `whatsapp.enabled` |
 | B-05 | ✅ | 🟠 | **Resumen de compra** con desglose subtotal + envío + cupón + total — ya implementado en el checkout |
 | B-06 | 🔲 | 🟠 | Para mayorista: campo de **cantidad mínima por ítem** con warning si no se alcanza |
 | B-07 | ✅ | 🟡 | **Carrito persistido en localStorage** — sobrevive refresh de página. Favoritos y datos del comprador también persisten si "Recordar mis datos" está activo |
@@ -54,7 +54,7 @@
 | C-01 | ✅ | 🔴 | UX imagen+color mejorada: thumbnails más grandes, select color con color de fondo cuando está asignado, banner de ayuda contextual, badge "PORTADA" en la primera imagen |
 | C-02 | ✅ | 🟠 | Campo **Subcategoría** — ya implementado en el formulario y en la DB. El storefront y la página /productos también lo leen y filtran |
 | C-03 | ✅ | 🟠 | **Reels/Videos** editables directamente desde el formulario de producto (URLs de Instagram, TikTok, YouTube Shorts) — el campo ya existía en DB (`reelUrls`) pero solo se podía editar desde un modal separado |
-| C-04 | 🔲 | 🟠 | El campo **Categoría principal** debe usar la lista de categorías de la tienda (dinámico), no opciones hardcodeadas |
+| C-04 | ✅ | 🟠 | El campo **Categoría principal** usa la lista de categorías reales de la tienda (dinámico) — cargadas desde `/api/productos` en el `useEffect` inicial |
 | C-05 | 🔲 | 🟡 | Drag & drop para reordenar las imágenes del producto |
 | C-06 | 🔲 | 🟡 | Preview en vivo del producto mientras se completa el formulario (panel lateral) |
 
