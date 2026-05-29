@@ -8,6 +8,7 @@ import { Plus, Package } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import ProductsTable from "./ProductsTable";
 import ChangeStoreTypeButton from "./ChangeStoreTypeButton";
+import CsvImportButton from "./CsvImportButton";
 import { STORE_TYPES } from "@/lib/storeTypes";
 
 export default async function ProductosPage() {
@@ -49,6 +50,7 @@ export default async function ProductosPage() {
               />
             ) : null;
           })()}
+          <CsvImportButton />
           <Link
             href="/dashboard/productos/nuevo"
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"

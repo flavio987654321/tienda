@@ -99,7 +99,7 @@
 | F-01 | ✅ | 🟠 | Búsqueda + filtros por categoría, estado y stock en la tabla del dashboard |
 | F-02 | ✅ | 🟠 | **Paginación** de 20 por página con navegación numerada en la tabla del dashboard |
 | F-03 | ✅ | 🟡 | **Vista grilla/tarjetas** — toggle tabla↔grilla en el panel de productos |
-| F-04 | 🔲 | 🟡 | **Importar productos** en bloque via CSV |
+| F-04 | ✅ | 🟡 | **Importar productos** en bloque via CSV: botón "Importar CSV" en el header de productos, modal con instrucciones + descarga de plantilla, parser CSV inline, preview de primeras 3 filas, endpoint `/api/productos/import` (hasta 500 productos). Columnas: nombre, precio, precioComparacion, categoria, subcategoria, descripcion, estado, imagenes. |
 | F-05 | ✅ | 🟡 | **Duplicar producto** con un click — crea copia en estado Oculto con nombre "Copia de..." |
 
 ---
