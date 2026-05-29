@@ -655,64 +655,111 @@ function ProductoFormPage() {
                 />
               </div>
 
-              {/* Thumbnails */}
+              {/* Thumbnails con asignación de color */}
               {images.length > 0 && (
-                <div className="flex gap-2 flex-wrap">
-                  {images.map((img, i) => (
-                    <div key={img.url + i} className="flex flex-col items-center gap-1">
-                      <div
-                        draggable
-                        onDragStart={() => setDragIdx(i)}
-                        onDragOver={(e) => { e.preventDefault(); }}
-                        onDrop={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== i) moveImage(dragIdx, i); setDragIdx(null); }}
-                        onDragEnd={() => setDragIdx(null)}
-                        onClick={() => setCarouselIdx(i)}
-                        className={`group relative w-16 h-16 rounded-lg cursor-grab active:cursor-grabbing border-2 transition-all flex-shrink-0 ${
-                          dragIdx === i ? "opacity-40 scale-95" : ""
-                        } ${carouselIdx === i ? "border-indigo-500 scale-105" : "border-transparent hover:border-gray-300"}`}
-                      >
-                        <img src={img.url} alt="" className="w-full h-full object-cover rounded-[6px]" />
-                        {img.variantValue && (
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 rounded-b-[5px] text-center">
-                            <span className="text-[8px] text-white font-medium px-1 leading-4 truncate block">{img.variantValue}</span>
+                <div className="space-y-3">
+                  {colorValues.length > 0 && (
+                    <div className="flex items-start gap-2 bg-indigo-50 rounded-xl px-3 py-2.5 text-xs text-indigo-700">
+                      <svg className="h-4 w-4 mt-0.5 shrink-0 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <span><strong>Asigná un color a cada foto</strong> para que el cliente vea la imagen correcta al elegir el color del producto.</span>
+                    </div>
+                  )}
+                  <div className="flex gap-3 flex-wrap">
+                    {images.map((img, i) => (
+                      <div key={img.url + i} className="flex flex-col gap-1.5" style={{ width: colorValues.length > 0 ? 88 : 64 }}>
+                        <div
+                          draggable
+                          onDragStart={() => setDragIdx(i)}
+                          onDragOver={(e) => { e.preventDefault(); }}
+                          onDrop={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== i) moveImage(dragIdx, i); setDragIdx(null); }}
+                          onDragEnd={() => setDragIdx(null)}
+                          onClick={() => setCarouselIdx(i)}
+                          className={`group relative rounded-xl cursor-grab active:cursor-grabbing border-2 transition-all flex-shrink-0 overflow-hidden ${
+                            dragIdx === i ? "opacity-40 scale-95" : ""
+                          } ${carouselIdx === i ? "border-indigo-500 scale-105" : "border-transparent hover:border-gray-300"}`}
+                          style={{ width: colorValues.length > 0 ? 88 : 64, height: colorValues.length > 0 ? 88 : 64 }}
+                        >
+                          <img src={img.url} alt="" className="w-full h-full object-cover" />
+                          {img.variantValue && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-center py-1">
+                              <span className="text-[9px] text-white font-semibold px-1 truncate block">{img.variantValue}</span>
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); removeImage(i); }}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                          {i === 0 && (
+                            <div className="absolute top-1 left-1 bg-indigo-600/80 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md">PORTADA</div>
+                          )}
+                        </div>
+                        {colorValues.length > 0 && (
+                          <div>
+                            <select
+                              value={img.variantValue || ""}
+                              onChange={(e) => assignImageColor(i, e.target.value || undefined)}
+                              onClick={(e) => e.stopPropagation()}
+                              className={`w-full text-xs border rounded-lg bg-white py-1.5 px-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
+                                img.variantValue
+                                  ? "border-indigo-300 text-indigo-700 font-medium bg-indigo-50"
+                                  : "border-gray-200 text-gray-400"
+                              }`}
+                            >
+                              <option value="">Sin color</option>
+                              {colorValues.map((v) => (
+                                <option key={v} value={v}>{v}</option>
+                              ))}
+                            </select>
                           </div>
                         )}
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); removeImage(i); }}
-                          className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
                       </div>
-                      {colorValues.length > 0 && (
-                        <select
-                          value={img.variantValue || ""}
-                          onChange={(e) => assignImageColor(i, e.target.value || undefined)}
-                          onClick={(e) => e.stopPropagation()}
-                          title="Asignar a color"
-                          className="w-16 text-[9px] border border-gray-200 rounded-md bg-white text-gray-500 py-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                        >
-                          <option value="">sin color</option>
-                          {colorValues.map((v) => <option key={v} value={v}>{v}</option>)}
-                        </select>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 p-6">
-              <h2 className="font-semibold text-gray-900">Reels del modal</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Los reels se cargan unicamente desde el modal de producto en configuracion. Si este producto ya tiene reels guardados, se conservan aunque no se editen desde aca.
-              </p>
-              {reelUrls.length > 0 && (
-                <p className="mt-3 text-xs text-gray-400">
-                  Este producto ya tiene {reelUrls.length} reel{reelUrls.length === 1 ? "" : "s"} guardado{reelUrls.length === 1 ? "" : "s"} desde el modal de configuracion.
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-semibold text-gray-900">Reels / Videos</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">URLs de Instagram Reels, TikTok o YouTube Shorts — se muestran en el modal del producto</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setReelUrls(p => [...p, ""]); markDirty(); }}
+                  className="flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  Agregar URL
+                </button>
+              </div>
+              {reelUrls.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-3">
+                  Sin reels. Agregá una URL para mostrar un video en el modal del producto.
                 </p>
               )}
+              {reelUrls.map((url, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input
+                    type="url"
+                    value={url}
+                    onChange={(e) => { setReelUrls(p => p.map((u, j) => j === i ? e.target.value : u)); markDirty(); }}
+                    placeholder="https://www.instagram.com/reel/... o tiktok.com/..."
+                    className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setReelUrls(p => p.filter((_, j) => j !== i)); markDirty(); }}
+                    className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
             </div>
 
             {/* Basic info */}

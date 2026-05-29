@@ -51,9 +51,9 @@
 
 | # | Estado | Impacto | Descripción |
 |---|--------|---------|-------------|
-| C-01 | 🔲 | 🔴 | Reemplazar UX de color+imagen: primero subís las fotos, después **desde cada foto** asignás el color con un dropdown. Hoy es al revés y confunde |
-| C-02 | 🔄 | 🟠 | Agregar campo **Subcategoría** — **DB ya tiene la columna `subcategory`** y el tipo `StorefrontProduct` ya la expone. Falta agregarla al formulario de carga de productos |
-| C-03 | 🔲 | 🟠 | Agregar campo de **Video/Reel** (URL de Instagram Reel, TikTok o subida de mp4 corto) para mostrarlo en el modal |
+| C-01 | ✅ | 🔴 | UX imagen+color mejorada: thumbnails más grandes, select color con color de fondo cuando está asignado, banner de ayuda contextual, badge "PORTADA" en la primera imagen |
+| C-02 | ✅ | 🟠 | Campo **Subcategoría** — ya implementado en el formulario y en la DB. El storefront y la página /productos también lo leen y filtran |
+| C-03 | ✅ | 🟠 | **Reels/Videos** editables directamente desde el formulario de producto (URLs de Instagram, TikTok, YouTube Shorts) — el campo ya existía en DB (`reelUrls`) pero solo se podía editar desde un modal separado |
 | C-04 | 🔲 | 🟠 | El campo **Categoría principal** debe usar la lista de categorías de la tienda (dinámico), no opciones hardcodeadas |
 | C-05 | 🔲 | 🟡 | Drag & drop para reordenar las imágenes del producto |
 | C-06 | 🔲 | 🟡 | Preview en vivo del producto mientras se completa el formulario (panel lateral) |
@@ -66,7 +66,7 @@
 
 | # | Estado | Impacto | Descripción |
 |---|--------|---------|-------------|
-| D-01 | 🔲 | 🔴 | **Carrusel de imágenes** con flechas prev/next y miniaturas abajo (hoy solo muestra una imagen) |
+| D-01 | ✅ | 🔴 | **Carrusel de imágenes** con flechas prev/next, contador "1/3" y miniaturas clickeables — implementado en el modal de FashionNoir |
 | D-02 | 🔲 | 🟠 | Si el producto tiene **video/reel**, mostrarlo como primera "diapositiva" del carrusel |
 | D-03 | 🔲 | 🟠 | Mostrar **Subcategoría** del producto dentro del modal (breadcrumb: Mujer › Vestidos) |
 | D-04 | 🔲 | 🟡 | Sección de **reseñas** al pie del modal (estrellas + comentarios) |

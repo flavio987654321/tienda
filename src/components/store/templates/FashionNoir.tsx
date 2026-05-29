@@ -700,14 +700,42 @@ export default function FashionNoir() {
           <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.88)", backdropFilter:"blur(8px)" }}/>
           <div style={{ position:"relative", background:S, maxWidth:960, width:"calc(100% - 48px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns:"1fr 1fr" }} onClick={e => e.stopPropagation()}>
             <div>
-              <img src={modalProduct.images[modalImg]} alt="" style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}/>
-              <div style={{ display:"flex", gap:8, padding:"12px 16px", background:"#0d0d0d" }}>
-                {modalProduct.images.map((img, i) => (
-                  <button key={i} onClick={() => setModalImg(i)} style={{ width:56, height:56, padding:2, border: i===modalImg ? `1px solid ${G}` : "1px solid transparent", background:"none", cursor:"pointer" }}>
-                    <img src={img} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
-                  </button>
-                ))}
+              {/* Imagen principal con flechas */}
+              <div style={{ position:"relative", overflow:"hidden" }}>
+                <img src={modalProduct.images[modalImg]} alt="" style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}
+                  onError={e => { e.currentTarget.style.opacity="0"; }}/>
+                {modalProduct.images.length > 1 && (
+                  <>
+                    <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
+                      style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", background:"rgba(10,10,10,0.65)", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:40, height:40, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)", transition:"background 0.2s" }}
+                      onMouseEnter={e => (e.currentTarget.style.background="rgba(10,10,10,0.88)")}
+                      onMouseLeave={e => (e.currentTarget.style.background="rgba(10,10,10,0.65)")}>
+                      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                    <button onClick={() => setModalImg(i => (i + 1) % modalProduct.images.length)}
+                      style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"rgba(10,10,10,0.65)", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:40, height:40, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)", transition:"background 0.2s" }}
+                      onMouseEnter={e => (e.currentTarget.style.background="rgba(10,10,10,0.88)")}
+                      onMouseLeave={e => (e.currentTarget.style.background="rgba(10,10,10,0.65)")}>
+                      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                    <div style={{ position:"absolute", bottom:12, right:12, background:"rgba(10,10,10,0.65)", color:T, fontSize:11, letterSpacing:1, padding:"4px 10px", backdropFilter:"blur(4px)" }}>
+                      {modalImg + 1} / {modalProduct.images.length}
+                    </div>
+                  </>
+                )}
               </div>
+              {/* Miniaturas */}
+              {modalProduct.images.length > 1 && (
+                <div style={{ display:"flex", gap:8, padding:"12px 16px", background:"#0d0d0d", overflowX:"auto" }}>
+                  {modalProduct.images.map((img, i) => (
+                    <button key={i} onClick={() => setModalImg(i)}
+                      style={{ width:56, height:56, flexShrink:0, padding:2, border: i===modalImg ? `2px solid ${G}` : "2px solid transparent", background:"none", cursor:"pointer", transition:"border-color 0.2s" }}>
+                      <img src={img} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
+                        onError={e => { e.currentTarget.style.opacity="0.3"; }}/>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{ padding:"40px 36px", display:"flex", flexDirection:"column", gap:20 }}>
               <button onClick={() => setModalProduct(null)} style={{ alignSelf:"flex-end", background:"none", border:`1px solid rgba(240,235,227,0.2)`, color:T, width:34, height:34, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
