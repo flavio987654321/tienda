@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
   if (!affiliate) return NextResponse.json({ error: "Afiliación no encontrada" }, { status: 404 });
 
   const product = await prisma.product.findFirst({
-    where: { id: productId, storeId: affiliate.storeId, isActive: true },
+    where: { id: productId, storeId: affiliate.storeId, isActive: true, deletedAt: null },
     select: { name: true, price: true, comparePrice: true, description: true, category: true, images: true },
   });
 

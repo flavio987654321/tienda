@@ -67,7 +67,7 @@ async function ensureBucketPublic(supabaseUrl: string, serviceRoleKey: string, b
       method: "POST",
       headers,
       body: JSON.stringify({ id: bucket, name: bucket, public: true }),
-    }).catch(() => {});
+    }).catch((err) => console.error("[upload] bucket creation failed:", err));
   }
   bucketEnsured = true;
 }

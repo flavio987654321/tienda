@@ -72,6 +72,11 @@ export default function CsvImportButton({ onImported }: { onImported?: () => voi
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setResult({ created: 0, errors: [{ row: 0, error: "El archivo supera el límite de 5 MB." }] });
+      e.target.value = "";
+      return;
+    }
     setFileName(file.name);
     setResult(null);
     const reader = new FileReader();

@@ -1055,6 +1055,7 @@ export default function ConfiguracionPage() {
   const [activeField, setActiveField] = useState<string | null>(null);
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -1091,7 +1092,7 @@ export default function ConfiguracionPage() {
           }
         } catch { /* config vacía o inválida, mostrar galería */ }
       })
-      .catch(() => {})
+      .catch(() => setFetchError(true))
       .finally(() => setLoadingConfig(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1218,12 +1219,64 @@ export default function ConfiguracionPage() {
   if (loadingConfig) {
     return (
       <DashboardLayout>
+        <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", background: "#f1f5f9", padding: "24px 40px 0" }}>
+            <div style={{ width: "100%", maxWidth: 960, flex: 1,
+              borderRadius: "14px 14px 0 0", background: "#1e293b",
+              boxShadow: "0 0 0 2px #334155, 0 20px 60px rgba(0,0,0,0.35)",
+              display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
+              <div style={{ height: 36, background: "#1e293b", display: "flex", alignItems: "center",
+                justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#334155" }} />
+              </div>
+              <div style={{ flex: 1, background: "white", overflowY: "auto", padding: "32px 48px" }}>
+                <div style={{ width: 80, height: 11, background: "#e2e8f0", borderRadius: 6, marginBottom: 10,
+                  animation: "pulse 1.5s ease-in-out infinite" }} />
+                <div style={{ width: 260, height: 22, background: "#e2e8f0", borderRadius: 8, marginBottom: 8,
+                  animation: "pulse 1.5s ease-in-out infinite" }} />
+                <div style={{ width: 200, height: 14, background: "#f1f5f9", borderRadius: 6, marginBottom: 36,
+                  animation: "pulse 1.5s ease-in-out infinite" }} />
+                {[0, 1].map((row) => (
+                  <div key={row} style={{ marginBottom: 40 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+                      <div style={{ width: 80, height: 12, background: "#e2e8f0", borderRadius: 4,
+                        animation: "pulse 1.5s ease-in-out infinite" }} />
+                      <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+                    </div>
+                    <div style={{ display: "flex", gap: 16 }}>
+                      {[0, 1, 2, 3].map((i) => (
+                        <div key={i} style={{ width: 180, height: 200, borderRadius: 12,
+                          background: "#f1f5f9", flexShrink: 0,
+                          animation: "pulse 1.5s ease-in-out infinite" }} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }`}</style>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <DashboardLayout>
         <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center",
           flexDirection: "column", gap: 16, color: "#64748b", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-          <div style={{ width: 36, height: 36, border: "3px solid #e2e8f0", borderTopColor: "#6366f1",
-            borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-          <p style={{ margin: 0, fontSize: 14 }}>Cargando tu tienda...</p>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <p style={{ margin: 0, fontSize: 28 }}>⚠️</p>
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1e293b" }}>No se pudo cargar la configuración</p>
+          <p style={{ margin: 0, fontSize: 14 }}>Verificá tu conexión e intentá de nuevo.</p>
+          <button
+            onClick={() => { setFetchError(false); setLoadingConfig(true); window.location.reload(); }}
+            style={{ marginTop: 8, padding: "10px 24px", background: "#6366f1", color: "white",
+              border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+          >
+            Reintentar
+          </button>
         </div>
       </DashboardLayout>
     );

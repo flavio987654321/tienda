@@ -289,7 +289,7 @@ export async function POST(req: NextRequest) {
       alias: walletFull.alias ?? null,
       cuil: rawCuil ?? null,
       bankHolder: rawHolder ?? null,
-    }).catch(() => {});
+    }).catch((err) => console.error("[email] sendWithdrawalRequestEmail failed:", err));
   }
 
   // Notificación in-app a la afiliada

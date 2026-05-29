@@ -5,6 +5,52 @@ import { revalidatePath } from "next/cache";
 import { createNotificationMany } from "@/lib/notifications";
 import { isSafeUrl } from "@/lib/url-utils";
 import { sendNewStorePublishedEmail } from "@/lib/email";
+import { z } from "zod";
+
+const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
+const storeConfigSchema = z.object({
+  template: z.enum(["fashion-noir", "boho-terra", "urban-pulse", "chic-paris"]),
+  storeName: z.string().max(120),
+  storeTagline: z.string().max(200),
+  colors: z.object({ accent: z.string().regex(HEX_RE) }),
+  whatsapp: z.object({ enabled: z.boolean(), number: z.string().max(30) }),
+  socialLinks: z.object({
+    instagram: z.string().max(200),
+    facebook:  z.string().max(200),
+    tiktok:    z.string().max(200),
+    youtube:   z.string().max(200),
+    pinterest: z.string().max(200),
+  }),
+  currency: z.enum(["ARS", "USD"]),
+  language: z.enum(["ES", "EN"]),
+  seo: z.object({ enabled: z.boolean(), title: z.string().max(120), description: z.string().max(320) }),
+  textOverrides: z.record(z.string(), z.object({
+    text: z.string().max(500).optional(),
+    color: z.string().max(30).optional(),
+    fontFamily: z.string().max(80).optional(),
+    fontSize: z.number().optional(),
+    bold: z.boolean().optional(),
+    italic: z.boolean().optional(),
+    underline: z.boolean().optional(),
+  })),
+  imageOverrides: z.record(z.string(), z.object({
+    url: z.string().max(2000).optional(),
+    overlayType: z.enum(["none", "dark", "light"]).optional(),
+    overlayOpacity: z.number().min(0).max(1).optional(),
+    posX: z.number().min(0).max(100).optional(),
+    posY: z.number().min(0).max(100).optional(),
+  })),
+  sectionColors: z.record(z.string(), z.string().max(30)),
+  bannerInterval: z.number().optional(),
+  promoBanner: z.object({ enabled: z.boolean() }).optional(),
+  previewFill: z.boolean().optional(),
+  tipoTienda: z.string().max(30).optional(),
+  tieneVentaMayorista: z.boolean().optional(),
+  ocultarPreciosPublico: z.boolean().optional(),
+  featuredCategories: z.array(z.string().max(80)).optional(),
+  storeId: z.string().optional(),
+  slug: z.string().optional(),
+});
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -16,13 +62,14 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  const { storeConfig } = await req.json();
-  if (!storeConfig || typeof storeConfig !== "object") {
-    return NextResponse.json({ error: "Config inválida" }, { status: 400 });
+  const body = await req.json();
+  const parsed = storeConfigSchema.safeParse(body.storeConfig);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Config inválida", details: parsed.error.flatten() }, { status: 400 });
   }
   const store = await prisma.store.update({
     where: { ownerId: user.id },
-    data: { storeConfig: JSON.stringify(storeConfig) },
+    data: { storeConfig: JSON.stringify(parsed.data) },
     select: { slug: true },
   });
   revalidatePath(`/tienda/${store.slug}`, "layout");
@@ -211,7 +258,7 @@ export async function PUT(req: NextRequest) {
       UPDATE "Store"
       SET "tcOwnerAcceptedAt" = NOW(), "tcOwnerAcceptedIp" = ${ip}, "tcOwnerVersion" = ${version}
       WHERE "ownerId" = ${user.id} AND "tcOwnerAcceptedAt" IS NULL
-    `.catch(() => {});
+    `.catch((err) => console.error("[configuracion] TC acceptance update failed:", err));
   }
 
   // Notificar a afiliados activos si el programa fue pausado
@@ -326,7 +373,7 @@ export async function PATCH(req: NextRequest) {
           storeName: prevStore.name,
           storeSlug: prevStore.slug,
           commissionRate: prevStore.commissionRate,
-        }).catch(() => {});
+        }).catch((err) => console.error("[email] sendNewStorePublishedEmail failed:", err));
       }
     }
   }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Trash2, ToggleLeft, ToggleRight, Tag, Copy, Check, Download, Eye } from "lucide-react";
+import { Plus, Trash2, ToggleLeft, ToggleRight, Tag, Copy, Check, Loader2 } from "lucide-react";
 import { normalizeCouponCode } from "@/lib/coupons";
 
 type Coupon = {
@@ -253,26 +253,6 @@ export default function CuponesPage() {
                         {c.maxUses !== null && <span>{Math.max(0, c.maxUses - c.usedCount)} restante{Math.max(0, c.maxUses - c.usedCount) !== 1 ? "s" : ""}</span>}
                         {c.expiresAt && <span>Vence {new Date(c.expiresAt).toLocaleDateString("es-AR")}</span>}
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <a
-                          href={`/api/cupones/${c.id}/imagen`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          Ver imagen
-                        </a>
-                        <a
-                          href={`/api/cupones/${c.id}/imagen?download=1`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          Descargar
-                        </a>
-                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -282,9 +262,11 @@ export default function CuponesPage() {
                         title={c.isActive ? "Desactivar" : "Activar"}
                         className="disabled:opacity-50"
                       >
-                        {c.isActive
-                          ? <ToggleRight className="h-6 w-6 text-indigo-500" />
-                          : <ToggleLeft className="h-6 w-6 text-gray-300" />}
+                        {togglingId === c.id
+                          ? <Loader2 className="h-6 w-6 animate-spin text-indigo-400" />
+                          : c.isActive
+                            ? <ToggleRight className="h-6 w-6 text-indigo-500" />
+                            : <ToggleLeft className="h-6 w-6 text-gray-300" />}
                       </button>
                       <button
                         onClick={() => deleteCoupon(c.id)}

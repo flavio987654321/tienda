@@ -20,7 +20,7 @@ export default async function AjustesPage() {
     }),
   ]);
 
-  const tier = (sub as any)?.tier ?? "BASIC";
+  const tier = sub?.tier ?? "BASIC";
   const isPremium = tier === "PREMIUM";
 
   return (
