@@ -55,8 +55,8 @@
 | C-02 | ✅ | 🟠 | Campo **Subcategoría** — ya implementado en el formulario y en la DB. El storefront y la página /productos también lo leen y filtran |
 | C-03 | ✅ | 🟠 | **Reels/Videos** editables directamente desde el formulario de producto (URLs de Instagram, TikTok, YouTube Shorts) — el campo ya existía en DB (`reelUrls`) pero solo se podía editar desde un modal separado |
 | C-04 | ✅ | 🟠 | El campo **Categoría principal** usa la lista de categorías reales de la tienda (dinámico) — cargadas desde `/api/productos` en el `useEffect` inicial |
-| C-05 | 🔲 | 🟡 | Drag & drop para reordenar las imágenes del producto |
-| C-06 | 🔲 | 🟡 | Preview en vivo del producto mientras se completa el formulario (panel lateral) |
+| C-05 | ✅ | 🟡 | Drag & drop para reordenar las imágenes del producto — ya implementado en el formulario (thumbnails arrastrables con `draggable` + `onDrop`) |
+| C-06 | ✅ | 🟡 | Preview en vivo del producto — ya implementado (panel lateral derecho en el formulario se actualiza en tiempo real mientras se completa) |
 
 ---
 
@@ -69,8 +69,8 @@
 | D-01 | ✅ | 🔴 | **Carrusel de imágenes** con flechas prev/next, contador "1/3" y miniaturas clickeables — implementado en el modal de FashionNoir |
 | D-02 | ✅ | 🟠 | **Reels/videos** del producto en el modal — cards con plataforma detectada (Instagram, TikTok, YouTube) y link que abre en nueva pestaña |
 | D-03 | ✅ | 🟠 | **Subcategoría** como breadcrumb en el modal: "Mujer › Vestidos" |
-| D-04 | 🔲 | 🟡 | Sección de **reseñas** al pie del modal (estrellas + comentarios) |
-| D-05 | 🔲 | 🟡 | Botón de compartir el producto (link directo + WhatsApp) |
+| D-04 | ✅ | 🟡 | Sección de **reseñas** en el modal — modelo `PublicReview` en schema, API pública `/api/public/[slug]/reviews` (GET + POST), formulario con nombre + estrellas + comentario, listado de reseñas existentes. Los 4 templates. Tabla requiere SQL en Supabase (ver notas). |
+| D-05 | ✅ | 🟡 | Botón de compartir el producto — "Copiar link" (copia URL con `?p=productId` al clipboard + toast) + WhatsApp (abre wa.me con nombre + link). Auto-open desde URL: si la página carga con `?p=ID`, abre el modal de ese producto. Los 4 templates. |
 | D-06 | ✅ | 🟡 | **Stock por variante** en el modal — "¡Últimas N unidades!" cuando ≤5, "Sin stock" deshabilita el botón de compra |
 
 ---

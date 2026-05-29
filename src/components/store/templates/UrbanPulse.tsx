@@ -32,6 +32,12 @@ export default function UrbanPulse() {
   const [activeCategory,   setActiveCategory]   = useState("Todos");
   const [visibleCount,     setVisibleCount]     = useState(8);
   const [openPolicyField,  setOpenPolicyField]  = useState<string | null>(null);
+  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
+  const [reviews,        setReviews]        = useState<PReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewDone,     setReviewDone]     = useState(false);
 
   const storeConfig = useStoreConfig();
   const storefront  = useStorefront();
@@ -119,6 +125,58 @@ export default function UrbanPulse() {
     setModalProduct(null);
     setContactForm({ nombre: "", email: "", mensaje: `Hola, me interesa "${product.name}". ¿Me podés dar más información?` });
     setTimeout(() => scrollTo("contacto"), 100);
+  }
+  function shareProduct(product: Product) {
+    const url = `${window.location.origin}${window.location.pathname}?p=${product.id}`;
+    navigator.clipboard.writeText(url).catch(() => {});
+    showToast("¡Link copiado al portapapeles!");
+  }
+  function whatsappShare(product: Product) {
+    const url = `${window.location.origin}${window.location.pathname}?p=${product.id}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(product.name + "\n" + url)}`, "_blank");
+  }
+
+  // Auto-open modal desde URL ?p=productId (D-05)
+  useEffect(() => {
+    if (!products.length) return;
+    const productId = new URLSearchParams(window.location.search).get("p");
+    if (!productId) return;
+    const found = products.find(p => p.id === productId);
+    if (found) openModal(found);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products]);
+
+  // Cargar reseñas al abrir modal (D-04)
+  useEffect(() => {
+    const slug = storeConfig?.slug;
+    if (!modalProduct || !slug) { setReviews([]); return; }
+    setReviewsLoading(true); setReviewDone(false);
+    setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
+    fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
+      .then(r => r.ok ? r.json() : { reviews: [] })
+      .then(d => setReviews(d.reviews ?? []))
+      .catch(() => setReviews([]))
+      .finally(() => setReviewsLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalProduct?.id]);
+
+  async function submitReview(e: React.FormEvent) {
+    e.preventDefault();
+    const slug = storeConfig?.slug;
+    if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
+    setReviewSubmitting(true);
+    const res = await fetch(`/api/public/${slug}/reviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setReviews(p => [data.review, ...p]);
+      setReviewForm({ reviewer: "", rating: 5, comment: "" });
+      setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
+    }
+    setReviewSubmitting(false);
   }
 
   const changeCategory = (cat: string) => { setActiveCategory(cat); setVisibleCount(8); };
@@ -688,7 +746,21 @@ export default function UrbanPulse() {
               </div>
               <div style={{ padding:32 }}>
                 <p style={{ margin:"0 0 6px", fontSize:10, color:MID, fontWeight:800, letterSpacing:3, textTransform:"uppercase" }}>{modalProduct.category}</p>
-                <h3 style={{ margin:"0 0 18px", fontSize:24, fontWeight:900, textTransform:"uppercase", letterSpacing:"-0.5px" }}>{modalProduct.name}</h3>
+                <h3 style={{ margin:"0 0 10px", fontSize:24, fontWeight:900, textTransform:"uppercase", letterSpacing:"-0.5px" }}>{modalProduct.name}</h3>
+                <div style={{ display:"flex", gap:6, marginBottom:18 }}>
+                  <button onClick={() => shareProduct(modalProduct)}
+                    style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", color:MID, padding:"5px 12px", fontSize:9, fontWeight:900, letterSpacing:1.5, textTransform:"uppercase", cursor:"pointer", transition:"color 0.2s" }}
+                    onMouseEnter={e=>(e.currentTarget.style.color=WHITE)} onMouseLeave={e=>(e.currentTarget.style.color=MID)}>
+                    <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    Copiar link
+                  </button>
+                  <button onClick={() => whatsappShare(modalProduct)}
+                    style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(37,211,102,0.08)", border:"1px solid rgba(37,211,102,0.25)", color:"rgba(37,211,102,0.7)", padding:"5px 12px", fontSize:9, fontWeight:900, letterSpacing:1.5, textTransform:"uppercase", cursor:"pointer", transition:"color 0.2s" }}
+                    onMouseEnter={e=>(e.currentTarget.style.color="#25D366")} onMouseLeave={e=>(e.currentTarget.style.color="rgba(37,211,102,0.7)")}>
+                    <svg width={11} height={11} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M11.897 0C5.395 0 .13 5.266.13 11.767c0 2.078.545 4.03 1.495 5.727L.057 24l6.7-1.757A11.71 11.71 0 0 0 11.897 23.534c6.503 0 11.768-5.265 11.768-11.767C23.67 5.266 18.4 0 11.897 0zm0 21.536h-.004a9.726 9.726 0 0 1-4.96-1.358l-.356-.211-3.678.965.982-3.581-.232-.368A9.73 9.73 0 0 1 2.158 11.767C2.158 6.355 6.551 2 11.897 2c2.581 0 5.007 1.007 6.831 2.831a9.604 9.604 0 0 1 2.828 6.83c0 5.347-4.393 9.875-9.659 9.875z"/></svg>
+                    WhatsApp
+                  </button>
+                </div>
                 <div style={{ display:"flex", gap:14, alignItems:"baseline", marginBottom:22 }}>
                   <span style={{ fontSize:28, fontWeight:900, color: modalProduct.comparePrice ? RED : DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price)}</span>
                   {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:15, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
@@ -739,6 +811,52 @@ export default function UrbanPulse() {
                   <svg width={14} height={14} viewBox="0 0 24 24" fill={favorites.includes(modalProduct.id) ? DARK : "none"} stroke={DARK} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
                   {favorites.includes(modalProduct.id) ? "Guardado" : "Guardar en favoritos"}
                 </button>
+
+                {/* Reseñas — D-04 */}
+                <div style={{ borderTop:`2px solid ${DARK}`, paddingTop:20, marginTop:20 }}>
+                  <p style={{ fontSize:9, letterSpacing:3, fontWeight:900, textTransform:"uppercase", color:MID, margin:"0 0 16px" }}>
+                    Reseñas{reviews.length > 0 && ` (${reviews.length})`}
+                  </p>
+                  {reviewsLoading ? (
+                    <p style={{ fontSize:12, color:MID }}>Cargando...</p>
+                  ) : reviews.length > 0 ? (
+                    <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:20 }}>
+                      {reviews.map(r => (
+                        <div key={r.id} style={{ borderBottom:`1px solid ${DARK}`, paddingBottom:14 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                            <span style={{ fontSize:12, fontWeight:900, textTransform:"uppercase" }}>{r.reviewer}</span>
+                            <span style={{ fontSize:14, color:ACC }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
+                          </div>
+                          {r.comment && <p style={{ fontSize:12, color:MID, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize:12, color:MID, marginBottom:16 }}>Sé el primero en dejar una reseña.</p>
+                  )}
+                  {reviewDone ? (
+                    <p style={{ fontSize:12, color:ACC, fontWeight:900 }}>¡Gracias por tu reseña!</p>
+                  ) : (
+                    <form onSubmit={submitReview} style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                      <input value={reviewForm.reviewer} onChange={e => setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
+                        placeholder="Tu nombre" required
+                        style={{ background:"none", border:`2px solid ${DARK}`, padding:"9px 12px", fontSize:12, fontWeight:600, outline:"none" }} />
+                      <div style={{ display:"flex", gap:4 }}>
+                        {[1,2,3,4,5].map(s => (
+                          <button key={s} type="button" onClick={() => setReviewForm(p => ({ ...p, rating: s }))}
+                            style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color: s <= reviewForm.rating ? ACC : DARK, padding:"2px" }}>★</button>
+                        ))}
+                      </div>
+                      <textarea value={reviewForm.comment} onChange={e => setReviewForm(p => ({ ...p, comment: e.target.value }))}
+                        placeholder="Comentario (opcional)" rows={3}
+                        style={{ background:"none", border:`2px solid ${DARK}`, padding:"9px 12px", fontSize:12, resize:"none", outline:"none" }} />
+                      <button type="submit" disabled={reviewSubmitting || !reviewForm.reviewer.trim()}
+                        style={{ background: reviewSubmitting || !reviewForm.reviewer.trim() ? MID : DARK, color:ACC, border:"none", padding:"12px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>
+                        {reviewSubmitting ? "Enviando..." : "Publicar reseña"}
+                      </button>
+                    </form>
+                  )}
+                </div>
               </div>
             </div>
           </div>
