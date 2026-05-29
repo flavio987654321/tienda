@@ -20,6 +20,7 @@ export type StorefrontProduct = {
   subcategory?: string;
   description: string | null;
   images: string[];
+  reelUrls: string[];
   sizes: string[];
   colors: string[];
   variants: StorefrontVariant[];
@@ -62,56 +63,56 @@ const DEMO_PRODUCTS: StorefrontProduct[] = [
     category: "Mujer", description: "Remera de algodón premium con corte oversized.",
     images: ["https://picsum.photos/seed/dp-rem/600/800"],
     sizes: ["XS","S","M","L","XL"], colors: ["Blanco","Negro","Gris"],
-    variants: [], badge: "NUEVO",
+    variants: [], reelUrls: [], badge: "NUEVO",
   },
   {
     id: "demo-2", name: "Jeans Skinny", price: 35900, comparePrice: 48000,
     category: "Mujer", description: "Jeans de corte skinny con elastán.",
     images: ["https://picsum.photos/seed/dp-jean/600/800"],
     sizes: ["38","40","42","44"], colors: ["Azul","Negro"],
-    variants: [], badge: "SALE",
+    variants: [], reelUrls: [], badge: "SALE",
   },
   {
     id: "demo-3", name: "Hoodie Premium", price: 29900, comparePrice: null,
     category: "Hombre", description: "Hoodie de algodón french terry 380g.",
     images: ["https://picsum.photos/seed/dp-hood/600/800"],
     sizes: ["S","M","L","XL","XXL"], colors: ["Gris","Negro","Oliva"],
-    variants: [], badge: "NUEVO",
+    variants: [], reelUrls: [], badge: "NUEVO",
   },
   {
     id: "demo-4", name: "Pantalón Cargo", price: 42000, comparePrice: null,
     category: "Hombre", description: "Pantalón cargo con múltiples bolsillos.",
     images: ["https://picsum.photos/seed/dp-carg/600/800"],
     sizes: ["28","30","32","34","36"], colors: ["Beige","Negro","Verde"],
-    variants: [],
+    variants: [], reelUrls: [],
   },
   {
     id: "demo-5", name: "Vestido Midi", price: 38500, comparePrice: null,
     category: "Mujer", description: "Vestido midi floreado ideal para el verano.",
     images: ["https://picsum.photos/seed/dp-vest/600/800"],
     sizes: ["XS","S","M","L"], colors: ["Floral","Negro"],
-    variants: [], badge: "NUEVO",
+    variants: [], reelUrls: [], badge: "NUEVO",
   },
   {
     id: "demo-6", name: "Cinturón de Cuero", price: 12000, comparePrice: 16000,
     category: "Accesorios", description: "Cinturón de cuero genuino con hebilla dorada.",
     images: ["https://picsum.photos/seed/dp-belt/600/800"],
     sizes: ["Único"], colors: ["Marrón","Negro"],
-    variants: [], badge: "SALE",
+    variants: [], reelUrls: [], badge: "SALE",
   },
   {
     id: "demo-7", name: "Campera de Jean", price: 55000, comparePrice: 68000,
     category: "Hombre", description: "Campera de jean clásica con detalles lavados.",
     images: ["https://picsum.photos/seed/dp-camp/600/800"],
     sizes: ["S","M","L","XL"], colors: ["Azul","Blanco"],
-    variants: [], badge: "SALE",
+    variants: [], reelUrls: [], badge: "SALE",
   },
   {
     id: "demo-8", name: "Cartera Tote", price: 24500, comparePrice: null,
     category: "Accesorios", description: "Cartera tote de lona con interior forrado.",
     images: ["https://picsum.photos/seed/dp-tote/600/800"],
     sizes: ["Único"], colors: ["Beige","Negro","Bordo"],
-    variants: [],
+    variants: [], reelUrls: [],
   },
 ];
 
@@ -130,6 +131,12 @@ function mapProduct(raw: any): StorefrontProduct {
       .filter(Boolean);
   } catch { images = []; }
 
+  let reelUrls: string[] = [];
+  try {
+    const parsed = JSON.parse(raw.reelUrls || "[]");
+    reelUrls = Array.isArray(parsed) ? parsed.filter((u: unknown) => typeof u === "string") : [];
+  } catch { reelUrls = []; }
+
   return {
     id: raw.id,
     name: raw.name,
@@ -139,6 +146,7 @@ function mapProduct(raw: any): StorefrontProduct {
     subcategory: raw.subcategory ?? undefined,
     description: raw.description ?? null,
     images,
+    reelUrls,
     sizes,
     colors,
     variants,

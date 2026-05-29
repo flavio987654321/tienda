@@ -41,6 +41,33 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Restaurar carrito, favoritos y datos del comprador desde localStorage
+  useEffect(() => {
+    try {
+      const savedCart = localStorage.getItem("storefront_cart");
+      if (savedCart) setCartItems(JSON.parse(savedCart));
+      const savedFavs = localStorage.getItem("storefront_favorites");
+      if (savedFavs) setFavorites(JSON.parse(savedFavs));
+      const savedBuyer = localStorage.getItem("storefront_buyer");
+      if (savedBuyer) { setBuyerForm(JSON.parse(savedBuyer)); setRememberData(true); }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem("storefront_cart", JSON.stringify(cartItems)); } catch {}
+  }, [cartItems]);
+
+  useEffect(() => {
+    try { localStorage.setItem("storefront_favorites", JSON.stringify(favorites)); } catch {}
+  }, [favorites]);
+
+  useEffect(() => {
+    try {
+      if (rememberData) localStorage.setItem("storefront_buyer", JSON.stringify(buyerForm));
+      else localStorage.removeItem("storefront_buyer");
+    } catch {}
+  }, [buyerForm, rememberData]);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) {
@@ -156,6 +183,7 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
     setCheckoutStatus("done");
     setCartItems([]);
     setAppliedCoupon(null);
+    try { localStorage.removeItem("storefront_cart"); } catch {}
   };
 
   const handleContact = (e: React.FormEvent) => {

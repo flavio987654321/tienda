@@ -113,6 +113,18 @@ export default function FashionNoir() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAnnouncement]);
 
+  // Stock del variante seleccionado en el modal (D-06)
+  const selectedVariantStock = useMemo(() => {
+    if (!modalProduct?.variants.length) return null;
+    const v = modalProduct.variants.find(v => {
+      const inValue = v.value.includes(selectedSize) || v.value.includes(selectedColor);
+      let inAttrs = false;
+      try { const a = JSON.parse(v.name); inAttrs = Object.values(a).includes(selectedSize) || Object.values(a).includes(selectedColor); } catch {}
+      return inValue || inAttrs;
+    }) ?? (modalProduct.variants.length === 1 ? modalProduct.variants[0] : null);
+    return v?.stock ?? null;
+  }, [modalProduct, selectedSize, selectedColor]);
+
   const changeCategory = (cat: string, sub: string | null = null) => {
     setActiveCategory(cat);
     setActiveSubcategory(sub);
@@ -740,7 +752,10 @@ export default function FashionNoir() {
             <div style={{ padding:"40px 36px", display:"flex", flexDirection:"column", gap:20 }}>
               <button onClick={() => setModalProduct(null)} style={{ alignSelf:"flex-end", background:"none", border:`1px solid rgba(240,235,227,0.2)`, color:T, width:34, height:34, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
               <div>
-                <p style={{ fontSize:10, letterSpacing:4, color:G, textTransform:"uppercase", marginBottom:8 }}>{modalProduct.category}</p>
+                <p style={{ fontSize:10, letterSpacing:3, color:G, textTransform:"uppercase", marginBottom:8, opacity:0.8 }}>
+                  {modalProduct.category}
+                  {modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
+                </p>
                 <h2 style={{ fontFamily:"Georgia, serif", fontSize:26, margin:0, lineHeight:1.2 }}>{modalProduct.name}</h2>
               </div>
               <div style={{ display:"flex", gap:12, alignItems:"baseline" }}>
@@ -782,8 +797,45 @@ export default function FashionNoir() {
                 </div>
               </div>
 
-              <button onClick={addToCart} style={{ background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginTop:"auto" }}>
-                {"Agregar al Carrito"} · {fmt(modalProduct.price * qty)}
+              {/* Stock por variante (D-06) */}
+              {selectedVariantStock !== null && selectedVariantStock === 0 && (
+                <p style={{ fontSize:12, color:"#888", fontWeight:500, margin:0 }}>Sin stock en esta combinación</p>
+              )}
+              {selectedVariantStock !== null && selectedVariantStock > 0 && selectedVariantStock <= 5 && (
+                <p style={{ fontSize:12, color:"#ef4444", fontWeight:600, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
+              )}
+
+              {/* Reels / Videos (D-02) */}
+              {modalProduct.reelUrls.length > 0 && (
+                <div style={{ borderTop:`1px solid rgba(240,235,227,0.08)`, paddingTop:16 }}>
+                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:12, opacity:0.5 }}>Videos del producto</p>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {modalProduct.reelUrls.map((url, i) => {
+                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : url.includes("youtube") || url.includes("youtu.be") ? "YouTube" : "Video";
+                      return (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                          style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", border:`1px solid rgba(240,235,227,0.12)`, textDecoration:"none", color:T, transition:"border-color 0.2s" }}
+                          onMouseEnter={e => (e.currentTarget.style.borderColor=G)}
+                          onMouseLeave={e => (e.currentTarget.style.borderColor="rgba(240,235,227,0.12)")}>
+                          <div style={{ width:32, height:32, background:`rgba(201,168,76,0.12)`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                            <svg width={14} height={14} viewBox="0 0 24 24" fill={G} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                          </div>
+                          <div>
+                            <p style={{ fontSize:12, fontWeight:600, margin:0, color:T }}>{platform}</p>
+                            <p style={{ fontSize:10, opacity:0.4, margin:0 }}>Ver en {platform.split(" ")[0]}</p>
+                          </div>
+                          <svg style={{ marginLeft:"auto", opacity:0.4 }} width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <button onClick={addToCart}
+                disabled={selectedVariantStock === 0}
+                style={{ background: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
+                {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(modalProduct.price * qty)}`}
               </button>
             </div>
           </div>

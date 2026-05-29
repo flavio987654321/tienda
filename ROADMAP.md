@@ -41,7 +41,7 @@
 | B-04 | 🔲 | 🟠 | Mostrar **datos de contacto del vendedor** en el panel del carrito (WhatsApp, email) para consultas antes de hacer checkout |
 | B-05 | ✅ | 🟠 | **Resumen de compra** con desglose subtotal + envío + cupón + total — ya implementado en el checkout |
 | B-06 | 🔲 | 🟠 | Para mayorista: campo de **cantidad mínima por ítem** con warning si no se alcanza |
-| B-07 | 🔲 | 🟡 | Persistir carrito en localStorage para que no se vacíe al refrescar |
+| B-07 | ✅ | 🟡 | **Carrito persistido en localStorage** — sobrevive refresh de página. Favoritos y datos del comprador también persisten si "Recordar mis datos" está activo |
 
 ---
 
@@ -67,11 +67,11 @@
 | # | Estado | Impacto | Descripción |
 |---|--------|---------|-------------|
 | D-01 | ✅ | 🔴 | **Carrusel de imágenes** con flechas prev/next, contador "1/3" y miniaturas clickeables — implementado en el modal de FashionNoir |
-| D-02 | 🔲 | 🟠 | Si el producto tiene **video/reel**, mostrarlo como primera "diapositiva" del carrusel |
-| D-03 | 🔲 | 🟠 | Mostrar **Subcategoría** del producto dentro del modal (breadcrumb: Mujer › Vestidos) |
+| D-02 | ✅ | 🟠 | **Reels/videos** del producto en el modal — cards con plataforma detectada (Instagram, TikTok, YouTube) y link que abre en nueva pestaña |
+| D-03 | ✅ | 🟠 | **Subcategoría** como breadcrumb en el modal: "Mujer › Vestidos" |
 | D-04 | 🔲 | 🟡 | Sección de **reseñas** al pie del modal (estrellas + comentarios) |
 | D-05 | 🔲 | 🟡 | Botón de compartir el producto (link directo + WhatsApp) |
-| D-06 | 🔲 | 🟡 | Mostrar stock disponible por variante en tiempo real ("Últimas 2 unidades") |
+| D-06 | ✅ | 🟡 | **Stock por variante** en el modal — "¡Últimas N unidades!" cuando ≤5, "Sin stock" deshabilita el botón de compra |
 
 ---
 
