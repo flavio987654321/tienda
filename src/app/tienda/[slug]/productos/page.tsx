@@ -44,6 +44,7 @@ export default function ProductosPage() {
   const [activeCategory,   setActiveCategory]   = useState("Todos");
   const [activeSubcategory,setActiveSubcategory]= useState<string | null>(null);
   const [hoveredCatMenu,   setHoveredCatMenu]   = useState<string | null>(null);
+  const [sortBy,           setSortBy]           = useState("newest");
   const [page,             setPage]             = useState(1);
 
   useEffect(() => {
@@ -89,14 +90,25 @@ export default function ProductosPage() {
     return map;
   }, [products]);
 
-  const filtered = useMemo(() => products.filter(p => {
-    if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
-    if (activeSubcategory && p.subcategory !== activeSubcategory) return false;
-    if (search.trim() && !p.name.toLowerCase().includes(search.toLowerCase()) &&
-        !(p.subcategory ?? "").toLowerCase().includes(search.toLowerCase()) &&
-        !p.category.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  }), [products, activeCategory, activeSubcategory, search]);
+  const filtered = useMemo(() => {
+    let result = products.filter(p => {
+      if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
+      if (activeSubcategory && p.subcategory !== activeSubcategory) return false;
+      if (search.trim() && !p.name.toLowerCase().includes(search.toLowerCase()) &&
+          !(p.subcategory ?? "").toLowerCase().includes(search.toLowerCase()) &&
+          !p.category.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    });
+    if (sortBy === "price_asc")  result = [...result].sort((a, b) => a.price - b.price);
+    if (sortBy === "price_desc") result = [...result].sort((a, b) => b.price - a.price);
+    if (sortBy === "name_az")    result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+    if (sortBy === "discount")   result = [...result].sort((a, b) => {
+      const da = a.comparePrice ? (a.comparePrice - a.price) / a.comparePrice : 0;
+      const db = b.comparePrice ? (b.comparePrice - b.price) / b.comparePrice : 0;
+      return db - da;
+    });
+    return result;
+  }, [products, activeCategory, activeSubcategory, search, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -144,22 +156,32 @@ export default function ProductosPage() {
               {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <div style={{ position:"relative" }}>
-            <input
-              value={search}
-              onChange={e => { setSearch(e.target.value); setPage(1); }}
-              placeholder="Buscar productos..."
-              style={{ background:S, border:`1px solid rgba(201,168,76,0.2)`, color:T, padding:"11px 16px 11px 42px", fontSize:13, outline:"none", width:280, boxSizing:"border-box" }}
-              onFocus={e => (e.target.style.borderColor=G)}
-              onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.2)")}
-            />
-            <svg style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", opacity:0.35, pointerEvents:"none" }} width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            {search && (
-              <button onClick={() => { setSearch(""); setPage(1); }}
-                style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:MID, cursor:"pointer", fontSize:16, lineHeight:1, padding:0 }}>×</button>
-            )}
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
+            <div style={{ position:"relative" }}>
+              <input
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(1); }}
+                placeholder="Buscar productos..."
+                style={{ background:S, border:`1px solid rgba(201,168,76,0.2)`, color:T, padding:"11px 16px 11px 42px", fontSize:13, outline:"none", width:240, boxSizing:"border-box" as const }}
+                onFocus={e => (e.target.style.borderColor=G)}
+                onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.2)")}
+              />
+              <svg style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", opacity:0.35, pointerEvents:"none" }} width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              {search && (
+                <button onClick={() => { setSearch(""); setPage(1); }}
+                  style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:MID, cursor:"pointer", fontSize:16, lineHeight:1, padding:0 }}>×</button>
+              )}
+            </div>
+            <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
+              style={{ background:S, border:`1px solid rgba(201,168,76,0.2)`, color:T, padding:"11px 14px", fontSize:12, outline:"none", cursor:"pointer", letterSpacing:1 }}>
+              <option value="newest">Más recientes</option>
+              <option value="price_asc">Precio ↑</option>
+              <option value="price_desc">Precio ↓</option>
+              <option value="name_az">Nombre A→Z</option>
+              <option value="discount">Mayor descuento</option>
+            </select>
           </div>
         </div>
 

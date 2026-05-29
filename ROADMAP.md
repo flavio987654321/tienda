@@ -88,7 +88,7 @@
 | E-04 | ✅ | 🟠 | **Dropdown de subcategorías** implementado en FashionNoir y en la página `/productos`. Aparece al hover sobre cada categoría si tiene subcategorías cargadas |
 | E-05 | 🔲 | 🟠 | El editor debe permitir activar/desactivar qué categorías mostrar como sección destacada |
 | E-06 | 🔲 | 🟠 | Templates adaptativos para mayorista: ocultar precios al público, mostrar "Solicitá tu lista de precios" |
-| E-07 | 🔲 | 🟡 | Ordenamiento de productos: más nuevos / precio menor-mayor / más vendidos |
+| E-07 | ✅ | 🟡 | **Ordenamiento** en la página /productos: más recientes, precio ↑↓, nombre A→Z, mayor descuento |
 
 ---
 
@@ -96,11 +96,11 @@
 
 | # | Estado | Impacto | Descripción |
 |---|--------|---------|-------------|
-| F-01 | 🔲 | 🟠 | Lista de productos con **búsqueda y filtro por categoría** (hoy con 100+ productos la tabla es inmanejable) |
-| F-02 | 🔲 | 🟠 | **Paginación** en la tabla de productos del dashboard |
-| F-03 | 🔲 | 🟡 | Vista de grilla/tarjetas alternativa a la tabla en el panel de productos |
+| F-01 | ✅ | 🟠 | Búsqueda + filtros por categoría, estado y stock en la tabla del dashboard |
+| F-02 | ✅ | 🟠 | **Paginación** de 20 por página con navegación numerada en la tabla del dashboard |
+| F-03 | ✅ | 🟡 | **Vista grilla/tarjetas** — toggle tabla↔grilla en el panel de productos |
 | F-04 | 🔲 | 🟡 | **Importar productos** en bloque via CSV |
-| F-05 | 🔲 | 🟡 | **Duplicar producto** con un click |
+| F-05 | ✅ | 🟡 | **Duplicar producto** con un click — crea copia en estado Oculto con nombre "Copia de..." |
 
 ---
 
