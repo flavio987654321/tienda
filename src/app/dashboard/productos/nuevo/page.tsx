@@ -1043,12 +1043,14 @@ function ProductoFormPage() {
               ))}
             </div>}
 
-            {/* Atributos adicionales */}
+            {/* Ficha técnica / Atributos */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-1">
-                    <h2 className="font-semibold text-gray-900">Atributos del producto</h2>
+                    <h2 className="font-semibold text-gray-900">
+                      {storeTypeConfig.hideVariants ? "Ficha técnica" : storeTypeConfig.extraFields.length > 0 ? "Especificaciones" : "Atributos del producto"}
+                    </h2>
                     <Tip text="Información extra sin stock. Ej: Material → Algodón, Género → Unisex, Peso → 250g. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio." />
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">
@@ -1067,43 +1069,76 @@ function ProductoFormPage() {
                 </button>
               </div>
 
-              {attributes.length === 0 && (
+              {/* Campos tipados del store type (Marca, Año, Km, etc.) */}
+              {storeTypeConfig.extraFields.length > 0 && (
+                <div className="grid grid-cols-2 gap-3">
+                  {storeTypeConfig.extraFields.map((field) => {
+                    const attrIdx = attributes.findIndex((a) => a.key === field.label);
+                    const val = attrIdx >= 0 ? attributes[attrIdx].value : "";
+                    return (
+                      <div key={field.key}>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">{field.label}</label>
+                        <input
+                          type={field.type || "text"}
+                          value={val}
+                          onChange={(e) => {
+                            if (attrIdx >= 0) {
+                              updateAttribute(attrIdx, "value", e.target.value);
+                            } else {
+                              setAttributes((p) => [...p, { key: field.label, value: e.target.value }]);
+                              markDirty();
+                            }
+                          }}
+                          placeholder={field.placeholder || ""}
+                          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Atributos personalizados (Agregar) */}
+              {storeTypeConfig.extraFields.length === 0 && attributes.length === 0 && (
                 <p className="text-sm text-gray-400 text-center py-4">
                   Sin atributos. Usá esto para especificar datos técnicos del producto.
                 </p>
               )}
 
-              {attributes.map((attr, idx) => (
-                <div key={idx} className="flex gap-3 items-end">
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Nombre del atributo</label>
-                    <input
-                      type="text"
-                      value={attr.key}
-                      onChange={(e) => updateAttribute(idx, "key", e.target.value)}
-                      placeholder="Ej: Número de serie, Peso, Material"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
+              {attributes
+                .map((attr, idx) => ({ attr, idx }))
+                .filter(({ attr }) => !storeTypeConfig.extraFields.some((f) => f.label === attr.key))
+                .map(({ attr, idx }) => (
+                  <div key={idx} className="flex gap-3 items-end">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Nombre del atributo</label>
+                      <input
+                        type="text"
+                        value={attr.key}
+                        onChange={(e) => updateAttribute(idx, "key", e.target.value)}
+                        placeholder="Ej: Número de serie, Peso, Material"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Valor</label>
+                      <input
+                        type="text"
+                        value={attr.value}
+                        onChange={(e) => updateAttribute(idx, "value", e.target.value)}
+                        placeholder="Ej: ABC-123, 2.5 kg, Algodón"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeAttribute(idx)}
+                      className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors mb-0.5"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Valor</label>
-                    <input
-                      type="text"
-                      value={attr.value}
-                      onChange={(e) => updateAttribute(idx, "value", e.target.value)}
-                      placeholder="Ej: ABC-123, 2.5 kg, Algodón"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeAttribute(idx)}
-                    className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors mb-0.5"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
+                ))}
             </div>
 
             {/* Actions */}

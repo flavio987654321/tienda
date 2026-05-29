@@ -22,7 +22,7 @@
 | # | Estado | Impacto | Descripción |
 |---|--------|---------|-------------|
 | A-01 | ✅ | 🔴 | `tipoTienda` y `tieneVentaMayorista` leídos desde DB en la página del storefront e inyectados en `StoreConfig`. Expuestos como `checkoutMode` e `isWholesale` en `useStorefront` y disponibles en los 4 templates |
-| A-02 | 🔲 | 🔴 | Que el formulario de producto cambie según `storeType`: ropa→talles/colores, autos→año/km/combustible, servicios→duración/modalidad |
+| A-02 | ✅ | 🔴 | Formulario de producto adaptativo por `storeType`: los `extraFields` de cada tipo (Marca/Año/Km para AUTOS, Autor/Editorial para LIBROS, etc.) renderizan como campos propios con tipo correcto (`number`/`text`), placeholder contextual y sin edición de clave. Sección se llama "Ficha técnica" (AUTOS), "Especificaciones" (con extraFields) o "Atributos" (GENERAL). Atributos libres del usuario siguen funcionando abajo del grid |
 | A-03 | ✅ | 🔴 | Carrito adaptado por tipo: `inquiry` (AUTOS) → botón "Consultar disponibilidad" en modal que pre-rellena y hace scroll al formulario de contacto. `cart` → flujo normal. Los 4 templates implementados |
 | A-04 | 🔲 | 🟠 | Templates de mayorista: sin precios visibles al público, mostrar "Consultá precio", formulario de pedido por volumen |
 | A-05 | 🔲 | 🟠 | Categorías por defecto según `storeType`: ropa→Mujer/Hombre/Niños/Accesorios, autos→Sedán/SUV/Pickup, mayorista→Línea A/B/C |
