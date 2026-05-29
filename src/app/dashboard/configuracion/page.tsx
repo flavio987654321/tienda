@@ -10,6 +10,7 @@ import FashionNoir from "@/components/store/templates/FashionNoir";
 import BohoTerra from "@/components/store/templates/BohoTerra";
 import UrbanPulse from "@/components/store/templates/UrbanPulse";
 import ChicParis from "@/components/store/templates/ChicParis";
+import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 
 /* ── Types ─────────────────────────────────────────────────── */
 type Mode = "gallery" | "preview" | "editing";
@@ -975,6 +976,8 @@ export default function ConfiguracionPage() {
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
 
   /* Cargar config guardada al montar */
   const allTemplates = CATEGORIES.flatMap(c => c.templates);
@@ -1017,6 +1020,7 @@ export default function ConfiguracionPage() {
       ...c,
       textOverrides: { ...c.textOverrides, [field]: { ...(c.textOverrides[field] ?? {}), ...partial } },
     }));
+    setIsDirty(true);
   }, []);
 
   const resetOverride = useCallback((field: string) => {
@@ -1025,6 +1029,7 @@ export default function ConfiguracionPage() {
       const { [field]: _, ...rest } = c.textOverrides;
       return { ...c, textOverrides: rest };
     });
+    setIsDirty(true);
   }, []);
 
   /* Image override helpers */
@@ -1033,6 +1038,7 @@ export default function ConfiguracionPage() {
       ...c,
       imageOverrides: { ...c.imageOverrides, [field]: { ...(c.imageOverrides[field] ?? {}), ...partial } },
     }));
+    setIsDirty(true);
   }, []);
 
   /* Section color helpers */
@@ -1043,10 +1049,12 @@ export default function ConfiguracionPage() {
       else delete next[field];
       return { ...c, sectionColors: next };
     });
+    setIsDirty(true);
   }, []);
 
   const update = useCallback(<K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => {
     setConfig(c => ({ ...c, [key]: value }));
+    setIsDirty(true);
   }, []);
 
   /* Step 1 → 2 */
@@ -1069,15 +1077,19 @@ export default function ConfiguracionPage() {
   };
 
   /* Step 2 → 3 */
-  const handleUseTemplate = () => setMode("editing");
+  const handleUseTemplate = () => { setIsDirty(false); setMode("editing"); };
 
   /* Any → 1 */
-  const handleBackToGallery = () => { setMode("gallery"); };
+  const handleBackToGallery = () => {
+    if (mode === "editing" && isDirty) { setConfirmLeave(true); return; }
+    setMode("gallery");
+  };
 
   /* Gallery → editing (click on saved template) — restaura config guardado */
   const handleGoToEditing = (t: TemplateInfo) => {
     setSelected(t);
     if (savedConfig && savedConfig.template === t.id) setConfig(savedConfig);
+    setIsDirty(false);
     setMode("editing");
   };
 
@@ -1096,6 +1108,7 @@ export default function ConfiguracionPage() {
       if (!res.ok) throw new Error("Error al guardar");
       setSavedTemplateId(config.template);
       setSavedConfig(config);
+      setIsDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2200);
     } catch {
@@ -1275,7 +1288,7 @@ export default function ConfiguracionPage() {
           <div style={{ flex: 1, display: "flex", alignItems: "stretch", padding: "12px 20px 20px", minHeight: 0 }}>
             <div style={{ flex: 1, borderRadius: 10, overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column" }}>
-              <StoreConfigContext.Provider value={config}>
+              <StoreConfigContext.Provider value={{ ...config, slug: undefined }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>
@@ -1411,7 +1424,7 @@ export default function ConfiguracionPage() {
             <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
               transform: "translate(0,0)" }}>
-              <StoreConfigContext.Provider value={config}>
+              <StoreConfigContext.Provider value={{ ...config, slug: undefined }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>
@@ -1427,6 +1440,36 @@ export default function ConfiguracionPage() {
       {configModalOpen && (
         <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} onDelete={() => { setConfigModalOpen(false); handleDelete(); }} />
       )}
+
+      {/* Confirmar salir sin guardar */}
+      {confirmLeave && (
+        <div style={{ position:"fixed", inset:0, zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+          <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)" }} onClick={() => setConfirmLeave(false)} />
+          <div style={{ position:"relative", background:"#0f172a", border:"1px solid rgba(255,255,255,0.1)", borderRadius:16, padding:24, maxWidth:360, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.5)" }}>
+            <div style={{ display:"flex", gap:16, marginBottom:20 }}>
+              <div style={{ width:40, height:40, background:"rgba(245,158,11,0.15)", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div>
+                <p style={{ color:"white", fontWeight:700, fontSize:15, margin:"0 0 4px" }}>Cambios sin guardar</p>
+                <p style={{ color:"#94a3b8", fontSize:13, margin:0, lineHeight:1.5 }}>Tenés cambios que no guardaste todavía. Si salís ahora los perdés.</p>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={() => setConfirmLeave(false)}
+                style={{ flex:1, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"white", borderRadius:10, padding:"10px 0", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                Quedarme
+              </button>
+              <button onClick={() => { setConfirmLeave(false); setIsDirty(false); setMode("gallery"); }}
+                style={{ flex:1, background:"rgba(239,68,68,0.15)", border:"1px solid rgba(239,68,68,0.3)", color:"#f87171", borderRadius:10, padding:"10px 0", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                Salir sin guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <UnsavedChangesGuard isDirty={isDirty} />
     </DashboardLayout>
   );
 }

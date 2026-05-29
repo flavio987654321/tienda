@@ -46,11 +46,39 @@ function extensionFor(file: File) {
   return file.type.split("/")[1] || "bin";
 }
 
+let bucketEnsured = false;
+
+async function ensureBucketPublic(supabaseUrl: string, serviceRoleKey: string, bucket: string) {
+  if (bucketEnsured) return;
+  const headers = {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    "Content-Type": "application/json",
+  };
+  // Try to update existing bucket to public
+  const updateRes = await fetch(`${supabaseUrl}/storage/v1/bucket/${bucket}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({ id: bucket, name: bucket, public: true }),
+  }).catch(() => null);
+  if (!updateRes?.ok) {
+    // Bucket might not exist yet — create it
+    await fetch(`${supabaseUrl}/storage/v1/bucket`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ id: bucket, name: bucket, public: true }),
+    }).catch(() => {});
+  }
+  bucketEnsured = true;
+}
+
 async function uploadToSupabaseStorage(file: File, bytes: ArrayBuffer, folder = "products") {
   const config = getSupabaseStorageConfig();
   if (!config) {
     throw new Error("Falta configurar Supabase Storage en Vercel para subir archivos.");
   }
+
+  await ensureBucketPublic(config.supabaseUrl, config.serviceRoleKey, config.bucket);
 
   const ext = extensionFor(file);
   const filePath = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;

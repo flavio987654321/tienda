@@ -321,13 +321,17 @@ export default function ProductsTable({ products: initialProducts }: Props) {
                   <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gray-100 rounded-xl overflow-hidden shrink-0">
-                          {images[0] ? (
-                            <img src={images[0]} alt={product.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Package className="h-5 w-5 text-gray-300" />
-                            </div>
+                        <div className="relative w-12 h-12 bg-gray-100 rounded-xl overflow-hidden shrink-0">
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Package className="h-5 w-5 text-gray-300" />
+                          </div>
+                          {images[0] && (
+                            <img
+                              src={images[0]}
+                              alt={product.name}
+                              className="relative w-full h-full object-cover z-10"
+                              onError={e => { e.currentTarget.style.opacity = "0"; }}
+                            />
                           )}
                         </div>
                         <div>
