@@ -5,6 +5,7 @@ import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, Bg
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
+import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 
 const BG  = "#faf7f2";
 const S   = "#f0e9df";
@@ -70,6 +71,7 @@ export default function BohoTerra() {
   const [carouselIdx,         setCarouselIdx]         = useState(0);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [announcementIdx,     setAnnouncementIdx]     = useState(0);
+  const [openPolicyField,     setOpenPolicyField]     = useState<string | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -519,44 +521,39 @@ export default function BohoTerra() {
         <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, padding:"16px 40px", maxWidth:1280, margin:"0 auto" }}>
           <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px", marginBottom:10 }}>
             {[
-              { label: "Política de devoluciones", tipo: "devoluciones" },
-              { label: "Política de envíos", tipo: "envios" },
-              { label: "Términos y condiciones", tipo: "terminos" },
-            ].map(({ label, tipo }) => (
-              <a key={tipo} href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=${tipo}`}
-                style={{ fontSize:11, color:footerMid, opacity:0.55, textDecoration:"none" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.55"; }}>
-                {label}
-              </a>
+              { label: "Política de devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
+              { label: "Política de envíos",       tipo: "envios",       policyField: "policyShipping" },
+              { label: "Términos y condiciones",   tipo: "terminos",     policyField: "policyTerms" },
+            ].map(({ label, tipo, policyField }) => (
+              editMode ? (
+                <button key={tipo} type="button" onClick={() => setOpenPolicyField(policyField)}
+                  style={{ fontSize:11, color:footerMid, opacity:0.55, background:"none", border:"none", cursor:"pointer", padding:0, display:"inline-flex", alignItems:"center", gap:4 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.55"; }}>
+                  {label}
+                  <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+              ) : (
+                <a key={tipo} href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=${tipo}`}
+                  style={{ fontSize:11, color:footerMid, opacity:0.55, textDecoration:"none" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.55"; }}>
+                  {label}
+                </a>
+              )
             ))}
           </div>
           <p style={{ fontSize:11, color:footerMid, margin:0, opacity:0.6 }}>
             <EditableZone field="footerCopyright" label="Copyright">© 2025 Terra · Moda consciente · Mendoza, Argentina</EditableZone>
           </p>
 
-          {editMode && (
-            <div style={{ marginTop:24, padding:"16px 20px", background:"rgba(99,102,241,0.08)", border:"1.5px dashed rgba(99,102,241,0.35)", borderRadius:12 }}>
-              <p style={{ margin:"0 0 14px", fontSize:10, fontWeight:800, color:"#6366f1", textTransform:"uppercase", letterSpacing:2 }}>POLÍTICAS LEGALES</p>
-              <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-                {([
-                  { field:"policyReturns", label:"Política de devoluciones" },
-                  { field:"policyShipping", label:"Política de envíos" },
-                  { field:"policyTerms",   label:"Términos y condiciones" },
-                ] as const).map(({ field, label }) => (
-                  <div key={field}>
-                    <p style={{ margin:"0 0 4px", fontSize:10, fontWeight:700, color:"#6366f1", opacity:0.8 }}>{label}</p>
-                    <EditableZone field={field} label={label} block>
-                      {"Sin contenido — hacé click para agregar"}
-                    </EditableZone>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
         </div>
       </footer>
+
+      {openPolicyField && (
+        <PolicyEditorModal field={openPolicyField} onClose={() => setOpenPolicyField(null)} />
+      )}
 
       {/* ── MODAL PRODUCTO */}
       {modalProduct && (

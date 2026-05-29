@@ -899,7 +899,6 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
   const label = textFieldLabels[activeField] ?? activeField;
   const ov = overrides[activeField] ?? {};
   const hasOverride = Object.entries(ov).some(([, v]) => v !== undefined);
-  const isLongTextField = activeField.startsWith("policy");
 
   const btnBase: React.CSSProperties = {
     width: 30, height: 30, border: "1.5px solid #e2e8f0", borderRadius: 6,
@@ -907,36 +906,6 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
     flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
   };
   const btnActive: React.CSSProperties = { borderColor: "#6366f1", background: "#e0e7ff", color: "#6366f1" };
-
-  if (isLongTextField) {
-    return (
-      <div style={{ ...base, padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#6366f1" }}>✏ {label}</span>
-          <div style={{ display: "flex", gap: 6 }}>
-            {hasOverride && (
-              <button type="button" onClick={() => resetOverride(activeField)}
-                style={{ ...btnBase, fontSize: 14 }} title="Restablecer texto original">↺</button>
-            )}
-            <button type="button" onClick={() => setActiveField(null)}
-              style={{ ...btnBase, border: "none", fontSize: 18, color: "#94a3b8" }}>×</button>
-          </div>
-        </div>
-        <textarea
-          value={ov.text ?? ""}
-          placeholder="Escribí el texto de esta política. Usá guiones (-) al inicio de línea para listas."
-          rows={6}
-          onChange={e => setOverride(activeField, { text: e.target.value || undefined })}
-          style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 7, padding: "8px 10px", fontSize: 12, outline: "none", fontFamily: "inherit", resize: "vertical", boxSizing: "border-box" }}
-          onFocus={e => (e.target.style.borderColor = "#6366f1")}
-          onBlur={e => (e.target.style.borderColor = "#d1d5db")}
-        />
-        <p style={{ margin: 0, fontSize: 10, color: "#94a3b8" }}>
-          💡 Usá <strong>-</strong> al inicio de cada línea para crear una lista con bullets. El cambio se guarda con el botón Guardar del template.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div style={{ ...base, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
