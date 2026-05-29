@@ -53,13 +53,13 @@ export default function FashionNoir() {
 
   const storeConfig = useStoreConfig();
   const storefront  = useStorefront();
-  const { products, checkoutMode, isWholesale } = storefront;
-  const isInquiryMode = checkoutMode === "inquiry";
+  const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
+  const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
-    return cats.length > 0 ? cats : ["Mujer", "Hombre", "Accesorios"];
-  }, [products]);
+    return cats.length > 0 ? cats : defaultCategories.slice(0, 6);
+  }, [products, defaultCategories]);
 
   const CATEGORIES = useMemo(() => ["Todos", ...categoryList], [categoryList]);
 
@@ -260,7 +260,7 @@ export default function FashionNoir() {
                     <img src={p.images[0]} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}/>
                     <div style={{ padding:"10px 12px" }}>
                       <p style={{ fontSize:12, margin:"0 0 4px", fontWeight:500 }}>{p.name}</p>
-                      <p style={{ fontSize:13, color:G, fontWeight:700, margin:0 }}>{fmt(p.price)}</p>
+                      <p style={{ fontSize:13, color:G, fontWeight:700, margin:0 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
                     </div>
                   </button>
                 ))}
@@ -493,8 +493,8 @@ export default function FashionNoir() {
               <p style={{ fontSize:11, color:productosMid, letterSpacing:2, textTransform:"uppercase", margin:"0 0 6px" }}>{product.category}</p>
               <p style={{ fontSize:16, color:productosText, margin:"0 0 8px", fontWeight:500 }}>{product.name}</p>
               <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                <span style={{ fontSize:17, fontWeight:700, color:G }}>{fmt(product.price)}</span>
-                {product.comparePrice && <span style={{ fontSize:13, color:productosMid, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
+                <span style={{ fontSize:17, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</span>
+                {!ocultarPrecios && product.comparePrice && <span style={{ fontSize:13, color:productosMid, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
               </div>
             </div>
           ))}
@@ -766,8 +766,8 @@ export default function FashionNoir() {
                 <h2 style={{ fontFamily:"Georgia, serif", fontSize:26, margin:0, lineHeight:1.2 }}>{modalProduct.name}</h2>
               </div>
               <div style={{ display:"flex", gap:12, alignItems:"baseline" }}>
-                <span style={{ fontSize:24, fontWeight:700, color:G }}>{fmt(modalProduct.price)}</span>
-                {modalProduct.comparePrice && <span style={{ fontSize:15, color:"#444", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                <span style={{ fontSize:24, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price)}</span>
+                {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:15, color:"#444", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
               </div>
               <p style={{ fontSize:13, opacity:0.58, lineHeight:1.75, borderTop:`1px solid rgba(240,235,227,0.08)`, paddingTop:16 }}>{modalProduct.description}</p>
 
@@ -1110,7 +1110,7 @@ export default function FashionNoir() {
                   <img src={product.images[0]} alt="" style={{ width:70, height:93, objectFit:"cover", flexShrink:0 }}/>
                   <div style={{ flex:1 }}>
                     <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500 }}>{product.name}</p>
-                    <p style={{ fontSize:13, color:G, fontWeight:700, margin:"0 0 10px" }}>{fmt(product.price)}</p>
+                    <p style={{ fontSize:13, color:G, fontWeight:700, margin:"0 0 10px" }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
                     <div style={{ display:"flex", gap:8 }}>
                       <button onClick={() => { setFavoritesOpen(false); openModal(product); }}
                         style={{ background:G, color:BG, border:"none", padding:"7px 14px", fontSize:10, letterSpacing:2, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>

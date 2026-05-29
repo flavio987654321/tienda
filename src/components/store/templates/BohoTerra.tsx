@@ -28,14 +28,14 @@ const scrollTo = (id:string) => document.getElementById(id)?.scrollIntoView({ be
 export default function BohoTerra() {
   const storeConfig = useStoreConfig();
   const storefront  = useStorefront();
-  const { products, checkoutMode, isWholesale } = storefront;
+  const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
   const { editMode } = useEditContext();
-  const isInquiryMode = checkoutMode === "inquiry";
+  const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
-    return cats.length > 0 ? cats : ["Mujer", "Hombre", "Accesorios"];
-  }, [products]);
+    return cats.length > 0 ? cats : defaultCategories.slice(0, 6);
+  }, [products, defaultCategories]);
   const CATEGORIES = useMemo(() => ["Todos", ...categoryList], [categoryList]);
 
   // eslint-disable-next-line @typescript-eslint/no-shadow
@@ -189,7 +189,7 @@ export default function BohoTerra() {
                     <img src={p.images[0]} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}/>
                     <div style={{ padding:"10px 12px" }}>
                       <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:12, margin:"0 0 4px" }}>{p.name}</p>
-                      <p style={{ fontSize:13, color:A, fontWeight:700, margin:0 }}>{fmt(p.price)}</p>
+                      <p style={{ fontSize:13, color:A, fontWeight:700, margin:0 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
                     </div>
                   </button>
                 ))}
@@ -354,8 +354,8 @@ export default function BohoTerra() {
                   <p style={{ fontSize:10, color:A, letterSpacing:3, textTransform:"uppercase", margin:"0 0 5px" }}>{product.category}</p>
                   <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:17, color:coleccionText, margin:"0 0 8px", lineHeight:1.3 }}>{product.name}</p>
                   <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                    <span style={{ fontSize:16, fontWeight:700, color:coleccionText }}>{fmt(product.price)}</span>
-                    {product.comparePrice && <span style={{ fontSize:13, color:coleccionMid, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
+                    <span style={{ fontSize:16, fontWeight:700, color:coleccionText }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</span>
+                    {!ocultarPrecios && product.comparePrice && <span style={{ fontSize:13, color:coleccionMid, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
                   </div>
                 </div>
               ))}
@@ -589,8 +589,8 @@ export default function BohoTerra() {
                 <h2 style={{ fontFamily:"Georgia, serif", fontSize:24, fontStyle:"italic", margin:0, lineHeight:1.2, color:T }}>{modalProduct.name}</h2>
               </div>
               <div style={{ display:"flex", gap:12, alignItems:"baseline" }}>
-                <span style={{ fontSize:22, fontWeight:700, color:A }}>{fmt(modalProduct.price)}</span>
-                {modalProduct.comparePrice && <span style={{ fontSize:14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                <span style={{ fontSize:22, fontWeight:700, color:A }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price)}</span>
+                {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
               </div>
               <p style={{ fontSize:13, color:MID, lineHeight:1.8, borderTop:`1px solid rgba(44,34,24,0.07)`, paddingTop:14 }}>{modalProduct.description}</p>
               <div>
@@ -724,7 +724,7 @@ export default function BohoTerra() {
                   <img src={product.images[0]} alt="" style={{ width:64, height:86, objectFit:"cover", flexShrink:0 }}/>
                   <div style={{ flex:1 }}>
                     <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:14, margin:"0 0 4px", color:T }}>{product.name}</p>
-                    <p style={{ fontSize:13, color:A, fontWeight:700, margin:"0 0 10px" }}>{fmt(product.price)}</p>
+                    <p style={{ fontSize:13, color:A, fontWeight:700, margin:"0 0 10px" }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
                     <div style={{ display:"flex", gap:8 }}>
                       <button onClick={() => { setFavoritesOpen(false); openModal(product); }}
                         style={{ background:A, color:"#fff", border:"none", padding:"7px 14px", fontSize:10, letterSpacing:2, fontWeight:600, textTransform:"uppercase", cursor:"pointer" }}>

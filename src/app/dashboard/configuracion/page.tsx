@@ -540,6 +540,30 @@ function ConfigModal({ config, update, onClose, onDelete }: {
             </div>
           )}
 
+          {/* Mayorista — solo si la tienda tiene ventaMayorista */}
+          {config.tieneVentaMayorista && (
+            <div style={sec}>
+              <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+                🏭 Venta mayorista
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Ocultar precios al público</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Muestra "Consultá precio" — clientes consultan antes de ver valores</p>
+                  </div>
+                  <Toggle value={config.ocultarPreciosPublico ?? false}
+                    onChange={v => update("ocultarPreciosPublico", v)} />
+                </div>
+                {(config.ocultarPreciosPublico) && (
+                  <div style={{ background: "#fef3c7", borderRadius: 8, padding: "8px 12px", fontSize: 11, color: "#92400e" }}>
+                    Los botones de carrito cambian a "Consultar precio" y los visitantes son dirigidos al formulario de contacto. Las vendedoras afiliadas siguen siendo acreditadas por cada consulta generada.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* SEO */}
           <div style={sec}>
             <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
@@ -991,6 +1015,7 @@ export default function ConfiguracionPage() {
         const storeFields: Partial<StoreConfig> = {
           ...(store.id   && { storeId: store.id }),
           ...(store.slug && { slug:    store.slug }),
+          tieneVentaMayorista: Boolean(store.tieneVentaMayorista),
         };
         try {
           const saved: StoreConfig = JSON.parse(store.storeConfig || "{}");

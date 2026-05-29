@@ -24,14 +24,14 @@ export default function ChicParis() {
 
   const storeConfig = useStoreConfig();
   const storefront  = useStorefront();
-  const { products, loadingProducts, checkoutMode, isWholesale } = storefront;
+  const { products, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
   const { editMode } = useEditContext();
-  const isInquiryMode = checkoutMode === "inquiry";
+  const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
-    return cats.length > 0 ? cats : ["Mujer", "Hombre", "Accesorios"];
-  }, [products]);
+    return cats.length > 0 ? cats : defaultCategories.slice(0, 6);
+  }, [products, defaultCategories]);
   const CATEGORIES = useMemo(() => ["Todos", ...categoryList], [categoryList]);
 
   const ACC   = storeConfig?.colors.accent ?? "#c0392b";
@@ -351,8 +351,8 @@ export default function ChicParis() {
                       <p style={{ margin: "0 0 4px", fontSize: 10, color: "#999", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>{product.category}</p>
                       <p style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: prodText, lineHeight: 1.3 }}>{product.name}</p>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 16, fontWeight: 800, color: ACC }}>{fmt(product.price)}</span>
-                        {product.comparePrice && <span style={{ fontSize: 13, color: "#aaa", textDecoration: "line-through" }}>{fmt(product.comparePrice)}</span>}
+                        <span style={{ fontSize: 16, fontWeight: 800, color: ACC }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</span>
+                        {!ocultarPrecios && product.comparePrice && <span style={{ fontSize: 13, color: "#aaa", textDecoration: "line-through" }}>{fmt(product.comparePrice)}</span>}
                       </div>
                     </div>
                   </div>
@@ -599,7 +599,7 @@ export default function ChicParis() {
                   <img src={p.images[0] ?? "/placeholder.jpg"} alt={p.name} style={{ width: 48, height: 60, objectFit: "cover", flexShrink: 0 }} />
                   <div>
                     <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600 }}>{p.name}</p>
-                    <p style={{ margin: 0, fontSize: 13, color: ACC, fontWeight: 700 }}>{fmt(p.price)}</p>
+                    <p style={{ margin: 0, fontSize: 13, color: ACC, fontWeight: 700 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
                   </div>
                 </div>
               )) : searchQuery ? (
@@ -637,8 +637,8 @@ export default function ChicParis() {
               <p style={{ margin: "0 0 6px", fontSize: 10, color: "#999", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>{modalProduct.category}</p>
               <h2 style={{ margin: "0 0 16px", fontSize: 22, fontWeight: 900, color: "#111", lineHeight: 1.2 }}>{modalProduct.name}</h2>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-                <span style={{ fontSize: 24, fontWeight: 900, color: ACC }}>{fmt(modalProduct.price)}</span>
-                {modalProduct.comparePrice && <span style={{ fontSize: 16, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                <span style={{ fontSize: 24, fontWeight: 900, color: ACC }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price)}</span>
+                {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize: 16, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
               </div>
               {modalProduct.description && <p style={{ fontSize: 14, color: "#555", lineHeight: 1.7, marginBottom: 20 }}>{modalProduct.description}</p>}
 
@@ -896,7 +896,7 @@ export default function ChicParis() {
                   <img src={product.images[0] ?? "/placeholder.jpg"} alt={product.name} style={{ width: 64, height: 80, objectFit: "cover" }} />
                   <div style={{ flex: 1 }}>
                     <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600 }}>{product.name}</p>
-                    <p style={{ margin: "0 0 8px", fontSize: 13, color: ACC, fontWeight: 700 }}>{fmt(product.price)}</p>
+                    <p style={{ margin: "0 0 8px", fontSize: 13, color: ACC, fontWeight: 700 }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
                     <button onClick={() => { setFavoritesOpen(false); openModal(product); }}
                       style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "6px 16px", fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
                       Ver

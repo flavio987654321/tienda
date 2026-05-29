@@ -57,6 +57,7 @@ export type StoreConfig = {
   previewFill?: boolean;
   tipoTienda?: string;
   tieneVentaMayorista?: boolean;
+  ocultarPreciosPublico?: boolean;
 };
 
 export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: string }> = {

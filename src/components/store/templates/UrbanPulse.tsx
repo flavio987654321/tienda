@@ -35,14 +35,14 @@ export default function UrbanPulse() {
 
   const storeConfig = useStoreConfig();
   const storefront  = useStorefront();
-  const { products, checkoutMode, isWholesale } = storefront;
+  const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
   const { editMode } = useEditContext();
-  const isInquiryMode = checkoutMode === "inquiry";
+  const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
-    return cats.length > 0 ? cats : ["Mujer", "Hombre", "Accesorios"];
-  }, [products]);
+    return cats.length > 0 ? cats : defaultCategories.slice(0, 6);
+  }, [products, defaultCategories]);
   const CATEGORIES = useMemo(() => ["Todos", ...categoryList], [categoryList]);
 
   const DARK  = "#0f0f0f";
@@ -339,8 +339,8 @@ export default function UrbanPulse() {
               ))}
             </div>
             <div style={{ display:"flex", alignItems:"baseline", gap:16, marginBottom:32 }}>
-              <span style={{ color:ACC, fontSize:36, fontWeight:900 }}>{fmt(featuredProduct.price)}</span>
-              {featuredProduct.comparePrice && <span style={{ color:featuredText, opacity:0.25, fontSize:20, textDecoration:"line-through" }}>{fmt(featuredProduct.comparePrice)}</span>}
+              <span style={{ color:ACC, fontSize:36, fontWeight:900 }}>{ocultarPrecios ? "Consultá precio" : fmt(featuredProduct.price)}</span>
+              {!ocultarPrecios && featuredProduct.comparePrice && <span style={{ color:featuredText, opacity:0.25, fontSize:20, textDecoration:"line-through" }}>{fmt(featuredProduct.comparePrice)}</span>}
             </div>
             <button onClick={() => isInquiryMode ? openInquiry(featuredProduct) : openModal(featuredProduct)}
               style={{ width:"100%", background:ACC, color:DARK, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
@@ -382,8 +382,8 @@ export default function UrbanPulse() {
                       <p style={{ margin:"4px 0 0", fontSize:14, fontWeight:800 }}>{product.name}</p>
                     </div>
                     <div style={{ textAlign:"right", flexShrink:0 }}>
-                      {product.comparePrice && <p style={{ margin:0, fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</p>}
-                      <p style={{ margin:0, fontSize:15, fontWeight:900, color: product.comparePrice ? RED : DARK }}>{fmt(product.price)}</p>
+                      {!ocultarPrecios && product.comparePrice && <p style={{ margin:0, fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</p>}
+                      <p style={{ margin:0, fontSize:15, fontWeight:900, color: product.comparePrice ? RED : DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
                     </div>
                   </div>
                   {product.badge && (
@@ -629,7 +629,7 @@ export default function UrbanPulse() {
                   <div>
                     <p style={{ color:"rgba(255,255,255,0.4)", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", margin:0 }}>{p.category}</p>
                     <p style={{ color:WHITE, fontSize:13, fontWeight:800, margin:"5px 0 4px" }}>{p.name}</p>
-                    <p style={{ color:ACC, fontWeight:900, fontSize:13, margin:0 }}>{fmt(p.price)}</p>
+                    <p style={{ color:ACC, fontWeight:900, fontSize:13, margin:0 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
                   </div>
                 </div>
               ))}
@@ -656,7 +656,7 @@ export default function UrbanPulse() {
                     <div style={{ flex:1 }}>
                       <p style={{ margin:0, fontSize:10, color:MID, fontWeight:800, letterSpacing:2, textTransform:"uppercase" }}>{p.category}</p>
                       <p style={{ margin:"4px 0 6px", fontSize:13, fontWeight:800 }}>{p.name}</p>
-                      <p style={{ margin:"0 0 10px", fontSize:14, fontWeight:900 }}>{fmt(p.price)}</p>
+                      <p style={{ margin:"0 0 10px", fontSize:14, fontWeight:900 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
                       <button onClick={() => openModal(p)} style={{ background:DARK, color:ACC, border:"none", padding:"7px 14px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>Ver</button>
                     </div>
                     <button onClick={() => toggleFavorite(p.id)} style={{ background:"none", border:"none", fontSize:16, cursor:"pointer", alignSelf:"flex-start", padding:4, color:MID }}>✕</button>
@@ -690,8 +690,8 @@ export default function UrbanPulse() {
                 <p style={{ margin:"0 0 6px", fontSize:10, color:MID, fontWeight:800, letterSpacing:3, textTransform:"uppercase" }}>{modalProduct.category}</p>
                 <h3 style={{ margin:"0 0 18px", fontSize:24, fontWeight:900, textTransform:"uppercase", letterSpacing:"-0.5px" }}>{modalProduct.name}</h3>
                 <div style={{ display:"flex", gap:14, alignItems:"baseline", marginBottom:22 }}>
-                  <span style={{ fontSize:28, fontWeight:900, color: modalProduct.comparePrice ? RED : DARK }}>{fmt(modalProduct.price)}</span>
-                  {modalProduct.comparePrice && <span style={{ fontSize:15, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  <span style={{ fontSize:28, fontWeight:900, color: modalProduct.comparePrice ? RED : DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price)}</span>
+                  {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:15, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                 </div>
                 <div style={{ marginBottom:18 }}>
                   <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>Talle: <span style={{ color:MID, fontWeight:600 }}>{selectedSize}</span></p>

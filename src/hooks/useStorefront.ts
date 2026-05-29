@@ -243,9 +243,11 @@ export function useStorefront() {
     return { ok: true };
   }
 
-  const storeTypeConfig = getStoreType(config?.tipoTienda || "GENERAL");
-  const checkoutMode  = storeTypeConfig.checkoutMode;
-  const isWholesale   = config?.tieneVentaMayorista ?? false;
+  const storeTypeConfig    = getStoreType(config?.tipoTienda || "GENERAL");
+  const checkoutMode       = storeTypeConfig.checkoutMode;
+  const isWholesale        = config?.tieneVentaMayorista ?? false;
+  const ocultarPrecios     = config?.ocultarPreciosPublico ?? false;
+  const defaultCategories  = storeTypeConfig.categorias;
 
-  return { products, loadingProducts, affiliateId, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale };
+  return { products, loadingProducts, affiliateId, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories };
 }
