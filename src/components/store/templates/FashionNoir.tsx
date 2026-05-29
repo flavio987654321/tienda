@@ -53,7 +53,8 @@ export default function FashionNoir() {
 
   const storeConfig = useStoreConfig();
   const storefront  = useStorefront();
-  const { products } = storefront;
+  const { products, checkoutMode, isWholesale } = storefront;
+  const isInquiryMode = checkoutMode === "inquiry";
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
@@ -88,10 +89,16 @@ export default function FashionNoir() {
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
     cartTotal, cartCount, envioPrice, couponDiscount, orderTotal,
-    searchResults, favoriteProducts,
+    searchResults, favoriteProducts, wholesaleWarnings,
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
   } = useCartLogic(storefront);
+
+  function openInquiry(product: StorefrontProduct) {
+    setModalProduct(null);
+    setContactForm({ nombre: "", email: "", mensaje: `Hola, me interesa "${product.name}". ¿Me podés dar más información?` });
+    setTimeout(() => scrollTo("contacto"), 100);
+  }
 
   const ANNOUNCEMENT_BAR_H = 36;
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
@@ -832,11 +839,18 @@ export default function FashionNoir() {
                 </div>
               )}
 
-              <button onClick={addToCart}
-                disabled={selectedVariantStock === 0}
-                style={{ background: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
-                {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(modalProduct.price * qty)}`}
-              </button>
+              {isInquiryMode ? (
+                <button onClick={() => openInquiry(modalProduct)}
+                  style={{ background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginTop:"auto" }}>
+                  Consultar disponibilidad
+                </button>
+              ) : (
+                <button onClick={addToCart}
+                  disabled={selectedVariantStock === 0}
+                  style={{ background: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
+                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(modalProduct.price * qty)}`}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1041,6 +1055,16 @@ export default function FashionNoir() {
                 <span style={{ fontSize:13, opacity:0.6 }}>Total</span>
                 <span style={{ fontSize:22, fontWeight:700, color:G }}>{fmt(cartTotal)}</span>
               </div>
+              {wholesaleWarnings.length > 0 && (
+                <div style={{ marginBottom:14, padding:"10px 14px", background:"rgba(234,179,8,0.1)", borderLeft:"3px solid #eab308", borderRadius:"0 6px 6px 0" }}>
+                  <p style={{ fontSize:11, margin:0, color:"#eab308", fontWeight:600, letterSpacing:0.5 }}>Cantidad mínima no alcanzada</p>
+                  {wholesaleWarnings.map((item, i) => (
+                    <p key={i} style={{ fontSize:10, margin:"4px 0 0", color:"rgba(240,235,227,0.55)" }}>
+                      {item.product.name}: mín. {item.product.cantMinMayorista} uds.
+                    </p>
+                  ))}
+                </div>
+              )}
               <button onClick={openCheckout} style={{ width:"100%", background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
                 {"Finalizar Compra"}
               </button>

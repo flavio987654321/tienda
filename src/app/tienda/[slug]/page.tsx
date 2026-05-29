@@ -56,6 +56,8 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
       logoColor: true,
       primaryColor: true,
       tagline: true,
+      tipoTienda: true,
+      tieneVentaMayorista: true,
     },
   });
 
@@ -76,7 +78,14 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
   try {
     const parsed = JSON.parse(store.storeConfig || "{}");
     if (!parsed?.template) notFound();
-    config = { ...DEFAULT_CONFIG, ...parsed, storeId: store.id, slug };
+    config = {
+      ...DEFAULT_CONFIG,
+      ...parsed,
+      storeId: store.id,
+      slug,
+      tipoTienda: store.tipoTienda ?? "GENERAL",
+      tieneVentaMayorista: store.tieneVentaMayorista ?? false,
+    };
   } catch {
     notFound();
   }

@@ -14,6 +14,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
           description: true,
           price: true,
           comparePrice: true,
+          precioMayorista: true,
+          cantMinMayorista: true,
           images: true,
           category: true,
           subcategory: true,

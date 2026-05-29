@@ -24,8 +24,9 @@ export default function ChicParis() {
 
   const storeConfig = useStoreConfig();
   const storefront  = useStorefront();
-  const { products, loadingProducts } = storefront;
+  const { products, loadingProducts, checkoutMode, isWholesale } = storefront;
   const { editMode } = useEditContext();
+  const isInquiryMode = checkoutMode === "inquiry";
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
@@ -87,10 +88,16 @@ export default function ChicParis() {
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
     cartTotal, cartCount, envioPrice, couponDiscount, orderTotal,
-    searchResults, favoriteProducts,
+    searchResults, favoriteProducts, wholesaleWarnings,
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
   } = useCartLogic(storefront);
+
+  function openInquiry(product: Product) {
+    setModalProduct(null);
+    setContactForm({ nombre: "", email: "", mensaje: `Hola, me interesa "${product.name}". ¿Me podés dar más información?` });
+    setTimeout(() => scrollTo("contacto"), 100);
+  }
 
   const changeCategory = (cat: string) => { setActiveCategory(cat); setVisibleCount(8); };
   const allFiltered = activeCategory === "Todos" ? products : products.filter(p => p.category === activeCategory);
@@ -674,9 +681,15 @@ export default function ChicParis() {
                   <button onClick={() => setQty(q => q + 1)} style={{ width: 36, height: 36, background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#333" }}>+</button>
                 </div>
               </div>
-              <button onClick={addToCart} style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", marginTop: "auto" }}>
-                Agregar al carrito
-              </button>
+              {isInquiryMode ? (
+                <button onClick={() => openInquiry(modalProduct)} style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", marginTop: "auto" }}>
+                  Consultar disponibilidad
+                </button>
+              ) : (
+                <button onClick={addToCart} style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", marginTop: "auto" }}>
+                  Agregar al carrito
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -722,6 +735,16 @@ export default function ChicParis() {
                   <span style={{ fontSize: 13, color: "#666" }}>Subtotal</span>
                   <span style={{ fontSize: 13, fontWeight: 700 }}>{fmt(cartTotal)}</span>
                 </div>
+                {wholesaleWarnings.length > 0 && (
+                  <div style={{ marginBottom:12, padding:"10px 14px", background:"#fefce8", border:"1px solid #fde047", borderRadius:4 }}>
+                    <p style={{ fontSize:11, margin:0, color:"#ca8a04", fontWeight:600 }}>Cantidad mínima no alcanzada</p>
+                    {wholesaleWarnings.map((item, i) => (
+                      <p key={i} style={{ fontSize:10, margin:"4px 0 0", color:"#9a7000" }}>
+                        {item.product.name}: mín. {item.product.cantMinMayorista} uds.
+                      </p>
+                    ))}
+                  </div>
+                )}
                 <button onClick={openCheckout} style={{ width: "100%", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "14px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", marginTop: 8 }}>
                   Finalizar compra
                 </button>

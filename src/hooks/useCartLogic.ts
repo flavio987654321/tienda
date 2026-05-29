@@ -9,9 +9,11 @@ type StorefrontDeps = {
   resolveVariantId: (product: StorefrontProduct, size: string, color: string) => string | null;
   validateCoupon: (code: string, subtotal: number) => Promise<{ coupon: ValidatedCoupon; discount: number } | { error: string }>;
   placeOrder: (params: PlaceOrderParams) => Promise<{ ok: boolean; error?: string }>;
+  checkoutMode?: "cart" | "inquiry";
+  isWholesale?: boolean;
 };
 
-export function useCartLogic({ products, resolveVariantId, validateCoupon, placeOrder }: StorefrontDeps) {
+export function useCartLogic({ products, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false }: StorefrontDeps) {
   const [cartItems,      setCartItems]      = useState<CartItem[]>([]);
   const [cartOpen,       setCartOpen]       = useState(false);
   const [modalProduct,   setModalProduct]   = useState<StorefrontProduct | null>(null);
@@ -87,7 +89,14 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
   }, []);
 
   // Derived values
-  const cartTotal      = cartItems.reduce((s, i) => s + i.product.price * i.qty, 0);
+  const cartTotal      = cartItems.reduce((s, i) => {
+    const useWholesale = isWholesale && i.product.precioMayorista && i.product.cantMinMayorista && i.qty >= i.product.cantMinMayorista;
+    const price = useWholesale ? (i.product.precioMayorista as number) : i.product.price;
+    return s + price * i.qty;
+  }, 0);
+  const wholesaleWarnings = isWholesale ? cartItems.filter(i =>
+    i.product.cantMinMayorista && i.qty < i.product.cantMinMayorista
+  ) : [];
   const cartCount      = cartItems.reduce((s, i) => s + i.qty, 0);
   const envioPrice     = ENVIO_OPTIONS.find(o => o.id === envioId)?.price ?? 0;
   const couponDiscount = appliedCoupon?.discount ?? 0;
@@ -214,6 +223,7 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
     // Derived
     cartTotal, cartCount, envioPrice, couponDiscount, orderTotal,
     searchResults, favoriteProducts,
+    checkoutMode, isWholesale, wholesaleWarnings,
     // Functions
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,

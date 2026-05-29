@@ -28,8 +28,9 @@ const scrollTo = (id:string) => document.getElementById(id)?.scrollIntoView({ be
 export default function BohoTerra() {
   const storeConfig = useStoreConfig();
   const storefront  = useStorefront();
-  const { products } = storefront;
+  const { products, checkoutMode, isWholesale } = storefront;
   const { editMode } = useEditContext();
+  const isInquiryMode = checkoutMode === "inquiry";
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
@@ -94,10 +95,16 @@ export default function BohoTerra() {
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
     cartTotal, cartCount, envioPrice, couponDiscount, orderTotal,
-    searchResults, favoriteProducts,
+    searchResults, favoriteProducts, wholesaleWarnings,
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
   } = useCartLogic(storefront);
+
+  function openInquiry(product: Product) {
+    setModalProduct(null);
+    setContactForm({ nombre: "", email: "", mensaje: `Hola, me interesa "${product.name}". ¿Me podés dar más información?` });
+    setTimeout(() => scrollTo("contacto"), 100);
+  }
 
   const ANNOUNCEMENT_BAR_H = 36;
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
@@ -616,9 +623,15 @@ export default function BohoTerra() {
                   <button onClick={()=>setQty(q=>q+1)} style={{ width:36, height:36, background:"none", border:"none", color:T, fontSize:18, cursor:"pointer" }}>+</button>
                 </div>
               </div>
+              {isInquiryMode ? (
+                <button onClick={() => openInquiry(modalProduct)} style={{ background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", marginTop:"auto" }}>
+                  Consultar disponibilidad
+                </button>
+              ) : (
               <button onClick={addToCart} style={{ background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", marginTop:"auto" }}>
                 {"Agregar al Carrito"} · {fmt(modalProduct.price*qty)}
               </button>
+              )}
             </div>
           </div>
         </div>
@@ -662,6 +675,16 @@ export default function BohoTerra() {
                 <span style={{ fontSize:13, color:T }}>Total</span>
                 <span style={{ fontSize:20, fontWeight:700, color:A }}>{fmt(cartTotal)}</span>
               </div>
+              {wholesaleWarnings.length > 0 && (
+                <div style={{ marginBottom:12, padding:"10px 14px", background:"rgba(234,179,8,0.07)", borderLeft:"3px solid #eab308", borderRadius:"0 6px 6px 0" }}>
+                  <p style={{ fontSize:11, margin:0, color:"#ca8a04", fontWeight:600 }}>Cantidad mínima no alcanzada</p>
+                  {wholesaleWarnings.map((item, i) => (
+                    <p key={i} style={{ fontSize:10, margin:"4px 0 0", color:"rgba(44,34,24,0.5)" }}>
+                      {item.product.name}: mín. {item.product.cantMinMayorista} uds.
+                    </p>
+                  ))}
+                </div>
+              )}
               <button onClick={openCheckout} style={{ width:"100%", background:A, color:"#fff", border:"none", padding:"14px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", marginBottom:8 }}>{"Finalizar Compra"}</button>
               <button onClick={()=>setCartOpen(false)} style={{ width:"100%", background:"transparent", color:T, border:`1px solid rgba(44,34,24,0.2)`, padding:"12px", fontSize:10, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>Seguir Comprando</button>
               {storeConfig?.whatsapp?.enabled && storeConfig.whatsapp.number && (

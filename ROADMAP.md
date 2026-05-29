@@ -21,9 +21,9 @@
 
 | # | Estado | Impacto | Descripción |
 |---|--------|---------|-------------|
-| A-01 | 🔄 | 🔴 | Guardar `storeType` en DB al elegir tipo de tienda en onboarding. **DB ya tiene `tipoTienda` y `tieneVentaMayorista` en el modelo Store** — falta leerlo y usarlo en el formulario, carrito y templates |
+| A-01 | ✅ | 🔴 | `tipoTienda` y `tieneVentaMayorista` leídos desde DB en la página del storefront e inyectados en `StoreConfig`. Expuestos como `checkoutMode` e `isWholesale` en `useStorefront` y disponibles en los 4 templates |
 | A-02 | 🔲 | 🔴 | Que el formulario de producto cambie según `storeType`: ropa→talles/colores, autos→año/km/combustible, servicios→duración/modalidad |
-| A-03 | 🔲 | 🔴 | Que el carrito cambie según `storeType`: ropa→dirección+envío, autos→formulario de contacto/consulta, mayorista→lista de precios+cantidad mínima |
+| A-03 | ✅ | 🔴 | Carrito adaptado por tipo: `inquiry` (AUTOS) → botón "Consultar disponibilidad" en modal que pre-rellena y hace scroll al formulario de contacto. `cart` → flujo normal. Los 4 templates implementados |
 | A-04 | 🔲 | 🟠 | Templates de mayorista: sin precios visibles al público, mostrar "Consultá precio", formulario de pedido por volumen |
 | A-05 | 🔲 | 🟠 | Categorías por defecto según `storeType`: ropa→Mujer/Hombre/Niños/Accesorios, autos→Sedán/SUV/Pickup, mayorista→Línea A/B/C |
 
@@ -40,7 +40,7 @@
 | B-03 | ✅ | 🔴 | Campo de **código de cupón** — ya implementado con validación y descuento en el checkout |
 | B-04 | ✅ | 🟠 | Mostrar **datos de contacto del vendedor** en el panel del carrito (WhatsApp, email) para consultas antes de hacer checkout — link directo a WhatsApp en todos los templates si `whatsapp.enabled` |
 | B-05 | ✅ | 🟠 | **Resumen de compra** con desglose subtotal + envío + cupón + total — ya implementado en el checkout |
-| B-06 | 🔲 | 🟠 | Para mayorista: campo de **cantidad mínima por ítem** con warning si no se alcanza |
+| B-06 | ✅ | 🟠 | Para mayorista: warning en el carrito cuando la cantidad es menor a `cantMinMayorista`. Si alcanza el mínimo, precio cambia automáticamente a `precioMayorista`. Los 4 templates implementados |
 | B-07 | ✅ | 🟡 | **Carrito persistido en localStorage** — sobrevive refresh de página. Favoritos y datos del comprador también persisten si "Recordar mis datos" está activo |
 
 ---

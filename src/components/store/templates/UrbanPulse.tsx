@@ -35,8 +35,9 @@ export default function UrbanPulse() {
 
   const storeConfig = useStoreConfig();
   const storefront  = useStorefront();
-  const { products } = storefront;
+  const { products, checkoutMode, isWholesale } = storefront;
   const { editMode } = useEditContext();
+  const isInquiryMode = checkoutMode === "inquiry";
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
@@ -109,10 +110,16 @@ export default function UrbanPulse() {
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
     cartTotal, cartCount, envioPrice, couponDiscount, orderTotal,
-    searchResults, favoriteProducts,
+    searchResults, favoriteProducts, wholesaleWarnings,
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
   } = useCartLogic(storefront);
+
+  function openInquiry(product: Product) {
+    setModalProduct(null);
+    setContactForm({ nombre: "", email: "", mensaje: `Hola, me interesa "${product.name}". ¿Me podés dar más información?` });
+    setTimeout(() => scrollTo("contacto"), 100);
+  }
 
   const changeCategory = (cat: string) => { setActiveCategory(cat); setVisibleCount(8); };
 
@@ -335,9 +342,9 @@ export default function UrbanPulse() {
               <span style={{ color:ACC, fontSize:36, fontWeight:900 }}>{fmt(featuredProduct.price)}</span>
               {featuredProduct.comparePrice && <span style={{ color:featuredText, opacity:0.25, fontSize:20, textDecoration:"line-through" }}>{fmt(featuredProduct.comparePrice)}</span>}
             </div>
-            <button onClick={() => openModal(featuredProduct)}
+            <button onClick={() => isInquiryMode ? openInquiry(featuredProduct) : openModal(featuredProduct)}
               style={{ width:"100%", background:ACC, color:DARK, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
-              Agregar al Carrito
+              {isInquiryMode ? "Consultar disponibilidad" : "Agregar al Carrito"}
             </button>
           </div>
         </div>
@@ -716,10 +723,17 @@ export default function UrbanPulse() {
                     <button onClick={() => setQty(q => q+1)} style={{ width:36, height:36, background:"none", border:"none", fontSize:18, cursor:"pointer", fontWeight:900 }}>+</button>
                   </div>
                 </div>
-                <button onClick={addToCart}
-                  style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
-                  Agregar · {fmt(modalProduct.price * qty)}
-                </button>
+                {isInquiryMode ? (
+                  <button onClick={() => openInquiry(modalProduct)}
+                    style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
+                    Consultar disponibilidad
+                  </button>
+                ) : (
+                  <button onClick={addToCart}
+                    style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
+                    Agregar · {fmt(modalProduct.price * qty)}
+                  </button>
+                )}
                 <button onClick={() => toggleFavorite(modalProduct.id)}
                   style={{ width:"100%", background:"none", border:`2px solid ${DARK}`, color:DARK, padding:"12px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
                   <svg width={14} height={14} viewBox="0 0 24 24" fill={favorites.includes(modalProduct.id) ? DARK : "none"} stroke={DARK} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -769,6 +783,16 @@ export default function UrbanPulse() {
                   <span style={{ fontSize:12, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>Total</span>
                   <span style={{ fontSize:20, fontWeight:900 }}>{fmt(cartTotal)}</span>
                 </div>
+                {wholesaleWarnings.length > 0 && (
+                  <div style={{ marginBottom:12, padding:"10px 14px", background:"rgba(234,179,8,0.08)", borderLeft:"3px solid #eab308" }}>
+                    <p style={{ fontSize:11, margin:0, color:"#eab308", fontWeight:700, letterSpacing:1 }}>CANTIDAD MÍNIMA NO ALCANZADA</p>
+                    {wholesaleWarnings.map((item, i) => (
+                      <p key={i} style={{ fontSize:10, margin:"3px 0 0", color:"rgba(0,0,0,0.5)" }}>
+                        {item.product.name}: mín. {item.product.cantMinMayorista} uds.
+                      </p>
+                    ))}
+                  </div>
+                )}
                 <button onClick={openCheckout} style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
                   Finalizar Compra →
                 </button>
