@@ -155,6 +155,7 @@ export default function ChicParis() {
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
+    if (isPreview) return;
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
     setReviewSubmitting(true);
@@ -922,7 +923,9 @@ export default function ChicParis() {
                 ) : (
                   <p style={{ fontSize: 12, color: "#bbb", marginBottom: 16 }}>Sé el primero en dejar una reseña.</p>
                 )}
-                {reviewDone ? (
+                {isPreview ? (
+                  <p style={{ fontSize: 11, color: "#bbb", fontStyle: "italic" }}>Las reseñas solo están disponibles en la tienda real.</p>
+                ) : reviewDone ? (
                   <p style={{ fontSize: 12, color: ACC, fontWeight: 700 }}>¡Gracias por tu reseña!</p>
                 ) : (
                   <form onSubmit={submitReview} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
