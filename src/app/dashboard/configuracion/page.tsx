@@ -1369,7 +1369,7 @@ export default function ConfiguracionPage() {
   /* ── STEP 2: Preview ── */
   if (mode === "preview") {
     return (
-      <DashboardLayout>
+      <DashboardLayout fullHeight>
         <div style={{ display: "flex", height: "100%", overflow: "hidden",
           flexDirection: "column", background: "#0f172a" }}>
 
