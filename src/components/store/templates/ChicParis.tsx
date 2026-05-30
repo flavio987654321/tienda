@@ -656,7 +656,31 @@ export default function ChicParis() {
               ))}
             </div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px 24px" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0 16px" }}>
+              {[
+                { label: "Política de devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
+                { label: "Política de envíos",       tipo: "envios",       policyField: "policyShipping" },
+                { label: "Términos y condiciones",   tipo: "terminos",     policyField: "policyTerms" },
+              ].map(({ label, tipo, policyField }) => (
+                editMode ? (
+                  <button key={tipo} type="button" onClick={() => setOpenPolicyField(policyField)}
+                    style={{ fontSize: 11, color: footerText, opacity: 0.4, background: "none", border: "none", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", gap: 4 }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.4"; }}>
+                    {label}
+                    <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                ) : (
+                  <a key={tipo} href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=${tipo}`}
+                    style={{ fontSize: 11, color: footerText, opacity: 0.4, textDecoration: "none" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.4"; }}>
+                    {label}
+                  </a>
+                )
+              ))}
+            </div>
             <p style={{ margin: 0, fontSize: 11, color: footerText, opacity: 0.4 }}>
               <EditableZone field="footerCopyright" label="Copyright">© 2025 Chic Paris. Todos los derechos reservados.</EditableZone>
             </p>

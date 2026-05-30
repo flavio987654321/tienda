@@ -621,8 +621,8 @@ export default function BohoTerra() {
             })}
           </div>
         </div>
-        <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, padding:"16px 40px", maxWidth:1280, margin:"0 auto" }}>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px", marginBottom:10 }}>
+        <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, padding:"16px 40px", maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:"0 16px" }}>
             {[
               { label: "Política de devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
               { label: "Política de envíos",       tipo: "envios",       policyField: "policyShipping" },
