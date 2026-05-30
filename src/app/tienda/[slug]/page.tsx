@@ -6,6 +6,8 @@ import type { Metadata } from "next";
 import type { StoreConfig } from "@/types/store-config";
 import { DEFAULT_CONFIG } from "@/types/store-config";
 import ComingSoonPage from "./ComingSoonPage";
+import OwnerPreviewBadge from "./OwnerPreviewBadge";
+import { getCurrentUser } from "@/lib/auth-session";
 
 export const dynamic = "force-dynamic";
 
@@ -45,25 +47,31 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
   noStore();
   const { slug } = await params;
 
-  const store = await prisma.store.findFirst({
-    where: { slug, isActive: true },
-    select: {
-      id: true,
-      storeConfig: true,
-      isPublished: true,
-      name: true,
-      logo: true,
-      logoColor: true,
-      primaryColor: true,
-      tagline: true,
-      tipoTienda: true,
-      tieneVentaMayorista: true,
-    },
-  });
+  const [store, currentUser] = await Promise.all([
+    prisma.store.findFirst({
+      where: { slug, isActive: true },
+      select: {
+        id: true,
+        storeConfig: true,
+        isPublished: true,
+        name: true,
+        logo: true,
+        logoColor: true,
+        primaryColor: true,
+        tagline: true,
+        tipoTienda: true,
+        tieneVentaMayorista: true,
+        ownerId: true,
+      },
+    }),
+    getCurrentUser(),
+  ]);
 
   if (!store) notFound();
 
-  if (!store.isPublished) {
+  const isOwner = !!currentUser && currentUser.id === store.ownerId;
+
+  if (!store.isPublished && !isOwner) {
     return (
       <ComingSoonPage
         name={store.name}
@@ -90,5 +98,17 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
     notFound();
   }
 
-  return <StorefrontTemplateRenderer config={config} />;
+  return (
+    <>
+      <StorefrontTemplateRenderer config={config} />
+      {!store.isPublished && isOwner && (
+        <OwnerPreviewBadge
+          name={store.name}
+          logo={store.logo ?? null}
+          color={store.logoColor || store.primaryColor || "#6366f1"}
+          tagline={store.tagline ?? null}
+        />
+      )}
+    </>
+  );
 }
