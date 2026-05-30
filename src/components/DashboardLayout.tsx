@@ -201,7 +201,7 @@ export default function DashboardLayout({
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
           >
             <UserCircle className="h-4 w-4 shrink-0" />
-            <div className="min-w-0 max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
+            <div className="flex-1 max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
               <p className="text-xs font-medium text-gray-700 truncate whitespace-nowrap">{userName}</p>
               <p className="text-xs text-gray-400 truncate whitespace-nowrap">{userEmail}</p>
             </div>
