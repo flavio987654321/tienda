@@ -201,6 +201,7 @@ export default function BohoTerra() {
   }, [showAnnouncement]);
 
   const CARDS_PER_VIEW = 3;
+  const CAROUSEL_LIMIT = CARDS_PER_VIEW * 2; // 6 productos → 2 tandas
   const subcategoriesFor = useMemo(() => {
     const map: Record<string, string[]> = {};
     products.forEach(p => {
@@ -220,7 +221,8 @@ export default function BohoTerra() {
     if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
     return true;
   });
-  const maxIdx      = Math.max(0, allFiltered.length - CARDS_PER_VIEW);
+  const carouselProducts = allFiltered.slice(0, CAROUSEL_LIMIT);
+  const maxIdx      = Math.max(0, carouselProducts.length - CARDS_PER_VIEW);
   const prevSlide   = () => setCarouselIdx(i => Math.max(0, i - 1));
   const nextSlide   = () => setCarouselIdx(i => Math.min(maxIdx, i + 1));
 
@@ -471,7 +473,7 @@ export default function BohoTerra() {
           {/* área deslizante */}
           <div ref={carouselRef} style={{ overflow:"hidden", padding:"0 40px" }}>
             <div style={{ display:"flex", gap:20, transition:"transform 0.45s cubic-bezier(.4,0,.2,1)", transform:`translateX(calc(-${carouselIdx} * (100% / ${CARDS_PER_VIEW} + 20px / ${CARDS_PER_VIEW})))` }}>
-              {allFiltered.map(product=>(
+              {carouselProducts.map(product=>(
                 <div key={product.id}
                   style={{ flexShrink:0, width:`calc((100% - ${(CARDS_PER_VIEW-1)*20}px) / ${CARDS_PER_VIEW})`, cursor:"pointer", position:"relative" }}
                   onClick={()=>openModal(product)}>
@@ -533,6 +535,16 @@ export default function BohoTerra() {
             ))}
           </div>
         )}
+
+        {/* Ver colección completa */}
+        <div style={{ textAlign:"center", marginTop:48 }}>
+          <a href={`/tienda/${storeConfig?.slug}/productos`}
+            style={{ display:"inline-block", border:`1px solid ${T}`, color:T, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s", fontFamily:"Georgia, serif", fontStyle:"italic" }}
+            onMouseEnter={e=>{ e.currentTarget.style.background=T; e.currentTarget.style.color=coleccionBg; }}
+            onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=T; }}>
+            Ver colección completa
+          </a>
+        </div>
       </section>
 
       {/* ── NOSOTROS — imagen full width + texto encima */}

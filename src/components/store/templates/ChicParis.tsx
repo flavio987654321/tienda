@@ -496,14 +496,14 @@ export default function ChicParis() {
                   </div>
                 ))}
               </div>
-              {hasMore && (
-                <div style={{ textAlign: "center", marginTop: 48 }}>
-                  <button onClick={() => setVisibleCount(v => v + 8)}
-                    style={{ background: "transparent", color: prodText, border: `2px solid ${prodText === "#fff" ? "rgba(255,255,255,0.4)" : "#ccc"}`, padding: "12px 40px", fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
-                    Ver más
-                  </button>
-                </div>
-              )}
+              <div style={{ textAlign: "center", marginTop: 48 }}>
+                <a href={`/tienda/${storeConfig?.slug}/productos`}
+                  style={{ display: "inline-block", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", padding: "14px 44px", fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", textDecoration: "none", transition: "opacity 0.2s" }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
+                  Ver colección completa
+                </a>
+              </div>
             </>
           )}
         </div>
