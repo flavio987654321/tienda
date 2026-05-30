@@ -653,8 +653,8 @@ export default function UrbanPulse() {
               </div>
             ))}
           </div>
-          <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22 }}>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px", marginBottom:14 }}>
+          <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:"0 16px" }}>
               {[
                 { label: "Devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
                 { label: "Envíos",       tipo: "envios",       policyField: "policyShipping" },
@@ -678,7 +678,7 @@ export default function UrbanPulse() {
                 )
               ))}
             </div>
-            <div style={{ display:"flex", justifyContent:"space-between" }}>
+            <div style={{ display:"flex", gap:24, alignItems:"center" }}>
               <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerCopyright" label="Copyright">© 2025 UrbanPulse. Todos los derechos reservados.</EditableZone></p>
               <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerMadeIn" label="Hecho en">Hecho en Argentina</EditableZone></p>
             </div>
