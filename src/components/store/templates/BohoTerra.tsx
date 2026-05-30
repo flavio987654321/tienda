@@ -539,8 +539,8 @@ export default function BohoTerra() {
         {/* Ver colección completa */}
         <div style={{ textAlign:"center", marginTop:48 }}>
           <a href={`/tienda/${storeConfig?.slug}/productos?t=boho-terra`}
-            target={editMode ? "_blank" : undefined}
-            rel={editMode ? "noopener noreferrer" : undefined}
+            target={storeConfig?.previewFill ? "_blank" : undefined}
+            rel={storeConfig?.previewFill ? "noopener noreferrer" : undefined}
             style={{ display:"inline-block", border:`1px solid ${T}`, color:T, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s", fontFamily:"Georgia, serif", fontStyle:"italic" }}
             onMouseEnter={e=>{ e.currentTarget.style.background=T; e.currentTarget.style.color=coleccionBg; }}
             onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=T; }}>
