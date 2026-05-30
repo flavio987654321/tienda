@@ -626,7 +626,9 @@ export default function FashionNoir() {
                 Ver 8 más
               </button>
             )}
-            <a href={`/tienda/${storeConfig?.slug ?? ""}/productos`}
+            <a href={`/tienda/${storeConfig?.slug ?? ""}/productos?t=fashion-noir`}
+              target={editMode ? "_blank" : undefined}
+              rel={editMode ? "noopener noreferrer" : undefined}
               style={{ background:G, color:BG, padding:"14px 36px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:700, cursor:"pointer", textDecoration:"none", display:"inline-block", transition:"opacity 0.2s" }}
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity="0.85"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity="1"; }}>

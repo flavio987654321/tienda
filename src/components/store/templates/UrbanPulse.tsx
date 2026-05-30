@@ -551,9 +551,11 @@ export default function UrbanPulse() {
           })}
         </div>
         <div style={{ textAlign:"center", marginTop:48 }}>
-          <a href={`/tienda/${storeConfig?.slug}/productos`}
+          <a href={`/tienda/${storeConfig?.slug}/productos?t=urban-pulse`}
+            target={editMode ? "_blank" : undefined}
+            rel={editMode ? "noopener noreferrer" : undefined}
             style={{ display:"inline-block", background:DARK, color:ACC, border:`3px solid ${DARK}`, padding:"16px 52px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s" }}
-            onMouseEnter={e=>{ e.currentTarget.style.background=ACC; e.currentTarget.style.color=DARK; e.currentTarget.style.borderColor=ACC; }}
+            onMouseEnter={e=>{ e.currentTarget.style.background=ACC; e.currentTarget.style.color=DARK; e.currentTarget.style.borderColor=DARK; }}
             onMouseLeave={e=>{ e.currentTarget.style.background=DARK; e.currentTarget.style.color=ACC; e.currentTarget.style.borderColor=DARK; }}>
             Ver colección completa
           </a>

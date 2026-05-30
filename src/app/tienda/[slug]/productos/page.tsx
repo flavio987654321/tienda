@@ -1,7 +1,7 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct, PlaceOrderParams } from "@/hooks/useStorefront";
@@ -75,16 +75,18 @@ const THEMES: Record<string, Theme> = {
 
 const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 
-// ── Componente principal ─────────────────────────────────────────────────────
-export default function ProductosPage() {
-  const params = useParams();
-  const slug   = params?.slug as string;
+// ── Componente interno (necesita useSearchParams dentro de Suspense) ──────────
+function ProductosPageInner() {
+  const params       = useParams();
+  const searchParams = useSearchParams();
+  const slug         = params?.slug as string;
+  const tParam       = searchParams?.get("t") ?? null;
 
   const [products,   setProducts]   = useState<StorefrontProduct[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState<string | null>(null);
   const [storeName,  setStoreName]  = useState("Tienda");
-  const [template,   setTemplate]   = useState("fashion-noir");
+  const [template,   setTemplate]   = useState(tParam && THEMES[tParam] ? tParam : "fashion-noir");
 
   const storeIdRef = useRef<string | null>(null);
 
@@ -150,7 +152,7 @@ export default function ProductosPage() {
         storeIdRef.current = data.store.id ?? null;
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
-          if (cfg.template) setTemplate(cfg.template);
+          if (cfg.template && !tParam) setTemplate(cfg.template);
           if (cfg.storeName) setStoreName(cfg.storeName);
           else if (data.store.name) setStoreName(data.store.name);
         } catch { if (data.store.name) setStoreName(data.store.name); }
@@ -250,12 +252,21 @@ export default function ProductosPage() {
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:backdropNav, backdropFilter:"blur(12px)", borderBottom:`1px solid ${borderFaint}` }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 32px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <Link href={`/tienda/${slug}`}
-            style={{ color:T, textDecoration:"none", fontSize:11, letterSpacing:3, textTransform:"uppercase", opacity:0.5, display:"flex", alignItems:"center", gap:8, transition:"opacity 0.2s" }}
-            onMouseEnter={e => (e.currentTarget.style.opacity="1")}
-            onMouseLeave={e => (e.currentTarget.style.opacity="0.5")}>
-            ← Volver a la tienda
-          </Link>
+          {tParam ? (
+            <Link href="/dashboard/configuracion"
+              style={{ color:T, textDecoration:"none", fontSize:11, letterSpacing:3, textTransform:"uppercase", opacity:0.5, display:"flex", alignItems:"center", gap:8, transition:"opacity 0.2s" }}
+              onMouseEnter={e => (e.currentTarget.style.opacity="1")}
+              onMouseLeave={e => (e.currentTarget.style.opacity="0.5")}>
+              ← Volver al editor
+            </Link>
+          ) : (
+            <Link href={`/tienda/${slug}`}
+              style={{ color:T, textDecoration:"none", fontSize:11, letterSpacing:3, textTransform:"uppercase", opacity:0.5, display:"flex", alignItems:"center", gap:8, transition:"opacity 0.2s" }}
+              onMouseEnter={e => (e.currentTarget.style.opacity="1")}
+              onMouseLeave={e => (e.currentTarget.style.opacity="0.5")}>
+              ← Volver a la tienda
+            </Link>
+          )}
           <span style={{ fontFamily:serif, fontSize:20, fontWeight:700, letterSpacing:5, color:G }}>{storeName}</span>
           <button onClick={() => setCartOpen(true)} style={{ position:"relative", background:"none", border:`1px solid ${border}`, color:T, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"border-color 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.borderColor=G)}
@@ -763,5 +774,13 @@ export default function ProductosPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ProductosPage() {
+  return (
+    <Suspense>
+      <ProductosPageInner />
+    </Suspense>
   );
 }
