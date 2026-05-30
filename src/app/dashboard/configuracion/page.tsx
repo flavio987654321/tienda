@@ -1421,9 +1421,9 @@ export default function ConfiguracionPage() {
           </div>
 
           <div style={{ flex: 1, display: "flex", alignItems: "stretch", padding: "12px 20px 20px", minHeight: 0 }}>
-            <div style={{ flex: 1, borderRadius: 10, overflow: "clip",
+            <div style={{ flex: 1, borderRadius: 10, overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column",
-              transform: "translateZ(0)" }}>
+              contain: "paint" }}>
               <StoreConfigContext.Provider value={{ ...config, previewFill: true }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
@@ -1556,10 +1556,10 @@ export default function ConfiguracionPage() {
           sectionColors: config.sectionColors,
           setSectionColor,
         }}>
-          <div style={{ flex: 1, overflow: "clip", position: "relative", padding: "12px 16px 0" }}>
-            <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "clip",
+          <div style={{ flex: 1, overflow: "hidden", position: "relative", padding: "12px 16px 0" }}>
+            <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
-              transform: "translateZ(0)" }}>
+              contain: "paint" }}>
               <StoreConfigContext.Provider value={{ ...config, previewFill: true }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
