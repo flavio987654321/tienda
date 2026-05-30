@@ -42,6 +42,7 @@ export default function UrbanPulse() {
   const [reviewDone,     setReviewDone]     = useState(false);
 
   const storeConfig = useStoreConfig();
+  const isPreview   = !!storeConfig?.previewFill;
   const storefront  = useStorefront();
   const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const { editMode } = useEditContext();
