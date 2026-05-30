@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Globe, Smartphone, Crown, Copy, Check, ExternalLink, Info, Lock, Clock, Trash2 } from "lucide-react";
+import { Globe, Smartphone, Crown, Copy, Check, ExternalLink, Info, Lock, Clock, Trash2, Bell } from "lucide-react";
+import PushNotificationToggle from "@/components/PushNotificationToggle";
 import Link from "next/link";
 
 type Props = {
@@ -163,6 +164,20 @@ export default function AjustesClient({ slug, customDomain, isPremium }: Props) 
             </div>
           </div>
         )}
+      </div>
+
+      {/* Notificaciones push */}
+      <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+        <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100">
+          <Bell className="h-4 w-4 text-indigo-500" />
+          <h2 className="text-sm font-bold text-gray-800">Notificaciones push</h2>
+        </div>
+        <div className="px-5 py-4 space-y-2">
+          <p className="text-xs text-gray-500">
+            Recibí alertas en este dispositivo cuando llegue un nuevo pedido o una solicitud de afiliada, incluso con el panel cerrado.
+          </p>
+          <PushNotificationToggle />
+        </div>
       </div>
 
     </div>

@@ -7,7 +7,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle, Loader2, MessageCircle } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
-import PushNotificationToggle from "@/components/PushNotificationToggle";
 
 const LEADS_STORE_TYPES = ["VEHICULOS", "INMOBILIARIA"];
 
@@ -196,7 +195,7 @@ export default function DashboardLayout({
             </span>
           </button>
           {/* Info de usuario — solo visible expandido */}
-          <div className="max-h-0 group-hover:max-h-32 overflow-hidden transition-[max-height] duration-200 px-3 pt-2 space-y-2">
+          <div className="max-h-0 group-hover:max-h-16 overflow-hidden transition-[max-height] duration-200 px-3 pt-2">
             <div className="flex items-center gap-2">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-700 truncate">{userName}</p>
@@ -210,7 +209,6 @@ export default function DashboardLayout({
                 <UserCircle className="h-4 w-4" />
               </Link>
             </div>
-            <PushNotificationToggle />
           </div>
         </div>
 

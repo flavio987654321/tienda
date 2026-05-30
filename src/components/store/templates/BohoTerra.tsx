@@ -108,6 +108,17 @@ export default function BohoTerra() {
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
   } = useCartLogic(storefront);
 
+  const selectedVariantStock = useMemo(() => {
+    if (!modalProduct?.variants.length) return null;
+    const v = modalProduct.variants.find(v => {
+      const inValue = v.value.includes(selectedSize) || v.value.includes(selectedColor);
+      let inAttrs = false;
+      try { const a = JSON.parse(v.name); inAttrs = Object.values(a).includes(selectedSize) || Object.values(a).includes(selectedColor); } catch {}
+      return inValue || inAttrs;
+    }) ?? (modalProduct.variants.length === 1 ? modalProduct.variants[0] : null);
+    return v?.stock ?? null;
+  }, [modalProduct, selectedSize, selectedColor]);
+
   function openInquiry(product: Product) {
     setModalProduct(null);
     setContactForm({ nombre: "", email: "", mensaje: `Hola, me interesa "${product.name}". ¿Me podés dar más información?` });
@@ -716,13 +727,46 @@ export default function BohoTerra() {
                   <button onClick={()=>setQty(q=>q+1)} style={{ width:36, height:36, background:"none", border:"none", color:T, fontSize:18, cursor:"pointer" }}>+</button>
                 </div>
               </div>
+              {/* Stock por variante */}
+              {selectedVariantStock !== null && selectedVariantStock === 0 && (
+                <p style={{ fontSize:12, color:"#888", fontWeight:500, margin:0 }}>Sin stock en esta combinación</p>
+              )}
+              {selectedVariantStock !== null && selectedVariantStock > 0 && selectedVariantStock <= 5 && (
+                <p style={{ fontSize:12, color:"#ef4444", fontWeight:600, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
+              )}
+              {/* Videos del producto */}
+              {modalProduct.reelUrls.length > 0 && (
+                <div style={{ borderTop:`1px solid rgba(44,34,24,0.1)`, paddingTop:14, marginBottom:4 }}>
+                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:10, color:MID }}>Videos</p>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {modalProduct.reelUrls.map((url, i) => {
+                      if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
+                        return (
+                          <video key={i} controls style={{ width:"100%", maxHeight:200, objectFit:"contain", background:"#000", borderRadius:4 }}>
+                            <source src={url} />
+                          </video>
+                        );
+                      }
+                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : url.includes("youtube") || url.includes("youtu.be") ? "YouTube" : "Video";
+                      return (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                          style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", border:`1px solid rgba(44,34,24,0.14)`, textDecoration:"none", color:"#2c2218" }}>
+                          <svg width={12} height={12} viewBox="0 0 24 24" fill={A} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                          <span style={{ fontSize:12 }}>{platform}</span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {isInquiryMode ? (
                 <button onClick={() => openInquiry(modalProduct)} style={{ background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", marginTop:"auto" }}>
                   Consultar disponibilidad
                 </button>
               ) : (
-              <button onClick={addToCart} style={{ background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", marginTop:"auto" }}>
-                {"Agregar al Carrito"} · {fmt(modalProduct.price*qty)}
+              <button onClick={addToCart} disabled={selectedVariantStock === 0}
+                style={{ background: selectedVariantStock === 0 ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
+                {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(modalProduct.price*qty)}`}
               </button>
               )}
 

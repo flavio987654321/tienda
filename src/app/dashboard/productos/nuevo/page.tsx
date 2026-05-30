@@ -6,7 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import {
   Plus, Trash2, Loader2, ArrowLeft, ChevronLeft, ChevronRight,
-  Upload, X, Star, ShoppingCart, Heart, Tag, Package, HelpCircle, Calendar,
+  Upload, X, Star, ShoppingCart, Heart, Tag, Package, HelpCircle, Calendar, Film,
 } from "lucide-react";
 import Link from "next/link";
 import { getStoreType } from "@/lib/storeTypes";
@@ -151,6 +151,10 @@ function variantPlaceholder(name: string): string {
   return "ej: Valor";
 }
 
+function isDirectVideoUrl(url: string) {
+  return /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url);
+}
+
 function safeJsonArray(value: unknown) {
   if (Array.isArray(value)) return value;
   if (typeof value !== "string") return [];
@@ -256,7 +260,9 @@ function ProductoFormPage() {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [uploadingImg, setUploadingImg] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoFileInputRef = useRef<HTMLInputElement>(null);
   const [reelUrls, setReelUrls] = useState<string[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const loadedRef = useRef(false);
@@ -483,6 +489,29 @@ function ProductoFormPage() {
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     uploadImages(Array.from(e.dataTransfer.files || []));
+  }
+
+  async function handleVideoFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingVideo(true);
+    setError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await readJsonResponse(res);
+      if (!res.ok) throw new Error(data.error || "No se pudo subir el video");
+      if (data.url) {
+        setReelUrls(p => [...p, data.url as string]);
+        markDirty();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo subir el video");
+    } finally {
+      setUploadingVideo(false);
+      if (videoFileInputRef.current) videoFileInputRef.current.value = "";
+    }
   }
 
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -733,40 +762,73 @@ function ProductoFormPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-semibold text-gray-900">Reels / Videos</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">URLs de Instagram Reels, TikTok o YouTube Shorts — se muestran en el modal del producto</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Subí tu propio video (MP4, MOV) o pegá una URL de Instagram, TikTok o YouTube</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => { setReelUrls(p => [...p, ""]); markDirty(); }}
-                  className="flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  Agregar URL
-                </button>
-              </div>
-              {reelUrls.length === 0 && (
-                <p className="text-sm text-gray-400 text-center py-3">
-                  Sin reels. Agregá una URL para mostrar un video en el modal del producto.
-                </p>
-              )}
-              {reelUrls.map((url, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => { setReelUrls(p => p.map((u, j) => j === i ? e.target.value : u)); markDirty(); }}
-                    placeholder="https://www.instagram.com/reel/... o tiktok.com/..."
-                    className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+                <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => { setReelUrls(p => p.filter((_, j) => j !== i)); markDirty(); }}
-                    className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                    onClick={() => videoFileInputRef.current?.click()}
+                    disabled={uploadingVideo}
+                    className="flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors disabled:opacity-50"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {uploadingVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
+                    {uploadingVideo ? "Subiendo..." : "Subir video"}
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <button
+                    type="button"
+                    onClick={() => { setReelUrls(p => [...p, ""]); markDirty(); }}
+                    className="flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Agregar URL
                   </button>
                 </div>
-              ))}
+              </div>
+              <input
+                ref={videoFileInputRef}
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime,video/ogg"
+                className="hidden"
+                onChange={handleVideoFileUpload}
+              />
+              {reelUrls.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-3">
+                  Sin videos. Subí un MP4 propio o pegá un link de Instagram, TikTok o YouTube.
+                </p>
+              )}
+              {reelUrls.map((url, i) => {
+                const isDirect = isDirectVideoUrl(url);
+                return isDirect ? (
+                  <div key={i} className="relative rounded-xl overflow-hidden bg-black">
+                    <video src={url} controls className="w-full max-h-48 object-contain" />
+                    <button
+                      type="button"
+                      onClick={() => { setReelUrls(p => p.filter((_, j) => j !== i)); markDirty(); }}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div key={i} className="flex gap-2 items-center">
+                    <input
+                      type="url"
+                      value={url}
+                      onChange={(e) => { setReelUrls(p => p.map((u, j) => j === i ? e.target.value : u)); markDirty(); }}
+                      placeholder="https://www.instagram.com/reel/... o tiktok.com/..."
+                      className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setReelUrls(p => p.filter((_, j) => j !== i)); markDirty(); }}
+                      className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Basic info */}

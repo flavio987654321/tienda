@@ -910,6 +910,13 @@ export default function FashionNoir() {
                   <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:12, opacity:0.5 }}>Videos del producto</p>
                   <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                     {modalProduct.reelUrls.map((url, i) => {
+                      if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
+                        return (
+                          <video key={i} controls style={{ width:"100%", maxHeight:220, objectFit:"contain", background:"#000", borderRadius:4 }}>
+                            <source src={url} />
+                          </video>
+                        );
+                      }
                       const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : url.includes("youtube") || url.includes("youtu.be") ? "YouTube" : "Video";
                       return (
                         <a key={i} href={url} target="_blank" rel="noopener noreferrer"
