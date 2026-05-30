@@ -63,7 +63,6 @@ export const STORE_TYPES: StoreTypeConfig[] = [
       "ropa-interior": ["corpiños", "bombachas", "boxers", "medias"],
     },
     extraFields: [
-      { key: "genero", label: "Género", placeholder: "Mujer / Hombre / Unisex" },
       { key: "material", label: "Material", placeholder: "Algodón, poliéster..." },
     ],
   },
@@ -234,7 +233,6 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     },
     extraFields: [
       { key: "deporte", label: "Deporte/Actividad", placeholder: "Fútbol, running, gym..." },
-      { key: "genero", label: "Género", placeholder: "Mujer / Hombre / Unisex" },
     ],
   },
   {

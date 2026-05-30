@@ -151,6 +151,20 @@ function variantPlaceholder(name: string): string {
   return "ej: Valor";
 }
 
+function getTalleSuggestions(category: string, subcategory: string): string[] {
+  const c = category.toLowerCase().replace(/-/g, "");
+  const s = subcategory.toLowerCase().replace(/-/g, "");
+  const shoeSubcats = ["zapatillas", "botas", "sandalias", "zapatos", "ojotas", "running", "futbol", "basquet", "training", "trekking"];
+  const pantSubcats = ["jeans", "wideleg", "cargo", "legging", "short", "pantalon"];
+  if (c === "calzado" || shoeSubcats.includes(s)) {
+    return ["35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
+  }
+  if (c === "pantalones" || pantSubcats.includes(s)) {
+    return ["26", "28", "30", "32", "34", "36", "38", "40", "42", "44"];
+  }
+  return ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+}
+
 function isDirectVideoUrl(url: string) {
   return /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url);
 }
@@ -694,6 +708,14 @@ function ProductoFormPage() {
                 />
               </div>
 
+              {/* Hint cuando no hay colores definidos */}
+              {!storeTypeConfig.hideVariants && colorValues.length === 0 && (
+                <div className="flex items-start gap-2 bg-gray-50 rounded-xl px-3 py-2.5 text-xs text-gray-500">
+                  <svg className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span>Si tu producto tiene <strong>diferentes colores</strong>, primero agregá las variantes de color en <strong>Variantes y stock</strong> (más abajo) — después podrás asignar cada foto a su color.</span>
+                </div>
+              )}
+
               {/* Thumbnails con asignación de color */}
               {images.length > 0 && (
                 <div className="space-y-3">
@@ -1092,8 +1114,16 @@ function ProductoFormPage() {
                             value={val}
                             onChange={(e) => updateVariantAttr(idx, dim, e.target.value)}
                             placeholder={variantPlaceholder(dim)}
+                            list={dim === "Talle" ? `talle-list-${idx}` : undefined}
                             className={`w-full border border-gray-200 rounded-lg py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${circle ? "pl-8 pr-3" : "px-3"}`}
                           />
+                          {dim === "Talle" && (
+                            <datalist id={`talle-list-${idx}`}>
+                              {getTalleSuggestions(form.category, form.subcategory).map(s => (
+                                <option key={s} value={s} />
+                              ))}
+                            </datalist>
+                          )}
                         </div>
                       </div>
                     );
@@ -1132,6 +1162,14 @@ function ProductoFormPage() {
                   </div>
                 </div>
               ))}
+
+              {/* Hint: tenés colores definidos pero hay fotos sin asignar */}
+              {colorValues.length > 0 && images.length > 0 && images.some(img => !img.variantValue) && (
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-700">
+                  <svg className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span>Tenés colores definidos pero tus fotos no tienen color asignado. Scrolleá a <strong>Imágenes del producto</strong> (arriba) para asignar cada foto a su color — así el cliente ve la foto correcta al elegir un color.</span>
+                </div>
+              )}
             </div>}
 
             {/* Ficha técnica / Atributos */}
