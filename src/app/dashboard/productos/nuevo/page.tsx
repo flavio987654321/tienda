@@ -162,6 +162,12 @@ function getTalleSuggestions(category: string, subcategory: string): string[] {
   if (c === "ropaninos") {
     return ["2", "3", "4", "5", "6", "7", "8", "10", "12", "14", "16"];
   }
+  if (c === "joyas" || s === "anillos") {
+    if (s === "collares") return ["40cm", "45cm", "50cm", "55cm", "60cm", "70cm"];
+    if (s === "pulseras") return ["16cm", "17cm", "18cm", "19cm", "20cm"];
+    if (s === "anillos") return ["12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"];
+    return ["Unitalla", "XS", "S", "M", "L", "XL"];
+  }
   if (c === "calzado" || shoeSubcats.includes(s)) {
     return ["35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
   }
