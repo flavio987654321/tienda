@@ -58,6 +58,7 @@ export default function FashionNoir() {
   const [reviewDone,     setReviewDone]     = useState(false);
 
   const storeConfig = useStoreConfig();
+  const isPreview   = !!storeConfig?.previewFill;
   const storefront  = useStorefront();
   const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
@@ -272,7 +273,7 @@ export default function FashionNoir() {
 
       {/* ── ANNOUNCEMENT BAR ───────────────────────────────── */}
       {showAnnouncement && (
-        <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ position: isPreview ? "sticky" : "fixed", top:0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex:110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <span style={{ fontSize:12, fontWeight:600, color:BG, letterSpacing:1 }}>
             <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{ANNOUNCEMENT_MESSAGES[announcementIdx]}</EditableZone>
           </span>
@@ -333,7 +334,7 @@ export default function FashionNoir() {
       )}
 
       {/* ── NAVBAR ─────────────────────────────────────────── */}
-      <nav style={{ position:"fixed", top:announcementBarHeight, left:0, right:0, zIndex:100, transition:"background 0.4s, top 0.3s", background: scrolled ? "rgba(10,10,10,0.97)" : "transparent", backdropFilter: scrolled ? "blur(12px)" : "none", borderBottom: scrolled ? `1px solid rgba(201,168,76,0.15)` : "none" }}>
+      <nav style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex:100, transition:"background 0.4s, top 0.3s", background: scrolled ? "rgba(10,10,10,0.97)" : "transparent", backdropFilter: scrolled ? "blur(12px)" : "none", borderBottom: scrolled ? `1px solid rgba(201,168,76,0.15)` : "none" }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 32px", height:72, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <button onClick={() => scrollTo("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:26, fontWeight:700, letterSpacing:6, color:G, maxWidth:240, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
             <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "NOIR"}</EditableZone>

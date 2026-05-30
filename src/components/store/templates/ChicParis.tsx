@@ -29,6 +29,7 @@ export default function ChicParis() {
   const [reviewDone,     setReviewDone]     = useState(false);
 
   const storeConfig = useStoreConfig();
+  const isPreview   = !!storeConfig?.previewFill;
   const storefront  = useStorefront();
   const { products, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const { editMode } = useEditContext();
@@ -199,7 +200,7 @@ export default function ChicParis() {
       {/* ── PROMO BAR ── */}
       {promoBannerEnabled && (
         <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, zIndex: 1001,
+          position: isPreview ? "sticky" : "fixed", top: 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: 1001,
           height: PROMO_BAR_H, background: "#111",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
@@ -213,7 +214,7 @@ export default function ChicParis() {
 
       {/* ── NAVBAR ── */}
       <header style={{
-        position: "fixed", top: promoBannerEnabled ? PROMO_BAR_H : 0, left: 0, right: 0, zIndex: 1000,
+        position: isPreview ? "sticky" : "fixed", top: promoBannerEnabled ? PROMO_BAR_H : 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: 1000,
         background: scrolled ? "rgba(255,255,255,0.97)" : "transparent",
         borderBottom: scrolled ? "1px solid #e8e8e8" : "none",
         backdropFilter: scrolled ? "blur(12px)" : "none",
