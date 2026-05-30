@@ -107,6 +107,8 @@ export default async function DashboardPage() {
                 />
                 <Link
                   href={`/tienda/${store.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
                 >
                   Ver tienda
