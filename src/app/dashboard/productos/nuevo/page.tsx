@@ -156,6 +156,12 @@ function getTalleSuggestions(category: string, subcategory: string): string[] {
   const s = subcategory.toLowerCase().replace(/-/g, "");
   const shoeSubcats = ["zapatillas", "botas", "sandalias", "zapatos", "ojotas", "running", "futbol", "basquet", "training", "trekking"];
   const pantSubcats = ["jeans", "wideleg", "cargo", "legging", "short", "pantalon"];
+  if (c === "ropabebe") {
+    return ["0-3m", "3-6m", "6-9m", "9-12m", "12-18m", "18-24m"];
+  }
+  if (c === "ropaninos") {
+    return ["2", "3", "4", "5", "6", "7", "8", "10", "12", "14", "16"];
+  }
   if (c === "calzado" || shoeSubcats.includes(s)) {
     return ["35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
   }

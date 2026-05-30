@@ -49,7 +49,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     variantValuePlaceholder: "S, M, L, XL",
     namePlaceholder: "Ej: Remera oversize negra talle M",
     tagsPlaceholder: "negro, oversize, algodon",
-    categorias: ["remeras", "pantalones", "vestidos", "camperas", "buzos", "calzado", "joyas", "accesorios", "bolsos", "ropa-interior"],
+    categorias: ["remeras", "pantalones", "vestidos", "camperas", "buzos", "calzado", "joyas", "accesorios", "bolsos", "ropa-interior", "ropa-ninos", "ropa-bebe"],
     subcategorias: {
       remeras: ["básica", "oversize", "estampada", "manga-larga"],
       pantalones: ["jeans", "wide-leg", "cargo", "legging", "short"],
@@ -61,6 +61,8 @@ export const STORE_TYPES: StoreTypeConfig[] = [
       accesorios: ["cinturones", "lentes", "gorros", "pañuelos"],
       bolsos: ["carteras", "mochilas", "riñoneras", "tote"],
       "ropa-interior": ["corpiños", "bombachas", "boxers", "medias"],
+      "ropa-ninos": ["remeras", "pantalones", "vestidos", "camperas", "buzos", "calzado", "conjuntos"],
+      "ropa-bebe": ["bodies", "pijamas", "conjuntos", "ajuar", "gorros", "medias"],
     },
     extraFields: [
       { key: "material", label: "Material", placeholder: "Algodón, poliéster..." },
