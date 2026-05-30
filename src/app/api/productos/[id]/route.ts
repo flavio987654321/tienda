@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
   if (!existing) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
   const body = await req.json();
-  const { description, category, subcategory, tags, images, reelUrls, attributes, publishAt } = body;
+  const { description, category, subcategory, gender, tags, images, reelUrls, attributes, publishAt } = body;
 
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;
@@ -94,6 +94,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         comparePrice: parsedComparePrice,
         category: category || "general",
         subcategory: subcategory || null,
+        gender: gender || "unisex",
         tags: JSON.stringify(Array.isArray(tags) ? tags : []),
         images: JSON.stringify(Array.isArray(images) ? images : []),
         reelUrls: JSON.stringify(Array.isArray(reelUrls) ? reelUrls.slice(0, MAX_PRODUCT_REELS) : []),

@@ -83,6 +83,8 @@ export default function BohoTerra() {
 
   const [scrolled,            setScrolled]            = useState(false);
   const [activeCategory,      setActiveCategory]      = useState("Todos");
+  const [activeGender,        setActiveGender]        = useState<string | null>(null);
+  const [hoveredNavCat,       setHoveredNavCat]       = useState<string | null>(null);
   const [carouselIdx,         setCarouselIdx]         = useState(0);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [announcementIdx,     setAnnouncementIdx]     = useState(0);
@@ -199,8 +201,25 @@ export default function BohoTerra() {
   }, [showAnnouncement]);
 
   const CARDS_PER_VIEW = 3;
+  const subcategoriesFor = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    products.forEach(p => {
+      if (p.subcategory && p.category) {
+        if (!map[p.category]) map[p.category] = [];
+        if (!map[p.category].includes(p.subcategory)) map[p.category].push(p.subcategory);
+      }
+    });
+    return map;
+  }, [products]);
+
   const changeCategory = (cat:string) => { setActiveCategory(cat); setCarouselIdx(0); };
-  const allFiltered = activeCategory==="Todos" ? products : products.filter(p=>p.category===activeCategory);
+  const changeGender = (g: string | null) => { setActiveGender(g); setActiveCategory("Todos"); setCarouselIdx(0); };
+
+  const allFiltered = products.filter(p => {
+    if (activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
+    if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
+    return true;
+  });
   const maxIdx      = Math.max(0, allFiltered.length - CARDS_PER_VIEW);
   const prevSlide   = () => setCarouselIdx(i => Math.max(0, i - 1));
   const nextSlide   = () => setCarouselIdx(i => Math.min(maxIdx, i + 1));
@@ -280,15 +299,61 @@ export default function BohoTerra() {
           <button onClick={()=>scrollTo("inicio")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:20, fontStyle:"italic", color:T, letterSpacing:2, maxWidth:200, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
             <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "Terra"}</EditableZone>
           </button>
-          <div style={{ display:"flex", gap:8 }}>
-            {CATEGORIES.map(cat=>(
-              <button key={cat} onClick={()=>{ changeCategory(cat); scrollTo("coleccion"); }}
-                style={{ background: activeCategory===cat&&cat!=="Todos" ? A : "transparent", color: activeCategory===cat&&cat!=="Todos" ? "#fff" : MID, border:"none", padding:"6px 16px", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", transition:"all 0.2s" }}
-                onMouseEnter={e=>{ if(!(activeCategory===cat&&cat!=="Todos")) e.currentTarget.style.color=T; }}
-                onMouseLeave={e=>{ if(!(activeCategory===cat&&cat!=="Todos")) e.currentTarget.style.color=MID; }}>
-                {cat === "Todos" ? "Todos" : cat}
+          <div style={{ display:"flex", gap:20, alignItems:"center" }}>
+            {/* CATEGORÍAS dropdown */}
+            <div style={{ position:"relative" }}
+              onMouseEnter={() => setHoveredNavCat("__open__")}
+              onMouseLeave={() => setHoveredNavCat(null)}>
+              <button style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color:MID, display:"flex", alignItems:"center", gap:4 }}
+                onMouseEnter={e => (e.currentTarget.style.color = T)}
+                onMouseLeave={e => (e.currentTarget.style.color = MID)}>
+                Categorías <span style={{ fontSize:9, opacity:0.6 }}>▾</span>
               </button>
-            ))}
+              {hoveredNavCat && (
+                <div style={{ position:"absolute", top:"calc(100% + 10px)", left:0, background:"#faf7f2", border:`1px solid rgba(44,34,24,0.12)`, minWidth:180, zIndex:500, padding:"6px 0", boxShadow:"0 12px 40px rgba(44,34,24,0.12)" }}>
+                  {categoryList.map(cat => {
+                    const subs = subcategoriesFor[cat] || [];
+                    return (
+                      <div key={cat} style={{ position:"relative" }}
+                        onMouseEnter={() => setHoveredNavCat(cat)}
+                        onMouseLeave={() => setHoveredNavCat("__open__")}>
+                        <button onClick={() => { changeCategory(cat); scrollTo("coleccion"); setHoveredNavCat(null); }}
+                          style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background: hoveredNavCat===cat ? "rgba(44,34,24,0.05)" : "none", border:"none", color:T, padding:"9px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+                          {cat}
+                          {subs.length > 0 && <span style={{ opacity:0.4, fontSize:10 }}>›</span>}
+                        </button>
+                        {subs.length > 0 && hoveredNavCat === cat && (
+                          <div style={{ position:"absolute", top:0, left:"100%", background:"#faf7f2", border:`1px solid rgba(44,34,24,0.12)`, minWidth:160, padding:"6px 0", boxShadow:"8px 8px 32px rgba(44,34,24,0.1)", zIndex:501 }}>
+                            {subs.map(sub => (
+                              <button key={sub} onClick={() => { changeCategory(cat); scrollTo("coleccion"); setHoveredNavCat(null); }}
+                                style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"8px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase" }}
+                                onMouseEnter={e => (e.currentTarget.style.background = "rgba(44,34,24,0.05)")}
+                                onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                                {sub}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {/* MUJER */}
+            <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); scrollTo("coleccion"); }}
+              style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color: activeGender==="mujer" ? A : MID, transition:"color 0.2s" }}
+              onMouseEnter={e => { if(activeGender!=="mujer") e.currentTarget.style.color=T; }}
+              onMouseLeave={e => { if(activeGender!=="mujer") e.currentTarget.style.color=MID; }}>
+              Mujer
+            </button>
+            {/* HOMBRE */}
+            <button onClick={() => { changeGender(activeGender==="hombre" ? null : "hombre"); scrollTo("coleccion"); }}
+              style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color: activeGender==="hombre" ? A : MID, transition:"color 0.2s" }}
+              onMouseEnter={e => { if(activeGender!=="hombre") e.currentTarget.style.color=T; }}
+              onMouseLeave={e => { if(activeGender!=="hombre") e.currentTarget.style.color=MID; }}>
+              Hombre
+            </button>
           </div>
           <div style={{ display:"flex", gap:10, alignItems:"center" }}>
             <button onClick={()=>scrollTo("nosotros")} style={{ background:"none", border:"none", color:MID, fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="navHistoriaLabel" label="Enlace Nuestra Historia">Nuestra Historia</EditableZone></button>

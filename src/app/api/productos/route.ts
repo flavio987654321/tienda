@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
   const body = await req.json();
-  const { description, category, subcategory, tags, images, reelUrls, attributes, publishAt } = body;
+  const { description, category, subcategory, gender, tags, images, reelUrls, attributes, publishAt } = body;
 
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
       comparePrice: parsedComparePrice,
       category: category || "general",
       subcategory: subcategory || null,
+      gender: gender || "unisex",
       tags: JSON.stringify(Array.isArray(tags) ? tags : []),
       images: JSON.stringify(Array.isArray(images) ? images : []),
       reelUrls: JSON.stringify(Array.isArray(reelUrls) ? reelUrls.slice(0, MAX_PRODUCT_REELS) : []),

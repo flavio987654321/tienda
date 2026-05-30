@@ -16,6 +16,8 @@ const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ b
 export default function ChicParis() {
   const [scrolled,        setScrolled]        = useState(false);
   const [activeCategory,  setActiveCategory]  = useState("Todos");
+  const [activeGender,    setActiveGender]    = useState<string | null>(null);
+  const [hoveredNavCat,   setHoveredNavCat]   = useState<string | null>(null);
   const [visibleCount,    setVisibleCount]    = useState(8);
   const [heroSlide,       setHeroSlide]       = useState(0);
   const [heroPaused,      setHeroPaused]      = useState(false);
@@ -170,8 +172,25 @@ export default function ChicParis() {
     setReviewSubmitting(false);
   }
 
+  const subcategoriesFor = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    products.forEach(p => {
+      if (p.subcategory && p.category) {
+        if (!map[p.category]) map[p.category] = [];
+        if (!map[p.category].includes(p.subcategory)) map[p.category].push(p.subcategory);
+      }
+    });
+    return map;
+  }, [products]);
+
   const changeCategory = (cat: string) => { setActiveCategory(cat); setVisibleCount(8); };
-  const allFiltered = activeCategory === "Todos" ? products : products.filter(p => p.category === activeCategory);
+  const changeGender = (g: string | null) => { setActiveGender(g); setActiveCategory("Todos"); setVisibleCount(8); };
+
+  const allFiltered = products.filter(p => {
+    if (activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
+    if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
+    return true;
+  });
   const filtered    = allFiltered.slice(0, visibleCount);
   const hasMore     = visibleCount < allFiltered.length;
 
@@ -222,13 +241,55 @@ export default function ChicParis() {
       }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 32px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {/* Nav left */}
-          <nav style={{ display: "flex", gap: 28 }}>
-            {["Mujer", "Hombre", "Accesorios"].map(cat => (
-              <button key={cat} onClick={() => { changeCategory(cat); scrollTo("productos"); }}
-                style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", color: (isPreview || scrolled) ? "#111" : "#fff", padding: 0, transition: "color 0.3s" }}>
-                {cat}
+          <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
+            {/* CATEGORÍAS dropdown */}
+            <div style={{ position: "relative" }}
+              onMouseEnter={() => setHoveredNavCat("__open__")}
+              onMouseLeave={() => setHoveredNavCat(null)}>
+              <button style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", color: (isPreview || scrolled) ? "#111" : "#fff", padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                Categorías <span style={{ fontSize: 9, opacity: 0.6 }}>▾</span>
               </button>
-            ))}
+              {hoveredNavCat && (
+                <div style={{ position: "absolute", top: "calc(100% + 12px)", left: 0, background: "#fff", border: "1px solid #e8e8e8", minWidth: 180, zIndex: 500, padding: "6px 0", boxShadow: "0 12px 40px rgba(0,0,0,0.12)" }}>
+                  {categoryList.map(cat => {
+                    const subs = subcategoriesFor[cat] || [];
+                    return (
+                      <div key={cat} style={{ position: "relative" }}
+                        onMouseEnter={() => setHoveredNavCat(cat)}
+                        onMouseLeave={() => setHoveredNavCat("__open__")}>
+                        <button onClick={() => { changeCategory(cat); scrollTo("productos"); setHoveredNavCat(null); }}
+                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: hoveredNavCat === cat ? "#f9f9f9" : "none", border: "none", color: "#111", padding: "9px 16px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 2, textTransform: "uppercase" }}>
+                          {cat}
+                          {subs.length > 0 && <span style={{ opacity: 0.4, fontSize: 10 }}>›</span>}
+                        </button>
+                        {subs.length > 0 && hoveredNavCat === cat && (
+                          <div style={{ position: "absolute", top: 0, left: "100%", background: "#fff", border: "1px solid #e8e8e8", minWidth: 160, padding: "6px 0", boxShadow: "8px 8px 32px rgba(0,0,0,0.08)", zIndex: 501 }}>
+                            {subs.map(sub => (
+                              <button key={sub} onClick={() => { changeCategory(cat); scrollTo("productos"); setHoveredNavCat(null); }}
+                                style={{ display: "block", width: "100%", background: "none", border: "none", color: "#111", padding: "8px 16px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 1, textTransform: "uppercase" }}
+                                onMouseEnter={e => (e.currentTarget.style.background = "#f9f9f9")}
+                                onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                                {sub}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {/* MUJER */}
+            <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); scrollTo("productos"); }}
+              style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", padding: 0, color: activeGender === "mujer" ? ACC : (isPreview || scrolled) ? "#111" : "#fff" }}>
+              Mujer
+            </button>
+            {/* HOMBRE */}
+            <button onClick={() => { changeGender(activeGender === "hombre" ? null : "hombre"); scrollTo("productos"); }}
+              style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", padding: 0, color: activeGender === "hombre" ? ACC : (isPreview || scrolled) ? "#111" : "#fff" }}>
+              Hombre
+            </button>
           </nav>
 
           {/* Logo center */}

@@ -249,6 +249,7 @@ function ProductoFormPage() {
   });
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [productSubcategories, setProductSubcategories] = useState<Record<string, string[]>>({});
+  const [gender, setGender] = useState<"mujer" | "hombre" | "unisex">("unisex");
   const [customCategory, setCustomCategory] = useState("");
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [variants, setVariants] = useState<Variant[]>([{ attrs: { Talle: "" }, stock: "0", price: "", sku: "" }]);
@@ -331,6 +332,7 @@ function ProductoFormPage() {
           subcategory: product.subcategory ? (productSubcategories[product.category] || []).includes(product.subcategory) ? product.subcategory : "otro" : "",
           tags: safeJsonArray(product.tags).join(", "),
         });
+        setGender((product.gender as "mujer" | "hombre" | "unisex") || "unisex");
         setCustomCategory(knownCategory ? "" : product.category || "");
         setCustomSubcategory(product.subcategory && !((productSubcategories[product.category] || []).includes(product.subcategory)) ? product.subcategory : "");
         setImages(
@@ -576,6 +578,7 @@ function ProductoFormPage() {
         ...form,
         category,
         subcategory,
+        gender,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         images: images.map((img) => img.variantValue ? img : img.url),
         reelUrls,
@@ -854,6 +857,25 @@ function ProductoFormPage() {
                   placeholder="Describi tu producto..."
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Género</label>
+                <div className="flex gap-2">
+                  {(["mujer", "hombre", "unisex"] as const).map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => setGender(g)}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                        gender === g
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
+                      }`}
+                    >
+                      {g === "mujer" ? "Mujer" : g === "hombre" ? "Hombre" : "Unisex"}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

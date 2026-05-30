@@ -43,6 +43,8 @@ const GARANTIAS = [
 export default function FashionNoir() {
   const [scrolled,           setScrolled]           = useState(false);
   const [activeCategory,     setActiveCategory]     = useState("Todos");
+  const [activeGender,       setActiveGender]       = useState<string | null>(null);
+  const [hoveredNavCat,      setHoveredNavCat]      = useState<string | null>(null);
   const [visibleCount,       setVisibleCount]       = useState(8);
   const [hoveredId,          setHoveredId]          = useState<string | null>(null);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
@@ -198,7 +200,15 @@ export default function FashionNoir() {
     setVisibleCount(8);
   };
 
+  const changeGender = (g: string | null) => {
+    setActiveGender(g);
+    setActiveCategory("Todos");
+    setActiveSubcategory(null);
+    setVisibleCount(8);
+  };
+
   const allFiltered = products.filter(p => {
+    if (activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
     if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
     if (activeSubcategory && p.subcategory !== activeSubcategory) return false;
     return true;
@@ -339,17 +349,69 @@ export default function FashionNoir() {
           <button onClick={() => scrollTo("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:26, fontWeight:700, letterSpacing:6, color:G, maxWidth:240, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
             <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "NOIR"}</EditableZone>
           </button>
-          <div style={{ display:"flex", gap:32 }}>
-            {([
-              ...categoryList.slice(0, 3).map(c => [c, "productos"]),
-              ["Nosotros","nosotros"],
-              ["Contacto","contacto"],
-            ] as [string,string][]).map(([label, target]) => (
-              <button key={label} onClick={() => { if (target === "productos") changeCategory(label); scrollTo(target); }}
+          <div style={{ display:"flex", gap:28, alignItems:"center" }}>
+            {/* CATEGORÍAS dropdown */}
+            <div style={{ position:"relative" }}
+              onMouseEnter={() => setHoveredNavCat("__open__")}
+              onMouseLeave={() => setHoveredNavCat(null)}>
+              <button style={{ background:"none", border:"none", color:T, fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", opacity:0.8, display:"flex", alignItems:"center", gap:5 }}
+                onMouseEnter={e => { e.currentTarget.style.opacity="1"; e.currentTarget.style.color=G; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity="0.8"; e.currentTarget.style.color=T; }}>
+                Categorías <span style={{ fontSize:9, opacity:0.7 }}>▾</span>
+              </button>
+              {hoveredNavCat && (
+                <div style={{ position:"absolute", top:"100%", left:0, background:"#111", border:`1px solid rgba(201,168,76,0.15)`, minWidth:180, zIndex:500, padding:"6px 0", boxShadow:"0 12px 40px rgba(0,0,0,0.6)" }}>
+                  {categoryList.map(cat => {
+                    const subs = subcategoriesFor[cat] || [];
+                    return (
+                      <div key={cat} style={{ position:"relative" }}
+                        onMouseEnter={() => setHoveredNavCat(cat)}
+                        onMouseLeave={() => setHoveredNavCat("__open__")}>
+                        <button onClick={() => { changeCategory(cat); scrollTo("productos"); setHoveredNavCat(null); }}
+                          style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background: hoveredNavCat===cat ? "rgba(201,168,76,0.08)" : "none", border:"none", color:T, padding:"9px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase", transition:"background 0.15s" }}>
+                          {cat}
+                          {subs.length > 0 && <span style={{ opacity:0.5, fontSize:10 }}>›</span>}
+                        </button>
+                        {subs.length > 0 && hoveredNavCat === cat && (
+                          <div style={{ position:"absolute", top:0, left:"100%", background:"#1a1a1a", border:`1px solid rgba(201,168,76,0.15)`, minWidth:160, padding:"6px 0", boxShadow:"8px 8px 32px rgba(0,0,0,0.5)", zIndex:501 }}>
+                            {subs.map(sub => (
+                              <button key={sub} onClick={() => { changeCategory(cat, sub); scrollTo("productos"); setHoveredNavCat(null); }}
+                                style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"8px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"background 0.15s" }}
+                                onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
+                                onMouseLeave={e => (e.currentTarget.style.background="none")}>
+                                {sub}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {/* MUJER */}
+            <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); scrollTo("productos"); }}
+              style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="mujer" ? G : T, opacity: activeGender==="mujer" ? 1 : 0.8 }}
+              onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="mujer") e.currentTarget.style.color=G; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="mujer"?"1":"0.8"; if(activeGender!=="mujer") e.currentTarget.style.color=T; }}>
+              Mujer
+            </button>
+            {/* HOMBRE */}
+            <button onClick={() => { changeGender(activeGender === "hombre" ? null : "hombre"); scrollTo("productos"); }}
+              style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="hombre" ? G : T, opacity: activeGender==="hombre" ? 1 : 0.8 }}
+              onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="hombre") e.currentTarget.style.color=G; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="hombre"?"1":"0.8"; if(activeGender!=="hombre") e.currentTarget.style.color=T; }}>
+              Hombre
+            </button>
+            {/* NOSOTROS / CONTACTO */}
+            {[["Nosotros","nosotros"],["Contacto","contacto"]].map(([label, target]) => (
+              <button key={label} onClick={() => scrollTo(target)}
                 style={{ background:"none", border:"none", color:T, fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", opacity:0.8, transition:"opacity 0.2s, color 0.2s" }}
                 onMouseEnter={e => { e.currentTarget.style.opacity="1"; e.currentTarget.style.color=G; }}
-                onMouseLeave={e => { e.currentTarget.style.opacity="0.8"; e.currentTarget.style.color=T; }}
-              >{label}</button>
+                onMouseLeave={e => { e.currentTarget.style.opacity="0.8"; e.currentTarget.style.color=T; }}>
+                {label}
+              </button>
             ))}
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>

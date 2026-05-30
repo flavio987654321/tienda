@@ -21,6 +21,7 @@ export type StorefrontProduct = {
   cantMinMayorista: number | null;
   category: string;
   subcategory?: string;
+  gender: string;
   description: string | null;
   images: string[];
   reelUrls: string[];
@@ -61,62 +62,14 @@ const COLOR_ATTRS = ["color", "colour", "colores", "colors"];
 
 /* ── Productos de muestra para el preview del dashboard ─────── */
 const DEMO_PRODUCTS: StorefrontProduct[] = [
-  {
-    id: "demo-1", name: "Remera Oversize", price: 18500, comparePrice: null,
-    category: "Mujer", description: "Remera de algodón premium con corte oversized.",
-    images: ["https://picsum.photos/seed/dp-rem/600/800"],
-    sizes: ["XS","S","M","L","XL"], colors: ["Blanco","Negro","Gris"],
-    variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, badge: "NUEVO",
-  },
-  {
-    id: "demo-2", name: "Jeans Skinny", price: 35900, comparePrice: 48000,
-    category: "Mujer", description: "Jeans de corte skinny con elastán.",
-    images: ["https://picsum.photos/seed/dp-jean/600/800"],
-    sizes: ["38","40","42","44"], colors: ["Azul","Negro"],
-    variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, badge: "SALE",
-  },
-  {
-    id: "demo-3", name: "Hoodie Premium", price: 29900, comparePrice: null,
-    category: "Hombre", description: "Hoodie de algodón french terry 380g.",
-    images: ["https://picsum.photos/seed/dp-hood/600/800"],
-    sizes: ["S","M","L","XL","XXL"], colors: ["Gris","Negro","Oliva"],
-    variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, badge: "NUEVO",
-  },
-  {
-    id: "demo-4", name: "Pantalón Cargo", price: 42000, comparePrice: null,
-    category: "Hombre", description: "Pantalón cargo con múltiples bolsillos.",
-    images: ["https://picsum.photos/seed/dp-carg/600/800"],
-    sizes: ["28","30","32","34","36"], colors: ["Beige","Negro","Verde"],
-    variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null,
-  },
-  {
-    id: "demo-5", name: "Vestido Midi", price: 38500, comparePrice: null,
-    category: "Mujer", description: "Vestido midi floreado ideal para el verano.",
-    images: ["https://picsum.photos/seed/dp-vest/600/800"],
-    sizes: ["XS","S","M","L"], colors: ["Floral","Negro"],
-    variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, badge: "NUEVO",
-  },
-  {
-    id: "demo-6", name: "Cinturón de Cuero", price: 12000, comparePrice: 16000,
-    category: "Accesorios", description: "Cinturón de cuero genuino con hebilla dorada.",
-    images: ["https://picsum.photos/seed/dp-belt/600/800"],
-    sizes: ["Único"], colors: ["Marrón","Negro"],
-    variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, badge: "SALE",
-  },
-  {
-    id: "demo-7", name: "Campera de Jean", price: 55000, comparePrice: 68000,
-    category: "Hombre", description: "Campera de jean clásica con detalles lavados.",
-    images: ["https://picsum.photos/seed/dp-camp/600/800"],
-    sizes: ["S","M","L","XL"], colors: ["Azul","Blanco"],
-    variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, badge: "SALE",
-  },
-  {
-    id: "demo-8", name: "Cartera Tote", price: 24500, comparePrice: null,
-    category: "Accesorios", description: "Cartera tote de lona con interior forrado.",
-    images: ["https://picsum.photos/seed/dp-tote/600/800"],
-    sizes: ["Único"], colors: ["Beige","Negro","Bordo"],
-    variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null,
-  },
+  { id: "demo-1", name: "Remera Oversize", price: 18500, comparePrice: null, category: "remeras", description: "Remera de algodón premium con corte oversized.", images: ["https://picsum.photos/seed/dp-rem/600/800"], sizes: ["XS","S","M","L","XL"], colors: ["Blanco","Negro","Gris"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "mujer", badge: "NUEVO" },
+  { id: "demo-2", name: "Jeans Skinny", price: 35900, comparePrice: 48000, category: "pantalones", description: "Jeans de corte skinny con elastán.", images: ["https://picsum.photos/seed/dp-jean/600/800"], sizes: ["38","40","42","44"], colors: ["Azul","Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "mujer", badge: "SALE" },
+  { id: "demo-3", name: "Hoodie Premium", price: 29900, comparePrice: null, category: "buzos", description: "Hoodie de algodón french terry 380g.", images: ["https://picsum.photos/seed/dp-hood/600/800"], sizes: ["S","M","L","XL","XXL"], colors: ["Gris","Negro","Oliva"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "hombre", badge: "NUEVO" },
+  { id: "demo-4", name: "Pantalón Cargo", price: 42000, comparePrice: null, category: "pantalones", description: "Pantalón cargo con múltiples bolsillos.", images: ["https://picsum.photos/seed/dp-carg/600/800"], sizes: ["28","30","32","34","36"], colors: ["Beige","Negro","Verde"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "hombre" },
+  { id: "demo-5", name: "Vestido Midi", price: 38500, comparePrice: null, category: "vestidos", description: "Vestido midi floreado ideal para el verano.", images: ["https://picsum.photos/seed/dp-vest/600/800"], sizes: ["XS","S","M","L"], colors: ["Floral","Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "mujer", badge: "NUEVO" },
+  { id: "demo-6", name: "Cinturón de Cuero", price: 12000, comparePrice: 16000, category: "accesorios", description: "Cinturón de cuero genuino con hebilla dorada.", images: ["https://picsum.photos/seed/dp-belt/600/800"], sizes: ["Único"], colors: ["Marrón","Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "SALE" },
+  { id: "demo-7", name: "Campera de Jean", price: 55000, comparePrice: 68000, category: "camperas", description: "Campera de jean clásica con detalles lavados.", images: ["https://picsum.photos/seed/dp-camp/600/800"], sizes: ["S","M","L","XL"], colors: ["Azul","Blanco"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "hombre", badge: "SALE" },
+  { id: "demo-8", name: "Cartera Tote", price: 24500, comparePrice: null, category: "accesorios", description: "Cartera tote de lona con interior forrado.", images: ["https://picsum.photos/seed/dp-tote/600/800"], sizes: ["Único"], colors: ["Beige","Negro","Bordo"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex" },
 ];
 
 function isSize (name: string) { return SIZE_ATTRS.includes(name.toLowerCase()); }
@@ -149,6 +102,7 @@ function mapProduct(raw: any): StorefrontProduct {
     cantMinMayorista: raw.cantMinMayorista ?? null,
     category: raw.category ?? "general",
     subcategory: raw.subcategory ?? undefined,
+    gender: raw.gender ?? "unisex",
     description: raw.description ?? null,
     images,
     reelUrls,

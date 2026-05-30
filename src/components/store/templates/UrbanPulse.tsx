@@ -30,6 +30,8 @@ const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ b
 export default function UrbanPulse() {
   const [scrolled,         setScrolled]         = useState(false);
   const [activeCategory,   setActiveCategory]   = useState("Todos");
+  const [activeGender,     setActiveGender]     = useState<string | null>(null);
+  const [hoveredNavCat,    setHoveredNavCat]    = useState<string | null>(null);
   const [visibleCount,     setVisibleCount]     = useState(8);
   const [openPolicyField,  setOpenPolicyField]  = useState<string | null>(null);
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
@@ -191,9 +193,25 @@ export default function UrbanPulse() {
     setReviewSubmitting(false);
   }
 
-  const changeCategory = (cat: string) => { setActiveCategory(cat); setVisibleCount(8); };
+  const subcategoriesFor = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    products.forEach(p => {
+      if (p.subcategory && p.category) {
+        if (!map[p.category]) map[p.category] = [];
+        if (!map[p.category].includes(p.subcategory)) map[p.category].push(p.subcategory);
+      }
+    });
+    return map;
+  }, [products]);
 
-  const allFiltered = activeCategory === "Todos" ? products : products.filter(p => p.category === activeCategory);
+  const changeCategory = (cat: string) => { setActiveCategory(cat); setVisibleCount(8); };
+  const changeGender = (g: string | null) => { setActiveGender(g); setActiveCategory("Todos"); setVisibleCount(8); };
+
+  const allFiltered = products.filter(p => {
+    if (activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
+    if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
+    return true;
+  });
   const filtered    = allFiltered.slice(0, visibleCount);
   const hasMore     = visibleCount < allFiltered.length;
   const featuredProduct  = products[7] ?? products[0] ?? null;
@@ -246,19 +264,67 @@ export default function UrbanPulse() {
             {storeConfig?.storeName ?? <span>URBAN<span style={{ background:DARK, color:ACC, padding:"3px 7px", marginLeft:2 }}>PULSE</span></span>}
           </EditableZone>
         </div>
-        <div style={{ display:"flex", gap:32 }}>
-          {[["Mujeres","Mujer"],["Hombres","Hombre"],["Accesorios","Accesorios"]].map(([label, cat]) => (
-            <button key={label} onClick={() => { changeCategory(cat); scrollTo("productos"); }}
-              style={{ background:"none", border:"none", borderBottom:"2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color:DARK, padding:"4px 0", transition:"border-color 0.2s" }}
-              onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; e.currentTarget.style.background = "none"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderBottomColor = "transparent"; }}
-            >{label}</button>
-          ))}
+        <div style={{ display:"flex", gap:28, alignItems:"center" }}>
+          {/* CATEGORÍAS dropdown */}
+          <div style={{ position:"relative" }}
+            onMouseEnter={() => setHoveredNavCat("__open__")}
+            onMouseLeave={() => setHoveredNavCat(null)}>
+            <button style={{ background:"none", border:"none", borderBottom:"2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color:DARK, padding:"4px 0", display:"flex", alignItems:"center", gap:5 }}
+              onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; }}
+              onMouseLeave={e => { e.currentTarget.style.borderBottomColor = "transparent"; }}>
+              Categorías <span style={{ fontSize:9, opacity:0.6 }}>▾</span>
+            </button>
+            {hoveredNavCat && (
+              <div style={{ position:"absolute", top:"calc(100% + 12px)", left:0, background:WHITE, border:`2px solid ${DARK}`, minWidth:180, zIndex:500, padding:"6px 0", boxShadow:`4px 4px 0 ${DARK}` }}>
+                {categoryList.map(cat => {
+                  const subs = subcategoriesFor[cat] || [];
+                  return (
+                    <div key={cat} style={{ position:"relative" }}
+                      onMouseEnter={() => setHoveredNavCat(cat)}
+                      onMouseLeave={() => setHoveredNavCat("__open__")}>
+                      <button onClick={() => { changeCategory(cat); scrollTo("productos"); setHoveredNavCat(null); }}
+                        style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background: hoveredNavCat===cat ? "#f5f5f5" : "none", border:"none", color:DARK, padding:"9px 16px", fontSize:11, fontWeight:700, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+                        {cat}
+                        {subs.length > 0 && <span style={{ opacity:0.5, fontSize:10 }}>›</span>}
+                      </button>
+                      {subs.length > 0 && hoveredNavCat === cat && (
+                        <div style={{ position:"absolute", top:0, left:"100%", background:WHITE, border:`2px solid ${DARK}`, minWidth:160, padding:"6px 0", boxShadow:`4px 4px 0 ${DARK}`, zIndex:501 }}>
+                          {subs.map(sub => (
+                            <button key={sub} onClick={() => { changeCategory(cat); scrollTo("productos"); setHoveredNavCat(null); }}
+                              style={{ display:"block", width:"100%", background:"none", border:"none", color:DARK, padding:"8px 16px", fontSize:11, fontWeight:700, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase" }}
+                              onMouseEnter={e => (e.currentTarget.style.background = "#f5f5f5")}
+                              onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                              {sub}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          {/* MUJER */}
+          <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); scrollTo("productos"); }}
+            style={{ background:"none", border:"none", borderBottom: activeGender==="mujer" ? `2px solid ${ACC}` : "2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color: activeGender==="mujer" ? DARK : DARK, padding:"4px 0", transition:"border-color 0.2s" }}
+            onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; }}
+            onMouseLeave={e => { if(activeGender!=="mujer") e.currentTarget.style.borderBottomColor = "transparent"; }}>
+            Mujer
+          </button>
+          {/* HOMBRE */}
+          <button onClick={() => { changeGender(activeGender==="hombre" ? null : "hombre"); scrollTo("productos"); }}
+            style={{ background:"none", border:"none", borderBottom: activeGender==="hombre" ? `2px solid ${ACC}` : "2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color: DARK, padding:"4px 0", transition:"border-color 0.2s" }}
+            onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; }}
+            onMouseLeave={e => { if(activeGender!=="hombre") e.currentTarget.style.borderBottomColor = "transparent"; }}>
+            Hombre
+          </button>
           <button onClick={() => scrollTo("nosotros")}
             style={{ background:"none", border:"none", borderBottom:"2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color:DARK, padding:"4px 0", transition:"border-color 0.2s" }}
             onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; }}
-            onMouseLeave={e => { e.currentTarget.style.borderBottomColor = "transparent"; }}
-          >Nosotros</button>
+            onMouseLeave={e => { e.currentTarget.style.borderBottomColor = "transparent"; }}>
+            Nosotros
+          </button>
         </div>
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
           <button onClick={() => setSearchOpen(true)} style={iconBtn}>
