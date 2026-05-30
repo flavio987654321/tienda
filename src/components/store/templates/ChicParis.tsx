@@ -215,9 +215,9 @@ export default function ChicParis() {
       {/* ── NAVBAR ── */}
       <header style={{
         position: isPreview ? "sticky" : "fixed", top: promoBannerEnabled ? PROMO_BAR_H : 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: 1000,
-        background: scrolled ? "rgba(255,255,255,0.97)" : "transparent",
-        borderBottom: scrolled ? "1px solid #e8e8e8" : "none",
-        backdropFilter: scrolled ? "blur(12px)" : "none",
+        background: (isPreview || scrolled) ? "rgba(255,255,255,0.97)" : "transparent",
+        borderBottom: (isPreview || scrolled) ? "1px solid #e8e8e8" : "none",
+        backdropFilter: (isPreview || scrolled) ? "blur(12px)" : "none",
         transition: "all 0.3s ease",
       }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 32px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -225,7 +225,7 @@ export default function ChicParis() {
           <nav style={{ display: "flex", gap: 28 }}>
             {["Mujer", "Hombre", "Accesorios"].map(cat => (
               <button key={cat} onClick={() => { changeCategory(cat); scrollTo("productos"); }}
-                style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", color: scrolled ? "#111" : "#fff", padding: 0, transition: "color 0.3s" }}>
+                style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", color: (isPreview || scrolled) ? "#111" : "#fff", padding: 0, transition: "color 0.3s" }}>
                 {cat}
               </button>
             ))}
@@ -233,21 +233,21 @@ export default function ChicParis() {
 
           {/* Logo center */}
           <a onClick={() => scrollTo("hero")} style={{ cursor: "pointer", textDecoration: "none" }}>
-            <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: 4, textTransform: "uppercase", color: scrolled ? "#111" : "#fff", transition: "color 0.3s" }}>
+            <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: 4, textTransform: "uppercase", color: (isPreview || scrolled) ? "#111" : "#fff", transition: "color 0.3s" }}>
               <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "CHIC PARIS"}</EditableZone>
             </span>
           </a>
 
           {/* Nav right */}
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={() => setSearchOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: scrolled ? "#555" : "#fff", padding: 6, display: "flex", transition: "color 0.3s" }}>
+            <button onClick={() => setSearchOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", transition: "color 0.3s" }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
-            <button onClick={() => setFavoritesOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: scrolled ? "#555" : "#fff", padding: 6, position: "relative", display: "flex", transition: "color 0.3s" }}>
+            <button onClick={() => setFavoritesOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, position: "relative", display: "flex", transition: "color 0.3s" }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill={favorites.length > 0 ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
             </button>
             <div ref={userDropdownRef} style={{ position: "relative" }}>
-              <button onClick={() => setUserDropdownOpen(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: scrolled ? "#555" : "#fff", padding: 6, display: "flex", transition: "color 0.3s" }}>
+              <button onClick={() => setUserDropdownOpen(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", transition: "color 0.3s" }}>
                 <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </button>
               {userDropdownOpen && (
@@ -260,7 +260,7 @@ export default function ChicParis() {
                 </div>
               )}
             </div>
-            <button onClick={() => setCartOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: scrolled ? "#555" : "#fff", padding: 6, position: "relative", display: "flex", transition: "color 0.3s" }}>
+            <button onClick={() => setCartOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, position: "relative", display: "flex", transition: "color 0.3s" }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
               {cartCount > 0 && (
                 <span style={{ position: "absolute", top: 2, right: 2, background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", borderRadius: "50%", width: 16, height: 16, fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{cartCount}</span>
