@@ -459,22 +459,11 @@ export default function BohoTerra() {
       <section id="coleccion" style={{ padding:"80px 0", background:coleccionBg, position:"relative" }}>
         <EditableSectionBg field="bgColeccion" label="Fondo colección" />
         {/* encabezado */}
-        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 40px", display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:40, borderBottom:`1px solid rgba(44,34,24,0.1)`, paddingBottom:24 }}>
-          <div>
-            <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(22px,2.5vw,32px)", fontWeight:400, fontStyle:"italic", margin:0, color:coleccionText }}>
-              {activeCategory==="Todos" ? "Toda la colección" : activeCategory}
-            </h2>
-            <p style={{ fontSize:12, color:coleccionMid, margin:"6px 0 0" }}>{allFiltered.length} piezas</p>
-          </div>
-          {/* filtros de categoría */}
-          <div style={{ display:"flex", gap:4 }}>
-            {CATEGORIES.map(cat=>(
-              <button key={cat} onClick={()=>changeCategory(cat)}
-                style={{ background:activeCategory===cat ? coleccionText : "transparent", color:activeCategory===cat ? coleccionBg : coleccionMid, border:`1px solid ${activeCategory===cat ? coleccionText : "rgba(44,34,24,0.18)"}`, padding:"7px 18px", fontSize:10, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", transition:"all 0.2s" }}>
-                {cat === "Todos" ? "Todos" : cat}
-              </button>
-            ))}
-          </div>
+        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 40px", marginBottom:40, borderBottom:`1px solid rgba(44,34,24,0.1)`, paddingBottom:24 }}>
+          <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(22px,2.5vw,32px)", fontWeight:400, fontStyle:"italic", margin:0, color:coleccionText }}>
+            {activeGender==="mujer" ? "Mujer" : activeGender==="hombre" ? "Hombre" : activeCategory==="Todos" ? "Toda la colección" : activeCategory}
+          </h2>
+          <p style={{ fontSize:12, color:coleccionMid, margin:"6px 0 0" }}>{allFiltered.length} piezas</p>
         </div>
 
         {/* carrusel — overflow visible para que se vean las tarjetas */}

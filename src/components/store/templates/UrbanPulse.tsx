@@ -510,16 +510,11 @@ export default function UrbanPulse() {
       <section id="productos" style={{ background:productosBgUp, position:"relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
         <div style={{ padding:"80px 40px", maxWidth:1200, margin:"0 auto" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:40 }}>
-          <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, color:productosTextUp }}><EditableZone field="collectionHeading" label="Título sección productos">Colección</EditableZone></h2>
-          <div style={{ display:"flex", border:`2px solid ${productosTextUp}` }}>
-            {CATEGORIES.map((cat, i) => (
-              <button key={cat} onClick={() => changeCategory(cat)}
-                style={{ background: activeCategory === cat ? DARK : WHITE, color: activeCategory === cat ? ACC : DARK, border:"none", borderRight: i < CATEGORIES.length - 1 ? `1px solid ${DARK}` : "none", padding:"10px 18px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", transition:"all 0.2s" }}>
-                {cat}
-              </button>
-            ))}
-          </div>
+        <div style={{ marginBottom:40 }}>
+          <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, color:productosTextUp }}>
+            {activeGender==="mujer" ? "Mujer" : activeGender==="hombre" ? "Hombre" : activeCategory==="Todos" ? <EditableZone field="collectionHeading" label="Título sección productos">Colección</EditableZone> : activeCategory}
+          </h2>
+          <p style={{ fontSize:12, color:productosTextUp, opacity:0.5, margin:"6px 0 0" }}>{allFiltered.length} piezas</p>
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:4 }}>
           {filtered.map((product, idx) => {

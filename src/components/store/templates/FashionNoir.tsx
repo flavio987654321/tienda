@@ -574,41 +574,12 @@ export default function FashionNoir() {
       <section id="productos" style={{ background:productosBg, position:"relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
         <div style={{ padding:"80px 32px", maxWidth:1280, margin:"0 auto" }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:40, flexWrap:"wrap", gap:16 }}>
+        <div style={{ marginBottom:40 }}>
           <p style={{ fontFamily:"Georgia, serif", fontSize:28, color:productosText, margin:0 }}>
-            {activeCategory === "Todos" ? "Toda la Colección" : activeCategory}
+            {activeGender === "mujer" ? "Mujer" : activeGender === "hombre" ? "Hombre" : activeCategory === "Todos" ? "Toda la Colección" : activeCategory}
             {activeSubcategory && <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", opacity:0.6 }}> › {activeSubcategory}</span>}
             <span style={{ fontSize:14, color:productosMid, fontFamily:"sans-serif", fontWeight:400, marginLeft:12 }}>({allFiltered.length} piezas)</span>
           </p>
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-            {CATEGORIES.map(cat => {
-              const subcats = cat !== "Todos" ? (subcategoriesFor[cat] || []) : [];
-              const isActive = activeCategory === cat;
-              return (
-                <div key={cat} style={{ position:"relative" }}
-                  onMouseEnter={() => subcats.length > 0 && setHoveredCatMenu(cat)}
-                  onMouseLeave={() => setHoveredCatMenu(null)}>
-                  <button onClick={() => changeCategory(cat)}
-                    style={{ background: isActive ? G : "transparent", color: isActive ? BG : productosText, border:`1px solid ${isActive ? G : "rgba(240,235,227,0.2)"}`, padding:"8px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", transition:"all 0.2s", display:"flex", alignItems:"center", gap:5 }}>
-                    {cat}
-                    {subcats.length > 0 && <span style={{ opacity:0.6, fontSize:9 }}>▾</span>}
-                  </button>
-                  {subcats.length > 0 && hoveredCatMenu === cat && (
-                    <div style={{ position:"absolute", top:"100%", left:0, background:"#1a1a1a", border:`1px solid rgba(201,168,76,0.2)`, minWidth:160, zIndex:300, padding:"4px 0", boxShadow:"0 8px 24px rgba(0,0,0,0.5)" }}>
-                      {subcats.map(sub => (
-                        <button key={sub} onClick={() => { changeCategory(cat, sub); setHoveredCatMenu(null); }}
-                          style={{ display:"block", width:"100%", background: activeSubcategory===sub ? "rgba(201,168,76,0.1)" : "none", border:"none", color: activeSubcategory===sub ? G : productosText, padding:"8px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"background 0.15s" }}
-                          onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
-                          onMouseLeave={e => (e.currentTarget.style.background=activeSubcategory===sub?"rgba(201,168,76,0.1)":"none")}>
-                          {sub}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </div>
 
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:24, marginBottom:48 }}>

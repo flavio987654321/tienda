@@ -452,22 +452,9 @@ export default function ChicParis() {
               <EditableZone field="productsKicker" label="Kicker productos">Temporada</EditableZone>
             </span>
             <h2 style={{ fontSize: "clamp(28px,3.5vw,42px)", fontWeight: 900, color: prodText, margin: "8px 0 0", textTransform: "uppercase", letterSpacing: "-0.5px" }}>
-              <EditableZone field="productsHeading" label="Título sección productos">Nuestra Colección</EditableZone>
+              {activeGender === "mujer" ? "Mujer" : activeGender === "hombre" ? "Hombre" : activeCategory !== "Todos" ? activeCategory : <EditableZone field="productsHeading" label="Título sección productos">Nuestra Colección</EditableZone>}
             </h2>
-          </div>
-
-          {/* Category filter */}
-          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 36, flexWrap: "wrap" }}>
-            {CATEGORIES.map(cat => (
-              <button key={cat} onClick={() => changeCategory(cat)} style={{
-                padding: "8px 20px", border: activeCategory === cat ? `2px solid ${ACC}` : "2px solid #e0e0e0",
-                background: activeCategory === cat ? ACC : "transparent",
-                color: activeCategory === cat ? (getContrastColor(ACC) === "light" ? "#fff" : "#111") : prodText,
-                fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", transition: "all 0.2s",
-              }}>
-                {cat}
-              </button>
-            ))}
+            <p style={{ fontSize:12, color:prodText, opacity:0.45, margin:"6px 0 0" }}>{allFiltered.length} piezas</p>
           </div>
 
           {loadingProducts ? (
