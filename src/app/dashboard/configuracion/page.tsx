@@ -270,7 +270,7 @@ function CarouselRow({ templates, savedTemplateId, onSelect, onGoToEditing }: {
 /* ── Browser frame wrapper ──────────────────────────────────── */
 function BrowserFrame({ storeName, children }: { storeName: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "clip" }}>
       <div style={{ background: "#1e293b", padding: "10px 16px", display: "flex",
         alignItems: "center", gap: 12, flexShrink: 0 }}>
         <div style={{ display: "flex", gap: 6 }}>
@@ -283,7 +283,7 @@ function BrowserFrame({ storeName, children }: { storeName: string; children: Re
           mitienda.com/tienda/{storeName.toLowerCase().replace(/\s+/g, "-")}
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "clip" }}>
         {children}
       </div>
     </div>
