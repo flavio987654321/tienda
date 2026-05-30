@@ -194,22 +194,18 @@ export default function DashboardLayout({
               {signingOut ? "Cerrando..." : "Cerrar sesión"}
             </span>
           </button>
-          {/* Info de usuario — solo visible expandido */}
-          <div className="max-h-0 group-hover:max-h-16 overflow-hidden transition-[max-height] duration-200 px-3 pt-2">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-700 truncate">{userName}</p>
-                <p className="text-xs text-gray-400 truncate">{userEmail}</p>
-              </div>
-              <Link
-                href="/dashboard/perfil"
-                title="Mi perfil"
-                className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-              >
-                <UserCircle className="h-4 w-4" />
-              </Link>
+          {/* Info de usuario — icono siempre visible, texto solo expandido */}
+          <Link
+            href="/dashboard/perfil"
+            title="Mi perfil"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
+          >
+            <UserCircle className="h-4 w-4 shrink-0" />
+            <div className="min-w-0 max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
+              <p className="text-xs font-medium text-gray-700 truncate whitespace-nowrap">{userName}</p>
+              <p className="text-xs text-gray-400 truncate whitespace-nowrap">{userEmail}</p>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* I-07: indicador de reconexión */}
