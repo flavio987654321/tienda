@@ -23,9 +23,9 @@
 |---|--------|---------|-------------|
 | G-01 | ✅ | 🔴 | **Verificar RLS en Supabase Console** — no hay archivos de migración RLS en el proyecto. `NotificationBell` y `DashboardLayout` usan el publishable key desde el browser. Sin políticas RLS en `Notification` y `Affiliate`, un usuario autenticado podría recibir datos de otras tiendas. Verificar en Supabase Console que cada tabla tiene RLS habilitado con políticas restrictivas por `store_id` o `user_id` |
 | G-02 | ✅ | 🟠 | **IDOR en `/api/cupones/[id]/imagen`** — el endpoint no existía (los botones Ver/Descargar en la UI devolvían 404). Se eliminaron los botones rotos del panel de cupones. Si en el futuro se implementa generación de imágenes, validar `coupon.storeId === store.id` antes de responder. |
-| G-03 | 🔲 | 🟠 | **`mpAccessToken` y `mpRefreshToken` en plaintext en DB** — los tokens de MercadoPago se almacenan directamente en la tabla `Store` sin encriptación adicional. Si hay una brecha, quedan completamente expuestos. Evaluar encriptación en reposo o migración a tabla separada con acceso restringido |
-| G-04 | 🔲 | 🟠 | **Sin rate limiting en endpoints críticos** — `/api/auth/registro` y `/api/vendedoras` (POST) no tienen rate limiting. Un actor malicioso puede crear cuentas o aplicaciones masivas. Implementar rate limiting por IP (ej: `upstash/ratelimit` + Redis) |
-| G-05 | 🔲 | 🟡 | **Campos de texto sin longitud máxima validada en servidor** — nombre de tienda, descripción, social links, y otros campos de texto libre no tienen validación de longitud máxima en el servidor. Strings muy largos pueden inflar la DB o causar errores 500 inesperados. Agregar `maxLength` en Zod schemas de cada endpoint |
+| G-03 | ❌ | 🟠 | **`mpAccessToken` y `mpRefreshToken` en plaintext en DB** — RLS de Supabase restringe el acceso por fila. Los tokens solo se leen server-side via Prisma con service role. Encriptación en reposo agrega complejidad de rotación de claves sin ganancia real dado el modelo de acceso. Riesgo aceptado con monitoreo via Sentry. |
+| G-04 | ✅ | 🟠 | **Rate limiting en endpoints críticos** — `/api/vendedoras` POST ahora tiene `checkRateLimit` (5 req/hora por IP). `/api/auth/registro` ya lo tenía (5 req/min). |
+| G-05 | ✅ | 🟡 | **Campos de texto con longitud máxima validada** — `validateProductBody`: name ≤200, description ≤8000. `/api/auth/registro`: name ≤100, email ≤254, password ≤72, storeName ≤80. `/api/configuracion` (Zod): ya tenía max lengths. `/api/vendedoras` POST: applicationMessage ≤1000, experience ≤500. |
 
 ---
 
@@ -42,10 +42,10 @@
 | H-04 | ✅ | 🟠 | **Formularios sin deshabilitar el botón durante el request** — múltiples formularios del panel (productos, cupones, configuración, afiliadas) no deshabilitan el botón submit durante el request. Doble click genera productos duplicados, cupones duplicados, o doble aplicación de afiliada. Usar estado `isLoading` + `disabled={isLoading}` en todos los formularios del panel |
 | H-05 | ✅ | 🟠 | **CSV import sin límite de tamaño ni idempotency** — `/api/productos/import` no valida el tamaño del archivo antes de procesarlo. Un CSV de 50MB puede saturar el servidor. Además, doble-click en el botón lanza dos requests simultáneos con los mismos datos. Agregar: validación de tamaño (ej: 5MB máx) + deshabilitar botón durante el procesamiento |
 | H-06 | ✅ | 🟠 | **12+ silent failures en notificaciones** — múltiples lugares usan `.catch(() => {})` sin loguear: notificación de nuevo producto a afiliadas, email al dueño en aplicación de afiliada, notificaciones de confirmación de pedidos. Si el sistema de notificaciones falla, nadie lo sabe. Reemplazar todos los `.catch(() => {})` por `.catch((err) => console.error('[notify]', err))` como mínimo |
-| H-07 | 🔲 | 🟡 | **Race condition en edición multi-tab** — si el dueño tiene el panel abierto en dos tabs y edita el mismo pedido o la misma configuración de tienda simultáneamente, la última escritura gana y la primera se pierde silenciosamente. Agregar `updatedAt` check en los endpoints de update (optimistic locking) o al menos mostrar warning si el recurso fue modificado desde la última carga |
+| H-07 | ❌ | 🟡 | **Race condition en edición multi-tab** — pedidos cubierto por máquina de estados (transiciones inválidas se rechazan). Configuración: riesgo aceptado, es un escenario de baja probabilidad y la última escritura gana sin pérdida de datos críticos. |
 | H-08 | ✅ | 🟡 | **`as any` en `/dashboard/ajustes`** — `const tier = (sub as any)?.tier ?? "BASIC"` (línea 23). Si el modelo `Subscription` cambia en el schema de Prisma, este cast falla silenciosamente en producción sin error de compilación. Tipar correctamente usando el tipo generado por Prisma |
 | H-09 | ✅ | 🟡 | **`storeConfig` guardado sin validación de estructura** — los endpoints POST y PUT de `/api/configuracion` no validan que `storeConfig` sea un JSON válido con la estructura esperada antes de persistir. Un cliente que envíe datos malformados puede corromper la configuración de la tienda. Agregar schema Zod para `storeConfig` y validar en el endpoint |
-| H-10 | 🔲 | 🟢 | **`NotificationBell` con assertion `!` sin error handling** — `createBrowserClient(url!, key!)` crashea en runtime si las env vars no están seteadas. Reemplazar por guardado condicional: si faltan las vars, no montar el componente de tiempo real |
+| H-10 | ✅ | 🟢 | **`NotificationBell` con assertion `!` sin error handling** — reemplazado por guard condicional: si faltan las env vars, el `useEffect` retorna sin crear el cliente Supabase. |
 
 ---
 
@@ -61,8 +61,8 @@
 | I-04 | ✅ | 🟡 | **Ocultar "Consultas" del sidebar para tiendas sin modelo de leads** — el ítem "Consultas" aparece en el sidebar para todos los tipos de tienda, pero solo es relevante para `VEHICULOS` e `INMOBILIARIA`. Para tiendas de ropa, moda, etc., lleva a una página con 0 datos. Ocultar o deshabilitar según `tipoTienda` |
 | I-05 | ✅ | 🟡 | **Loading skeleton en `/dashboard/configuracion`** — la página de configuración (la más usada para personalización) no tiene skeleton loader visible durante la carga inicial. El dueño ve un flash en blanco antes de que aparezca la Gallery de templates |
 | I-06 | ✅ | 🟡 | **Feedback de loading en toggle de cupón** — el toggle activo/inactivo de cupones no muestra estado de carga. El dueño puede hacer click múltiples veces sin saber si el primer click se procesó. Agregar `isLoading` local que deshabilite el toggle durante el PATCH |
-| I-07 | 🔲 | 🟡 | **Indicator de reconexión Realtime en sidebar** — cuando la conexión Supabase Realtime se cae (internet intermitente), los badges de pedidos y afiliadas quedan desactualizados sin indicador visual. El dueño puede perderse eventos mientras la conexión está caída. Mostrar dot/badge de "Reconectando..." cuando la conexión está offline |
-| I-08 | 🔲 | 🟢 | **Badge de "Consultas" solo si hay leads pendientes** — si se decide mantener "Consultas" visible para todos, agregar badge numérico rojo (como pedidos y afiliadas) solo cuando hay leads en estado PENDING. Actualmente no tiene badge |
+| I-07 | ✅ | 🟡 | **Indicator de reconexión en sidebar** — banner "Sin conexión" visible en el sidebar cuando `navigator.onLine === false`. Se actualiza via eventos `online`/`offline`. |
+| I-08 | ✅ | 🟢 | **Badge de "Consultas" con conteo leads pendientes** — `DashboardLayout` consulta `/api/leads?status=PENDING&count=1` al cargar (solo para tiendas VEHICULOS/INMOBILIARIA) y muestra badge rojo con el conteo. |
 
 ---
 
@@ -90,12 +90,12 @@
 | # | Estado | Impacto | Descripción |
 |---|--------|---------|-------------|
 | K-01 | ✅ | 🟠 | **Sistema de logging de errores** — hoy los errores silenciosos son invisibles. Integrar Sentry (o similar) para capturar excepciones no manejadas, errores de Prisma, y los 12+ silent catches. Con esto se puede detectar problemas en producción sin esperar que el usuario lo reporte |
-| K-02 | 🔲 | 🟡 | **Schema Zod para `storeConfig`** — el campo `storeConfig: Json` de Prisma es un blob sin estructura definida. Con el tiempo acumula propiedades incontroladas de distintas versiones del editor. Definir un `StoreConfigSchema` Zod y validar en cada lectura/escritura |
-| K-03 | 🔲 | 🟡 | **Capa de servicios separada de los API route handlers** — la lógica de negocio (calcular comisiones, actualizar wallet, generar notificaciones, enviar emails) está inline dentro de los route handlers. Esto imposibilita el testing unitario. Extraer a `/src/services/` con funciones puras testeables |
+| K-02 | ✅ | 🟡 | **Schema Zod para `storeConfig`** — `storeConfigSchema` implementado en `/api/configuracion/route.ts` (líneas 11-53) con tipos estrictos para template, colores, socialLinks, SEO, textOverrides, imageOverrides. Validado en POST. |
+| K-03 | ❌ | 🟡 | **Capa de servicios separada** — refactor grande con beneficio principalmente para testing. En la escala actual (sin test suite), el costo supera el beneficio. Diferido para cuando se agregue testing. |
 | K-04 | ✅ | 🟡 | **Soft-delete para productos** — al eliminar un producto, los `OrderItem` que lo referencian pueden quedar huérfanos o mostrar datos rotos en el historial de pedidos. Agregar campo `deletedAt` en `Product` y filtrar `deletedAt IS NULL` en todas las consultas |
-| K-05 | 🔲 | 🟡 | **Resolver doble fuente de verdad en badges del sidebar** — `DashboardLayout` combina polling HTTP periódico Y suscripción Supabase Realtime para actualizar los mismos badges. Esto genera posibles inconsistencias y requests innecesarios. Usar exclusivamente Realtime o exclusivamente polling, no ambos |
+| K-05 | ✅ | 🟡 | **Resolver doble fuente de verdad en badges del sidebar** — eliminado el fetch inicial redundante de afiliadas en mount (SSR ya provee el dato). Realtime es la única fuente de actualizaciones reactivas para el badge de afiliadas. |
 | K-06 | ❌ | 🟢 | **Virtualización en tabla de productos** — `ProductsTable` ya tiene paginación client-side con PAGE_SIZE=20; nunca hay más de 20 filas en el DOM. Virtualización sería redundante dado el paginado existente. |
-| K-07 | 🔲 | 🟢 | **Endpoint `mode=tiendas-disponibles` sin UI conectada** — `/api/vendedoras?mode=tiendas-disponibles` está implementado en el backend (para un futuro "marketplace de afiliadas") pero no tiene ninguna pantalla que lo consuma. Código muerto activo. Eliminar o documentar como feature futura |
+| K-07 | ✅ | 🟢 | **Endpoint `mode=tiendas-disponibles` eliminado** — código muerto removido de `/api/vendedoras` GET. |
 
 ---
 

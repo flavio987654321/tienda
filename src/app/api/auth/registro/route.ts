@@ -24,10 +24,22 @@ export async function POST(req: NextRequest) {
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
     }
+    if (typeof name !== "string" || name.trim().length > 100) {
+      return NextResponse.json({ error: "El nombre no puede superar 100 caracteres" }, { status: 400 });
+    }
+    if (typeof email !== "string" || email.length > 254) {
+      return NextResponse.json({ error: "Email inválido" }, { status: 400 });
+    }
+    if (typeof password !== "string" || password.length > 72) {
+      return NextResponse.json({ error: "La contraseña no puede superar 72 caracteres" }, { status: 400 });
+    }
 
     const type = accountType === "seller" ? "SELLER" : accountType === "buyer" ? "BUYER" : "OWNER";
     if (type === "OWNER" && !storeName) {
       return NextResponse.json({ error: "El nombre de la tienda es requerido" }, { status: 400 });
+    }
+    if (type === "OWNER" && typeof storeName === "string" && storeName.trim().length > 80) {
+      return NextResponse.json({ error: "El nombre de la tienda no puede superar 80 caracteres" }, { status: 400 });
     }
 
     const normalizedEmail = String(email).toLowerCase().trim();

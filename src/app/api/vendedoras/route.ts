@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { sendNewAffiliateApplicationEmail } from "@/lib/email";
 import { isSafeExternalUrl } from "@/lib/url-utils";
 import { sendPushToUser } from "@/lib/push";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // GET - afiliado: ver tiendas disponibles / tienda: ver sus afiliados
 export async function GET(req: NextRequest) {
@@ -39,30 +40,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ totalOrders, totalEarned, pendingBalance, pendingCommissions, affiliates });
   }
 
-  if (mode === "tiendas-disponibles") {
-    const userId = user?.id;
-    const stores = await prisma.store.findMany({
-      where: {
-        isActive: true,
-        OR: [
-          // Tiendas con el programa activo (para postularse)
-          { affiliatesEnabled: true },
-          // Tiendas donde el usuario ya tiene afiliación (para mostrar aunque estén pausadas)
-          ...(userId ? [{ affiliates: { some: { userId, status: { in: ["APPROVED", "PENDING", "PAUSED"] } } } }] : []),
-        ],
-      },
-      include: {
-        owner: { select: { name: true } },
-        _count: { select: { products: true } },
-        affiliates: {
-          where: userId ? { userId } : { id: "__public_no_affiliate__" },
-          select: { id: true, status: true, isActive: true },
-        },
-      },
-    });
-    return NextResponse.json({ stores });
-  }
-
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   // Ver afiliados de mi tienda
@@ -88,6 +65,11 @@ const TC_VERSION = "1.3";
 
 // POST - afiliado se une a una tienda
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (!checkRateLimit(`affiliate-apply:${ip}`, 5, 60 * 60_000)) {
+    return NextResponse.json({ error: "Demasiadas solicitudes. Esperá un momento." }, { status: 429 });
+  }
+
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 

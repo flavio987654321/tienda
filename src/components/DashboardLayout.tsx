@@ -52,7 +52,9 @@ export default function DashboardLayout({
   const [pendingAffiliateCount, setPendingAffiliateCount] = useState(initialPendingAffiliateCount);
   const [lowStockCount, setLowStockCount] = useState(initialLowStockCount);
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
+  const [pendingLeadsCount, setPendingLeadsCount] = useState(0);
   const [storeType, setStoreType] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
     setPendingAffiliateCount(initialPendingAffiliateCount);
@@ -62,6 +64,20 @@ export default function DashboardLayout({
     setLowStockCount(initialLowStockCount);
   }, [initialLowStockCount]);
 
+  // I-07: indicador de conexión
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const onOnline  = () => setIsOnline(true);
+    const onOffline = () => setIsOnline(false);
+    window.addEventListener("online",  onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online",  onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
+  // K-05: solo Realtime para afiliadas — sin polling duplicado
   const fetchAffiliateCount = useCallback(() => {
     fetch("/api/vendedoras")
       .then((res) => (res.ok ? res.json() : null))
@@ -75,7 +91,6 @@ export default function DashboardLayout({
   }, []);
 
   useEffect(() => {
-    fetchAffiliateCount();
     const supabase = createSupabaseBrowserClient();
     const channel = supabase.channel("dashboard-layout-affiliates");
     channel.on(
@@ -97,20 +112,14 @@ export default function DashboardLayout({
       .catch(() => {});
   }, []);
 
+  // I-08: badge de leads pendientes para Consultas
   useEffect(() => {
-    fetch("/api/productos")
+    if (!storeType || !LEADS_STORE_TYPES.includes(storeType)) return;
+    fetch("/api/leads?status=PENDING&count=1")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        const count = Array.isArray(data?.products)
-          ? data.products.filter((p: { variants: { stock: number }[] }) => {
-              const total = p.variants.reduce((s: number, v: { stock: number }) => s + v.stock, 0);
-              return total === 0;
-            }).length
-          : 0;
-        setLowStockCount(count);
-      })
+      .then((data) => setPendingLeadsCount(data?.count ?? 0))
       .catch(() => {});
-  }, []);
+  }, [storeType]);
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden text-gray-900 [color-scheme:light]">
@@ -132,9 +141,10 @@ export default function DashboardLayout({
             const showAffiliateBadge = href === "/dashboard/vendedoras" && pendingAffiliateCount > 0;
             const showStockBadge = href === "/dashboard/productos" && lowStockCount > 0;
             const showOrderBadge = href === "/dashboard/pedidos" && pendingOrderCount > 0;
-            const hasBadge = showAffiliateBadge || showStockBadge || showOrderBadge;
-            const badgeCount = showAffiliateBadge ? pendingAffiliateCount : showStockBadge ? lowStockCount : pendingOrderCount;
-            const badgeColor = showAffiliateBadge ? "bg-red-500" : showStockBadge ? "bg-orange-500" : "bg-yellow-500";
+            const showLeadsBadge = href === "/dashboard/consultas" && pendingLeadsCount > 0;
+            const hasBadge = showAffiliateBadge || showStockBadge || showOrderBadge || showLeadsBadge;
+            const badgeCount = showAffiliateBadge ? pendingAffiliateCount : showStockBadge ? lowStockCount : showLeadsBadge ? pendingLeadsCount : pendingOrderCount;
+            const badgeColor = showAffiliateBadge ? "bg-red-500" : showStockBadge ? "bg-orange-500" : showLeadsBadge ? "bg-red-500" : "bg-yellow-500";
             return (
               <Link
                 key={href}
@@ -203,6 +213,14 @@ export default function DashboardLayout({
             <PushNotificationToggle />
           </div>
         </div>
+
+        {/* I-07: indicador de reconexión */}
+        {!isOnline && (
+          <div className="mx-2 mb-2 rounded-xl bg-orange-50 border border-orange-200 px-3 py-2">
+            <p className="text-[11px] font-semibold text-orange-600 leading-tight">Sin conexión</p>
+            <p className="text-[10px] text-orange-400 leading-tight">Los datos pueden estar desactualizados</p>
+          </div>
+        )}
       </aside>
 
       <main className={`ml-14 flex-1 flex flex-col bg-gray-50 ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>

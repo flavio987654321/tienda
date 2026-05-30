@@ -61,10 +61,16 @@ export async function GET(req: NextRequest) {
 
   const url = new URL(req.url);
   const status = url.searchParams.get("status") || undefined;
+  const countOnly = url.searchParams.get("count") === "1";
   const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
   const take = 20;
 
   const where = { storeId: store.id, ...(status ? { status } : {}) };
+
+  if (countOnly) {
+    const count = await prisma.lead.count({ where });
+    return NextResponse.json({ count });
+  }
 
   const [leads, total] = await Promise.all([
     prisma.lead.findMany({

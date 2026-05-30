@@ -60,6 +60,14 @@ export function validateProductBody(
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     return { error: NextResponse.json({ error: "Nombre requerido (mínimo 2 caracteres)" }, { status: 400 }) };
   }
+  if (name.trim().length > 200) {
+    return { error: NextResponse.json({ error: "El nombre no puede superar 200 caracteres" }, { status: 400 }) };
+  }
+
+  const { description } = body as { description?: unknown };
+  if (description && typeof description === "string" && description.length > 8000) {
+    return { error: NextResponse.json({ error: "La descripción no puede superar 8000 caracteres" }, { status: 400 }) };
+  }
 
   const parsedPrice = parseFloat(price as string);
   if (isNaN(parsedPrice) || parsedPrice <= 0) {
