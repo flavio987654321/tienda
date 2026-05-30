@@ -498,8 +498,6 @@ export default function ChicParis() {
               </div>
               <div style={{ textAlign: "center", marginTop: 48 }}>
                 <a href={`/tienda/${storeConfig?.slug}/productos?t=chic-paris`}
-                  target={storeConfig?.previewFill ? "_blank" : undefined}
-                  rel={storeConfig?.previewFill ? "noopener noreferrer" : undefined}
                   style={{ display: "inline-block", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", padding: "14px 44px", fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", textDecoration: "none", transition: "opacity 0.2s" }}
                   onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
                   onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
