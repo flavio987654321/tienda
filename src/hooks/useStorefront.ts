@@ -77,8 +77,23 @@ function isColor(name: string) { return COLOR_ATTRS.includes(name.toLowerCase())
 
 function mapProduct(raw: any): StorefrontProduct {
   const variants: StorefrontVariant[] = (raw.variants ?? []);
-  const sizes  = [...new Set(variants.filter(v => isSize(v.name)).map(v => v.value))];
-  const colors = [...new Set(variants.filter(v => isColor(v.name)).map(v => v.value))];
+  const sizesSet  = new Set<string>();
+  const colorsSet = new Set<string>();
+  variants.forEach(v => {
+    let attrs: Record<string, string> = {};
+    try { const p = JSON.parse(v.name); if (p && typeof p === "object") attrs = p; } catch {}
+    if (Object.keys(attrs).length > 0) {
+      Object.entries(attrs).forEach(([k, val]) => {
+        if (isSize(k)  && val) sizesSet.add(val);
+        if (isColor(k) && val) colorsSet.add(val);
+      });
+    } else {
+      if (isSize(v.name)  && v.value) sizesSet.add(v.value);
+      if (isColor(v.name) && v.value) colorsSet.add(v.value);
+    }
+  });
+  const sizes  = [...sizesSet];
+  const colors = [...colorsSet];
   let images: string[] = [];
   try {
     const parsed = JSON.parse(raw.images || "[]");

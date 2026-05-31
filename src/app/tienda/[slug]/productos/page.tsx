@@ -14,8 +14,23 @@ const PAGE_SIZE   = 24;
 
 function mapProduct(raw: any): StorefrontProduct {
   const variants = raw.variants ?? [];
-  const sizes  = [...new Set<string>(variants.filter((v: any) => SIZE_ATTRS.includes(v.name?.toLowerCase())).map((v: any) => v.value))];
-  const colors = [...new Set<string>(variants.filter((v: any) => COLOR_ATTRS.includes(v.name?.toLowerCase())).map((v: any) => v.value))];
+  const sizesSet  = new Set<string>();
+  const colorsSet = new Set<string>();
+  variants.forEach((v: any) => {
+    let attrs: Record<string, string> = {};
+    try { const p = JSON.parse(v.name); if (p && typeof p === "object") attrs = p; } catch {}
+    if (Object.keys(attrs).length > 0) {
+      Object.entries(attrs).forEach(([k, val]) => {
+        if (SIZE_ATTRS.includes(k.toLowerCase())  && val) sizesSet.add(val as string);
+        if (COLOR_ATTRS.includes(k.toLowerCase()) && val) colorsSet.add(val as string);
+      });
+    } else {
+      if (SIZE_ATTRS.includes(v.name?.toLowerCase())  && v.value) sizesSet.add(v.value);
+      if (COLOR_ATTRS.includes(v.name?.toLowerCase()) && v.value) colorsSet.add(v.value);
+    }
+  });
+  const sizes  = [...sizesSet];
+  const colors = [...colorsSet];
   let images: string[] = [];
   try {
     const parsed = JSON.parse(raw.images || "[]");
