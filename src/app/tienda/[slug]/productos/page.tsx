@@ -615,19 +615,21 @@ function ProductosPageInner() {
           <div style={{ position:"absolute", inset:0, background:overlayBg, backdropFilter:"blur(8px)" }}/>
           <div style={{ position:"relative", background:S, maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }} onClick={e => e.stopPropagation()}>
             {/* Galería */}
-            <div style={{ position:"relative" }}>
-              <img src={modalProduct.images[modalImg] ?? ""} alt={modalProduct.name}
-                style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}
-                onError={e => { e.currentTarget.style.opacity="0"; }}/>
-              {modalProduct.images.length > 1 && (<>
-                <button onClick={() => setModalImg(i => (i-1+modalProduct.images.length)%modalProduct.images.length)}
-                  style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.45)", border:"none", color:"#fff", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, borderRadius:2 }}>‹</button>
-                <button onClick={() => setModalImg(i => (i+1)%modalProduct.images.length)}
-                  style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.45)", border:"none", color:"#fff", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, borderRadius:2 }}>›</button>
-                <div style={{ position:"absolute", bottom:8, right:8, background:"rgba(0,0,0,0.5)", color:"#fff", fontSize:10, letterSpacing:1, padding:"3px 8px", borderRadius:2 }}>
-                  {modalImg+1} / {modalProduct.images.length}
-                </div>
-              </>)}
+            <div>
+              <div style={{ position:"relative" }}>
+                <img src={modalProduct.images[modalImg] ?? ""} alt={modalProduct.name}
+                  style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}
+                  onError={e => { e.currentTarget.style.opacity="0"; }}/>
+                {modalProduct.images.length > 1 && (<>
+                  <button onClick={() => setModalImg(i => (i-1+modalProduct.images.length)%modalProduct.images.length)}
+                    style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.45)", border:"none", color:"#fff", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, borderRadius:2 }}>‹</button>
+                  <button onClick={() => setModalImg(i => (i+1)%modalProduct.images.length)}
+                    style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.45)", border:"none", color:"#fff", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, borderRadius:2 }}>›</button>
+                  <div style={{ position:"absolute", bottom:8, right:8, background:"rgba(0,0,0,0.5)", color:"#fff", fontSize:10, letterSpacing:1, padding:"3px 8px", borderRadius:2 }}>
+                    {modalImg+1} / {modalProduct.images.length}
+                  </div>
+                </>)}
+              </div>
               {modalProduct.images.length > 1 && (
                 <div style={{ display:"flex", gap:6, padding:"8px 12px", background:BG, overflowX:"auto" }}>
                   {modalProduct.images.map((img, i) => (
