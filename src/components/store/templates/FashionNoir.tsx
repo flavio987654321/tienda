@@ -9,6 +9,8 @@ import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 
 type Product = StorefrontProduct;
 
+const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
+
 
 const ANNOUNCEMENT_MESSAGES = [
   "🚚 Envío gratis en compras mayores a $30.000",
@@ -185,14 +187,40 @@ export default function FashionNoir() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAnnouncement]);
 
+  // Al cambiar color: sync imagen + auto-seleccionar talle disponible
+  useEffect(() => {
+    if (!modalProduct || !selectedColor) return;
+    const imgIdx = modalProduct.imageItems.findIndex(
+      (img: any) => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
+    );
+    if (imgIdx !== -1) setModalImg(imgIdx);
+    const colorVariants = modalProduct.variants.filter((v: any) => {
+      try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x: any) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
+    });
+    if (!colorVariants.length) return;
+    const best = colorVariants.find((v: any) => v.stock > 0) ?? colorVariants[0];
+    try {
+      const a = JSON.parse(best.name);
+      const sizeKey = Object.keys(a).find((k: string) => SIZE_ATTRS.includes(k.toLowerCase()));
+      if (sizeKey && a[sizeKey] && a[sizeKey] !== selectedSize) setSelectedSize(a[sizeKey]);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedColor, modalProduct?.id]);
+
   // Stock del variante seleccionado en el modal (D-06)
   const selectedVariantStock = useMemo(() => {
     if (!modalProduct?.variants.length) return null;
     const v = modalProduct.variants.find(v => {
-      const inValue = v.value.includes(selectedSize) || v.value.includes(selectedColor);
-      let inAttrs = false;
-      try { const a = JSON.parse(v.name); inAttrs = Object.values(a).includes(selectedSize) || Object.values(a).includes(selectedColor); } catch {}
-      return inValue || inAttrs;
+      try {
+        const a = JSON.parse(v.name);
+        if (a && typeof a === "object") {
+          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          const sizeOk  = !selectedSize  || vals.includes(selectedSize.toLowerCase());
+          const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
+          return sizeOk && colorOk;
+        }
+      } catch {}
+      return v.value.includes(selectedSize) && v.value.includes(selectedColor);
     }) ?? (modalProduct.variants.length === 1 ? modalProduct.variants[0] : null);
     return v?.stock ?? null;
   }, [modalProduct, selectedSize, selectedColor]);
