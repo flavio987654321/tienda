@@ -771,7 +771,7 @@ function ProductosPageInner() {
                 ) : (
                   <p style={{ fontSize:12, opacity:0.35, marginBottom:16 }}>Sé el primero en dejar una reseña.</p>
                 )}
-                {isOwner ? (
+                {!fromEditor && isOwner ? (
                   <p style={{ fontSize:11, opacity:0.4, fontStyle:"italic" }}>El dueño no puede dejar reseñas en su propia tienda.</p>
                 ) : reviewDone ? (
                   <p style={{ fontSize:12, color:G, fontWeight:600 }}>¡Gracias por tu reseña!</p>
