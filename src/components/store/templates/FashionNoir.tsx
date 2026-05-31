@@ -1247,8 +1247,8 @@ export default function FashionNoir() {
                   ))}
                 </div>
               )}
-              <button onClick={openCheckout} style={{ width:"100%", background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
-                {"Finalizar Compra"}
+              <button onClick={isPreview ? undefined : openCheckout} disabled={isPreview} title={isPreview ? "No disponible en modo edición" : undefined} style={{ width:"100%", background: isPreview ? "rgba(201,168,76,0.25)" : G, color: isPreview ? "rgba(240,235,227,0.35)" : BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "not-allowed" : "pointer", marginBottom:10 }}>
+                {isPreview ? "Solo en la tienda real" : "Finalizar Compra"}
               </button>
               <button onClick={() => setCartOpen(false)} style={{ width:"100%", background:"transparent", color:T, border:`1px solid rgba(240,235,227,0.15)`, padding:"12px", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
                 Seguir Comprando

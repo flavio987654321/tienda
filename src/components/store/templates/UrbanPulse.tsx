@@ -1039,8 +1039,8 @@ export default function UrbanPulse() {
                     ))}
                   </div>
                 )}
-                <button onClick={openCheckout} style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
-                  Finalizar Compra →
+                <button onClick={isPreview ? undefined : openCheckout} disabled={isPreview} title={isPreview ? "No disponible en modo edición" : undefined} style={{ width:"100%", background: isPreview ? "rgba(0,0,0,0.08)" : DARK, color: isPreview ? "rgba(0,0,0,0.25)" : ACC, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor: isPreview ? "not-allowed" : "pointer" }}>
+                  {isPreview ? "Solo en la tienda real" : "Finalizar Compra →"}
                 </button>
                 {storeConfig?.whatsapp?.enabled && storeConfig.whatsapp.number && (
                   <a

@@ -1003,8 +1003,8 @@ export default function ChicParis() {
                     ))}
                   </div>
                 )}
-                <button onClick={openCheckout} style={{ width: "100%", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "14px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", marginTop: 8 }}>
-                  Finalizar compra
+                <button onClick={isPreview ? undefined : openCheckout} disabled={isPreview} title={isPreview ? "No disponible en modo edición" : undefined} style={{ width: "100%", background: isPreview ? "#f3f4f6" : ACC, color: isPreview ? "#9ca3af" : getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "14px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: isPreview ? "not-allowed" : "pointer", marginTop: 8 }}>
+                  {isPreview ? "Solo en la tienda real" : "Finalizar compra"}
                 </button>
                 {storeConfig?.whatsapp?.enabled && storeConfig.whatsapp.number && (
                   <a

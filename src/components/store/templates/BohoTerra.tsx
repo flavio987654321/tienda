@@ -938,7 +938,7 @@ export default function BohoTerra() {
                   ))}
                 </div>
               )}
-              <button onClick={openCheckout} style={{ width:"100%", background:A, color:"#fff", border:"none", padding:"14px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", marginBottom:8 }}>{"Finalizar Compra"}</button>
+              <button onClick={isPreview ? undefined : openCheckout} disabled={isPreview} title={isPreview ? "No disponible en modo edición" : undefined} style={{ width:"100%", background: isPreview ? "rgba(181,101,42,0.2)" : A, color: isPreview ? "rgba(44,34,24,0.3)" : "#fff", border:"none", padding:"14px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: isPreview ? "not-allowed" : "pointer", marginBottom:8 }}>{isPreview ? "Solo en la tienda real" : "Finalizar Compra"}</button>
               <button onClick={()=>setCartOpen(false)} style={{ width:"100%", background:"transparent", color:T, border:`1px solid rgba(44,34,24,0.2)`, padding:"12px", fontSize:10, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>Seguir Comprando</button>
               {storeConfig?.whatsapp?.enabled && storeConfig.whatsapp.number && (
                 <a
