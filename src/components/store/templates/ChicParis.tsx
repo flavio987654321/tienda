@@ -32,6 +32,8 @@ export default function ChicParis() {
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
+  const isOwner     = !!storeConfig?.isOwner;
+  const blockBuy    = isPreview || isOwner;
   const storefront  = useStorefront();
   const { products, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const { editMode } = useEditContext();
@@ -155,7 +157,7 @@ export default function ChicParis() {
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
-    if (isPreview) return;
+    if (isPreview || isOwner) return;
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
     setReviewSubmitting(true);
@@ -923,8 +925,8 @@ export default function ChicParis() {
                 ) : (
                   <p style={{ fontSize: 12, color: "#bbb", marginBottom: 16 }}>Sé el primero en dejar una reseña.</p>
                 )}
-                {isPreview ? (
-                  <p style={{ fontSize: 11, color: "#bbb", fontStyle: "italic" }}>Las reseñas solo están disponibles en la tienda real.</p>
+                {(isPreview || isOwner) ? (
+                  <p style={{ fontSize: 11, color: "#bbb", fontStyle: "italic" }}>{isOwner ? "El dueño no puede dejar reseñas en su propia tienda." : "Las reseñas solo están disponibles en la tienda real."}</p>
                 ) : reviewDone ? (
                   <p style={{ fontSize: 12, color: ACC, fontWeight: 700 }}>¡Gracias por tu reseña!</p>
                 ) : (
@@ -1003,8 +1005,8 @@ export default function ChicParis() {
                     ))}
                   </div>
                 )}
-                <button onClick={isPreview ? undefined : openCheckout} disabled={isPreview} title={isPreview ? "No disponible en modo edición" : undefined} style={{ width: "100%", background: isPreview ? "#f3f4f6" : ACC, color: isPreview ? "#9ca3af" : getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "14px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: isPreview ? "not-allowed" : "pointer", marginTop: 8 }}>
-                  {isPreview ? "Solo en la tienda real" : "Finalizar compra"}
+                <button onClick={blockBuy ? undefined : openCheckout} disabled={blockBuy} title={isOwner ? "No podés comprar en tu propia tienda" : isPreview ? "No disponible en modo edición" : undefined} style={{ width: "100%", background: blockBuy ? "#f3f4f6" : ACC, color: blockBuy ? "#9ca3af" : getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "14px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: blockBuy ? "not-allowed" : "pointer", marginTop: 8 }}>
+                  {isOwner ? "No disponible para el dueño" : isPreview ? "Solo en la tienda real" : "Finalizar compra"}
                 </button>
                 {storeConfig?.whatsapp?.enabled && storeConfig.whatsapp.number && (
                   <a

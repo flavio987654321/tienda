@@ -93,6 +93,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
       slug,
       tipoTienda: store.tipoTienda ?? "GENERAL",
       tieneVentaMayorista: store.tieneVentaMayorista ?? false,
+      isOwner,
     };
   } catch {
     notFound();

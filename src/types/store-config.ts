@@ -55,6 +55,7 @@ export type StoreConfig = {
     enabled: boolean;
   };
   previewFill?: boolean;
+  isOwner?: boolean;
   tipoTienda?: string;
   tieneVentaMayorista?: boolean;
   ocultarPreciosPublico?: boolean;

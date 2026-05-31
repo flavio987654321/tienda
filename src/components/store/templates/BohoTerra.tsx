@@ -35,6 +35,8 @@ export default function BohoTerra() {
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
+  const isOwner     = !!storeConfig?.isOwner;
+  const blockBuy    = isPreview || isOwner;
   const storefront  = useStorefront();
   const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const { editMode } = useEditContext();
@@ -163,7 +165,7 @@ export default function BohoTerra() {
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
-    if (isPreview) return;
+    if (isPreview || isOwner) return;
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
     setReviewSubmitting(true);
@@ -860,8 +862,8 @@ export default function BohoTerra() {
                 ) : (
                   <p style={{ fontSize:12, color:MID, marginBottom:16 }}>Sé el primero en dejar una reseña.</p>
                 )}
-                {isPreview ? (
-                  <p style={{ fontSize:11, color:MID, fontStyle:"italic" }}>Las reseñas solo están disponibles en la tienda real.</p>
+                {(isPreview || isOwner) ? (
+                  <p style={{ fontSize:11, color:MID, fontStyle:"italic" }}>{isOwner ? "El dueño no puede dejar reseñas en su propia tienda." : "Las reseñas solo están disponibles en la tienda real."}</p>
                 ) : reviewDone ? (
                   <p style={{ fontSize:12, color:A, fontWeight:600 }}>¡Gracias por tu reseña!</p>
                 ) : (
@@ -938,7 +940,7 @@ export default function BohoTerra() {
                   ))}
                 </div>
               )}
-              <button onClick={isPreview ? undefined : openCheckout} disabled={isPreview} title={isPreview ? "No disponible en modo edición" : undefined} style={{ width:"100%", background: isPreview ? "rgba(181,101,42,0.2)" : A, color: isPreview ? "rgba(44,34,24,0.3)" : "#fff", border:"none", padding:"14px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: isPreview ? "not-allowed" : "pointer", marginBottom:8 }}>{isPreview ? "Solo en la tienda real" : "Finalizar Compra"}</button>
+              <button onClick={blockBuy ? undefined : openCheckout} disabled={blockBuy} title={isOwner ? "No podés comprar en tu propia tienda" : isPreview ? "No disponible en modo edición" : undefined} style={{ width:"100%", background: blockBuy ? "rgba(181,101,42,0.2)" : A, color: blockBuy ? "rgba(44,34,24,0.3)" : "#fff", border:"none", padding:"14px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: blockBuy ? "not-allowed" : "pointer", marginBottom:8 }}>{isOwner ? "No disponible para el dueño" : isPreview ? "Solo en la tienda real" : "Finalizar Compra"}</button>
               <button onClick={()=>setCartOpen(false)} style={{ width:"100%", background:"transparent", color:T, border:`1px solid rgba(44,34,24,0.2)`, padding:"12px", fontSize:10, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>Seguir Comprando</button>
               {storeConfig?.whatsapp?.enabled && storeConfig.whatsapp.number && (
                 <a

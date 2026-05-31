@@ -87,6 +87,7 @@ function ProductosPageInner() {
   const [error,      setError]      = useState<string | null>(null);
   const [storeName,  setStoreName]  = useState("Tienda");
   const [template,   setTemplate]   = useState(tParam && THEMES[tParam] ? tParam : "fashion-noir");
+  const [isOwner,    setIsOwner]    = useState(false);
 
   const storeIdRef = useRef<string | null>(null);
 
@@ -150,6 +151,7 @@ function ProductosPageInner() {
       .then(data => {
         if (!data?.store) { setError("Tienda no encontrada"); return; }
         storeIdRef.current = data.store.id ?? null;
+        setIsOwner(data.isOwner ?? false);
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.template && !tParam) setTemplate(cfg.template);
@@ -609,9 +611,9 @@ function ProductosPageInner() {
                 <span style={{ fontSize:13, opacity:0.6, color:T }}>Total</span>
                 <span style={{ fontSize:20, fontWeight:700, color:G }}>{fmt(cartTotal)}</span>
               </div>
-              <button onClick={openCheckout}
-                style={{ width:"100%", background:G, color:dark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
-                Finalizar compra
+              <button onClick={isOwner ? undefined : openCheckout} disabled={isOwner} title={isOwner ? "No podés comprar en tu propia tienda" : undefined}
+                style={{ width:"100%", background: isOwner ? "rgba(128,128,128,0.15)" : G, color: isOwner ? "rgba(128,128,128,0.5)" : dark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isOwner ? "not-allowed" : "pointer", marginBottom:10 }}>
+                {isOwner ? "No disponible para el dueño" : "Finalizar compra"}
               </button>
               <button onClick={() => setCartOpen(false)}
                 style={{ width:"100%", background:"transparent", color:T, border:`1px solid ${border}`, padding:"11px", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>

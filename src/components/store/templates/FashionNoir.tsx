@@ -61,6 +61,8 @@ export default function FashionNoir() {
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
+  const isOwner     = !!storeConfig?.isOwner;
+  const blockBuy    = isPreview || isOwner;
   const storefront  = useStorefront();
   const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
@@ -145,7 +147,7 @@ export default function FashionNoir() {
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
-    if (isPreview) return;
+    if (isPreview || isOwner) return;
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
     setReviewSubmitting(true);
@@ -1008,8 +1010,8 @@ export default function FashionNoir() {
                 ) : (
                   <p style={{ fontSize:12, opacity:0.35, marginBottom:16 }}>Sé el primero en dejar una reseña.</p>
                 )}
-                {isPreview ? (
-                  <p style={{ fontSize:11, opacity:0.4, fontStyle:"italic" }}>Las reseñas solo están disponibles en la tienda real.</p>
+                {(isPreview || isOwner) ? (
+                  <p style={{ fontSize:11, opacity:0.4, fontStyle:"italic" }}>{isOwner ? "El dueño no puede dejar reseñas en su propia tienda." : "Las reseñas solo están disponibles en la tienda real."}</p>
                 ) : reviewDone ? (
                   <p style={{ fontSize:12, color:G, fontWeight:600 }}>¡Gracias por tu reseña!</p>
                 ) : (
@@ -1247,8 +1249,8 @@ export default function FashionNoir() {
                   ))}
                 </div>
               )}
-              <button onClick={isPreview ? undefined : openCheckout} disabled={isPreview} title={isPreview ? "No disponible en modo edición" : undefined} style={{ width:"100%", background: isPreview ? "rgba(201,168,76,0.25)" : G, color: isPreview ? "rgba(240,235,227,0.35)" : BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "not-allowed" : "pointer", marginBottom:10 }}>
-                {isPreview ? "Solo en la tienda real" : "Finalizar Compra"}
+              <button onClick={blockBuy ? undefined : openCheckout} disabled={blockBuy} title={isOwner ? "No podés comprar en tu propia tienda" : isPreview ? "No disponible en modo edición" : undefined} style={{ width:"100%", background: blockBuy ? "rgba(201,168,76,0.25)" : G, color: blockBuy ? "rgba(240,235,227,0.35)" : BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: blockBuy ? "not-allowed" : "pointer", marginBottom:10 }}>
+                {isOwner ? "No disponible para el dueño" : isPreview ? "Solo en la tienda real" : "Finalizar Compra"}
               </button>
               <button onClick={() => setCartOpen(false)} style={{ width:"100%", background:"transparent", color:T, border:`1px solid rgba(240,235,227,0.15)`, padding:"12px", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
                 Seguir Comprando

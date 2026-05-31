@@ -43,6 +43,8 @@ export default function UrbanPulse() {
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
+  const isOwner     = !!storeConfig?.isOwner;
+  const blockBuy    = isPreview || isOwner;
   const storefront  = useStorefront();
   const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const { editMode } = useEditContext();
@@ -177,7 +179,7 @@ export default function UrbanPulse() {
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
-    if (isPreview) return;
+    if (isPreview || isOwner) return;
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
     setReviewSubmitting(true);
@@ -960,8 +962,8 @@ export default function UrbanPulse() {
                   ) : (
                     <p style={{ fontSize:12, color:MID, marginBottom:16 }}>Sé el primero en dejar una reseña.</p>
                   )}
-                  {isPreview ? (
-                    <p style={{ fontSize:11, color:MID, fontStyle:"italic" }}>Las reseñas solo están disponibles en la tienda real.</p>
+                  {(isPreview || isOwner) ? (
+                    <p style={{ fontSize:11, color:MID, fontStyle:"italic" }}>{isOwner ? "El dueño no puede dejar reseñas en su propia tienda." : "Las reseñas solo están disponibles en la tienda real."}</p>
                   ) : reviewDone ? (
                     <p style={{ fontSize:12, color:ACC, fontWeight:900 }}>¡Gracias por tu reseña!</p>
                   ) : (
@@ -1039,8 +1041,8 @@ export default function UrbanPulse() {
                     ))}
                   </div>
                 )}
-                <button onClick={isPreview ? undefined : openCheckout} disabled={isPreview} title={isPreview ? "No disponible en modo edición" : undefined} style={{ width:"100%", background: isPreview ? "rgba(0,0,0,0.08)" : DARK, color: isPreview ? "rgba(0,0,0,0.25)" : ACC, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor: isPreview ? "not-allowed" : "pointer" }}>
-                  {isPreview ? "Solo en la tienda real" : "Finalizar Compra →"}
+                <button onClick={blockBuy ? undefined : openCheckout} disabled={blockBuy} title={isOwner ? "No podés comprar en tu propia tienda" : isPreview ? "No disponible en modo edición" : undefined} style={{ width:"100%", background: blockBuy ? "rgba(0,0,0,0.08)" : DARK, color: blockBuy ? "rgba(0,0,0,0.25)" : ACC, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor: blockBuy ? "not-allowed" : "pointer" }}>
+                  {isOwner ? "No disponible para el dueño" : isPreview ? "Solo en la tienda real" : "Finalizar Compra →"}
                 </button>
                 {storeConfig?.whatsapp?.enabled && storeConfig.whatsapp.number && (
                   <a
