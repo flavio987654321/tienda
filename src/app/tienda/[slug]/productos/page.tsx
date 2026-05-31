@@ -8,8 +8,15 @@ import type { StorefrontProduct, PlaceOrderParams } from "@/hooks/useStorefront"
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 
 // ── Tipos extra ──────────────────────────────────────────────────────────────
-const SIZE_ATTRS  = ["talle","size","talla","talles","sizes"];
-const COLOR_ATTRS = ["color","colour","colores","colors"];
+const SIZE_ATTRS  = [
+  "talle","size","talla","talles","sizes",
+  "tamaño","tamano",
+  "almacenamiento","ram",
+  "versión","version",
+  "formato","variante","material",
+  "sabor","peso/tamaño","peso",
+];
+const COLOR_ATTRS = ["color","colour","colores","colors","tono"];
 const PAGE_SIZE   = 24;
 
 function mapProduct(raw: any): StorefrontProduct {

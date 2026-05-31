@@ -57,8 +57,21 @@ export type PlaceOrderParams = {
   rewardCouponCode?: string | null;
 };
 
-const SIZE_ATTRS  = ["talle", "size", "talla", "talles", "sizes"];
-const COLOR_ATTRS = ["color", "colour", "colores", "colors"];
+// Claves que mapean a "talle" (dimensión principal no-color) según tipoTienda
+const SIZE_ATTRS  = [
+  "talle", "size", "talla", "talles", "sizes",          // ROPA / DEPORTE
+  "tamaño", "tamano",                                    // HOGAR / MASCOTAS / GENERAL
+  "almacenamiento",                                      // TECH
+  "ram",                                                 // TECH
+  "versión", "version",                                  // AUTOS
+  "formato",                                             // LIBROS
+  "variante",                                            // GENERAL
+  "material",                                            // HOGAR
+  "sabor",                                               // ALIMENTOS / MASCOTAS
+  "peso/tamaño", "peso",                                 // ALIMENTOS
+];
+// Claves que mapean a "color"
+const COLOR_ATTRS = ["color", "colour", "colores", "colors", "tono"];
 
 /* ── Productos de muestra para el preview del dashboard ─────── */
 const DEMO_PRODUCTS: StorefrontProduct[] = [
