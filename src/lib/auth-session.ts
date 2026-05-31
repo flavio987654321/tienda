@@ -9,6 +9,8 @@ export type AppSessionUser = {
   image: string | null;
 };
 
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+
 export async function getCurrentUser(): Promise<AppSessionUser | null> {
   if (!hasSupabaseServerConfig()) return null;
 
@@ -16,6 +18,8 @@ export async function getCurrentUser(): Promise<AppSessionUser | null> {
   const { data, error } = await supabase.auth.getUser();
 
   if (error || !data.user?.email) return null;
+
+  const isAdminEmail = ADMIN_EMAIL && data.user.email.toLowerCase() === ADMIN_EMAIL;
 
   const profile = await prisma.user.findFirst({
     where: {
@@ -34,6 +38,11 @@ export async function getCurrentUser(): Promise<AppSessionUser | null> {
   if (profile) {
     if (profile.banned) return null;
     const { banned: _, ...rest } = profile;
+    // Si el email es el admin y el role no es ADMIN, lo corrige automáticamente
+    if (isAdminEmail && rest.role !== "ADMIN") {
+      await prisma.user.update({ where: { id: profile.id }, data: { role: "ADMIN" } });
+      rest.role = "ADMIN";
+    }
     return rest;
   }
 
@@ -45,7 +54,7 @@ export async function getCurrentUser(): Promise<AppSessionUser | null> {
       id: data.user.id,
       email: data.user.email,
       name: data.user.user_metadata?.name ?? null,
-      role: "BUYER",
+      role: isAdminEmail ? "ADMIN" : "BUYER",
     },
     select: {
       id: true,
