@@ -776,26 +776,30 @@ function ProductosPageInner() {
                 ) : reviewDone ? (
                   <p style={{ fontSize:12, color:G, fontWeight:600 }}>¡Gracias por tu reseña!</p>
                 ) : (
-                  <form onSubmit={submitReview} style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                    <input value={reviewForm.reviewer} onChange={e => setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
-                      placeholder="Tu nombre" required
-                      style={{ background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, outline:"none" }}
-                      onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)} />
-                    <div style={{ display:"flex", gap:4 }}>
-                      {[1,2,3,4,5].map(s => (
-                        <button key={s} type="button" onClick={() => setReviewForm(p => ({ ...p, rating: s }))}
-                          style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color: s <= reviewForm.rating ? G : `${T}30`, padding:"2px" }}>★</button>
-                      ))}
-                    </div>
-                    <textarea value={reviewForm.comment} onChange={e => setReviewForm(p => ({ ...p, comment: e.target.value }))}
-                      placeholder="Comentario (opcional)" rows={3}
-                      style={{ background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none", fontFamily:sans }}
-                      onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)} />
-                    <button type="submit" disabled={reviewSubmitting || !reviewForm.reviewer.trim()}
-                      style={{ background: reviewSubmitting || !reviewForm.reviewer.trim() ? `${G}40` : G, color:dark?"#000":"#fff", border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>
-                      {reviewSubmitting ? "Enviando..." : "Publicar reseña"}
-                    </button>
-                  </form>
+                  <div style={{ position:"relative" }}>
+                    {fromEditor && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
+                    <form onSubmit={fromEditor ? e => e.preventDefault() : submitReview} style={{ display:"flex", flexDirection:"column", gap:10, opacity: fromEditor ? 0.55 : 1 }}>
+                      <input value={reviewForm.reviewer} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
+                        placeholder="Tu nombre" readOnly={fromEditor}
+                        style={{ background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, outline:"none" }}
+                        onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
+                      <div style={{ display:"flex", gap:4 }}>
+                        {[1,2,3,4,5].map(s => (
+                          <button key={s} type="button" onClick={() => !fromEditor && setReviewForm(p => ({ ...p, rating: s }))}
+                            style={{ background:"none", border:"none", fontSize:22, cursor: fromEditor ? "default" : "pointer", color: s <= reviewForm.rating ? G : `${T}30`, padding:"2px" }}>★</button>
+                        ))}
+                      </div>
+                      <textarea value={reviewForm.comment} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, comment: e.target.value }))}
+                        placeholder="Comentario (opcional)" rows={3} readOnly={fromEditor}
+                        style={{ background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none", fontFamily:sans }}
+                        onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
+                      <button type="submit" disabled={fromEditor || reviewSubmitting || !reviewForm.reviewer.trim()}
+                        style={{ background: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? `${G}40` : G, color:dark?"#000":"#fff", border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>
+                        {reviewSubmitting ? "Enviando..." : "Publicar reseña"}
+                      </button>
+                    </form>
+                    {fromEditor && <p style={{ fontSize:10, opacity:0.45, fontStyle:"italic", marginTop:6 }}>Vista previa — solo disponible en la tienda real.</p>}
+                  </div>
                 )}
               </div>
             </div>
