@@ -93,6 +93,8 @@ export default function BohoTerra() {
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [announcementIdx,     setAnnouncementIdx]     = useState(0);
   const [openPolicyField,     setOpenPolicyField]     = useState<string | null>(null);
+  const [isMobile,            setIsMobile]            = useState(false);
+  const [mobileMenuOpen,      setMobileMenuOpen]      = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -200,6 +202,13 @@ export default function BohoTerra() {
     const fn = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", fn);
     return () => window.removeEventListener("scroll", fn);
+  }, []);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
   useEffect(() => {
@@ -368,107 +377,88 @@ export default function BohoTerra() {
 
       {/* ── NAVBAR */}
       <nav style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex:100, background: scrolled ? "rgba(250,247,242,0.96)" : BG, borderBottom:`1px solid rgba(44,34,24,0.07)`, backdropFilter: scrolled ? "blur(10px)" : "none", transition:"all 0.3s" }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 40px", height:60, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 20px", height:60, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <button onClick={()=>scrollTo("inicio")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:20, fontStyle:"italic", color:T, letterSpacing:2, maxWidth:200, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
             <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "Terra"}</EditableZone>
           </button>
-          <div style={{ display:"flex", gap:20, alignItems:"center" }}>
-            {/* CATEGORÍAS dropdown */}
-            <div style={{ position:"relative" }}
-              onMouseEnter={() => setHoveredNavCat("__open__")}
-              onMouseLeave={() => setHoveredNavCat(null)}>
-              <button style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color:MID, display:"flex", alignItems:"center", gap:4 }}
-                onMouseEnter={e => (e.currentTarget.style.color = T)}
-                onMouseLeave={e => (e.currentTarget.style.color = MID)}>
-                Categorías <span style={{ fontSize:9, opacity:0.6 }}>▾</span>
-              </button>
-              {hoveredNavCat && (
-                <div style={{ position:"absolute", top:"calc(100% + 10px)", left:0, background:"#faf7f2", border:`1px solid rgba(44,34,24,0.12)`, minWidth:180, zIndex:500, padding:"6px 0", boxShadow:"0 12px 40px rgba(44,34,24,0.12)" }}>
-                  {categoryList.map(cat => {
-                    const subs = subcategoriesFor[cat] || [];
-                    return (
-                      <div key={cat} style={{ position:"relative" }}
-                        onMouseEnter={() => setHoveredNavCat(cat)}
-                        onMouseLeave={() => setHoveredNavCat("__open__")}>
-                        <button onClick={() => { changeCategory(cat); scrollTo("coleccion"); setHoveredNavCat(null); }}
-                          style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background: hoveredNavCat===cat ? "rgba(44,34,24,0.05)" : "none", border:"none", color:T, padding:"9px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
-                          {cat}
-                          {subs.length > 0 && <span style={{ opacity:0.4, fontSize:10 }}>›</span>}
-                        </button>
-                        {subs.length > 0 && hoveredNavCat === cat && (
-                          <div style={{ position:"absolute", top:0, left:"100%", background:"#faf7f2", border:`1px solid rgba(44,34,24,0.12)`, minWidth:160, padding:"6px 0", boxShadow:"8px 8px 32px rgba(44,34,24,0.1)", zIndex:501 }}>
-                            {subs.map(sub => (
-                              <button key={sub} onClick={() => { changeCategory(cat); scrollTo("coleccion"); setHoveredNavCat(null); }}
-                                style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"8px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase" }}
-                                onMouseEnter={e => (e.currentTarget.style.background = "rgba(44,34,24,0.05)")}
-                                onMouseLeave={e => (e.currentTarget.style.background = "none")}>
-                                {sub}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+          {!isMobile && (
+            <div style={{ display:"flex", gap:20, alignItems:"center" }}>
+              {/* CATEGORÍAS dropdown */}
+              <div style={{ position:"relative" }}
+                onMouseEnter={() => setHoveredNavCat("__open__")}
+                onMouseLeave={() => setHoveredNavCat(null)}>
+                <button style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color:MID, display:"flex", alignItems:"center", gap:4 }}
+                  onMouseEnter={e => (e.currentTarget.style.color = T)}
+                  onMouseLeave={e => (e.currentTarget.style.color = MID)}>
+                  Categorías <span style={{ fontSize:9, opacity:0.6 }}>▾</span>
+                </button>
+                {hoveredNavCat && (
+                  <div style={{ position:"absolute", top:"calc(100% + 10px)", left:0, background:"#faf7f2", border:`1px solid rgba(44,34,24,0.12)`, minWidth:180, zIndex:500, padding:"6px 0", boxShadow:"0 12px 40px rgba(44,34,24,0.12)" }}>
+                    {categoryList.map(cat => (
+                      <button key={cat} onClick={() => { changeCategory(cat); scrollTo("coleccion"); setHoveredNavCat(null); }}
+                        style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"9px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); scrollTo("coleccion"); }}
+                style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color: activeGender==="mujer" ? A : MID }}>Mujer</button>
+              <button onClick={() => { changeGender(activeGender==="hombre" ? null : "hombre"); scrollTo("coleccion"); }}
+                style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color: activeGender==="hombre" ? A : MID }}>Hombre</button>
             </div>
-            {/* MUJER */}
-            <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); scrollTo("coleccion"); }}
-              style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color: activeGender==="mujer" ? A : MID, transition:"color 0.2s" }}
-              onMouseEnter={e => { if(activeGender!=="mujer") e.currentTarget.style.color=T; }}
-              onMouseLeave={e => { if(activeGender!=="mujer") e.currentTarget.style.color=MID; }}>
-              Mujer
-            </button>
-            {/* HOMBRE */}
-            <button onClick={() => { changeGender(activeGender==="hombre" ? null : "hombre"); scrollTo("coleccion"); }}
-              style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color: activeGender==="hombre" ? A : MID, transition:"color 0.2s" }}
-              onMouseEnter={e => { if(activeGender!=="hombre") e.currentTarget.style.color=T; }}
-              onMouseLeave={e => { if(activeGender!=="hombre") e.currentTarget.style.color=MID; }}>
-              Hombre
-            </button>
-          </div>
-          <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-            <button onClick={()=>scrollTo("nosotros")} style={{ background:"none", border:"none", color:MID, fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="navHistoriaLabel" label="Enlace Nuestra Historia">Nuestra Historia</EditableZone></button>
-            {/* Search icon */}
+          )}
+          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+            {!isMobile && <button onClick={()=>scrollTo("nosotros")} style={{ background:"none", border:"none", color:MID, fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="navHistoriaLabel" label="Enlace Nuestra Historia">Nuestra Historia</EditableZone></button>}
             <button onClick={() => setSearchOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
-            {/* Favorites icon */}
-            <button onClick={() => setFavoritesOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
-              <svg width={18} height={18} viewBox="0 0 24 24" fill={favorites.length > 0 ? A : "none"} stroke={favorites.length > 0 ? A : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              {favorites.length > 0 && <span style={{ position:"absolute", top:-5, right:-5, background:A, color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
-            </button>
-            {/* User icon */}
-            <div ref={userDropdownRef} style={{ position:"relative" }}>
-              <button onClick={() => setUserDropdownOpen(o => !o)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
-                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            {!isMobile && (
+              <button onClick={() => setFavoritesOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
+                <svg width={18} height={18} viewBox="0 0 24 24" fill={favorites.length > 0 ? A : "none"} stroke={favorites.length > 0 ? A : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                {favorites.length > 0 && <span style={{ position:"absolute", top:-5, right:-5, background:A, color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
               </button>
-              {userDropdownOpen && (
-                <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#fff", border:`1px solid rgba(44,34,24,0.12)`, minWidth:180, zIndex:200, boxShadow:"0 8px 32px rgba(44,34,24,0.15)" }}>
-                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:A, padding:"10px 16px 4px", margin:0 }}>{"Mi cuenta"}</p>
-                  {["Iniciar sesión", "Registrarse"].map(item => (
-                    <button key={item} style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"10px 16px", fontSize:13, textAlign:"left", cursor:"pointer", transition:"background 0.2s" }}
-                      onMouseEnter={e => (e.currentTarget.style.background=S)}
-                      onMouseLeave={e => (e.currentTarget.style.background="none")}>{item}</button>
-                  ))}
-                  <div style={{ borderTop:`1px solid rgba(44,34,24,0.08)`, margin:"4px 0" }}/>
-                  {["Mis pedidos", "Mi perfil"].map(item => (
-                    <button key={item} style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"10px 16px", fontSize:13, textAlign:"left", cursor:"pointer", transition:"background 0.2s" }}
-                      onMouseEnter={e => (e.currentTarget.style.background=S)}
-                      onMouseLeave={e => (e.currentTarget.style.background="none")}>{item}</button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {/* Cart icon */}
-            <button onClick={()=>setCartOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", display:"flex", alignItems:"center" }}>
+            )}
+            <button onClick={()=>setCartOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", display:"flex", alignItems:"center", padding:4 }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
               {cartCount>0 && <span style={{ position:"absolute", top:-5, right:-5, background:A, color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
             </button>
+            {isMobile && (
+              <button onClick={() => setMobileMenuOpen(o => !o)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center", flexDirection:"column", gap:4 }}>
+                <span style={{ display:"block", width:22, height:2, background:T, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(4px, 4px)" : "none" }}/>
+                <span style={{ display:"block", width:22, height:2, background:T, transition:"all 0.3s", opacity: mobileMenuOpen ? 0 : 1 }}/>
+                <span style={{ display:"block", width:22, height:2, background:T, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(-45deg) translate(4px, -4px)" : "none" }}/>
+              </button>
+            )}
           </div>
         </div>
       </nav>
+      {/* ── MOBILE MENU */}
+      {isMobile && mobileMenuOpen && (
+        <div style={{ position: isPreview ? "sticky" : "fixed", top: isPreview ? 0 : 60 + announcementBarHeight, left:0, right:0, bottom:0, background:BG, zIndex:99, overflowY:"auto", paddingTop:8 }}>
+          {categoryList.map(cat => (
+            <button key={cat} onClick={() => { changeCategory(cat); scrollTo("coleccion"); setMobileMenuOpen(false); }}
+              style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(44,34,24,0.06)`, color:T, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+              {cat}
+            </button>
+          ))}
+          {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
+            <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("coleccion"); setMobileMenuOpen(false); }}
+              style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(44,34,24,0.06)`, color: activeGender===g ? A : T, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+              {label}
+            </button>
+          ))}
+          <button onClick={() => { scrollTo("nosotros"); setMobileMenuOpen(false); }}
+            style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(44,34,24,0.06)`, color:MID, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+            Nuestra Historia
+          </button>
+          <button onClick={() => { setFavoritesOpen(true); setMobileMenuOpen(false); }}
+            style={{ display:"block", width:"100%", background:"none", border:"none", color:MID, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+            Favoritos {favorites.length > 0 && `(${favorites.length})`}
+          </button>
+        </div>
+      )}
 
       {/* ── HERO — fondo crema con tipografía grande + foto al costado */}
       <section id="inicio" style={{ paddingTop: 60 + announcementBarHeight, minHeight:"100vh", display:"flex", alignItems:"stretch" }}>
@@ -799,7 +789,7 @@ export default function BohoTerra() {
       {modalProduct && (
         <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={()=>setModalProduct(null)}>
           <div style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.65)", backdropFilter:"blur(8px)" }}/>
-          <div style={{ position:"relative", background:"#fff", maxWidth:920, width:"calc(100% - 48px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns:"1fr 1fr" }} onClick={e=>e.stopPropagation()}>
+          <div style={{ position:"relative", background:"#fff", maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }} onClick={e=>e.stopPropagation()}>
             <div>
               <div style={{ position:"relative" }}>
                 <img src={modalProduct.images[modalImg]} alt="" style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}/>

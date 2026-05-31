@@ -48,6 +48,8 @@ export default function FashionNoir() {
   const [activeGender,       setActiveGender]       = useState<string | null>(null);
   const [hoveredNavCat,      setHoveredNavCat]      = useState<string | null>(null);
   const [visibleCount,       setVisibleCount]       = useState(8);
+  const [isMobile,           setIsMobile]           = useState(false);
+  const [mobileMenuOpen,     setMobileMenuOpen]     = useState(false);
   const [hoveredId,          setHoveredId]          = useState<string | null>(null);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [announcementIdx,    setAnnouncementIdx]    = useState(0);
@@ -176,6 +178,13 @@ export default function FashionNoir() {
     const onScroll = () => setScrolled(window.scrollY > 60);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
   useEffect(() => {
@@ -420,7 +429,7 @@ export default function FashionNoir() {
           <button onClick={() => scrollTo("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:26, fontWeight:700, letterSpacing:6, color:G, maxWidth:240, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
             <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "NOIR"}</EditableZone>
           </button>
-          <div style={{ display:"flex", gap:28, alignItems:"center" }}>
+          {!isMobile && <div style={{ display:"flex", gap:28, alignItems:"center" }}>
             {/* CATEGORÍAS dropdown */}
             <div style={{ position:"relative" }}
               onMouseEnter={() => setHoveredNavCat("__open__")}
@@ -484,17 +493,17 @@ export default function FashionNoir() {
                 {label}
               </button>
             ))}
-          </div>
+          </div>}
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             {/* Search icon */}
             <button onClick={() => setSearchOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
             {/* Favorites icon */}
-            <button onClick={() => setFavoritesOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
+            {!isMobile && <button onClick={() => setFavoritesOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? G : "none"} stroke={favorites.length > 0 ? G : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {favorites.length > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:G, color:BG, borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
-            </button>
+            </button>}
             {/* User icon */}
             <div ref={userDropdownRef} style={{ position:"relative" }}>
               <button onClick={() => setUserDropdownOpen(o => !o)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
@@ -522,9 +531,38 @@ export default function FashionNoir() {
               <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
               {cartCount > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:G, color:BG, borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
             </button>
+            {isMobile && (
+              <button onClick={() => setMobileMenuOpen(o => !o)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", flexDirection:"column", gap:4, alignItems:"center" }}>
+                <span style={{ display:"block", width:20, height:2, background:T, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(3px,3px)" : "none" }}/>
+                <span style={{ display:"block", width:20, height:2, background:T, transition:"all 0.3s", opacity: mobileMenuOpen ? 0 : 1 }}/>
+                <span style={{ display:"block", width:20, height:2, background:T, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(-45deg) translate(3px,-3px)" : "none" }}/>
+              </button>
+            )}
           </div>
         </div>
       </nav>
+      {isMobile && mobileMenuOpen && (
+        <div style={{ position: isPreview ? "sticky" : "fixed", top: isPreview ? 0 : 72 + announcementBarHeight, left:0, right:0, bottom:0, background:BG, zIndex:99, overflowY:"auto" }}>
+          {categoryList.map(cat => (
+            <button key={cat} onClick={() => { changeCategory(cat); scrollTo("productos"); setMobileMenuOpen(false); }}
+              style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(201,168,76,0.1)`, color:T, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
+              {cat}
+            </button>
+          ))}
+          {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
+            <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("productos"); setMobileMenuOpen(false); }}
+              style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(201,168,76,0.1)`, color: activeGender===g ? G : T, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
+              {label}
+            </button>
+          ))}
+          {[["Nosotros","nosotros"],["Contacto","contacto"]].map(([label, target]) => (
+            <button key={target} onClick={() => { scrollTo(target); setMobileMenuOpen(false); }}
+              style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(201,168,76,0.1)`, color:"rgba(240,235,227,0.6)", padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── HERO ───────────────────────────────────────────── */}
       <section id="hero" style={{ position:"relative", height:"100vh", minHeight:600, overflow:"hidden" }}>
@@ -900,7 +938,7 @@ export default function FashionNoir() {
       {modalProduct && (
         <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => setModalProduct(null)}>
           <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.88)", backdropFilter:"blur(8px)" }}/>
-          <div style={{ position:"relative", background:S, maxWidth:960, width:"calc(100% - 48px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns:"1fr 1fr" }} onClick={e => e.stopPropagation()}>
+          <div style={{ position:"relative", background:S, maxWidth:960, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }} onClick={e => e.stopPropagation()}>
             <div>
               {/* Imagen principal con flechas */}
               <div style={{ position:"relative" }}>

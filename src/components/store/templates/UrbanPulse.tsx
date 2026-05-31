@@ -36,6 +36,8 @@ export default function UrbanPulse() {
   const [hoveredNavCat,    setHoveredNavCat]    = useState<string | null>(null);
   const [visibleCount,     setVisibleCount]     = useState(8);
   const [openPolicyField,  setOpenPolicyField]  = useState<string | null>(null);
+  const [isMobile,         setIsMobile]         = useState(false);
+  const [mobileMenuOpen,   setMobileMenuOpen]   = useState(false);
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -107,6 +109,13 @@ export default function UrbanPulse() {
     const fn = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", fn);
     return () => window.removeEventListener("scroll", fn);
+  }, []);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
   const {
@@ -330,13 +339,13 @@ export default function UrbanPulse() {
       )}
 
       {/* NAVBAR */}
-      <nav style={{ position:"sticky", top:0, zIndex:100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"all 0.3s", padding:"0 40px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+      <nav style={{ position:"sticky", top:0, zIndex:100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"all 0.3s", padding:"0 20px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div style={{ fontWeight:900, fontSize:18, letterSpacing:4, textTransform:"uppercase", maxWidth:220, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
           <EditableZone field="storeName" label="Nombre de la tienda">
             {storeConfig?.storeName ?? <span>URBAN<span style={{ background:DARK, color:ACC, padding:"3px 7px", marginLeft:2 }}>PULSE</span></span>}
           </EditableZone>
         </div>
-        <div style={{ display:"flex", gap:28, alignItems:"center" }}>
+        {!isMobile && <div style={{ display:"flex", gap:28, alignItems:"center" }}>
           {/* CATEGORÍAS dropdown */}
           <div style={{ position:"relative" }}
             onMouseEnter={() => setHoveredNavCat("__open__")}
@@ -397,7 +406,7 @@ export default function UrbanPulse() {
             onMouseLeave={e => { e.currentTarget.style.borderBottomColor = "transparent"; }}>
             Nosotros
           </button>
-        </div>
+        </div>}
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
           <button onClick={() => setSearchOpen(true)} style={iconBtn}>
             <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -423,12 +432,39 @@ export default function UrbanPulse() {
             )}
           </div>
           <button onClick={() => setCartOpen(true)}
-            style={{ background:DARK, border:"none", color:ACC, padding:"10px 18px", display:"flex", alignItems:"center", gap:6, fontSize:11, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", marginLeft:8 }}>
+            style={{ background:DARK, border:"none", color:ACC, padding:"10px 14px", display:"flex", alignItems:"center", gap:6, fontSize:11, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", marginLeft:4 }}>
             <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-            {cartCount > 0 ? cartCount : "Carrito"}
+            {cartCount > 0 ? cartCount : ""}
           </button>
+          {isMobile && (
+            <button onClick={() => setMobileMenuOpen(o => !o)} style={{ background:"none", border:"none", color:DARK, cursor:"pointer", padding:4, display:"flex", flexDirection:"column", gap:4, alignItems:"center" }}>
+              <span style={{ display:"block", width:20, height:2.5, background:DARK, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(3px,4px)" : "none" }}/>
+              <span style={{ display:"block", width:20, height:2.5, background:DARK, transition:"all 0.3s", opacity: mobileMenuOpen ? 0 : 1 }}/>
+              <span style={{ display:"block", width:20, height:2.5, background:DARK, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(-45deg) translate(3px,-4px)" : "none" }}/>
+            </button>
+          )}
         </div>
       </nav>
+      {isMobile && mobileMenuOpen && (
+        <div style={{ position:"fixed", top:64, left:0, right:0, bottom:0, background:WHITE, zIndex:99, overflowY:"auto" }}>
+          {categoryList.map(cat => (
+            <button key={cat} onClick={() => { changeCategory(cat); scrollTo("productos"); setMobileMenuOpen(false); }}
+              style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`2px solid ${DARK}`, color:DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase" }}>
+              {cat}
+            </button>
+          ))}
+          {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
+            <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("productos"); setMobileMenuOpen(false); }}
+              style={{ display:"block", width:"100%", background: activeGender===g ? DARK : "none", border:"none", borderBottom:`2px solid ${DARK}`, color: activeGender===g ? ACC : DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase" }}>
+              {label}
+            </button>
+          ))}
+          <button onClick={() => { scrollTo("nosotros"); setMobileMenuOpen(false); }}
+            style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`2px solid ${DARK}`, color:DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase" }}>
+            Nosotros
+          </button>
+        </div>
+      )}
 
       {/* HERO — diagonal split */}
       <section style={{ display:"grid", gridTemplateColumns:"55% 45%", minHeight:"calc(100vh - 100px)", overflow:"hidden" }}>
@@ -895,7 +931,7 @@ export default function UrbanPulse() {
         <div className="up-fade" style={{ position:"fixed", inset:0, zIndex:600 }}>
           <div onClick={() => setModalProduct(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)" }} />
           <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-            <div style={{ background:WHITE, width:"100%", maxWidth:860, maxHeight:"92vh", overflowY:"auto", display:"grid", gridTemplateColumns:"1fr 1fr", position:"relative" }}>
+            <div style={{ background:WHITE, width:"100%", maxWidth:860, maxHeight:"92vh", overflowY:"auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", position:"relative" }}>
               <button onClick={() => setModalProduct(null)} style={{ position:"absolute", top:0, right:0, background:DARK, border:"none", color:ACC, width:40, height:40, fontSize:18, cursor:"pointer", zIndex:10, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
               <div>
                 <div style={{ position:"relative" }}>

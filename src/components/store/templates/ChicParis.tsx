@@ -21,6 +21,8 @@ export default function ChicParis() {
   const [activeGender,    setActiveGender]    = useState<string | null>(null);
   const [hoveredNavCat,   setHoveredNavCat]   = useState<string | null>(null);
   const [visibleCount,    setVisibleCount]    = useState(8);
+  const [isMobile,        setIsMobile]        = useState(false);
+  const [mobileMenuOpen,  setMobileMenuOpen]  = useState(false);
   const [heroSlide,       setHeroSlide]       = useState(0);
   const [heroPaused,      setHeroPaused]      = useState(false);
   const [openPolicyField, setOpenPolicyField] = useState<string | null>(null);
@@ -68,6 +70,13 @@ export default function ChicParis() {
     const fn = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", fn);
     return () => window.removeEventListener("scroll", fn);
+  }, []);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
   // banner auto-advance
@@ -312,7 +321,7 @@ export default function ChicParis() {
       }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 32px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {/* Nav left */}
-          <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
+          {!isMobile && <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
             {/* CATEGORÍAS dropdown */}
             <div style={{ position: "relative" }}
               onMouseEnter={() => setHoveredNavCat("__open__")}
@@ -361,7 +370,7 @@ export default function ChicParis() {
               style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", padding: 0, color: activeGender === "hombre" ? ACC : (isPreview || scrolled) ? "#111" : "#fff" }}>
               Hombre
             </button>
-          </nav>
+          </nav>}
 
           {/* Logo center */}
           <a onClick={() => scrollTo("hero")} style={{ cursor: "pointer", textDecoration: "none" }}>
@@ -398,9 +407,32 @@ export default function ChicParis() {
                 <span style={{ position: "absolute", top: 2, right: 2, background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", borderRadius: "50%", width: 16, height: 16, fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{cartCount}</span>
               )}
             </button>
+            {isMobile && (
+              <button onClick={() => setMobileMenuOpen(o => !o)} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "center" }}>
+                <span style={{ display: "block", width: 20, height: 2, background: "currentColor", transition: "all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(3px,3px)" : "none" }}/>
+                <span style={{ display: "block", width: 20, height: 2, background: "currentColor", transition: "all 0.3s", opacity: mobileMenuOpen ? 0 : 1 }}/>
+                <span style={{ display: "block", width: 20, height: 2, background: "currentColor", transition: "all 0.3s", transform: mobileMenuOpen ? "rotate(-45deg) translate(3px,-3px)" : "none" }}/>
+              </button>
+            )}
           </div>
         </div>
       </header>
+      {isMobile && mobileMenuOpen && (
+        <div style={{ position: isPreview ? "sticky" : "fixed", top: isPreview ? 0 : 68 + (promoBannerEnabled ? PROMO_BAR_H : 0), left: 0, right: 0, bottom: 0, background: "#fff", zIndex: 999, overflowY: "auto" }}>
+          {categoryList.map(cat => (
+            <button key={cat} onClick={() => { changeCategory(cat); scrollTo("productos"); setMobileMenuOpen(false); }}
+              style={{ display: "block", width: "100%", background: "none", border: "none", borderBottom: "1px solid #f0f0f0", color: "#111", padding: "16px 24px", fontSize: 12, textAlign: "left", cursor: "pointer", letterSpacing: 2, fontWeight: 600, textTransform: "uppercase" }}>
+              {cat}
+            </button>
+          ))}
+          {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
+            <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("productos"); setMobileMenuOpen(false); }}
+              style={{ display: "block", width: "100%", background: "none", border: "none", borderBottom: "1px solid #f0f0f0", color: activeGender===g ? ACC : "#111", padding: "16px 24px", fontSize: 12, textAlign: "left", cursor: "pointer", letterSpacing: 2, fontWeight: 600, textTransform: "uppercase" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── HERO CAROUSEL ── */}
       <section id="hero" style={{ position: "relative", height: "100vh", overflow: "hidden", background: "#111" }}
@@ -849,10 +881,10 @@ export default function ChicParis() {
       {modalProduct && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(4px)" }}
           onClick={() => setModalProduct(null)}>
-          <div style={{ background: "#fff", width: "100%", maxWidth: 860, maxHeight: "90vh", overflow: "hidden", display: "flex", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.35)" }}
+          <div style={{ background: "#fff", width: "100%", maxWidth: 860, maxHeight: "90vh", overflow: "auto", display: "flex", flexDirection: isMobile ? "column" : "row", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.35)" }}
             onClick={e => e.stopPropagation()}>
             {/* Images */}
-            <div style={{ width: "48%", flexShrink: 0, position: "relative", overflow: "hidden" }}>
+            <div style={{ width: isMobile ? "100%" : "48%", flexShrink: 0, position: "relative", overflow: "hidden", aspectRatio: isMobile ? "4/3" : undefined }}>
               <img src={modalProduct.images[modalImg] ?? "/placeholder.jpg"} alt={modalProduct.name}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               {modalProduct.images.length > 1 && (<>
