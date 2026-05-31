@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Store, Package, Users, ShoppingBag, Globe, EyeOff, Calendar, RefreshCw, Power, Search, X, Trash2, AlertTriangle } from "lucide-react";
 
 type PendingToggle = { store: StoreRow; field: "isPublished" | "isActive" };
+type DeleteState = { store: StoreRow; step: 1 | 2; confirmSlug: string; loading: boolean; error: string };
 
 type StoreRow = {
   id: string;
@@ -44,6 +45,7 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [pending, setPending] = useState<PendingToggle | null>(null);
+  const [deleteState, setDeleteState] = useState<DeleteState | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -70,6 +72,31 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
       }
     } finally {
       setLoadingId(null);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteState) return;
+    if (deleteState.confirmSlug.trim() !== deleteState.store.slug) {
+      setDeleteState(d => d ? { ...d, error: "El slug no coincide. Verificá que esté escrito exactamente igual." } : null);
+      return;
+    }
+    setDeleteState(d => d ? { ...d, loading: true, error: "" } : null);
+    try {
+      const res = await fetch(`/api/admin/tiendas/${deleteState.store.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmSlug: deleteState.confirmSlug.trim() }),
+      });
+      if (res.ok) {
+        setStores(prev => prev.filter(s => s.id !== deleteState.store.id));
+        setDeleteState(null);
+      } else {
+        const err = await res.json();
+        setDeleteState(d => d ? { ...d, loading: false, error: err.error ?? "Error al eliminar." } : null);
+      }
+    } catch {
+      setDeleteState(d => d ? { ...d, loading: false, error: "Error de conexión." } : null);
     }
   }
 
@@ -196,6 +223,112 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
         </div>
       )}
 
+      {/* Modal eliminar tienda */}
+      {deleteState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="bg-gray-900 border border-red-500/30 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+
+            {deleteState.step === 1 ? (
+              <>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-base">Eliminar tienda</p>
+                    <p className="text-gray-400 text-xs mt-0.5">Esta acción es irreversible</p>
+                  </div>
+                </div>
+
+                <div className="bg-red-950/40 border border-red-500/20 rounded-xl p-4 mb-5 space-y-2">
+                  <p className="text-red-300 text-sm font-semibold mb-3">¿Qué se va a eliminar?</p>
+                  <div className="space-y-1.5 text-sm">
+                    <p className="flex items-center gap-2 text-red-300"><Trash2 className="h-3.5 w-3.5 shrink-0" /> Diseño y bloques de la página</p>
+                    <p className="flex items-center gap-2 text-red-300"><Trash2 className="h-3.5 w-3.5 shrink-0" /> Productos e imágenes</p>
+                    <p className="flex items-center gap-2 text-red-300"><Trash2 className="h-3.5 w-3.5 shrink-0" /> Cupones activos</p>
+                    <p className="flex items-center gap-2 text-red-300"><Trash2 className="h-3.5 w-3.5 shrink-0" /> Afiliados desactivados</p>
+                  </div>
+                  <div className="border-t border-red-500/20 mt-3 pt-3 space-y-1.5 text-sm">
+                    <p className="flex items-center gap-2 text-gray-400"><span className="text-green-400">✓</span> El historial de pedidos se conserva (AFIP)</p>
+                    <p className="flex items-center gap-2 text-gray-400"><span className="text-green-400">✓</span> La cuenta del dueño queda activa (como comprador)</p>
+                    <p className="flex items-center gap-2 text-gray-400"><span className="text-green-400">✓</span> Los saldos de afiliados en billetera quedan disponibles</p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800/50 rounded-xl p-3 mb-5 flex items-center gap-3">
+                  <Store className="h-4 w-4 text-gray-400 shrink-0" />
+                  <div>
+                    <p className="text-white text-sm font-semibold">{deleteState.store.name}</p>
+                    <p className="text-gray-500 text-xs">/{deleteState.store.slug}</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button onClick={() => setDeleteState(null)}
+                    className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-sm font-semibold border border-white/10 transition-colors">
+                    Cancelar
+                  </button>
+                  <button onClick={() => setDeleteState(d => d ? { ...d, step: 2 } : null)}
+                    className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                    <Trash2 className="h-4 w-4" /> Continuar
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+                    <Trash2 className="h-5 w-5 text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-base">Confirmación final</p>
+                    <p className="text-gray-400 text-xs mt-0.5">Escribí el slug exacto para confirmar</p>
+                  </div>
+                </div>
+
+                <p className="text-gray-300 text-sm mb-2">
+                  Para eliminar <strong className="text-white">{deleteState.store.name}</strong>, escribí el slug exacto:
+                </p>
+                <p className="text-red-400 font-mono text-sm bg-red-950/30 border border-red-500/20 rounded-lg px-3 py-2 mb-4 select-all">
+                  {deleteState.store.slug}
+                </p>
+
+                <input
+                  type="text"
+                  value={deleteState.confirmSlug}
+                  onChange={e => setDeleteState(d => d ? { ...d, confirmSlug: e.target.value, error: "" } : null)}
+                  placeholder={deleteState.store.slug}
+                  className="w-full bg-gray-800 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm font-mono mb-4"
+                  autoFocus
+                />
+
+                {deleteState.error && (
+                  <p className="text-sm text-red-400 bg-red-950/40 border border-red-500/20 rounded-xl px-4 py-2.5 mb-4">
+                    {deleteState.error}
+                  </p>
+                )}
+
+                <div className="flex gap-3">
+                  <button onClick={() => setDeleteState(d => d ? { ...d, step: 1, confirmSlug: "", error: "" } : null)}
+                    className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-sm font-semibold border border-white/10 transition-colors">
+                    Atrás
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleteState.loading || deleteState.confirmSlug.trim() !== deleteState.store.slug}
+                    className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+                    {deleteState.loading
+                      ? <><RefreshCw className="h-4 w-4 animate-spin" /> Eliminando...</>
+                      : <><Trash2 className="h-4 w-4" /> Eliminar definitivamente</>
+                    }
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Tabla */}
       <div className="bg-gray-900/50 border border-white/5 rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -210,6 +343,7 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Afiliados</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Pedidos</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Creada</th>
+                <th className="px-5 py-3.5"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -301,6 +435,15 @@ export default function TiendasAdmin({ stores: initial, filter: activeFilter }: 
                       <Calendar className="h-3 w-3" />
                       {new Date(s.createdAt).toLocaleDateString("es-AR")}
                     </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <button
+                      onClick={() => setDeleteState({ store: s, step: 1, confirmSlug: "", loading: false, error: "" })}
+                      title="Eliminar tienda"
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-500/20 bg-red-500/5 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all"
+                    >
+                      <Trash2 className="h-3 w-3" /> Eliminar
+                    </button>
                   </td>
                 </tr>
               ))}
