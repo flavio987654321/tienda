@@ -49,6 +49,7 @@ export default function FashionNoir() {
   const [hoveredNavCat,      setHoveredNavCat]      = useState<string | null>(null);
   const [visibleCount,       setVisibleCount]       = useState(8);
   const [isMobile,           setIsMobile]           = useState(false);
+  const [reelIndex,          setReelIndex]          = useState(0);
   const [mobileMenuOpen,     setMobileMenuOpen]     = useState(false);
   const [hoveredId,          setHoveredId]          = useState<string | null>(null);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
@@ -139,7 +140,7 @@ export default function FashionNoir() {
   useEffect(() => {
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug) { setReviews([]); return; }
-    setReviewsLoading(true); setReviewDone(false);
+    setReviewsLoading(true); setReviewDone(false); setReelIndex(0);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
     fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
       .then(r => r.ok ? r.json() : { reviews: [] })
@@ -1051,32 +1052,40 @@ export default function FashionNoir() {
               {modalProduct.reelUrls.length > 0 && (
                 <div style={{ borderTop:`1px solid rgba(240,235,227,0.08)`, paddingTop:16 }}>
                   <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:12, opacity:0.5 }}>Videos del producto</p>
-                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                    {modalProduct.reelUrls.map((url, i) => {
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
+                    {(() => {
+                      const url = modalProduct.reelUrls[reelIndex];
                       if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
-                        return (
-                          <video key={i} controls style={{ width:"100%", maxHeight:220, objectFit:"contain", background:"#000", borderRadius:4 }}>
-                            <source src={url} />
-                          </video>
-                        );
+                        return <video controls style={{ width:160, aspectRatio:"9/16", objectFit:"cover", background:"#000", borderRadius:4 }}><source src={url} /></video>;
                       }
-                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : url.includes("youtube") || url.includes("youtu.be") ? "YouTube" : "Video";
+                      let embedUrl = "";
+                      if (url.includes("youtube.com/shorts/")) { const id = url.split("shorts/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
+                      else if (url.includes("youtu.be/")) { const id = url.split("youtu.be/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
+                      else if (url.includes("youtube.com/watch")) { try { const id = new URL(url).searchParams.get("v"); if (id) embedUrl = `https://www.youtube.com/embed/${id}`; } catch {} }
+                      if (embedUrl) return <iframe src={embedUrl} allow="autoplay; encrypted-media" allowFullScreen style={{ width:160, aspectRatio:"9/16", border:"none", borderRadius:4 }} />;
+                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : "Video";
                       return (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                          style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", border:`1px solid rgba(240,235,227,0.12)`, textDecoration:"none", color:T, transition:"border-color 0.2s" }}
-                          onMouseEnter={e => (e.currentTarget.style.borderColor=G)}
-                          onMouseLeave={e => (e.currentTarget.style.borderColor="rgba(240,235,227,0.12)")}>
-                          <div style={{ width:32, height:32, background:`rgba(201,168,76,0.12)`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                            <svg width={14} height={14} viewBox="0 0 24 24" fill={G} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                          </div>
-                          <div>
-                            <p style={{ fontSize:12, fontWeight:600, margin:0, color:T }}>{platform}</p>
-                            <p style={{ fontSize:10, opacity:0.4, margin:0 }}>Ver en {platform.split(" ")[0]}</p>
-                          </div>
-                          <svg style={{ marginLeft:"auto", opacity:0.4 }} width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        <a href={url} target="_blank" rel="noopener noreferrer"
+                          style={{ width:160, aspectRatio:"9/16", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, border:`1px solid rgba(240,235,227,0.12)`, textDecoration:"none", color:T, borderRadius:4, background:BG }}>
+                          <svg width={24} height={24} viewBox="0 0 24 24" fill={G} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                          <span style={{ fontSize:11 }}>{platform}</span>
                         </a>
                       );
-                    })}
+                    })()}
+                    {modalProduct.reelUrls.length > 1 && (
+                      <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                        <button onClick={() => setReelIndex(i => (i - 1 + modalProduct.reelUrls.length) % modalProduct.reelUrls.length)}
+                          style={{ background:"none", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:30, height:30, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+                        <div style={{ display:"flex", gap:5 }}>
+                          {modalProduct.reelUrls.map((_, i) => (
+                            <button key={i} onClick={() => setReelIndex(i)}
+                              style={{ width:6, height:6, borderRadius:"50%", background: i === reelIndex ? G : "rgba(240,235,227,0.2)", border:"none", cursor:"pointer", padding:0 }} />
+                          ))}
+                        </div>
+                        <button onClick={() => setReelIndex(i => (i + 1) % modalProduct.reelUrls.length)}
+                          style={{ background:"none", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:30, height:30, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

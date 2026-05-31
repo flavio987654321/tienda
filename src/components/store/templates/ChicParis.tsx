@@ -22,6 +22,7 @@ export default function ChicParis() {
   const [hoveredNavCat,   setHoveredNavCat]   = useState<string | null>(null);
   const [visibleCount,    setVisibleCount]    = useState(8);
   const [isMobile,        setIsMobile]        = useState(false);
+  const [reelIndex,       setReelIndex]       = useState(0);
   const [mobileMenuOpen,  setMobileMenuOpen]  = useState(false);
   const [heroSlide,       setHeroSlide]       = useState(0);
   const [heroPaused,      setHeroPaused]      = useState(false);
@@ -162,7 +163,7 @@ export default function ChicParis() {
   useEffect(() => {
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug) { setReviews([]); return; }
-    setReviewsLoading(true); setReviewDone(false);
+    setReviewsLoading(true); setReviewDone(false); setReelIndex(0);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
     fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
       .then(r => r.ok ? r.json() : { reviews: [] })
@@ -975,24 +976,40 @@ export default function ChicParis() {
               {modalProduct.reelUrls.length > 0 && (
                 <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 14, marginBottom: 4 }}>
                   <p style={{ fontSize: 10, letterSpacing: 2, fontWeight: 700, textTransform: "uppercase", marginBottom: 10, color: "#bbb" }}>Videos</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {modalProduct.reelUrls.map((url, i) => {
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                    {(() => {
+                      const url = modalProduct.reelUrls[reelIndex];
                       if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
-                        return (
-                          <video key={i} controls style={{ width: "100%", maxHeight: 200, objectFit: "contain", background: "#000", borderRadius: 4 }}>
-                            <source src={url} />
-                          </video>
-                        );
+                        return <video controls style={{ width: 160, aspectRatio: "9/16", objectFit: "cover", background: "#000", borderRadius: 4 }}><source src={url} /></video>;
                       }
-                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : url.includes("youtube") || url.includes("youtu.be") ? "YouTube" : "Video";
+                      let embedUrl = "";
+                      if (url.includes("youtube.com/shorts/")) { const id = url.split("shorts/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
+                      else if (url.includes("youtu.be/")) { const id = url.split("youtu.be/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
+                      else if (url.includes("youtube.com/watch")) { try { const id = new URL(url).searchParams.get("v"); if (id) embedUrl = `https://www.youtube.com/embed/${id}`; } catch {} }
+                      if (embedUrl) return <iframe src={embedUrl} allow="autoplay; encrypted-media" allowFullScreen style={{ width: 160, aspectRatio: "9/16", border: "none", borderRadius: 4 }} />;
+                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : "Video";
                       return (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                          style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", border: `1px solid ${ACC}33`, textDecoration: "none", color: "#333", borderRadius: 2 }}>
-                          <svg width={12} height={12} viewBox="0 0 24 24" fill={ACC} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                          <span style={{ fontSize: 12, fontWeight: 600 }}>{platform}</span>
+                        <a href={url} target="_blank" rel="noopener noreferrer"
+                          style={{ width: 160, aspectRatio: "9/16", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, border: `1px solid ${ACC}33`, textDecoration: "none", color: "#333", borderRadius: 4, background: "#faf9f7" }}>
+                          <svg width={24} height={24} viewBox="0 0 24 24" fill={ACC} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                          <span style={{ fontSize: 11 }}>{platform}</span>
                         </a>
                       );
-                    })}
+                    })()}
+                    {modalProduct.reelUrls.length > 1 && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <button onClick={() => setReelIndex(i => (i - 1 + modalProduct.reelUrls.length) % modalProduct.reelUrls.length)}
+                          style={{ background: "none", border: `1px solid ${ACC}33`, color: "#333", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
+                        <div style={{ display: "flex", gap: 5 }}>
+                          {modalProduct.reelUrls.map((_, i) => (
+                            <button key={i} onClick={() => setReelIndex(i)}
+                              style={{ width: 6, height: 6, borderRadius: "50%", background: i === reelIndex ? ACC : `${ACC}33`, border: "none", cursor: "pointer", padding: 0 }} />
+                          ))}
+                        </div>
+                        <button onClick={() => setReelIndex(i => (i + 1) % modalProduct.reelUrls.length)}
+                          style={{ background: "none", border: `1px solid ${ACC}33`, color: "#333", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
