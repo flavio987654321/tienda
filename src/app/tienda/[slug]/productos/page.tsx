@@ -118,6 +118,14 @@ function ProductosPageInner() {
 
   const storeIdRef = useRef<string | null>(null);
 
+  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
+  const [reviews,          setReviews]          = useState<PReview[]>([]);
+  const [reviewsLoading,   setReviewsLoading]   = useState(false);
+  const [reviewForm,       setReviewForm]       = useState({ reviewer: "", rating: 5, comment: "" });
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewDone,       setReviewDone]       = useState(false);
+  const [isMobile,         setIsMobile]         = useState(false);
+
   // ── Funciones estables para useCartLogic ──────────────────────────────────
   const resolveVariantId = useCallback((product: StorefrontProduct, sizeValue: string, colorValue: string): string | null => {
     if (!product.variants.length) return null;
@@ -318,9 +326,52 @@ function ProductosPageInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSize, modalProduct?.id]);
 
+  // ── isMobile ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // ── Cargar reseñas al abrir modal ──────────────────────────────────────────
+  useEffect(() => {
+    if (!modalProduct || !slug) return;
+    setReviews([]);
+    setReviewDone(false);
+    setReviewsLoading(true);
+    fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
+      .then(r => r.ok ? r.json() : { reviews: [] })
+      .then(d => setReviews(d.reviews ?? []))
+      .catch(() => {})
+      .finally(() => setReviewsLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalProduct?.id, slug]);
+
   // ── Tema activo ─────────────────────────────────────────────────────────────
   const th: Theme = THEMES[template] ?? THEMES["fashion-noir"];
   const { BG, S, T, G, MID, border, borderFaint, inputBorder, inputBg, serif, sans, dark } = th;
+
+  // ── Enviar reseña ──────────────────────────────────────────────────────────
+  const submitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
+    setReviewSubmitting(true);
+    try {
+      const res = await fetch(`/api/public/${slug}/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(p => [data.review, ...p]);
+        setReviewForm({ reviewer: "", rating: 5, comment: "" });
+        setReviewDone(true);
+      }
+    } catch {}
+    finally { setReviewSubmitting(false); }
+  };
 
   // ── Colores derivados para fondos semitransparentes ─────────────────────────
   const overlayBg   = dark ? "rgba(10,10,10,0.85)" : "rgba(0,0,0,0.6)";
@@ -560,7 +611,7 @@ function ProductosPageInner() {
       {modalProduct && (
         <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => setModalProduct(null)}>
           <div style={{ position:"absolute", inset:0, background:overlayBg, backdropFilter:"blur(8px)" }}/>
-          <div style={{ position:"relative", background:S, maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns:"1fr 1fr" }} onClick={e => e.stopPropagation()}>
+          <div style={{ position:"relative", background:S, maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }} onClick={e => e.stopPropagation()}>
             {/* Galería */}
             <div style={{ position:"relative" }}>
               <img src={modalProduct.images[modalImg] ?? ""} alt={modalProduct.name}
@@ -653,6 +704,98 @@ function ProductosPageInner() {
                 style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:dark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
                 {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(modalProduct.price * qty)}`}
               </button>
+
+              {/* ── Reels / Videos — formato vertical 9:16 */}
+              {modalProduct.reelUrls.length > 0 && (
+                <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:14, marginTop:4 }}>
+                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:10, opacity:0.5 }}>Videos del producto</p>
+                  <div style={{ display:"flex", gap:10, overflowX:"auto", paddingBottom:4 }}>
+                    {modalProduct.reelUrls.map((url, i) => {
+                      if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
+                        return (
+                          <video key={i} controls style={{ flexShrink:0, width:160, aspectRatio:"9/16", objectFit:"cover", background:"#000", borderRadius:8 }}>
+                            <source src={url} />
+                          </video>
+                        );
+                      }
+                      let embedUrl = "";
+                      if (url.includes("youtube.com/shorts/")) {
+                        const id = url.split("shorts/")[1]?.split("?")[0];
+                        embedUrl = `https://www.youtube.com/embed/${id}`;
+                      } else if (url.includes("youtu.be/")) {
+                        const id = url.split("youtu.be/")[1]?.split("?")[0];
+                        embedUrl = `https://www.youtube.com/embed/${id}`;
+                      } else if (url.includes("youtube.com/watch")) {
+                        try { const id = new URL(url).searchParams.get("v"); if (id) embedUrl = `https://www.youtube.com/embed/${id}`; } catch {}
+                      }
+                      if (embedUrl) {
+                        return (
+                          <iframe key={i} src={embedUrl} allow="autoplay; encrypted-media" allowFullScreen
+                            style={{ flexShrink:0, width:160, aspectRatio:"9/16", border:"none", borderRadius:8 }} />
+                        );
+                      }
+                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : "Video";
+                      return (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                          style={{ flexShrink:0, width:160, aspectRatio:"9/16", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, border:`1px solid ${border}`, textDecoration:"none", color:T, borderRadius:8, background:S }}>
+                          <svg width={24} height={24} viewBox="0 0 24 24" fill={G} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                          <span style={{ fontSize:11 }}>{platform}</span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Reseñas */}
+              <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:20, marginTop:8 }}>
+                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.5, margin:"0 0 16px" }}>
+                  Reseñas{reviews.length > 0 && ` (${reviews.length})`}
+                </p>
+                {reviewsLoading ? (
+                  <p style={{ fontSize:12, opacity:0.4 }}>Cargando...</p>
+                ) : reviews.length > 0 ? (
+                  <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:20 }}>
+                    {reviews.map(r => (
+                      <div key={r.id} style={{ borderBottom:`1px solid ${borderFaint}`, paddingBottom:14 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                          <span style={{ fontSize:12, fontWeight:600, color:T }}>{r.reviewer}</span>
+                          <span style={{ fontSize:13, color:G }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
+                        </div>
+                        {r.comment && <p style={{ fontSize:12, opacity:0.6, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ fontSize:12, opacity:0.35, marginBottom:16 }}>Sé el primero en dejar una reseña.</p>
+                )}
+                {isOwner ? (
+                  <p style={{ fontSize:11, opacity:0.4, fontStyle:"italic" }}>El dueño no puede dejar reseñas en su propia tienda.</p>
+                ) : reviewDone ? (
+                  <p style={{ fontSize:12, color:G, fontWeight:600 }}>¡Gracias por tu reseña!</p>
+                ) : (
+                  <form onSubmit={submitReview} style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    <input value={reviewForm.reviewer} onChange={e => setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
+                      placeholder="Tu nombre" required
+                      style={{ background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, outline:"none" }}
+                      onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)} />
+                    <div style={{ display:"flex", gap:4 }}>
+                      {[1,2,3,4,5].map(s => (
+                        <button key={s} type="button" onClick={() => setReviewForm(p => ({ ...p, rating: s }))}
+                          style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color: s <= reviewForm.rating ? G : `${T}30`, padding:"2px" }}>★</button>
+                      ))}
+                    </div>
+                    <textarea value={reviewForm.comment} onChange={e => setReviewForm(p => ({ ...p, comment: e.target.value }))}
+                      placeholder="Comentario (opcional)" rows={3}
+                      style={{ background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none", fontFamily:sans }}
+                      onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)} />
+                    <button type="submit" disabled={reviewSubmitting || !reviewForm.reviewer.trim()}
+                      style={{ background: reviewSubmitting || !reviewForm.reviewer.trim() ? `${G}40` : G, color:dark?"#000":"#fff", border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>
+                      {reviewSubmitting ? "Enviando..." : "Publicar reseña"}
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
         </div>

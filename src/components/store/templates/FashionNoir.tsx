@@ -1116,29 +1116,33 @@ export default function FashionNoir() {
                 ) : (
                   <p style={{ fontSize:12, opacity:0.35, marginBottom:16 }}>Sé el primero en dejar una reseña.</p>
                 )}
-                {(isPreview || isOwner) ? (
-                  <p style={{ fontSize:11, opacity:0.4, fontStyle:"italic" }}>{isOwner ? "El dueño no puede dejar reseñas en su propia tienda." : "Las reseñas solo están disponibles en la tienda real."}</p>
+                {isOwner ? (
+                  <p style={{ fontSize:11, opacity:0.4, fontStyle:"italic" }}>El dueño no puede dejar reseñas en su propia tienda.</p>
                 ) : reviewDone ? (
                   <p style={{ fontSize:12, color:G, fontWeight:600 }}>¡Gracias por tu reseña!</p>
                 ) : (
-                  <form onSubmit={submitReview} style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                    <input value={reviewForm.reviewer} onChange={e => setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
-                      placeholder="Tu nombre" required
-                      style={{ background:"rgba(240,235,227,0.06)", border:"1px solid rgba(240,235,227,0.12)", color:T, padding:"9px 12px", fontSize:12, outline:"none" }} />
-                    <div style={{ display:"flex", gap:4 }}>
-                      {[1,2,3,4,5].map(s => (
-                        <button key={s} type="button" onClick={() => setReviewForm(p => ({ ...p, rating: s }))}
-                          style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color: s <= reviewForm.rating ? G : "rgba(240,235,227,0.2)", padding:"2px" }}>★</button>
-                      ))}
-                    </div>
-                    <textarea value={reviewForm.comment} onChange={e => setReviewForm(p => ({ ...p, comment: e.target.value }))}
-                      placeholder="Comentario (opcional)" rows={3}
-                      style={{ background:"rgba(240,235,227,0.06)", border:"1px solid rgba(240,235,227,0.12)", color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none" }} />
-                    <button type="submit" disabled={reviewSubmitting || !reviewForm.reviewer.trim()}
-                      style={{ background: reviewSubmitting || !reviewForm.reviewer.trim() ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>
-                      {reviewSubmitting ? "Enviando..." : "Publicar reseña"}
-                    </button>
-                  </form>
+                  <div style={{ position:"relative" }}>
+                    {isPreview && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
+                    <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display:"flex", flexDirection:"column", gap:10, opacity: isPreview ? 0.55 : 1 }}>
+                      <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
+                        placeholder="Tu nombre" readOnly={isPreview}
+                        style={{ background:"rgba(240,235,227,0.06)", border:"1px solid rgba(240,235,227,0.12)", color:T, padding:"9px 12px", fontSize:12, outline:"none" }} />
+                      <div style={{ display:"flex", gap:4 }}>
+                        {[1,2,3,4,5].map(s => (
+                          <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
+                            style={{ background:"none", border:"none", fontSize:20, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? G : "rgba(240,235,227,0.2)", padding:"2px" }}>★</button>
+                        ))}
+                      </div>
+                      <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
+                        placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
+                        style={{ background:"rgba(240,235,227,0.06)", border:"1px solid rgba(240,235,227,0.12)", color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none" }} />
+                      <button type="submit" disabled={isPreview || !reviewForm.reviewer.trim()}
+                        style={{ background: isPreview || !reviewForm.reviewer.trim() ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
+                        Publicar reseña
+                      </button>
+                    </form>
+                    {isPreview && <p style={{ fontSize:10, opacity:0.4, fontStyle:"italic", marginTop:6 }}>Vista previa — solo disponible en la tienda real.</p>}
+                  </div>
                 )}
               </div>
             </div>
