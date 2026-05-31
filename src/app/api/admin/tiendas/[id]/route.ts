@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { logAdminAction } from "@/lib/admin-log";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createNotificationMany } from "@/lib/notifications";
 
 export async function PATCH(
   req: NextRequest,
@@ -67,6 +68,10 @@ export async function DELETE(
       name: true,
       ownerId: true,
       products: { select: { images: true, reelUrls: true } },
+      affiliates: {
+        where: { isActive: true },
+        select: { userId: true },
+      },
     },
   });
 
@@ -83,6 +88,20 @@ export async function DELETE(
   }
 
   const deletedSlug = `deleted-${Date.now()}-${store.slug}`;
+
+  // Notificar a afiliados activos antes de la transacción
+  const affiliateUserIds = store.affiliates.map(a => a.userId);
+  if (affiliateUserIds.length > 0) {
+    await createNotificationMany(
+      affiliateUserIds.map(userId => ({
+        userId,
+        type: "STORE_CLOSED",
+        title: `${store.name} cerró su tienda`,
+        body: "Tu link de afiliado fue desactivado. Los saldos ya acreditados en tu billetera siguen disponibles para retirar.",
+        link: "/vendedoras",
+      }))
+    );
+  }
 
   await prisma.$transaction(async (tx) => {
     // Desactivar afiliados
