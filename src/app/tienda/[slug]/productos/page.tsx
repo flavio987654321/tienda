@@ -258,7 +258,7 @@ function ProductosPageInner() {
     return match?.stock ?? null;
   }, [modalProduct, selectedSize, selectedColor]);
 
-  // ── Al cambiar color: sync imagen + auto-seleccionar talle disponible ────────
+  // ── Al cambiar color: sync imagen + talle disponible ────────────────────────
   useEffect(() => {
     if (!modalProduct || !selectedColor) return;
     const imgIdx = modalProduct.imageItems.findIndex(
@@ -277,6 +277,46 @@ function ProductosPageInner() {
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedColor, modalProduct?.id]);
+
+  // ── Al cambiar talle: sync color + imagen si el combo actual no existe ───────
+  useEffect(() => {
+    if (!modalProduct || !selectedSize) return;
+    if (selectedColor) {
+      const hasCombo = modalProduct.variants.some((v: any) => {
+        try {
+          const a = JSON.parse(v.name);
+          if (typeof a !== "object") return false;
+          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
+        } catch { return false; }
+      });
+      if (hasCombo) return;
+    }
+    const sizeVariants = modalProduct.variants.filter((v: any) => {
+      try {
+        const a = JSON.parse(v.name);
+        if (typeof a !== "object") return false;
+        return Object.entries(a).some(([k, val]: any) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
+      } catch { return false; }
+    });
+    if (!sizeVariants.length) return;
+    const best = sizeVariants.find((v: any) => v.stock > 0) ?? sizeVariants[0];
+    try {
+      const a = JSON.parse(best.name);
+      const colorKey = Object.keys(a).find((k: string) => COLOR_ATTRS.includes(k.toLowerCase()));
+      if (colorKey && a[colorKey]) {
+        const newColor = String(a[colorKey]);
+        if (newColor !== selectedColor) {
+          setSelectedColor(newColor);
+          const imgIdx = modalProduct.imageItems.findIndex(
+            (img: any) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
+          );
+          if (imgIdx !== -1) setModalImg(imgIdx);
+        }
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSize, modalProduct?.id]);
 
   // ── Tema activo ─────────────────────────────────────────────────────────────
   const th: Theme = THEMES[template] ?? THEMES["fashion-noir"];

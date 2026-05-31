@@ -163,7 +163,7 @@ export default function ChicParis() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalProduct?.id]);
 
-  // Al cambiar color: sync imagen + auto-seleccionar talle disponible
+  // Al cambiar color: sync imagen + talle disponible
   useEffect(() => {
     if (!modalProduct || !selectedColor) return;
     const imgIdx = modalProduct.imageItems.findIndex(
@@ -182,6 +182,46 @@ export default function ChicParis() {
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedColor, modalProduct?.id]);
+
+  // Al cambiar talle: sync color + imagen si el combo talle+color actual no existe
+  useEffect(() => {
+    if (!modalProduct || !selectedSize) return;
+    if (selectedColor) {
+      const hasCombo = modalProduct.variants.some((v: any) => {
+        try {
+          const a = JSON.parse(v.name);
+          if (typeof a !== "object") return false;
+          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
+        } catch { return false; }
+      });
+      if (hasCombo) return;
+    }
+    const sizeVariants = modalProduct.variants.filter((v: any) => {
+      try {
+        const a = JSON.parse(v.name);
+        if (typeof a !== "object") return false;
+        return Object.entries(a).some(([k, val]: any) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
+      } catch { return false; }
+    });
+    if (!sizeVariants.length) return;
+    const best = sizeVariants.find((v: any) => v.stock > 0) ?? sizeVariants[0];
+    try {
+      const a = JSON.parse(best.name);
+      const colorKey = Object.keys(a).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
+      if (colorKey && a[colorKey]) {
+        const newColor = String(a[colorKey]);
+        if (newColor !== selectedColor) {
+          setSelectedColor(newColor);
+          const imgIdx = modalProduct.imageItems.findIndex(
+            (img: any) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
+          );
+          if (imgIdx !== -1) setModalImg(imgIdx);
+        }
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSize, modalProduct?.id]);
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
@@ -815,14 +855,18 @@ export default function ChicParis() {
             <div style={{ width: "48%", flexShrink: 0, position: "relative", overflow: "hidden" }}>
               <img src={modalProduct.images[modalImg] ?? "/placeholder.jpg"} alt={modalProduct.name}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              {modalProduct.images.length > 1 && (
-                <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }}>
+              {modalProduct.images.length > 1 && (<>
+                <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
+                  style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", border: "none", width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, zIndex: 2 }}>‹</button>
+                <button onClick={() => setModalImg(i => (i + 1) % modalProduct.images.length)}
+                  style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", border: "none", width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, zIndex: 2 }}>›</button>
+                <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6, zIndex: 2 }}>
                   {modalProduct.images.map((_, i) => (
                     <button key={i} onClick={() => setModalImg(i)}
                       style={{ width: i === modalImg ? 24 : 8, height: 8, borderRadius: 4, border: "none", background: i === modalImg ? "#fff" : "rgba(255,255,255,0.5)", cursor: "pointer", padding: 0, transition: "all 0.3s" }} />
                   ))}
                 </div>
-              )}
+              </>)}
             </div>
             {/* Details */}
             <div style={{ flex: 1, padding: 32, overflowY: "auto", display: "flex", flexDirection: "column" }}>

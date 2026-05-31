@@ -185,7 +185,7 @@ export default function UrbanPulse() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalProduct?.id]);
 
-  // Al cambiar color: sync imagen + auto-seleccionar talle disponible
+  // Al cambiar color: sync imagen + talle disponible
   useEffect(() => {
     if (!modalProduct || !selectedColor) return;
     const imgIdx = modalProduct.imageItems.findIndex(
@@ -204,6 +204,46 @@ export default function UrbanPulse() {
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedColor, modalProduct?.id]);
+
+  // Al cambiar talle: sync color + imagen si el combo talle+color actual no existe
+  useEffect(() => {
+    if (!modalProduct || !selectedSize) return;
+    if (selectedColor) {
+      const hasCombo = modalProduct.variants.some((v: any) => {
+        try {
+          const a = JSON.parse(v.name);
+          if (typeof a !== "object") return false;
+          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
+        } catch { return false; }
+      });
+      if (hasCombo) return;
+    }
+    const sizeVariants = modalProduct.variants.filter((v: any) => {
+      try {
+        const a = JSON.parse(v.name);
+        if (typeof a !== "object") return false;
+        return Object.entries(a).some(([k, val]: any) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
+      } catch { return false; }
+    });
+    if (!sizeVariants.length) return;
+    const best = sizeVariants.find((v: any) => v.stock > 0) ?? sizeVariants[0];
+    try {
+      const a = JSON.parse(best.name);
+      const colorKey = Object.keys(a).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
+      if (colorKey && a[colorKey]) {
+        const newColor = String(a[colorKey]);
+        if (newColor !== selectedColor) {
+          setSelectedColor(newColor);
+          const imgIdx = modalProduct.imageItems.findIndex(
+            (img: any) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
+          );
+          if (imgIdx !== -1) setModalImg(imgIdx);
+        }
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSize, modalProduct?.id]);
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
@@ -858,7 +898,15 @@ export default function UrbanPulse() {
             <div style={{ background:WHITE, width:"100%", maxWidth:860, maxHeight:"92vh", overflowY:"auto", display:"grid", gridTemplateColumns:"1fr 1fr", position:"relative" }}>
               <button onClick={() => setModalProduct(null)} style={{ position:"absolute", top:0, right:0, background:DARK, border:"none", color:ACC, width:40, height:40, fontSize:18, cursor:"pointer", zIndex:10, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
               <div>
-                <img src={modalProduct.images[modalImg]} alt={modalProduct.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
+                <div style={{ position:"relative" }}>
+                  <img src={modalProduct.images[modalImg]} alt={modalProduct.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
+                  {modalProduct.images.length > 1 && (<>
+                    <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
+                      style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.9)", border:"none", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:700, zIndex:2 }}>‹</button>
+                    <button onClick={() => setModalImg(i => (i + 1) % modalProduct.images.length)}
+                      style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.9)", border:"none", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:700, zIndex:2 }}>›</button>
+                  </>)}
+                </div>
                 {modalProduct.images.length > 1 && (
                   <div style={{ display:"flex", gap:4, padding:4 }}>
                     {modalProduct.images.map((img, i) => (

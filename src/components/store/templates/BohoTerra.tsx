@@ -211,15 +211,13 @@ export default function BohoTerra() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAnnouncement]);
 
-  // Al cambiar color: sincronizar imagen + auto-seleccionar talle disponible
+  // Al cambiar color: sync imagen + talle disponible
   useEffect(() => {
     if (!modalProduct || !selectedColor) return;
-    // imagen
     const imgIdx = modalProduct.imageItems.findIndex(
       img => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
     );
     if (imgIdx !== -1) setModalImg(imgIdx);
-    // talle: encontrar primer variant con este color que tenga stock
     const colorVariants = modalProduct.variants.filter(v => {
       try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x: any) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
     });
@@ -232,6 +230,46 @@ export default function BohoTerra() {
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedColor, modalProduct?.id]);
+
+  // Al cambiar talle: sync color + imagen si el combo talle+color actual no existe
+  useEffect(() => {
+    if (!modalProduct || !selectedSize) return;
+    if (selectedColor) {
+      const hasCombo = modalProduct.variants.some(v => {
+        try {
+          const a = JSON.parse(v.name);
+          if (typeof a !== "object") return false;
+          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
+        } catch { return false; }
+      });
+      if (hasCombo) return;
+    }
+    const sizeVariants = modalProduct.variants.filter(v => {
+      try {
+        const a = JSON.parse(v.name);
+        if (typeof a !== "object") return false;
+        return Object.entries(a).some(([k, val]: any) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
+      } catch { return false; }
+    });
+    if (!sizeVariants.length) return;
+    const best = sizeVariants.find(v => v.stock > 0) ?? sizeVariants[0];
+    try {
+      const a = JSON.parse(best.name);
+      const colorKey = Object.keys(a).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
+      if (colorKey && a[colorKey]) {
+        const newColor = String(a[colorKey]);
+        if (newColor !== selectedColor) {
+          setSelectedColor(newColor);
+          const imgIdx = modalProduct.imageItems.findIndex(
+            img => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
+          );
+          if (imgIdx !== -1) setModalImg(imgIdx);
+        }
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSize, modalProduct?.id]);
 
   const CARDS_PER_VIEW = 3;
   const CAROUSEL_LIMIT = CARDS_PER_VIEW * 2; // 6 productos → 2 tandas

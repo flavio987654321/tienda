@@ -187,7 +187,7 @@ export default function FashionNoir() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAnnouncement]);
 
-  // Al cambiar color: sync imagen + auto-seleccionar talle disponible
+  // Al cambiar color: sync imagen + talle disponible
   useEffect(() => {
     if (!modalProduct || !selectedColor) return;
     const imgIdx = modalProduct.imageItems.findIndex(
@@ -206,6 +206,46 @@ export default function FashionNoir() {
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedColor, modalProduct?.id]);
+
+  // Al cambiar talle: sync color + imagen si el combo talle+color actual no existe
+  useEffect(() => {
+    if (!modalProduct || !selectedSize) return;
+    if (selectedColor) {
+      const hasCombo = modalProduct.variants.some((v: any) => {
+        try {
+          const a = JSON.parse(v.name);
+          if (typeof a !== "object") return false;
+          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
+        } catch { return false; }
+      });
+      if (hasCombo) return;
+    }
+    const sizeVariants = modalProduct.variants.filter((v: any) => {
+      try {
+        const a = JSON.parse(v.name);
+        if (typeof a !== "object") return false;
+        return Object.entries(a).some(([k, val]: any) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
+      } catch { return false; }
+    });
+    if (!sizeVariants.length) return;
+    const best = sizeVariants.find((v: any) => v.stock > 0) ?? sizeVariants[0];
+    try {
+      const a = JSON.parse(best.name);
+      const colorKey = Object.keys(a).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
+      if (colorKey && a[colorKey]) {
+        const newColor = String(a[colorKey]);
+        if (newColor !== selectedColor) {
+          setSelectedColor(newColor);
+          const imgIdx = modalProduct.imageItems.findIndex(
+            (img: any) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
+          );
+          if (imgIdx !== -1) setModalImg(imgIdx);
+        }
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSize, modalProduct?.id]);
 
   // Stock del variante seleccionado en el modal (D-06)
   const selectedVariantStock = useMemo(() => {
@@ -863,7 +903,7 @@ export default function FashionNoir() {
           <div style={{ position:"relative", background:S, maxWidth:960, width:"calc(100% - 48px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns:"1fr 1fr" }} onClick={e => e.stopPropagation()}>
             <div>
               {/* Imagen principal con flechas */}
-              <div style={{ position:"relative", overflow:"hidden" }}>
+              <div style={{ position:"relative" }}>
                 <img src={modalProduct.images[modalImg]} alt="" style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}
                   onError={e => { e.currentTarget.style.opacity="0"; }}/>
                 {modalProduct.images.length > 1 && (
