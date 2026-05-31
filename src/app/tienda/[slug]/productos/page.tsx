@@ -81,6 +81,7 @@ function ProductosPageInner() {
   const searchParams = useSearchParams();
   const slug         = params?.slug as string;
   const tParam       = searchParams?.get("t") ?? null;
+  const fromEditor   = searchParams?.get("from") === "editor";
 
   const [products,   setProducts]   = useState<StorefrontProduct[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -254,19 +255,19 @@ function ProductosPageInner() {
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:backdropNav, backdropFilter:"blur(12px)", borderBottom:`1px solid ${borderFaint}` }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 32px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          {isOwner ? (
-            <Link href="/dashboard"
-              style={{ color:T, textDecoration:"none", fontSize:11, letterSpacing:3, textTransform:"uppercase", opacity:0.5, display:"flex", alignItems:"center", gap:8, transition:"opacity 0.2s" }}
-              onMouseEnter={e => (e.currentTarget.style.opacity="1")}
-              onMouseLeave={e => (e.currentTarget.style.opacity="0.5")}>
-              ← Volver a inicio
-            </Link>
-          ) : tParam ? (
+          {fromEditor ? (
             <Link href="/dashboard/configuracion"
               style={{ color:T, textDecoration:"none", fontSize:11, letterSpacing:3, textTransform:"uppercase", opacity:0.5, display:"flex", alignItems:"center", gap:8, transition:"opacity 0.2s" }}
               onMouseEnter={e => (e.currentTarget.style.opacity="1")}
               onMouseLeave={e => (e.currentTarget.style.opacity="0.5")}>
               ← Volver al editor
+            </Link>
+          ) : isOwner ? (
+            <Link href="/dashboard"
+              style={{ color:T, textDecoration:"none", fontSize:11, letterSpacing:3, textTransform:"uppercase", opacity:0.5, display:"flex", alignItems:"center", gap:8, transition:"opacity 0.2s" }}
+              onMouseEnter={e => (e.currentTarget.style.opacity="1")}
+              onMouseLeave={e => (e.currentTarget.style.opacity="0.5")}>
+              ← Volver a inicio
             </Link>
           ) : (
             <Link href={`/tienda/${slug}`}
