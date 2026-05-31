@@ -203,6 +203,15 @@ export default function BohoTerra() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAnnouncement]);
 
+  // Sincronizar imagen principal cuando cambia el color seleccionado
+  useEffect(() => {
+    if (!modalProduct || !selectedColor) return;
+    const idx = modalProduct.imageItems.findIndex(
+      img => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
+    );
+    if (idx !== -1) setModalImg(idx);
+  }, [selectedColor, modalProduct]);
+
   const CARDS_PER_VIEW = 3;
   const CAROUSEL_LIMIT = CARDS_PER_VIEW * 2; // 6 productos → 2 tandas
   const subcategoriesFor = useMemo(() => {
@@ -732,8 +741,14 @@ export default function BohoTerra() {
         <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={()=>setModalProduct(null)}>
           <div style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.65)", backdropFilter:"blur(8px)" }}/>
           <div style={{ position:"relative", background:"#fff", maxWidth:920, width:"calc(100% - 48px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns:"1fr 1fr" }} onClick={e=>e.stopPropagation()}>
-            <div>
+            <div style={{ position:"relative" }}>
               <img src={modalProduct.images[modalImg]} alt="" style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}/>
+              {modalProduct.images.length > 1 && (<>
+                <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
+                  style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.85)", border:"none", width:32, height:32, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>‹</button>
+                <button onClick={() => setModalImg(i => (i + 1) % modalProduct.images.length)}
+                  style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.85)", border:"none", width:32, height:32, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>›</button>
+              </>)}
               <div style={{ display:"flex", gap:8, padding:"10px 14px", background:S }}>
                 {modalProduct.images.map((img,i)=>(
                   <button key={i} onClick={()=>setModalImg(i)} style={{ width:52, height:52, padding:2, border:i===modalImg?`2px solid ${A}`:"2px solid transparent", background:"none", cursor:"pointer" }}>
@@ -804,25 +819,42 @@ export default function BohoTerra() {
               {selectedVariantStock !== null && selectedVariantStock > 0 && selectedVariantStock <= 5 && (
                 <p style={{ fontSize:12, color:"#ef4444", fontWeight:600, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
               )}
-              {/* Videos del producto */}
+              {/* Videos del producto — formato vertical 9:16 */}
               {modalProduct.reelUrls.length > 0 && (
                 <div style={{ borderTop:`1px solid rgba(44,34,24,0.1)`, paddingTop:14, marginBottom:4 }}>
                   <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:10, color:MID }}>Videos</p>
-                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  <div style={{ display:"flex", gap:10, overflowX:"auto", paddingBottom:4 }}>
                     {modalProduct.reelUrls.map((url, i) => {
                       if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
                         return (
-                          <video key={i} controls style={{ width:"100%", maxHeight:200, objectFit:"contain", background:"#000", borderRadius:4 }}>
+                          <video key={i} controls style={{ flexShrink:0, width:160, aspectRatio:"9/16", objectFit:"cover", background:"#000", borderRadius:8 }}>
                             <source src={url} />
                           </video>
                         );
                       }
-                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : url.includes("youtube") || url.includes("youtu.be") ? "YouTube" : "Video";
+                      let embedUrl = "";
+                      if (url.includes("youtube.com/shorts/")) {
+                        const id = url.split("shorts/")[1]?.split("?")[0];
+                        embedUrl = `https://www.youtube.com/embed/${id}`;
+                      } else if (url.includes("youtu.be/")) {
+                        const id = url.split("youtu.be/")[1]?.split("?")[0];
+                        embedUrl = `https://www.youtube.com/embed/${id}`;
+                      } else if (url.includes("youtube.com/watch")) {
+                        const id = new URL(url).searchParams.get("v");
+                        if (id) embedUrl = `https://www.youtube.com/embed/${id}`;
+                      }
+                      if (embedUrl) {
+                        return (
+                          <iframe key={i} src={embedUrl} allow="autoplay; encrypted-media" allowFullScreen
+                            style={{ flexShrink:0, width:160, aspectRatio:"9/16", border:"none", borderRadius:8 }} />
+                        );
+                      }
+                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : "Video";
                       return (
                         <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                          style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", border:`1px solid rgba(44,34,24,0.14)`, textDecoration:"none", color:"#2c2218" }}>
-                          <svg width={12} height={12} viewBox="0 0 24 24" fill={A} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                          <span style={{ fontSize:12 }}>{platform}</span>
+                          style={{ flexShrink:0, width:160, aspectRatio:"9/16", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, border:`1px solid rgba(44,34,24,0.14)`, textDecoration:"none", color:"#2c2218", borderRadius:8, background:S }}>
+                          <svg width={24} height={24} viewBox="0 0 24 24" fill={A} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                          <span style={{ fontSize:11 }}>{platform}</span>
                         </a>
                       );
                     })}

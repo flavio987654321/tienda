@@ -39,9 +39,13 @@ function mapProduct(raw: any): StorefrontProduct {
   const sizes  = [...sizesSet];
   const colors = [...colorsSet];
   let images: string[] = [];
+  let imageItems: { url: string; variantValue?: string }[] = [];
   try {
     const parsed = JSON.parse(raw.images || "[]");
-    images = parsed.map((img: any) => typeof img === "string" ? img : img?.url ?? "").filter(Boolean);
+    imageItems = parsed
+      .map((img: any) => typeof img === "string" ? { url: img } : { url: img?.url ?? "", variantValue: img?.variantValue })
+      .filter((x: any) => x.url);
+    images = imageItems.map((x: any) => x.url);
   } catch {}
   let reelUrls: string[] = [];
   try {
@@ -57,7 +61,7 @@ function mapProduct(raw: any): StorefrontProduct {
     subcategory: raw.subcategory ?? undefined,
     gender: raw.gender ?? "unisex",
     description: raw.description ?? null,
-    images, reelUrls, sizes, colors, variants,
+    images, imageItems, reelUrls, sizes, colors, variants,
   };
 }
 
