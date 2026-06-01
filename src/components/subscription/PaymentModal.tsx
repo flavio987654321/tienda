@@ -297,7 +297,7 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
             </div>
           )}
 
-          <form id="mp-card-form" className="space-y-4" style={!mpReady || isFreeMonth ? { visibility: "hidden", pointerEvents: "none", position: "absolute", height: 0, overflow: "hidden" } : {}}>
+          <form id="mp-card-form" className="space-y-4" style={!mpReady || isFreeMonth ? { visibility: "hidden", pointerEvents: "none", position: "absolute", top: "-9999px", left: "-9999px" } : {}}>
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Nombre en la tarjeta</label>
               <div id="mp-cardholder-name" className="h-11 rounded-xl border border-white/10 bg-white/5 px-3 flex items-center" />
