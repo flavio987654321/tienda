@@ -83,7 +83,7 @@ export default async function DashboardPage() {
         </div>
 
         {store && (
-          <LogoUploadCard storeName={store.name} initialLogo={store.logo} initialLogoColor={store.logoColor} />
+          <LogoUploadCard storeName={store.name} initialLogo={store.logo} initialLogoColor={store.logoColor} primaryColor={store.primaryColor} />
         )}
 
         {store && (

@@ -7,11 +7,21 @@ interface LogoUploadCardProps {
   storeName: string;
   initialLogo: string | null;
   initialLogoColor: string | null;
+  primaryColor?: string | null;
 }
 
-export default function LogoUploadCard({ storeName, initialLogo, initialLogoColor }: LogoUploadCardProps) {
+export default function LogoUploadCard({ storeName, initialLogo, initialLogoColor, primaryColor }: LogoUploadCardProps) {
   const [logo, setLogo] = useState<string | null>(initialLogo);
   const [logoColor, setLogoColor] = useState<string | null>(initialLogoColor);
+  const effectiveColor = (() => {
+    if (!logoColor) return null;
+    const r = parseInt(logoColor.slice(1, 3), 16);
+    const g = parseInt(logoColor.slice(3, 5), 16);
+    const b = parseInt(logoColor.slice(5, 7), 16);
+    const luminance = (r * 299 + g * 587 + b * 114) / 1000;
+    return luminance < 40 ? null : logoColor;
+  })();
+  const splashBg = effectiveColor || primaryColor || "linear-gradient(135deg, #6366f1, #8b5cf6)";
   const [uploading, setUploading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -267,7 +277,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
                 <p className="text-xs text-gray-400 mb-1.5 text-center font-medium">Splash al abrir la app</p>
                 <div
                   className="w-60 h-24 rounded-xl flex flex-col items-center justify-center gap-2 shadow-sm cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
-                  style={{ background: logoColor || "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+                  style={{ background: splashBg }}
                   onClick={() => setShowSplashModal(true)}
                 >
                   <img src={logo} alt={storeName} className="h-10 w-10 rounded-xl object-cover shadow-md" />
@@ -405,7 +415,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
                   <div
                     className="absolute inset-0 flex flex-col items-center justify-center"
                     style={{
-                      background: logoColor || "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                      background: splashBg,
                       opacity: splashFading ? 0 : splashMounted ? 1 : 0,
                       transform: splashFading ? "scale(1.06)" : splashMounted ? "scale(1)" : "scale(0.92)",
                       transition: "opacity 0.5s ease, transform 0.5s ease",

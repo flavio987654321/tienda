@@ -28,7 +28,15 @@ export async function GET(
       ]
     : [{ src: "/favicon.ico", sizes: "any", type: "image/x-icon" }];
 
-  const splashColor = store.logoColor || store.primaryColor || "#6366f1";
+  const effectiveLogoColor = (() => {
+    const c = store.logoColor;
+    if (!c) return null;
+    const r = parseInt(c.slice(1, 3), 16);
+    const g = parseInt(c.slice(3, 5), 16);
+    const b = parseInt(c.slice(5, 7), 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 < 40 ? null : c;
+  })();
+  const splashColor = effectiveLogoColor || store.primaryColor || "#6366f1";
 
   const manifest = {
     name: store.name,
