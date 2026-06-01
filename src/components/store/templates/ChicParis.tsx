@@ -448,10 +448,11 @@ export default function ChicParis() {
               position: "absolute", inset: 0,
               opacity: isActive ? 1 : 0,
               transition: "opacity 0.8s ease",
+              pointerEvents: isActive ? "auto" : "none",
               background: ov?.url ? "transparent" : ["#1a1a2e", "#16213e", "#0f3460"][i],
             }}>
               {ov?.url && (
-                <img src={ov.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` }} />
+                <img src={ov.url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` }} />
               )}
               {/* overlay */}
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(0,0,0,0.65) 40%, rgba(0,0,0,0.1))" }} />
