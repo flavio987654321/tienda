@@ -573,7 +573,7 @@ export default function FashionNoir() {
         )}
         <BgDragHandle imgKey="heroBackground" />
         <EditableImageButton field="heroBackground" label="Cambiar imagen" />
-        <div style={{ position:"relative", height:"100%", display:"flex", alignItems:"center", padding:"0 80px", maxWidth:1280, margin:"0 auto" }}>
+        <div style={{ position:"relative", height:"100%", display:"flex", alignItems:"center", padding: isMobile ? "0 20px" : "0 80px", maxWidth:1280, margin:"0 auto" }}>
           <div style={{ maxWidth:520 }}>
             <p style={{ fontSize:11, letterSpacing:5, color:heroAccentColor, marginBottom:20, textTransform:"uppercase" }}>
               <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva Temporada · Otoño 2025"}</EditableZone>
@@ -603,9 +603,9 @@ export default function FashionNoir() {
       {/* ── GARANTÍAS ──────────────────────────────────────── */}
       <section style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, borderBottom:`1px solid rgba(201,168,76,0.12)`, background:garantiasBg, position:"relative" }}>
         <EditableSectionBg field="bgGarantias" label="Fondo garantías" />
-        <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns:"repeat(4,1fr)" }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)" }}>
           {GARANTIAS.map((g, i) => (
-            <div key={i} style={{ padding:"28px 32px", display:"flex", alignItems:"center", gap:16, borderRight: i < 3 ? `1px solid rgba(201,168,76,0.1)` : "none" }}>
+            <div key={i} style={{ padding: isMobile ? "16px 14px" : "28px 32px", display:"flex", alignItems:"center", gap:16, borderRight: i < 3 ? `1px solid rgba(201,168,76,0.1)` : "none" }}>
               <span style={{ color:G, flexShrink:0 }}>{g.svg}</span>
               <div>
                 <p style={{ fontSize:13, fontWeight:700, color:garantiasText, margin:"0 0 4px" }}><EditableZone field={`garantia${i+1}Title`} label={`Título garantía ${i+1}`}>{g.title}</EditableZone></p>
@@ -638,11 +638,11 @@ export default function FashionNoir() {
       {/* ── CATEGORÍAS ─────────────────────────────────────── */}
       <section id="categorias" style={{ background:categoriasBg, position:"relative" }}>
         <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
-        <div style={{ padding:"80px 32px", maxWidth:1280, margin:"0 auto" }}>
+        <div style={{ padding: isMobile ? "48px 16px" : "80px 32px", maxWidth:1280, margin:"0 auto" }}>
           <p style={{ fontSize:11, letterSpacing:5, color:G, textAlign:"center", marginBottom:48, textTransform:"uppercase" }}>
             <EditableZone field="categoriesHeading" label="Título sección categorías">Colecciones</EditableZone>
           </p>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:16 }}>
             {[
               { label:"Mujer",      img: catMujerUrl,      field:"catMujer" },
               { label:"Hombre",     img: catHombreUrl,     field:"catHombre" },
@@ -683,7 +683,7 @@ export default function FashionNoir() {
       {/* ── PRODUCTOS ──────────────────────────────────────── */}
       <section id="productos" style={{ background:productosBg, position:"relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
-        <div style={{ padding:"80px 32px", maxWidth:1280, margin:"0 auto" }}>
+        <div style={{ padding: isMobile ? "48px 16px" : "80px 32px", maxWidth:1280, margin:"0 auto" }}>
         <div style={{ marginBottom:40 }}>
           <p style={{ fontFamily:"Georgia, serif", fontSize:28, color:productosText, margin:0 }}>
             {activeGender === "mujer" ? "Mujer" : activeGender === "hombre" ? "Hombre" : activeCategory === "Todos" ? "Toda la Colección" : activeCategory}
@@ -749,14 +749,14 @@ export default function FashionNoir() {
 
       {/* ── NOSOTROS ───────────────────────────────────────── */}
       <section id="nosotros" style={{ borderTop:`1px solid rgba(201,168,76,0.1)` }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr" }}>
-          <div style={{ position:"relative", minHeight:560, overflow:"hidden" }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
+          <div style={{ position:"relative", minHeight: isMobile ? 280 : 560, overflow:"hidden" }}>
             <img src={nosotrosImageUrl} alt="Nuestra historia" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${nosotrosPosX}% ${nosotrosPosY}%`, display:"block" }}/>
             <BgDragHandle imgKey="nosotrosImage" />
             <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
             <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.25)" }}/>
           </div>
-          <div style={{ padding:"80px 72px", display:"flex", flexDirection:"column", justifyContent:"center", gap:24, background:nosotrosPanelBg, position:"relative" }}>
+          <div style={{ padding: isMobile ? "40px 20px" : "80px 72px", display:"flex", flexDirection:"column", justifyContent:"center", gap:24, background:nosotrosPanelBg, position:"relative" }}>
             <EditableSectionBg field="bgNosotrosPanel" label="Fondo nosotros" />
             <div>
               <p style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", marginBottom:16 }}>
@@ -809,7 +809,7 @@ export default function FashionNoir() {
             </div>
           ) : (
             <form onSubmit={handleContact} style={{ display:"flex", flexDirection:"column", gap:16 }}>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:16 }}>
                 <div>
                   <label style={{ display:"block", fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.6, marginBottom:8 }}>Nombre</label>
                   <input required value={contactForm.nombre} onChange={e => setContactForm(f => ({...f, nombre:e.target.value}))}
@@ -846,7 +846,7 @@ export default function FashionNoir() {
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: footerBgImg.overlayType === "light" ? `rgba(255,255,255,${footerBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${footerBgImg.overlayOpacity ?? 0.45})` }} />
         )}
         <div style={{ padding:"60px 32px 32px", position:"relative", zIndex:1 }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1.5fr", gap:48, marginBottom:48 }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "2fr 1fr 1fr 1.5fr", gap: isMobile ? 32 : 48, marginBottom:48 }}>
           <div>
             <span style={{ fontFamily:"Georgia, serif", fontSize:28, fontWeight:700, letterSpacing:6, color:G, display:"block", marginBottom:16 }}><EditableZone field="footerBrandName" label="Nombre en footer">NOIR</EditableZone></span>
             <p style={{ fontSize:13, opacity:0.45, lineHeight:1.8, maxWidth:260 }}>
@@ -1318,7 +1318,7 @@ export default function FashionNoir() {
       {/* ── CARRITO ────────────────────────────────────────── */}
       <div style={{ position:"fixed", inset:0, zIndex:150, pointerEvents: cartOpen ? "auto" : "none" }}>
         <div onClick={() => setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.6)", opacity: cartOpen ? 1 : 0, transition:"opacity 0.3s" }}/>
-        <div style={{ position:"absolute", top:0, right:0, bottom:0, width:420, background:S, transform: cartOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
+        <div style={{ position:"absolute", top:0, right:0, bottom:0, width: isMobile ? "100vw" : 420, background:S, transform: cartOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
           <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid rgba(240,235,227,0.07)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <p style={{ fontFamily:"Georgia, serif", fontSize:18, margin:0 }}>Tu carrito <span style={{ fontSize:13, color:"#555" }}>({cartCount})</span></p>
             <button onClick={() => setCartOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>

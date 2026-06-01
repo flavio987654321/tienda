@@ -456,7 +456,7 @@ export default function ChicParis() {
               {/* overlay */}
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(0,0,0,0.65) 40%, rgba(0,0,0,0.1))" }} />
               {/* text */}
-              <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 80px", maxWidth: 640 }}>
+              <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: isMobile ? "0 20px" : "0 80px", maxWidth: 640 }}>
                 <span style={{ color: ACC, fontSize: 11, letterSpacing: 5, fontWeight: 700, textTransform: "uppercase", marginBottom: 16 }}>
                   <EditableZone field={`slide${i + 1}Kicker`} label={`Slide ${i + 1} — Kicker`}>Nueva Colección</EditableZone>
                 </span>
@@ -548,7 +548,7 @@ export default function ChicParis() {
       )}
 
       {/* ── PRODUCTOS ── */}
-      <section id="productos" style={{ background: prodBg, padding: "72px 40px", position: "relative" }}>
+      <section id="productos" style={{ background: prodBg, padding: isMobile ? "48px 16px" : "72px 40px", position: "relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
@@ -614,9 +614,9 @@ export default function ChicParis() {
       </section>
 
       {/* ── ABOUT ── */}
-      <section id="nosotros" style={{ background: aboutBg, padding: "80px 40px", position: "relative" }}>
+      <section id="nosotros" style={{ background: aboutBg, padding: isMobile ? "48px 16px" : "80px 40px", position: "relative" }}>
         <EditableSectionBg field="bgAbout" label="Fondo nosotros" />
-        <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 32 : 60, alignItems: "center" }}>
           <div style={{ position: "relative" }}>
             {(() => {
               const ov = storeConfig?.imageOverrides?.["nosotrosImage"];
@@ -654,10 +654,10 @@ export default function ChicParis() {
       </section>
 
       {/* ── CONTACT — split editorial ── */}
-      <section id="contacto" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: 540 }}>
+      <section id="contacto" style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", minHeight: isMobile ? "auto" : 540 }}>
 
         {/* Panel izquierdo — info */}
-        <div style={{ background: "#111", padding: "72px 56px", display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative" }}>
+        <div style={{ background: "#111", padding: isMobile ? "48px 20px" : "72px 56px", display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative" }}>
           <div>
             <span style={{ fontSize: 10, letterSpacing: 5, fontWeight: 700, color: ACC, textTransform: "uppercase", display: "block", marginBottom: 24 }}>
               <EditableZone field="contactKicker" label="Kicker contacto">Contacto</EditableZone>
@@ -705,7 +705,7 @@ export default function ChicParis() {
         </div>
 
         {/* Panel derecho — formulario */}
-        <div style={{ background: "#fafaf8", padding: "72px 56px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div style={{ background: "#fafaf8", padding: isMobile ? "48px 20px" : "72px 56px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
           {contactStatus === "sent" ? (
             <div style={{ textAlign: "center" }}>
               <div style={{ width: 64, height: 64, borderRadius: "50%", background: `${ACC}15`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
@@ -723,7 +723,7 @@ export default function ChicParis() {
               <p style={{ margin: "0 0 32px", fontSize: 11, fontWeight: 700, color: "#999", letterSpacing: 3, textTransform: "uppercase" }}>Envianos un mensaje</p>
               <form onSubmit={handleContact} style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                 {/* Nombre + Email en fila */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
                   {[["nombre", "Nombre", "text"], ["email", "Email", "email"]].map(([field, ph, type]) => (
                     <div key={field}>
                       <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#999", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>{ph}</label>
@@ -759,7 +759,7 @@ export default function ChicParis() {
       <footer style={{ background: footerBg, padding: "48px 40px 32px", position: "relative" }}>
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 40, marginBottom: 40, paddingBottom: 40, borderBottom: `1px solid ${footerText === "#fff" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"}` }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr", gap: isMobile ? 32 : 40, marginBottom: 40, paddingBottom: 40, borderBottom: `1px solid ${footerText === "#fff" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"}` }}>
             <div>
               <p style={{ margin: "0 0 12px", fontSize: 18, fontWeight: 900, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>
                 <EditableZone field="storeName" label="Nombre footer">{storeConfig?.storeName ?? "CHIC PARIS"}</EditableZone>
@@ -1084,7 +1084,7 @@ export default function ChicParis() {
       {cartOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 9500, display: "flex" }} onClick={() => setCartOpen(false)}>
           <div style={{ flex: 1 }} />
-          <div style={{ width: 400, background: "#fff", height: "100%", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(0,0,0,0.15)" }} onClick={e => e.stopPropagation()}>
+          <div style={{ width: isMobile ? "100vw" : 400, background: "#fff", height: "100%", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(0,0,0,0.15)" }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: "20px 24px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>Tu carrito ({cartCount})</h3>
               <button onClick={() => setCartOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: "#999" }}>×</button>

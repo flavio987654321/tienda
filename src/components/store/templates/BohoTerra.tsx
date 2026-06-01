@@ -281,8 +281,8 @@ export default function BohoTerra() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSize, modalProduct?.id]);
 
-  const CARDS_PER_VIEW = 3;
-  const CAROUSEL_LIMIT = CARDS_PER_VIEW * 2; // 6 productos → 2 tandas
+  const CARDS_PER_VIEW = isMobile ? 1 : 3;
+  const CAROUSEL_LIMIT = CARDS_PER_VIEW * 2;
   const subcategoriesFor = useMemo(() => {
     const map: Record<string, string[]> = {};
     products.forEach(p => {
@@ -462,8 +462,8 @@ export default function BohoTerra() {
       )}
 
       {/* ── HERO — fondo crema con tipografía grande + foto al costado */}
-      <section id="inicio" style={{ paddingTop: 60 + announcementBarHeight, minHeight:"100vh", display:"flex", alignItems:"stretch" }}>
-        <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"80px 80px 80px 80px", maxWidth:600, background:heroLeftBg, position:"relative" }}>
+      <section id="inicio" style={{ paddingTop: 60 + announcementBarHeight, minHeight:"100vh", display:"flex", alignItems:"stretch", flexDirection: isMobile ? "column" : "row" }}>
+        <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding: isMobile ? "20px 20px 40px" : "80px 80px 80px 80px", maxWidth: isMobile ? "100%" : 600, background:heroLeftBg, position:"relative" }}>
           <EditableSectionBg field="bgHeroLeft" label="Fondo hero" />
           <p style={{ fontSize:11, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:24 }}>
             <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva temporada · 2025"}</EditableZone>
@@ -481,7 +481,7 @@ export default function BohoTerra() {
           </button>
         </div>
         {/* fotos apiladas */}
-        <div style={{ flex:1, display:"grid", gridTemplateRows:"1fr 1fr", gridTemplateColumns:"1fr 1fr", gap:4, padding:4 }}>
+        <div style={{ flex:1, display: isMobile ? "none" : "grid", gridTemplateRows:"1fr 1fr", gridTemplateColumns:"1fr 1fr", gap:4, padding:4 }}>
           <div style={{ overflow:"hidden", gridRow:"1/3", position:"relative" }}>
             <img src={heroImage1Ov?.url ?? "https://picsum.photos/seed/terra-h1/600/900"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${heroImage1Ov?.posX ?? 50}% ${heroImage1Ov?.posY ?? 50}%`, display:"block" }}/>
             <BgDragHandle imgKey="heroImage1" />
@@ -523,7 +523,7 @@ export default function BohoTerra() {
       <section id="coleccion" style={{ padding:"80px 0", background:coleccionBg, position:"relative" }}>
         <EditableSectionBg field="bgColeccion" label="Fondo colección" />
         {/* encabezado */}
-        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 40px", marginBottom:40, borderBottom:`1px solid rgba(44,34,24,0.1)`, paddingBottom:24 }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "0 16px" : "0 40px", marginBottom:40, borderBottom:`1px solid rgba(44,34,24,0.1)`, paddingBottom:24 }}>
           <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(22px,2.5vw,32px)", fontWeight:400, fontStyle:"italic", margin:0, color:coleccionText }}>
             {activeGender==="mujer" ? "Mujer" : activeGender==="hombre" ? "Hombre" : activeCategory==="Todos" ? "Toda la colección" : activeCategory}
           </h2>
@@ -533,7 +533,7 @@ export default function BohoTerra() {
         {/* carrusel — overflow visible para que se vean las tarjetas */}
         <div style={{ position:"relative" }}>
           {/* área deslizante */}
-          <div ref={carouselRef} style={{ overflow:"hidden", padding:"0 40px" }}>
+          <div ref={carouselRef} style={{ overflow:"hidden", padding: isMobile ? "0 16px" : "0 40px" }}>
             <div style={{ display:"flex", gap:20, transition:"transform 0.45s cubic-bezier(.4,0,.2,1)", transform:`translateX(calc(-${carouselIdx} * (100% / ${CARDS_PER_VIEW} + 20px / ${CARDS_PER_VIEW})))` }}>
               {carouselProducts.map(product=>(
                 <div key={product.id}
@@ -625,7 +625,7 @@ export default function BohoTerra() {
           </div>
         </div>
         {/* texto + stats */}
-        <div style={{ maxWidth:1280, margin:"0 auto", padding:"72px 40px", display:"grid", gridTemplateColumns:"1.2fr 1fr", gap:80, alignItems:"start" }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "48px 20px" : "72px 40px", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr", gap: isMobile ? 32 : 80, alignItems:"start" }}>
           <div>
             <p style={{ fontSize:10, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:16 }}><EditableZone field="aboutKicker" label="Etiqueta 'Nosotros'">Nuestra historia</EditableZone></p>
             <p style={{ fontSize:15, color:nosotrosText, lineHeight:1.9, marginBottom:20 }}><EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'" block>Terra nació en Mendoza en 2019 como un pequeño taller de confección artesanal. Hoy somos un equipo de 12 personas que diseña, tiñe y cose cada prenda con materiales de origen responsable.</EditableZone></p>
@@ -648,7 +648,7 @@ export default function BohoTerra() {
         <BgDragHandle imgKey="contactBackground" />
         <EditableImageButton field="contactBackground" label="Imagen fondo contacto" />
         <div style={{ position:"absolute", inset:0, background:"rgba(250,247,242,0.88)" }}/>
-        <div style={{ position:"relative", maxWidth:1280, margin:"0 auto", padding:"80px 40px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"center", minHeight:500 }}>
+        <div style={{ position:"relative", maxWidth:1280, margin:"0 auto", padding: isMobile ? "48px 20px" : "80px 40px", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 0 : 80, alignItems:"center", minHeight: isMobile ? "auto" : 500 }}>
           {/* izq — texto e info */}
           <div>
             <p style={{ fontSize:10, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:20 }}><EditableZone field="contactKicker" label="Etiqueta contacto">Escribinos</EditableZone></p>
@@ -668,7 +668,7 @@ export default function BohoTerra() {
             </div>
           </div>
           {/* der — formulario */}
-          <div style={{ background:"#fff", padding:"40px 36px" }}>
+          <div style={{ background:"#fff", padding: isMobile ? "32px 20px" : "40px 36px" }}>
             {contactStatus==="sent" ? (
               <div style={{ textAlign:"center", padding:"40px 0" }}>
                 <div style={{ width:56, height:56, borderRadius:"50%", border:`1.5px solid ${A}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
@@ -708,13 +708,13 @@ export default function BohoTerra() {
             <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: newsletterBgImg.overlayType === "light" ? `rgba(255,255,255,${newsletterBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${newsletterBgImg.overlayOpacity ?? 0.45})` }} />
           )}
           <div style={{ position:"relative", zIndex:1, padding:"36px 40px" }}>
-          <div style={{ maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", gap:32, flexWrap:"wrap" }}>
+          <div style={{ maxWidth:1280, margin:"0 auto", display:"flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", justifyContent:"space-between", gap:32, flexWrap:"wrap" }}>
             <div>
               <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:newsletterText, margin:"0 0 4px" }}><EditableZone field="newsletterText" label="Título newsletter">Suscribite al newsletter</EditableZone></p>
               <p style={{ fontSize:12, color:newsletterMid, margin:0, letterSpacing:1 }}><EditableZone field="newsletterSubtext" label="Subtítulo newsletter">Novedades, lanzamientos y descuentos exclusivos</EditableZone></p>
             </div>
             <div style={{ display:"flex", flexShrink:0 }}>
-              <input placeholder="tu@email.com" style={{ width:260, background:newsletterInputBg, border:`1px solid ${newsletterInputBorder}`, borderRight:"none", color:newsletterText, padding:"12px 16px", fontSize:13, outline:"none" }}/>
+              <input placeholder="tu@email.com" style={{ width: isMobile ? "100%" : 260, background:newsletterInputBg, border:`1px solid ${newsletterInputBorder}`, borderRight:"none", color:newsletterText, padding:"12px 16px", fontSize:13, outline:"none" }}/>
               <button style={{ background:T, color:BG, border:"none", padding:"12px 24px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", fontWeight:600 }}>Suscribirse</button>
             </div>
           </div>
@@ -723,7 +723,7 @@ export default function BohoTerra() {
         {/* links + copyright — este div es el fondo del footer propiamente dicho */}
         <div style={{ position:"relative" }}>
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
-        <div style={{ maxWidth:1280, margin:"0 auto", padding:"28px 40px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:20 }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "20px 16px" : "28px 40px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:20 }}>
           <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:footerText, letterSpacing:2 }}><EditableZone field="footerBrandName" label="Nombre en footer">Terra</EditableZone></span>
           <div style={{ display:"flex", gap:24 }}>
             {[["Colección","coleccion"],["Nosotros","nosotros"],["Contacto","contacto"],["Envíos","contacto"],["Devoluciones","contacto"]].map(([l,t])=>(
@@ -749,7 +749,7 @@ export default function BohoTerra() {
             })}
           </div>
         </div>
-        <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, padding:"16px 40px", maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
+        <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, padding: isMobile ? "16px" : "16px 40px", maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
           <div style={{ display:"flex", flexWrap:"wrap", gap:"0 16px" }}>
             {[
               { label: "Política de devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
@@ -982,7 +982,7 @@ export default function BohoTerra() {
       {/* ── CARRITO */}
       <div style={{ position:"fixed", inset:0, zIndex:150, pointerEvents:cartOpen?"auto":"none" }}>
         <div onClick={()=>setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.4)", opacity:cartOpen?1:0, transition:"opacity 0.3s" }}/>
-        <div style={{ position:"absolute", top:0, right:0, bottom:0, width:400, background:"#fff", transform:cartOpen?"translateX(0)":"translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:`1px solid rgba(44,34,24,0.08)` }}>
+        <div style={{ position:"absolute", top:0, right:0, bottom:0, width: isMobile ? "100vw" : 400, background:"#fff", transform:cartOpen?"translateX(0)":"translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:`1px solid rgba(44,34,24,0.08)` }}>
           <div style={{ padding:"20px 24px 14px", borderBottom:`1px solid rgba(44,34,24,0.06)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:18, margin:0, color:T }}>Tu carrito <span style={{ fontStyle:"normal", fontSize:13, color:MID, fontFamily:"'Helvetica Neue', sans-serif" }}>({cartCount})</span></p>
             <button onClick={()=>setCartOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:22, cursor:"pointer" }}>×</button>

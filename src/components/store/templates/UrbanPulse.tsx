@@ -468,13 +468,13 @@ export default function UrbanPulse() {
       )}
 
       {/* HERO — diagonal split */}
-      <section style={{ display:"grid", gridTemplateColumns:"55% 45%", minHeight:"calc(100vh - 100px)", overflow:"hidden" }}>
-        <div style={{ background:heroLeftUpBg, display:"flex", flexDirection:"column", justifyContent:"flex-end", padding:"80px 64px", clipPath:"polygon(0 0, 100% 0, 91% 100%, 0 100%)", position:"relative" }}>
+      <section style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "55% 45%", minHeight: isMobile ? "auto" : "calc(100vh - 100px)", overflow:"hidden" }}>
+        <div style={{ background:heroLeftUpBg, display:"flex", flexDirection:"column", justifyContent:"flex-end", padding: isMobile ? "60px 20px 48px" : "80px 64px", clipPath: isMobile ? "none" : "polygon(0 0, 100% 0, 91% 100%, 0 100%)", position:"relative" }}>
           <EditableSectionBg field="bgHeroLeft" label="Fondo hero" />
           <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", marginBottom:20, display:"block" }}>
             <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "▶ Nueva Colección 2025"}</EditableZone>
           </span>
-          <h1 style={{ color:heroLeftUpText, fontSize:"clamp(58px,7.5vw,108px)", fontWeight:900, lineHeight:0.88, margin:"0 0 28px", textTransform:"uppercase", letterSpacing:"-2px" }}>
+          <h1 style={{ color:heroLeftUpText, fontSize: isMobile ? "clamp(32px,9vw,52px)" : "clamp(58px,7.5vw,108px)", fontWeight:900, lineHeight:0.88, margin:"0 0 28px", textTransform:"uppercase", letterSpacing:"-2px" }}>
             <EditableZone field="heroHeading" label="Título principal">MOVE FASTER. GO HARDER.</EditableZone>
           </h1>
           <p style={{ color:heroLeftUpMid, fontSize:15, maxWidth:360, marginBottom:40, lineHeight:1.7 }}>
@@ -504,9 +504,9 @@ export default function UrbanPulse() {
       {/* GARANTÍAS */}
       <section style={{ background:garantiasUpBg, borderTop:`3px solid ${DARK}`, borderBottom:`3px solid ${DARK}`, position:"relative" }}>
         <EditableSectionBg field="bgGarantias" label="Fondo garantías" />
-        <div style={{ maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns:"repeat(4,1fr)" }}>
+        <div style={{ maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)" }}>
           {GARANTIAS.map((g, i) => (
-            <div key={g.title} style={{ display:"flex", alignItems:"center", gap:12, padding:"18px 24px", borderRight: i < 3 ? `1px solid rgba(0,0,0,0.1)` : "none" }}>
+            <div key={g.title} style={{ display:"flex", alignItems:"center", gap:12, padding: isMobile ? "14px 16px" : "18px 24px", borderRight: i < 3 ? `1px solid rgba(0,0,0,0.1)` : "none" }}>
               <span style={{ color:garantiasUpText }}>{g.svg}</span>
               <div>
                 <p style={{ margin:0, fontSize:11, fontWeight:900, letterSpacing:1, textTransform:"uppercase", color:garantiasUpText }}><EditableZone field={`garantia${i+1}Title`} label={`Título garantía ${i+1}`}>{g.title}</EditableZone></p>
@@ -520,7 +520,7 @@ export default function UrbanPulse() {
       {/* CATEGORY TILES */}
       <section style={{ background:categoriesBgUp, position:"relative" }}>
         <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
-        <div style={{ padding:"80px 40px", maxWidth:1200, margin:"0 auto" }}>
+        <div style={{ padding: isMobile ? "48px 16px" : "80px 40px", maxWidth:1200, margin:"0 auto" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:40 }}>
           <h2 style={{ fontSize:"clamp(36px,4vw,52px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, lineHeight:1, color:categoriasText }}>
             <EditableZone field="categoriesHeading" label="Título sección categorías">Explorá la tienda</EditableZone>
@@ -530,7 +530,7 @@ export default function UrbanPulse() {
             <EditableZone field="categoryViewAll" label="Botón ver todo">Ver todo →</EditableZone>
           </button>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:4 }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:4 }}>
           {[
             { label:"Mujer",      cat:"Mujer",      img: storeConfig?.imageOverrides?.["catMujer"]?.url ?? "https://picsum.photos/seed/up_cat1/600/700",      field:"catMujer" },
             { label:"Hombre",     cat:"Hombre",     img: storeConfig?.imageOverrides?.["catHombre"]?.url ?? "https://picsum.photos/seed/up_cat2/600/700",     field:"catHombre" },
@@ -575,7 +575,7 @@ export default function UrbanPulse() {
       {featuredProduct && (
       <section id="featured" style={{ background:featuredBg, padding:"80px 40px", position:"relative" }}>
         <EditableSectionBg field="bgFeatured" label="Fondo featured" />
-        <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:0, alignItems:"center" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:0, alignItems:"center" }}>
           <div style={{ position:"relative" }}>
             <img src={featuredProduct.images[0]} alt={featuredProduct.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
             {featuredProduct.badge && (
@@ -584,7 +584,7 @@ export default function UrbanPulse() {
               </span>
             )}
           </div>
-          <div style={{ padding:"60px 56px" }}>
+          <div style={{ padding: isMobile ? "28px 20px" : "60px 56px" }}>
             <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>
               <EditableZone field="featuredLabel" label="Etiqueta featured">▶ Featured Drop</EditableZone>
             </span>
@@ -618,16 +618,16 @@ export default function UrbanPulse() {
       {/* PRODUCTS */}
       <section id="productos" style={{ background:productosBgUp, position:"relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
-        <div style={{ padding:"80px 40px", maxWidth:1200, margin:"0 auto" }}>
+        <div style={{ padding: isMobile ? "48px 16px" : "80px 40px", maxWidth:1200, margin:"0 auto" }}>
         <div style={{ marginBottom:40 }}>
           <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, color:productosTextUp }}>
             {activeGender==="mujer" ? "Mujer" : activeGender==="hombre" ? "Hombre" : activeCategory==="Todos" ? <EditableZone field="collectionHeading" label="Título sección productos">Colección</EditableZone> : activeCategory}
           </h2>
           <p style={{ fontSize:12, color:productosTextUp, opacity:0.5, margin:"6px 0 0" }}>{allFiltered.length} piezas</p>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:4 }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(3,1fr)", gap:4 }}>
           {filtered.map((product, idx) => {
-            const big = idx === 0 || idx === 5;
+            const big = !isMobile && (idx === 0 || idx === 5);
             return (
               <div key={product.id} className="up-prod" onClick={() => openModal(product)}
                 style={{ gridColumn: big ? "span 2" : "span 1", cursor:"pointer", position:"relative", overflow:"hidden", background:WHITE }}>
@@ -696,7 +696,7 @@ export default function UrbanPulse() {
       {/* NOSOTROS */}
       <section id="nosotros" style={{ background:nosotrosBgUp, position:"relative" }}>
         <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
-        <div style={{ padding:"100px 40px", maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"center", position:"relative", zIndex:1 }}>
+        <div style={{ padding: isMobile ? "60px 20px" : "100px 40px", maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 40 : 80, alignItems:"center", position:"relative", zIndex:1 }}>
         <div>
           <span style={{ color:nosotrosMidUp, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>
             <EditableZone field="aboutKicker" label="Kicker 'Nosotros'">▶ Nuestra Historia</EditableZone>
@@ -739,7 +739,7 @@ export default function UrbanPulse() {
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: contactBgImg.overlayType === "light" ? `rgba(255,255,255,${contactBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${contactBgImg.overlayOpacity ?? 0.45})` }} />
         )}
         <div style={{ position:"relative", zIndex:1, padding:"80px 40px" }}>
-        <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80 }}>
+        <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 40 : 80 }}>
           <div>
             <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}><EditableZone field="contactKicker" label="Etiqueta contacto">▶ Contacto</EditableZone></span>
             <h2 style={{ color:contactUpText, fontSize:"clamp(36px,4vw,48px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", lineHeight:1, margin:"0 0 28px" }}>
@@ -797,7 +797,7 @@ export default function UrbanPulse() {
         )}
         <div style={{ padding:"60px 40px 28px", position:"relative", zIndex:1 }}>
         <div style={{ maxWidth:1200, margin:"0 auto" }}>
-          <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:40, marginBottom:48 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "2fr 1fr 1fr 1fr", gap: isMobile ? 32 : 40, marginBottom:48 }}>
             <div>
               <div style={{ fontWeight:900, fontSize:24, letterSpacing:4, textTransform:"uppercase", color:footerUpText, marginBottom:16 }}>
                 URBAN<span style={{ color:ACC }}>PULSE</span>
@@ -1130,7 +1130,7 @@ export default function UrbanPulse() {
       {cartOpen && (
         <div className="up-fade" style={{ position:"fixed", inset:0, zIndex:700 }}>
           <div onClick={() => setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.5)" }} />
-          <div style={{ position:"absolute", right:0, top:0, bottom:0, width:440, background:WHITE, display:"flex", flexDirection:"column" }}>
+          <div style={{ position:"absolute", right:0, top:0, bottom:0, width: isMobile ? "100vw" : 440, background:WHITE, display:"flex", flexDirection:"column" }}>
             <div style={{ padding:"20px 24px", borderBottom:`3px solid ${DARK}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <h3 style={{ margin:0, fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase" }}>Carrito ({cartCount})</h3>
               <button onClick={() => setCartOpen(false)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer" }}>✕</button>
