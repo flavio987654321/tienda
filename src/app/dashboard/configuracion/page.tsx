@@ -999,15 +999,15 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
         <select value={ov.fontFamily ?? ""}
           onChange={e => setOverride(activeField, { fontFamily: e.target.value || undefined })}
           style={{ fontSize: 11, padding: "4px 6px", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, cursor: "pointer", color: "#f1f5f9", background: "rgba(255,255,255,0.07)", height: 28 }}>
-          {FONT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+          {FONT_OPTIONS.map(f => <option key={f.value} value={f.value} style={{ color: "#111", background: "#fff" }}>{f.label}</option>)}
         </select>
 
         {/* Tamaño */}
         <select value={ov.fontSize ?? ""}
           onChange={e => setOverride(activeField, { fontSize: e.target.value ? Number(e.target.value) : undefined })}
           style={{ fontSize: 11, padding: "4px 6px", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, cursor: "pointer", color: "#f1f5f9", background: "rgba(255,255,255,0.07)", width: 80, height: 28 }}>
-          <option value="">Tamaño</option>
-          {FONT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
+          <option value="" style={{ color: "#111", background: "#fff" }}>Tamaño</option>
+          {FONT_SIZES.map(s => <option key={s} value={s} style={{ color: "#111", background: "#fff" }}>{s}px</option>)}
         </select>
 
         {divider}
