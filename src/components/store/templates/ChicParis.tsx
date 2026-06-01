@@ -15,6 +15,41 @@ const BANNER_COUNT = 3;
 
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 
+/* ── Strip icon sets — 4 options per slot ──────────────────── */
+const STRIP_ICONS: React.ReactNode[][] = [
+  [ // Slot 0: envío
+    <svg key="truck" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+    <svg key="box" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
+    <svg key="zap" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+    <svg key="gift" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
+  ],
+  [ // Slot 1: cambios/devoluciones
+    <svg key="refresh" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16"/><polyline points="21 3 21 8 16 8"/><polyline points="3 21 3 16 8 16"/></svg>,
+    <svg key="undo" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>,
+    <svg key="check-circle" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+    <svg key="arrows-lr" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>,
+  ],
+  [ // Slot 2: pago seguro
+    <svg key="shield" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>,
+    <svg key="lock" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+    <svg key="card" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+    <svg key="award" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>,
+  ],
+  [ // Slot 3: atención
+    <svg key="chat" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+    <svg key="phone" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
+    <svg key="headset" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>,
+    <svg key="mail" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+  ],
+];
+
+const STRIP_ITEMS = [
+  { slot: 0, titleField: "garantia1Title", titleDefault: "Envío gratis",    descField: "garantia1Desc", descDefault: "En compras mayores a $30.000" },
+  { slot: 1, titleField: "garantia2Title", titleDefault: "Cambios sin cargo", descField: "garantia2Desc", descDefault: "Hasta 30 días después de la compra" },
+  { slot: 2, titleField: "garantia3Title", titleDefault: "Pago seguro",      descField: "garantia3Desc", descDefault: "Todos los medios de pago protegidos" },
+  { slot: 3, titleField: "garantia4Title", titleDefault: "Atención rápida",  descField: "garantia4Desc", descDefault: "Respondemos en menos de 24hs" },
+];
+
 export default function ChicParis() {
   const [scrolled,        setScrolled]        = useState(false);
   const [activeCategory,  setActiveCategory]  = useState("Todos");
@@ -41,7 +76,7 @@ export default function ChicParis() {
   const blockBuy    = isPreview || isOwner;
   const storefront  = useStorefront();
   const { products, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
-  const { editMode, activeField, setActiveField } = useEditContext();
+  const { editMode, activeField, setActiveField, overrides: textOverrides, setOverride } = useEditContext();
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   const categoryList = useMemo(() => {
@@ -541,20 +576,34 @@ export default function ChicParis() {
       <section style={{ background: stripBg, borderTop: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, borderBottom: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, padding: "20px 40px", position: "relative" }}>
         <EditableSectionBg field="bgStrip" label="Fondo franja garantías" />
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-          {[
-            { svg: <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>, title: "Envío gratis", sub: <EditableZone field="garantia1Desc" label="Garantía 1 — Descripción">En compras mayores a $30.000</EditableZone> },
-            { svg: <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16"/><polyline points="21 3 21 8 16 8"/><polyline points="3 21 3 16 8 16"/></svg>, title: "Cambios sin cargo", sub: <EditableZone field="garantia2Desc" label="Garantía 2 — Descripción">Hasta 30 días después de la compra</EditableZone> },
-            { svg: <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>, title: "Pago seguro", sub: <EditableZone field="garantia3Desc" label="Garantía 3 — Descripción">Todos los medios de pago protegidos</EditableZone> },
-            { svg: <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, title: "Atención rápida", sub: <EditableZone field="garantia4Desc" label="Garantía 4 — Descripción">Respondemos en menos de 24hs</EditableZone> },
-          ].map(({ svg, title, sub }) => (
-            <div key={title} style={{ display: "flex", alignItems: "center", gap: 14, flex: "1 1 200px" }}>
-              <div style={{ color: ACC, flexShrink: 0 }}>{svg}</div>
-              <div>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: stripText, letterSpacing: 0.3 }}>{title}</p>
-                <p style={{ margin: 0, fontSize: 11, color: stripText, opacity: 0.6, lineHeight: 1.4 }}>{sub}</p>
+          {STRIP_ITEMS.map(({ slot, titleField, titleDefault, descField, descDefault }) => {
+            const iconIdx = (Math.abs(parseInt(textOverrides[`garantia${slot + 1}Icon`]?.text ?? "0") || 0)) % STRIP_ICONS[slot].length;
+            const nextIdx = (iconIdx + 1) % STRIP_ICONS[slot].length;
+            return (
+              <div key={titleField} style={{ display: "flex", alignItems: "center", gap: 14, flex: "1 1 200px" }}>
+                <div style={{ color: ACC, flexShrink: 0, position: "relative" }}>
+                  {STRIP_ICONS[slot][iconIdx]}
+                  {editMode && (
+                    <button
+                      onClick={() => setOverride(`garantia${slot + 1}Icon`, { text: String(nextIdx) })}
+                      title="Cambiar ícono"
+                      style={{ position: "absolute", inset: 0, background: "rgba(99,102,241,0.9)", border: "none", borderRadius: 4, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, opacity: 0, transition: "opacity 0.15s" }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = "0")}
+                    >↻</button>
+                  )}
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: stripText, letterSpacing: 0.3 }}>
+                    <EditableZone field={titleField} label={`Garantía ${slot + 1} — Título`}>{titleDefault}</EditableZone>
+                  </p>
+                  <p style={{ margin: 0, fontSize: 11, color: stripText, opacity: 0.6, lineHeight: 1.4 }}>
+                    <EditableZone field={descField} label={`Garantía ${slot + 1} — Descripción`}>{descDefault}</EditableZone>
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
