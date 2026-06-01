@@ -41,7 +41,7 @@ export default function ChicParis() {
   const blockBuy    = isPreview || isOwner;
   const storefront  = useStorefront();
   const { products, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
-  const { editMode } = useEditContext();
+  const { editMode, activeField, setActiveField } = useEditContext();
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   const categoryList = useMemo(() => {
@@ -88,6 +88,22 @@ export default function ChicParis() {
     }, bannerMs);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [heroPaused, bannerMs, editMode]);
+
+  // in edit mode, auto-switch the floating editor when slide changes
+  useEffect(() => {
+    if (!editMode) return;
+    const imgField = `img:heroBanner${heroSlide + 1}`;
+    // if image editor is open for any banner, follow the active slide
+    if (activeField?.startsWith("img:heroBanner")) {
+      setActiveField(imgField);
+    }
+    // if a text field from another slide is selected, close it
+    if (activeField && !activeField.startsWith("img:") && !activeField.startsWith("bg:")) {
+      const slideFieldPrefix = [`slide${heroSlide + 1}Kicker`, `slide${heroSlide + 1}Heading`, `slide${heroSlide + 1}Sub`, `slide${heroSlide + 1}Cta`, `slide${heroSlide + 1}CtaSecondary`];
+      const isSameSlide = slideFieldPrefix.some(p => activeField === p);
+      if (!isSameSlide) setActiveField(null);
+    }
+  }, [heroSlide, editMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const goToSlide = (idx: number) => {
     setHeroSlide(idx);

@@ -148,12 +148,12 @@ export function EditableZone({
         cursor: "pointer",
         outline: isActive
           ? "2px solid #6366f1"
-          : hovered ? "2px dashed rgba(99,102,241,0.75)"
-          : "2px dashed transparent",
-        outlineOffset: 4,
+          : hovered ? "1.5px dashed rgba(99,102,241,0.7)"
+          : "1.5px dashed transparent",
+        outlineOffset: 3,
         boxShadow: isActive
-          ? "0 0 0 7px rgba(255,255,255,0.9)"
-          : hovered ? "0 0 0 7px rgba(255,255,255,0.6)"
+          ? "0 0 0 4px rgba(99,102,241,0.35)"
+          : hovered ? "0 0 0 3px rgba(99,102,241,0.18)"
           : "none",
         borderRadius: 3,
         transition: "outline-color 0.15s, box-shadow 0.15s",
