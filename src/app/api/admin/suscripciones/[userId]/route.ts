@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { logAdminAction } from "@/lib/admin-log";
+import { revalidatePath } from "next/cache";
 
 const VALID_STATUSES = ["TRIAL", "ACTIVE", "GRACE", "EXPIRED", "CANCELLED"];
 
@@ -50,6 +51,8 @@ export async function PATCH(
   }
 
   const updated = await prisma.subscription.update({ where: { userId }, data });
+
+  revalidatePath("/dashboard", "layout");
 
   const actions: string[] = [];
   if (data.status) actions.push(`CHANGE_STATUS:${data.status}`);
