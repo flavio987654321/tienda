@@ -256,11 +256,11 @@ export async function DELETE(req: NextRequest) {
           },
         });
       } else {
-        // Solo resetea el diseño de la página (pageBlocks)
+        // Solo resetea el diseño: template y bloques de página
         // Productos, afiliados, pedidos y configuración base quedan intactos
         await tx.store.update({
           where: { id: storeId },
-          data: { pageBlocks: "[]" },
+          data: { storeConfig: "{}", pageBlocks: "[]" },
         });
       }
     }

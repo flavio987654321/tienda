@@ -24,6 +24,7 @@ export default async function DashboardPage() {
     },
   });
 
+  if (user.role === "ADMIN") redirect("/admin");
   if (user.role === "SELLER") redirect("/vendedoras");
   if (!store) redirect("/login");
 

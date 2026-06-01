@@ -81,7 +81,7 @@ export async function DELETE() {
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const store = await prisma.store.update({
     where: { ownerId: user.id },
-    data: { storeConfig: "{}" },
+    data: { storeConfig: "{}", pageBlocks: "[]" },
     select: { slug: true },
   });
   revalidatePath(`/tienda/${store.slug}`, "layout");
