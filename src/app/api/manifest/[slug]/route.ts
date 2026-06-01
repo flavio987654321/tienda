@@ -28,6 +28,8 @@ export async function GET(
       ]
     : [{ src: "/favicon.ico", sizes: "any", type: "image/x-icon" }];
 
+  const splashColor = store.logoColor || store.primaryColor || "#6366f1";
+
   const manifest = {
     name: store.name,
     short_name: shortName,
@@ -37,8 +39,8 @@ export async function GET(
     scope: `/tienda/${slug}`,
     display: "standalone",
     orientation: "portrait-primary",
-    background_color: store.logoColor || store.primaryColor || "#6366f1",
-    theme_color: store.primaryColor || "#6366f1",
+    background_color: splashColor,
+    theme_color: splashColor,
     icons,
     categories: ["shopping"],
     lang: "es-AR",
