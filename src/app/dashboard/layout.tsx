@@ -49,7 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <>
       {user && <SubscriptionRealtimeRefresher userId={user.id} />}
       <Suspense><SubscriptionSuccessBanner /></Suspense>
-      {gate}
+      {gate && <div className="pl-14 bg-gray-50 [color-scheme:light]">{gate}</div>}
       {storeTypeGate}
       {children}
     </>

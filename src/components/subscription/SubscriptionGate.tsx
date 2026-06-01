@@ -24,14 +24,14 @@ export default function SubscriptionGate({ status, daysLeft, role, tier, plan }:
   if (status === "ACTIVE" && daysLeft <= 3) {
     return (
       <>
-        <div className="mx-4 mt-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 px-4 py-3 flex items-center gap-3 text-sm">
+        <div className="mx-4 mt-4 rounded-2xl border border-yellow-300 bg-yellow-50 text-yellow-800 px-4 py-3 flex items-center gap-3 text-sm">
           <Clock className="h-4 w-4 shrink-0" />
           <span className="flex-1">
             Tu suscripción vence en {daysLeft === 0 ? "menos de 24 hs" : `${daysLeft} día${daysLeft !== 1 ? "s" : ""}`}. Renovála para no perder el acceso.
           </span>
           <button
             onClick={() => setPayModal(true)}
-            className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 transition-colors"
+            className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg bg-yellow-200 hover:bg-yellow-300 text-yellow-900 transition-colors"
           >
             Renovar
           </button>
@@ -56,8 +56,8 @@ export default function SubscriptionGate({ status, daysLeft, role, tier, plan }:
       <>
         <div className={`mx-4 mt-4 rounded-2xl border px-4 py-3 flex items-center gap-3 text-sm ${
           isGrace
-            ? "border-red-500/30 bg-red-500/10 text-red-400"
-            : "border-amber-500/30 bg-amber-500/10 text-amber-400"
+            ? "border-red-200 bg-red-50 text-red-700"
+            : "border-amber-200 bg-amber-50 text-amber-800"
         }`}>
           <Clock className="h-4 w-4 shrink-0" />
           <span className="flex-1">
@@ -69,8 +69,8 @@ export default function SubscriptionGate({ status, daysLeft, role, tier, plan }:
             onClick={() => setPayModal(true)}
             className={`shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
               isGrace
-                ? "bg-red-500/20 hover:bg-red-500/30 text-red-300"
-                : "bg-amber-500/20 hover:bg-amber-500/30 text-amber-300"
+                ? "bg-red-100 hover:bg-red-200 text-red-800"
+                : "bg-amber-200 hover:bg-amber-300 text-amber-900"
             }`}
           >
             Suscribirme
