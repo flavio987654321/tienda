@@ -60,8 +60,8 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/((?!preview\\/).*)", headers: securityHeaders },
-      // Páginas donde carga el SDK de MercadoPago (checkout de tienda + suscripciones)
-      { source: "/(precios|tienda/.*)", headers: paymentHeaders },
+      // Páginas donde carga el SDK de MercadoPago (checkout de tienda + suscripciones + dashboard)
+      { source: "/(precios|tienda/.*|dashboard.*)", headers: paymentHeaders },
       // Preview de templates — permite iframe same-origin para el editor de diseño
       { source: "/preview/(.*)", headers: previewHeaders },
     ];
