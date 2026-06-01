@@ -741,9 +741,23 @@ function ImageFieldEditor({
             </span>
           </>
         )}
+        {field.startsWith("heroBanner") && (
+          <>
+            <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.1)" }} />
+            <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", userSelect: "none" }}>
+              <input
+                type="checkbox"
+                checked={!!ov.hideContent}
+                onChange={e => setImageOverride(field, { hideContent: e.target.checked ? true : undefined })}
+                style={{ width: 14, height: 14, cursor: "pointer", accentColor: "#6366f1", flexShrink: 0 }}
+              />
+              <span style={{ fontSize: 11, fontWeight: 600, ...dkMuted, whiteSpace: "nowrap" }}>Ocultar texto del slide</span>
+            </label>
+          </>
+        )}
         <div style={{ flex: 1 }} />
         {hasChanges && (
-          <button onClick={() => setImageOverride(field, { url: undefined, overlayType: undefined, overlayOpacity: undefined })}
+          <button onClick={() => setImageOverride(field, { url: undefined, overlayType: undefined, overlayOpacity: undefined, hideContent: undefined })}
             style={{ ...dkBtn, padding: "5px 12px" }} title="Restablecer">↺ Restablecer</button>
         )}
       </div>
@@ -907,7 +921,7 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
     const ov = imageOverrides[field] ?? {};
     const info = IMAGE_FIELD_INFO[field];
     const currentOverlay = ov.overlayType ?? "dark";
-    const hasChanges = ov.url !== undefined || ov.overlayType !== undefined || ov.overlayOpacity !== undefined;
+    const hasChanges = ov.url !== undefined || ov.overlayType !== undefined || ov.overlayOpacity !== undefined || ov.hideContent !== undefined;
 
     return <ImageFieldEditor
       field={field}

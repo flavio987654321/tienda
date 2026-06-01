@@ -443,6 +443,14 @@ export default function ChicParis() {
         {Array.from({ length: BANNER_COUNT }, (_, i) => {
           const ov = bannerImgs[i];
           const isActive = heroSlide === i;
+          const overlayType = ov?.overlayType ?? "dark";
+          const overlayOpacity = ov?.overlayOpacity ?? 0.65;
+          const overlayGradient = overlayType === "none"
+            ? null
+            : overlayType === "light"
+              ? `linear-gradient(to right, rgba(255,255,255,${overlayOpacity}) 40%, rgba(255,255,255,${+(overlayOpacity * 0.15).toFixed(2)}))`
+              : `linear-gradient(to right, rgba(0,0,0,${overlayOpacity}) 40%, rgba(0,0,0,${+(overlayOpacity * 0.15).toFixed(2)}))`;
+          const hideContent = ov?.hideContent ?? false;
           return (
             <div key={i} style={{
               position: "absolute", inset: 0,
@@ -454,33 +462,34 @@ export default function ChicParis() {
               {ov?.url && (
                 <img src={ov.url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` }} />
               )}
-              {/* overlay */}
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(0,0,0,0.65) 40%, rgba(0,0,0,0.1))" }} />
-              {/* text */}
-              <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: isMobile ? "0 20px" : "0 80px", maxWidth: 640 }}>
-                <span style={{ color: ACC, fontSize: 11, letterSpacing: 5, fontWeight: 700, textTransform: "uppercase", marginBottom: 16 }}>
-                  <EditableZone field={`slide${i + 1}Kicker`} label={`Slide ${i + 1} — Kicker`}>Nueva Colección</EditableZone>
-                </span>
-                <h1 style={{ color: "#fff", fontSize: "clamp(36px,5.5vw,72px)", fontWeight: 900, lineHeight: 1.05, margin: "0 0 20px", textTransform: "uppercase", letterSpacing: "-1px" }}>
-                  <EditableZone field={`slide${i + 1}Heading`} label={`Slide ${i + 1} — Título`}>
-                    {["Diseño que habla por vos.", "Elegancia sin esfuerzo.", "Tu próximo favorito."][i]}
-                  </EditableZone>
-                </h1>
-                <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 16, lineHeight: 1.7, margin: "0 0 32px" }}>
-                  <EditableZone field={`slide${i + 1}Sub`} label={`Slide ${i + 1} — Subtítulo`}>
-                    {["Piezas únicas para cada momento de tu día.", "Colección cuidada para quienes eligen con intención.", "Tendencias de temporada, calidad que dura."][i]}
-                  </EditableZone>
-                </p>
-                <div style={{ display: "flex", gap: 12 }}>
-                  <button onClick={() => scrollTo("productos")} style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "14px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
-                    <EditableZone field={`slide${i + 1}Cta`} label={`Slide ${i + 1} — Botón`}>Ver Colección</EditableZone>
-                  </button>
-                  <button onClick={() => scrollTo("nosotros")} style={{ background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,0.5)", padding: "14px 32px", fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
-                    <EditableZone field={`slide${i + 1}CtaSecondary`} label={`Slide ${i + 1} — Botón secundario`}>Nuestra Historia</EditableZone>
-                  </button>
+              {overlayGradient && (
+                <div style={{ position: "absolute", inset: 0, background: overlayGradient }} />
+              )}
+              {!hideContent && (
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: isMobile ? "0 20px" : "0 80px", maxWidth: 640 }}>
+                  <span style={{ color: ACC, fontSize: 11, letterSpacing: 5, fontWeight: 700, textTransform: "uppercase", marginBottom: 16 }}>
+                    <EditableZone field={`slide${i + 1}Kicker`} label={`Slide ${i + 1} — Kicker`}>Nueva Colección</EditableZone>
+                  </span>
+                  <h1 style={{ color: "#fff", fontSize: "clamp(36px,5.5vw,72px)", fontWeight: 900, lineHeight: 1.05, margin: "0 0 20px", textTransform: "uppercase", letterSpacing: "-1px" }}>
+                    <EditableZone field={`slide${i + 1}Heading`} label={`Slide ${i + 1} — Título`}>
+                      {["Diseño que habla por vos.", "Elegancia sin esfuerzo.", "Tu próximo favorito."][i]}
+                    </EditableZone>
+                  </h1>
+                  <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 16, lineHeight: 1.7, margin: "0 0 32px" }}>
+                    <EditableZone field={`slide${i + 1}Sub`} label={`Slide ${i + 1} — Subtítulo`}>
+                      {["Piezas únicas para cada momento de tu día.", "Colección cuidada para quienes eligen con intención.", "Tendencias de temporada, calidad que dura."][i]}
+                    </EditableZone>
+                  </p>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <button onClick={() => scrollTo("productos")} style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "14px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
+                      <EditableZone field={`slide${i + 1}Cta`} label={`Slide ${i + 1} — Botón`}>Ver Colección</EditableZone>
+                    </button>
+                    <button onClick={() => scrollTo("nosotros")} style={{ background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,0.5)", padding: "14px 32px", fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
+                      <EditableZone field={`slide${i + 1}CtaSecondary`} label={`Slide ${i + 1} — Botón secundario`}>Nuestra Historia</EditableZone>
+                    </button>
+                  </div>
                 </div>
-              </div>
-              {/* image edit button */}
+              )}
               {isActive && <EditableImageButton field={`heroBanner${i + 1}`} label={`Imagen banner ${i + 1}`} />}
             </div>
           );

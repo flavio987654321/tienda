@@ -19,6 +19,7 @@ export type ImageOverride = {
   overlayOpacity?: number;
   posX?: number; // focal point X, 0-100, default 50
   posY?: number; // focal point Y, 0-100, default 50
+  hideContent?: boolean; // hide template text + buttons (for images with embedded text)
 };
 
 export type StoreConfig = {
