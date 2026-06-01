@@ -90,30 +90,29 @@ export default function SubscriptionGate({ status, daysLeft, role, tier, plan }:
     );
   }
 
-  // Expirada — bloquear con modal (como ChatGPT)
+  // Expirada — bloquear con modal
   if (status === "EXPIRED" || status === "CANCELLED") {
     return (
       <>
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/95 backdrop-blur-sm p-4">
-          <div className="bg-gray-900 rounded-3xl border border-white/10 p-8 max-w-md w-full text-center shadow-2xl">
-            <div className="w-16 h-16 bg-red-500/15 rounded-full flex items-center justify-center mx-auto mb-5">
-              <AlertTriangle className="h-8 w-8 text-red-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-100/90 backdrop-blur-md p-4">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 max-w-sm w-full text-center">
+            <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
             </div>
-            <h2 className="text-2xl font-black text-white mb-2">Tu suscripción venció</h2>
-            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-              Para seguir usando la plataforma necesitás renovar tu suscripción.
-              Tus datos y configuración están guardados.
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Tu suscripción venció</h2>
+            <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+              Renová para seguir usando la plataforma. Tus datos y configuración están guardados.
             </p>
 
             <button
               onClick={() => setPayModal(true)}
-              className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center justify-center gap-2 transition-all mb-3"
+              className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors mb-3"
             >
               <CreditCard className="h-4 w-4" />
               Renovar suscripción
             </button>
 
-            <Link href="/" className="block text-sm text-gray-600 hover:text-gray-400 transition-colors">
+            <Link href="/" className="block text-sm text-gray-400 hover:text-gray-600 transition-colors">
               Volver al inicio
             </Link>
           </div>
