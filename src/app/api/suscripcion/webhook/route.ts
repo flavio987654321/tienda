@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { sendSubscriptionConfirmationEmail } from "@/lib/resend";
 
 function verifyMPSignature(req: NextRequest, dataId: string): boolean {
   const secret = process.env.MP_WEBHOOK_SECRET;
@@ -103,6 +104,25 @@ export async function POST(req: NextRequest) {
         await prisma.affiliateRewardCoupon.update({
           where: { id: couponId },
           data: { status: "USED", usedAt: now },
+        }).catch(() => {});
+      }
+
+      // Email de confirmación al usuario
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
+      }).catch(() => null);
+
+      if (user?.email) {
+        const planLabel = plan === "OWNER_PREMIUM" ? "Dueño Premium" : plan === "OWNER_BASIC" ? "Dueño Básico" : "Afiliado";
+        const billingLabel = billing === "MONTHLY" ? "Mensual" : "Anual";
+        sendSubscriptionConfirmationEmail({
+          to: user.email,
+          userName: user.name ?? "",
+          planLabel,
+          billingLabel,
+          amount: payment.transaction_amount ?? 0,
+          periodEnd,
         }).catch(() => {});
       }
     }
