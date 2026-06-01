@@ -39,6 +39,7 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
   const [appliedCoupon, setAppliedCoupon] = useState<SubscriptionCoupon | null>(null);
   const mpRef = useRef<any>(null);
   const cardFormRef = useRef<any>(null);
+  const mpInitializedRef = useRef(false);
 
   const discount = appliedCoupon ? Math.round(amount * appliedCoupon.discountValue / 100) : 0;
   const finalAmount = amount - discount;
@@ -63,7 +64,8 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
 
     // Cargar SDK de MP
     if (document.getElementById("mp-sdk")) {
-      initMP();
+      // Script ya existe: solo inicializar si SDK cargó y no está ya inicializado
+      if (window.MercadoPago && !mpInitializedRef.current) initMP();
       return;
     }
     const script = document.createElement("script");
@@ -74,10 +76,15 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
   }, [isFreeMonth]);
 
   function initMP() {
+    if (mpInitializedRef.current) return;
+    if (!window.MercadoPago) return;
+
     try {
+      mpInitializedRef.current = true;
       const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
       if (!publicKey) {
         setError("Error de configuración: clave de pago no disponible. Contactá al soporte.");
+        mpInitializedRef.current = false;
         return;
       }
       mpRef.current = new window.MercadoPago(publicKey, { locale: "es-AR" });
@@ -154,6 +161,7 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
       },
     });
     } catch (e: any) {
+      mpInitializedRef.current = false;
       setError("No se pudo inicializar el formulario de pago. Recargá la página e intentá de nuevo.");
     }
   }
