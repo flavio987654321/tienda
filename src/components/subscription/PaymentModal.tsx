@@ -99,7 +99,7 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
           cardExpirationMonth: { id: "mp-card-exp-month", placeholder: "MM" },
           cardExpirationYear: { id: "mp-card-exp-year", placeholder: "AA" },
           securityCode: { id: "mp-security-code", placeholder: "CVV" },
-          installments: { id: "mp-installments" },
+
         },
         callbacks: {
           onFormMounted: (err: any) => {
@@ -162,7 +162,9 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
     });
     } catch (e: any) {
       mpInitializedRef.current = false;
-      const msg = e?.message || String(e) || "Error desconocido";
+      const msg = Array.isArray(e)
+        ? JSON.stringify(e)
+        : e?.message || String(e) || "Error desconocido";
       console.error("[MP Init Error]:", msg, e);
       setError(`Error MP: ${msg}`);
     }
@@ -323,7 +325,6 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
               </div>
             </div>
 
-            <select id="mp-installments" className="hidden" />
 
             <button
               type="submit"
