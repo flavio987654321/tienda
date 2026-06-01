@@ -162,9 +162,9 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
     });
     } catch (e: any) {
       mpInitializedRef.current = false;
-      let msg: string;
-      try { msg = JSON.stringify(e, null, 2); } catch { msg = String(e); }
-      console.error("[MP Init Error]:", msg, e);
+      const e0 = e?.[0];
+      console.error("[MP e0]:", e0, "msg:", e0?.message, "cause:", e0?.cause, "keys:", Object.keys(e || {}));
+      const msg = e0?.message || e0?.cause || JSON.stringify(e0) || String(e);
       setError(`Error MP: ${msg}`);
     }
   }
