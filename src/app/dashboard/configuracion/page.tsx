@@ -696,84 +696,57 @@ function ImageFieldEditor({
     }
   }, [field, setImageOverride]);
 
+  const dk = { color: "#f1f5f9" };
+  const dkMuted = { color: "#94a3b8" };
+  const dkBtn: React.CSSProperties = { padding: "5px 11px", borderRadius: 6, border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.07)", color: "#f1f5f9", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" as const };
+  const dkBtnActive: React.CSSProperties = { ...dkBtn, borderColor: "#6366f1", background: "#6366f1", color: "white" };
+
   return (
-    <div style={{ ...base, padding: "10px 16px 12px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        {/* Label */}
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", whiteSpace: "nowrap" }}>
+    <div style={{ ...base, display: "flex", flexDirection: "column" }}>
+      {/* Fila 1: label + upload + preview */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 20px 9px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#818cf8", background: "rgba(99,102,241,0.2)", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>
           📷 {info?.label ?? field}
         </span>
-
-        {/* Preview de imagen actual */}
-        {ov.url && (
-          <img src={ov.url} alt="" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6, border: "1px solid #e2e8f0", flexShrink: 0 }} />
-        )}
-
-        {/* Selector de archivo */}
         <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-          style={{
-            display: "flex", alignItems: "center", gap: 6,
-            padding: "6px 14px", borderRadius: 7, border: "1.5px solid #6366f1",
-            background: uploading ? "#e0e7ff" : "#6366f1", color: "white",
-            fontSize: 12, fontWeight: 700, cursor: uploading ? "default" : "pointer",
-            whiteSpace: "nowrap", opacity: uploading ? 0.7 : 1,
-          }}>
+        <button onClick={() => fileRef.current?.click()} disabled={uploading}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 16px", borderRadius: 7, border: "none", background: uploading ? "#4338ca" : "#6366f1", color: "white", fontSize: 12, fontWeight: 700, cursor: uploading ? "default" : "pointer", whiteSpace: "nowrap", opacity: uploading ? 0.7 : 1 }}>
           {uploading ? "Subiendo..." : ov.url ? "Cambiar imagen" : "Elegir imagen"}
         </button>
+        {ov.url && <img src={ov.url} alt="" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6, border: "1px solid rgba(255,255,255,0.15)", flexShrink: 0 }} />}
+        {uploadError && <span style={{ fontSize: 11, color: "#f87171", whiteSpace: "nowrap" }}>⚠ {uploadError}</span>}
+        {info?.tip && <span style={{ fontSize: 10, ...dkMuted, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>💡 {info.tip}</span>}
+        <button onClick={() => setActiveField(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, ...dkMuted, flexShrink: 0, lineHeight: 1, padding: 0 }}>×</button>
+      </div>
 
-        {uploadError && (
-          <span style={{ fontSize: 11, color: "#ef4444", whiteSpace: "nowrap" }}>⚠ {uploadError}</span>
-        )}
-
-        {/* Capa / overlay */}
-        <span style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap" }}>Capa:</span>
+      {/* Fila 2: capa + opacidad + reset */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 20px", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 11, fontWeight: 600, ...dkMuted, whiteSpace: "nowrap" }}>Capa:</span>
         {(["none", "dark", "light"] as const).map(t => (
           <button key={t} onClick={() => setImageOverride(field, { overlayType: t })}
-            style={{
-              padding: "5px 10px", borderRadius: 6, border: "1.5px solid",
-              borderColor: currentOverlay === t ? "#6366f1" : "#e2e8f0",
-              background: currentOverlay === t ? "#e0e7ff" : "white",
-              color: currentOverlay === t ? "#6366f1" : "#374151",
-              cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
-            }}>
+            style={currentOverlay === t ? dkBtnActive : dkBtn}>
             {t === "none" ? "Sin capa" : t === "dark" ? "🌑 Oscura" : "☀️ Clara"}
           </button>
         ))}
-
-        {/* Opacity slider */}
         {currentOverlay !== "none" && (
           <>
+            <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.1)" }} />
+            <span style={{ fontSize: 11, ...dkMuted }}>Opacidad</span>
             <input type="range" min={10} max={90} step={5}
               value={Math.round((ov.overlayOpacity ?? 0.6) * 100)}
               onChange={e => setImageOverride(field, { overlayOpacity: Number(e.target.value) / 100 })}
-              style={{ width: 70, accentColor: "#6366f1" }} />
-            <span style={{ fontSize: 11, color: "#374151", minWidth: 28 }}>
+              style={{ width: 90, accentColor: "#6366f1" }} />
+            <span style={{ fontSize: 12, fontWeight: 700, ...dk, minWidth: 32 }}>
               {Math.round((ov.overlayOpacity ?? 0.6) * 100)}%
             </span>
           </>
         )}
-
-        {/* Reset */}
+        <div style={{ flex: 1 }} />
         {hasChanges && (
           <button onClick={() => setImageOverride(field, { url: undefined, overlayType: undefined, overlayOpacity: undefined })}
-            style={{ width: 30, height: 30, border: "1px solid #e2e8f0", borderRadius: 7, background: "white", cursor: "pointer", fontSize: 14, color: "#94a3b8" }}
-            title="Restablecer">↺</button>
+            style={{ ...dkBtn, padding: "5px 12px" }} title="Restablecer">↺ Restablecer</button>
         )}
-
-        {/* Close */}
-        <button onClick={() => setActiveField(null)}
-          style={{ width: 30, height: 30, border: "none", background: "white", cursor: "pointer", fontSize: 18, color: "#94a3b8" }}>×</button>
       </div>
-
-      {/* Tip */}
-      {info?.tip && (
-        <p style={{ margin: "6px 0 0", fontSize: 10, color: "#94a3b8" }}>
-          💡 {info.tip}
-        </p>
-      )}
     </div>
   );
 }
@@ -820,47 +793,54 @@ function BgFieldEditor({ field, base, setActiveField }: {
     }
   }, [imgKey, setImageOverride]);
 
+  const dkBtn: React.CSSProperties = { padding: "5px 11px", borderRadius: 6, border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.07)", color: "#f1f5f9", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" as const };
+  const dkBtnActive: React.CSSProperties = { ...dkBtn, borderColor: "#6366f1", background: "#6366f1", color: "white" };
+
   return (
-    <div style={{ ...base, padding: "10px 16px 12px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", whiteSpace: "nowrap" }}>🎨 Fondo de sección</span>
+    <div style={{ ...base, display: "flex", flexDirection: "column" }}>
+      {/* Fila 1: label + color + foto de fondo + cerrar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 20px 9px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#818cf8", background: "rgba(99,102,241,0.2)", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>
+          🎨 Fondo
+        </span>
 
-        {/* Color */}
-        <input type="color" value={currentColor}
-          onChange={e => setSectionColor(field, e.target.value)}
-          style={{ width: 34, height: 28, padding: 2, border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
-        <input value={currentColor}
-          onChange={e => setSectionColor(field, e.target.value)}
-          placeholder="#ffffff"
-          style={{ width: 88, border: "1px solid #d1d5db", borderRadius: 7, padding: "5px 10px", fontSize: 12, outline: "none", fontFamily: "monospace" }}
+        {/* Color picker + hex */}
+        <input type="color" value={currentColor} onChange={e => setSectionColor(field, e.target.value)}
+          style={{ width: 32, height: 32, padding: 2, border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
+        <input value={currentColor} onChange={e => setSectionColor(field, e.target.value)} placeholder="#ffffff"
+          style={{ width: 84, border: "1px solid rgba(255,255,255,0.15)", borderRadius: 7, padding: "5px 9px", fontSize: 12, outline: "none", fontFamily: "monospace", background: "rgba(255,255,255,0.07)", color: "#f1f5f9" }}
           onFocus={e => (e.target.style.borderColor = "#6366f1")}
-          onBlur={e => (e.target.style.borderColor = "#d1d5db")} />
+          onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.15)")} />
 
-        <span style={{ color: "#e2e8f0", fontSize: 18, lineHeight: 1 }}>|</span>
+        <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
 
-        {/* Image upload */}
+        {/* Foto de fondo */}
         <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
-        {ov.url && (
-          <img src={ov.url} alt="" style={{ width: 36, height: 28, objectFit: "cover", borderRadius: 6, border: "1px solid #e2e8f0", flexShrink: 0 }} />
-        )}
+        {ov.url && <img src={ov.url} alt="" style={{ width: 34, height: 30, objectFit: "cover", borderRadius: 5, border: "1px solid rgba(255,255,255,0.15)", flexShrink: 0 }} />}
         <button onClick={() => fileRef.current?.click()} disabled={uploading}
-          style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 7,
-            border: `1.5px solid ${ov.url ? "#6366f1" : "#d1d5db"}`,
-            background: ov.url ? "#e0e7ff" : "white", color: ov.url ? "#6366f1" : "#374151",
-            fontSize: 11, fontWeight: 700, cursor: uploading ? "default" : "pointer", whiteSpace: "nowrap" }}>
+          style={{ ...dkBtn, ...(ov.url ? dkBtnActive : {}), display: "flex", alignItems: "center", gap: 5 }}>
           📷 {uploading ? "Subiendo..." : ov.url ? "Cambiar foto" : "Foto de fondo"}
         </button>
 
-        {/* Overlay controls (only when image set) */}
+        {/* Contraste */}
+        <span style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap" }}>
+          Texto: <strong style={{ color: contrast === "light" ? "#a5b4fc" : "#f1f5f9" }}>
+            {contrast === "light" ? "☀ claro" : "🌑 oscuro"}
+          </strong>
+        </span>
+
+        <div style={{ flex: 1 }} />
+        {uploadError && <span style={{ fontSize: 11, color: "#f87171" }}>⚠ {uploadError}</span>}
+        <button onClick={() => setActiveField(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#94a3b8", lineHeight: 1, padding: 0 }}>×</button>
+      </div>
+
+      {/* Fila 2: capa (solo si hay imagen) + reset color */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 20px", flexWrap: "wrap" }}>
         {hasImage && (<>
-          <span style={{ fontSize: 11, color: "#64748b" }}>Capa:</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", whiteSpace: "nowrap" }}>Capa:</span>
           {(["dark", "light", "none"] as const).map(t => (
             <button key={t} onClick={() => setImageOverride(imgKey, { overlayType: t })}
-              style={{ padding: "4px 8px", borderRadius: 6, border: "1.5px solid",
-                borderColor: currentOverlay === t ? "#6366f1" : "#e2e8f0",
-                background: currentOverlay === t ? "#e0e7ff" : "white",
-                color: currentOverlay === t ? "#6366f1" : "#374151",
-                cursor: "pointer", fontSize: 10, fontWeight: 600 }}>
+              style={currentOverlay === t ? dkBtnActive : dkBtn}>
               {t === "none" ? "Sin capa" : t === "dark" ? "🌑 Oscura" : "☀️ Clara"}
             </button>
           ))}
@@ -868,38 +848,25 @@ function BgFieldEditor({ field, base, setActiveField }: {
             <input type="range" min={10} max={80} step={5}
               value={Math.round((ov.overlayOpacity ?? 0.45) * 100)}
               onChange={e => setImageOverride(imgKey, { overlayOpacity: Number(e.target.value) / 100 })}
-              style={{ width: 60, accentColor: "#6366f1" }} />
-            <span style={{ fontSize: 10, color: "#374151", minWidth: 28 }}>
+              style={{ width: 80, accentColor: "#6366f1" }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#f1f5f9", minWidth: 32 }}>
               {Math.round((ov.overlayOpacity ?? 0.45) * 100)}%
             </span>
           </>)}
           <button onClick={() => setImageOverride(imgKey, { url: undefined, overlayType: undefined, overlayOpacity: undefined })}
-            style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #fee2e2", background: "#fff7f7", color: "#ef4444", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+            style={{ ...dkBtn, borderColor: "rgba(239,68,68,0.4)", color: "#f87171" }}>
             ✕ Quitar foto
           </button>
         </>)}
-
-        {/* Contrast indicator */}
-        <span style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap" }}>
-          Texto: <strong style={{ color: contrast === "light" ? "#6366f1" : "#374151" }}>
-            {contrast === "light" ? "☀ claro" : "🌑 oscuro"}
-          </strong>
-        </span>
-
         {sectionColors[field] && !hasImage && (
-          <button onClick={() => setSectionColor(field, "")}
-            style={{ width: 28, height: 28, border: "1px solid #e2e8f0", borderRadius: 7, background: "white", cursor: "pointer", fontSize: 13, color: "#94a3b8" }}
-            title="Restablecer color">↺</button>
+          <button onClick={() => setSectionColor(field, "")} style={dkBtn} title="Restablecer color">
+            ↺ Restablecer color
+          </button>
         )}
-
-        <button onClick={() => setActiveField(null)}
-          style={{ width: 28, height: 28, border: "none", background: "white", cursor: "pointer", fontSize: 18, color: "#94a3b8" }}>×</button>
-
-        {uploadError && <span style={{ fontSize: 11, color: "#ef4444" }}>⚠ {uploadError}</span>}
+        {!hasImage && !sectionColors[field] && (
+          <span style={{ fontSize: 11, color: "#64748b" }}>💡 El contraste del texto se ajusta automáticamente al color elegido.</span>
+        )}
       </div>
-      <p style={{ margin: "6px 0 0", fontSize: 10, color: "#94a3b8" }}>
-        💡 El contraste de texto se ajusta automáticamente.{hasImage && " La capa oscura/clara garantiza que el texto sea siempre legible."}
-      </p>
     </div>
   );
 }
@@ -921,10 +888,10 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
   const FONT_SIZES = [10, 12, 13, 14, 15, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64];
 
   const base: React.CSSProperties = {
-    position: "fixed", bottom: 0, left: 72, right: 16, zIndex: 99999,
-    background: "white", borderTop: "2px solid #6366f1",
+    position: "fixed", bottom: 0, left: 72, right: 0, zIndex: 99999,
+    background: "#1e293b", borderTop: "2px solid #6366f1",
     borderRadius: "12px 12px 0 0",
-    boxShadow: "0 -4px 24px rgba(99,102,241,0.18)",
+    boxShadow: "0 -6px 32px rgba(0,0,0,0.45)",
     fontFamily: "system-ui, -apple-system, sans-serif",
   };
 
@@ -961,22 +928,23 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
   const isHidden = !!ov.hidden;
 
   const fmtBtn = (active: boolean): React.CSSProperties => ({
-    width: 28, height: 28, border: `1.5px solid ${active ? "#6366f1" : "#e2e8f0"}`,
-    borderRadius: 6, background: active ? "#e0e7ff" : "white",
-    cursor: "pointer", color: active ? "#6366f1" : "#374151",
+    width: 28, height: 28,
+    border: `1.5px solid ${active ? "#6366f1" : "rgba(255,255,255,0.15)"}`,
+    borderRadius: 6, background: active ? "#6366f1" : "rgba(255,255,255,0.07)",
+    cursor: "pointer", color: active ? "white" : "#f1f5f9",
     flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
     fontSize: 12,
   });
-  const divider = <div style={{ width: 1, height: 20, background: "#e2e8f0", flexShrink: 0 }} />;
+  const divider = <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />;
 
   return (
     <div style={{ ...base, display: "flex", flexDirection: "column" }}>
 
       {/* ── Fila 1: label + campo de texto + cerrar ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px 9px", borderBottom: "1px solid #f1f5f9" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 20px 9px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <span style={{
-          fontSize: 11, fontWeight: 700, color: "#6366f1",
-          background: "#f0f0ff", borderRadius: 20, padding: "3px 10px",
+          fontSize: 11, fontWeight: 700, color: "#818cf8",
+          background: "rgba(99,102,241,0.2)", borderRadius: 20, padding: "3px 10px",
           whiteSpace: "nowrap", flexShrink: 0,
         }}>
           ✏ {label}
@@ -986,29 +954,29 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
           placeholder="Texto personalizado (vacío = usa el original del template)"
           onChange={e => setOverride(activeField, { text: e.target.value || undefined })}
           style={{
-            flex: 1, border: "1px solid #e2e8f0", borderRadius: 8,
+            flex: 1, border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8,
             padding: "6px 12px", fontSize: 13, outline: "none",
-            fontFamily: "inherit", color: "#111", background: "white",
+            fontFamily: "inherit", color: "#f1f5f9", background: "rgba(255,255,255,0.07)",
           }}
           onFocus={e => (e.target.style.borderColor = "#6366f1")}
-          onBlur={e => (e.target.style.borderColor = "#e2e8f0")}
+          onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.15)")}
         />
         <button type="button" onClick={() => setActiveField(null)}
-          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#94a3b8", flexShrink: 0, lineHeight: 1, padding: 0 }}>
+          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#64748b", flexShrink: 0, lineHeight: 1, padding: 0 }}>
           ×
         </button>
       </div>
 
       {/* ── Fila 2: formato ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 16px", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 20px", flexWrap: "wrap" }}>
 
         {/* Color */}
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <input type="color" value={ov.color ?? "#000000"}
             onChange={e => setOverride(activeField, { color: e.target.value })}
             title="Color del texto"
-            style={{ width: 28, height: 28, padding: 2, border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
-          <span style={{ fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap" }}>Color</span>
+            style={{ width: 28, height: 28, padding: 2, border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
+          <span style={{ fontSize: 10, color: "#64748b", whiteSpace: "nowrap" }}>Color</span>
         </div>
 
         {divider}
@@ -1016,14 +984,14 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
         {/* Fuente */}
         <select value={ov.fontFamily ?? ""}
           onChange={e => setOverride(activeField, { fontFamily: e.target.value || undefined })}
-          style={{ fontSize: 11, padding: "4px 6px", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: "#374151", height: 28 }}>
+          style={{ fontSize: 11, padding: "4px 6px", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, cursor: "pointer", color: "#f1f5f9", background: "rgba(255,255,255,0.07)", height: 28 }}>
           {FONT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
 
         {/* Tamaño */}
         <select value={ov.fontSize ?? ""}
           onChange={e => setOverride(activeField, { fontSize: e.target.value ? Number(e.target.value) : undefined })}
-          style={{ fontSize: 11, padding: "4px 6px", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: "#374151", width: 72, height: 28 }}>
+          style={{ fontSize: 11, padding: "4px 6px", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, cursor: "pointer", color: "#f1f5f9", background: "rgba(255,255,255,0.07)", width: 80, height: 28 }}>
           <option value="">Tamaño</option>
           {FONT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
         </select>
@@ -1052,9 +1020,9 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
           style={{
             display: "flex", alignItems: "center", gap: 5,
             padding: "4px 11px", height: 28, borderRadius: 6,
-            border: `1.5px solid ${isHidden ? "#ef4444" : "#e2e8f0"}`,
-            background: isHidden ? "#fef2f2" : "white",
-            color: isHidden ? "#ef4444" : "#64748b",
+            border: `1.5px solid ${isHidden ? "#f87171" : "rgba(255,255,255,0.15)"}`,
+            background: isHidden ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.07)",
+            color: isHidden ? "#f87171" : "#94a3b8",
             cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
           }}>
           {isHidden ? "👁 Oculto" : "👁 Visible"}
