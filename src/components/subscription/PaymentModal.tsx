@@ -162,9 +162,8 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
     });
     } catch (e: any) {
       mpInitializedRef.current = false;
-      const msg = Array.isArray(e)
-        ? JSON.stringify(e)
-        : e?.message || String(e) || "Error desconocido";
+      let msg: string;
+      try { msg = JSON.stringify(e, null, 2); } catch { msg = String(e); }
       console.error("[MP Init Error]:", msg, e);
       setError(`Error MP: ${msg}`);
     }
