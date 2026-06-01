@@ -162,7 +162,9 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
     });
     } catch (e: any) {
       mpInitializedRef.current = false;
-      setError("No se pudo inicializar el formulario de pago. Recargá la página e intentá de nuevo.");
+      const msg = e?.message || String(e) || "Error desconocido";
+      console.error("[MP Init Error]:", msg, e);
+      setError(`Error MP: ${msg}`);
     }
   }
 
