@@ -105,8 +105,12 @@ export function EditableZone({
             : hovered ? "2px dashed rgba(239,68,68,0.6)"
             : "2px dashed rgba(239,68,68,0.35)",
           outlineOffset: 4,
+          boxShadow: isActive
+            ? "0 0 0 7px rgba(255,255,255,0.9)"
+            : hovered ? "0 0 0 7px rgba(255,255,255,0.6)"
+            : "0 0 0 7px rgba(255,255,255,0.25)",
           borderRadius: 3,
-          transition: "outline-color 0.15s",
+          transition: "outline-color 0.15s, box-shadow 0.15s",
           overflowWrap: "break-word",
           wordBreak: "break-word",
           maxWidth: "100%",
@@ -147,8 +151,12 @@ export function EditableZone({
           : hovered ? "2px dashed rgba(99,102,241,0.75)"
           : "2px dashed transparent",
         outlineOffset: 4,
+        boxShadow: isActive
+          ? "0 0 0 7px rgba(255,255,255,0.9)"
+          : hovered ? "0 0 0 7px rgba(255,255,255,0.6)"
+          : "none",
         borderRadius: 3,
-        transition: "outline-color 0.15s",
+        transition: "outline-color 0.15s, box-shadow 0.15s",
         overflowWrap: "break-word",
         wordBreak: "break-word",
         maxWidth: "100%",
@@ -324,7 +332,11 @@ export function EditableFixed({
               : hovered ? "3px dashed rgba(99,102,241,0.8)"
               : "3px dashed transparent",
             outlineOffset: 3,
-            transition: "outline-color 0.15s",
+            boxShadow: isActive
+              ? "0 0 0 7px rgba(255,255,255,0.9)"
+              : hovered ? "0 0 0 7px rgba(255,255,255,0.6)"
+              : "none",
+            transition: "outline-color 0.15s, box-shadow 0.15s",
           }}
         >
           {(hovered || isActive) && (
