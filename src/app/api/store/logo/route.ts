@@ -92,6 +92,10 @@ async function extractLogoColor(logoUrl: string): Promise<string | null> {
     const avgG = Math.round(opaquePixels.reduce((s, p) => s + p.g, 0) / opaquePixels.length);
     const avgB = Math.round(opaquePixels.reduce((s, p) => s + p.b, 0) / opaquePixels.length);
 
+    // Si el color detectado es muy oscuro (luminancia < 40) → fondo transparente o negro → usar color primario
+    const luminance = (avgR * 299 + avgG * 587 + avgB * 114) / 1000;
+    if (luminance < 40) return null;
+
     return `#${avgR.toString(16).padStart(2, "0")}${avgG.toString(16).padStart(2, "0")}${avgB.toString(16).padStart(2, "0")}`;
   } catch {
     return null;
