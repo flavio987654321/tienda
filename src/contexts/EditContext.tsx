@@ -13,6 +13,7 @@ type EditContextType = {
   setImageOverride: (field: string, partial: Partial<ImageOverride>) => void;
   sectionColors: Record<string, string>;
   setSectionColor: (field: string, color: string) => void;
+  imageLoading: Record<string, boolean>;
 };
 
 export const EditContext = createContext<EditContextType>({
@@ -26,6 +27,7 @@ export const EditContext = createContext<EditContextType>({
   setImageOverride: () => {},
   sectionColors: {},
   setSectionColor: () => {},
+  imageLoading: {},
 });
 
 export function getContrastColor(hex: string): "light" | "dark" {
@@ -186,36 +188,64 @@ export function EditableImageButton({
   field: string;
   label: string;
 }) {
-  const { editMode, activeField, setActiveField } = useEditContext();
+  const { editMode, activeField, setActiveField, imageLoading } = useEditContext();
   const [hovered, setHovered] = useState(false);
   const imageKey = `img:${field}`;
   const isActive = activeField === imageKey;
+  const isLoading = !!imageLoading[field];
 
   if (!editMode) return null;
 
   return (
-    <button
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={(e) => { e.stopPropagation(); setActiveField(isActive ? null : imageKey); }}
-      style={{
-        position: "absolute", top: 16, right: 16, zIndex: 9998,
-        display: "flex", alignItems: "center", gap: 6,
-        padding: "7px 14px", borderRadius: 9, cursor: "pointer",
-        fontSize: 12, fontWeight: 700,
-        background: isActive ? "#6366f1" : hovered ? "rgba(20,20,20,0.9)" : "rgba(20,20,20,0.65)",
-        color: "white",
-        border: isActive ? "2px solid #6366f1" : "1.5px solid rgba(255,255,255,0.25)",
-        backdropFilter: "blur(6px)",
-        transition: "all 0.15s",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-      }}
-    >
-      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
-      </svg>
-      {label}
-    </button>
+    <>
+      {isLoading && (
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 9997,
+          background: "rgba(15,23,42,0.55)",
+          backdropFilter: "blur(3px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 9,
+            background: "rgba(30,41,59,0.95)", color: "#e2e8f0",
+            fontSize: 12, fontWeight: 700, padding: "10px 18px", borderRadius: 10,
+            border: "1px solid rgba(99,102,241,0.5)",
+            fontFamily: "system-ui, -apple-system, sans-serif",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+          }}>
+            <span style={{
+              display: "inline-block", width: 14, height: 14, borderRadius: "50%",
+              border: "2.5px solid rgba(129,140,248,0.3)", borderTopColor: "#818cf8",
+              animation: "imgSpin 0.75s linear infinite", flexShrink: 0,
+            }} />
+            Cargando imagen...
+          </div>
+          <style>{`@keyframes imgSpin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
+      <button
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={(e) => { e.stopPropagation(); setActiveField(isActive ? null : imageKey); }}
+        style={{
+          position: "absolute", top: 16, right: 16, zIndex: 9998,
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "7px 14px", borderRadius: 9, cursor: "pointer",
+          fontSize: 12, fontWeight: 700,
+          background: isActive ? "#6366f1" : hovered ? "rgba(20,20,20,0.9)" : "rgba(20,20,20,0.65)",
+          color: "white",
+          border: isActive ? "2px solid #6366f1" : "1.5px solid rgba(255,255,255,0.25)",
+          backdropFilter: "blur(6px)",
+          transition: "all 0.15s",
+          fontFamily: "system-ui, -apple-system, sans-serif",
+        }}
+      >
+        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+        </svg>
+        {label}
+      </button>
+    </>
   );
 }
 
@@ -333,13 +363,14 @@ export function DraggableImage({
   style?: React.CSSProperties;
   className?: string;
 }) {
-  const { editMode, activeField, imageOverrides, setImageOverride } = useEditContext();
+  const { editMode, activeField, imageOverrides, setImageOverride, imageLoading } = useEditContext();
   const imgKey = `img:${field}`;
   const isActive = activeField === imgKey;
   const ov = imageOverrides[field] ?? {};
   const posX = ov.posX ?? 50;
   const posY = ov.posY ?? 50;
 
+  const isLoadingImg = editMode && !!imageLoading[field];
   const dragging = useRef(false);
   const startPos = useRef({ x: 0, y: 0, px: posX, py: posY });
   const [isDragging, setIsDragging] = useState(false);
@@ -401,7 +432,32 @@ export function DraggableImage({
           draggable: false,
         } as React.CSSProperties}
       />
-      {editMode && isActive && !isDragging && (
+      {isLoadingImg && (
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 9997,
+          background: "rgba(15,23,42,0.55)",
+          backdropFilter: "blur(3px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 9,
+            background: "rgba(30,41,59,0.95)", color: "#e2e8f0",
+            fontSize: 12, fontWeight: 700, padding: "10px 18px", borderRadius: 10,
+            border: "1px solid rgba(99,102,241,0.5)",
+            fontFamily: "system-ui, -apple-system, sans-serif",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+          }}>
+            <span style={{
+              display: "inline-block", width: 14, height: 14, borderRadius: "50%",
+              border: "2.5px solid rgba(129,140,248,0.3)", borderTopColor: "#818cf8",
+              animation: "imgSpin 0.75s linear infinite", flexShrink: 0,
+            }} />
+            Cargando imagen...
+          </div>
+          <style>{`@keyframes imgSpin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
+      {editMode && isActive && !isDragging && !isLoadingImg && (
         <div style={{
           position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)",
           background: "rgba(20,20,20,0.75)", color: "white",

@@ -715,7 +715,7 @@ function ImageFieldEditor({
         </button>
         {ov.url && <img src={ov.url} alt="" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6, border: "1px solid rgba(255,255,255,0.15)", flexShrink: 0 }} />}
         {uploadError && <span style={{ fontSize: 11, color: "#f87171", whiteSpace: "nowrap" }}>⚠ {uploadError}</span>}
-        {info?.tip && <span style={{ fontSize: 10, ...dkMuted, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>💡 {info.tip}</span>}
+        <div style={{ flex: 1 }} />
         <button onClick={() => setActiveField(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, ...dkMuted, flexShrink: 0, lineHeight: 1, padding: 0 }}>×</button>
       </div>
 
@@ -1058,6 +1058,7 @@ export default function ConfiguracionPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [imageLoadingFields, setImageLoadingFields] = useState<Record<string, boolean>>({});
 
   /* Cargar config guardada al montar */
   const allTemplates = CATEGORIES.flatMap(c => c.templates);
@@ -1115,10 +1116,26 @@ export default function ConfiguracionPage() {
 
   /* Image override helpers */
   const setImageOverride = useCallback((field: string, partial: Partial<ImageOverride>) => {
-    setConfig(c => ({
-      ...c,
-      imageOverrides: { ...c.imageOverrides, [field]: { ...(c.imageOverrides[field] ?? {}), ...partial } },
-    }));
+    if ("url" in partial && partial.url) {
+      // Preload new image before applying so the block doesn't flash
+      setImageLoadingFields(prev => ({ ...prev, [field]: true }));
+      const preload = new window.Image();
+      const apply = () => {
+        setConfig(c => ({
+          ...c,
+          imageOverrides: { ...c.imageOverrides, [field]: { ...(c.imageOverrides[field] ?? {}), ...partial } },
+        }));
+        setImageLoadingFields(prev => { const n = { ...prev }; delete n[field]; return n; });
+      };
+      preload.onload = apply;
+      preload.onerror = apply;
+      preload.src = partial.url;
+    } else {
+      setConfig(c => ({
+        ...c,
+        imageOverrides: { ...c.imageOverrides, [field]: { ...(c.imageOverrides[field] ?? {}), ...partial } },
+      }));
+    }
     setIsDirty(true);
   }, []);
 
@@ -1553,6 +1570,7 @@ export default function ConfiguracionPage() {
           setImageOverride,
           sectionColors: config.sectionColors,
           setSectionColor,
+          imageLoading: imageLoadingFields,
         }}>
           <div style={{ flex: 1, overflow: "hidden", position: "relative", padding: "12px 16px 0" }}>
             <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",

@@ -30,6 +30,7 @@ export default function StorefrontTemplateRenderer({ config }: { config: StoreCo
         setImageOverride: () => {},
         sectionColors: config.sectionColors,
         setSectionColor: () => {},
+        imageLoading: {},
       }}>
         <Template />
       </EditContext.Provider>
