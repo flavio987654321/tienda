@@ -80,14 +80,14 @@ export default function ChicParis() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // banner auto-advance
+  // banner auto-advance — disabled entirely in edit mode
   useEffect(() => {
-    if (heroPaused) return;
+    if (heroPaused || editMode) return;
     intervalRef.current = setInterval(() => {
       setHeroSlide(s => (s + 1) % BANNER_COUNT);
     }, bannerMs);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [heroPaused, bannerMs]);
+  }, [heroPaused, bannerMs, editMode]);
 
   const goToSlide = (idx: number) => {
     setHeroSlide(idx);
