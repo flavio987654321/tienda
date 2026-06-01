@@ -3,7 +3,9 @@ import { getUserSubscription, getSubscriptionStatus, daysRemaining } from "@/lib
 import { prisma } from "@/lib/prisma";
 import SubscriptionGate from "@/components/subscription/SubscriptionGate";
 import SubscriptionRealtimeRefresher from "@/components/subscription/SubscriptionRealtimeRefresher";
+import SubscriptionSuccessBanner from "@/components/subscription/SubscriptionSuccessBanner";
 import StoreTypeModal from "./productos/StoreTypeModal";
+import { Suspense } from "react";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -46,6 +48,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <>
       {user && <SubscriptionRealtimeRefresher userId={user.id} />}
+      <Suspense><SubscriptionSuccessBanner /></Suspense>
       {gate}
       {storeTypeGate}
       {children}
