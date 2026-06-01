@@ -10,6 +10,7 @@ export type TextOverride = {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
+  hidden?: boolean;
 };
 
 export type ImageOverride = {

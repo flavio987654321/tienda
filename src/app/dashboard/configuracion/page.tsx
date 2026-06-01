@@ -375,29 +375,6 @@ function ConfigModal({ config, update, onClose, onDelete, storeSlug }: {
         {/* Body */}
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px 24px" }}>
 
-          {/* Información */}
-          <div style={sec}>
-            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
-              🏪 Información
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div>
-                <label style={lbl}>Nombre de la tienda</label>
-                <input style={inp} value={config.storeName} placeholder="Mi Tienda"
-                  onChange={e => update("storeName", e.target.value)}
-                  onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                  onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-              </div>
-              <div>
-                <label style={lbl}>Tagline</label>
-                <input style={inp} value={config.storeTagline} placeholder="Tu tienda online"
-                  onChange={e => update("storeTagline", e.target.value)}
-                  onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                  onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-              </div>
-            </div>
-          </div>
-
           {/* Colores */}
           <div style={sec}>
             <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
@@ -981,62 +958,115 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
   const label = textFieldLabels[activeField] ?? activeField;
   const ov = overrides[activeField] ?? {};
   const hasOverride = Object.entries(ov).some(([, v]) => v !== undefined);
+  const isHidden = !!ov.hidden;
 
-  const btnBase: React.CSSProperties = {
-    width: 30, height: 30, border: "1.5px solid #e2e8f0", borderRadius: 6,
-    background: "white", cursor: "pointer", fontSize: 13, color: "#374151",
+  const fmtBtn = (active: boolean): React.CSSProperties => ({
+    width: 28, height: 28, border: `1.5px solid ${active ? "#6366f1" : "#e2e8f0"}`,
+    borderRadius: 6, background: active ? "#e0e7ff" : "white",
+    cursor: "pointer", color: active ? "#6366f1" : "#374151",
     flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
-  };
-  const btnActive: React.CSSProperties = { borderColor: "#6366f1", background: "#e0e7ff", color: "#6366f1" };
+    fontSize: 12,
+  });
+  const divider = <div style={{ width: 1, height: 20, background: "#e2e8f0", flexShrink: 0 }} />;
 
   return (
-    <div style={{ ...base, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", whiteSpace: "nowrap" }}>
-        ✏ {label}
-      </span>
+    <div style={{ ...base, display: "flex", flexDirection: "column" }}>
 
-      <input
-        value={ov.text ?? ""}
-        placeholder="Texto (vacío = original del template)"
-        onChange={e => setOverride(activeField, { text: e.target.value || undefined })}
-        style={{ flex: 1, minWidth: 160, border: "1px solid #d1d5db", borderRadius: 7, padding: "5px 10px", fontSize: 12, outline: "none", fontFamily: "inherit" }}
-        onFocus={e => (e.target.style.borderColor = "#6366f1")}
-        onBlur={e => (e.target.style.borderColor = "#d1d5db")}
-      />
-
-      <input type="color" value={ov.color ?? "#000000"}
-        onChange={e => setOverride(activeField, { color: e.target.value })}
-        title="Color del texto"
-        style={{ width: 32, height: 30, padding: 2, border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
-
-      <select value={ov.fontFamily ?? ""}
-        onChange={e => setOverride(activeField, { fontFamily: e.target.value || undefined })}
-        style={{ fontSize: 11, padding: "5px 6px", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: "#374151", height: 30 }}>
-        {FONT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-      </select>
-
-      <select value={ov.fontSize ?? ""}
-        onChange={e => setOverride(activeField, { fontSize: e.target.value ? Number(e.target.value) : undefined })}
-        style={{ fontSize: 11, padding: "5px 6px", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: "#374151", width: 68, height: 30 }}>
-        <option value="">Tam.</option>
-        {FONT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
-      </select>
-
-      {([["bold","B",{ fontWeight: 700 }],["italic","I",{ fontStyle: "italic" as const }],["underline","U",{ textDecoration: "underline" as const }]] as const).map(([key, lbl, st]) => (
-        <button key={key} type="button"
-          onClick={() => setOverride(activeField, { [key]: !ov[key as keyof TextOverride] })}
-          style={{ ...btnBase, ...(ov[key as keyof TextOverride] ? btnActive : {}), ...st }}>
-          {lbl}
+      {/* ── Fila 1: label + campo de texto + cerrar ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px 9px", borderBottom: "1px solid #f1f5f9" }}>
+        <span style={{
+          fontSize: 11, fontWeight: 700, color: "#6366f1",
+          background: "#f0f0ff", borderRadius: 20, padding: "3px 10px",
+          whiteSpace: "nowrap", flexShrink: 0,
+        }}>
+          ✏ {label}
+        </span>
+        <input
+          value={ov.text ?? ""}
+          placeholder="Texto personalizado (vacío = usa el original del template)"
+          onChange={e => setOverride(activeField, { text: e.target.value || undefined })}
+          style={{
+            flex: 1, border: "1px solid #e2e8f0", borderRadius: 8,
+            padding: "6px 12px", fontSize: 13, outline: "none",
+            fontFamily: "inherit", color: "#111", background: "white",
+          }}
+          onFocus={e => (e.target.style.borderColor = "#6366f1")}
+          onBlur={e => (e.target.style.borderColor = "#e2e8f0")}
+        />
+        <button type="button" onClick={() => setActiveField(null)}
+          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#94a3b8", flexShrink: 0, lineHeight: 1, padding: 0 }}>
+          ×
         </button>
-      ))}
+      </div>
 
-      {hasOverride && (
-        <button type="button" onClick={() => resetOverride(activeField)}
-          title="Restablecer" style={{ ...btnBase, fontSize: 14 }}>↺</button>
-      )}
+      {/* ── Fila 2: formato ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 16px", flexWrap: "wrap" }}>
 
-      <button type="button" onClick={() => setActiveField(null)}
-        style={{ ...btnBase, border: "none", fontSize: 18, color: "#94a3b8" }}>×</button>
+        {/* Color */}
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <input type="color" value={ov.color ?? "#000000"}
+            onChange={e => setOverride(activeField, { color: e.target.value })}
+            title="Color del texto"
+            style={{ width: 28, height: 28, padding: 2, border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
+          <span style={{ fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap" }}>Color</span>
+        </div>
+
+        {divider}
+
+        {/* Fuente */}
+        <select value={ov.fontFamily ?? ""}
+          onChange={e => setOverride(activeField, { fontFamily: e.target.value || undefined })}
+          style={{ fontSize: 11, padding: "4px 6px", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: "#374151", height: 28 }}>
+          {FONT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+        </select>
+
+        {/* Tamaño */}
+        <select value={ov.fontSize ?? ""}
+          onChange={e => setOverride(activeField, { fontSize: e.target.value ? Number(e.target.value) : undefined })}
+          style={{ fontSize: 11, padding: "4px 6px", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: "#374151", width: 72, height: 28 }}>
+          <option value="">Tamaño</option>
+          {FONT_SIZES.map(s => <option key={s} value={s}>{s}px</option>)}
+        </select>
+
+        {divider}
+
+        {/* B I U */}
+        {([
+          ["bold",      "B", { fontWeight: 700 }],
+          ["italic",    "I", { fontStyle: "italic" as const }],
+          ["underline", "U", { textDecoration: "underline" as const }],
+        ] as const).map(([key, lbl, st]) => (
+          <button key={key} type="button"
+            onClick={() => setOverride(activeField, { [key]: !ov[key as keyof TextOverride] })}
+            style={{ ...fmtBtn(!!ov[key as keyof TextOverride]), ...st }}>
+            {lbl}
+          </button>
+        ))}
+
+        <div style={{ flex: 1 }} />
+
+        {/* 👁 Visibilidad */}
+        <button type="button"
+          onClick={() => setOverride(activeField, { hidden: isHidden ? undefined : true })}
+          title={isHidden ? "Mostrar en la tienda" : "Ocultar de la tienda"}
+          style={{
+            display: "flex", alignItems: "center", gap: 5,
+            padding: "4px 11px", height: 28, borderRadius: 6,
+            border: `1.5px solid ${isHidden ? "#ef4444" : "#e2e8f0"}`,
+            background: isHidden ? "#fef2f2" : "white",
+            color: isHidden ? "#ef4444" : "#64748b",
+            cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+          }}>
+          {isHidden ? "👁 Oculto" : "👁 Visible"}
+        </button>
+
+        {/* ↺ Reset */}
+        {hasOverride && (
+          <button type="button" onClick={() => resetOverride(activeField)}
+            title="Restablecer todo"
+            style={{ ...fmtBtn(false), fontSize: 14 }}>↺</button>
+        )}
+      </div>
     </div>
   );
 }

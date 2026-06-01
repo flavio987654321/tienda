@@ -1,5 +1,6 @@
 "use client";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
+import { EditContext } from "@/contexts/EditContext";
 import type { StoreConfig } from "@/types/store-config";
 import FashionNoir from "./templates/FashionNoir";
 import BohoTerra from "./templates/BohoTerra";
@@ -18,7 +19,20 @@ export default function StorefrontTemplateRenderer({ config }: { config: StoreCo
   if (!Template) return null;
   return (
     <StoreConfigContext.Provider value={config}>
-      <Template />
+      <EditContext.Provider value={{
+        editMode: false,
+        activeField: null,
+        setActiveField: () => {},
+        overrides: config.textOverrides,
+        setOverride: () => {},
+        resetOverride: () => {},
+        imageOverrides: config.imageOverrides,
+        setImageOverride: () => {},
+        sectionColors: config.sectionColors,
+        setSectionColor: () => {},
+      }}>
+        <Template />
+      </EditContext.Provider>
     </StoreConfigContext.Provider>
   );
 }

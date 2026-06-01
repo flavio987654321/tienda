@@ -76,14 +76,60 @@ export function EditableZone({
 
   const displayContent = ov.text !== undefined ? ov.text : children;
   const hasStyle = Object.keys(overrideStyle).length > 0;
+  const isHidden = !!ov.hidden;
 
   if (!editMode) {
+    if (isHidden) return null;
     if (!hasStyle && ov.text === undefined) return <>{children}</>;
     const Tag = block ? "div" : ("span" as React.ElementType);
     return <Tag style={overrideStyle}>{displayContent}</Tag>;
   }
 
   const Tag = block ? "div" : ("span" as React.ElementType);
+
+  if (isHidden) {
+    return (
+      <Tag
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={(e: React.MouseEvent) => { e.stopPropagation(); setActiveField(field); }}
+        style={{
+          position: "relative",
+          display: block ? "block" : "inline",
+          cursor: "pointer",
+          opacity: 0.35,
+          outline: isActive
+            ? "2px solid #ef4444"
+            : hovered ? "2px dashed rgba(239,68,68,0.6)"
+            : "2px dashed rgba(239,68,68,0.35)",
+          outlineOffset: 4,
+          borderRadius: 3,
+          transition: "outline-color 0.15s",
+          overflowWrap: "break-word",
+          wordBreak: "break-word",
+          maxWidth: "100%",
+        } as React.CSSProperties}
+      >
+        {displayContent}
+        {(hovered || isActive) && (
+          <span style={{
+            position: "absolute", top: 0, left: 0,
+            transform: "translateY(-100%)",
+            background: "#ef4444", color: "white",
+            fontSize: 10, fontWeight: 700, lineHeight: 1.5,
+            padding: "3px 8px", borderRadius: "4px 4px 4px 0",
+            display: "inline-flex", alignItems: "center", gap: 4,
+            zIndex: 99999, whiteSpace: "nowrap", pointerEvents: "none",
+            boxShadow: "0 2px 10px rgba(239,68,68,0.35)",
+            fontFamily: "system-ui, -apple-system, sans-serif",
+            letterSpacing: 0,
+          }}>
+            👁 OCULTO · clic para editar
+          </span>
+        )}
+      </Tag>
+    );
+  }
 
   return (
     <Tag

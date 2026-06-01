@@ -32,6 +32,7 @@ const storeConfigSchema = z.object({
     bold: z.boolean().optional(),
     italic: z.boolean().optional(),
     underline: z.boolean().optional(),
+    hidden: z.boolean().optional(),
   })),
   imageOverrides: z.record(z.string(), z.object({
     url: z.string().max(2000).optional(),
