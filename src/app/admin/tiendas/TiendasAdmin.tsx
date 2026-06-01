@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { Store, Package, Users, ShoppingBag, Globe, EyeOff, Calendar, RefreshCw, Power, Search, X, RotateCcw, AlertTriangle } from "lucide-react";
+import { Store, Package, Users, ShoppingBag, Globe, EyeOff, Calendar, RefreshCw, Power, Search, X, Trash2, RotateCcw, AlertTriangle } from "lucide-react";
 
 type PendingToggle = { store: StoreRow; field: "isPublished" | "isActive" };
 type ResetState = { store: StoreRow; loading: boolean; error: string };
