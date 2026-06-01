@@ -99,7 +99,8 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
           cardExpirationMonth: { id: "mp-card-exp-month", placeholder: "MM" },
           cardExpirationYear: { id: "mp-card-exp-year", placeholder: "AA" },
           securityCode: { id: "mp-security-code", placeholder: "CVV" },
-
+          installments: { id: "mp-installments" },
+          issuer: { id: "mp-issuer" },
         },
         callbacks: {
           onFormMounted: (err: any) => {
@@ -324,6 +325,8 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
               </div>
             </div>
 
+            <select id="mp-installments" style={{ display: "none" }} />
+            <select id="mp-issuer" style={{ display: "none" }} />
 
             <button
               type="submit"
