@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Loader2, X, CreditCard, Lock, CheckCircle, Ticket } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2, X, CreditCard, Lock, CheckCircle, Ticket, ExternalLink } from "lucide-react";
 
 type Props = {
   plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE";
@@ -20,33 +20,22 @@ interface SubscriptionCoupon {
   earnedMonth: string;
 }
 
-declare global {
-  interface Window {
-    MercadoPago: any;
-  }
-}
-
 function money(n: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 }
 
-export default function PaymentModal({ plan, billing, amount, prorated, onClose, onSuccess }: Props) {
+export default function PaymentModal({ plan, billing, amount, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
-  const [mpReady, setMpReady] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [availableCoupon, setAvailableCoupon] = useState<SubscriptionCoupon | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<SubscriptionCoupon | null>(null);
-  const mpRef = useRef<any>(null);
-  const cardFormRef = useRef<any>(null);
-  const mpInitializedRef = useRef(false);
 
   const discount = appliedCoupon ? Math.round(amount * appliedCoupon.discountValue / 100) : 0;
   const finalAmount = amount - discount;
   const isFreeMonth = finalAmount === 0;
 
   useEffect(() => {
-    // Buscar cupón de suscripción disponible
     fetch("/api/vendedoras/premios")
       .then((r) => r.json())
       .then((data) => {
@@ -58,115 +47,35 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    // No inicializar MP si el mes es gratis
-    if (isFreeMonth) return;
-
-    // Cargar SDK de MP
-    if (document.getElementById("mp-sdk")) {
-      // Script ya existe: solo inicializar si SDK cargó y no está ya inicializado
-      if (window.MercadoPago && !mpInitializedRef.current) initMP();
-      return;
-    }
-    const script = document.createElement("script");
-    script.id = "mp-sdk";
-    script.src = "https://sdk.mercadopago.com/js/v2";
-    script.onload = initMP;
-    document.head.appendChild(script);
-  }, [isFreeMonth]);
-
-  function initMP() {
-    if (mpInitializedRef.current) return;
-    if (!window.MercadoPago) return;
-
+  async function handlePay() {
+    setLoading(true);
+    setError("");
     try {
-      mpInitializedRef.current = true;
-      const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
-      if (!publicKey) {
-        setError("Error de configuración: clave de pago no disponible. Contactá al soporte.");
-        mpInitializedRef.current = false;
+      const res = await fetch("/api/suscripcion/preferencia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan,
+          billing,
+          rewardCouponCode: appliedCoupon?.code ?? null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Error al iniciar el pago");
         return;
       }
-      mpRef.current = new window.MercadoPago(publicKey, { locale: "es-AR" });
-
-      cardFormRef.current = mpRef.current.cardForm({
-        amount: String(amount),
-        autoMount: true,
-        form: {
-          id: "mp-card-form",
-          cardholderName: { id: "mp-cardholder-name", placeholder: "Nombre como aparece en la tarjeta" },
-          cardNumber: { id: "mp-card-number", placeholder: "Número de tarjeta" },
-          cardExpirationMonth: { id: "mp-card-exp-month", placeholder: "MM" },
-          cardExpirationYear: { id: "mp-card-exp-year", placeholder: "AA" },
-          securityCode: { id: "mp-security-code", placeholder: "CVV" },
-          installments: { id: "mp-installments" },
-          issuer: { id: "mp-issuer" },
-        },
-        callbacks: {
-          onFormMounted: (err: any) => {
-            if (err) {
-              setError("No se pudo cargar el formulario de pago. Recargá la página e intentá de nuevo.");
-            } else {
-              setMpReady(true);
-            }
-          },
-        onSubmit: async (event: any) => {
-          event.preventDefault();
-          const {
-            paymentMethodId,
-            issuerId,
-            cardholderEmail,
-            amount: amt,
-            token,
-            installments,
-            identificationNumber,
-            identificationType,
-          } = cardFormRef.current.getCardFormData();
-
-          if (!token) { setError("No se pudo tokenizar la tarjeta. Verificá los datos."); return; }
-
-          setLoading(true);
-          setError("");
-
-          const res = await fetch("/api/suscripcion/pagar", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              plan, billing, cardToken: token, paymentMethodId,
-              rewardCouponCode: appliedCoupon?.code ?? null,
-              prorated: prorated ?? false,
-            }),
-          });
-
-          const data = await res.json();
-          setLoading(false);
-
-          if (res.status === 202) {
-            // Pago pendiente — informar sin redirigir
-            setError(data.error || "Tu pago está siendo procesado. Recibirás un email de confirmación.");
-            return;
-          }
-
-          if (!res.ok) {
-            setError(data.error || "Error al procesar el pago");
-            return;
-          }
-
-          setSuccess(true);
-          setTimeout(onSuccess, 2000);
-        },
-        onFetching: (resource: string) => {
-          setLoading(true);
-          return () => setLoading(false);
-        },
-      },
-    });
-    } catch (e: any) {
-      mpInitializedRef.current = false;
-      const e0 = e?.[0];
-      console.error("[MP e0]:", e0, "msg:", e0?.message, "cause:", e0?.cause, "keys:", Object.keys(e || {}));
-      const msg = e0?.message || e0?.cause || JSON.stringify(e0) || String(e);
-      setError(`Error MP: ${msg}`);
+      if (data.free) {
+        setSuccess(true);
+        setTimeout(onSuccess, 2000);
+        return;
+      }
+      // Redirigir a Checkout Pro de MP
+      window.location.href = data.checkoutUrl;
+    } catch {
+      setError("Error de conexión. Intentá de nuevo.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -177,8 +86,8 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
           <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="h-8 w-8 text-emerald-400" />
           </div>
-          <h2 className="text-2xl font-black text-white mb-2">¡Pago confirmado!</h2>
-          <p className="text-gray-400 text-sm">Tu suscripción está activa. Redirigiendo al panel...</p>
+          <h2 className="text-2xl font-black text-white mb-2">¡Suscripción activa!</h2>
+          <p className="text-gray-400 text-sm">Redirigiendo al panel...</p>
           <Loader2 className="h-5 w-5 animate-spin text-indigo-400 mx-auto mt-4" />
         </div>
       </div>
@@ -210,12 +119,10 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
           </button>
         </div>
 
-        {/* Formulario */}
-        <div className="p-6">
-
-          {/* Cupón de suscripción disponible */}
+        <div className="p-6 space-y-4">
+          {/* Cupón disponible */}
           {availableCoupon && !appliedCoupon && (
-            <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-center justify-between gap-3">
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Ticket className="h-4 w-4 text-amber-400 shrink-0" />
                 <div>
@@ -237,7 +144,7 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
 
           {/* Cupón aplicado */}
           {appliedCoupon && (
-            <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 flex items-center justify-between gap-3">
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-emerald-400 shrink-0" />
                 <div>
@@ -247,101 +154,57 @@ export default function PaymentModal({ plan, billing, amount, prorated, onClose,
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setAppliedCoupon(null)}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
+              <button type="button" onClick={() => setAppliedCoupon(null)} className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
                 Quitar
               </button>
             </div>
           )}
 
-          {/* Mes gratis — no necesita tarjeta */}
-          {isFreeMonth && (
-            <div className="text-center py-6">
-              <p className="text-4xl mb-3">🎉</p>
-              <p className="text-white font-bold text-lg">Este mes es gratis</p>
-              <p className="text-gray-400 text-sm mt-1 mb-6">Tu cupón cubre el 100% del costo de este mes.</p>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={async () => {
-                  setLoading(true);
-                  setError("");
-                  const res = await fetch("/api/suscripcion/pagar", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ plan, billing, rewardCouponCode: appliedCoupon?.code }),
-                  });
-                  setLoading(false);
-                  if (res.ok) { setSuccess(true); setTimeout(onSuccess, 2000); }
-                  else { const d = await res.json(); setError(d.error || "Error al aplicar el cupón"); }
-                }}
-                className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-              >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                {loading ? "Aplicando..." : "Activar mes gratis"}
-              </button>
-            </div>
-          )}
-
-          {!isFreeMonth && !mpReady && (
-            <div className="flex items-center justify-center py-8 gap-2 text-gray-400">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span className="text-sm">Cargando formulario de pago...</span>
+          {/* Resumen */}
+          {!isFreeMonth && (
+            <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Plan {planLabel} {billingLabel}</span>
+                <span className="text-white font-semibold">{money(amount)}</span>
+              </div>
+              {appliedCoupon && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-emerald-400">Descuento cupón</span>
+                  <span className="text-emerald-400 font-semibold">-{money(discount)}</span>
+                </div>
+              )}
+              <div className="border-t border-white/10 pt-2 flex justify-between">
+                <span className="text-white font-bold">Total</span>
+                <span className="text-white font-bold text-lg">{money(finalAmount)}</span>
+              </div>
             </div>
           )}
 
           {error && (
-            <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
               {error}
             </div>
           )}
 
-          <form id="mp-card-form" className="space-y-4" style={!mpReady || isFreeMonth ? { visibility: "hidden", pointerEvents: "none", position: "absolute", top: "-9999px", left: "-9999px" } : {}}>
-            <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Nombre en la tarjeta</label>
-              <div id="mp-cardholder-name" className="h-11 rounded-xl border border-white/10 bg-white/5 px-3 flex items-center" />
-            </div>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={handlePay}
+            className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+          >
+            {loading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Procesando...</>
+            ) : isFreeMonth ? (
+              <><CheckCircle className="h-4 w-4" /> Activar mes gratis</>
+            ) : (
+              <><ExternalLink className="h-4 w-4" /> Pagar con Mercado Pago</>
+            )}
+          </button>
 
-            <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Número de tarjeta</label>
-              <div id="mp-card-number" className="h-11 rounded-xl border border-white/10 bg-white/5 px-3 flex items-center" />
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Mes</label>
-                <div id="mp-card-exp-month" className="h-11 rounded-xl border border-white/10 bg-white/5 px-3 flex items-center" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Año</label>
-                <div id="mp-card-exp-year" className="h-11 rounded-xl border border-white/10 bg-white/5 px-3 flex items-center" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">CVV</label>
-                <div id="mp-security-code" className="h-11 rounded-xl border border-white/10 bg-white/5 px-3 flex items-center" />
-              </div>
-            </div>
-
-            <select id="mp-installments" style={{ display: "none" }} />
-            <select id="mp-issuer" style={{ display: "none" }} />
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-2"
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-              {loading ? "Procesando..." : `Pagar ${money(finalAmount)}`}
-            </button>
-          </form>
-
-          <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-gray-600">
+          <p className="text-center text-xs text-gray-600 flex items-center justify-center gap-1.5">
             <Lock className="h-3 w-3" />
-            Pago seguro procesado por Mercado Pago
-          </div>
+            {isFreeMonth ? "Sin cobro — cupón 100% off" : "Te redirigimos a Mercado Pago para completar el pago de forma segura"}
+          </p>
         </div>
       </div>
     </div>

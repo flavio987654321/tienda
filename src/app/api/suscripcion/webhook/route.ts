@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
     if (!userId || !plan || !billing) return NextResponse.json({ ok: true });
 
     if (payment.status === "approved") {
+      const { role, tier, couponId } = payment.metadata ?? {};
       const now = new Date();
       const periodEnd = billing === "MONTHLY"
         ? new Date(now.getTime() + 30 * 86400000)
@@ -75,6 +76,8 @@ export async function POST(req: NextRequest) {
       await prisma.subscription.upsert({
         where: { userId },
         update: {
+          role: role ?? plan,
+          tier: tier ?? "BASIC",
           plan: billing,
           status: "ACTIVE",
           currentPeriodStart: now,
@@ -84,7 +87,8 @@ export async function POST(req: NextRequest) {
         },
         create: {
           userId,
-          role: plan,
+          role: role ?? plan,
+          tier: tier ?? "BASIC",
           plan: billing,
           status: "ACTIVE",
           trialEndsAt: now,
@@ -94,6 +98,13 @@ export async function POST(req: NextRequest) {
           mpPaymentId: String(payment.id),
         },
       });
+
+      if (couponId) {
+        await prisma.affiliateRewardCoupon.update({
+          where: { id: couponId },
+          data: { status: "USED", usedAt: now },
+        }).catch(() => {});
+      }
     }
 
     return NextResponse.json({ ok: true });
