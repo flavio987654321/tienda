@@ -15,6 +15,7 @@ type StoreItem = {
   categories: string[];
   coverImg: string | null;
   banner: string | null;
+  heroImg: string | null;
 };
 
 const CATEGORIES = ["Todas", "ropa", "joyeria", "hogar", "tecnologia", "deportes", "belleza", "alimentacion", "infantil", "general"];
@@ -150,9 +151,9 @@ export default function TiendasPage() {
                 className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 group block"
               >
                 <div className="relative overflow-hidden h-44">
-                  {store.coverImg || store.banner ? (
+                  {store.heroImg || store.coverImg || store.banner ? (
                     <img
-                      src={(store.coverImg || store.banner)!}
+                      src={(store.heroImg || store.coverImg || store.banner)!}
                       alt={store.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />

@@ -156,6 +156,7 @@ type RealStore = {
   totalOrders: number;
   categories: string[];
   coverImg: string | null;
+  heroImg: string | null;
 };
 
 type RealTestimonial = {
@@ -777,8 +778,8 @@ export default function Home() {
                     {store ? (
                       <Link href={`/tienda/${store.slug}`} className="block bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
                         <div className="relative overflow-hidden h-48">
-                          {store.coverImg || store.banner ? (
-                            <img src={(store.coverImg || store.banner)!} alt={store.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          {store.heroImg || store.coverImg || store.banner ? (
+                            <img src={(store.heroImg || store.coverImg || store.banner)!} alt={store.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: store.primaryColor + "22" }}>
                               <Store className="h-16 w-16 opacity-30" style={{ color: store.primaryColor }} />
@@ -792,10 +793,13 @@ export default function Home() {
                           </div>
                         </div>
                         <div className="p-5">
-                          <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center justify-between mb-2">
                             <h3 className="font-bold text-gray-900">{store.name}</h3>
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: store.primaryColor }} />
+                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: store.primaryColor }} />
                           </div>
+                          {store.description && (
+                            <p className="text-sm text-gray-500 mb-3 line-clamp-2 leading-snug">{store.description}</p>
+                          )}
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-gray-500">{store.totalProducts} productos</span>
                             <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: store.primaryColor }}>

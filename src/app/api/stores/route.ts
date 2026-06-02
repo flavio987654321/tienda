@@ -47,6 +47,12 @@ export async function GET(req: NextRequest) {
       } catch {}
     }
 
+    let heroImg: string | null = null;
+    try {
+      const sc = JSON.parse(s.storeConfig);
+      heroImg = sc?.images?.heroBackground ?? sc?.images?.heroImage ?? null;
+    } catch {}
+
     const categories = [...new Set(s.products.map((p) => p.category).filter(Boolean))];
 
     return {
@@ -61,6 +67,7 @@ export async function GET(req: NextRequest) {
       totalOrders: s._count.orders,
       categories,
       coverImg,
+      heroImg,
     };
   });
 
