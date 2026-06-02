@@ -1082,7 +1082,7 @@ export default function VendedorasPage() {
 
   const isDark = theme === "dark";
 
-  if (sessionStatus === "loading" || sessionStatus === "unauthenticated") {
+  if (!mounted || sessionStatus === "loading" || sessionStatus === "unauthenticated") {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#030712] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
