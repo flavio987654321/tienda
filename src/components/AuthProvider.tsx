@@ -24,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthState["status"]>("loading");
+  const signingOut = useMemo(() => ({ current: false }), []);
 
   async function loadUser(hasSession: boolean) {
     if (!hasSession) {
@@ -43,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut(callbackUrl = "/") {
+    signingOut.current = true;
     setStatus("loading");
     try { await supabase.auth.signOut(); } catch {}
     window.location.href = callbackUrl;
@@ -54,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Subsequent auth changes: session provided by the event, no extra getSession call
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (signingOut.current) return;
       loadUser(!!session);
     });
     return () => data.subscription.unsubscribe();
