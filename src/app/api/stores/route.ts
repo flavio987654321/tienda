@@ -43,7 +43,10 @@ export async function GET(req: NextRequest) {
     if (firstProduct) {
       try {
         const imgs = JSON.parse(firstProduct.images);
-        coverImg = Array.isArray(imgs) && imgs[0] ? imgs[0] : null;
+        if (Array.isArray(imgs) && imgs[0]) {
+          const first = imgs[0];
+          coverImg = typeof first === "string" ? first : (first?.url ?? null);
+        }
       } catch {}
     }
 
@@ -54,6 +57,7 @@ export async function GET(req: NextRequest) {
         sc?.imageOverrides?.heroBackground?.url ??
         sc?.imageOverrides?.heroImage?.url ??
         sc?.imageOverrides?.heroImage1?.url ??
+        sc?.imageOverrides?.heroBanner1?.url ??
         null;
     } catch {}
 
@@ -63,7 +67,7 @@ export async function GET(req: NextRequest) {
       id: s.id,
       slug: s.slug,
       name: s.name,
-      description: s.description,
+      description: s.description || s.tagline || null,
       logo: s.logo,
       banner: s.banner,
       primaryColor: s.primaryColor,
