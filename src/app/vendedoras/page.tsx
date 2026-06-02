@@ -9,7 +9,7 @@ import { useTheme } from "next-themes";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 import {
-  CheckCircle, Clock, Loader2, Send, Store, TrendingUp, Users, Wallet,
+  CheckCircle, Clock, Loader2, Send, Store, Wallet,
   XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
   Star, Package, ArrowRight, ArrowLeft, ChevronLeft, ChevronRight, Eye, Edit3, MapPin, Phone, Save,
   DollarSign, ShoppingCart, Award, FileText, UploadCloud, Trash2, Download, Search,
@@ -1073,6 +1073,15 @@ export default function VendedorasPage() {
     );
   }
 
+  if (sessionStatus === "unauthenticated") {
+    router.replace("/login");
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-[#030712] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+      </div>
+    );
+  }
+
   const isLoggedIn = sessionStatus === "authenticated";
   const myAffiliations = stores.filter((s) => s.affiliates.length > 0);
   const approvedStores = myAffiliations.filter((s) => s.affiliates[0]?.status === "APPROVED");
@@ -1503,83 +1512,6 @@ export default function VendedorasPage() {
             )}
           </section>
         </div>
-      ) : (
-        /* NOT LOGGED IN: Marketing page */
-        <>
-          <section className="relative min-h-[70vh] flex items-center grid-bg">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-purple-900/20 rounded-full blur-3xl" />
-            <div className="relative max-w-4xl mx-auto px-6 py-20 text-center">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 text-purple-300 px-4 py-1.5 rounded-full text-sm font-medium mb-8">
-                  <TrendingUp className="h-4 w-4" />
-                  Vendé para marcas activas y cobrá comisiones
-                </div>
-                <h1 className="text-5xl lg:text-7xl font-black mb-6 leading-tight">
-                  Postulate como<br /><span className="gt">afiliado</span>
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-                  Elegí tiendas, mandá tu presentación y esperá la aprobación del titular. Cuando te acepten, vas a tener tu link propio y cobrar comisiones automáticas.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-14">
-                  <Link href="/registro" className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-xl shadow-purple-500/25 hover:scale-105">
-                    Crear cuenta gratis <ArrowRight className="h-5 w-5" />
-                  </Link>
-                  <Link href="/login" className="flex items-center justify-center gap-2 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all hover:bg-white/5">
-                    Ya tengo cuenta
-                  </Link>
-                </div>
-                <div className="grid grid-cols-3 gap-6 max-w-sm mx-auto">
-                  {[["$0", "Inversión inicial"], ["10-25%", "Comisión por venta"], ["24hs", "Primer pago"]].map(([v, l]) => (
-                    <div key={l} className="border-l border-purple-400/40 dark:border-purple-500/30 pl-4 text-left">
-                      <p className="text-2xl font-black text-purple-600 dark:text-purple-400">{v}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{l}</p>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            </div>
-          </section>
-
-          {/* How it works */}
-          <section className="bg-gray-100 dark:bg-gray-900/50 py-16">
-            <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                { icon: Users, label: "Solicitudes con aprobación", desc: "El/la titular revisa tu perfil antes de darte permiso. Así sabés que trabajás con marcas serias.", color: "#6366f1" },
-                { icon: Share2, label: "Compartí por redes", desc: "WhatsApp, Facebook, Instagram. Compartís tu link y cada venta te genera comisión automática.", color: "#a855f7" },
-                { icon: Wallet, label: "Cobrás cuando querés", desc: "Tu billetera acumula tus ganancias y pedís el retiro cuando lo necesitás.", color: "#10b981" },
-              ].map(({ icon: Icon, label, desc, color }) => (
-                <div key={label} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/5 rounded-3xl p-7 shadow-sm">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5" style={{ backgroundColor: color + "20" }}>
-                    <Icon className="h-6 w-6" style={{ color }} />
-                  </div>
-                  <h3 className="font-bold text-gray-900 dark:text-white mb-2">{label}</h3>
-                  <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Available stores preview */}
-          <section className="py-16">
-            <div className="max-w-6xl mx-auto px-6">
-              <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-8">Tiendas que buscan afiliados</h2>
-              {loadingStores ? (
-                <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-indigo-400" /></div>
-              ) : stores.length === 0 ? (
-                <div className="bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-white/5 rounded-3xl p-16 text-center shadow-sm">
-                  <Store className="h-10 w-10 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-                  <p className="text-gray-500">No hay tiendas disponibles por ahora.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {stores.slice(0, 6).map((store) => (
-                    <StoreCard key={store.id} store={store} onApply={() => router.push("/login")} requiresLogin />
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
-        </>
       )}
 
       {/* Banner de éxito al postularse */}
@@ -1625,7 +1557,7 @@ export default function VendedorasPage() {
 }
 
 /* ── Store Card ── */
-function StoreCard({ store, onApply, requiresLogin }: { store: StoreItem; onApply: () => void; requiresLogin?: boolean }) {
+function StoreCard({ store, onApply }: { store: StoreItem; onApply: () => void }) {
   const aff = store.affiliates[0];
   const status = aff ? STATUS[aff.status] : null;
   const canApply = !aff || ["REJECTED", "REMOVED"].includes(aff.status);
