@@ -1134,7 +1134,7 @@ export default function VendedorasPage() {
 
           {/* Desktop — se oculta en mobile */}
           <div className="hidden sm:flex items-center gap-3">
-            {isLoggedIn && user?.id && <NotificationBell userId={user.id} />}
+            {true && user?.id && <NotificationBell userId={user.id} />}
             {mounted && (
               <button
                 type="button"
@@ -1145,7 +1145,7 @@ export default function VendedorasPage() {
                 {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
               </button>
             )}
-            {isLoggedIn ? (
+            {true ? (
               <>
                 <Link href="/vendedoras/billetera" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
                   <Wallet className="h-4 w-4" /> Mi billetera
@@ -1223,12 +1223,12 @@ export default function VendedorasPage() {
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0">
-                    {isLoggedIn ? userInitial : "?"}
+                    {true ? userInitial : "?"}
                   </div>
-                  {isLoggedIn && <p className="text-sm font-semibold text-gray-900 dark:text-white">{userName}</p>}
+                  {true && <p className="text-sm font-semibold text-gray-900 dark:text-white">{userName}</p>}
                 </div>
                 <div className="flex items-center gap-2">
-                  {isLoggedIn && user?.id && <NotificationBell userId={user.id} />}
+                  {true && user?.id && <NotificationBell userId={user.id} />}
                   <button
                     onClick={() => setMobileMenuOpen(false)}
                     className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"
@@ -1240,7 +1240,7 @@ export default function VendedorasPage() {
 
               {/* Items */}
               <div className="flex-1 px-4 py-4 flex flex-col gap-1">
-                {isLoggedIn ? (
+                {true ? (
                   <>
                     <Link
                       href="/vendedoras/billetera"
