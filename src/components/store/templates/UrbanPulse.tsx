@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
@@ -327,6 +328,8 @@ export default function UrbanPulse() {
 
   const iconBtn = { background:"none", border:"none", cursor:"pointer", color:DARK, padding:6, display:"flex", alignItems:"center" } as const;
 
+  useScrollReveal();
+
   return (
     <div style={{ fontFamily:"'Inter','Helvetica Neue',Arial,sans-serif", background:BG, color:DARK, minHeight:"100vh" }}>
       <style>{`
@@ -536,7 +539,7 @@ export default function UrbanPulse() {
       </section>
 
       {/* GARANTÍAS */}
-      <section style={{ background:garantiasUpBg, borderTop:`3px solid ${DARK}`, borderBottom:`3px solid ${DARK}`, position:"relative" }}>
+      <section data-reveal style={{ background:garantiasUpBg, borderTop:`3px solid ${DARK}`, borderBottom:`3px solid ${DARK}`, position:"relative" }}>
         <EditableSectionBg field="bgGarantias" label="Fondo garantías" />
         <div style={{ maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)" }}>
           {GARANTIAS.map((g, i) => {
@@ -563,7 +566,7 @@ export default function UrbanPulse() {
       </section>
 
       {/* CATEGORY TILES */}
-      <section style={{ background:categoriesBgUp, position:"relative" }}>
+      <section data-reveal style={{ background:categoriesBgUp, position:"relative" }}>
         <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
         <div style={{ padding: isMobile ? "48px 16px" : "80px 40px", maxWidth:1200, margin:"0 auto" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:40 }}>
@@ -599,7 +602,7 @@ export default function UrbanPulse() {
 
       {/* MAYORISTA — banner "Solicitá tu lista de precios" */}
       {isWholesale && (
-        <section style={{ background:DARK, borderTop:`2px solid ${ACC}` }}>
+        <section data-reveal style={{ background:DARK, borderTop:`2px solid ${ACC}` }}>
           <div style={{ maxWidth:1200, margin:"0 auto", padding:"64px 40px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:20 }}>
             <span style={{ fontSize:9, letterSpacing:5, color:ACC, textTransform:"uppercase", fontWeight:900, background:"rgba(212,255,0,0.1)", padding:"5px 14px", borderRadius:2 }}>⚡ Tienda mayorista</span>
             <h2 style={{ fontSize:"clamp(28px,4vw,52px)", fontWeight:900, color:WHITE, margin:0, textTransform:"uppercase", letterSpacing:"-1px", lineHeight:1.05 }}>
@@ -618,7 +621,7 @@ export default function UrbanPulse() {
 
       {/* FEATURED DROP */}
       {featuredProduct && (
-      <section id="featured" style={{ background:featuredBg, padding:"80px 40px", position:"relative" }}>
+      <section id="featured" data-reveal style={{ background:featuredBg, padding:"80px 40px", position:"relative" }}>
         <EditableSectionBg field="bgFeatured" label="Fondo featured" />
         <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:0, alignItems:"center" }}>
           <div style={{ position:"relative" }}>
@@ -661,7 +664,7 @@ export default function UrbanPulse() {
       )}
 
       {/* PRODUCTS */}
-      <section id="productos" style={{ background:productosBgUp, position:"relative" }}>
+      <section id="productos" data-reveal style={{ background:productosBgUp, position:"relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
         <div style={{ padding: isMobile ? "48px 16px" : "80px 40px", maxWidth:1200, margin:"0 auto" }}>
         <div style={{ marginBottom:40 }}>
@@ -716,7 +719,7 @@ export default function UrbanPulse() {
       </section>
 
       {/* TESTIMONIALS */}
-      <section style={{ background:testimonialsBgUp, padding:"80px 0", position:"relative" }}>
+      <section data-reveal style={{ background:testimonialsBgUp, padding:"80px 0", position:"relative" }}>
         <EditableSectionBg field="bgTestimonios" label="Fondo testimonios" />
         <div style={{ padding:"0 40px", marginBottom:36, position:"relative", zIndex:1 }}>
           <h2 style={{ color:testimonialsText, fontSize:"clamp(30px,3.5vw,42px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0 }}>
@@ -749,7 +752,7 @@ export default function UrbanPulse() {
       </section>
 
       {/* NOSOTROS */}
-      <section id="nosotros" style={{ background:nosotrosBgUp, position:"relative" }}>
+      <section id="nosotros" data-reveal style={{ background:nosotrosBgUp, position:"relative" }}>
         <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
         <div style={{ padding: isMobile ? "60px 20px" : "100px 40px", maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 40 : 80, alignItems:"center", position:"relative", zIndex:1 }}>
         <div>
@@ -787,7 +790,7 @@ export default function UrbanPulse() {
       </section>
 
       {/* CONTACT */}
-      <section id="contacto" style={{ position:"relative", ...(contactBgImg?.url ? { backgroundImage:`url(${contactBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${contactBgImg.posX ?? 50}% ${contactBgImg.posY ?? 50}%` } : { background:contactUpBg }) }}>
+      <section id="contacto" data-reveal style={{ position:"relative", ...(contactBgImg?.url ? { backgroundImage:`url(${contactBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${contactBgImg.posX ?? 50}% ${contactBgImg.posY ?? 50}%` } : { background:contactUpBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
         <EditableSectionBg field="bgContacto" label="Fondo contacto" />
         {contactBgImg?.url && contactBgImg.overlayType !== "none" && (

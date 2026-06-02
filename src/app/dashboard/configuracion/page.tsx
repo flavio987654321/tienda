@@ -386,6 +386,7 @@ function ConfigModal({ config, update, onClose, onDelete, storeSlug, isPremium }
   isPremium?: boolean;
 }) {
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     if (!storeSlug) return;
@@ -792,17 +793,38 @@ function ConfigModal({ config, update, onClose, onDelete, storeSlug, isPremium }
 
         {/* Footer */}
         <div style={{ padding: "12px 24px 16px", borderTop: "1px solid #f1f5f9", display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={onClose}
-            style={{ width: "100%", padding: "11px", border: "none", borderRadius: 10, background: "#6366f1", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-            Listo
-          </button>
-          <button onClick={onDelete}
-            style={{ width: "100%", padding: "9px", border: "1px solid #fecaca", borderRadius: 10,
-              background: "white", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#fef2f2"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "white"; }}>
-            Eliminar diseño y volver a la galería
-          </button>
+          {!confirmingDelete ? (
+            <>
+              <button onClick={onClose}
+                style={{ width: "100%", padding: "11px", border: "none", borderRadius: 10, background: "#6366f1", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                Listo
+              </button>
+              <button onClick={() => setConfirmingDelete(true)}
+                style={{ width: "100%", padding: "9px", border: "1px solid #fecaca", borderRadius: 10,
+                  background: "white", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#fef2f2"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "white"; }}>
+                Eliminar diseño y volver a la galería
+              </button>
+            </>
+          ) : (
+            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "14px 16px" }}>
+              <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: "#991b1b" }}>¿Eliminar el diseño?</p>
+              <p style={{ margin: "0 0 12px", fontSize: 11, color: "#b91c1c", lineHeight: 1.5 }}>
+                Se borrará toda la configuración visual y volvés a elegir una plantilla. Los productos y pedidos no se tocan.
+              </p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setConfirmingDelete(false)}
+                  style={{ flex: 1, padding: "9px", border: "1px solid #e2e8f0", borderRadius: 8, background: "white", color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  Cancelar
+                </button>
+                <button onClick={onDelete}
+                  style={{ flex: 1, padding: "9px", border: "none", borderRadius: 8, background: "#ef4444", color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  Sí, eliminar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

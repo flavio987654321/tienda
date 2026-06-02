@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
@@ -198,6 +199,8 @@ export default function BohoTerra() {
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
   const showAnnouncement = promoBannerEnabled && announcementVisible;
   const announcementBarHeight = showAnnouncement ? ANNOUNCEMENT_BAR_H : 0;
+
+  useScrollReveal();
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40);
@@ -507,7 +510,7 @@ export default function BohoTerra() {
 
       {/* ── MAYORISTA — banner "Solicitá tu lista de precios" ── */}
       {isWholesale && (
-        <section style={{ background:S, borderTop:`1px solid rgba(181,101,42,0.2)`, borderBottom:`1px solid rgba(181,101,42,0.2)` }}>
+        <section data-reveal style={{ background:S, borderTop:`1px solid rgba(181,101,42,0.2)`, borderBottom:`1px solid rgba(181,101,42,0.2)` }}>
           <div style={{ maxWidth:1280, margin:"0 auto", padding:"60px 40px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:20 }}>
             <span style={{ fontSize:10, letterSpacing:4, color:A, textTransform:"uppercase", fontWeight:700, border:`1px solid ${A}`, padding:"4px 12px", borderRadius:20 }}>Tienda mayorista</span>
             <h2 style={{ fontSize:"clamp(26px,3.5vw,44px)", fontWeight:400, color:T, margin:0, fontFamily:"Georgia, 'Times New Roman', serif", lineHeight:1.25, fontStyle:"italic" }}>
@@ -525,7 +528,7 @@ export default function BohoTerra() {
       )}
 
       {/* ── COLECCIÓN — carrusel */}
-      <section id="coleccion" style={{ padding:"80px 0", background:coleccionBg, position:"relative" }}>
+      <section id="coleccion" data-reveal style={{ padding:"80px 0", background:coleccionBg, position:"relative" }}>
         <EditableSectionBg field="bgColeccion" label="Fondo colección" />
         {/* encabezado */}
         <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "0 16px" : "0 40px", marginBottom:40, borderBottom:`1px solid rgba(44,34,24,0.1)`, paddingBottom:24 }}>
@@ -615,7 +618,7 @@ export default function BohoTerra() {
       </section>
 
       {/* ── NOSOTROS — imagen full width + texto encima */}
-      <section id="nosotros" style={{ background:nosotrosBg, position:"relative" }}>
+      <section id="nosotros" data-reveal style={{ background:nosotrosBg, position:"relative" }}>
         <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
         {/* foto ancha */}
         <div style={{ position:"relative", height:400, overflow:"hidden" }}>
@@ -648,7 +651,7 @@ export default function BohoTerra() {
       </section>
 
       {/* ── CONTACTO — imagen de fondo + form superpuesto */}
-      <section id="contacto" style={{ position:"relative", overflow:"hidden" }}>
+      <section id="contacto" data-reveal style={{ position:"relative", overflow:"hidden" }}>
         <img src={contactBgOv?.url ?? "https://picsum.photos/seed/terra-contact/1920/700"} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:`${contactBgOv?.posX ?? 50}% ${contactBgOv?.posY ?? 60}%` }}/>
         <BgDragHandle imgKey="contactBackground" />
         <EditableImageButton field="contactBackground" label="Imagen fondo contacto" />

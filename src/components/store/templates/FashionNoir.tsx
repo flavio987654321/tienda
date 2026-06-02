@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
@@ -201,6 +202,8 @@ export default function FashionNoir() {
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
   const showAnnouncement = promoBannerEnabled && announcementVisible;
   const announcementBarHeight = showAnnouncement ? ANNOUNCEMENT_BAR_H : 0;
+
+  useScrollReveal();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -632,7 +635,7 @@ export default function FashionNoir() {
       </section>
 
       {/* ── GARANTÍAS ──────────────────────────────────────── */}
-      <section style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, borderBottom:`1px solid rgba(201,168,76,0.12)`, background:garantiasBg, position:"relative" }}>
+      <section data-reveal style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, borderBottom:`1px solid rgba(201,168,76,0.12)`, background:garantiasBg, position:"relative" }}>
         <EditableSectionBg field="bgGarantias" label="Fondo garantías" />
         <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)" }}>
           {GARANTIAS.map((g, i) => {
@@ -660,7 +663,7 @@ export default function FashionNoir() {
 
       {/* ── MAYORISTA — banner "Solicitá tu lista de precios" ── */}
       {isWholesale && (
-        <section style={{ background:S, borderTop:`1px solid rgba(201,168,76,0.2)`, borderBottom:`1px solid rgba(201,168,76,0.2)` }}>
+        <section data-reveal style={{ background:S, borderTop:`1px solid rgba(201,168,76,0.2)`, borderBottom:`1px solid rgba(201,168,76,0.2)` }}>
           <div style={{ maxWidth:1280, margin:"0 auto", padding:"60px 32px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:24 }}>
             <span style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", fontWeight:700, border:`1px solid ${G}`, padding:"4px 12px", borderRadius:2 }}>Tienda mayorista</span>
             <h2 style={{ fontSize:"clamp(28px,4vw,48px)", fontWeight:300, color:T, margin:0, letterSpacing:"-0.5px", fontFamily:"Georgia, 'Times New Roman', serif", lineHeight:1.2 }}>
@@ -678,7 +681,7 @@ export default function FashionNoir() {
       )}
 
       {/* ── CATEGORÍAS ─────────────────────────────────────── */}
-      <section id="categorias" style={{ background:categoriasBg, position:"relative" }}>
+      <section id="categorias" data-reveal style={{ background:categoriasBg, position:"relative" }}>
         <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
         <div style={{ padding: isMobile ? "48px 16px" : "80px 32px", maxWidth:1280, margin:"0 auto" }}>
           <p style={{ fontSize:11, letterSpacing:5, color:G, textAlign:"center", marginBottom:48, textTransform:"uppercase" }}>
@@ -708,7 +711,7 @@ export default function FashionNoir() {
       </section>
 
       {/* ── STATEMENT ──────────────────────────────────────── */}
-      <section style={{ borderTop:`1px solid rgba(201,168,76,0.1)`, borderBottom:`1px solid rgba(201,168,76,0.1)`, textAlign:"center", position:"relative", ...(statementBgImg?.url ? { backgroundImage:`url(${statementBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${statementBgImg.posX ?? 50}% ${statementBgImg.posY ?? 50}%` } : { background:statementBg }) }}>
+      <section data-reveal style={{ borderTop:`1px solid rgba(201,168,76,0.1)`, borderBottom:`1px solid rgba(201,168,76,0.1)`, textAlign:"center", position:"relative", ...(statementBgImg?.url ? { backgroundImage:`url(${statementBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${statementBgImg.posX ?? 50}% ${statementBgImg.posY ?? 50}%` } : { background:statementBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgStatement" />
         <EditableSectionBg field="bgStatement" label="Fondo frase" />
         {statementBgImg?.url && statementBgImg.overlayType !== "none" && (
@@ -723,7 +726,7 @@ export default function FashionNoir() {
       </section>
 
       {/* ── PRODUCTOS ──────────────────────────────────────── */}
-      <section id="productos" style={{ background:productosBg, position:"relative" }}>
+      <section id="productos" data-reveal style={{ background:productosBg, position:"relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
         <div style={{ padding: isMobile ? "48px 16px" : "80px 32px", maxWidth:1280, margin:"0 auto" }}>
         <div style={{ marginBottom:40 }}>
@@ -790,7 +793,7 @@ export default function FashionNoir() {
       </section>
 
       {/* ── NOSOTROS ───────────────────────────────────────── */}
-      <section id="nosotros" style={{ borderTop:`1px solid rgba(201,168,76,0.1)` }}>
+      <section id="nosotros" data-reveal style={{ borderTop:`1px solid rgba(201,168,76,0.1)` }}>
         <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
           <div style={{ position:"relative", minHeight: isMobile ? 280 : 560, overflow:"hidden" }}>
             <img src={nosotrosImageUrl} alt="Nuestra historia" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${nosotrosPosX}% ${nosotrosPosY}%`, display:"block" }}/>
@@ -827,7 +830,7 @@ export default function FashionNoir() {
       </section>
 
       {/* ── CONTACTO ───────────────────────────────────────── */}
-      <section id="contacto" style={{ position:"relative", borderTop:`1px solid rgba(201,168,76,0.1)`, color:contactoText, ...(contactoBgImg?.url ? { backgroundImage:`url(${contactoBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${contactoBgImg.posX ?? 50}% ${contactoBgImg.posY ?? 50}%` } : { background:contactoBg }) }}>
+      <section id="contacto" data-reveal style={{ position:"relative", borderTop:`1px solid rgba(201,168,76,0.1)`, color:contactoText, ...(contactoBgImg?.url ? { backgroundImage:`url(${contactoBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${contactoBgImg.posX ?? 50}% ${contactoBgImg.posY ?? 50}%` } : { background:contactoBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
         <EditableSectionBg field="bgContacto" label="Fondo contacto" />
         {contactoBgImg?.url && contactoBgImg.overlayType !== "none" && (

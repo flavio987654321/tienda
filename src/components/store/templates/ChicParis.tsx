@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
@@ -337,6 +338,8 @@ export default function ChicParis() {
     fontFamily: "inherit", boxSizing: "border-box", background: "#fff", color: "#111",
   };
 
+  useScrollReveal();
+
   return (
     <div style={{ fontFamily: "'Inter','Helvetica Neue',Arial,sans-serif", background: "#fff", color: "#111", minHeight: "100vh" }}>
       <style>{`
@@ -576,7 +579,7 @@ export default function ChicParis() {
       </section>
 
       {/* ── STRIP ── */}
-      <section style={{ background: stripBg, borderTop: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, borderBottom: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, padding: "20px 40px", position: "relative" }}>
+      <section data-reveal style={{ background: stripBg, borderTop: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, borderBottom: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, padding: "20px 40px", position: "relative" }}>
         <EditableSectionBg field="bgStrip" label="Fondo franja garantías" />
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
           {STRIP_ITEMS.map(({ slot, titleField, titleDefault, descField, descDefault }) => {
@@ -612,7 +615,7 @@ export default function ChicParis() {
 
       {/* ── MAYORISTA — banner "Solicitá tu lista de precios" ── */}
       {isWholesale && (
-        <section style={{ background: "#f8f5f0", borderTop: `3px solid ${ACC}` }}>
+        <section data-reveal style={{ background: "#f8f5f0", borderTop: `3px solid ${ACC}` }}>
           <div style={{ maxWidth: 1280, margin: "0 auto", padding: "72px 40px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 20 }}>
             <span style={{ fontSize: 10, letterSpacing: 4, color: ACC, textTransform: "uppercase", fontWeight: 700 }}>Tienda mayorista</span>
             <h2 style={{ fontSize: "clamp(28px,4vw,52px)", fontWeight: 300, color: "#111", margin: 0, fontFamily: "'Playfair Display', Georgia, serif", letterSpacing: "-0.5px", lineHeight: 1.2 }}>
@@ -630,7 +633,7 @@ export default function ChicParis() {
       )}
 
       {/* ── PRODUCTOS ── */}
-      <section id="productos" style={{ background: prodBg, padding: isMobile ? "48px 16px" : "72px 40px", position: "relative" }}>
+      <section id="productos" data-reveal style={{ background: prodBg, padding: isMobile ? "48px 16px" : "72px 40px", position: "relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
@@ -696,7 +699,7 @@ export default function ChicParis() {
       </section>
 
       {/* ── ABOUT ── */}
-      <section id="nosotros" style={{ background: aboutBg, padding: isMobile ? "48px 16px" : "80px 40px", position: "relative" }}>
+      <section id="nosotros" data-reveal style={{ background: aboutBg, padding: isMobile ? "48px 16px" : "80px 40px", position: "relative" }}>
         <EditableSectionBg field="bgAbout" label="Fondo nosotros" />
         <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 32 : 60, alignItems: "center" }}>
           <div style={{ position: "relative" }}>
@@ -736,7 +739,7 @@ export default function ChicParis() {
       </section>
 
       {/* ── CONTACT — split editorial ── */}
-      <section id="contacto" style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", minHeight: isMobile ? "auto" : 540 }}>
+      <section id="contacto" data-reveal style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", minHeight: isMobile ? "auto" : 540 }}>
 
         {/* Panel izquierdo — info */}
         <div style={{ background: "#111", padding: isMobile ? "48px 20px" : "72px 56px", display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative" }}>
