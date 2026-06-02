@@ -377,10 +377,11 @@ function FlyerImageSlot({ url, slot, onUpload, onRemove }: {
 }
 
 /* ── Config avanzada modal ──────────────────────────────────── */
-function ConfigModal({ config, update, onClose, onDelete, storeSlug, isPremium }: {
+function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isPremium }: {
   config: StoreConfig;
   update: <K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => void;
   onClose: () => void;
+  onSave: () => Promise<void>;
   onDelete: () => void;
   storeSlug?: string | null;
   isPremium?: boolean;
@@ -441,7 +442,7 @@ function ConfigModal({ config, update, onClose, onDelete, storeSlug, isPremium }
         <div style={{ padding: "18px 24px 14px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a" }}>Configuración avanzada</h2>
-            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Los cambios se reflejan en el preview al instante</p>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Usá "Guardar y cerrar" para que los cambios queden guardados</p>
           </div>
           <button onClick={onClose} style={{ width: 32, height: 32, border: "1px solid #e2e8f0", borderRadius: 8, background: "white", cursor: "pointer", fontSize: 18, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
         </div>
@@ -795,9 +796,10 @@ function ConfigModal({ config, update, onClose, onDelete, storeSlug, isPremium }
         <div style={{ padding: "12px 24px 16px", borderTop: "1px solid #f1f5f9", display: "flex", flexDirection: "column", gap: 8 }}>
           {!confirmingDelete ? (
             <>
-              <button onClick={onClose}
+              <button
+                onClick={async () => { await onSave(); onClose(); }}
                 style={{ width: "100%", padding: "11px", border: "none", borderRadius: 10, background: "#6366f1", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                Listo
+                Guardar y cerrar
               </button>
               <button onClick={() => setConfirmingDelete(true)}
                 style={{ width: "100%", padding: "9px", border: "1px solid #fecaca", borderRadius: 10,
@@ -1780,7 +1782,7 @@ export default function ConfiguracionPage() {
 
       {/* Config modal */}
       {configModalOpen && (
-        <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} onDelete={() => { setConfigModalOpen(false); handleDelete(); }} storeSlug={storeSlug} isPremium={isPremium} />
+        <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} onSave={handleSave} onDelete={() => { setConfigModalOpen(false); handleDelete(); }} storeSlug={storeSlug} isPremium={isPremium} />
       )}
 
       {/* Confirmar salir sin guardar */}
