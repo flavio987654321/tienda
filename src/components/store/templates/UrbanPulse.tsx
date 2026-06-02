@@ -720,18 +720,28 @@ export default function UrbanPulse() {
             <EditableZone field="testimonialsHeading" label="Título testimonios">Lo que dicen nuestros clientes</EditableZone>
           </h2>
         </div>
-        <div style={{ display:"flex", gap:4, overflowX:"auto", padding:"0 40px 4px", scrollbarWidth:"none", position:"relative", zIndex:1 }}>
-          {TESTIMONIALS.map((t, i) => (
-            <div key={i} style={{ flex:"0 0 300px", background:testimonialsCardBg, border:`1px solid ${testimonialsCardBorder}`, padding:"28px" }}>
-              <div style={{ display:"flex", gap:3, marginBottom:14 }}>
-                {Array.from({length:5}).map((_,si) => (
-                  <svg key={si} width={13} height={13} viewBox="0 0 24 24" fill={si < t.stars ? ACC : testimonialsMid} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                ))}
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4,1fr)", gap:12, padding:"0 40px", position:"relative", zIndex:1 }}>
+          {TESTIMONIALS.map((t, i) => {
+            const starsVal = Math.min(5, Math.max(1, parseInt(textOverrides[`testimonial${i+1}Stars`]?.text ?? String(t.stars)) || t.stars));
+            return (
+              <div key={i} style={{ background:testimonialsCardBg, border:`1px solid ${testimonialsCardBorder}`, padding:"28px" }}>
+                <div style={{ display:"flex", gap:3, marginBottom:14, cursor: editMode ? "pointer" : "default" }}
+                  onClick={() => editMode && setOverride(`testimonial${i+1}Stars`, { text: String(starsVal < 5 ? starsVal + 1 : 1) })}
+                  title={editMode ? "Click para cambiar estrellas" : undefined}>
+                  {Array.from({length:5}).map((_,si) => (
+                    <svg key={si} width={13} height={13} viewBox="0 0 24 24" fill={si < starsVal ? ACC : testimonialsMid} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  ))}
+                  {editMode && <span style={{ fontSize:9, color:testimonialsMid, marginLeft:4, alignSelf:"center" }}>↑</span>}
+                </div>
+                <p style={{ color:testimonialsMid, fontSize:13, lineHeight:1.7, margin:"0 0 18px" }}>
+                  "<EditableZone field={`testimonial${i+1}Text`} label={`Testimonio ${i+1} — Texto`}>{t.text}</EditableZone>"
+                </p>
+                <p style={{ color:ACC, fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:0 }}>
+                  <EditableZone field={`testimonial${i+1}Name`} label={`Testimonio ${i+1} — Nombre`}>{t.name}</EditableZone>
+                </p>
               </div>
-              <p style={{ color:testimonialsMid, fontSize:13, lineHeight:1.7, margin:"0 0 18px" }}>"{t.text}"</p>
-              <p style={{ color:ACC, fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:0 }}>{t.name}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -848,19 +858,19 @@ export default function UrbanPulse() {
                 <EditableZone field="footerDescription" label="Descripción footer">Ropa deportiva de alta performance. Para quienes van más rápido.</EditableZone>
               </p>
             </div>
-            {[
-              { title:"Tienda", links:["Mujer","Hombre","Accesorios","Novedades","Sale"] },
-              { title:"Ayuda", links:["Guía de talles","Envíos","Devoluciones","FAQ","Contacto"] },
-              { title:"Empresa", links:["Nosotros","Prensa","Empleo","Sustentabilidad"] },
-            ].map(col => (
-              <div key={col.title}>
-                <p style={{ color:footerUpText, fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:"0 0 18px" }}>{col.title}</p>
-                {col.links.map(link => (
-                  <a key={link} href="#" style={{ display:"block", color:footerUpMid, fontSize:13, textDecoration:"none", marginBottom:10 }}
-                    onMouseEnter={e => { (e.target as HTMLElement).style.color = ACC; }}
-                    onMouseLeave={e => { (e.target as HTMLElement).style.color = footerUpMid; }}>
-                    {link}
-                  </a>
+            {([
+              { titleField:"footerCol1Title", titleDefault:"Tienda",   links:[["footerCol1Link1","Mujer"],["footerCol1Link2","Hombre"],["footerCol1Link3","Accesorios"],["footerCol1Link4","Novedades"],["footerCol1Link5","Sale"]] },
+              { titleField:"footerCol2Title", titleDefault:"Ayuda",    links:[["footerCol2Link1","Guía de talles"],["footerCol2Link2","Envíos"],["footerCol2Link3","Devoluciones"],["footerCol2Link4","FAQ"],["footerCol2Link5","Contacto"]] },
+              { titleField:"footerCol3Title", titleDefault:"Empresa",  links:[["footerCol3Link1","Nosotros"],["footerCol3Link2","Prensa"],["footerCol3Link3","Empleo"],["footerCol3Link4","Sustentabilidad"]] },
+            ] as const).map(col => (
+              <div key={col.titleField}>
+                <p style={{ color:footerUpText, fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:"0 0 18px" }}>
+                  <EditableZone field={col.titleField} label={`Footer — columna título`}>{col.titleDefault}</EditableZone>
+                </p>
+                {col.links.map(([f, def]) => (
+                  <div key={f} style={{ display:"block", color:footerUpMid, fontSize:13, marginBottom:10 }}>
+                    <EditableZone field={f} label={`Footer link`}>{def}</EditableZone>
+                  </div>
                 ))}
               </div>
             ))}
