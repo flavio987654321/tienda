@@ -22,6 +22,11 @@ export type ImageOverride = {
   hideContent?: boolean; // hide template text + buttons (for images with embedded text)
 };
 
+export type FlyerConfig = {
+  enabled: boolean;
+  images: string[]; // hasta 3 URLs de Supabase Storage
+};
+
 export type StoreConfig = {
   template: TemplateId;
   storeId?: string;
@@ -62,6 +67,7 @@ export type StoreConfig = {
   tieneVentaMayorista?: boolean;
   ocultarPreciosPublico?: boolean;
   featuredCategories?: string[];
+  flyerConfig?: FlyerConfig;
 };
 
 export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: string }> = {

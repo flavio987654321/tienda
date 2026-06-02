@@ -51,13 +51,20 @@ const storeConfigSchema = z.object({
   featuredCategories: z.array(z.string().max(80)).optional(),
   storeId: z.string().optional(),
   slug: z.string().optional(),
+  flyerConfig: z.object({
+    enabled: z.boolean(),
+    images: z.array(z.string().max(2000)).max(3),
+  }).optional(),
 });
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  const store = await prisma.store.findUnique({ where: { ownerId: user.id } });
-  return NextResponse.json({ store });
+  const [store, subscription] = await Promise.all([
+    prisma.store.findUnique({ where: { ownerId: user.id } }),
+    prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } }),
+  ]);
+  return NextResponse.json({ store, isPremium: subscription?.tier === "PREMIUM" });
 }
 
 export async function POST(req: NextRequest) {

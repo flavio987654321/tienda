@@ -62,6 +62,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
         tipoTienda: true,
         tieneVentaMayorista: true,
         ownerId: true,
+        owner: { select: { subscription: { select: { tier: true } } } },
       },
     }),
     getCurrentUser(),
@@ -70,6 +71,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
   if (!store) notFound();
 
   const isOwner = !!currentUser && currentUser.id === store.ownerId;
+  const ownerIsPremium = (store.owner as { subscription?: { tier?: string } } | null)?.subscription?.tier === "PREMIUM";
 
   if (!store.isPublished && !isOwner) {
     return (
@@ -94,6 +96,8 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
       tipoTienda: store.tipoTienda ?? "GENERAL",
       tieneVentaMayorista: store.tieneVentaMayorista ?? false,
       isOwner,
+      // Solo mostrar el flyer si el dueño tiene Premium
+      flyerConfig: ownerIsPremium ? parsed.flyerConfig : undefined,
     };
   } catch {
     notFound();

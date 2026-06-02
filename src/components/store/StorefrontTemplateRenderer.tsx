@@ -6,6 +6,7 @@ import FashionNoir from "./templates/FashionNoir";
 import BohoTerra from "./templates/BohoTerra";
 import UrbanPulse from "./templates/UrbanPulse";
 import ChicParis from "./templates/ChicParis";
+import FlyerPopup from "./FlyerPopup";
 
 const TEMPLATES: Record<string, React.ComponentType> = {
   "fashion-noir": FashionNoir,
@@ -33,6 +34,9 @@ export default function StorefrontTemplateRenderer({ config }: { config: StoreCo
         imageLoading: {},
       }}>
         <Template />
+        {!config.isOwner && config.flyerConfig?.enabled && (config.flyerConfig.images?.length ?? 0) > 0 && (
+          <FlyerPopup flyer={config.flyerConfig} />
+        )}
       </EditContext.Provider>
     </StoreConfigContext.Provider>
   );

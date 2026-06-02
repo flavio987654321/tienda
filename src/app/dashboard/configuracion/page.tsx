@@ -305,12 +305,85 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 }
 
 /* ── Config avanzada modal ──────────────────────────────────── */
-function ConfigModal({ config, update, onClose, onDelete, storeSlug }: {
+/* ── Flyer image slot (upload individual) ──────────────────── */
+function FlyerImageSlot({ url, slot, onUpload, onRemove }: {
+  url?: string;
+  slot: number;
+  onUpload: (slot: number, url: string) => void;
+  onRemove: (slot: number) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `tienda-imagenes/flyer-${slot}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("tienda-imagenes").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("tienda-imagenes").getPublicUrl(path);
+      onUpload(slot, data.publicUrl);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al subir la imagen");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }, [slot, onUpload]);
+
+  return (
+    <div style={{ border: "1.5px dashed #e2e8f0", borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10, background: "white" }}>
+      <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
+      {url ? (
+        <>
+          <img src={url} alt="" style={{ width: 40, height: 54, objectFit: "cover", borderRadius: 6, border: "1px solid #e2e8f0", flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#1e293b" }}>Flyer {slot + 1}</p>
+            <p style={{ margin: "2px 0 0", fontSize: 10, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Imagen cargada ✓</p>
+          </div>
+          <button onClick={() => fileRef.current?.click()} disabled={uploading}
+            style={{ fontSize: 11, padding: "5px 9px", border: "1px solid #e2e8f0", borderRadius: 6, background: "white", cursor: "pointer", color: "#64748b", whiteSpace: "nowrap" }}>
+            Cambiar
+          </button>
+          <button onClick={() => onRemove(slot)}
+            style={{ fontSize: 11, padding: "5px 9px", border: "1px solid #fecaca", borderRadius: 6, background: "white", cursor: "pointer", color: "#ef4444", whiteSpace: "nowrap" }}>
+            Quitar
+          </button>
+        </>
+      ) : (
+        <>
+          <div style={{ width: 40, height: 54, background: "#f8fafc", borderRadius: 6, border: "1px dashed #cbd5e1", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 18, color: "#cbd5e1" }}>
+            🖼
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#94a3b8" }}>Flyer {slot + 1}</p>
+            <p style={{ margin: "2px 0 0", fontSize: 10, color: "#cbd5e1" }}>Sin imagen</p>
+          </div>
+          <button onClick={() => fileRef.current?.click()} disabled={uploading}
+            style={{ fontSize: 11, padding: "5px 9px", border: "1px solid #e2e8f0", borderRadius: 6, background: uploading ? "#f8fafc" : "white", cursor: uploading ? "default" : "pointer", color: "#64748b", whiteSpace: "nowrap" }}>
+            {uploading ? "Subiendo…" : "Subir imagen"}
+          </button>
+        </>
+      )}
+      {error && <span style={{ fontSize: 10, color: "#ef4444", flexShrink: 0 }}>⚠ {error}</span>}
+    </div>
+  );
+}
+
+/* ── Config avanzada modal ──────────────────────────────────── */
+function ConfigModal({ config, update, onClose, onDelete, storeSlug, isPremium }: {
   config: StoreConfig;
   update: <K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => void;
   onClose: () => void;
   onDelete: () => void;
   storeSlug?: string | null;
+  isPremium?: boolean;
 }) {
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
@@ -597,6 +670,85 @@ function ConfigModal({ config, update, onClose, onDelete, storeSlug }: {
               )}
             </div>
           )}
+
+          {/* Flyer de publicidad — solo Premium */}
+          <div style={sec}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+                🪄 Flyer de publicidad
+              </p>
+              {isPremium ? (
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#d97706", background: "#fffbeb", border: "1px solid #fde68a", padding: "2px 8px", borderRadius: 20, flexShrink: 0 }}>★ Premium</span>
+              ) : (
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "2px 8px", borderRadius: 20, flexShrink: 0 }}>Solo Premium</span>
+              )}
+            </div>
+
+            {!isPremium ? (
+              <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "12px 14px" }}>
+                <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700, color: "#92400e" }}>Disponible en Tienda Premium</p>
+                <p style={{ margin: "0 0 8px", fontSize: 11, color: "#b45309", lineHeight: 1.5 }}>
+                  Mostrá un flyer o folleto publicitario cada vez que alguien entra a tu tienda. Perfecto para promociones, lanzamientos y novedades.
+                </p>
+                <a href="/dashboard/mi-plan" style={{ fontSize: 11, fontWeight: 700, color: "#b45309", textDecoration: "underline" }}>Actualizar a Premium →</a>
+              </div>
+            ) : (
+              <>
+                {/* Toggle activar */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Activar flyer</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Aparece al entrar a la tienda, en cada visita</p>
+                  </div>
+                  <Toggle
+                    value={config.flyerConfig?.enabled ?? false}
+                    onChange={v => update("flyerConfig", { enabled: v, images: config.flyerConfig?.images ?? [] })}
+                  />
+                </div>
+
+                {config.flyerConfig?.enabled && (
+                  <>
+                    {/* Info */}
+                    <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 8, padding: "9px 12px", marginBottom: 12, fontSize: 11, color: "#0369a1", lineHeight: 1.5 }}>
+                      📸 <strong>Formato recomendado:</strong> imagen vertical tipo historia de Instagram (1080×1920px). Subí hasta 3 flyers — el visitante puede navegar entre ellos con flechas.
+                    </div>
+
+                    {/* Slots de imagen */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {[0, 1, 2].map(slot => (
+                        <FlyerImageSlot
+                          key={slot}
+                          slot={slot}
+                          url={config.flyerConfig?.images?.[slot]}
+                          onUpload={(s, url) => {
+                            const next = [...(config.flyerConfig?.images ?? [])];
+                            next[s] = url;
+                            update("flyerConfig", { enabled: true, images: next.filter(Boolean) as string[] });
+                          }}
+                          onRemove={(s) => {
+                            const next = (config.flyerConfig?.images ?? []).filter((_, i) => i !== s);
+                            update("flyerConfig", { enabled: true, images: next });
+                          }}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Alerta sin imágenes */}
+                    {(config.flyerConfig?.images?.length ?? 0) === 0 && (
+                      <div style={{ background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 8, padding: "9px 12px", marginTop: 10, fontSize: 11, color: "#92400e" }}>
+                        ⚠ Agregá al menos una imagen para que el flyer sea visible a tus visitantes.
+                      </div>
+                    )}
+
+                    {/* Info PWA */}
+                    <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", marginTop: 10, fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
+                      📱 Si tus clientes tienen la tienda instalada como app (PWA), el flyer aparece justo después de la pantalla de carga.
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
 
           {/* SEO */}
           <div style={sec}>
@@ -1066,6 +1218,7 @@ export default function ConfiguracionPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [activeField, setActiveField] = useState<string | null>(null);
   const [configModalOpen, setConfigModalOpen] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -1079,7 +1232,8 @@ export default function ConfiguracionPage() {
   useEffect(() => {
     fetch("/api/configuracion")
       .then(r => r.json())
-      .then(({ store }) => {
+      .then(({ store, isPremium: premium }) => {
+        setIsPremium(premium ?? false);
         if (!store) return;
         if (store.slug) setStoreSlug(store.slug);
         // Campos de la tienda que siempre deben estar en el config del preview
@@ -1604,7 +1758,7 @@ export default function ConfiguracionPage() {
 
       {/* Config modal */}
       {configModalOpen && (
-        <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} onDelete={() => { setConfigModalOpen(false); handleDelete(); }} storeSlug={storeSlug} />
+        <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} onDelete={() => { setConfigModalOpen(false); handleDelete(); }} storeSlug={storeSlug} isPremium={isPremium} />
       )}
 
       {/* Confirmar salir sin guardar */}

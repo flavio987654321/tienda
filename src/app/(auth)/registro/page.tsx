@@ -46,6 +46,7 @@ const TYPES = [
       "App instalable en el celular (PWA)",
       "Conectá tu dominio propio",
       "Afiliados y cupones ilimitados",
+      "Flyer de publicidad al entrar a la tienda",
       "Soporte prioritario",
     ],
     cta: "Crear mi tienda",
@@ -425,7 +426,7 @@ function RegistroContent() {
                     {ownerTier === "BASIC" ? (
                       <p className="text-xs text-gray-600 mt-1.5">6 afiliados · 10 cupones · Dominio propio no incluido</p>
                     ) : (
-                      <p className="text-xs text-amber-500/70 mt-1.5">Afiliados y cupones ilimitados · Dominio propio · App instalable</p>
+                      <p className="text-xs text-amber-500/70 mt-1.5">Afiliados y cupones ilimitados · Dominio propio · App instalable · Flyer publicitario</p>
                     )}
                   </div>
                 )}

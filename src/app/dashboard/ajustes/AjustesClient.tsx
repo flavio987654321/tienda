@@ -166,6 +166,53 @@ export default function AjustesClient({ slug, customDomain, isPremium }: Props) 
         )}
       </div>
 
+      {/* Flyer de publicidad */}
+      <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2.5">
+            <span className="text-base">🪄</span>
+            <h2 className="text-sm font-bold text-gray-800">Flyer de publicidad</h2>
+          </div>
+          {isPremium ? (
+            <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1">
+              <Crown className="h-3 w-3" /> Premium
+            </span>
+          ) : (
+            <span className="text-xs font-bold text-gray-400 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full flex items-center gap-1">
+              <Lock className="h-3 w-3" /> Solo Premium
+            </span>
+          )}
+        </div>
+        {isPremium ? (
+          <div className="px-5 py-4 space-y-3">
+            <p className="text-xs text-gray-500">
+              Mostrá un flyer o folleto publicitario cada vez que alguien entra a tu tienda. Subí hasta 3 imágenes en formato vertical (tipo historia de Instagram).
+            </p>
+            <Link
+              href="/dashboard/configuracion"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+            >
+              Configurar flyer en el diseño de la tienda →
+            </Link>
+          </div>
+        ) : (
+          <div className="px-5 py-4">
+            <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl p-3.5">
+              <Crown className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">Disponible en Tienda Premium</p>
+                <p className="text-xs text-amber-600 mt-0.5">
+                  Mostrá un flyer publicitario al entrar a la tienda. Perfecto para promociones, lanzamientos y novedades.
+                </p>
+                <Link href="/dashboard/mi-plan" className="inline-flex items-center gap-1 mt-2.5 text-xs font-bold text-amber-700 hover:text-amber-900 underline">
+                  Actualizar a Premium →
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Notificaciones push */}
       <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100">

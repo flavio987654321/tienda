@@ -391,6 +391,7 @@ function PreciosContent() {
                   { text: `Hasta 10 cupones activos`, both: false, basic: true, premiumText: "Cupones ilimitados" },
                   { text: "Tienda instalable como app (PWA)", both: false, basic: false, premiumOnly: true },
                   { text: "Conectá tu dominio propio (lo configuramos nosotros)", both: false, basic: false, premiumOnly: true },
+                  { text: "Flyer de publicidad al entrar a la tienda", both: false, basic: false, premiumOnly: true },
                   { text: "Soporte por email", both: false, basic: true, premiumText: "Soporte prioritario" },
                 ].map((f, i) => {
                   if (f.both) {
