@@ -136,7 +136,7 @@ export default async function VendedorasPage() {
 
   return (
     <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pending.length}>
-      <AutoRefresh intervalMs={30_000} />
+      <AutoRefresh />
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Afiliados</h1>

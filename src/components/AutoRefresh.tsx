@@ -2,23 +2,28 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-function isUserTyping() {
-  const el = document.activeElement;
-  return el instanceof HTMLInputElement ||
-    el instanceof HTMLTextAreaElement ||
-    (el instanceof HTMLElement && el.isContentEditable);
-}
-
-export default function AutoRefresh({ intervalMs = 30_000 }: { intervalMs?: number }) {
+export default function AutoRefresh({ tables = ["Affiliate", "Order"] }: { tables?: string[] }) {
   const router = useRouter();
+
   useEffect(() => {
-    const id = setInterval(() => {
-      if (document.hidden) return;   // tab en segundo plano
-      if (isUserTyping()) return;    // usuario escribiendo en un campo
-      router.refresh();
-    }, intervalMs);
-    return () => clearInterval(id);
-  }, [router, intervalMs]);
+    const supabase = createSupabaseBrowserClient();
+    const channel = supabase.channel("autorefresh");
+
+    for (const table of tables) {
+      channel.on(
+        "postgres_changes" as Parameters<typeof channel.on>[0],
+        { event: "*", schema: "public", table },
+        () => {
+          if (!document.hidden) router.refresh();
+        }
+      );
+    }
+
+    channel.subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [router, tables]);
+
   return null;
 }

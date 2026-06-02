@@ -107,7 +107,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
   }
 
   function productUrl(productId: string) {
-    return `${origin}/tienda/${target.storeSlug}?ref=${target.affiliateId}&producto=${productId}`;
+    return `${origin}/tienda/${target.storeSlug}?ref=${target.affiliateId}&p=${productId}`;
   }
 
   function productShareText(product: ShareProduct, url: string) {
