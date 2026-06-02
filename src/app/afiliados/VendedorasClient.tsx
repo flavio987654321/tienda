@@ -238,7 +238,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
 
     ctx.fillStyle = "#94a3b8";
     ctx.font = "500 24px Arial";
-    ctx.fillText("Link en la publicacion", 650, 1285);
+    ctx.fillText("Link en bio / stories", 620, 1285);
 
     return new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("No se pudo exportar la placa"))), "image/png", 0.92);
@@ -438,7 +438,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                     <div className="flex items-start gap-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-500/20 rounded-2xl px-4 py-3">
                       <span className="text-base mt-0.5">💡</span>
                       <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                        <span className="text-purple-600 dark:text-purple-300 font-bold">Para Instagram/TikTok:</span> swipeá la foto, generá la placa y subila a stories con el sticker de link.
+                        <span className="text-purple-600 dark:text-purple-300 font-bold">Para Instagram:</span> en Stories agregá el sticker de link con tu URL. En posts, copiá el link y pegalo en tu bio o en el caption.
                       </p>
                     </div>
 
