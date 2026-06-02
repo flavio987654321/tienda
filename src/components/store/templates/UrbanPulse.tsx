@@ -384,6 +384,8 @@ export default function UrbanPulse() {
               Categorías <span style={{ fontSize:9, opacity:0.6 }}>▾</span>
             </button>
             {hoveredNavCat && (
+              <>
+              <div style={{ position:"absolute", top:"100%", left:0, right:0, height:12, zIndex:499 }} />
               <div style={{ position:"absolute", top:"calc(100% + 12px)", left:0, background:WHITE, border:`2px solid ${DARK}`, minWidth:180, zIndex:500, padding:"6px 0", boxShadow:`4px 4px 0 ${DARK}` }}>
                 {categoryList.map(cat => {
                   const subs = subcategoriesFor[cat] || [];
@@ -412,6 +414,7 @@ export default function UrbanPulse() {
                   );
                 })}
               </div>
+              </>
             )}
           </div>
           {/* MUJER */}

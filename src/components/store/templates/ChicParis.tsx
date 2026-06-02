@@ -382,6 +382,8 @@ export default function ChicParis() {
                 Categorías <span style={{ fontSize: 9, opacity: 0.6 }}>▾</span>
               </button>
               {hoveredNavCat && (
+                <>
+                <div style={{ position: "absolute", top: "100%", left: 0, right: 0, height: 12, zIndex: 499 }} />
                 <div style={{ position: "absolute", top: "calc(100% + 12px)", left: 0, background: "#fff", border: "1px solid #e8e8e8", minWidth: 180, zIndex: 500, padding: "6px 0", boxShadow: "0 12px 40px rgba(0,0,0,0.12)" }}>
                   {categoryList.map(cat => {
                     const subs = subcategoriesFor[cat] || [];
@@ -410,6 +412,7 @@ export default function ChicParis() {
                     );
                   })}
                 </div>
+                </>
               )}
             </div>
             {/* MUJER */}

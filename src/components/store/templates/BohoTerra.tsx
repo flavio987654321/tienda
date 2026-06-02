@@ -394,6 +394,8 @@ export default function BohoTerra() {
                   Categorías <span style={{ fontSize:9, opacity:0.6 }}>▾</span>
                 </button>
                 {hoveredNavCat && (
+                  <>
+                  <div style={{ position:"absolute", top:"100%", left:0, right:0, height:10, zIndex:499 }} />
                   <div style={{ position:"absolute", top:"calc(100% + 10px)", left:0, background:"#faf7f2", border:`1px solid rgba(44,34,24,0.12)`, minWidth:180, zIndex:500, padding:"6px 0", boxShadow:"0 12px 40px rgba(44,34,24,0.12)" }}>
                     {categoryList.map(cat => (
                       <button key={cat} onClick={() => { changeCategory(cat); scrollTo("coleccion"); setHoveredNavCat(null); }}
@@ -402,6 +404,7 @@ export default function BohoTerra() {
                       </button>
                     ))}
                   </div>
+                  </>
                 )}
               </div>
               <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); scrollTo("coleccion"); }}
