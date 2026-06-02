@@ -42,6 +42,37 @@ export async function GET(req: NextRequest) {
 
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
+  if (mode === "tiendas-disponibles") {
+    const stores = await prisma.store.findMany({
+      where: { isActive: true, isPublished: true, affiliatesEnabled: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        tagline: true,
+        commissionRate: true,
+        primaryColor: true,
+        affiliatesEnabled: true,
+        acceptsRewardCoupons: true,
+        owner: { select: { name: true } },
+        _count: { select: { products: true } },
+        affiliates: {
+          where: { userId: user.id },
+          select: { id: true, status: true, isActive: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const result = stores.map((s) => ({
+      ...s,
+      description: s.description || s.tagline || null,
+    }));
+
+    return NextResponse.json({ stores: result });
+  }
+
   // Ver afiliados de mi tienda
   const ownerId = user.id;
   const store = await prisma.store.findUnique({
