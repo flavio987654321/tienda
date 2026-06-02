@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 export const metadata = {
   title: "Términos y Condiciones del Programa de Afiliados — TiendaApps",
@@ -10,7 +10,7 @@ export default function TerminosAfiliados() {
     <div className="min-h-screen bg-[#070b18] text-gray-300">
       <div className="max-w-3xl mx-auto px-6 py-16">
         <div className="mb-10">
-          <Link href="/vendedoras" className="text-indigo-400 hover:text-indigo-300 text-sm transition-colors">
+          <Link href="/afiliados" className="text-indigo-400 hover:text-indigo-300 text-sm transition-colors">
             ← Volver a Vendedoras
           </Link>
         </div>

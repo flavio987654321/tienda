@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -62,7 +62,7 @@ export default function TiendasPage() {
       router.push("/login");
       return;
     }
-    router.push(`/vendedoras?apply=${store.id}`);
+    router.push(`/afiliados?apply=${store.id}`);
   }
 
   return (
@@ -70,7 +70,7 @@ export default function TiendasPage() {
       {/* Navbar */}
       <nav className="sticky top-0 z-40 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-4">
-          <Link href="/vendedoras" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+          <Link href="/afiliados" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm font-medium">Volver</span>
           </Link>

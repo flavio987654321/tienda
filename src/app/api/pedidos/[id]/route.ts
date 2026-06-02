@@ -254,7 +254,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             type: "COMMISSION_EARNED",
             title: "¡Ganaste una comisión!",
             body: `Tu comisión de $${result.commission.amount.toLocaleString("es-AR")} fue acreditada.`,
-            link: "/vendedoras/billetera",
+            link: "/afiliados/billetera",
           });
         }
       }

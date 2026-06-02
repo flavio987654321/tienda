@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -419,7 +419,7 @@ export default function BilleteraPage() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
-          <Link href="/vendedoras" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+          <Link href="/afiliados" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex-1">Mi billetera</h1>
@@ -580,7 +580,7 @@ export default function BilleteraPage() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Últimas comisiones</p>
-                    <Link href="/vendedoras/pedidos"
+                    <Link href="/afiliados/pedidos"
                       className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
                       Ver todos <ExternalLink className="h-3 w-3" />
                     </Link>
@@ -636,7 +636,7 @@ export default function BilleteraPage() {
             <Wallet className="h-10 w-10 text-gray-200 dark:text-gray-700 mx-auto mb-3" />
             <p className="text-gray-500 font-medium mb-1">Aún no te uniste a ninguna tienda</p>
             <p className="text-gray-400 text-sm mb-4">Unite a una tienda para empezar a ganar comisiones.</p>
-            <Link href="/vendedoras"
+            <Link href="/afiliados"
               className="inline-flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors text-sm">
               Ver tiendas disponibles
             </Link>

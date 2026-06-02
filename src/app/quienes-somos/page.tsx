@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -128,7 +128,7 @@ export default function QuienesSomosPage() {
               <Link href="/registro" className="group flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-indigo-500/25 hover:scale-105">
                 Empezar gratis <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link href="/vendedoras" className="flex items-center gap-2 border border-white/10 hover:border-white/25 text-gray-300 hover:text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all hover:bg-white/5">
+              <Link href="/afiliados" className="flex items-center gap-2 border border-white/10 hover:border-white/25 text-gray-300 hover:text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all hover:bg-white/5">
                 <Briefcase className="h-5 w-5" /> Quiero ser afiliado
               </Link>
             </motion.div>
@@ -182,7 +182,7 @@ export default function QuienesSomosPage() {
                   "Su billetera crece cuanto más comparte",
                 ],
                 cta: "Quiero ser afiliado",
-                href: "/vendedoras",
+                href: "/afiliados",
               },
               {
                 icon: ShoppingCart,
@@ -456,7 +456,7 @@ export default function QuienesSomosPage() {
                 ))}
               </motion.ul>
               <motion.div variants={fadeUp}>
-                <Link href="/vendedoras" className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-purple-500/25 hover:scale-105">
+                <Link href="/afiliados" className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-purple-500/25 hover:scale-105">
                   Quiero ser afiliado <ArrowRight className="h-5 w-5" />
                 </Link>
               </motion.div>
@@ -615,7 +615,7 @@ export default function QuienesSomosPage() {
             <Link href="/" className="text-gray-500 hover:text-white transition-colors">Inicio</Link>
             <Link href="/precios" className="text-gray-500 hover:text-white transition-colors">Precios</Link>
             <Link href="/tiendas" className="text-gray-500 hover:text-white transition-colors">Tiendas</Link>
-            <Link href="/vendedoras" className="text-gray-500 hover:text-white transition-colors">Ser afiliado</Link>
+            <Link href="/afiliados" className="text-gray-500 hover:text-white transition-colors">Ser afiliado</Link>
             <Link href="/terminos" className="text-gray-500 hover:text-white transition-colors">Términos</Link>
             <Link href="/privacidad" className="text-gray-500 hover:text-white transition-colors">Privacidad</Link>
           </div>

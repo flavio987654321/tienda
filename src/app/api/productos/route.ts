@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { validateProductBody, MAX_PRODUCT_REELS } from "@/lib/products";
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
           type: "NEW_PRODUCT",
           title: `Nuevo producto en ${store.name}`,
           body: `${product.name} — $${parsedPrice.toLocaleString("es-AR")}. ¡Compartilo con tu link!`,
-          link: "/vendedoras",
+          link: "/afiliados",
         }))
       );
     }).catch((err) => console.error("[notify] new product affiliate notification failed:", err));

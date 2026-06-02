@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -729,7 +729,7 @@ function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: 
             </div>
             <span className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
               Leí y acepto los{" "}
-              <a href="/vendedoras/terminos" target="_blank" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">
+              <a href="/afiliados/terminos" target="_blank" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">
                 Términos y Condiciones del Programa de Afiliados
               </a>
               {" "}y entiendo cómo funcionan las comisiones y los pagos.
@@ -963,7 +963,7 @@ function ProfileCard({ profile, stats, onEdit }: { profile: UserProfile; stats: 
             { label: "Pedidos generados", value: stats.totalOrders, icon: ShoppingCart, color: "text-blue-500 dark:text-blue-400" },
             { label: "Total ganado", value: fmt(stats.totalEarned), icon: Award, color: "text-emerald-600 dark:text-emerald-400" },
             { label: "Comisiones pend.", value: fmt(stats.pendingCommissions), icon: DollarSign, color: "text-yellow-600 dark:text-yellow-400" },
-            { label: "Saldo disponible", value: fmt(stats.pendingBalance), icon: Wallet, color: "text-purple-600 dark:text-purple-400", link: "/vendedoras/billetera" },
+            { label: "Saldo disponible", value: fmt(stats.pendingBalance), icon: Wallet, color: "text-purple-600 dark:text-purple-400", link: "/afiliados/billetera" },
           ].map(({ label, value, icon: Icon, color, link }) =>
             link ? (
               <a key={label} href={link} className="bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/5 rounded-2xl p-3 transition-all group cursor-pointer">
@@ -1061,7 +1061,7 @@ export default function VendedorasClient() {
     return () => { supabase.removeChannel(channel); };
   }, [sessionStatus, fetchUserData]);
 
-  // Auto-open apply modal when coming from /vendedoras/tiendas?apply={id}
+  // Auto-open apply modal when coming from /afiliados/tiendas?apply={id}
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (sessionStatus !== "authenticated" || stores.length === 0) return;
@@ -1070,7 +1070,7 @@ export default function VendedorasClient() {
     const store = stores.find((s) => s.id === applyId);
     if (store) {
       setApplyStore(store);
-      window.history.replaceState({}, "", "/vendedoras");
+      window.history.replaceState({}, "", "/afiliados");
     }
   }, [stores, sessionStatus]);
 
@@ -1135,16 +1135,16 @@ export default function VendedorasClient() {
                 {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
               </button>
             )}
-            <Link href="/vendedoras/billetera" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
+            <Link href="/afiliados/billetera" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
               <Wallet className="h-4 w-4" /> Mi billetera
             </Link>
-            <Link href="/vendedoras/premios" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
+            <Link href="/afiliados/premios" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
               <Award className="h-4 w-4" /> Mis premios
             </Link>
-            <Link href="/vendedoras/estadisticas" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
+            <Link href="/afiliados/estadisticas" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
               <BarChart3 className="h-4 w-4" /> Estadísticas
             </Link>
-            <Link href="/vendedoras/ranking" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
+            <Link href="/afiliados/ranking" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
               <Trophy className="h-4 w-4" /> Ranking
             </Link>
             <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl">
@@ -1219,40 +1219,40 @@ export default function VendedorasClient() {
               <div className="flex-1 px-4 py-4 flex flex-col gap-1">
                 <>
                     <Link
-                      href="/vendedoras/billetera"
+                      href="/afiliados/billetera"
                       onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                     >
                       <Wallet className="h-4 w-4 text-indigo-500" /> Mi billetera
                     </Link>
                     <Link
-                      href="/vendedoras/premios"
+                      href="/afiliados/premios"
                       onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                     >
                       <Award className="h-4 w-4 text-amber-500" /> Mis premios
                     </Link>
-                    <Link href="/vendedoras/pedidos" onClick={() => setMobileMenuOpen(false)}
+                    <Link href="/afiliados/pedidos" onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <ShoppingBag className="h-4 w-4 text-green-500" /> Mis pedidos
                     </Link>
-                    <Link href="/vendedoras/estadisticas" onClick={() => setMobileMenuOpen(false)}
+                    <Link href="/afiliados/estadisticas" onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <BarChart3 className="h-4 w-4 text-blue-500" /> Estadísticas
                     </Link>
-                    <Link href="/vendedoras/plantillas" onClick={() => setMobileMenuOpen(false)}
+                    <Link href="/afiliados/plantillas" onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <MessageSquare className="h-4 w-4 text-purple-500" /> Plantillas
                     </Link>
-                    <Link href="/vendedoras/kit" onClick={() => setMobileMenuOpen(false)}
+                    <Link href="/afiliados/kit" onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <Download className="h-4 w-4 text-indigo-500" /> Kit de contenido
                     </Link>
-                    <Link href="/vendedoras/metas" onClick={() => setMobileMenuOpen(false)}
+                    <Link href="/afiliados/metas" onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <Target className="h-4 w-4 text-orange-500" /> Mis metas
                     </Link>
-                    <Link href="/vendedoras/ranking" onClick={() => setMobileMenuOpen(false)}
+                    <Link href="/afiliados/ranking" onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <Trophy className="h-4 w-4 text-amber-500" /> Ranking
                     </Link>
@@ -1292,8 +1292,8 @@ export default function VendedorasClient() {
               {[
                 { label: "Tiendas activas", value: activeStores.length, icon: CheckCircle, color: "text-emerald-400" },
                 { label: "Solicitudes pendientes", value: pendingStores.length, icon: Clock, color: "text-yellow-400" },
-                { label: "Tiendas disponibles", value: availableStores.length > 0 ? `${availableStores.length} →` : "0", icon: Store, color: "text-indigo-400", link: availableStores.length > 0 ? "/vendedoras/tiendas" : undefined },
-                { label: "Mi billetera", value: "Ver →", icon: Wallet, color: "text-purple-400", link: "/vendedoras/billetera" },
+                { label: "Tiendas disponibles", value: availableStores.length > 0 ? `${availableStores.length} →` : "0", icon: Store, color: "text-indigo-400", link: availableStores.length > 0 ? "/afiliados/tiendas" : undefined },
+                { label: "Mi billetera", value: "Ver →", icon: Wallet, color: "text-purple-400", link: "/afiliados/billetera" },
               ].map(({ label, value, icon: Icon, color, link }) => (
                 link ? (
                   <Link key={label} href={link} className="bg-white dark:bg-gray-900/80 hover:bg-gray-50 dark:hover:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-2xl p-4 transition-all group shadow-sm">
@@ -1437,7 +1437,7 @@ export default function VendedorasClient() {
                 )}
               </div>
               {availableStores.length > 0 && (
-                <Link href="/vendedoras/tiendas" className="flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold transition-colors">
+                <Link href="/afiliados/tiendas" className="flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold transition-colors">
                   Ver todas <ArrowRight className="h-4 w-4" />
                 </Link>
               )}
@@ -1457,7 +1457,7 @@ export default function VendedorasClient() {
                 </div>
                 {availableStores.length > 3 && (
                   <div className="mt-4 text-center">
-                    <Link href="/vendedoras/tiendas" className="inline-flex items-center gap-2 bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/40 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-6 py-3 rounded-2xl text-sm font-semibold transition-all shadow-sm">
+                    <Link href="/afiliados/tiendas" className="inline-flex items-center gap-2 bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/40 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-6 py-3 rounded-2xl text-sm font-semibold transition-all shadow-sm">
                       Ver las {availableStores.length} tiendas disponibles <ArrowRight className="h-4 w-4" />
                     </Link>
                   </div>

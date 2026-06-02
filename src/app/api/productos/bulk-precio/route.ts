@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createNotificationMany } from "@/lib/notifications";
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
           type: "PRICE_CHANGED",
           title: "Precios actualizados",
           body: `${products.length} producto${products.length !== 1 ? "s" : ""} cambiaron de precio (${sign}${pct}%).`,
-          link: "/vendedoras",
+          link: "/afiliados",
         }))
       );
     }

@@ -131,7 +131,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
           type: "PRICE_CHANGED",
           title: `Precio actualizado: ${product.name}`,
           body: `Nuevo precio: $${parsedPrice.toLocaleString("es-AR")}`,
-          link: "/vendedoras",
+          link: "/afiliados",
         });
       }
       if (wentOutOfStock) {
@@ -140,7 +140,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
           type: "OUT_OF_STOCK",
           title: `Sin stock: ${product.name}`,
           body: "Este producto ya no tiene stock disponible.",
-          link: "/vendedoras",
+          link: "/afiliados",
         });
       }
       if (wentBackInStock) {
@@ -149,7 +149,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
           type: "RESTOCK",
           title: `¡Volvió el stock! ${product.name}`,
           body: `Ya hay ${newTotalStock} unidades disponibles. ¡Momento ideal para compartirlo!`,
-          link: "/vendedoras",
+          link: "/afiliados",
         });
       }
       return result;

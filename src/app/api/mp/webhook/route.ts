@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import MercadoPagoConfig, { Payment } from "mercadopago";
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
             type: "COMMISSION_EARNED",
             title: "¡Ganaste una comisión!",
             body: `Tu comisión de $${amount.toLocaleString("es-AR")} fue acreditada automáticamente.`,
-            link: "/vendedoras/billetera",
+            link: "/afiliados/billetera",
           });
         }
       }

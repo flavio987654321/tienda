@@ -25,7 +25,7 @@ export default async function DashboardPage() {
   });
 
   if (user.role === "ADMIN") redirect("/admin");
-  if (user.role === "SELLER") redirect("/vendedoras");
+  if (user.role === "SELLER") redirect("/afiliados");
   if (!store) redirect("/login");
 
   const recentOrders = await prisma.order.findMany({

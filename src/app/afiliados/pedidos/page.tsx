@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
@@ -137,7 +137,7 @@ export default function PedidosPage() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/vendedoras/billetera" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+          <Link href="/afiliados/billetera" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="flex-1">
@@ -201,7 +201,7 @@ export default function PedidosPage() {
             <ShoppingBag className="h-10 w-10 text-gray-200 dark:text-gray-700 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">Aún no tenés pedidos referidos</p>
             <p className="text-gray-400 text-sm mt-1">Compartí tu link de venta para empezar a generar ventas.</p>
-            <Link href="/vendedoras"
+            <Link href="/afiliados"
               className="inline-flex items-center gap-2 mt-4 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors text-sm">
               Ver mis tiendas
             </Link>

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -144,7 +144,7 @@ export async function DELETE(req: NextRequest) {
             type: "STORE_CLOSED",
             title: `${storeData.name} cerró su tienda`,
             body: "Tu link de afiliado fue desactivado. Los saldos ya acreditados en tu billetera siguen disponibles para retirar.",
-            link: "/vendedoras",
+            link: "/afiliados",
           }))
         );
       }

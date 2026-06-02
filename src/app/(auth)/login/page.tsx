@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -46,7 +46,7 @@ function LoginForm() {
       router.refresh();
       const me = await fetch("/api/auth/me", { cache: "no-store" }).then((r) => r.json()).catch(() => ({}));
       const role = me?.user?.role;
-      router.push(role === "SELLER" ? "/vendedoras" : "/dashboard");
+      router.push(role === "SELLER" ? "/afiliados" : "/dashboard");
     }
   }
 
@@ -275,7 +275,7 @@ function LoginForm() {
                 Si tenes cuenta de afiliado inicia sesion arriba. Si queres postularte a una tienda, explora las activas.
               </p>
               <Link
-                href="/vendedoras"
+                href="/afiliados"
                 className="mt-2.5 inline-flex items-center gap-1.5 text-xs text-purple-400 font-semibold hover:text-purple-300 transition-colors"
               >
                 Ver tiendas activas <ArrowRight className="h-3 w-3" />

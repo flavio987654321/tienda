@@ -1,8 +1,8 @@
-export const dynamic = "force-dynamic";
+﻿export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-session";
-import VendedorasClient from "./VendedorasClient";
+import VendedorasClient from "./afiliadosClient";
 
 export default async function VendedorasPage() {
   const user = await getCurrentUser();

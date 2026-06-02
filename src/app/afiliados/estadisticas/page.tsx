@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -109,7 +109,7 @@ export default function EstadisticasPage() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/vendedoras" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+          <Link href="/afiliados" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="flex-1">

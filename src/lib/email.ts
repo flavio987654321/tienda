@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+﻿import nodemailer from "nodemailer";
 
 function escapeHtml(s: string | null | undefined): string {
   if (!s) return "";
@@ -214,7 +214,7 @@ export async function sendAffiliateStatusEmail({
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-  const dashboardUrl = `${appUrl}/vendedoras`;
+  const dashboardUrl = `${appUrl}/afiliados`;
 
   const content = {
     APPROVED: {
@@ -247,7 +247,7 @@ export async function sendAffiliateStatusEmail({
       body: `La tienda <strong>${storeName}</strong> no aprobó tu solicitud por ahora. Podés seguir explorando otras tiendas o volver a revisar tu panel más adelante.`,
       accent: "#dc2626",
       cta: "Explorar tiendas",
-      ctaUrl: `${appUrl}/vendedoras`,
+      ctaUrl: `${appUrl}/afiliados`,
     },
   }[status];
 
@@ -395,7 +395,7 @@ export async function sendCommissionEarnedEmail({
         </div>
 
         <div style="text-align:center;">
-          <a href="${appUrl}/vendedoras/billetera"
+          <a href="${appUrl}/afiliados/billetera"
              style="display:inline-block;background:#16a34a;color:#fff;padding:12px 28px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;">
             Ver mi billetera
           </a>
@@ -682,7 +682,7 @@ export async function sendNewStorePublishedEmail({
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-  const storeUrl = `${appUrl}/vendedoras`;
+  const storeUrl = `${appUrl}/afiliados`;
 
   await transporter.sendMail({
     from: `"TiendaApps" <${process.env.SMTP_USER}>`,
@@ -716,7 +716,7 @@ export async function sendNewStorePublishedEmail({
 
         <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
           Recibís este email porque activaste las alertas de nuevas tiendas en tu panel.
-          <a href="${appUrl}/vendedoras" style="color:#6b7280;">Gestionar mis preferencias</a>
+          <a href="${appUrl}/afiliados" style="color:#6b7280;">Gestionar mis preferencias</a>
         </p>
       </div>
     `,

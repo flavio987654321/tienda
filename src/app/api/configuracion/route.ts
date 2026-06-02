@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { revalidatePath } from "next/cache";
@@ -282,7 +282,7 @@ export async function PUT(req: NextRequest) {
           type: "STORE_PROGRAM_PAUSED",
           title: `${store.name} pausó su programa de afiliados`,
           body: "Por ahora no podés generar nuevas ventas con tu link. Tu saldo en billetera sigue disponible para retirar.",
-          link: "/vendedoras",
+          link: "/afiliados",
         }))
       );
     }
@@ -312,7 +312,7 @@ export async function PUT(req: NextRequest) {
             type: "STORE_COUPONS_DISABLED",
             title: `${store.name} ya no acepta cupones de premio`,
             body: "Tus cupones siguen válidos pero no podés usarlos en esta tienda por ahora.",
-            link: "/vendedoras/premios",
+            link: "/afiliados/premios",
           }))
         );
       }
@@ -336,7 +336,7 @@ export async function PUT(req: NextRequest) {
           type: "COMMISSION_RATE_CHANGED",
           title: `Cambio de comisión en ${store.name}`,
           body: `La comisión pasó de ${prevStore.commissionRate}% a ${newRate}%. · ${dateStr}, ${timeStr}`,
-          link: "/vendedoras",
+          link: "/afiliados",
         }))
       );
     }

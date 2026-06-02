@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
@@ -335,7 +335,7 @@ export default function Home() {
   }, []);
 
   const role = sessionUser?.role;
-  const panelHref = role === "ADMIN" ? "/admin" : role === "OWNER" ? "/dashboard" : role === "SELLER" ? "/vendedoras" : "/mi-cuenta";
+  const panelHref = role === "ADMIN" ? "/admin" : role === "OWNER" ? "/dashboard" : role === "SELLER" ? "/afiliados" : "/mi-cuenta";
   const panelLabel = role === "ADMIN" ? "Admin" : role === "OWNER" ? "Mi tienda" : role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const userName = sessionUser?.name?.split(" ")[0] ?? null;
 
@@ -487,7 +487,7 @@ export default function Home() {
                 <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
-                href="/vendedoras"
+                href="/afiliados"
                 className="flex items-center gap-2 border border-white/10 hover:border-white/25 text-gray-300 hover:text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all hover:bg-white/5"
               >
                 <Users className="h-5 w-5" />
@@ -848,7 +848,7 @@ export default function Home() {
                 icon: Users, color: "#a855f7", gradient: "from-purple-600/20 to-pink-600/10", border: "border-purple-500/20",
                 title: "Quiero trabajar", sub: "Trabajá desde casa sin invertir un peso",
                 items: ["Postulate a tiendas y empezá a vender ya", "Tu propio link con seguimiento en tiempo real", "Cuanto más compartís, más ganás — sin límite", "Billetera digital con tu historial completo", "Retirá tus ganancias cuando quieras"],
-                cta: "Quiero ser afiliado", href: "/vendedoras",
+                cta: "Quiero ser afiliado", href: "/afiliados",
               },
               {
                 icon: ShoppingCart, color: "#10b981", gradient: "from-emerald-600/20 to-teal-600/10", border: "border-emerald-500/20",
@@ -977,7 +977,7 @@ export default function Home() {
               <Link href="/quienes-somos" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-500/25 hover:scale-105">
                 Conocé nuestra historia <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link href="/vendedoras" className="inline-flex items-center gap-2 border border-gray-200 hover:border-indigo-300 text-gray-600 hover:text-indigo-600 px-6 py-3 rounded-2xl font-semibold transition-all hover:bg-indigo-50">
+              <Link href="/afiliados" className="inline-flex items-center gap-2 border border-gray-200 hover:border-indigo-300 text-gray-600 hover:text-indigo-600 px-6 py-3 rounded-2xl font-semibold transition-all hover:bg-indigo-50">
                 Quiero ser afiliado
               </Link>
             </motion.div>
@@ -1007,7 +1007,7 @@ export default function Home() {
               <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
-              href="/vendedoras"
+              href="/afiliados"
               className="flex items-center justify-center gap-2 border border-white/15 hover:border-white/30 text-gray-300 hover:text-white px-8 py-5 rounded-2xl font-bold text-lg transition-all hover:bg-white/5"
             >
               <Users className="h-5 w-5" /> Quiero ser afiliado
@@ -1047,7 +1047,7 @@ export default function Home() {
             <div>
               <p className="text-white font-semibold text-sm mb-4">Afiliados</p>
               <ul className="space-y-2.5">
-                {[["/vendedoras", "Postularme"], ["/vendedoras/billetera", "Mi billetera"], ["/quienes-somos", "Quiénes somos"]].map(([href, label]) => (
+                {[["/afiliados", "Postularme"], ["/afiliados/billetera", "Mi billetera"], ["/quienes-somos", "Quiénes somos"]].map(([href, label]) => (
                   <li key={label}><a href={href} className="text-gray-500 hover:text-white text-sm transition-colors">{label}</a></li>
                 ))}
                 <li><button onClick={() => setContact(true)} className="text-gray-500 hover:text-white text-sm transition-colors">Contacto</button></li>

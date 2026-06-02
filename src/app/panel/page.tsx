@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 
@@ -15,7 +15,7 @@ export default async function PanelPage() {
 
   if (user.role === "ADMIN") redirect("/admin");
   if (store || user.role === "OWNER") redirect("/dashboard");
-  if (user.role === "SELLER") redirect("/vendedoras");
+  if (user.role === "SELLER") redirect("/afiliados");
 
   redirect("/mi-cuenta");
 }
