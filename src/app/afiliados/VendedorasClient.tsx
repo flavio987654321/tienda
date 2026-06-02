@@ -56,19 +56,29 @@ function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, x: number, 
   const words = text.split(" ");
   const lines: string[] = [];
   let line = "";
+  let truncated = false;
 
   for (const word of words) {
     const testLine = line ? `${line} ${word}` : word;
     if (ctx.measureText(testLine).width > maxWidth && line) {
       lines.push(line);
       line = word;
+      if (lines.length === maxLines) { truncated = true; break; }
     } else {
       line = testLine;
     }
-    if (lines.length === maxLines) break;
   }
 
-  if (line && lines.length < maxLines) lines.push(line);
+  if (!truncated && line) lines.push(line);
+
+  if (truncated && lines.length > 0) {
+    let last = lines[lines.length - 1];
+    while (last.length > 1 && ctx.measureText(last + "…").width > maxWidth) {
+      last = last.slice(0, -1).trimEnd();
+    }
+    lines[lines.length - 1] = last + "…";
+  }
+
   lines.forEach((item, index) => ctx.fillText(item, x, y + index * lineHeight));
 }
 
@@ -220,11 +230,11 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
     }
 
     ctx.fillStyle = "#4f46e5";
-    ctx.roundRect(72, 1245, 430, 62, 31);
+    ctx.roundRect(72, 1245, 300, 62, 31);
     ctx.fill();
     ctx.fillStyle = "#ffffff";
     ctx.font = "800 26px Arial";
-    ctx.fillText(`${target.commissionRate}% comision`, 108, 1285);
+    ctx.fillText("Comprá ahora →", 108, 1285);
 
     ctx.fillStyle = "#94a3b8";
     ctx.font = "500 24px Arial";
