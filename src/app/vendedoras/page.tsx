@@ -1145,45 +1145,32 @@ export default function VendedorasPage() {
                 {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
               </button>
             )}
-            {true ? (
-              <>
-                <Link href="/vendedoras/billetera" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
-                  <Wallet className="h-4 w-4" /> Mi billetera
-                </Link>
-                <Link href="/vendedoras/premios" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
-                  <Award className="h-4 w-4" /> Mis premios
-                </Link>
-                <Link href="/vendedoras/estadisticas" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
-                  <BarChart3 className="h-4 w-4" /> Estadísticas
-                </Link>
-                <Link href="/vendedoras/ranking" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
-                  <Trophy className="h-4 w-4" /> Ranking
-                </Link>
-                <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl">
-                  <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-xs font-bold text-white">
-                    {userInitial}
-                  </div>
-                  <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{userName}</span>
-                </div>
-                <button
-                  onClick={() => signOut("/")}
-                  className="flex items-center gap-2 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 text-sm px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 transition-all border border-transparent hover:border-red-200 dark:hover:border-red-500/20"
-                  title="Cerrar sesión"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>Salir</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/login" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium px-4 py-2 border border-gray-200 dark:border-white/10 rounded-xl hover:border-gray-300 dark:hover:border-white/20 transition-all">
-                  Iniciar sesión
-                </Link>
-                <Link href="/registro?tipo=vendedora" className="bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-purple-500/20">
-                  Crear cuenta
-                </Link>
-              </>
-            )}
+            <Link href="/vendedoras/billetera" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
+              <Wallet className="h-4 w-4" /> Mi billetera
+            </Link>
+            <Link href="/vendedoras/premios" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
+              <Award className="h-4 w-4" /> Mis premios
+            </Link>
+            <Link href="/vendedoras/estadisticas" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
+              <BarChart3 className="h-4 w-4" /> Estadísticas
+            </Link>
+            <Link href="/vendedoras/ranking" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
+              <Trophy className="h-4 w-4" /> Ranking
+            </Link>
+            <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl">
+              <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                {userInitial}
+              </div>
+              <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{userName}</span>
+            </div>
+            <button
+              onClick={() => signOut("/")}
+              className="flex items-center gap-2 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 text-sm px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 transition-all border border-transparent hover:border-red-200 dark:hover:border-red-500/20"
+              title="Cerrar sesión"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Salir</span>
+            </button>
           </div>
 
           {/* Mobile — botón hamburguesa */}
@@ -1223,9 +1210,9 @@ export default function VendedorasPage() {
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0">
-                    {true ? userInitial : "?"}
+                    {userInitial}
                   </div>
-                  {true && <p className="text-sm font-semibold text-gray-900 dark:text-white">{userName}</p>}
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{userName}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {true && user?.id && <NotificationBell userId={user.id} />}
@@ -1240,8 +1227,7 @@ export default function VendedorasPage() {
 
               {/* Items */}
               <div className="flex-1 px-4 py-4 flex flex-col gap-1">
-                {true ? (
-                  <>
+                <>
                     <Link
                       href="/vendedoras/billetera"
                       onClick={() => setMobileMenuOpen(false)}
@@ -1297,26 +1283,7 @@ export default function VendedorasPage() {
                         <LogOut className="h-4 w-4" /> Cerrar sesión
                       </button>
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center py-3 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 rounded-xl">
-                      Iniciar sesión
-                    </Link>
-                    <Link href="/registro?tipo=vendedora" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center py-3 text-sm font-semibold bg-purple-600 text-white rounded-xl">
-                      Crear cuenta
-                    </Link>
-                    {mounted && (
-                      <button
-                        onClick={() => { setTheme(isDark ? "light" : "dark"); }}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors w-full"
-                      >
-                        {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
-                        {isDark ? "Modo claro" : "Modo oscuro"}
-                      </button>
-                    )}
-                  </>
-                )}
+                </>
               </div>
             </motion.div>
           </>
