@@ -612,12 +612,16 @@ export default function FashionNoir() {
               <EditableZone field="heroSubtext" label="Subtítulo hero">Piezas diseñadas para quienes eligen calidad sobre cantidad. Colecciones cápsula para cada estilo de vida.</EditableZone>
             </p>
             <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
-              <button onClick={() => scrollTo("productos")} style={{ background:G, color:BG, border:"none", padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>
-                <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
-              </button>
-              <button onClick={() => scrollTo("nosotros")} style={{ background:"transparent", color:heroTextColor, border:`1px solid rgba(240,235,227,0.4)`, padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:500, textTransform:"uppercase", cursor:"pointer" }}>
-                <EditableZone field="heroCtaSecondary" label="Botón secundario">Nuestra Historia</EditableZone>
-              </button>
+              {(editMode || !storeConfig?.textOverrides?.["heroCta"]?.hidden) && (
+                <button onClick={() => scrollTo("productos")} style={{ background:G, color:BG, border:"none", padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>
+                  <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
+                </button>
+              )}
+              {(editMode || !storeConfig?.textOverrides?.["heroCtaSecondary"]?.hidden) && (
+                <button onClick={() => scrollTo("nosotros")} style={{ background:"transparent", color:heroTextColor, border:`1px solid rgba(240,235,227,0.4)`, padding:"14px 36px", fontSize:12, letterSpacing:3, fontWeight:500, textTransform:"uppercase", cursor:"pointer" }}>
+                  <EditableZone field="heroCtaSecondary" label="Botón secundario">Nuestra Historia</EditableZone>
+                </button>
+              )}
             </div>
           </div>
         </div>

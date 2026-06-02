@@ -508,14 +508,18 @@ export default function UrbanPulse() {
             <EditableZone field="heroSubtext" label="Subtítulo hero">Ropa deportiva de alta performance para quienes no conocen los límites.</EditableZone>
           </p>
           <div style={{ display:"flex", gap:12 }}>
-            <button onClick={() => scrollTo("productos")}
-              style={{ background:ACC, color:DARK, border:"none", padding:"16px 36px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
-              <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
-            </button>
-            <button onClick={() => scrollTo("featured")}
-              style={{ background:"none", color:heroLeftUpText, border:`2px solid ${heroLeftUpMid}`, padding:"16px 36px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
-              <EditableZone field="heroCtaSecondary" label="Botón secundario">Featured Drop</EditableZone>
-            </button>
+            {(editMode || !storeConfig?.textOverrides?.["heroCta"]?.hidden) && (
+              <button onClick={() => scrollTo("productos")}
+                style={{ background:ACC, color:DARK, border:"none", padding:"16px 36px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
+              </button>
+            )}
+            {(editMode || !storeConfig?.textOverrides?.["heroCtaSecondary"]?.hidden) && (
+              <button onClick={() => scrollTo("featured")}
+                style={{ background:"none", color:heroLeftUpText, border:`2px solid ${heroLeftUpMid}`, padding:"16px 36px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                <EditableZone field="heroCtaSecondary" label="Botón secundario">Featured Drop</EditableZone>
+              </button>
+            )}
           </div>
         </div>
         <div style={{ position:"relative", overflow:"hidden" }}>
