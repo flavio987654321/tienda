@@ -1063,18 +1063,26 @@ export default function VendedorasPage() {
     return () => { supabase.removeChannel(channel); };
   }, [sessionStatus, fetchUserData]);
 
+  // Auto-open apply modal when coming from /vendedoras/tiendas?apply={id}
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (sessionStatus !== "authenticated" || stores.length === 0) return;
+    const applyId = new URLSearchParams(window.location.search).get("apply");
+    if (!applyId) return;
+    const store = stores.find((s) => s.id === applyId);
+    if (store) {
+      setApplyStore(store);
+      window.history.replaceState({}, "", "/vendedoras");
+    }
+  }, [stores, sessionStatus]);
+
+  useEffect(() => {
+    if (sessionStatus === "unauthenticated") router.replace("/login");
+  }, [sessionStatus, router]);
+
   const isDark = theme === "dark";
 
-  if (sessionStatus === "loading") {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#030712] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
-      </div>
-    );
-  }
-
-  if (sessionStatus === "unauthenticated") {
-    router.replace("/login");
+  if (sessionStatus === "loading" || sessionStatus === "unauthenticated") {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#030712] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
@@ -1089,18 +1097,6 @@ export default function VendedorasPage() {
   const availableStores = stores.filter((s) => s.affiliates.length === 0 || ["REJECTED", "REMOVED"].includes(s.affiliates[0]?.status));
   const sortedAvailable = [...availableStores].sort((a, b) => (b.commissionRate * 10 + b._count.products) - (a.commissionRate * 10 + a._count.products));
   const topStores = sortedAvailable.slice(0, 3);
-
-  // Auto-open apply modal when coming from /vendedoras/tiendas?apply={id}
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const applyId = new URLSearchParams(window.location.search).get("apply");
-    if (!applyId || stores.length === 0 || sessionStatus !== "authenticated") return;
-    const store = stores.find((s) => s.id === applyId);
-    if (store) {
-      setApplyStore(store);
-      window.history.replaceState({}, "", "/vendedoras");
-    }
-  }, [stores, sessionStatus]);
 
   function handleApplySuccess(storeId: string, affiliateId: string, storeName: string) {
     setStores((prev) =>
