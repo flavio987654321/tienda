@@ -9,10 +9,12 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(48, Math.max(1, isNaN(rawLimit) ? 12 : rawLimit));
   const category = searchParams.get("category") ?? "";
   const featured = searchParams.get("featured") === "true";
+  const slugFilter = searchParams.get("slug") ?? "";
 
   const where = {
     isActive: true,
     isPublished: true,
+    ...(slugFilter ? { slug: slugFilter } : {}),
     ...(category ? { products: { some: { category, isActive: true } } } : {}),
   };
 

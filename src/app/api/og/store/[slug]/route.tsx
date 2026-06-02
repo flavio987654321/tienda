@@ -1,8 +1,7 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
@@ -13,81 +12,31 @@ function darken(hex: string, amount = 50): string {
   return `rgb(${r},${g},${b})`;
 }
 
-export async function GET(_req: NextRequest, context: RouteContext) {
+export async function GET(req: NextRequest, context: RouteContext) {
   try {
     const { slug } = await context.params;
+    const origin = new URL(req.url).origin;
 
-    // findFirst because isActive/isPublished are not unique fields
-    const store = await prisma.store.findFirst({
-      where: { slug, isActive: true, isPublished: true },
-      select: {
-        name: true,
-        description: true,
-        tagline: true,
-        primaryColor: true,
-        storeConfig: true,
-        banner: true,
-        _count: { select: { products: true } },
-        products: {
-          where: { isActive: true },
-          select: { images: true },
-          take: 1,
-          orderBy: { createdAt: "desc" },
-        },
-      },
+    // Fetch store data from our existing API (Node.js runtime, has Prisma)
+    const apiRes = await fetch(`${origin}/api/stores?slug=${encodeURIComponent(slug)}&limit=1`, {
+      headers: { "x-internal": "1" },
     });
 
-    if (!store) {
-      return new Response("Not found", { status: 404 });
-    }
+    if (!apiRes.ok) return new Response("Not found", { status: 404 });
 
-    // Resolve hero image URL
-    let heroImgUrl: string | null = null;
-    try {
-      const sc = JSON.parse(store.storeConfig);
-      heroImgUrl =
-        sc?.imageOverrides?.heroBackground?.url ??
-        sc?.imageOverrides?.heroImage?.url ??
-        sc?.imageOverrides?.heroImage1?.url ??
-        sc?.imageOverrides?.heroBanner1?.url ??
-        null;
-    } catch {}
+    const { stores } = await apiRes.json() as { stores: Array<{
+      slug: string; name: string; description: string | null;
+      primaryColor: string; heroImg: string | null; coverImg: string | null;
+      banner: string | null; totalProducts: number;
+    }> };
 
-    if (!heroImgUrl && store.products[0]) {
-      try {
-        const imgs = JSON.parse(store.products[0].images);
-        if (Array.isArray(imgs) && imgs[0]) {
-          const first = imgs[0];
-          heroImgUrl = typeof first === "string" ? first : (first?.url ?? null);
-        }
-      } catch {}
-    }
+    const store = stores?.[0];
+    if (!store) return new Response("Not found", { status: 404 });
 
-    if (!heroImgUrl && store.banner) heroImgUrl = store.banner;
-
-    // Fetch image and convert to base64 (Satori needs this for reliable embedding)
-    let bgBase64: string | null = null;
-    if (heroImgUrl) {
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 4000);
-        const res = await fetch(heroImgUrl, { signal: controller.signal });
-        clearTimeout(timer);
-        if (res.ok) {
-          const buf = await res.arrayBuffer();
-          const ct = res.headers.get("content-type") || "image/jpeg";
-          const b64 = Buffer.from(buf).toString("base64");
-          bgBase64 = `data:${ct};base64,${b64}`;
-        }
-      } catch {}
-    }
-
-    const color = /^#[0-9a-fA-F]{6}$/.test(store.primaryColor ?? "")
-      ? store.primaryColor!
-      : "#6366f1";
+    const bgUrl = store.heroImg || store.coverImg || store.banner || null;
+    const color = /^#[0-9a-fA-F]{6}$/.test(store.primaryColor) ? store.primaryColor : "#6366f1";
     const colorDark = darken(color);
-    const displayText = store.description || store.tagline || null;
-    const productCount = store._count.products;
+    const displayText = store.description || null;
 
     return new ImageResponse(
       (
@@ -97,22 +46,18 @@ export async function GET(_req: NextRequest, context: RouteContext) {
             height: "100%",
             display: "flex",
             position: "relative",
-            background: bgBase64
-              ? "#111"
-              : `linear-gradient(135deg, ${color} 0%, ${colorDark} 100%)`,
+            background: bgUrl ? "#111" : `linear-gradient(135deg, ${color} 0%, ${colorDark} 100%)`,
           }}
         >
-          {/* Background image */}
-          {bgBase64 && (
+          {/* Background image — Satori fetches by URL in edge runtime */}
+          {bgUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={bgBase64}
+              src={bgUrl}
               alt=""
               style={{
                 position: "absolute",
                 top: 0,
-                right: 0,
-                bottom: 0,
                 left: 0,
                 width: "100%",
                 height: "100%",
@@ -121,22 +66,22 @@ export async function GET(_req: NextRequest, context: RouteContext) {
             />
           )}
 
-          {/* Gradient overlay — bottom-heavy dark scrim */}
+          {/* Scrim */}
           <div
             style={{
               position: "absolute",
               top: 0,
+              left: 0,
               right: 0,
               bottom: 0,
-              left: 0,
-              background: bgBase64
-                ? "linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.75) 100%)"
-                : "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.4) 100%)",
+              background: bgUrl
+                ? "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.78) 100%)"
+                : "linear-gradient(to bottom, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.35) 100%)",
               display: "flex",
             }}
           />
 
-          {/* TiendaApps badge — top right */}
+          {/* TiendaApps badge */}
           <div
             style={{
               position: "absolute",
@@ -144,25 +89,25 @@ export async function GET(_req: NextRequest, context: RouteContext) {
               right: 48,
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              background: "rgba(255,255,255,0.15)",
+              background: "rgba(255,255,255,0.18)",
               borderRadius: 40,
               paddingTop: 8,
               paddingBottom: 8,
-              paddingLeft: 20,
-              paddingRight: 20,
+              paddingLeft: 18,
+              paddingRight: 18,
             }}
           >
             <div
               style={{
-                width: 22,
-                height: 22,
-                borderRadius: 6,
+                width: 18,
+                height: 18,
+                borderRadius: 5,
                 background: color,
+                marginRight: 8,
                 display: "flex",
               }}
             />
-            <span style={{ color: "white", fontSize: 22, fontWeight: 600 }}>
+            <span style={{ color: "white", fontSize: 20, fontWeight: 600 }}>
               TiendaApps
             </span>
           </div>
@@ -176,66 +121,58 @@ export async function GET(_req: NextRequest, context: RouteContext) {
               right: 0,
               paddingLeft: 56,
               paddingRight: 56,
-              paddingBottom: 48,
+              paddingBottom: 44,
               display: "flex",
               flexDirection: "column",
             }}
           >
-            {/* Store name */}
             <div
               style={{
-                fontSize: 80,
+                fontSize: 84,
                 fontWeight: 800,
                 color: "white",
-                lineHeight: 1.05,
+                lineHeight: 1.0,
               }}
             >
               {store.name}
             </div>
 
-            {/* Description */}
             {displayText && (
               <div
                 style={{
-                  fontSize: 30,
-                  color: "rgba(255,255,255,0.82)",
+                  fontSize: 28,
+                  color: "rgba(255,255,255,0.80)",
                   marginTop: 14,
-                  lineHeight: 1.3,
                 }}
               >
-                {displayText.length > 80
-                  ? displayText.slice(0, 80) + "…"
-                  : displayText}
+                {displayText.length > 90 ? displayText.slice(0, 90) + "…" : displayText}
               </div>
             )}
 
-            {/* Bottom row */}
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                marginTop: 28,
+                marginTop: 26,
               }}
             >
               <div
                 style={{
                   display: "flex",
-                  alignItems: "center",
                   background: color,
                   borderRadius: 40,
                   paddingTop: 10,
                   paddingBottom: 10,
-                  paddingLeft: 24,
-                  paddingRight: 24,
+                  paddingLeft: 22,
+                  paddingRight: 22,
                 }}
               >
-                <span style={{ color: "white", fontSize: 24, fontWeight: 700 }}>
-                  {productCount} {productCount === 1 ? "producto" : "productos"}
+                <span style={{ color: "white", fontSize: 22, fontWeight: 700 }}>
+                  {store.totalProducts} {store.totalProducts === 1 ? "producto" : "productos"}
                 </span>
               </div>
-
-              <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 22 }}>
+              <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 20 }}>
                 tiendaapps.com/{slug}
               </span>
             </div>
@@ -251,7 +188,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       }
     );
   } catch (err) {
-    console.error("[og/store] error:", err);
-    return new Response("Error generating image", { status: 500 });
+    console.error("[og/store]", err);
+    return new Response("Error", { status: 500 });
   }
 }
