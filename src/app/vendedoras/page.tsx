@@ -1082,7 +1082,6 @@ export default function VendedorasPage() {
     );
   }
 
-  const isLoggedIn = sessionStatus === "authenticated";
   const myAffiliations = stores.filter((s) => s.affiliates.length > 0);
   const approvedStores = myAffiliations.filter((s) => s.affiliates[0]?.status === "APPROVED");
   const activeStores = approvedStores.filter((s) => s.affiliatesEnabled);
@@ -1324,10 +1323,8 @@ export default function VendedorasPage() {
         )}
       </AnimatePresence>
 
-      {/* ── HERO / DASHBOARD ── */}
-      {isLoggedIn ? (
-        /* LOGGED IN: Dashboard */
-        <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
+      {/* ── DASHBOARD ── */}
+      <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
           {/* Profile + Stats header */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             {profile && (
@@ -1511,8 +1508,7 @@ export default function VendedorasPage() {
               </>
             )}
           </section>
-        </div>
-      )}
+      </div>
 
       {/* Banner de éxito al postularse */}
       <AnimatePresence>
