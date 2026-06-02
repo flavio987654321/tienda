@@ -53,14 +53,13 @@ export function useEditContext() { return useContext(EditContext); }
    both in edit mode and in live preview.
 ──────────────────────────────────────────────────────────────── */
 export function EditableZone({
-  field, label, children, block = false, noBadge = false, badgeBelow = false,
+  field, label, children, block = false, noBadge = false,
 }: {
   field: string;
   label: string;
   children: React.ReactNode;
   block?: boolean;
   noBadge?: boolean;
-  badgeBelow?: boolean;
 }) {
   const { editMode, activeField, setActiveField, overrides } = useEditContext();
   const [hovered, setHovered] = useState(false);
@@ -120,13 +119,11 @@ export function EditableZone({
         {displayContent}
         {(hovered || isActive) && (
           <span style={{
-            position: "absolute",
-            ...(badgeBelow
-              ? { top: "100%", left: 0, marginTop: 4, borderRadius: "0 4px 4px 4px" }
-              : { top: 0, left: 0, transform: "translateY(-100%)", borderRadius: "4px 4px 4px 0" }),
+            position: "absolute", top: 0, left: 0,
+            transform: "translateY(-100%)",
             background: "#ef4444", color: "white",
             fontSize: 10, fontWeight: 700, lineHeight: 1.5,
-            padding: "3px 8px",
+            padding: "3px 8px", borderRadius: "4px 4px 4px 0",
             display: "inline-flex", alignItems: "center", gap: 4,
             zIndex: 99999, whiteSpace: "nowrap", pointerEvents: "none",
             boxShadow: "0 2px 10px rgba(239,68,68,0.35)",
@@ -169,13 +166,11 @@ export function EditableZone({
       {displayContent}
       {hovered && !isActive && !noBadge && (
         <span style={{
-          position: "absolute",
-          ...(badgeBelow
-            ? { top: "100%", left: 0, marginTop: 4, borderRadius: "0 4px 4px 4px" }
-            : { top: 0, left: 0, transform: "translateY(-100%)", borderRadius: "4px 4px 4px 0" }),
+          position: "absolute", top: 0, left: 0,
+          transform: "translateY(-100%)",
           background: "#6366f1", color: "white",
           fontSize: 10, fontWeight: 700, lineHeight: 1.5,
-          padding: "3px 8px",
+          padding: "3px 8px", borderRadius: "4px 4px 4px 0",
           display: "inline-flex", alignItems: "center", gap: 4,
           zIndex: 99999, whiteSpace: "nowrap", pointerEvents: "none",
           boxShadow: "0 2px 10px rgba(99,102,241,0.45)",

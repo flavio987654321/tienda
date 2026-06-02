@@ -368,8 +368,8 @@ export default function UrbanPulse() {
 
       {/* NAVBAR */}
       <nav style={{ position:"sticky", top:0, zIndex:100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"all 0.3s", padding:"0 20px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <div style={{ fontWeight:900, fontSize:18, letterSpacing:4, textTransform:"uppercase", maxWidth:220, overflow: editMode ? "visible" : "hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
-          <EditableZone field="storeName" label="Nombre de la tienda" badgeBelow>
+        <div style={{ fontWeight:900, fontSize:18, letterSpacing:4, textTransform:"uppercase", maxWidth:220, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
+          <EditableZone field="storeName" label="Nombre de la tienda">
             {storeConfig?.storeName ?? <span>URBAN<span style={{ background:DARK, color:ACC, padding:"3px 7px", marginLeft:2 }}>PULSE</span></span>}
           </EditableZone>
         </div>
@@ -855,7 +855,9 @@ export default function UrbanPulse() {
           <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "2fr 1fr 1fr 1fr", gap: isMobile ? 32 : 40, marginBottom:48 }}>
             <div>
               <div style={{ fontWeight:900, fontSize:24, letterSpacing:4, textTransform:"uppercase", color:footerUpText, marginBottom:16 }}>
-                URBAN<span style={{ color:ACC }}>PULSE</span>
+                <EditableZone field="storeName" label="Nombre de la tienda">
+                  {storeConfig?.storeName ?? <span>URBAN<span style={{ color:ACC }}>PULSE</span></span>}
+                </EditableZone>
               </div>
               <p style={{ color:footerUpMid, fontSize:13, lineHeight:1.8, maxWidth:260 }}>
                 <EditableZone field="footerDescription" label="Descripción footer">Ropa deportiva de alta performance. Para quienes van más rápido.</EditableZone>

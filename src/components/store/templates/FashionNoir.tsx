@@ -454,8 +454,8 @@ export default function FashionNoir() {
       {/* ── NAVBAR ─────────────────────────────────────────── */}
       <nav style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex:100, transition:"background 0.4s, top 0.3s", background: (isPreview || scrolled) ? "rgba(10,10,10,0.97)" : "transparent", backdropFilter: (isPreview || scrolled) ? "blur(12px)" : "none", borderBottom: (isPreview || scrolled) ? `1px solid rgba(201,168,76,0.15)` : "none" }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 32px", height:72, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <button onClick={() => scrollTo("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:26, fontWeight:700, letterSpacing:6, color:G, maxWidth:240, overflow: editMode ? "visible" : "hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
-            <EditableZone field="storeName" label="Nombre de la tienda" badgeBelow>{storeConfig?.storeName ?? "NOIR"}</EditableZone>
+          <button onClick={() => scrollTo("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:26, fontWeight:700, letterSpacing:6, color:G, maxWidth:240, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
+            <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "NOIR"}</EditableZone>
           </button>
           {!isMobile && <div style={{ display:"flex", gap:28, alignItems:"center" }}>
             {/* CATEGORÍAS dropdown */}
