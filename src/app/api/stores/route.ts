@@ -50,7 +50,11 @@ export async function GET(req: NextRequest) {
     let heroImg: string | null = null;
     try {
       const sc = JSON.parse(s.storeConfig);
-      heroImg = sc?.images?.heroBackground ?? sc?.images?.heroImage ?? null;
+      heroImg =
+        sc?.imageOverrides?.heroBackground?.url ??
+        sc?.imageOverrides?.heroImage?.url ??
+        sc?.imageOverrides?.heroImage1?.url ??
+        null;
     } catch {}
 
     const categories = [...new Set(s.products.map((p) => p.category).filter(Boolean))];

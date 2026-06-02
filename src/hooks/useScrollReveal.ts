@@ -2,17 +2,35 @@ import { useEffect } from "react";
 
 export function useScrollReveal() {
   useEffect(() => {
-    const els = document.querySelectorAll("[data-reveal]");
-    if (!els.length) return;
+    const seen = new WeakSet<Element>();
+
     const obs = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
           if (e.isIntersecting) e.target.classList.add("in-view");
         });
       },
-      { threshold: 0.07, rootMargin: "-50px 0px" },
+      { threshold: 0.05 },
     );
-    els.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
+
+    const watchNew = () => {
+      document.querySelectorAll("[data-reveal]").forEach((el) => {
+        if (!seen.has(el)) {
+          seen.add(el);
+          obs.observe(el);
+        }
+      });
+    };
+
+    watchNew();
+
+    // Observa elementos que se agregan al DOM después (secciones condicionales, async)
+    const mut = new MutationObserver(watchNew);
+    mut.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      obs.disconnect();
+      mut.disconnect();
+    };
   }, []);
 }
