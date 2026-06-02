@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
       description: s.description || s.tagline || null,
     }));
 
-    return NextResponse.json({ stores: result });
+    return NextResponse.json({ stores: result, _debug: { count: result.length, userId: user.id } });
   }
 
   // Ver afiliados de mi tienda
