@@ -430,7 +430,7 @@ export default function ChicParis() {
           {/* Logo center */}
           <a onClick={() => scrollTo("hero")} style={{ cursor: "pointer", textDecoration: "none" }}>
             <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: 4, textTransform: "uppercase", color: (isPreview || scrolled) ? "#111" : "#fff", transition: "color 0.3s" }}>
-              <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "CHIC PARIS"}</EditableZone>
+              <EditableZone field="storeName" label="Nombre de la tienda" badgeBelow>{storeConfig?.storeName ?? "CHIC PARIS"}</EditableZone>
             </span>
           </a>
 
