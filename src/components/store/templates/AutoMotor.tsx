@@ -576,7 +576,7 @@ export default function AutoMotor() {
 
       {/* Featured vehicle */}
       {!loadingProducts && featured && (
-        <section style={{ padding: "72px 20px 0", background: "#080808" }}>
+        <section style={{ padding: "72px 20px 0", background: "#111318" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28 }}>
               <div style={{ width: 32, height: 1, background: accent }} />
@@ -592,7 +592,7 @@ export default function AutoMotor() {
       )}
 
       {/* Catálogo */}
-      <section id="catálogo" style={{ padding: "72px 20px" }}>
+      <section id="catálogo" style={{ padding: "72px 20px", background: "#f0efe9" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
             <div style={{ width: 32, height: 1, background: accent }} />
@@ -601,7 +601,8 @@ export default function AutoMotor() {
               <EditableZone field="catalogKicker" label="Etiqueta catálogo">Nuestro stock</EditableZone>
             </p>
           </div>
-          <h2 style={{ margin: "0 0 32px 48px", fontSize: "clamp(24px,4vw,38px)", fontWeight: 900 }}>
+          <h2 style={{ margin: "0 0 32px 48px", fontSize: "clamp(24px,4vw,38px)",
+            fontWeight: 900, color: "#111" }}>
             <EditableZone field="categoriesHeading" label="Título catálogo">Catálogo de vehículos</EditableZone>
           </h2>
 
@@ -609,9 +610,9 @@ export default function AutoMotor() {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 32 }}>
             {categories.map(cat => (
               <button key={cat} onClick={() => setActiveCategory(cat)}
-                style={{ background: activeCategory === cat ? accent : "transparent",
-                  color: activeCategory === cat ? getContrastColor(accent) : "#666",
-                  border: activeCategory === cat ? "none" : "1px solid #2a2a2a",
+                style={{ background: activeCategory === cat ? accent : "white",
+                  color: activeCategory === cat ? getContrastColor(accent) : "#555",
+                  border: activeCategory === cat ? "none" : "1px solid #d0cfc8",
                   padding: "8px 18px", borderRadius: 2, cursor: "pointer",
                   fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
                 {cat}
@@ -620,11 +621,11 @@ export default function AutoMotor() {
           </div>
 
           {loadingProducts ? (
-            <div style={{ textAlign: "center", padding: "80px 0", color: "#333" }}>
+            <div style={{ textAlign: "center", padding: "80px 0", color: "#888" }}>
               Cargando vehículos…
             </div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "80px 0", color: "#333" }}>
+            <div style={{ textAlign: "center", padding: "80px 0", color: "#888" }}>
               No hay vehículos en esta categoría.
             </div>
           ) : (
@@ -639,7 +640,7 @@ export default function AutoMotor() {
       </section>
 
       {/* Servicios */}
-      <section id="servicios" style={{ padding: "72px 20px",
+      <section id="servicios" style={{ padding: "72px 20px", background: "#080808",
         borderTop: `1px solid ${accent}22`, borderBottom: `1px solid ${accent}22` }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
@@ -676,7 +677,7 @@ export default function AutoMotor() {
       </section>
 
       {/* Nosotros */}
-      <section id="nosotros" style={{ padding: "72px 20px" }}>
+      <section id="nosotros" style={{ padding: "72px 20px", background: "#111318" }}>
         <div className="am-about"
           style={{ maxWidth: 1200, margin: "0 auto", display: "grid",
             gridTemplateColumns: "1fr", gap: 56, alignItems: "center" }}>
@@ -691,10 +692,10 @@ export default function AutoMotor() {
             <h2 style={{ margin: "0 0 20px 48px", fontSize: "clamp(22px,4vw,34px)", fontWeight: 900 }}>
               <EditableZone field="aboutHeading2" label="Título nosotros">Años de pasión por los vehículos</EditableZone>
             </h2>
-            <p style={{ margin: "0 0 14px 48px", fontSize: 15, color: "#666", lineHeight: 1.8 }}>
+            <p style={{ margin: "0 0 14px 48px", fontSize: 15, color: "#888", lineHeight: 1.8 }}>
               <EditableZone field="aboutParagraph1" label="Párrafo 1 Nosotros">Somos una empresa familiar con más de una década en el mercado automotor. Nuestro compromiso es la transparencia total en cada operación.</EditableZone>
             </p>
-            <p style={{ margin: "0 0 28px 48px", fontSize: 15, color: "#666", lineHeight: 1.8 }}>
+            <p style={{ margin: "0 0 28px 48px", fontSize: 15, color: "#888", lineHeight: 1.8 }}>
               <EditableZone field="aboutParagraph2" label="Párrafo 2 Nosotros">Contamos con asesores especializados y taller propio para garantizar la calidad de cada vehículo en nuestro stock.</EditableZone>
             </p>
             {whatsapp.enabled && whatsapp.number && (
