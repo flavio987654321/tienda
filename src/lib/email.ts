@@ -666,6 +666,53 @@ export async function sendWithdrawalRequestEmail({
   });
 }
 
+export async function sendStoreOfflineEmail({
+  affiliateEmail,
+  affiliateName,
+  storeName,
+}: {
+  affiliateEmail: string;
+  affiliateName: string;
+  storeName: string;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+
+  await transporter.sendMail({
+    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    to: affiliateEmail,
+    subject: `La tienda ${escapeHtml(storeName)} pausó su actividad temporalmente`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#6b7280;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">TiendaApps · Programa de Afiliados</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Tienda pausada temporalmente</h1>
+        </div>
+
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(affiliateName) || "afiliado"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:24px;">
+          La tienda <strong>${escapeHtml(storeName)}</strong> pausó temporalmente su actividad en TiendaApps.
+          Tu link de afiliado sigue existiendo, pero la tienda no está visible para el público por ahora.
+          Cuando vuelva a estar activa te avisaremos.
+        </p>
+
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:24px;text-align:center;">
+          <p style="font-size:14px;color:#6b7280;margin:0 0 4px;">Mientras tanto podés explorar otras tiendas</p>
+          <a href="${appUrl}/afiliados"
+             style="display:inline-block;margin-top:12px;background:#6366f1;color:#fff;padding:10px 24px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;">
+            Ver tiendas disponibles
+          </a>
+        </div>
+
+        <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
+          Este aviso fue generado automáticamente · TiendaApps
+        </p>
+      </div>
+    `,
+  });
+}
+
 export async function sendNewStorePublishedEmail({
   affiliateEmail,
   affiliateName,

@@ -87,7 +87,16 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
   let config: StoreConfig;
   try {
     const parsed = JSON.parse(store.storeConfig || "{}");
-    if (!parsed?.template) notFound();
+    if (!parsed?.template) {
+      return (
+        <ComingSoonPage
+          name={store.name}
+          logo={store.logo ?? null}
+          color={store.logoColor || store.primaryColor || "#6366f1"}
+          tagline={store.tagline ?? null}
+        />
+      );
+    }
     config = {
       ...DEFAULT_CONFIG,
       ...parsed,

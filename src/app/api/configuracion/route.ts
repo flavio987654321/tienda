@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { revalidatePath } from "next/cache";
 import { createNotificationMany } from "@/lib/notifications";
 import { isSafeUrl } from "@/lib/url-utils";
-import { sendNewStorePublishedEmail } from "@/lib/email";
+import { sendNewStorePublishedEmail, sendStoreOfflineEmail } from "@/lib/email";
 import { z } from "zod";
 
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
@@ -84,15 +84,51 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
+async function notifyAffiliatesStoreOffline(storeId: string, storeName: string) {
+  const affiliates = await prisma.affiliate.findMany({
+    where: { storeId, status: "APPROVED", isActive: true },
+    select: { userId: true, user: { select: { email: true, name: true } } },
+  });
+  if (!affiliates.length) return;
+
+  await createNotificationMany(affiliates.map(a => ({
+    userId: a.userId,
+    type: "store_offline",
+    title: "Tienda pausada",
+    body: `La tienda "${storeName}" pausó temporalmente su actividad. Tu link sigue existiendo.`,
+    link: "/afiliados",
+  })));
+
+  for (const a of affiliates) {
+    sendStoreOfflineEmail({
+      affiliateEmail: a.user.email,
+      affiliateName: a.user.name || "afiliado",
+      storeName,
+    }).catch(console.error);
+  }
+}
+
 export async function DELETE() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const prevStore = await prisma.store.findUnique({
+    where: { ownerId: user.id },
+    select: { id: true, slug: true, name: true, isPublished: true },
+  });
+
   const store = await prisma.store.update({
     where: { ownerId: user.id },
-    data: { storeConfig: "{}", pageBlocks: "[]" },
+    data: { storeConfig: "{}", pageBlocks: "[]", isPublished: false },
     select: { slug: true },
   });
+
   revalidatePath(`/tienda/${store.slug}`, "layout");
+
+  if (prevStore?.isPublished && prevStore.id) {
+    notifyAffiliatesStoreOffline(prevStore.id, prevStore.name).catch(console.error);
+  }
+
   return NextResponse.json({ ok: true });
 }
 
@@ -365,6 +401,11 @@ export async function PATCH(req: NextRequest) {
   });
 
   revalidatePath(`/tienda/${store.slug}`, "layout");
+
+  // Cuando se despublica, notificar a afiliados activos
+  if (!isPublished && prevStore?.isPublished && prevStore?.id) {
+    notifyAffiliatesStoreOffline(prevStore.id, prevStore.name).catch(console.error);
+  }
 
   // Cuando una tienda se publica por primera vez (o se re-publica), notificar a afiliadas interesadas
   if (isPublished && !prevStore?.isPublished && prevStore?.affiliatesEnabled) {
