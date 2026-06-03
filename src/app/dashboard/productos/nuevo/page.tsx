@@ -280,7 +280,7 @@ function ProductoFormPage() {
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [variants, setVariants] = useState<Variant[]>([{ attrs: { Talle: "" }, stock: "0", price: "", sku: "" }]);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
-  const [condicion, setCondicion] = useState<"Nuevo" | "Usado">("Usado");
+  const [condicion, setCondicion] = useState<string>("Usado");
   const [precioMayorista, setPrecioMayorista] = useState("");
   const [cantMinMayorista, setCantMinMayorista] = useState("");
   const [publishAt, setPublishAt] = useState<string>("");
@@ -308,6 +308,9 @@ function ProductoFormPage() {
           setForm((p) => ({ ...p, category: typeConfig.categorias[0] || "general" }));
           if (typeConfig.extraFields.length > 0) {
             setAttributes(typeConfig.extraFields.map((f) => ({ key: f.label, value: "" })));
+          }
+          if (typeConfig.condicionOptions?.length) {
+            setCondicion(typeConfig.condicionOptions[0]);
           }
           const dims = getVariantOptions(d.store.tipoTienda || "ROPA").filter(o => o !== "Otro");
           setVariants([makeDefaultVariant(dims)]);
@@ -388,7 +391,7 @@ function ProductoFormPage() {
           (a: any) => a && typeof a.key === "string" && typeof a.value === "string"
         ) as Attribute[];
         const condAttr = allAttrs.find((a) => a.key === "Condición");
-        if (condAttr) setCondicion(condAttr.value as "Nuevo" | "Usado");
+        if (condAttr) setCondicion(condAttr.value);
         setAttributes(allAttrs.filter((a) => a.key !== "Condición"));
         setPrecioMayorista(product.precioMayorista?.toString() || "");
         setCantMinMayorista(product.cantMinMayorista?.toString() || "");
@@ -980,22 +983,31 @@ function ProductoFormPage() {
             {/* Condición — solo para tipos que lo soportan (AUTOS, TECH) */}
             {storeTypeConfig.supportsCondicion && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <h2 className="font-semibold text-gray-900 mb-3">Condición</h2>
-                <div className="flex gap-3">
-                  {(["Nuevo", "Usado"] as const).map((opt) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => { setCondicion(opt); markDirty(); }}
-                      className={`flex-1 py-3 rounded-xl text-sm font-semibold border-2 transition-all ${
-                        condicion === opt
-                          ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                          : "border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-300"
-                      }`}
-                    >
-                      {opt === "Nuevo" ? "✨ Nuevo" : "🔄 Usado"}
-                    </button>
-                  ))}
+                <h2 className="font-semibold text-gray-900 mb-3">Condición del vehículo</h2>
+                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${(storeTypeConfig.condicionOptions ?? ["Nuevo","Usado"]).length}, 1fr)` }}>
+                  {(storeTypeConfig.condicionOptions ?? ["Nuevo", "Usado"]).map((opt) => {
+                    const emoji =
+                      opt === "0 km"        ? "✨" :
+                      opt === "Casi nuevo"  ? "🌟" :
+                      opt === "Muy bueno"   ? "👍" :
+                      opt === "Bueno"       ? "✅" :
+                      opt === "Nuevo"       ? "✨" : "🔄";
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => { setCondicion(opt); markDirty(); }}
+                        className={`py-3 px-2 rounded-xl text-sm font-semibold border-2 transition-all text-center ${
+                          condicion === opt
+                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                            : "border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-300"
+                        }`}
+                      >
+                        <span className="block text-lg mb-0.5">{emoji}</span>
+                        {opt}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1495,11 +1507,19 @@ function ProductoFormPage() {
                   {/* Condición badge — solo para tipos que lo soportan */}
                   {storeTypeConfig.supportsCondicion && (
                     <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full w-fit ${
-                      condicion === "Nuevo"
+                      condicion === "0 km" || condicion === "Nuevo"
                         ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
+                        : condicion === "Casi nuevo" || condicion === "Muy bueno"
+                        ? "bg-blue-100 text-blue-700"
+                        : condicion === "Bueno"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-gray-100 text-gray-600"
                     }`}>
-                      {condicion === "Nuevo" ? "✨ Nuevo" : "🔄 Usado"}
+                      {condicion === "0 km" ? "✨ 0 km" :
+                       condicion === "Casi nuevo" ? "🌟 Casi nuevo" :
+                       condicion === "Muy bueno" ? "👍 Muy bueno" :
+                       condicion === "Bueno" ? "✅ Bueno" :
+                       condicion === "Nuevo" ? "✨ Nuevo" : "🔄 Usado"}
                     </span>
                   )}
 

@@ -27,6 +27,7 @@ export interface StoreTypeConfig {
   hideVariants: boolean;
   hideTags: boolean;
   hideGender?: boolean;
+  condicionOptions?: string[];
   defaultVariantName: string;
   checkoutMode: "cart" | "inquiry";
   namePlaceholder: string;
@@ -92,6 +93,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
       accesorios: ["audio", "seguridad", "limpieza", "interior"],
     },
     hideGender: true,
+    condicionOptions: ["0 km", "Casi nuevo", "Muy bueno", "Bueno", "Usado"],
     extraFields: [
       { key: "marca",      label: "Marca",       placeholder: "Toyota, Ford, Honda, Yamaha..." },
       { key: "modelo",     label: "Modelo",      placeholder: "Corolla, Ranger, CB 500..." },

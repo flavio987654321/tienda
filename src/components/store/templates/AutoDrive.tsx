@@ -37,6 +37,7 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
   const imgs = product.images.length > 0
     ? product.images
     : ["https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=75"];
+  const condicion = attr(product, "Condición");
   const specs = [
     { label: "Marca",       value: attr(product, "Marca") },
     { label: "Modelo",      value: attr(product, "Modelo") },
@@ -120,6 +121,21 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
         </div>
 
         <div style={{ padding: "20px 20px 28px" }}>
+          {condicion && (
+            <div style={{ marginBottom: 10 }}>
+              <span style={{
+                fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
+                background: condicion === "0 km" || condicion === "Nuevo" ? "#dcfce7" :
+                            condicion === "Casi nuevo" || condicion === "Muy bueno" ? "#dbeafe" :
+                            condicion === "Bueno" ? "#fef3c7" : "#f1f5f9",
+                color: condicion === "0 km" || condicion === "Nuevo" ? "#16a34a" :
+                       condicion === "Casi nuevo" || condicion === "Muy bueno" ? "#2563eb" :
+                       condicion === "Bueno" ? "#d97706" : "#64748b",
+              }}>
+                {condicion}
+              </span>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between",
             alignItems: "flex-start", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: "clamp(18px,3vw,24px)",
@@ -178,6 +194,7 @@ function VehicleCard({ product, accent, currency, onClick }: {
   const comb = attr(product, "Combustible");
   const traccion = attr(product, "Tracción");
   const carroceria = attr(product, "Carrocería");
+  const condicion = attr(product, "Condición");
   const marca = attr(product, "Marca");
 
   return (
@@ -225,6 +242,17 @@ function VehicleCard({ product, accent, currency, onClick }: {
 
         {/* specs chips row */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+          {condicion && (
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
+              background: condicion === "0 km" || condicion === "Nuevo" ? "#dcfce7" :
+                          condicion === "Casi nuevo" || condicion === "Muy bueno" ? "#dbeafe" :
+                          condicion === "Bueno" ? "#fef3c7" : "#f1f5f9",
+              color: condicion === "0 km" || condicion === "Nuevo" ? "#16a34a" :
+                     condicion === "Casi nuevo" || condicion === "Muy bueno" ? "#2563eb" :
+                     condicion === "Bueno" ? "#d97706" : "#64748b",
+            }}>{condicion}</span>
+          )}
           {año && <InfoChip val={año} />}
           {km && <InfoChip val={`${km} km`} />}
           {motor && <InfoChip val={motor} />}

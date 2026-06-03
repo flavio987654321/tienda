@@ -31,6 +31,7 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
   const imgs = product.images.length > 0
     ? product.images
     : ["https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=75"];
+  const condicion = attr(product, "Condición");
   const specs = [
     { label: "Marca",       value: attr(product, "Marca") },
     { label: "Modelo",      value: attr(product, "Modelo") },
@@ -109,6 +110,22 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
         </div>
 
         <div style={{ padding: "24px 20px 28px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+            {condicion && (
+              <span style={{
+                fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 20,
+                textTransform: "uppercase", letterSpacing: 0.5,
+                background: condicion === "0 km" || condicion === "Nuevo" ? "#16a34a22" :
+                            condicion === "Casi nuevo" || condicion === "Muy bueno" ? "#2563eb22" :
+                            condicion === "Bueno" ? "#d9770622" : "#55555522",
+                color: condicion === "0 km" || condicion === "Nuevo" ? "#4ade80" :
+                       condicion === "Casi nuevo" || condicion === "Muy bueno" ? "#60a5fa" :
+                       condicion === "Bueno" ? "#fb923c" : "#888",
+              }}>
+                {condicion}
+              </span>
+            )}
+          </div>
           <h2 style={{ margin: "0 0 6px", fontSize: "clamp(20px,4vw,26px)", fontWeight: 900, color: "white" }}>
             {product.name}
           </h2>
