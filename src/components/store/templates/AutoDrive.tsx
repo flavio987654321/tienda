@@ -268,86 +268,71 @@ function VehicleCard({ product, accent, currency, theme = "light", onClick }: {
     ?? "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=600&q=70";
   const año = attr(product, "Año");
   const km = attr(product, "Km");
-  const motor = attr(product, "Motor");
   const trans = attr(product, "Transmisión");
   const comb = attr(product, "Combustible");
   const condicion = attr(product, "Condición");
-  const marca = attr(product, "Marca");
+  const ubicacion = attr(product, "Ubicación") || attr(product, "Ciudad") || "";
 
   const L = theme === "light";
-  const cardBg   = L ? "#fff" : "#1a1a1a";
-  const titleCol = L ? "#111" : "#fff";
-  const midCol   = L ? "#aaa" : "#777";
-  const divider  = L ? "#f0f0f0" : "#2a2a2a";
-  const chipBg   = L ? "#f5f5f5" : "#2a2a2a";
-  const chipCol  = L ? "#666" : "#aaa";
+  const cardBg   = L ? "#ffffff" : "#1e1e1e";
+  const titleCol = L ? "#333333" : "#f0f0f0";
+  const priceCol = L ? "#333333" : "#ffffff";
+  const subCol   = L ? "#999" : "#888";
+  const borderCol = L ? (hov ? "#c8c8c8" : "#e0e0e0") : (hov ? "#444" : "#2a2a2a");
 
-  const condColor = condicion === "0 km" || condicion === "Nuevo" ? { bg: "#f0fdf4", fg: "#16a34a" }
-    : condicion === "Casi nuevo" || condicion === "Muy bueno" ? { bg: "#eff6ff", fg: "#2563eb" }
-    : condicion === "Bueno" ? { bg: "#fff7ed", fg: "#ea580c" }
-    : null;
+  const metaLine = [
+    año,
+    km ? `${Number(km).toLocaleString("es-AR")} km` : null,
+    trans,
+    comb,
+  ].filter(Boolean).join(" · ");
 
   return (
     <div onClick={onClick}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ background: cardBg, borderRadius: 12, overflow: "hidden", cursor: "pointer",
-        boxShadow: hov
-          ? `0 20px 52px rgba(0,0,0,${L ? 0.12 : 0.5})`
-          : `0 2px 10px rgba(0,0,0,${L ? 0.05 : 0.3})`,
-        border: `1px solid ${L ? (hov ? accent + "55" : "#ebebeb") : (hov ? accent + "55" : "#2a2a2a")}`,
-        transition: "all 0.25s", display: "flex", flexDirection: "column",
-        transform: hov ? "translateY(-4px)" : "none" }}>
+      style={{ background: cardBg, borderRadius: 6, overflow: "hidden", cursor: "pointer",
+        border: `1px solid ${borderCol}`,
+        boxShadow: hov ? `0 4px 20px rgba(0,0,0,${L ? 0.1 : 0.4})` : `0 1px 4px rgba(0,0,0,${L ? 0.06 : 0.3})`,
+        transition: "box-shadow 0.2s, border-color 0.2s",
+        display: "flex", flexDirection: "column" }}>
 
-      <div style={{ position: "relative", aspectRatio: "16/10", overflow: "hidden",
+      <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden",
         background: L ? "#f5f5f5" : "#111" }}>
         <img src={img} alt={product.name}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
-            transform: hov ? "scale(1.06)" : "none", transition: "transform 0.55s ease" }} />
-        {/* color accent line */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3,
-          background: hov ? accent : "transparent", transition: "background 0.2s" }} />
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         {product.badge && (
-          <div style={{ position: "absolute", top: 12, left: 12,
+          <div style={{ position: "absolute", top: 10, left: 10,
             background: accent, color: getContrastColor(accent),
-            fontSize: 9, fontWeight: 800, padding: "4px 10px",
-            borderRadius: 4, textTransform: "uppercase", letterSpacing: 1 }}>
+            fontSize: 10, fontWeight: 700, padding: "3px 10px",
+            borderRadius: 4, textTransform: "uppercase", letterSpacing: 0.8 }}>
             {product.badge}
           </div>
         )}
-        {condColor && condicion && (
-          <div style={{ position: "absolute", top: 12, right: 12,
-            background: "rgba(255,255,255,0.95)", color: condColor.fg,
-            fontSize: 9, fontWeight: 700, padding: "3px 10px",
-            borderRadius: 20, textTransform: "uppercase", letterSpacing: 0.5 }}>
+        {condicion && (
+          <div style={{ position: "absolute", top: 10, right: 10,
+            background: "rgba(0,0,0,0.55)", color: "#fff",
+            fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 20 }}>
             {condicion}
           </div>
         )}
       </div>
 
-      <div style={{ padding: "16px 18px 18px", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-        {marca && (
-          <span style={{ fontSize: 9, color: accent, fontWeight: 700,
-            textTransform: "uppercase", letterSpacing: 2.5 }}>{marca}</span>
+      <div style={{ padding: "14px 16px 16px", flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+        <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: titleCol, lineHeight: 1.35,
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
+          overflow: "hidden" }}>{product.name}</p>
+
+        <p style={{ margin: 0, fontSize: "clamp(18px,2.2vw,22px)", fontWeight: 700, color: priceCol, letterSpacing: -0.5 }}>
+          {fmtPrice(product.price, currency)}
+        </p>
+
+        {metaLine && (
+          <p style={{ margin: 0, fontSize: 12, color: subCol, lineHeight: 1.4 }}>{metaLine}</p>
         )}
-        <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: titleCol, letterSpacing: -0.2,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{product.name}</p>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-          {año && <span style={{ background: chipBg, color: chipCol, fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 20 }}>{año}</span>}
-          {km && <span style={{ background: chipBg, color: chipCol, fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 20 }}>{Number(km).toLocaleString("es-AR")} km</span>}
-          {motor && <span style={{ background: chipBg, color: chipCol, fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 20 }}>{motor}</span>}
-          {trans && <span style={{ background: `${accent}12`, color: accent, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>{trans}</span>}
-          {comb && <span style={{ background: chipBg, color: chipCol, fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 20 }}>{comb}</span>}
-        </div>
-
-        <div style={{ marginTop: "auto", paddingTop: 12, borderTop: `1px solid ${divider}`,
-          display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <p style={{ margin: 0, fontSize: "clamp(16px,2.5vw,20px)", fontWeight: 900, color: accent, letterSpacing: -0.5 }}>
-            {fmtPrice(product.price, currency)}
-          </p>
-          <span style={{ fontSize: 11, fontWeight: 600, color: hov ? accent : midCol,
-            transition: "color 0.2s", letterSpacing: 0.5 }}>Ver →</span>
-        </div>
+        {ubicacion && (
+          <p style={{ margin: 0, fontSize: 11, color: subCol }}>{ubicacion}</p>
+        )}
       </div>
     </div>
   );
