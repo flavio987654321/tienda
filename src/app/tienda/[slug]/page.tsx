@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: TiendaPageProps): Promise<Met
   let config: Partial<StoreConfig> = {};
   try { config = JSON.parse(store.storeConfig || "{}"); } catch { /* noop */ }
 
-  const baseName = (config.storeName || store.name) ?? "Tienda";
+  const baseName = store.name ?? "Tienda";
   const title = store.isPublished ? baseName : `${baseName} — Próximamente`;
   const description = store.isPublished
     ? (store.description || store.tagline || `Comprá en ${baseName}`)
@@ -100,6 +100,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
     config = {
       ...DEFAULT_CONFIG,
       ...parsed,
+      storeName: store.name,
       storeId: store.id,
       slug,
       tipoTienda: store.tipoTienda ?? "GENERAL",

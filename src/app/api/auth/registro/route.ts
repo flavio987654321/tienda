@@ -45,7 +45,17 @@ export async function POST(req: NextRequest) {
     const normalizedEmail = String(email).toLowerCase().trim();
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
-      return NextResponse.json({ error: "No se pudo completar el registro. Verificá los datos e intentá de nuevo." }, { status: 400 });
+      return NextResponse.json({ error: "Ya existe una cuenta con ese email. Iniciá sesión o usá otro email." }, { status: 400 });
+    }
+
+    if (type === "OWNER" && storeName) {
+      const nameExists = await prisma.store.findFirst({
+        where: { name: { equals: storeName.trim(), mode: "insensitive" } },
+        select: { id: true },
+      });
+      if (nameExists) {
+        return NextResponse.json({ error: "Ya existe una tienda con ese nombre. Elegí un nombre diferente." }, { status: 400 });
+      }
     }
 
     const supabase = createSupabaseAdminClient();
@@ -113,10 +123,13 @@ export async function POST(req: NextRequest) {
 
 async function uniqueStoreSlug(storeName: string): Promise<string> {
   const base = toSlug(storeName) || "tienda";
-  // Sufijo único desde el inicio — elimina la ventana de race condition entre check y create
-  const suffix = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  const slug = `${base}-${suffix}`;
-  // Verificación extra por si acaso (colisión prácticamente imposible)
-  const exists = await prisma.store.findUnique({ where: { slug } });
-  return exists ? `${slug}-${Math.random().toString(36).slice(2, 6)}` : slug;
+  const first = await prisma.store.findUnique({ where: { slug: base } });
+  if (!first) return base;
+  for (let i = 2; i <= 99; i++) {
+    const candidate = `${base}-${i}`;
+    const exists = await prisma.store.findUnique({ where: { slug: candidate } });
+    if (!exists) return candidate;
+  }
+  // Fallback con timestamp si los 99 slots están ocupados (prácticamente imposible)
+  return `${base}-${Date.now().toString(36)}`;
 }
