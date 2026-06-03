@@ -50,8 +50,11 @@ export async function POST(req: NextRequest) {
 
     if (type === "OWNER" && storeName) {
       const baseSlug = toSlug(storeName.trim()) || "tienda";
-      const slugExists = await prisma.store.findUnique({ where: { slug: baseSlug } });
-      if (slugExists) {
+      const [slugExists, nameExists] = await Promise.all([
+        prisma.store.findUnique({ where: { slug: baseSlug }, select: { id: true } }),
+        prisma.store.findFirst({ where: { name: { equals: storeName.trim(), mode: "insensitive" } }, select: { id: true } }),
+      ]);
+      if (slugExists || nameExists) {
         return NextResponse.json({ error: "Ya existe una tienda con un nombre muy similar. Elegí un nombre diferente." }, { status: 400 });
       }
     }
