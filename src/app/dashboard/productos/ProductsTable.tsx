@@ -60,44 +60,52 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
 
   function downloadQr() {
     if (!qrProduct) return;
-    const qrCanvas = document.getElementById("qr-dl-canvas") as HTMLCanvasElement | null;
+    const qrCanvas = document.getElementById("qr-hd-canvas") as HTMLCanvasElement | null;
     if (!qrCanvas) return;
 
-    const W = 600, H = 800;
+    // Extract year from name
+    const yearMatch = qrProduct.name.match(/\b(19[6-9]\d|20[0-2]\d)\b/);
+    const year = yearMatch ? yearMatch[0] : null;
+    const nameClean = year ? qrProduct.name.replace(year, "").replace(/\s{2,}/g, " ").trim() : qrProduct.name;
+
+    const W = 680, H = 980;
     const out = document.createElement("canvas");
     out.width = W; out.height = H;
     const ctx = out.getContext("2d")!;
 
-    // White background
+    // ── White background (prints well in B&W) ──────────────
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, W, H);
 
-    // Top header
+    // ── Top header band (dark = prints black in B&W) ────────
     ctx.fillStyle = "#0f172a";
-    ctx.fillRect(0, 0, W, 110);
+    ctx.fillRect(0, 0, W, 120);
+
+    // Accent stripe
     ctx.fillStyle = "#4f46e5";
-    ctx.fillRect(0, 107, W, 3);
+    ctx.fillRect(0, 120, W, 5);
 
-    // Header text
+    // Header: big bold "ESCANEÁ" — white on dark = perfect B&W
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 24px Arial, sans-serif";
+    ctx.font = "900 52px Arial Black, Arial, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("ESCANEÁ Y VE TODOS LOS DETALLES", W / 2, 50);
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "15px Arial, sans-serif";
-    ctx.fillText("Apuntá la cámara de tu celular al código QR", W / 2, 80);
+    ctx.fillText("ESCANEÁ PARA MÁS INFO", W / 2, 72);
 
-    // QR — big and centered, starts early
-    const qrSize = qrCanvas.width;
-    // Scale QR up to 340px regardless of canvas size
-    const qrDraw = 340;
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "17px Arial, sans-serif";
+    ctx.fillText("Apuntá la cámara al código · Abre directo en tu celular", W / 2, 104);
+
+    // ── QR code — biggest element, centered ─────────────────
+    const qrDraw = 460;
     const qrX = (W - qrDraw) / 2;
-    const qrY = 130;
-    // Shadow box
-    ctx.fillStyle = "#f8fafc";
-    ctx.strokeStyle = "#e2e8f0";
-    ctx.lineWidth = 1.5;
-    const r = 16, bx = qrX - 16, by = qrY - 16, bw = qrDraw + 32, bh = qrDraw + 32;
+    const qrY = 148;
+
+    // Thin border frame around QR (border prints fine in B&W)
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 3;
+    const pad = 20, r = 14;
+    const bx = qrX - pad, by = qrY - pad, bw = qrDraw + pad * 2, bh = qrDraw + pad * 2;
+    ctx.fillStyle = "#ffffff";
     ctx.beginPath();
     ctx.moveTo(bx + r, by);
     ctx.lineTo(bx + bw - r, by); ctx.arcTo(bx + bw, by, bx + bw, by + r, r);
@@ -105,25 +113,45 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
     ctx.lineTo(bx + r, by + bh); ctx.arcTo(bx, by + bh, bx, by + bh - r, r);
     ctx.lineTo(bx, by + r); ctx.arcTo(bx, by, bx + r, by, r);
     ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.drawImage(qrCanvas, 0, 0, qrSize, qrSize, qrX, qrY, qrDraw, qrDraw);
-
-    // Divider
-    const divY = qrY + qrDraw + 36;
-    ctx.strokeStyle = "#e2e8f0";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(40, divY); ctx.lineTo(W - 40, divY);
+    ctx.fill();
     ctx.stroke();
 
-    // Vehicle name
+    const qs = qrCanvas.width;
+    ctx.drawImage(qrCanvas, 0, 0, qs, qs, qrX, qrY, qrDraw, qrDraw);
+
+    // ── Divider ─────────────────────────────────────────────
+    const divY = qrY + qrDraw + pad + 28;
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(50, divY); ctx.lineTo(W - 50, divY);
+    ctx.stroke();
+
+    // ── Year pill ────────────────────────────────────────────
+    let infoStart = divY + 36;
+    if (year) {
+      const pillTxt = `AÑO ${year}`;
+      ctx.font = "bold 16px Arial, sans-serif";
+      const pillW = ctx.measureText(pillTxt).width + 32;
+      const pillH = 32;
+      const pillX = (W - pillW) / 2;
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.roundRect(pillX, infoStart - 22, pillW, pillH, 16);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.fillText(pillTxt, W / 2, infoStart - 22 + 21);
+      infoStart += 28;
+    }
+
+    // ── Vehicle name ─────────────────────────────────────────
     ctx.fillStyle = "#0f172a";
     ctx.textAlign = "center";
-    const name = qrProduct.name;
     const maxNameW = W - 80;
-    const fs = name.length > 40 ? 22 : name.length > 28 ? 26 : 30;
+    const fs = nameClean.length > 38 ? 28 : nameClean.length > 24 ? 34 : 40;
     ctx.font = `bold ${fs}px Arial, sans-serif`;
-    const words = name.split(" ");
+    const words = nameClean.split(" ");
     let line = "", lines: string[] = [];
     for (const w of words) {
       const test = line ? `${line} ${w}` : w;
@@ -131,24 +159,26 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
       else line = test;
     }
     lines.push(line);
-    const nameY = divY + 34;
-    lines.forEach((l, i) => ctx.fillText(l, W / 2, nameY + i * (fs + 6)));
+    lines.forEach((l, i) => ctx.fillText(l, W / 2, infoStart + i * (fs + 8)));
 
-    // Price
-    const priceY = nameY + lines.length * (fs + 6) + 14;
-    ctx.fillStyle = "#4f46e5";
-    ctx.font = "bold 36px Arial, sans-serif";
+    // ── Price ─────────────────────────────────────────────────
+    const priceY = infoStart + lines.length * (fs + 8) + 20;
+    ctx.fillStyle = "#1e1b4b"; // very dark indigo → prints as near-black in B&W ✓
+    ctx.font = "900 58px Arial Black, Arial, sans-serif";
     ctx.fillText(`$${qrProduct.price.toLocaleString("es-AR")}`, W / 2, priceY);
 
-    // Footer
-    ctx.fillStyle = "#f1f5f9";
-    ctx.fillRect(0, H - 60, W, 60);
-    ctx.fillStyle = "#64748b";
-    ctx.font = "13px Arial, sans-serif";
-    ctx.fillText(storeName ? `${storeName} · Más info al escanear` : "Más información disponible al escanear", W / 2, H - 32);
-    ctx.fillStyle = "#4f46e5";
-    ctx.font = "bold 13px Arial, sans-serif";
-    ctx.fillText(appUrl.replace("https://", ""), W / 2, H - 12);
+    // ── Bottom footer band ───────────────────────────────────
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(0, H - 64, W, 64);
+
+    if (storeName) {
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.font = "14px Arial, sans-serif";
+      ctx.fillText(storeName.toUpperCase(), W / 2, H - 38);
+    }
+    ctx.fillStyle = "#a5b4fc";
+    ctx.font = "bold 16px Arial, sans-serif";
+    ctx.fillText(appUrl.replace("https://", ""), W / 2, H - 14);
 
     const link = document.createElement("a");
     link.download = `qr-${qrProduct.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 40)}.png`;
@@ -296,8 +326,18 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
               <QRCodeCanvas
                 id="qr-dl-canvas"
                 value={`${appUrl}/tienda/${storeSlug}?producto=${qrProduct.id}`}
-                size={240}
-                level="M"
+                size={220}
+                level="H"
+                marginSize={1}
+              />
+            </div>
+            {/* Hidden HD canvas for download */}
+            <div style={{ position: "absolute", left: -9999, top: -9999, pointerEvents: "none" }}>
+              <QRCodeCanvas
+                id="qr-hd-canvas"
+                value={`${appUrl}/tienda/${storeSlug}?producto=${qrProduct.id}`}
+                size={400}
+                level="H"
                 marginSize={2}
               />
             </div>
