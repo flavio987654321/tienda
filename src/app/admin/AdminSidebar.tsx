@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck, Wallet,
+  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck, Wallet, BadgeCheck,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/admin/testimonios", label: "Testimonios", icon: MessageSquare },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users },
   { href: "/admin/tiendas", label: "Tiendas", icon: Store },
+  { href: "/admin/verificaciones", label: "Verificaciones", icon: BadgeCheck },
   { href: "/admin/retiros", label: "Retiros", icon: Wallet },
   { href: "/admin/auditoria", label: "Auditoría", icon: ShieldCheck },
 ];

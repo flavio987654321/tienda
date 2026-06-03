@@ -7,6 +7,7 @@ import type { StoreConfig } from "@/types/store-config";
 import { DEFAULT_CONFIG } from "@/types/store-config";
 import ComingSoonPage from "./ComingSoonPage";
 import OwnerPreviewBadge from "./OwnerPreviewBadge";
+import VerifiedBadge from "@/components/store/VerifiedBadge";
 import { getCurrentUser } from "@/lib/auth-session";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +63,20 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
         tipoTienda: true,
         tieneVentaMayorista: true,
         ownerId: true,
-        owner: { select: { subscription: { select: { tier: true } } } },
+        isVerified: true,
+        verifiedShowName: true,
+        verifiedShowCity: true,
+        verifiedShowPhone: true,
+        verifiedShowSince: true,
+        owner: {
+          select: {
+            name: true,
+            city: true,
+            phone: true,
+            createdAt: true,
+            subscription: { select: { tier: true } },
+          },
+        },
       },
     }),
     getCurrentUser(),
@@ -71,7 +85,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
   if (!store) notFound();
 
   const isOwner = !!currentUser && currentUser.id === store.ownerId;
-  const ownerIsPremium = (store.owner as { subscription?: { tier?: string } } | null)?.subscription?.tier === "PREMIUM";
+  const ownerIsPremium = store.owner?.subscription?.tier === "PREMIUM";
 
   if (!store.isPublished && !isOwner) {
     return (
@@ -113,9 +127,29 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
     notFound();
   }
 
+  const memberSince = store.owner?.createdAt
+    ? new Date(store.owner.createdAt).toLocaleDateString("es-AR", { month: "long", year: "numeric" })
+    : null;
+
   return (
     <>
       <StorefrontTemplateRenderer config={config} />
+      {store.isVerified && (
+        <div className="fixed bottom-4 left-4 z-50">
+          <VerifiedBadge
+            info={{
+              showName: store.verifiedShowName,
+              name: store.owner?.name ?? null,
+              showCity: store.verifiedShowCity,
+              city: store.owner?.city ?? null,
+              showPhone: store.verifiedShowPhone,
+              phone: store.owner?.phone ?? null,
+              showSince: store.verifiedShowSince,
+              memberSince,
+            }}
+          />
+        </div>
+      )}
       {!store.isPublished && isOwner && (
         <OwnerPreviewBadge
           name={store.name}

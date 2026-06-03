@@ -168,19 +168,42 @@ model Store {
   mpRefreshToken  String?
   mpSellerId      String?
   mpConnectedAt   DateTime?
+  // Verificación de identidad
+  isVerified           Boolean  @default(false)
+  verifiedShowName     Boolean  @default(false)
+  verifiedShowCity     Boolean  @default(false)
+  verifiedShowPhone    Boolean  @default(false)
+  verifiedShowSince    Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   ownerId String @unique
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
-  products       Product[]
-  orders         Order[]
-  affiliates     Affiliate[]
-  coupons        Coupon[]
-  affiliateGoals AffiliateGoal[]
-  leads          Lead[]
-  publicReviews  PublicReview[]
+  products            Product[]
+  orders              Order[]
+  affiliates          Affiliate[]
+  coupons             Coupon[]
+  affiliateGoals      AffiliateGoal[]
+  leads               Lead[]
+  publicReviews       PublicReview[]
+  verificationRequest VerificationRequest?
+}
+
+model VerificationRequest {
+  id          String    @id @default(cuid())
+  storeId     String    @unique
+  store       Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  status      String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  dniFront    String
+  dniBack     String
+  selfie      String
+  reviewNote  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
 }
 
 model Product {
