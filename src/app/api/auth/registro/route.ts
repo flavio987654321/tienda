@@ -49,12 +49,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (type === "OWNER" && storeName) {
-      const nameExists = await prisma.store.findFirst({
-        where: { name: { equals: storeName.trim(), mode: "insensitive" } },
-        select: { id: true },
-      });
-      if (nameExists) {
-        return NextResponse.json({ error: "Ya existe una tienda con ese nombre. Elegí un nombre diferente." }, { status: 400 });
+      const baseSlug = toSlug(storeName.trim()) || "tienda";
+      const slugExists = await prisma.store.findUnique({ where: { slug: baseSlug } });
+      if (slugExists) {
+        return NextResponse.json({ error: "Ya existe una tienda con un nombre muy similar. Elegí un nombre diferente." }, { status: 400 });
       }
     }
 
