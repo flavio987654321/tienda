@@ -13,6 +13,17 @@ import { getStoreType } from "@/lib/storeTypes";
 
 type ImageItem = { url: string; variantValue?: string };
 
+const AUTO_SERVICES = [
+  { key: "aceite",      label: "Aceite y filtros" },
+  { key: "frenos",      label: "Frenos" },
+  { key: "distribucion",label: "Distribución" },
+  { key: "cubiertas",   label: "Cubiertas" },
+  { key: "suspension",  label: "Suspensión" },
+  { key: "electrico",   label: "Sist. eléctrico" },
+  { key: "ac",          label: "Aire acondicionado" },
+  { key: "caja",        label: "Caja de cambios" },
+];
+
 function getVariantOptions(storeType: string): string[] {
   const map: Record<string, string[]> = {
     ROPA:      ["Talle", "Color"],
@@ -291,6 +302,7 @@ function ProductoFormPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
   const [reelUrls, setReelUrls] = useState<string[]>([]);
+  const [services, setServices] = useState<Record<string, boolean>>({});
   const [isDirty, setIsDirty] = useState(false);
   const loadedRef = useRef(false);
 
@@ -392,7 +404,9 @@ function ProductoFormPage() {
         ) as Attribute[];
         const condAttr = allAttrs.find((a) => a.key === "Condición");
         if (condAttr) setCondicion(condAttr.value);
-        setAttributes(allAttrs.filter((a) => a.key !== "Condición"));
+        const svcAttr = allAttrs.find((a) => a.key === "Servicios");
+        if (svcAttr) { try { setServices(JSON.parse(svcAttr.value)); } catch {} }
+        setAttributes(allAttrs.filter((a) => a.key !== "Condición" && a.key !== "Servicios"));
         setPrecioMayorista(product.precioMayorista?.toString() || "");
         setCantMinMayorista(product.cantMinMayorista?.toString() || "");
         if (product.publishAt) {
@@ -596,9 +610,12 @@ function ProductoFormPage() {
     }
 
     const baseAttrs = attributes.filter((a) => a.key.trim() && a.value.trim());
+    const svcList = storeTypeConfig.hideVariants && Object.keys(services).length > 0
+      ? [{ key: "Servicios", value: JSON.stringify(services) }]
+      : [];
     const finalAttrs = storeTypeConfig.supportsCondicion
-      ? [{ key: "Condición", value: condicion }, ...baseAttrs]
-      : baseAttrs;
+      ? [{ key: "Condición", value: condicion }, ...baseAttrs, ...svcList]
+      : [...baseAttrs, ...svcList];
 
     const res = await fetch(isEditing ? `/api/productos/${editingId}` : "/api/productos", {
       method: isEditing ? "PATCH" : "POST",
@@ -997,6 +1014,39 @@ function ProductoFormPage() {
                       }`}
                     >
                       {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Historial de servicios — solo AUTOS */}
+            {storeTypeConfig.hideVariants && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                <div>
+                  <h2 className="font-semibold text-gray-900">Historial de servicios</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Marcá los servicios que están al día. Se muestran con un tilde verde en la página del vehículo.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {AUTO_SERVICES.map(svc => (
+                    <button
+                      key={svc.key}
+                      type="button"
+                      onClick={() => { setServices(p => ({ ...p, [svc.key]: !p[svc.key] })); markDirty(); }}
+                      className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-left ${
+                        services[svc.key]
+                          ? "border-green-400 bg-green-50"
+                          : "border-gray-100 bg-gray-50"
+                      }`}
+                    >
+                      <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                        services[svc.key] ? "bg-green-500 text-white" : "bg-gray-200 text-gray-400"
+                      }`}>
+                        {services[svc.key] ? "✓" : "✕"}
+                      </span>
+                      <span className={`text-xs font-medium ${services[svc.key] ? "text-green-700" : "text-gray-400"}`}>
+                        {svc.label}
+                      </span>
                     </button>
                   ))}
                 </div>

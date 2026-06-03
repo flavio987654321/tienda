@@ -53,6 +53,17 @@ function WaIcon({ size = 18 }: { size?: number }) {
   );
 }
 
+const AUTO_SERVICES = [
+  { key: "aceite",       label: "Aceite y filtros" },
+  { key: "frenos",       label: "Frenos" },
+  { key: "distribucion", label: "Distribución" },
+  { key: "cubiertas",    label: "Cubiertas" },
+  { key: "suspension",   label: "Suspensión" },
+  { key: "electrico",    label: "Sist. eléctrico" },
+  { key: "ac",           label: "Aire acond." },
+  { key: "caja",         label: "Caja de cambios" },
+];
+
 /* ── Modal ─────────────────────────────────────────────────── */
 function VehicleModal({ product, accent, currency, whatsapp, products, onClose, onSelect }: {
   product: StorefrontProduct; accent: string; currency: string;
@@ -96,6 +107,11 @@ function VehicleModal({ product, accent, currency, whatsapp, products, onClose, 
 
   const waNumber = whatsapp.number.replace(/\D/g, "");
   const waMsg = encodeURIComponent(`Hola! Me interesa el ${product.name}${año ? ` (${año})` : ""}. ¿Podés darme más info?`);
+
+  const servicesRaw = attr(product, "Servicios");
+  let servicesData: Record<string, boolean> = {};
+  if (servicesRaw) { try { servicesData = JSON.parse(servicesRaw); } catch {} }
+  const hasServices = Object.keys(servicesData).length > 0;
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -279,6 +295,31 @@ function VehicleModal({ product, accent, currency, whatsapp, products, onClose, 
                         boxShadow: "0 4px 16px rgba(37,211,102,0.3)", marginTop: 4 }}>
                       <WaIcon size={18} /> Consultar por WhatsApp
                     </a>
+                  )}
+                  {hasServices && (
+                    <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 14, marginTop: 4 }}>
+                      <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: "#555",
+                        textTransform: "uppercase", letterSpacing: 0.5 }}>Historial de servicios</p>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 10px" }}>
+                        {AUTO_SERVICES.map(svc => (
+                          <div key={svc.key} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                            <span style={{
+                              width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: 11, fontWeight: 800,
+                              background: servicesData[svc.key] ? "#22c55e" : "#e8e8e8",
+                              color: servicesData[svc.key] ? "white" : "#aaa",
+                            }}>
+                              {servicesData[svc.key] ? "✓" : "✕"}
+                            </span>
+                            <span style={{ fontSize: 11, color: servicesData[svc.key] ? "#333" : "#bbb",
+                              fontWeight: servicesData[svc.key] ? 500 : 400 }}>
+                              {svc.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </>
               )}
