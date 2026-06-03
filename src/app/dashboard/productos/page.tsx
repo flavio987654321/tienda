@@ -77,7 +77,7 @@ export default async function ProductosPage() {
           </Link>
         </div>
       ) : (
-        <ProductsTable products={products} />
+        <ProductsTable products={products} storeSlug={store?.slug ?? ""} storeName={store?.name ?? ""} />
       )}
     </DashboardLayout>
   );

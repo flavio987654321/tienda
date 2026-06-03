@@ -2,9 +2,10 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { QRCodeCanvas } from "qrcode.react";
 import {
   Edit, Eye, EyeOff, Package, Search, X, Percent, ChevronDown,
-  Trash2, Copy, LayoutGrid, List, ChevronLeft, ChevronRight,
+  Trash2, Copy, LayoutGrid, List, ChevronLeft, ChevronRight, QrCode,
 } from "lucide-react";
 
 interface Variant { id: string; stock: number }
@@ -21,7 +22,7 @@ interface Product {
   variants: Variant[];
 }
 
-interface Props { products: Product[] }
+interface Props { products: Product[]; storeSlug?: string; storeName?: string }
 
 const PAGE_SIZE = 20;
 
@@ -34,7 +35,7 @@ function parseImages(raw: string): string[] {
   } catch { return []; }
 }
 
-export default function ProductsTable({ products: initialProducts }: Props) {
+export default function ProductsTable({ products: initialProducts, storeSlug = "", storeName = "" }: Props) {
   const [products,      setProducts]      = useState(initialProducts);
   const [search,        setSearch]        = useState("");
   const [categoryFilter,setCategoryFilter]= useState("all");
@@ -53,6 +54,110 @@ export default function ProductsTable({ products: initialProducts }: Props) {
   const [deleteError,   setDeleteError]   = useState("");
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [qrProduct,     setQrProduct]     = useState<{ id: string; name: string; price: number } | null>(null);
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://tiendaapps.com";
+
+  function downloadQr() {
+    if (!qrProduct) return;
+    const qrCanvas = document.getElementById("qr-dl-canvas") as HTMLCanvasElement | null;
+    if (!qrCanvas) return;
+
+    const W = 560, H = 760;
+    const out = document.createElement("canvas");
+    out.width = W; out.height = H;
+    const ctx = out.getContext("2d")!;
+
+    // White background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, W, H);
+
+    // Top header band
+    ctx.fillStyle = "#1e1b4b";
+    ctx.fillRect(0, 0, W, 90);
+
+    // Header accent stripe
+    ctx.fillStyle = "#4f46e5";
+    ctx.fillRect(0, 86, W, 4);
+
+    // Header title
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 22px Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("ESCANEÁ Y VE TODOS LOS DETALLES", W / 2, 42);
+
+    // Header subtitle
+    ctx.fillStyle = "#a5b4fc";
+    ctx.font = "14px Arial, sans-serif";
+    ctx.fillText("Apuntá la cámara de tu celular al código QR", W / 2, 68);
+
+    // Vehicle name — wrap if too long
+    ctx.fillStyle = "#111827";
+    ctx.textAlign = "center";
+    const name = qrProduct.name;
+    const maxW = W - 60;
+    const fontSize = name.length > 40 ? 22 : name.length > 28 ? 26 : 30;
+    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+    // simple word-wrap
+    const words = name.split(" ");
+    let line = "", lines: string[] = [];
+    for (const w of words) {
+      const test = line ? `${line} ${w}` : w;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+      else line = test;
+    }
+    lines.push(line);
+    const nameY = 148;
+    lines.forEach((l, i) => ctx.fillText(l, W / 2, nameY + i * (fontSize + 6)));
+
+    // Price
+    const priceY = nameY + lines.length * (fontSize + 6) + 16;
+    ctx.fillStyle = "#4f46e5";
+    ctx.font = "bold 38px Arial, sans-serif";
+    ctx.fillText(`$${qrProduct.price.toLocaleString("es-AR")}`, W / 2, priceY);
+
+    // Divider
+    const divY = priceY + 24;
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(40, divY); ctx.lineTo(W - 40, divY);
+    ctx.stroke();
+
+    // QR code — centered
+    const qrSize = qrCanvas.width;
+    const qrX = (W - qrSize) / 2;
+    const qrY = divY + 20;
+    // White box behind QR
+    ctx.fillStyle = "#f9fafb";
+    ctx.beginPath();
+    const r = 12;
+    const bx = qrX - 12, by = qrY - 12, bw = qrSize + 24, bh = qrSize + 24;
+    ctx.moveTo(bx + r, by);
+    ctx.lineTo(bx + bw - r, by); ctx.arcTo(bx + bw, by, bx + bw, by + r, r);
+    ctx.lineTo(bx + bw, by + bh - r); ctx.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
+    ctx.lineTo(bx + r, by + bh); ctx.arcTo(bx, by + bh, bx, by + bh - r, r);
+    ctx.lineTo(bx, by + r); ctx.arcTo(bx, by, bx + r, by, r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.drawImage(qrCanvas, qrX, qrY);
+
+    // Footer
+    ctx.fillStyle = "#f3f4f6";
+    ctx.fillRect(0, H - 60, W, 60);
+    ctx.fillStyle = "#6b7280";
+    ctx.font = "13px Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(storeName ? `${storeName} · Más info al escanear` : "Más información disponible al escanear", W / 2, H - 33);
+    ctx.fillStyle = "#4f46e5";
+    ctx.font = "bold 13px Arial, sans-serif";
+    ctx.fillText(appUrl.replace("https://", ""), W / 2, H - 14);
+
+    const link = document.createElement("a");
+    link.download = `qr-${qrProduct.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 40)}.png`;
+    link.href = out.toDataURL("image/png");
+    link.click();
+  }
 
   const categories = useMemo(
     () => Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort(),
@@ -176,6 +281,41 @@ export default function ProductsTable({ products: initialProducts }: Props) {
             <div className="mt-5 flex gap-3">
               <button onClick={() => setPendingDelete(null)} className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50">Cancelar</button>
               <button onClick={confirmDelete} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-bold text-white hover:bg-red-700">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR modal */}
+      {qrProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-xs rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2 self-stretch">
+              <QrCode className="h-5 w-5 text-indigo-500 shrink-0" />
+              <p className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 flex-1">{qrProduct.name}</p>
+              <button onClick={() => setQrProduct(null)} className="text-gray-400 hover:text-gray-600 shrink-0"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+              <QRCodeCanvas
+                id="qr-dl-canvas"
+                value={`${appUrl}/tienda/${storeSlug}?producto=${qrProduct.id}`}
+                size={200}
+                level="M"
+                marginSize={2}
+              />
+            </div>
+            <p className="text-xs text-gray-400 text-center -mt-1">
+              Escanear abre la publicación directamente en la tienda
+            </p>
+            <div className="flex gap-3 w-full">
+              <button onClick={() => setQrProduct(null)}
+                className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50">
+                Cerrar
+              </button>
+              <button onClick={downloadQr}
+                className="flex-1 rounded-xl bg-indigo-600 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 flex items-center justify-center gap-1.5">
+                <QrCode className="h-4 w-4" /> Descargar PNG
+              </button>
             </div>
           </div>
         </div>
@@ -337,6 +477,11 @@ export default function ProductsTable({ products: initialProducts }: Props) {
                       className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
                       <Edit className="h-3 w-3" /> Editar
                     </Link>
+                    <button onClick={() => setQrProduct({ id: product.id, name: product.name, price: product.price })}
+                      className="flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-violet-500 bg-violet-50 rounded-lg hover:bg-violet-100 transition-colors"
+                      title="Código QR">
+                      <QrCode className="h-3 w-3" />
+                    </button>
                     <button onClick={() => duplicateProduct(product)} disabled={duplicatingId === product.id}
                       className="flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40"
                       title="Duplicar">
@@ -411,6 +556,10 @@ export default function ProductsTable({ products: initialProducts }: Props) {
                           className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
                           <Edit className="h-3.5 w-3.5" /> Editar
                         </Link>
+                        <button onClick={() => setQrProduct({ id: product.id, name: product.name, price: product.price })}
+                          className="flex items-center gap-1.5 text-sm text-violet-500 hover:text-violet-700 font-medium" title="Código QR">
+                          <QrCode className="h-3.5 w-3.5" /> QR
+                        </button>
                         <button onClick={() => duplicateProduct(product)} disabled={duplicatingId === product.id}
                           className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 font-medium disabled:opacity-40" title="Duplicar producto">
                           <Copy className="h-3.5 w-3.5" />
