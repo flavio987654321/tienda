@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
@@ -11,22 +11,29 @@ function fmtPrice(n: number, currency: string) {
 function attr(p: StorefrontProduct, key: string) {
   return p.attributes.find(a => a.key.toLowerCase() === key.toLowerCase())?.value ?? "";
 }
-function scrollTo(id: string) {
+function smoothScrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
-/* ── Section bg helpers ───────────────────────────────────── */
+const PRICE_RANGES = [
+  { label: "Todos los precios", min: 0, max: Infinity },
+  { label: "Hasta $15M",        min: 0, max: 15_000_000 },
+  { label: "$15M – $35M",       min: 15_000_000, max: 35_000_000 },
+  { label: "Más de $35M",       min: 35_000_000, max: Infinity },
+];
+
+/* ── Section bg helpers ──────────────────────────────────── */
 function secBg(ov: ImageOverride | undefined, fallback: string): React.CSSProperties {
   if (ov?.url) return { backgroundImage: `url(${ov.url})`, backgroundSize: "cover", backgroundPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` };
   return { background: fallback };
 }
 function secText(ov: ImageOverride | undefined, bg: string): string {
-  if (ov?.url) return ov.overlayType === "light" ? "#0f172a" : "white";
-  return getContrastColor(bg) === "light" ? "white" : "#0f172a";
+  if (ov?.url) return ov.overlayType === "light" ? "#111111" : "#ffffff";
+  return getContrastColor(bg) === "light" ? "#ffffff" : "#111111";
 }
 function secMid(ov: ImageOverride | undefined, bg: string): string {
-  if (ov?.url) return ov.overlayType === "light" ? "#475569" : "#94a3b8";
-  return getContrastColor(bg) === "light" ? "#94a3b8" : "#64748b";
+  if (ov?.url) return ov.overlayType === "light" ? "#666666" : "rgba(255,255,255,0.55)";
+  return getContrastColor(bg) === "light" ? "rgba(255,255,255,0.55)" : "#888888";
 }
 function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
   if (!ov?.url || ov.overlayType === "none") return null;
@@ -34,7 +41,7 @@ function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
     <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
       background: ov.overlayType === "light"
         ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})`
-        : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />
+        : `rgba(0,0,0,${ov.overlayOpacity ?? 0.55})` }} />
   );
 }
 
@@ -46,14 +53,7 @@ function WaIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-const PRICE_RANGES = [
-  { label: "Todos los precios", min: 0, max: Infinity },
-  { label: "Hasta $15M",        min: 0, max: 15_000_000 },
-  { label: "$15M – $35M",       min: 15_000_000, max: 35_000_000 },
-  { label: "Más de $35M",       min: 35_000_000, max: Infinity },
-];
-
-/* ── Modal ────────────────────────────────────────────────── */
+/* ── Modal ─────────────────────────────────────────────────── */
 function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
   product: StorefrontProduct; accent: string; currency: string;
   whatsapp: { enabled: boolean; number: string }; onClose: () => void;
@@ -61,14 +61,14 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
   const [imgIdx, setImgIdx] = useState(0);
   const imgs = product.images.length > 0
     ? product.images
-    : ["https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=75"];
+    : ["https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80"];
   const condicion = attr(product, "Condición");
   const specs = [
     { label: "Marca",       value: attr(product, "Marca") },
     { label: "Modelo",      value: attr(product, "Modelo") },
     { label: "Versión",     value: attr(product, "Versión") },
     { label: "Año",         value: attr(product, "Año") },
-    { label: "Kilómetros",  value: attr(product, "Km") ? `${attr(product, "Km")} km` : "" },
+    { label: "Kilómetros",  value: attr(product, "Km") ? `${Number(attr(product, "Km")).toLocaleString("es-AR")} km` : "" },
     { label: "Motor",       value: attr(product, "Motor") },
     { label: "Transmisión", value: attr(product, "Transmisión") },
     { label: "Combustible", value: attr(product, "Combustible") },
@@ -78,126 +78,180 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
     { label: "Puertas",     value: attr(product, "Puertas") ? `${attr(product, "Puertas")} puertas` : "" },
   ].filter(s => s.value);
 
+  const condColor = condicion === "0 km" || condicion === "Nuevo"
+    ? { bg: "#f0fdf4", fg: "#16a34a" }
+    : condicion === "Casi nuevo" || condicion === "Muy bueno"
+    ? { bg: "#eff6ff", fg: "#2563eb" }
+    : condicion === "Bueno"
+    ? { bg: "#fff7ed", fg: "#ea580c" }
+    : { bg: "#f8fafc", fg: "#64748b" };
+
   const waNumber = whatsapp.number.replace(/\D/g, "");
-  const waMsg = encodeURIComponent(
-    `Hola! Me interesa el ${product.name}${attr(product, "Año") ? ` (${attr(product, "Año")})` : ""}. ¿Podés darme más info?`
-  );
+  const waMsg = encodeURIComponent(`Hola! Me interesa el ${product.name}${attr(product, "Año") ? ` (${attr(product, "Año")})` : ""}. ¿Podés darme más info?`);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
-  }, []);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") setImgIdx(i => (i - 1 + imgs.length) % imgs.length);
+      if (e.key === "ArrowRight") setImgIdx(i => (i + 1) % imgs.length);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => { document.body.style.overflow = ""; window.removeEventListener("keydown", onKey); };
+  }, [imgs.length]);
 
   return (
     <div onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.8)",
-        backdropFilter: "blur(6px)", zIndex: 1000,
-        display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1000,
+        display: "flex", alignItems: "center", justifyContent: "center", padding: "16px",
+        backdropFilter: "blur(10px)" }}>
       <div onClick={e => e.stopPropagation()}
-        style={{ background: "white", borderRadius: 20, width: "100%", maxWidth: 880,
-          maxHeight: "92vh", overflowY: "auto", boxShadow: "0 40px 100px rgba(0,0,0,0.25)" }}>
+        className="ad-modal"
+        style={{ background: "#ffffff", borderRadius: 12, width: "100%", maxWidth: 1040,
+          maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column",
+          boxShadow: "0 32px 80px rgba(0,0,0,0.25)" }}>
 
+        {/* sticky header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "14px 20px", borderBottom: "1px solid #e2e8f0", position: "sticky",
-          top: 0, background: "white", zIndex: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ background: `${accent}15`, color: accent,
-              fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>
-              {product.category}
-            </span>
+          padding: "14px 20px", borderBottom: "1px solid #f0f0f0", flexShrink: 0,
+          background: "#fff", position: "sticky", top: 0, zIndex: 2 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {condicion && (
+              <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 12px",
+                borderRadius: 20, background: condColor.bg, color: condColor.fg }}>
+                {condicion}
+              </span>
+            )}
             {product.badge && (
-              <span style={{ background: accent, color: getContrastColor(accent),
-                fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 12px",
+                borderRadius: 20, background: accent, color: getContrastColor(accent) }}>
                 {product.badge}
               </span>
             )}
+            <span style={{ fontSize: 11, color: "#bbb", textTransform: "uppercase",
+              letterSpacing: 2, fontWeight: 500 }}>
+              {product.category}
+            </span>
           </div>
           <button onClick={onClose}
-            style={{ background: "#f1f5f9", border: "none", color: "#64748b",
-              cursor: "pointer", width: 32, height: 32, borderRadius: "50%",
-              fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            style={{ background: "#f5f5f5", border: "none", color: "#555",
+              cursor: "pointer", width: 34, height: 34, borderRadius: "50%",
+              fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "all 0.15s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#111"; e.currentTarget.style.color = "#fff"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#f5f5f5"; e.currentTarget.style.color = "#555"; }}>
+            ×
+          </button>
         </div>
 
-        <div style={{ position: "relative", background: "#f8fafc" }}>
-          <img src={imgs[imgIdx]} alt={product.name}
-            style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
-          {imgs.length > 1 && (
-            <>
-              <button onClick={() => setImgIdx(i => (i - 1 + imgs.length) % imgs.length)}
-                style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-                  background: "white", border: "none", color: "#334155",
-                  width: 38, height: 38, borderRadius: "50%", cursor: "pointer", fontSize: 20,
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.15)" }}>‹</button>
-              <button onClick={() => setImgIdx(i => (i + 1) % imgs.length)}
-                style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
-                  background: "white", border: "none", color: "#334155",
-                  width: 38, height: 38, borderRadius: "50%", cursor: "pointer", fontSize: 20,
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.15)" }}>›</button>
-              <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)",
-                display: "flex", gap: 6 }}>
-                {imgs.map((_, i) => (
+        <div className="ad-modal-body"
+          style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
+
+          {/* image panel */}
+          <div className="ad-modal-left"
+            style={{ display: "flex", flexDirection: "column", background: "#f8f8f8", flexShrink: 0 }}>
+            <div style={{ flex: 1, position: "relative", overflow: "hidden", minHeight: 0 }}>
+              <img src={imgs[imgIdx]} alt={product.name}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              {imgs.length > 1 && (
+                <>
+                  <button onClick={() => setImgIdx(i => (i - 1 + imgs.length) % imgs.length)}
+                    style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
+                      background: "rgba(255,255,255,0.92)", border: "none", color: "#111",
+                      width: 40, height: 40, borderRadius: "50%", cursor: "pointer",
+                      fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
+                      boxShadow: "0 2px 12px rgba(0,0,0,0.1)" }}>
+                    ‹
+                  </button>
+                  <button onClick={() => setImgIdx(i => (i + 1) % imgs.length)}
+                    style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+                      background: "rgba(255,255,255,0.92)", border: "none", color: "#111",
+                      width: 40, height: 40, borderRadius: "50%", cursor: "pointer",
+                      fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
+                      boxShadow: "0 2px 12px rgba(0,0,0,0.1)" }}>
+                    ›
+                  </button>
+                  <div style={{ position: "absolute", bottom: 14, left: "50%",
+                    transform: "translateX(-50%)", display: "flex", gap: 6 }}>
+                    {imgs.map((_, i) => (
+                      <button key={i} onClick={() => setImgIdx(i)}
+                        style={{ width: i === imgIdx ? 24 : 8, height: 8, borderRadius: 4,
+                          border: "none", cursor: "pointer", transition: "all 0.2s",
+                          background: i === imgIdx ? accent : "rgba(0,0,0,0.25)" }} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            {imgs.length > 1 && (
+              <div style={{ display: "flex", gap: 3, padding: "8px", background: "#f0f0f0",
+                overflowX: "auto", flexShrink: 0 }}>
+                {imgs.map((src, i) => (
                   <button key={i} onClick={() => setImgIdx(i)}
-                    style={{ width: 8, height: 8, borderRadius: "50%", border: "none",
-                      cursor: "pointer", background: i === imgIdx ? accent : "rgba(255,255,255,0.6)" }} />
+                    style={{ flexShrink: 0, width: 64, height: 44, padding: 0, border: "none",
+                      cursor: "pointer", borderRadius: 4, overflow: "hidden",
+                      outline: i === imgIdx ? `2px solid ${accent}` : "2px solid transparent",
+                      transition: "outline 0.15s", opacity: i === imgIdx ? 1 : 0.5 }}>
+                    <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  </button>
                 ))}
               </div>
-            </>
-          )}
-        </div>
-
-        <div style={{ padding: "20px 20px 28px" }}>
-          {condicion && (
-            <div style={{ marginBottom: 10 }}>
-              <span style={{
-                fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
-                background: condicion === "0 km" || condicion === "Nuevo" ? "#dcfce7" :
-                            condicion === "Casi nuevo" || condicion === "Muy bueno" ? "#dbeafe" :
-                            condicion === "Bueno" ? "#fef3c7" : "#f1f5f9",
-                color: condicion === "0 km" || condicion === "Nuevo" ? "#16a34a" :
-                       condicion === "Casi nuevo" || condicion === "Muy bueno" ? "#2563eb" :
-                       condicion === "Bueno" ? "#d97706" : "#64748b",
-              }}>
-                {condicion}
-              </span>
-            </div>
-          )}
-          <div style={{ display: "flex", justifyContent: "space-between",
-            alignItems: "flex-start", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-            <h2 style={{ margin: 0, fontSize: "clamp(18px,3vw,24px)",
-              fontWeight: 800, color: "#0f172a" }}>{product.name}</h2>
-            <p style={{ margin: 0, fontSize: "clamp(20px,3vw,26px)",
-              fontWeight: 900, color: accent }}>{fmtPrice(product.price, currency)}</p>
+            )}
           </div>
 
-          {specs.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)",
-              gap: "10px 20px", marginBottom: 16,
-              padding: "16px", background: "#f8fafc", borderRadius: 12 }}>
-              {specs.map(s => (
-                <div key={s.label} style={{ borderLeft: `3px solid ${accent}`, paddingLeft: 10 }}>
-                  <p style={{ margin: 0, fontSize: 9, color: "#94a3b8",
-                    textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>{s.label}</p>
-                  <p style={{ margin: "3px 0 0", fontSize: 14, fontWeight: 700, color: "#1e293b" }}>{s.value}</p>
-                </div>
-              ))}
+          {/* info panel */}
+          <div className="ad-modal-right"
+            style={{ flex: 1, overflowY: "auto", padding: "28px 26px 32px", minWidth: 0 }}>
+            <h2 style={{ margin: "0 0 4px", fontSize: "clamp(18px,2.5vw,26px)",
+              fontWeight: 800, color: "#111", lineHeight: 1.15, letterSpacing: -0.5 }}>
+              {product.name}
+            </h2>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 24 }}>
+              <p style={{ margin: 0, fontSize: "clamp(26px,3.5vw,34px)",
+                fontWeight: 900, color: accent, letterSpacing: -1 }}>
+                {fmtPrice(product.price, currency)}
+              </p>
+              {product.comparePrice && (
+                <span style={{ fontSize: 14, color: "#bbb", textDecoration: "line-through", fontWeight: 400 }}>
+                  {fmtPrice(product.comparePrice, currency)}
+                </span>
+              )}
             </div>
-          )}
 
-          {product.description && (
-            <p style={{ margin: "0 0 16px", fontSize: 14, color: "#64748b",
-              lineHeight: 1.7, background: "#f8fafc", borderRadius: 10, padding: "12px 14px" }}>
-              {product.description}
-            </p>
-          )}
+            {specs.length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr",
+                gap: "1px", background: "#f0f0f0", marginBottom: 22,
+                borderRadius: 8, overflow: "hidden", border: "1px solid #f0f0f0" }}>
+                {specs.map(s => (
+                  <div key={s.label} style={{ padding: "12px 16px", background: "#fff" }}>
+                    <p style={{ margin: 0, fontSize: 9, color: accent,
+                      textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>{s.label}</p>
+                    <p style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 700, color: "#222" }}>
+                      {s.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
 
-          {whatsapp.enabled && waNumber && (
-            <a href={`https://wa.me/${waNumber}?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                background: "#25d366", color: "white", textDecoration: "none",
-                padding: "14px 20px", borderRadius: 12, fontWeight: 800, fontSize: 15 }}>
-              <WaIcon size={20} /> Consultar por WhatsApp
-            </a>
-          )}
+            {product.description && (
+              <p style={{ margin: "0 0 22px", fontSize: 13, color: "#666",
+                lineHeight: 1.85, background: "#fafafa",
+                padding: "14px 16px", borderRadius: 8, borderLeft: `3px solid ${accent}` }}>
+                {product.description}
+              </p>
+            )}
+
+            {whatsapp.enabled && waNumber && (
+              <a href={`https://wa.me/${waNumber}?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                  background: "#25d366", color: "white", textDecoration: "none",
+                  padding: "15px 20px", borderRadius: 10, fontWeight: 800, fontSize: 14,
+                  boxShadow: "0 4px 20px rgba(37,211,102,0.25)" }}>
+                <WaIcon size={20} /> Consultar por WhatsApp
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -217,109 +271,112 @@ function VehicleCard({ product, accent, currency, theme = "light", onClick }: {
   const motor = attr(product, "Motor");
   const trans = attr(product, "Transmisión");
   const comb = attr(product, "Combustible");
-  const traccion = attr(product, "Tracción");
-  const carroceria = attr(product, "Carrocería");
   const condicion = attr(product, "Condición");
   const marca = attr(product, "Marca");
 
   const L = theme === "light";
-  const cardBg    = L ? "white" : "#1a2d4a";
-  const borderCol = L ? "#e2e8f0" : "#2d4a6e";
-  const titleCol  = L ? "#0f172a" : "white";
-  const priceCol  = accent;
-  const midCol    = L ? "#94a3b8" : "#64748b";
-  const divider   = L ? "#f1f5f9" : "#1e3a5f";
-  const chipBg    = L ? "#f1f5f9" : "rgba(255,255,255,0.08)";
-  const chipCol   = L ? "#64748b" : "#94a3b8";
-  const catBg     = L ? "rgba(255,255,255,0.92)" : "rgba(6,15,36,0.75)";
-  const catCol    = L ? "#475569" : "#94a3b8";
+  const cardBg   = L ? "#fff" : "#1a1a1a";
+  const titleCol = L ? "#111" : "#fff";
+  const midCol   = L ? "#aaa" : "#777";
+  const divider  = L ? "#f0f0f0" : "#2a2a2a";
+  const chipBg   = L ? "#f5f5f5" : "#2a2a2a";
+  const chipCol  = L ? "#666" : "#aaa";
+
+  const condColor = condicion === "0 km" || condicion === "Nuevo" ? { bg: "#f0fdf4", fg: "#16a34a" }
+    : condicion === "Casi nuevo" || condicion === "Muy bueno" ? { bg: "#eff6ff", fg: "#2563eb" }
+    : condicion === "Bueno" ? { bg: "#fff7ed", fg: "#ea580c" }
+    : null;
 
   return (
     <div onClick={onClick}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ background: cardBg, borderRadius: 14, overflow: "hidden", cursor: "pointer",
-        boxShadow: hov ? "0 16px 40px rgba(0,0,0,0.13)" : "0 2px 8px rgba(0,0,0,0.06)",
-        transform: hov ? "translateY(-3px)" : "none",
-        border: `1px solid ${hov ? accent : borderCol}`,
-        transition: "all 0.2s", display: "flex", flexDirection: "column" }}>
+      style={{ background: cardBg, borderRadius: 12, overflow: "hidden", cursor: "pointer",
+        boxShadow: hov
+          ? `0 20px 52px rgba(0,0,0,${L ? 0.12 : 0.5})`
+          : `0 2px 10px rgba(0,0,0,${L ? 0.05 : 0.3})`,
+        border: `1px solid ${L ? (hov ? accent + "55" : "#ebebeb") : (hov ? accent + "55" : "#2a2a2a")}`,
+        transition: "all 0.25s", display: "flex", flexDirection: "column",
+        transform: hov ? "translateY(-4px)" : "none" }}>
 
-      <div style={{ position: "relative", aspectRatio: "16/10", overflow: "hidden", background: "#f8fafc" }}>
+      <div style={{ position: "relative", aspectRatio: "16/10", overflow: "hidden",
+        background: L ? "#f5f5f5" : "#111" }}>
         <img src={img} alt={product.name}
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
-            transform: hov ? "scale(1.05)" : "none", transition: "transform 0.5s" }} />
-        <div style={{ position: "absolute", top: 0, left: 0, bottom: 0,
-          width: 4, background: hov ? accent : "transparent", transition: "background 0.2s" }} />
+            transform: hov ? "scale(1.06)" : "none", transition: "transform 0.55s ease" }} />
+        {/* color accent line */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3,
+          background: hov ? accent : "transparent", transition: "background 0.2s" }} />
         {product.badge && (
-          <div style={{ position: "absolute", top: 10, left: 10,
-            background: product.badge === "OPORTUNIDAD" ? "#ef4444"
-              : product.badge === "FINANCIADO" ? "#8b5cf6"
-              : product.badge === "NUEVO" ? "#22c55e"
-              : accent,
-            color: "white", fontSize: 9, fontWeight: 800,
-            padding: "3px 8px", borderRadius: 20, textTransform: "uppercase", letterSpacing: 0.5 }}>
+          <div style={{ position: "absolute", top: 12, left: 12,
+            background: accent, color: getContrastColor(accent),
+            fontSize: 9, fontWeight: 800, padding: "4px 10px",
+            borderRadius: 4, textTransform: "uppercase", letterSpacing: 1 }}>
             {product.badge}
           </div>
         )}
-        <div style={{ position: "absolute", bottom: 8, right: 8,
-          background: catBg, color: catCol,
-          fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20 }}>
-          {product.category}
-        </div>
+        {condColor && condicion && (
+          <div style={{ position: "absolute", top: 12, right: 12,
+            background: "rgba(255,255,255,0.95)", color: condColor.fg,
+            fontSize: 9, fontWeight: 700, padding: "3px 10px",
+            borderRadius: 20, textTransform: "uppercase", letterSpacing: 0.5 }}>
+            {condicion}
+          </div>
+        )}
       </div>
 
-      <div style={{ padding: "14px 14px 16px", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ padding: "16px 18px 18px", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
         {marca && (
-          <span style={{ fontSize: 10, color: accent, fontWeight: 700,
-            textTransform: "uppercase", letterSpacing: 1 }}>{marca}</span>
+          <span style={{ fontSize: 9, color: accent, fontWeight: 700,
+            textTransform: "uppercase", letterSpacing: 2.5 }}>{marca}</span>
         )}
-        <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: titleCol,
+        <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: titleCol, letterSpacing: -0.2,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{product.name}</p>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-          {condicion && (
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
-              background: condicion === "0 km" || condicion === "Nuevo" ? "#dcfce7" :
-                          condicion === "Casi nuevo" || condicion === "Muy bueno" ? "#dbeafe" :
-                          condicion === "Bueno" ? "#fef3c7" : chipBg,
-              color: condicion === "0 km" || condicion === "Nuevo" ? "#16a34a" :
-                     condicion === "Casi nuevo" || condicion === "Muy bueno" ? "#2563eb" :
-                     condicion === "Bueno" ? "#d97706" : chipCol,
-            }}>{condicion}</span>
-          )}
-          {año && <InfoChip val={año} bg={chipBg} col={chipCol} />}
-          {km && <InfoChip val={`${km} km`} bg={chipBg} col={chipCol} />}
-          {motor && <InfoChip val={motor} bg={chipBg} col={chipCol} />}
-          {trans && <InfoChip val={trans} bg={`${accent}12`} col={accent} />}
-          {comb && <InfoChip val={comb} bg={chipBg} col={chipCol} />}
-          {traccion && <InfoChip val={traccion} bg={chipBg} col={chipCol} />}
-          {carroceria && <InfoChip val={carroceria} bg={chipBg} col={chipCol} />}
+          {año && <span style={{ background: chipBg, color: chipCol, fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 20 }}>{año}</span>}
+          {km && <span style={{ background: chipBg, color: chipCol, fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 20 }}>{Number(km).toLocaleString("es-AR")} km</span>}
+          {motor && <span style={{ background: chipBg, color: chipCol, fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 20 }}>{motor}</span>}
+          {trans && <span style={{ background: `${accent}12`, color: accent, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>{trans}</span>}
+          {comb && <span style={{ background: chipBg, color: chipCol, fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 20 }}>{comb}</span>}
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between",
-          alignItems: "center", marginTop: "auto", paddingTop: 8,
-          borderTop: `1px solid ${divider}` }}>
-          <p style={{ margin: 0, fontSize: "clamp(16px,2.5vw,20px)", fontWeight: 900, color: priceCol }}>
+        <div style={{ marginTop: "auto", paddingTop: 12, borderTop: `1px solid ${divider}`,
+          display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <p style={{ margin: 0, fontSize: "clamp(16px,2.5vw,20px)", fontWeight: 900, color: accent, letterSpacing: -0.5 }}>
             {fmtPrice(product.price, currency)}
-            {product.comparePrice && (
-              <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 500,
-                color: midCol, textDecoration: "line-through" }}>
-                {fmtPrice(product.comparePrice, currency)}
-              </span>
-            )}
           </p>
-          <span style={{ fontSize: 12, fontWeight: 700, color: hov ? accent : midCol,
-            transition: "color 0.2s" }}>Ver →</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: hov ? accent : midCol,
+            transition: "color 0.2s", letterSpacing: 0.5 }}>Ver →</span>
         </div>
       </div>
     </div>
   );
 }
 
-function InfoChip({ val, bg, col }: { val: string; bg: string; col: string }) {
+/* ── Category Tile ─────────────────────────────────────────── */
+function CategoryTile({ cat, count, accent, active, dark, onClick }: {
+  cat: string; count: number; accent: string; active: boolean; dark: boolean; onClick: () => void;
+}) {
+  const [hov, setHov] = useState(false);
+  const on = active || hov;
   return (
-    <span style={{ background: bg, color: col, fontSize: 10, fontWeight: 600,
-      padding: "2px 8px", borderRadius: 20 }}>{val}</span>
+    <button onClick={onClick}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ background: on ? accent : (dark ? "#1a1a1a" : "#fff"),
+        border: `1px solid ${on ? accent : (dark ? "#2a2a2a" : "#e8e8e8")}`,
+        borderRadius: 10, padding: "20px 18px", cursor: "pointer", textAlign: "left",
+        transition: "all 0.2s", display: "flex", flexDirection: "column", gap: 6,
+        boxShadow: on ? `0 8px 24px ${accent}33` : "none" }}>
+      <span style={{ fontSize: 13, fontWeight: 800,
+        color: on ? getContrastColor(accent) : (dark ? "#fff" : "#111"),
+        textTransform: "uppercase", letterSpacing: 0.8 }}>
+        {cat}
+      </span>
+      <span style={{ fontSize: 11, color: on ? getContrastColor(accent) + "99" : (dark ? "#666" : "#aaa"),
+        fontWeight: 500 }}>
+        {count} unidad{count !== 1 ? "es" : ""}
+      </span>
+    </button>
   );
 }
 
@@ -334,112 +391,145 @@ export default function AutoDrive() {
   const whatsapp = config?.whatsapp ?? { enabled: false, number: "" };
 
   const heroImgUrl = config?.imageOverrides?.["heroImage"]?.url
-    ?? "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=900&q=80";
+    ?? "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1000&q=80";
   const nosotrosUrl = config?.imageOverrides?.["nosotrosImage"]?.url
     ?? "https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?auto=format&fit=crop&w=900&q=80";
 
-  /* ── Section bg / text colors ─────────────────────────── */
   const sc   = config?.sectionColors ?? {};
   const iovr = config?.imageOverrides ?? {};
 
-  const heroBg    = sc["bgHero"]      ?? "white";
-  const heroImg   = iovr["sectionbg_bgHero"];
-  const heroText  = secText(heroImg, heroBg);
-  const heroMid   = secMid(heroImg, heroBg);
+  const heroBg   = sc["bgHero"]     ?? "#f7f8fa";
+  const heroImg  = iovr["sectionbg_bgHero"];
+  const heroText = secText(heroImg, heroBg);
+  const heroMid  = secMid(heroImg, heroBg);
 
-  const statsBg   = sc["bgStats"]     ?? accent;
+  const statsBg   = sc["bgStats"]   ?? accent;
   const statsImg  = iovr["sectionbg_bgStats"];
   const statsText = secText(statsImg, statsBg);
 
-  const catalogoBg  = sc["bgCatalogo"]  ?? "#f8fafc";
+  const catsSectionBg  = sc["bgCategorias"] ?? "#ffffff";
+  const catsSectionImg = iovr["sectionbg_bgCategorias"];
+  const catsText       = secText(catsSectionImg, catsSectionBg);
+  const catsMid        = secMid(catsSectionImg, catsSectionBg);
+  const catsDark       = catsText === "#ffffff";
+
+  const catalogoBg  = sc["bgCatalogo"]  ?? "#f7f8fa";
   const catalogoImg = iovr["sectionbg_bgCatalogo"];
   const catText     = secText(catalogoImg, catalogoBg);
   const catMid      = secMid(catalogoImg, catalogoBg);
-  const catTheme    = catText === "white" ? "dark" as const : "light" as const;
+  const catTheme    = catText === "#ffffff" ? "dark" as const : "light" as const;
 
-  const serviciosBg  = sc["bgServicios"] ?? "white";
+  const serviciosBg  = sc["bgServicios"] ?? "#ffffff";
   const serviciosImg = iovr["sectionbg_bgServicios"];
   const svcText      = secText(serviciosImg, serviciosBg);
   const svcMid       = secMid(serviciosImg, serviciosBg);
-  const svcIsLight   = svcText === "#0f172a";
-  const svcCardBg    = svcIsLight ? "#f8fafc" : "rgba(255,255,255,0.07)";
-  const svcCardBorder= svcIsLight ? "#e2e8f0" : "rgba(255,255,255,0.12)";
+  const svcIsLight   = svcText === "#111111";
+  const svcCardBg    = svcIsLight ? "#f7f8fa" : "rgba(255,255,255,0.06)";
+  const svcCardBor   = svcIsLight ? "#ebebeb" : "rgba(255,255,255,0.1)";
 
-  const nosotrosBg  = sc["bgNosotros"]  ?? "#f8fafc";
+  const nosotrosBg  = sc["bgNosotros"]  ?? "#f7f8fa";
   const nosotrosImg2= iovr["sectionbg_bgNosotros"];
   const nosText     = secText(nosotrosImg2, nosotrosBg);
   const nosMid      = secMid(nosotrosImg2, nosotrosBg);
 
-  const contactoBg  = sc["bgContacto"]  ?? "white";
+  const contactoBg  = sc["bgContacto"]  ?? "#111111";
   const contactoImg = iovr["sectionbg_bgContacto"];
   const conText     = secText(contactoImg, contactoBg);
   const conMid      = secMid(contactoImg, contactoBg);
 
-  const footerBg    = sc["bgFooter"]    ?? "#0f172a";
-  const footerImg   = iovr["sectionbg_bgFooter"];
-  const ftText      = secText(footerImg, footerBg);
-  const ftMid       = secMid(footerImg, footerBg);
+  const footerBg   = sc["bgFooter"]    ?? "#0a0a0a";
+  const footerImg  = iovr["sectionbg_bgFooter"];
+  const ftMid      = secMid(footerImg, footerBg);
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [selected, setSelected] = useState<StorefrontProduct | null>(null);
+  const [menuOpen, setMenuOpen]         = useState(false);
+  const [selected, setSelected]         = useState<StorefrontProduct | null>(null);
   const [activeCategory, setActiveCategory] = useState("Todos");
   const [activePriceRange, setActivePriceRange] = useState(0);
-  const [search, setSearch] = useState("");
-  const [scrolled, setScrolled] = useState(false);
+  const [search, setSearch]             = useState("");
+  const [scrolled, setScrolled]         = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const categories = ["Todos", ...Array.from(new Set(products.map(p => p.category))).filter(Boolean)];
+  const categoryList = useMemo(() =>
+    Array.from(new Set(products.map(p => p.category))).filter(Boolean), [products]);
+  const categories = useMemo(() => ["Todos", ...categoryList], [categoryList]);
+  const categoryCount = useMemo(() => {
+    const map: Record<string, number> = {};
+    products.forEach(p => { if (p.category) map[p.category] = (map[p.category] ?? 0) + 1; });
+    return map;
+  }, [products]);
+
   const pr = PRICE_RANGES[activePriceRange];
-  const filtered = products.filter(p => {
+  const filtered = useMemo(() => products.filter(p => {
     const matchCat = activeCategory === "Todos" || p.category === activeCategory;
     const matchPrice = p.price >= pr.min && p.price <= pr.max;
     const q = search.toLowerCase().trim();
     const matchSearch = !q || p.name.toLowerCase().includes(q)
       || p.attributes.some(a => a.value.toLowerCase().includes(q));
     return matchCat && matchPrice && matchSearch;
-  });
+  }), [products, activeCategory, pr, search]);
 
   return (
-    <div style={{ background: "#f8fafc", color: "#0f172a",
-      fontFamily: "'Inter','Segoe UI',sans-serif", minHeight: "100vh" }}>
+    <div style={{ background: "#ffffff", color: "#111111",
+      fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", minHeight: "100vh" }}>
       <style>{`
         .ad-grid { grid-template-columns: 1fr !important }
         @media(min-width:560px){ .ad-grid { grid-template-columns: repeat(2,1fr) !important } }
         @media(min-width:900px){ .ad-grid { grid-template-columns: repeat(3,1fr) !important } }
+        .ad-cats { grid-template-columns: repeat(2,1fr) !important }
+        @media(min-width:480px){ .ad-cats { grid-template-columns: repeat(3,1fr) !important } }
+        @media(min-width:768px){ .ad-cats { grid-template-columns: repeat(4,1fr) !important } }
+        @media(min-width:1024px){ .ad-cats { grid-template-columns: repeat(6,1fr) !important } }
         .ad-nav-links { display: none !important }
         @media(min-width:768px){ .ad-nav-links { display: flex !important } .ad-burger { display: none !important } }
         .ad-hero { flex-direction: column !important }
-        @media(min-width:768px){ .ad-hero { flex-direction: row !important; align-items: stretch !important } }
+        .ad-hero-left { width: 100% !important; padding: 60px 28px 40px !important }
+        @media(min-width:768px){
+          .ad-hero { flex-direction: row !important; min-height: 100svh !important }
+          .ad-hero-left { width: 50% !important; padding: 80px 48px 80px 40px !important }
+        }
         .ad-about { grid-template-columns: 1fr !important }
         @media(min-width:768px){ .ad-about { grid-template-columns: 1fr 1fr !important } }
         .ad-stats { grid-template-columns: repeat(2,1fr) }
         @media(min-width:640px){ .ad-stats { grid-template-columns: repeat(4,1fr) !important } }
-        .ad-search { width: 100% !important; box-sizing: border-box }
+        .ad-svc { grid-template-columns: 1fr !important }
+        @media(min-width:560px){ .ad-svc { grid-template-columns: repeat(2,1fr) !important } }
+        @media(min-width:900px){ .ad-svc { grid-template-columns: repeat(4,1fr) !important } }
+        .ad-modal { flex-direction: column !important }
+        .ad-modal-body { flex-direction: column !important }
+        .ad-modal-left { width: 100% !important; max-height: 55vw; min-height: 200px }
+        .ad-modal-right { max-height: 50vh; overflow-y: auto }
+        @media(min-width:700px){
+          .ad-modal-body { flex-direction: row !important }
+          .ad-modal-left { width: 52% !important; max-height: unset !important }
+          .ad-modal-right { max-height: unset !important }
+        }
       `}</style>
 
-      {/* Navbar */}
+      {/* ── Navbar ─────────────────────────────────────────── */}
       <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-        background: "white",
-        boxShadow: scrolled ? "0 2px 16px rgba(0,0,0,0.08)" : "0 1px 0 #e2e8f0",
-        transition: "box-shadow 0.3s", padding: "0 20px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", height: 58,
+        background: scrolled ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.97)",
+        borderBottom: "1px solid #ebebeb",
+        backdropFilter: "blur(20px)",
+        boxShadow: scrolled ? "0 4px 24px rgba(0,0,0,0.06)" : "none",
+        transition: "box-shadow 0.3s", padding: "0 28px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", height: 62,
           display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontWeight: 900, fontSize: 17, color: accent, letterSpacing: 0.5 }}>
+          <div style={{ fontWeight: 900, fontSize: 17, color: accent, letterSpacing: -0.3 }}>
             <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
           </div>
-          <div className="ad-nav-links" style={{ display: "flex", gap: 24, alignItems: "center" }}>
-            {["Catálogo", "Servicios", "Nosotros", "Contacto"].map(item => (
-              <button key={item} onClick={() => scrollTo(item.toLowerCase())}
-                style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer",
-                  fontSize: 14, fontWeight: 500 }}
+          <div className="ad-nav-links" style={{ display: "flex", gap: 32, alignItems: "center" }}>
+            {[["Catálogo", "catálogo"], ["Servicios", "servicios"], ["Nosotros", "nosotros"], ["Contacto", "contacto"]].map(([label, id]) => (
+              <button key={id} onClick={() => smoothScrollTo(id)}
+                style={{ background: "none", border: "none", color: "#888", cursor: "pointer",
+                  fontSize: 13, fontWeight: 500, transition: "color 0.15s" }}
                 onMouseEnter={e => (e.currentTarget.style.color = accent)}
-                onMouseLeave={e => (e.currentTarget.style.color = "#64748b")}>
-                {item}
+                onMouseLeave={e => (e.currentTarget.style.color = "#888")}>
+                {label}
               </button>
             ))}
             {whatsapp.enabled && whatsapp.number && (
@@ -447,127 +537,141 @@ export default function AutoDrive() {
                 target="_blank" rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center", gap: 6,
                   background: "#25d366", color: "white", textDecoration: "none",
-                  padding: "7px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700 }}>
+                  padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
                 <WaIcon size={14} /> WhatsApp
               </a>
             )}
           </div>
           <button className="ad-burger" onClick={() => setMenuOpen(m => !m)}
-            style={{ background: "none", border: "1px solid #e2e8f0", color: "#475569",
-              padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 18 }}>
+            style={{ background: "none", border: "1px solid #e8e8e8", color: "#444",
+              padding: "6px 11px", borderRadius: 8, cursor: "pointer", fontSize: 18 }}>
             {menuOpen ? "×" : "☰"}
           </button>
         </div>
         {menuOpen && (
-          <div style={{ background: "white", borderTop: "1px solid #e2e8f0",
-            padding: "10px 20px 18px", display: "flex", flexDirection: "column", gap: 2 }}>
-            {["Catálogo", "Servicios", "Nosotros", "Contacto"].map(item => (
-              <button key={item} onClick={() => { scrollTo(item.toLowerCase()); setMenuOpen(false); }}
-                style={{ background: "none", border: "none", color: "#475569", cursor: "pointer",
-                  textAlign: "left", padding: "10px 4px", fontSize: 15, fontWeight: 500,
-                  borderBottom: "1px solid #f1f5f9" }}>
-                {item}
+          <div style={{ background: "white", borderTop: "1px solid #f0f0f0",
+            padding: "8px 28px 18px" }}>
+            {[["Catálogo", "catálogo"], ["Servicios", "servicios"], ["Nosotros", "nosotros"], ["Contacto", "contacto"]].map(([label, id]) => (
+              <button key={id} onClick={() => { smoothScrollTo(id); setMenuOpen(false); }}
+                style={{ display: "block", width: "100%", background: "none", border: "none",
+                  color: "#555", cursor: "pointer", textAlign: "left",
+                  padding: "12px 0", fontSize: 14, borderBottom: "1px solid #f5f5f5" }}>
+                {label}
               </button>
             ))}
           </div>
         )}
       </nav>
 
-      {/* Hero */}
-      <section style={{ paddingTop: 58, position: "relative", ...secBg(heroImg, heroBg),
-        borderBottom: "1px solid #e2e8f0" }}>
+      {/* ── Hero ───────────────────────────────────────────── */}
+      <section style={{ paddingTop: 62, position: "relative", ...secBg(heroImg, heroBg) }}>
         <BgDragHandle imgKey="sectionbg_bgHero" />
         <SectionOverlay ov={heroImg} />
         <EditableSectionBg field="bgHero" label="Fondo hero" />
-        <div className="ad-hero" style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", display: "flex" }}>
-          <div style={{ flex: "0 0 auto", padding: "48px 20px 48px",
-            display: "flex", flexDirection: "column", justifyContent: "center" }}
-            className="ad-hero-left">
-            <p style={{ margin: "0 0 10px", fontSize: 11, color: accent,
-              textTransform: "uppercase", letterSpacing: 3, fontWeight: 700 }}>
+        <div className="ad-hero" style={{ position: "relative", zIndex: 1, maxWidth: 1400, margin: "0 auto",
+          display: "flex", alignItems: "stretch" }}>
+
+          {/* left */}
+          <div className="ad-hero-left"
+            style={{ flex: "0 0 auto", display: "flex", flexDirection: "column",
+              justifyContent: "center", padding: "80px 48px 80px 40px" }}>
+            <p style={{ margin: "0 0 12px", fontSize: 10, color: accent,
+              textTransform: "uppercase", letterSpacing: 4, fontWeight: 700 }}>
               <EditableZone field="heroBadge" label="Badge hero">Concesionaria Oficial</EditableZone>
             </p>
-            <h1 style={{ margin: "0 0 12px", fontSize: "clamp(26px,4vw,48px)",
-              fontWeight: 900, lineHeight: 1.1, color: heroText }}>
+            <h1 style={{ margin: "0 0 14px", fontSize: "clamp(28px,4.5vw,56px)",
+              fontWeight: 900, lineHeight: 1.0, color: heroText, letterSpacing: -1.5 }}>
               <EditableZone field="heroHeading" label="Título principal">{"Encontrá el\nvehículo ideal"}</EditableZone>
             </h1>
-            <p style={{ margin: "0 0 24px", fontSize: "clamp(13px,1.8vw,16px)",
-              color: heroMid, lineHeight: 1.7 }}>
+            <p style={{ margin: "0 0 28px", fontSize: "clamp(13px,1.6vw,16px)",
+              color: heroMid, lineHeight: 1.85, fontWeight: 300, maxWidth: 380 }}>
               <EditableZone field="heroSubtext" label="Subtítulo">El mayor catálogo en autos y motos. Financiación disponible, entrega rápida.</EditableZone>
             </p>
 
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            {/* search */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 18, maxWidth: 440 }}>
               <div style={{ position: "relative", flex: 1 }}>
                 <svg width={15} height={15} viewBox="0 0 24 24" fill="none"
-                  stroke="#94a3b8" strokeWidth={2} strokeLinecap="round"
-                  style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }}>
+                  stroke="#aaa" strokeWidth={2} strokeLinecap="round"
+                  style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }}>
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>
-                <input className="ad-search" value={search}
-                  onChange={e => setSearch(e.target.value)}
+                <input value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Buscar marca, modelo, año..."
-                  style={{ paddingLeft: 36, paddingRight: 14, paddingTop: 12, paddingBottom: 12,
-                    border: "2px solid #e2e8f0", borderRadius: 10, fontSize: 14,
-                    outline: "none", background: "#f8fafc" }}
+                  style={{ width: "100%", boxSizing: "border-box",
+                    paddingLeft: 40, paddingRight: 14, paddingTop: 12, paddingBottom: 12,
+                    border: "2px solid #e8e8e8", borderRadius: 10, fontSize: 13,
+                    outline: "none", background: "#fff", color: "#111",
+                    fontFamily: "inherit" }}
                   onFocus={e => (e.currentTarget.style.borderColor = accent)}
-                  onBlur={e => (e.currentTarget.style.borderColor = "#e2e8f0")} />
+                  onBlur={e => (e.currentTarget.style.borderColor = "#e8e8e8")} />
               </div>
-              <button onClick={() => scrollTo("catálogo")}
-                style={{ background: accent, color: "white", border: "none",
+              <button onClick={() => smoothScrollTo("catálogo")}
+                style={{ background: accent, color: getContrastColor(accent), border: "none",
                   padding: "0 20px", borderRadius: 10, fontWeight: 700,
-                  fontSize: 14, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  fontSize: 13, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
                 Buscar
               </button>
             </div>
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {["Sedanes", "SUVs", "Pickups", "Motos"].map(cat => (
+            {/* quick category pills */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {categoryList.slice(0, 6).map(cat => (
                 <button key={cat}
-                  onClick={() => { setActiveCategory(cat); scrollTo("catálogo"); }}
-                  style={{ background: "#f1f5f9", color: "#475569", border: "1px solid #e2e8f0",
-                    padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600,
-                    cursor: "pointer" }}
+                  onClick={() => { setActiveCategory(cat); smoothScrollTo("catálogo"); }}
+                  style={{ background: "#f5f5f5", color: "#555", border: "1px solid #e8e8e8",
+                    padding: "6px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+                    cursor: "pointer", transition: "all 0.15s" }}
                   onMouseEnter={e => { e.currentTarget.style.background = `${accent}15`; e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#475569"; }}>
+                  onMouseLeave={e => { e.currentTarget.style.background = "#f5f5f5"; e.currentTarget.style.borderColor = "#e8e8e8"; e.currentTarget.style.color = "#555"; }}>
                   {cat}
                 </button>
               ))}
             </div>
           </div>
 
-          <div style={{ flex: 1, position: "relative", minHeight: 260, overflow: "hidden",
-            background: "#0f172a" }}>
-            <img src={heroImgUrl} alt="Vehículo destacado"
+          {/* right image */}
+          <div style={{ flex: 1, position: "relative", overflow: "hidden",
+            minHeight: 300, background: "#111" }}>
+            <img src={heroImgUrl} alt="Vehículo"
               style={{ width: "100%", height: "100%", objectFit: "cover",
-                display: "block", opacity: 0.9 }} />
+                display: "block", opacity: 0.92 }} />
             <div style={{ position: "absolute", inset: 0,
-              background: "linear-gradient(to right, white 0%, transparent 20%)" }} />
+              background: "linear-gradient(to right, rgba(247,248,250,0.9) 0%, rgba(247,248,250,0) 25%)" }} />
             <EditableImageButton field="heroImage" label="Imagen del hero" />
+            {!loadingProducts && (
+              <div style={{ position: "absolute", bottom: 20, left: 20,
+                background: "rgba(255,255,255,0.9)", padding: "8px 16px",
+                borderRadius: 8, backdropFilter: "blur(8px)" }}>
+                <span style={{ fontSize: 12, color: "#111", fontWeight: 700 }}>
+                  <span style={{ color: accent, fontSize: 18 }}>{products.length}</span> vehículos en stock
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Stats */}
+      {/* ── Stats ──────────────────────────────────────────── */}
       <section style={{ position: "relative", ...secBg(statsImg, statsBg) }}>
         <BgDragHandle imgKey="sectionbg_bgStats" />
         <SectionOverlay ov={statsImg} />
         <EditableSectionBg field="bgStats" label="Fondo estadísticas" />
-        <div className="ad-stats" style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto",
-          display: "grid", gridTemplateColumns: "repeat(2,1fr)" }}>
+        <div className="ad-stats" style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", display: "grid" }}>
           {[
             { fv: "stat1", fl: "statLabel1", n: "500+", l: "Vehículos" },
             { fv: "stat2", fl: "statLabel2", n: "15",   l: "Años en el mercado" },
             { fv: "stat3", fl: "statLabel3", n: "98%",  l: "Satisfacción" },
             { fv: "stat4", fl: "statLabel4", n: "12",   l: "Marcas" },
           ].map((s, i) => (
-            <div key={i} style={{ textAlign: "center", padding: "16px 8px",
-              borderRight: i % 2 === 0 ? "1px solid rgba(0,0,0,0.12)" : "none",
-              borderBottom: i < 2 ? "1px solid rgba(0,0,0,0.12)" : "none" }}>
-              <p style={{ margin: 0, fontSize: "clamp(20px,4vw,28px)", fontWeight: 900, color: statsText }}>
+            <div key={i} style={{ textAlign: "center", padding: "28px 10px",
+              borderRight: i % 2 === 0 ? "1px solid rgba(255,255,255,0.12)" : "none",
+              borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.12)" : "none" }}>
+              <p style={{ margin: 0, fontSize: "clamp(24px,4vw,36px)", fontWeight: 900, color: statsText, letterSpacing: -1 }}>
                 <EditableZone field={s.fv} label={`Stat ${i+1}`}>{s.n}</EditableZone>
               </p>
-              <p style={{ margin: "2px 0 0", fontSize: 10, color: statsText,
-                opacity: 0.7, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              <p style={{ margin: "4px 0 0", fontSize: 10, color: statsText,
+                opacity: 0.5, textTransform: "uppercase", letterSpacing: 2 }}>
                 <EditableZone field={s.fl} label={`Etiqueta stat ${i+1}`}>{s.l}</EditableZone>
               </p>
             </div>
@@ -575,64 +679,103 @@ export default function AutoDrive() {
         </div>
       </section>
 
-      {/* Catálogo */}
-      <section id="catálogo" style={{ padding: "48px 20px", position: "relative", ...secBg(catalogoImg, catalogoBg) }}>
+      {/* ── Categorías ─────────────────────────────────────── */}
+      {categoryList.length > 0 && (
+        <section style={{ padding: "64px 28px", position: "relative", ...secBg(catsSectionImg, catsSectionBg) }}>
+          <BgDragHandle imgKey="sectionbg_bgCategorias" />
+          <SectionOverlay ov={catsSectionImg} />
+          <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
+          <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto" }}>
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between",
+              flexWrap: "wrap", gap: 16, marginBottom: 28 }}>
+              <div>
+                <p style={{ margin: "0 0 6px", fontSize: 10, color: accent,
+                  textTransform: "uppercase", letterSpacing: 3, fontWeight: 700 }}>
+                  <EditableZone field="catsKicker" label="Kicker categorías">Explorá por tipo</EditableZone>
+                </p>
+                <h2 style={{ margin: 0, fontSize: "clamp(20px,3.5vw,30px)",
+                  fontWeight: 900, color: catsText, letterSpacing: -0.3 }}>
+                  <EditableZone field="catsHeading" label="Título categorías">Categorías disponibles</EditableZone>
+                </h2>
+              </div>
+              {activeCategory !== "Todos" && (
+                <button onClick={() => { setActiveCategory("Todos"); smoothScrollTo("catálogo"); }}
+                  style={{ background: "none", border: `1px solid ${catsMid}44`, color: catsMid,
+                    padding: "8px 16px", cursor: "pointer", borderRadius: 8,
+                    fontSize: 11, fontWeight: 600 }}>
+                  Ver todos →
+                </button>
+              )}
+            </div>
+            <div className="ad-cats" style={{ display: "grid", gap: 10 }}>
+              {categoryList.map(cat => (
+                <CategoryTile key={cat} cat={cat} count={categoryCount[cat] ?? 0}
+                  accent={accent} active={activeCategory === cat} dark={catsDark}
+                  onClick={() => { setActiveCategory(cat); smoothScrollTo("catálogo"); }} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Catálogo ───────────────────────────────────────── */}
+      <section id="catálogo" style={{ padding: "56px 28px", position: "relative",
+        ...secBg(catalogoImg, catalogoBg) }}>
         <BgDragHandle imgKey="sectionbg_bgCatalogo" />
         <SectionOverlay ov={catalogoImg} />
         <EditableSectionBg field="bgCatalogo" label="Fondo catálogo" />
         <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between",
-            alignItems: "flex-end", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
+            alignItems: "flex-end", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
             <div>
-              <p style={{ margin: "0 0 2px", fontSize: 11, color: accent,
+              <p style={{ margin: "0 0 4px", fontSize: 10, color: accent,
                 textTransform: "uppercase", letterSpacing: 3, fontWeight: 700 }}>
                 <EditableZone field="featuredLabel" label="Etiqueta catálogo">Nuestro stock</EditableZone>
               </p>
-              <h2 style={{ margin: 0, fontSize: "clamp(20px,4vw,30px)", fontWeight: 900, color: catText }}>
+              <h2 style={{ margin: 0, fontSize: "clamp(20px,4vw,30px)",
+                fontWeight: 900, color: catText, letterSpacing: -0.3 }}>
                 <EditableZone field="categoriesHeading" label="Título catálogo">Catálogo completo</EditableZone>
               </h2>
             </div>
-            <span style={{ fontSize: 13, color: catMid, fontWeight: 500 }}>
+            <span style={{ fontSize: 13, color: catMid }}>
               {filtered.length} vehículo{filtered.length !== 1 ? "s" : ""}
             </span>
           </div>
 
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+          {/* filters */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
             {categories.map(cat => (
               <button key={cat} onClick={() => setActiveCategory(cat)}
                 style={{ background: activeCategory === cat ? accent : "transparent",
-                  color: activeCategory === cat ? "white" : catMid,
-                  border: activeCategory === cat ? "none" : `1px solid ${catMid}44`,
-                  padding: "6px 14px", borderRadius: 20, cursor: "pointer",
-                  fontSize: 12, fontWeight: 600 }}>
+                  color: activeCategory === cat ? getContrastColor(accent) : catMid,
+                  border: `1px solid ${activeCategory === cat ? accent : catMid + "44"}`,
+                  padding: "6px 16px", borderRadius: 20, cursor: "pointer",
+                  fontSize: 11, fontWeight: 600, transition: "all 0.15s" }}>
                 {cat}
               </button>
             ))}
           </div>
-
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 28 }}>
             {PRICE_RANGES.map((range, i) => (
               <button key={i} onClick={() => setActivePriceRange(i)}
-                style={{ background: activePriceRange === i ? `${accent}15` : "transparent",
+                style={{ background: activePriceRange === i ? `${accent}12` : "transparent",
                   color: activePriceRange === i ? accent : catMid,
-                  border: `1px solid ${activePriceRange === i ? accent : `${catMid}44`}`,
+                  border: `1px solid ${activePriceRange === i ? accent + "66" : catMid + "33"}`,
                   padding: "5px 12px", borderRadius: 6, cursor: "pointer",
-                  fontSize: 11, fontWeight: 600 }}>
+                  fontSize: 10, fontWeight: 600, transition: "all 0.15s" }}>
                 {range.label}
               </button>
             ))}
           </div>
 
           {loadingProducts ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: catMid }}>
-              Cargando vehículos…
-            </div>
+            <div style={{ textAlign: "center", padding: "60px 0", color: catMid }}>Cargando vehículos…</div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 0", color: catMid }}>
               No se encontraron vehículos con esos filtros.
             </div>
           ) : (
-            <div className="ad-grid" style={{ display: "grid", gap: 16 }}>
+            <div className="ad-grid" style={{ display: "grid", gap: 20 }}>
               {filtered.map(p => (
                 <VehicleCard key={p.id} product={p} accent={accent}
                   currency={currency} theme={catTheme} onClick={() => setSelected(p)} />
@@ -642,38 +785,37 @@ export default function AutoDrive() {
         </div>
       </section>
 
-      {/* Servicios */}
-      <section id="servicios" style={{ padding: "56px 20px", position: "relative",
-        ...secBg(serviciosImg, serviciosBg), borderTop: "1px solid #e2e8f0" }}>
+      {/* ── Servicios ──────────────────────────────────────── */}
+      <section id="servicios" style={{ padding: "72px 28px", position: "relative",
+        ...secBg(serviciosImg, serviciosBg), borderTop: "1px solid #ebebeb" }}>
         <BgDragHandle imgKey="sectionbg_bgServicios" />
         <SectionOverlay ov={serviciosImg} />
         <EditableSectionBg field="bgServicios" label="Fondo servicios" />
         <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto" }}>
-          <p style={{ margin: "0 0 4px", fontSize: 11, color: accent,
-            textTransform: "uppercase", letterSpacing: 3, fontWeight: 700, textAlign: "center" }}>
-            <EditableZone field="aboutKicker" label="Kicker servicios">Por qué elegirnos</EditableZone>
-          </p>
-          <h2 style={{ margin: "0 0 40px", fontSize: "clamp(20px,4vw,30px)",
-            fontWeight: 900, textAlign: "center", color: svcText }}>
-            <EditableZone field="aboutHeading" label="Título servicios">Comprá con confianza</EditableZone>
-          </h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16 }}>
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <p style={{ margin: "0 0 8px", fontSize: 10, color: accent,
+              textTransform: "uppercase", letterSpacing: 3, fontWeight: 700 }}>
+              <EditableZone field="aboutKicker" label="Kicker servicios">Por qué elegirnos</EditableZone>
+            </p>
+            <h2 style={{ margin: 0, fontSize: "clamp(22px,4vw,34px)",
+              fontWeight: 900, color: svcText, letterSpacing: -0.3 }}>
+              <EditableZone field="aboutHeading" label="Título servicios">Comprá con confianza</EditableZone>
+            </h2>
+          </div>
+          <div className="ad-svc" style={{ display: "grid", gap: 16 }}>
             {[
-              { icon: "🔎", fv: "garantia1Title", fl: "garantia1Desc", t: "Inspección 150 puntos", d: "Cada vehículo pasa revisión técnica completa antes de publicarse." },
-              { icon: "📋", fv: "garantia2Title", fl: "garantia2Desc", t: "Documentación en regla", d: "Transferencia y trámites gestionados por nosotros." },
-              { icon: "💳", fv: "garantia3Title", fl: "garantia3Desc", t: "Financiación", d: "Planes de cuotas disponibles según perfil crediticio." },
-              { icon: "💬", fv: "garantia4Title", fl: "garantia4Desc", t: "Asesor exclusivo", d: "Un asesor te acompaña en todo el proceso sin costo." },
+              { fv: "garantia1Title", fl: "garantia1Desc", t: "Inspección 150 puntos", d: "Cada vehículo pasa revisión técnica completa antes de publicarse." },
+              { fv: "garantia2Title", fl: "garantia2Desc", t: "Documentación en regla", d: "Transferencia y trámites gestionados por nosotros." },
+              { fv: "garantia3Title", fl: "garantia3Desc", t: "Financiación", d: "Planes de cuotas disponibles según perfil crediticio." },
+              { fv: "garantia4Title", fl: "garantia4Desc", t: "Asesor exclusivo", d: "Un asesor te acompaña en todo el proceso sin costo." },
             ].map((s, i) => (
-              <div key={i}
-                style={{ padding: "22px 20px", borderRadius: 14,
-                  border: `1px solid ${svcCardBorder}`,
-                  background: svcCardBg,
-                  borderTop: `3px solid ${accent}` }}>
-                <div style={{ fontSize: 26, marginBottom: 12 }}>{s.icon}</div>
-                <p style={{ margin: "0 0 6px", fontSize: 15, fontWeight: 700, color: svcText }}>
+              <div key={i} style={{ padding: "28px 24px", borderRadius: 12,
+                border: `1px solid ${svcCardBor}`, background: svcCardBg,
+                borderTop: `3px solid ${accent}` }}>
+                <p style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 800, color: svcText, letterSpacing: -0.2 }}>
                   <EditableZone field={s.fv} label={`Servicio ${i+1} — Título`}>{s.t}</EditableZone>
                 </p>
-                <p style={{ margin: 0, fontSize: 13, color: svcMid, lineHeight: 1.6 }}>
+                <p style={{ margin: 0, fontSize: 13, color: svcMid, lineHeight: 1.7 }}>
                   <EditableZone field={s.fl} label={`Servicio ${i+1} — Desc`}>{s.d}</EditableZone>
                 </p>
               </div>
@@ -682,30 +824,32 @@ export default function AutoDrive() {
         </div>
       </section>
 
-      {/* Nosotros */}
-      <section id="nosotros" style={{ padding: "56px 20px", position: "relative", ...secBg(nosotrosImg2, nosotrosBg) }}>
+      {/* ── Nosotros ───────────────────────────────────────── */}
+      <section id="nosotros" style={{ padding: "72px 28px", position: "relative",
+        ...secBg(nosotrosImg2, nosotrosBg) }}>
         <BgDragHandle imgKey="sectionbg_bgNosotros" />
         <SectionOverlay ov={nosotrosImg2} />
         <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
         <div className="ad-about" style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto",
-          display: "grid", gridTemplateColumns: "1fr", gap: 40, alignItems: "center" }}>
-          <div style={{ borderRadius: 20, overflow: "hidden", aspectRatio: "4/3", position: "relative" }}>
+          display: "grid", gap: 52, alignItems: "center" }}>
+          <div style={{ borderRadius: 16, overflow: "hidden", aspectRatio: "4/3", position: "relative" }}>
             <img src={nosotrosUrl} alt="Nosotros"
               style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
           </div>
           <div>
-            <p style={{ margin: "0 0 8px", fontSize: 11, color: accent,
+            <p style={{ margin: "0 0 8px", fontSize: 10, color: accent,
               textTransform: "uppercase", letterSpacing: 3, fontWeight: 700 }}>
               <EditableZone field="contactKicker" label="Etiqueta nosotros">Nuestra empresa</EditableZone>
             </p>
-            <h2 style={{ margin: "0 0 16px", fontSize: "clamp(20px,4vw,30px)", fontWeight: 900, color: nosText }}>
+            <h2 style={{ margin: "0 0 18px", fontSize: "clamp(22px,4vw,32px)",
+              fontWeight: 900, color: nosText, letterSpacing: -0.3 }}>
               <EditableZone field="aboutHeading2" label="Título nosotros">Pasión por los vehículos desde 2010</EditableZone>
             </h2>
-            <p style={{ margin: "0 0 12px", fontSize: 15, color: nosMid, lineHeight: 1.8 }}>
+            <p style={{ margin: "0 0 14px", fontSize: 15, color: nosMid, lineHeight: 1.9, fontWeight: 300 }}>
               <EditableZone field="aboutParagraph1" label="Párrafo 1">Somos una empresa familiar con más de 15 años en el mercado automotor, especializados en brindar la mejor experiencia de compra con total transparencia.</EditableZone>
             </p>
-            <p style={{ margin: "0 0 24px", fontSize: 15, color: nosMid, lineHeight: 1.8 }}>
+            <p style={{ margin: "0 0 28px", fontSize: 15, color: nosMid, lineHeight: 1.9, fontWeight: 300 }}>
               <EditableZone field="aboutParagraph2" label="Párrafo 2">Nuestro equipo de asesores y taller propio garantizan la calidad de cada vehículo antes de llegar a tus manos.</EditableZone>
             </p>
             {whatsapp.enabled && whatsapp.number && (
@@ -713,7 +857,7 @@ export default function AutoDrive() {
                 target="_blank" rel="noopener noreferrer"
                 style={{ display: "inline-flex", alignItems: "center", gap: 8,
                   background: "#25d366", color: "white", textDecoration: "none",
-                  padding: "12px 22px", borderRadius: 10, fontWeight: 800, fontSize: 14 }}>
+                  padding: "13px 24px", borderRadius: 10, fontWeight: 800, fontSize: 14 }}>
                 <WaIcon /> Contactanos
               </a>
             )}
@@ -721,19 +865,21 @@ export default function AutoDrive() {
         </div>
       </section>
 
-      {/* Contacto */}
-      <section id="contacto" style={{ padding: "56px 20px", position: "relative",
-        ...secBg(contactoImg, contactoBg), borderTop: "1px solid #e2e8f0" }}>
+      {/* ── Contacto ───────────────────────────────────────── */}
+      <section id="contacto" style={{ padding: "88px 28px", position: "relative",
+        ...secBg(contactoImg, contactoBg) }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
         <SectionOverlay ov={contactoImg} />
         <EditableSectionBg field="bgContacto" label="Fondo contacto" />
-        <div style={{ position: "relative", zIndex: 1, maxWidth: 580, margin: "0 auto", textAlign: "center" }}>
-          <div style={{ width: 40, height: 4, background: accent,
-            borderRadius: 2, margin: "0 auto 20px" }} />
-          <h2 style={{ margin: "0 0 12px", fontSize: "clamp(22px,4vw,32px)", fontWeight: 900, color: conText }}>
+        <div style={{ position: "relative", zIndex: 1, maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
+          <p style={{ margin: "0 0 8px", fontSize: 10, color: accent,
+            textTransform: "uppercase", letterSpacing: 3, fontWeight: 700 }}>Contacto</p>
+          <h2 style={{ margin: "0 0 14px", fontSize: "clamp(24px,4vw,40px)",
+            fontWeight: 900, color: conText, letterSpacing: -0.5, lineHeight: 1.1 }}>
             <EditableZone field="contactHeading" label="Título contacto">¿Te interesa algún vehículo?</EditableZone>
           </h2>
-          <p style={{ margin: "0 0 28px", fontSize: 15, color: conMid, lineHeight: 1.6 }}>
+          <p style={{ margin: "0 0 32px", fontSize: 15, color: conMid,
+            lineHeight: 1.8, fontWeight: 300 }}>
             <EditableZone field="contactSubtext" label="Subtítulo">Escribinos y coordinamos una visita sin costo. Respondemos en minutos.</EditableZone>
           </p>
           {whatsapp.enabled && whatsapp.number && (
@@ -741,7 +887,8 @@ export default function AutoDrive() {
               target="_blank" rel="noopener noreferrer"
               style={{ display: "inline-flex", alignItems: "center", gap: 10,
                 background: "#25d366", color: "white", textDecoration: "none",
-                padding: "15px 28px", borderRadius: 12, fontWeight: 800, fontSize: 15 }}>
+                padding: "16px 32px", borderRadius: 12, fontWeight: 800, fontSize: 15,
+                boxShadow: "0 8px 28px rgba(37,211,102,0.3)" }}>
               <WaIcon size={20} />
               <EditableZone field="contactWhatsApp" label="WhatsApp de contacto">Escribinos por WhatsApp</EditableZone>
             </a>
@@ -749,17 +896,17 @@ export default function AutoDrive() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer style={{ position: "relative", padding: "24px 20px",
+      {/* ── Footer ─────────────────────────────────────────── */}
+      <footer style={{ position: "relative", padding: "28px",
         ...secBg(footerImg, footerBg), textAlign: "center" }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <SectionOverlay ov={footerImg} />
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
         <div style={{ position: "relative", zIndex: 1 }}>
-          <p style={{ margin: "0 0 4px", fontWeight: 900, fontSize: 15, color: accent }}>
+          <p style={{ margin: "0 0 6px", fontWeight: 900, fontSize: 15, color: accent }}>
             {storeName}
           </p>
-          <p style={{ margin: 0, fontSize: 11, color: ftMid }}>
+          <p style={{ margin: 0, fontSize: 11, color: ftMid, letterSpacing: 0.3 }}>
             <EditableZone field="footerCopyright" label="Copyright">
               {`© ${new Date().getFullYear()} ${storeName}. Todos los derechos reservados.`}
             </EditableZone>
@@ -775,10 +922,10 @@ export default function AutoDrive() {
       {!editMode && whatsapp.enabled && whatsapp.number && (
         <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}`}
           target="_blank" rel="noopener noreferrer"
-          style={{ position: "fixed", bottom: 20, right: 20, zIndex: 200,
-            background: "#25d366", color: "white", width: 54, height: 54,
+          style={{ position: "fixed", bottom: 24, right: 24, zIndex: 200,
+            background: "#25d366", color: "white", width: 56, height: 56,
             borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 4px 16px rgba(37,211,102,0.4)", textDecoration: "none" }}>
+            boxShadow: "0 4px 24px rgba(37,211,102,0.45)", textDecoration: "none" }}>
           <WaIcon size={22} />
         </a>
       )}
