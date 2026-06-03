@@ -54,21 +54,29 @@ function WaIcon({ size = 18 }: { size?: number }) {
 }
 
 /* ── Modal ─────────────────────────────────────────────────── */
-function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
+function VehicleModal({ product, accent, currency, whatsapp, products, onClose, onSelect }: {
   product: StorefrontProduct; accent: string; currency: string;
-  whatsapp: { enabled: boolean; number: string }; onClose: () => void;
+  whatsapp: { enabled: boolean; number: string };
+  products: StorefrontProduct[];
+  onClose: () => void;
+  onSelect: (p: StorefrontProduct) => void;
 }) {
   const [imgIdx, setImgIdx] = useState(0);
   const imgs = product.images.length > 0
     ? product.images
     : ["https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80"];
+
+  const año = attr(product, "Año");
+  const km = attr(product, "Km");
   const condicion = attr(product, "Condición");
+  const ubicacion = attr(product, "Ubicación") || attr(product, "Ciudad") || "";
+
   const specs = [
     { label: "Marca",       value: attr(product, "Marca") },
     { label: "Modelo",      value: attr(product, "Modelo") },
     { label: "Versión",     value: attr(product, "Versión") },
-    { label: "Año",         value: attr(product, "Año") },
-    { label: "Kilómetros",  value: attr(product, "Km") ? `${Number(attr(product, "Km")).toLocaleString("es-AR")} km` : "" },
+    { label: "Año",         value: año },
+    { label: "Kilómetros",  value: km ? `${Number(km).toLocaleString("es-AR")} km` : "" },
     { label: "Motor",       value: attr(product, "Motor") },
     { label: "Transmisión", value: attr(product, "Transmisión") },
     { label: "Combustible", value: attr(product, "Combustible") },
@@ -78,18 +86,18 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
     { label: "Puertas",     value: attr(product, "Puertas") ? `${attr(product, "Puertas")} puertas` : "" },
   ].filter(s => s.value);
 
-  const condColor = condicion === "0 km" || condicion === "Nuevo"
-    ? { bg: "#f0fdf4", fg: "#16a34a" }
-    : condicion === "Casi nuevo" || condicion === "Muy bueno"
-    ? { bg: "#eff6ff", fg: "#2563eb" }
-    : condicion === "Bueno"
-    ? { bg: "#fff7ed", fg: "#ea580c" }
-    : { bg: "#f8fafc", fg: "#64748b" };
+  const similar = products
+    .filter(p => p.id !== product.id && p.category === product.category)
+    .slice(0, 4);
+
+  const headerLine = [año, km ? `${Number(km).toLocaleString("es-AR")} km` : null, condicion]
+    .filter(Boolean).join(" · ");
 
   const waNumber = whatsapp.number.replace(/\D/g, "");
-  const waMsg = encodeURIComponent(`Hola! Me interesa el ${product.name}${attr(product, "Año") ? ` (${attr(product, "Año")})` : ""}. ¿Podés darme más info?`);
+  const waMsg = encodeURIComponent(`Hola! Me interesa el ${product.name}${año ? ` (${año})` : ""}. ¿Podés darme más info?`);
 
   useEffect(() => {
+    const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -97,101 +105,87 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
       if (e.key === "ArrowRight") setImgIdx(i => (i + 1) % imgs.length);
     };
     window.addEventListener("keydown", onKey);
-    return () => { document.body.style.overflow = ""; window.removeEventListener("keydown", onKey); };
-  }, [imgs.length]);
+    return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", onKey); };
+  }, [imgs.length, onClose]);
 
   return (
     <div onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1000,
-        display: "flex", alignItems: "center", justifyContent: "center", padding: "16px",
-        backdropFilter: "blur(10px)" }}>
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000,
+        overflowY: "auto", padding: "20px 16px 40px", backdropFilter: "blur(4px)" }}>
       <div onClick={e => e.stopPropagation()}
-        className="ad-modal"
-        style={{ background: "#ffffff", borderRadius: 12, width: "100%", maxWidth: 1040,
-          maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column",
-          boxShadow: "0 32px 80px rgba(0,0,0,0.25)" }}>
+        style={{ background: "#fff", borderRadius: 8, width: "100%", maxWidth: 960,
+          margin: "0 auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
 
         {/* sticky header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "14px 20px", borderBottom: "1px solid #f0f0f0", flexShrink: 0,
-          background: "#fff", position: "sticky", top: 0, zIndex: 2 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            {condicion && (
-              <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 12px",
-                borderRadius: 20, background: condColor.bg, color: condColor.fg }}>
-                {condicion}
-              </span>
-            )}
+          padding: "12px 20px", borderBottom: "1px solid #ebebeb",
+          position: "sticky", top: 0, background: "#fff", zIndex: 2,
+          borderRadius: "8px 8px 0 0" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             {product.badge && (
-              <span style={{ fontSize: 10, fontWeight: 700, padding: "4px 12px",
-                borderRadius: 20, background: accent, color: getContrastColor(accent) }}>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 3,
+                background: accent, color: getContrastColor(accent),
+                textTransform: "uppercase", letterSpacing: 0.8 }}>
                 {product.badge}
               </span>
             )}
-            <span style={{ fontSize: 11, color: "#bbb", textTransform: "uppercase",
-              letterSpacing: 2, fontWeight: 500 }}>
-              {product.category}
-            </span>
+            {condicion && (
+              <span style={{ fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 3,
+                background: "#f0f0f0", color: "#666" }}>
+                {condicion}
+              </span>
+            )}
+            {product.category && (
+              <span style={{ fontSize: 12, color: "#bbb" }}>{product.category}</span>
+            )}
           </div>
           <button onClick={onClose}
-            style={{ background: "#f5f5f5", border: "none", color: "#555",
-              cursor: "pointer", width: 34, height: 34, borderRadius: "50%",
-              fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
-              transition: "all 0.15s" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#111"; e.currentTarget.style.color = "#fff"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#f5f5f5"; e.currentTarget.style.color = "#555"; }}>
+            style={{ background: "#f5f5f5", border: "none", cursor: "pointer",
+              width: 32, height: 32, borderRadius: "50%", fontSize: 18,
+              display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>
             ×
           </button>
         </div>
 
-        <div className="ad-modal-body"
-          style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
+        {/* main: image + info */}
+        <div className="ad-modal-body" style={{ display: "grid" }}>
 
-          {/* image panel */}
-          <div className="ad-modal-left"
-            style={{ display: "flex", flexDirection: "column", background: "#f8f8f8", flexShrink: 0 }}>
-            <div style={{ flex: 1, position: "relative", overflow: "hidden", minHeight: 0 }}>
+          {/* images */}
+          <div style={{ background: "#f5f5f5" }}>
+            <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden" }}>
               <img src={imgs[imgIdx]} alt={product.name}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               {imgs.length > 1 && (
                 <>
                   <button onClick={() => setImgIdx(i => (i - 1 + imgs.length) % imgs.length)}
                     style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-                      background: "rgba(255,255,255,0.92)", border: "none", color: "#111",
-                      width: 40, height: 40, borderRadius: "50%", cursor: "pointer",
-                      fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
-                      boxShadow: "0 2px 12px rgba(0,0,0,0.1)" }}>
-                    ‹
-                  </button>
+                      background: "rgba(255,255,255,0.9)", border: "none", width: 36, height: 36,
+                      borderRadius: "50%", cursor: "pointer", fontSize: 20,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>‹</button>
                   <button onClick={() => setImgIdx(i => (i + 1) % imgs.length)}
                     style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
-                      background: "rgba(255,255,255,0.92)", border: "none", color: "#111",
-                      width: 40, height: 40, borderRadius: "50%", cursor: "pointer",
-                      fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
-                      boxShadow: "0 2px 12px rgba(0,0,0,0.1)" }}>
-                    ›
-                  </button>
-                  <div style={{ position: "absolute", bottom: 14, left: "50%",
-                    transform: "translateX(-50%)", display: "flex", gap: 6 }}>
-                    {imgs.map((_, i) => (
-                      <button key={i} onClick={() => setImgIdx(i)}
-                        style={{ width: i === imgIdx ? 24 : 8, height: 8, borderRadius: 4,
-                          border: "none", cursor: "pointer", transition: "all 0.2s",
-                          background: i === imgIdx ? accent : "rgba(0,0,0,0.25)" }} />
-                    ))}
-                  </div>
+                      background: "rgba(255,255,255,0.9)", border: "none", width: 36, height: 36,
+                      borderRadius: "50%", cursor: "pointer", fontSize: 20,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>›</button>
                 </>
               )}
+              <div style={{ position: "absolute", bottom: 10, right: 10,
+                background: "rgba(0,0,0,0.5)", color: "#fff", fontSize: 11,
+                padding: "3px 8px", borderRadius: 4 }}>
+                {imgIdx + 1} / {imgs.length}
+              </div>
             </div>
             {imgs.length > 1 && (
-              <div style={{ display: "flex", gap: 3, padding: "8px", background: "#f0f0f0",
-                overflowX: "auto", flexShrink: 0 }}>
+              <div style={{ display: "flex", gap: 4, padding: "8px 8px 10px",
+                overflowX: "auto", background: "#e8e8e8" }}>
                 {imgs.map((src, i) => (
                   <button key={i} onClick={() => setImgIdx(i)}
-                    style={{ flexShrink: 0, width: 64, height: 44, padding: 0, border: "none",
-                      cursor: "pointer", borderRadius: 4, overflow: "hidden",
-                      outline: i === imgIdx ? `2px solid ${accent}` : "2px solid transparent",
-                      transition: "outline 0.15s", opacity: i === imgIdx ? 1 : 0.5 }}>
+                    style={{ flexShrink: 0, width: 72, height: 50, padding: 0, border: "none",
+                      cursor: "pointer", borderRadius: 3, overflow: "hidden",
+                      outline: i === imgIdx ? `2.5px solid ${accent}` : "2.5px solid transparent",
+                      opacity: i === imgIdx ? 1 : 0.55, transition: "all 0.15s" }}>
                     <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                   </button>
                 ))}
@@ -199,60 +193,106 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
             )}
           </div>
 
-          {/* info panel */}
-          <div className="ad-modal-right"
-            style={{ flex: 1, overflowY: "auto", padding: "28px 26px 32px", minWidth: 0 }}>
-            <h2 style={{ margin: "0 0 4px", fontSize: "clamp(18px,2.5vw,26px)",
-              fontWeight: 800, color: "#111", lineHeight: 1.15, letterSpacing: -0.5 }}>
-              {product.name}
-            </h2>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 24 }}>
-              <p style={{ margin: 0, fontSize: "clamp(26px,3.5vw,34px)",
-                fontWeight: 900, color: accent, letterSpacing: -1 }}>
+          {/* info */}
+          <div style={{ padding: "28px 28px 32px", display: "flex", flexDirection: "column", gap: 12 }}>
+            {headerLine && (
+              <p style={{ margin: 0, fontSize: 13, color: "#888" }}>{headerLine}</p>
+            )}
+            <h2 style={{ margin: 0, fontSize: "clamp(18px,2.5vw,24px)", fontWeight: 600,
+              color: "#333", lineHeight: 1.2 }}>{product.name}</h2>
+            {ubicacion && (
+              <p style={{ margin: 0, fontSize: 12, color: "#aaa" }}>📍 {ubicacion}</p>
+            )}
+            <div>
+              <p style={{ margin: 0, fontSize: "clamp(26px,3.5vw,34px)", fontWeight: 700,
+                color: "#333", letterSpacing: -1, lineHeight: 1 }}>
                 {fmtPrice(product.price, currency)}
               </p>
               {product.comparePrice && (
-                <span style={{ fontSize: 14, color: "#bbb", textDecoration: "line-through", fontWeight: 400 }}>
+                <p style={{ margin: "4px 0 0", fontSize: 14, color: "#bbb", textDecoration: "line-through" }}>
                   {fmtPrice(product.comparePrice, currency)}
-                </span>
+                </p>
               )}
             </div>
-
-            {specs.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr",
-                gap: "1px", background: "#f0f0f0", marginBottom: 22,
-                borderRadius: 8, overflow: "hidden", border: "1px solid #f0f0f0" }}>
-                {specs.map(s => (
-                  <div key={s.label} style={{ padding: "12px 16px", background: "#fff" }}>
-                    <p style={{ margin: 0, fontSize: 9, color: accent,
-                      textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>{s.label}</p>
-                    <p style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 700, color: "#222" }}>
-                      {s.value}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {product.description && (
-              <p style={{ margin: "0 0 22px", fontSize: 13, color: "#666",
-                lineHeight: 1.85, background: "#fafafa",
-                padding: "14px 16px", borderRadius: 8, borderLeft: `3px solid ${accent}` }}>
-                {product.description}
-              </p>
-            )}
-
             {whatsapp.enabled && waNumber && (
-              <a href={`https://wa.me/${waNumber}?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
+              <a href={`https://wa.me/${waNumber}?text=${waMsg}`}
+                target="_blank" rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
                   background: "#25d366", color: "white", textDecoration: "none",
-                  padding: "15px 20px", borderRadius: 10, fontWeight: 800, fontSize: 14,
-                  boxShadow: "0 4px 20px rgba(37,211,102,0.25)" }}>
-                <WaIcon size={20} /> Consultar por WhatsApp
+                  padding: "14px 20px", borderRadius: 6, fontWeight: 700, fontSize: 14,
+                  boxShadow: "0 4px 16px rgba(37,211,102,0.3)", marginTop: 4 }}>
+                <WaIcon size={18} /> Consultar por WhatsApp
               </a>
             )}
           </div>
         </div>
+
+        {/* características */}
+        {specs.length > 0 && (
+          <div style={{ padding: "24px 28px", borderTop: "1px solid #f0f0f0" }}>
+            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600, color: "#333" }}>
+              Características del producto
+            </h3>
+            <div className="ad-specs-grid" style={{ display: "grid", gap: "0 32px" }}>
+              {specs.map((s) => (
+                <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 12,
+                  padding: "10px 0", borderBottom: "1px solid #f5f5f5" }}>
+                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#f0f0f0",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    flexShrink: 0, fontSize: 12, color: "#666", fontWeight: 700 }}>
+                    {s.label.charAt(0)}
+                  </div>
+                  <span style={{ fontSize: 13, color: "#555" }}>
+                    {s.label}: <strong style={{ color: "#333" }}>{s.value}</strong>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* descripción */}
+        {product.description && (
+          <div style={{ padding: "0 28px 28px", borderTop: "1px solid #f0f0f0" }}>
+            <p style={{ margin: 0, fontSize: 14, color: "#666", lineHeight: 1.75 }}>
+              {product.description}
+            </p>
+          </div>
+        )}
+
+        {/* similares */}
+        {similar.length > 0 && (
+          <div style={{ padding: "24px 28px 32px", borderTop: "1px solid #f0f0f0" }}>
+            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600, color: "#333" }}>
+              Estos vehículos también podrían interesarte
+            </h3>
+            <div className="ad-similar-grid" style={{ display: "grid", gap: 12 }}>
+              {similar.map(p => (
+                <div key={p.id} onClick={() => onSelect(p)}
+                  style={{ cursor: "pointer", border: "1px solid #e0e0e0", borderRadius: 6,
+                    overflow: "hidden", background: "#fff" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
+                  <img src={p.images[0] || imgs[0]} alt={p.name}
+                    style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", display: "block" }} />
+                  <div style={{ padding: "10px 12px" }}>
+                    <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 500, color: "#333",
+                      overflow: "hidden", display: "-webkit-box",
+                      WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{p.name}</p>
+                    <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#333" }}>
+                      {fmtPrice(p.price, currency)}
+                    </p>
+                    {(attr(p, "Año") || attr(p, "Km")) && (
+                      <p style={{ margin: "3px 0 0", fontSize: 11, color: "#999" }}>
+                        {[attr(p, "Año"), attr(p, "Km") && `${Number(attr(p, "Km")).toLocaleString("es-AR")} Km`].filter(Boolean).join(" | ")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -484,15 +524,12 @@ export default function AutoDrive() {
         .ad-svc { grid-template-columns: 1fr !important }
         @media(min-width:560px){ .ad-svc { grid-template-columns: repeat(2,1fr) !important } }
         @media(min-width:900px){ .ad-svc { grid-template-columns: repeat(4,1fr) !important } }
-        .ad-modal { flex-direction: column !important }
-        .ad-modal-body { flex-direction: column !important }
-        .ad-modal-left { width: 100% !important; max-height: 55vw; min-height: 200px }
-        .ad-modal-right { max-height: 50vh; overflow-y: auto }
-        @media(min-width:700px){
-          .ad-modal-body { flex-direction: row !important }
-          .ad-modal-left { width: 52% !important; max-height: unset !important }
-          .ad-modal-right { max-height: unset !important }
-        }
+        .ad-modal-body { grid-template-columns: 1fr !important }
+        @media(min-width:700px){ .ad-modal-body { grid-template-columns: 1fr 1fr !important } }
+        .ad-specs-grid { grid-template-columns: 1fr !important }
+        @media(min-width:560px){ .ad-specs-grid { grid-template-columns: 1fr 1fr !important } }
+        .ad-similar-grid { grid-template-columns: repeat(2,1fr) !important }
+        @media(min-width:560px){ .ad-similar-grid { grid-template-columns: repeat(4,1fr) !important } }
       `}</style>
 
       {/* ── Navbar ─────────────────────────────────────────── */}
@@ -901,7 +938,8 @@ export default function AutoDrive() {
 
       {selected && (
         <VehicleModal product={selected} accent={accent} currency={currency}
-          whatsapp={whatsapp} onClose={() => setSelected(null)} />
+          whatsapp={whatsapp} products={products}
+          onClose={() => setSelected(null)} onSelect={p => setSelected(p)} />
       )}
 
       {!editMode && whatsapp.enabled && whatsapp.number && (
