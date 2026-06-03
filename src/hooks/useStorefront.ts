@@ -29,6 +29,7 @@ export type StorefrontProduct = {
   sizes: string[];
   colors: string[];
   variants: StorefrontVariant[];
+  attributes: { key: string; value: string }[];
   badge?: string;
 };
 
@@ -76,14 +77,25 @@ const COLOR_ATTRS = ["color", "colour", "colores", "colors", "tono"];
 
 /* ── Productos de muestra para el preview del dashboard ─────── */
 const DEMO_PRODUCTS: StorefrontProduct[] = [
-  { id: "demo-1", name: "Remera Oversize", price: 18500, comparePrice: null, category: "remeras", description: "Remera de algodón premium con corte oversized.", images: ["https://picsum.photos/seed/dp-rem/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-rem/600/800" }], sizes: ["XS","S","M","L","XL"], colors: ["Blanco","Negro","Gris"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "mujer", badge: "NUEVO" },
-  { id: "demo-2", name: "Jeans Skinny", price: 35900, comparePrice: 48000, category: "pantalones", description: "Jeans de corte skinny con elastán.", images: ["https://picsum.photos/seed/dp-jean/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-jean/600/800" }], sizes: ["38","40","42","44"], colors: ["Azul","Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "mujer", badge: "SALE" },
-  { id: "demo-3", name: "Hoodie Premium", price: 29900, comparePrice: null, category: "buzos", description: "Hoodie de algodón french terry 380g.", images: ["https://picsum.photos/seed/dp-hood/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-hood/600/800" }], sizes: ["S","M","L","XL","XXL"], colors: ["Gris","Negro","Oliva"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "hombre", badge: "NUEVO" },
-  { id: "demo-4", name: "Pantalón Cargo", price: 42000, comparePrice: null, category: "pantalones", description: "Pantalón cargo con múltiples bolsillos.", images: ["https://picsum.photos/seed/dp-carg/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-carg/600/800" }], sizes: ["28","30","32","34","36"], colors: ["Beige","Negro","Verde"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "hombre" },
-  { id: "demo-5", name: "Vestido Midi", price: 38500, comparePrice: null, category: "vestidos", description: "Vestido midi floreado ideal para el verano.", images: ["https://picsum.photos/seed/dp-vest/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-vest/600/800" }], sizes: ["XS","S","M","L"], colors: ["Floral","Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "mujer", badge: "NUEVO" },
-  { id: "demo-6", name: "Cinturón de Cuero", price: 12000, comparePrice: 16000, category: "accesorios", description: "Cinturón de cuero genuino con hebilla dorada.", images: ["https://picsum.photos/seed/dp-belt/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-belt/600/800" }], sizes: ["Único"], colors: ["Marrón","Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "SALE" },
-  { id: "demo-7", name: "Campera de Jean", price: 55000, comparePrice: 68000, category: "camperas", description: "Campera de jean clásica con detalles lavados.", images: ["https://picsum.photos/seed/dp-camp/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-camp/600/800" }], sizes: ["S","M","L","XL"], colors: ["Azul","Blanco"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "hombre", badge: "SALE" },
-  { id: "demo-8", name: "Cartera Tote", price: 24500, comparePrice: null, category: "accesorios", description: "Cartera tote de lona con interior forrado.", images: ["https://picsum.photos/seed/dp-tote/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-tote/600/800" }], sizes: ["Único"], colors: ["Beige","Negro","Bordo"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex" },
+  { id: "demo-1", name: "Remera Oversize", price: 18500, comparePrice: null, category: "remeras", description: "Remera de algodón premium con corte oversized.", images: ["https://picsum.photos/seed/dp-rem/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-rem/600/800" }], sizes: ["XS","S","M","L","XL"], colors: ["Blanco","Negro","Gris"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "mujer", badge: "NUEVO", attributes: [] },
+  { id: "demo-2", name: "Jeans Skinny", price: 35900, comparePrice: 48000, category: "pantalones", description: "Jeans de corte skinny con elastán.", images: ["https://picsum.photos/seed/dp-jean/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-jean/600/800" }], sizes: ["38","40","42","44"], colors: ["Azul","Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "mujer", badge: "SALE", attributes: [] },
+  { id: "demo-3", name: "Hoodie Premium", price: 29900, comparePrice: null, category: "buzos", description: "Hoodie de algodón french terry 380g.", images: ["https://picsum.photos/seed/dp-hood/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-hood/600/800" }], sizes: ["S","M","L","XL","XXL"], colors: ["Gris","Negro","Oliva"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "hombre", badge: "NUEVO", attributes: [] },
+  { id: "demo-4", name: "Pantalón Cargo", price: 42000, comparePrice: null, category: "pantalones", description: "Pantalón cargo con múltiples bolsillos.", images: ["https://picsum.photos/seed/dp-carg/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-carg/600/800" }], sizes: ["28","30","32","34","36"], colors: ["Beige","Negro","Verde"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "hombre", attributes: [] },
+  { id: "demo-5", name: "Vestido Midi", price: 38500, comparePrice: null, category: "vestidos", description: "Vestido midi floreado ideal para el verano.", images: ["https://picsum.photos/seed/dp-vest/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-vest/600/800" }], sizes: ["XS","S","M","L"], colors: ["Floral","Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "mujer", badge: "NUEVO", attributes: [] },
+  { id: "demo-6", name: "Cinturón de Cuero", price: 12000, comparePrice: 16000, category: "accesorios", description: "Cinturón de cuero genuino con hebilla dorada.", images: ["https://picsum.photos/seed/dp-belt/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-belt/600/800" }], sizes: ["Único"], colors: ["Marrón","Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "SALE", attributes: [] },
+  { id: "demo-7", name: "Campera de Jean", price: 55000, comparePrice: 68000, category: "camperas", description: "Campera de jean clásica con detalles lavados.", images: ["https://picsum.photos/seed/dp-camp/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-camp/600/800" }], sizes: ["S","M","L","XL"], colors: ["Azul","Blanco"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "hombre", badge: "SALE", attributes: [] },
+  { id: "demo-8", name: "Cartera Tote", price: 24500, comparePrice: null, category: "accesorios", description: "Cartera tote de lona con interior forrado.", images: ["https://picsum.photos/seed/dp-tote/600/800"], imageItems: [{ url: "https://picsum.photos/seed/dp-tote/600/800" }], sizes: ["Único"], colors: ["Beige","Negro","Bordo"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", attributes: [] },
+];
+
+const DEMO_PRODUCTS_AUTOS: StorefrontProduct[] = [
+  { id: "auto-1", name: "Toyota Corolla XEI", price: 28500000, comparePrice: null, category: "Sedanes", description: "Excelente estado. Un dueño. Full equipo, cámara de retroceso, tapizado cuero.", images: ["https://picsum.photos/seed/auto1/800/500"], imageItems: [{ url: "https://picsum.photos/seed/auto1/800/500" }], sizes: [], colors: ["Blanco"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "DESTACADO", attributes: [{ key: "Marca", value: "Toyota" }, { key: "Año", value: "2022" }, { key: "Km", value: "28.000" }, { key: "Motor", value: "2.0" }, { key: "Transmisión", value: "Automática" }, { key: "Combustible", value: "Nafta" }] },
+  { id: "auto-2", name: "Volkswagen Amarok V6", price: 52000000, comparePrice: null, category: "Pickups", description: "La pickup más potente de su segmento. Motor V6 turbo diesel, tracción 4x4.", images: ["https://picsum.photos/seed/auto2/800/500"], imageItems: [{ url: "https://picsum.photos/seed/auto2/800/500" }], sizes: [], colors: ["Gris"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "NUEVO", attributes: [{ key: "Marca", value: "Volkswagen" }, { key: "Año", value: "2023" }, { key: "Km", value: "5.000" }, { key: "Motor", value: "3.0 V6" }, { key: "Transmisión", value: "Automática" }, { key: "Combustible", value: "Diesel" }] },
+  { id: "auto-3", name: "Ford Ranger XLT", price: 38000000, comparePrice: null, category: "Pickups", description: "Doble cabina, tracción 4x4 selectiva. Motor TDCi turbo diesel 170 HP.", images: ["https://picsum.photos/seed/auto3/800/500"], imageItems: [{ url: "https://picsum.photos/seed/auto3/800/500" }], sizes: [], colors: ["Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", attributes: [{ key: "Marca", value: "Ford" }, { key: "Año", value: "2021" }, { key: "Km", value: "45.000" }, { key: "Motor", value: "2.2 TDCi" }, { key: "Transmisión", value: "Manual" }, { key: "Combustible", value: "Diesel" }] },
+  { id: "auto-4", name: "Chevrolet S10 LTZ", price: 34500000, comparePrice: null, category: "Pickups", description: "Full equipo, techo panorámico, cámara 360°. Ideal para trabajo y familia.", images: ["https://picsum.photos/seed/auto4/800/500"], imageItems: [{ url: "https://picsum.photos/seed/auto4/800/500" }], sizes: [], colors: ["Plata"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", attributes: [{ key: "Marca", value: "Chevrolet" }, { key: "Año", value: "2022" }, { key: "Km", value: "33.000" }, { key: "Motor", value: "2.8 CTDi" }, { key: "Transmisión", value: "Automática" }, { key: "Combustible", value: "Diesel" }] },
+  { id: "auto-5", name: "Honda CR-V EXL", price: 41000000, comparePrice: null, category: "SUVs", description: "SUV premium, 7 asientos, motor turbo. Sistema Honda Sensing de seguridad activa.", images: ["https://picsum.photos/seed/auto5/800/500"], imageItems: [{ url: "https://picsum.photos/seed/auto5/800/500" }], sizes: [], colors: ["Rojo"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "FINANCIADO", attributes: [{ key: "Marca", value: "Honda" }, { key: "Año", value: "2023" }, { key: "Km", value: "12.000" }, { key: "Motor", value: "1.5 Turbo" }, { key: "Transmisión", value: "CVT" }, { key: "Combustible", value: "Nafta" }] },
+  { id: "auto-6", name: "Renault Duster Oroch", price: 22000000, comparePrice: 25000000, category: "Pickups", description: "La pickup compacta más versátil. Motor 1.3 turbo, suspensión elevada.", images: ["https://picsum.photos/seed/auto6/800/500"], imageItems: [{ url: "https://picsum.photos/seed/auto6/800/500" }], sizes: [], colors: ["Naranja"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "OPORTUNIDAD", attributes: [{ key: "Marca", value: "Renault" }, { key: "Año", value: "2021" }, { key: "Km", value: "58.000" }, { key: "Motor", value: "1.3 TCe" }, { key: "Transmisión", value: "Manual" }, { key: "Combustible", value: "Nafta" }] },
+  { id: "auto-7", name: "Yamaha MT-07", price: 8500000, comparePrice: null, category: "Motos", description: "Naked deportiva 689cc. Motor CP2 de 73 HP. Ideal para city y ruta.", images: ["https://picsum.photos/seed/auto7/800/500"], imageItems: [{ url: "https://picsum.photos/seed/auto7/800/500" }], sizes: [], colors: ["Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "NUEVO", attributes: [{ key: "Marca", value: "Yamaha" }, { key: "Año", value: "2023" }, { key: "Km", value: "2.000" }, { key: "Motor", value: "689cc" }, { key: "Transmisión", value: "Manual 6v" }, { key: "Combustible", value: "Nafta" }] },
+  { id: "auto-8", name: "Honda CB 500F", price: 5800000, comparePrice: null, category: "Motos", description: "Moto naked media con motor bicilíndrico paralelo. Ideal para la ciudad.", images: ["https://picsum.photos/seed/auto8/800/500"], imageItems: [{ url: "https://picsum.photos/seed/auto8/800/500" }], sizes: [], colors: ["Rojo"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", attributes: [{ key: "Marca", value: "Honda" }, { key: "Año", value: "2022" }, { key: "Km", value: "15.000" }, { key: "Motor", value: "471cc" }, { key: "Transmisión", value: "Manual 6v" }, { key: "Combustible", value: "Nafta" }] },
 ];
 
 function isSize (name: string) { return SIZE_ATTRS.includes(name.toLowerCase()); }
@@ -126,6 +138,12 @@ function mapProduct(raw: any): StorefrontProduct {
     reelUrls = Array.isArray(parsed) ? parsed.filter((u: unknown) => typeof u === "string") : [];
   } catch { reelUrls = []; }
 
+  let attributes: { key: string; value: string }[] = [];
+  try {
+    const parsed = JSON.parse(raw.attributes || "[]");
+    attributes = Array.isArray(parsed) ? parsed.filter((a: unknown) => a && typeof a === "object") : [];
+  } catch { attributes = []; }
+
   return {
     id: raw.id,
     name: raw.name,
@@ -143,6 +161,7 @@ function mapProduct(raw: any): StorefrontProduct {
     sizes,
     colors,
     variants,
+    attributes,
   };
 }
 
@@ -166,7 +185,8 @@ export function useStorefront() {
   // Carga productos reales; usa demo cuando no hay slug (preview del dashboard)
   useEffect(() => {
     if (!slug) {
-      setProducts(DEMO_PRODUCTS);
+      const tipoTienda = config?.tipoTienda ?? "ROPA";
+      setProducts(tipoTienda === "AUTOS" ? DEMO_PRODUCTS_AUTOS : DEMO_PRODUCTS);
       setLoadingProducts(false);
       return;
     }
@@ -178,8 +198,10 @@ export function useStorefront() {
           : [];
         if (previewFill) {
           // En el editor: productos reales primero, demos para completar hasta 8
+          const tipoTienda = config?.tipoTienda ?? "ROPA";
+          const demoPool = tipoTienda === "AUTOS" ? DEMO_PRODUCTS_AUTOS : DEMO_PRODUCTS;
           const needed = Math.max(0, 8 - real.length);
-          setProducts([...real, ...DEMO_PRODUCTS.slice(0, needed)]);
+          setProducts([...real, ...demoPool.slice(0, needed)]);
         } else {
           setProducts(real);
         }

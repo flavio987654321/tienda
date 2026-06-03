@@ -1,4 +1,4 @@
-export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse" | "chic-paris";
+export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse" | "chic-paris" | "auto-motor" | "auto-drive";
 
 export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = ["chic-paris"];
 
@@ -75,6 +75,17 @@ export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: 
   "boho-terra":   { accent: "#b5652a", storeName: "BOHO TERRA"   },
   "urban-pulse":  { accent: "#d4ff00", storeName: "URBAN PULSE"  },
   "chic-paris":   { accent: "#c0392b", storeName: "CHIC PARIS"   },
+  "auto-motor":   { accent: "#e8a020", storeName: "AUTO MOTOR"   },
+  "auto-drive":   { accent: "#2563eb", storeName: "AUTO DRIVE"   },
+};
+
+export const TEMPLATE_TIPO_TIENDA: Record<TemplateId, string[]> = {
+  "fashion-noir": ["ROPA", "BELLEZA", "DEPORTE", "MASCOTAS", "LIBROS", "ALIMENTOS", "HOGAR", "GENERAL"],
+  "boho-terra":   ["ROPA", "BELLEZA", "ALIMENTOS", "MASCOTAS", "LIBROS", "GENERAL"],
+  "urban-pulse":  ["ROPA", "DEPORTE", "TECH", "GENERAL"],
+  "chic-paris":   ["ROPA", "BELLEZA", "HOGAR", "GENERAL"],
+  "auto-motor":   ["AUTOS"],
+  "auto-drive":   ["AUTOS"],
 };
 
 export const DEFAULT_CONFIG: StoreConfig = {

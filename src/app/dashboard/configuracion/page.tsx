@@ -10,7 +10,10 @@ import FashionNoir from "@/components/store/templates/FashionNoir";
 import BohoTerra from "@/components/store/templates/BohoTerra";
 import UrbanPulse from "@/components/store/templates/UrbanPulse";
 import ChicParis from "@/components/store/templates/ChicParis";
+import AutoMotor from "@/components/store/templates/AutoMotor";
+import AutoDrive from "@/components/store/templates/AutoDrive";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
+import { TEMPLATE_TIPO_TIENDA } from "@/types/store-config";
 
 /* ── Types ─────────────────────────────────────────────────── */
 type Mode = "gallery" | "preview" | "editing";
@@ -21,6 +24,7 @@ type TemplateInfo = {
   desc: string;
   palette: string[];
   component: React.ComponentType;
+  tipoTiendas: string[];
 };
 
 type Category = { id: string; name: string; templates: TemplateInfo[] };
@@ -31,10 +35,18 @@ const CATEGORIES: Category[] = [
     id: "moda",
     name: "Moda & Ropa",
     templates: [
-      { id: "fashion-noir", name: "Fashion Noir", desc: "Lujo · Oscuro · Editorial",    palette: ["#0a0a0a", "#c9a84c", "#f0ebe3"], component: FashionNoir },
-      { id: "boho-terra",   name: "Boho Terra",   desc: "Orgánico · Natural · Cálido",  palette: ["#faf7f2", "#b5652a", "#2c2218"], component: BohoTerra  },
-      { id: "urban-pulse",  name: "Urban Pulse",  desc: "Deportivo · Energético",        palette: ["#0f0f0f", "#d4ff00", "#f5f5f5"], component: UrbanPulse },
-      { id: "chic-paris",   name: "Chic Paris",   desc: "Editorial · Carousel · Limpio", palette: ["#ffffff", "#c0392b", "#111111"], component: ChicParis  },
+      { id: "fashion-noir", name: "Fashion Noir", desc: "Lujo · Oscuro · Editorial",    palette: ["#0a0a0a", "#c9a84c", "#f0ebe3"], component: FashionNoir, tipoTiendas: TEMPLATE_TIPO_TIENDA["fashion-noir"] },
+      { id: "boho-terra",   name: "Boho Terra",   desc: "Orgánico · Natural · Cálido",  palette: ["#faf7f2", "#b5652a", "#2c2218"], component: BohoTerra,   tipoTiendas: TEMPLATE_TIPO_TIENDA["boho-terra"]   },
+      { id: "urban-pulse",  name: "Urban Pulse",  desc: "Deportivo · Energético",        palette: ["#0f0f0f", "#d4ff00", "#f5f5f5"], component: UrbanPulse,  tipoTiendas: TEMPLATE_TIPO_TIENDA["urban-pulse"]  },
+      { id: "chic-paris",   name: "Chic Paris",   desc: "Editorial · Carousel · Limpio", palette: ["#ffffff", "#c0392b", "#111111"], component: ChicParis,   tipoTiendas: TEMPLATE_TIPO_TIENDA["chic-paris"]   },
+    ],
+  },
+  {
+    id: "autos",
+    name: "Autos & Motos",
+    templates: [
+      { id: "auto-motor", name: "Auto Motor", desc: "Oscuro · Premium · Concesionaria", palette: ["#0a0a0a", "#e8a020", "#1a1a1a"], component: AutoMotor, tipoTiendas: TEMPLATE_TIPO_TIENDA["auto-motor"] },
+      { id: "auto-drive", name: "Auto Drive", desc: "Claro · Moderno · Marketplace",    palette: ["#f0f4f8", "#2563eb", "#0f172a"], component: AutoDrive,  tipoTiendas: TEMPLATE_TIPO_TIENDA["auto-drive"]  },
     ],
   },
 ];
@@ -166,30 +178,39 @@ function TemplateThumbnail({ component: Component }: { component: React.Componen
 }
 
 /* ── Template card ──────────────────────────────────────────── */
-function TemplateCard({ t, isSaved, onSelect, onGoToEditing }: {
+function TemplateCard({ t, isSaved, disabled, onSelect, onGoToEditing }: {
   t: TemplateInfo;
   isSaved?: boolean;
+  disabled?: boolean;
   onSelect: () => void;
   onGoToEditing?: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
-  const handleClick = () => isSaved && onGoToEditing ? onGoToEditing() : onSelect();
+  const handleClick = () => {
+    if (disabled) return;
+    if (isSaved && onGoToEditing) return onGoToEditing();
+    onSelect();
+  };
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
+      onMouseEnter={() => !disabled && setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={handleClick}
       style={{
-        flexShrink: 0, width: THUMB_W, borderRadius: 12, overflow: "hidden", cursor: "pointer",
-        border: "2px solid", borderColor: isSaved ? "#059669" : hovered ? "#6366f1" : "#e2e8f0",
+        flexShrink: 0, width: THUMB_W, borderRadius: 12, overflow: "hidden",
+        cursor: disabled ? "not-allowed" : "pointer",
+        border: "2px solid",
+        borderColor: disabled ? "#e2e8f0" : isSaved ? "#059669" : hovered ? "#6366f1" : "#e2e8f0",
         background: "white", transition: "all 0.2s",
-        boxShadow: isSaved
-          ? "0 4px 16px rgba(5,150,105,0.2)"
+        opacity: disabled ? 0.45 : 1,
+        boxShadow: disabled ? "none"
+          : isSaved ? "0 4px 16px rgba(5,150,105,0.2)"
           : hovered ? "0 8px 24px rgba(99,102,241,0.18)" : "0 2px 8px rgba(0,0,0,0.07)",
-        transform: hovered ? "translateY(-3px)" : "none",
+        transform: !disabled && hovered ? "translateY(-3px)" : "none",
         position: "relative",
+        filter: disabled ? "grayscale(1)" : "none",
       }}>
-      {isSaved && (
+      {isSaved && !disabled && (
         <div style={{
           position: "absolute", top: 8, right: 8, zIndex: 2,
           background: "#059669", color: "white", borderRadius: 20,
@@ -197,6 +218,16 @@ function TemplateCard({ t, isSaved, onSelect, onGoToEditing }: {
           boxShadow: "0 2px 6px rgba(5,150,105,0.4)",
         }}>
           ✓ Tu diseño
+        </div>
+      )}
+      {disabled && (
+        <div style={{
+          position: "absolute", top: 8, left: 8, right: 8, zIndex: 2,
+          background: "rgba(0,0,0,0.75)", color: "white", borderRadius: 6,
+          fontSize: 9, fontWeight: 700, padding: "4px 8px", textAlign: "center",
+          letterSpacing: 0.3,
+        }}>
+          No disponible para tu rubro
         </div>
       )}
       <TemplateThumbnail component={t.component} />
@@ -209,24 +240,27 @@ function TemplateCard({ t, isSaved, onSelect, onGoToEditing }: {
         </div>
         <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#1e293b" }}>{t.name}</p>
         <p style={{ margin: "3px 0 8px", fontSize: 10, color: "#94a3b8", lineHeight: 1.3 }}>{t.desc}</p>
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "6px", borderRadius: 7, fontSize: 11, fontWeight: 700,
-          background: isSaved ? (hovered ? "#059669" : "#dcfce7") : hovered ? "#6366f1" : "#f1f5f9",
-          color: isSaved ? (hovered ? "white" : "#059669") : hovered ? "white" : "#64748b",
-          transition: "all 0.2s",
-        }}>
-          {isSaved ? (hovered ? "Editar →" : "Editar diseño") : hovered ? "Ver diseño →" : "Ver diseño"}
-        </div>
+        {!disabled && (
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "6px", borderRadius: 7, fontSize: 11, fontWeight: 700,
+            background: isSaved ? (hovered ? "#059669" : "#dcfce7") : hovered ? "#6366f1" : "#f1f5f9",
+            color: isSaved ? (hovered ? "white" : "#059669") : hovered ? "white" : "#64748b",
+            transition: "all 0.2s",
+          }}>
+            {isSaved ? (hovered ? "Editar →" : "Editar diseño") : hovered ? "Ver diseño →" : "Ver diseño"}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 /* ── Carousel row ───────────────────────────────────────────── */
-function CarouselRow({ templates, savedTemplateId, onSelect, onGoToEditing }: {
+function CarouselRow({ templates, savedTemplateId, storeTipoTienda, onSelect, onGoToEditing }: {
   templates: TemplateInfo[];
   savedTemplateId?: string | null;
+  storeTipoTienda?: string;
   onSelect: (t: TemplateInfo) => void;
   onGoToEditing?: (t: TemplateInfo) => void;
 }) {
@@ -246,16 +280,20 @@ function CarouselRow({ templates, savedTemplateId, onSelect, onGoToEditing }: {
         display: "flex", gap: 16, overflowX: "auto", paddingBottom: 8,
         scrollSnapType: "x mandatory", scrollbarWidth: "none",
       }}>
-        {templates.map(t => (
-          <div key={t.id} style={{ scrollSnapAlign: "start" }}>
-            <TemplateCard
-              t={t}
-              isSaved={savedTemplateId === t.id}
-              onSelect={() => onSelect(t)}
-              onGoToEditing={onGoToEditing ? () => onGoToEditing(t) : undefined}
-            />
-          </div>
-        ))}
+        {templates.map(t => {
+          const isDisabled = !!storeTipoTienda && !t.tipoTiendas.includes(storeTipoTienda);
+          return (
+            <div key={t.id} style={{ scrollSnapAlign: "start" }}>
+              <TemplateCard
+                t={t}
+                isSaved={savedTemplateId === t.id}
+                disabled={isDisabled}
+                onSelect={() => onSelect(t)}
+                onGoToEditing={onGoToEditing ? () => onGoToEditing(t) : undefined}
+              />
+            </div>
+          );
+        })}
       </div>
       <button onClick={() => scroll("r")} style={{
         position: "absolute", right: -18, top: "50%", transform: "translateY(-50%)",
@@ -1250,6 +1288,7 @@ export default function ConfiguracionPage() {
   const [isDirty, setIsDirty] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [imageLoadingFields, setImageLoadingFields] = useState<Record<string, boolean>>({});
+  const [storeTipoTienda, setStoreTipoTienda] = useState<string>("GENERAL");
 
   /* Cargar config guardada al montar */
   const allTemplates = CATEGORIES.flatMap(c => c.templates);
@@ -1260,11 +1299,13 @@ export default function ConfiguracionPage() {
         setIsPremium(premium ?? false);
         if (!store) return;
         if (store.slug) setStoreSlug(store.slug);
+        if (store.tipoTienda) setStoreTipoTienda(store.tipoTienda);
         // Campos de la tienda que siempre deben estar en el config del preview
         const storeFields: Partial<StoreConfig> = {
           ...(store.id   && { storeId: store.id }),
           ...(store.slug && { slug:    store.slug }),
           tieneVentaMayorista: Boolean(store.tieneVentaMayorista),
+          tipoTienda: store.tipoTienda ?? "GENERAL",
         };
         try {
           const saved: StoreConfig = JSON.parse(store.storeConfig || "{}");
@@ -1529,6 +1570,7 @@ export default function ConfiguracionPage() {
                     <CarouselRow
                       templates={cat.templates}
                       savedTemplateId={savedTemplateId}
+                      storeTipoTienda={storeTipoTienda}
                       onSelect={handlePreview}
                       onGoToEditing={handleGoToEditing}
                     />
@@ -1542,7 +1584,7 @@ export default function ConfiguracionPage() {
                     <div style={{ flex: 1, height: 1, background: "#f1f5f9" }} />
                   </div>
                   <div style={{ display: "flex", gap: 16 }}>
-                    {["Gastronomía", "Accesorios", "Belleza", "Tecnología"].map(label => (
+                    {["Gastronomía", "Belleza", "Tecnología", "Hogar"].map(label => (
                       <div key={label} style={{
                         width: 180, height: 160, borderRadius: 12, border: "2px dashed #e2e8f0",
                         display: "flex", flexDirection: "column", alignItems: "center",

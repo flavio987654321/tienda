@@ -62,6 +62,7 @@ function mapProduct(raw: any): StorefrontProduct {
     gender: raw.gender ?? "unisex",
     description: raw.description ?? null,
     images, imageItems, reelUrls, sizes, colors, variants,
+    attributes: [],
   };
 }
 

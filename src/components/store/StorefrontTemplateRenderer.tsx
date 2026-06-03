@@ -6,6 +6,8 @@ import FashionNoir from "./templates/FashionNoir";
 import BohoTerra from "./templates/BohoTerra";
 import UrbanPulse from "./templates/UrbanPulse";
 import ChicParis from "./templates/ChicParis";
+import AutoMotor from "./templates/AutoMotor";
+import AutoDrive from "./templates/AutoDrive";
 import FlyerPopup from "./FlyerPopup";
 
 const TEMPLATES: Record<string, React.ComponentType> = {
@@ -13,6 +15,8 @@ const TEMPLATES: Record<string, React.ComponentType> = {
   "boho-terra":   BohoTerra,
   "urban-pulse":  UrbanPulse,
   "chic-paris":   ChicParis,
+  "auto-motor":   AutoMotor,
+  "auto-drive":   AutoDrive,
 };
 
 export default function StorefrontTemplateRenderer({ config }: { config: StoreConfig }) {
