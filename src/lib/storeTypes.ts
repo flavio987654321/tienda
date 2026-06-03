@@ -15,6 +15,7 @@ export interface ExtraField {
   label: string;
   placeholder?: string;
   type?: "text" | "number";
+  options?: string[];
 }
 
 export interface StoreTypeConfig {
@@ -25,6 +26,7 @@ export interface StoreTypeConfig {
   supportsCondicion: boolean;
   hideVariants: boolean;
   hideTags: boolean;
+  hideGender?: boolean;
   defaultVariantName: string;
   checkoutMode: "cart" | "inquiry";
   namePlaceholder: string;
@@ -89,13 +91,20 @@ export const STORE_TYPES: StoreTypeConfig[] = [
       repuestos: ["motor", "frenos", "suspensión", "eléctrico", "carrocería"],
       accesorios: ["audio", "seguridad", "limpieza", "interior"],
     },
+    hideGender: true,
     extraFields: [
-      { key: "marca", label: "Marca", placeholder: "Toyota, Ford..." },
-      { key: "modelo", label: "Modelo", placeholder: "Corolla, Ranger..." },
-      { key: "año", label: "Año", placeholder: "2022", type: "number" },
-      { key: "km", label: "Kilómetros", placeholder: "50000", type: "number" },
-      { key: "combustible", label: "Combustible", placeholder: "Nafta / Diesel / Eléctrico" },
-      { key: "transmision", label: "Transmisión", placeholder: "Manual / Automático" },
+      { key: "marca",      label: "Marca",       placeholder: "Toyota, Ford, Honda, Yamaha..." },
+      { key: "modelo",     label: "Modelo",      placeholder: "Corolla, Ranger, CB 500..." },
+      { key: "version",    label: "Versión",     placeholder: "XEI, LTZ, Sport, Full..." },
+      { key: "año",        label: "Año",         placeholder: "2022", type: "number" },
+      { key: "km",         label: "Kilómetros",  placeholder: "50000", type: "number" },
+      { key: "motor",      label: "Motor",       placeholder: "2.0, 1.5 Turbo, 3.0 V6, 689cc" },
+      { key: "combustible",label: "Combustible", options: ["Nafta", "Diesel", "GNC", "Eléctrico", "Híbrido"] },
+      { key: "transmision",label: "Transmisión", options: ["Manual", "Automática", "CVT", "Secuencial"] },
+      { key: "traccion",   label: "Tracción",    options: ["4x2", "4x4", "AWD", "FWD", "RWD"] },
+      { key: "carroceria", label: "Carrocería",  options: ["Sedán", "SUV", "Pickup", "Hatchback", "Coupé", "Convertible", "Van / Minivan", "Naked", "Scooter", "Trail / Enduro", "Cuatriciclo"] },
+      { key: "color",      label: "Color",       placeholder: "Blanco, Negro, Gris, Rojo..." },
+      { key: "puertas",    label: "Puertas",     options: ["2", "3", "4", "5"] },
     ],
   },
   {

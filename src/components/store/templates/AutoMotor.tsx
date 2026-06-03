@@ -33,13 +33,17 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
     : ["https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=75"];
   const specs = [
     { label: "Marca",       value: attr(product, "Marca") },
+    { label: "Modelo",      value: attr(product, "Modelo") },
+    { label: "Versión",     value: attr(product, "Versión") },
     { label: "Año",         value: attr(product, "Año") },
     { label: "Kilómetros",  value: attr(product, "Km") ? `${attr(product, "Km")} km` : "" },
     { label: "Motor",       value: attr(product, "Motor") },
     { label: "Transmisión", value: attr(product, "Transmisión") },
     { label: "Combustible", value: attr(product, "Combustible") },
+    { label: "Tracción",    value: attr(product, "Tracción") },
+    { label: "Carrocería",  value: attr(product, "Carrocería") },
     { label: "Color",       value: attr(product, "Color") || (product.colors[0] ?? "") },
-    { label: "Puertas",     value: attr(product, "Puertas") },
+    { label: "Puertas",     value: attr(product, "Puertas") ? `${attr(product, "Puertas")} puertas` : "" },
   ].filter(s => s.value);
 
   const waNumber = whatsapp.number.replace(/\D/g, "");
@@ -157,6 +161,8 @@ function VehicleCard({ product, accent, currency, onClick }: {
   const motor = attr(product, "Motor");
   const trans = attr(product, "Transmisión");
   const comb = attr(product, "Combustible");
+  const traccion = attr(product, "Tracción");
+  const carroceria = attr(product, "Carrocería");
   const marca = attr(product, "Marca");
 
   return (
@@ -209,6 +215,8 @@ function VehicleCard({ product, accent, currency, onClick }: {
           {motor && <Spec icon="⚙️" label="Motor" val={motor} />}
           {trans && <Spec icon="🔧" label="Caja" val={trans} />}
           {comb && <Spec icon="⛽" label="Combustible" val={comb} />}
+          {traccion && <Spec icon="🔄" label="Tracción" val={traccion} />}
+          {carroceria && <Spec icon="🚗" label="Carrocería" val={carroceria} />}
         </div>
 
         <button style={{ marginTop: "auto", background: hov ? accent : "transparent",
@@ -243,6 +251,8 @@ function FeaturedVehicle({ product, accent, currency, onClick }: {
   const km = attr(product, "Km");
   const motor = attr(product, "Motor");
   const trans = attr(product, "Transmisión");
+  const traccion = attr(product, "Tracción");
+  const carroceria = attr(product, "Carrocería");
 
   return (
     <div onClick={onClick}
@@ -285,6 +295,8 @@ function FeaturedVehicle({ product, accent, currency, onClick }: {
           {km && <SpecBig label="Kilómetros" val={`${km} km`} accent={accent} />}
           {motor && <SpecBig label="Motor" val={motor} accent={accent} />}
           {trans && <SpecBig label="Transmisión" val={trans} accent={accent} />}
+          {traccion && <SpecBig label="Tracción" val={traccion} accent={accent} />}
+          {carroceria && <SpecBig label="Carrocería" val={carroceria} accent={accent} />}
         </div>
         {product.description && (
           <p style={{ margin: 0, fontSize: 13, color: "#888", lineHeight: 1.6 }}>

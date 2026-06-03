@@ -39,13 +39,17 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
     : ["https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=75"];
   const specs = [
     { label: "Marca",       value: attr(product, "Marca") },
+    { label: "Modelo",      value: attr(product, "Modelo") },
+    { label: "Versión",     value: attr(product, "Versión") },
     { label: "Año",         value: attr(product, "Año") },
     { label: "Kilómetros",  value: attr(product, "Km") ? `${attr(product, "Km")} km` : "" },
     { label: "Motor",       value: attr(product, "Motor") },
     { label: "Transmisión", value: attr(product, "Transmisión") },
     { label: "Combustible", value: attr(product, "Combustible") },
+    { label: "Tracción",    value: attr(product, "Tracción") },
+    { label: "Carrocería",  value: attr(product, "Carrocería") },
     { label: "Color",       value: attr(product, "Color") || (product.colors[0] ?? "") },
-    { label: "Puertas",     value: attr(product, "Puertas") },
+    { label: "Puertas",     value: attr(product, "Puertas") ? `${attr(product, "Puertas")} puertas` : "" },
   ].filter(s => s.value);
 
   const waNumber = whatsapp.number.replace(/\D/g, "");
@@ -172,6 +176,8 @@ function VehicleCard({ product, accent, currency, onClick }: {
   const motor = attr(product, "Motor");
   const trans = attr(product, "Transmisión");
   const comb = attr(product, "Combustible");
+  const traccion = attr(product, "Tracción");
+  const carroceria = attr(product, "Carrocería");
   const marca = attr(product, "Marca");
 
   return (
@@ -224,6 +230,8 @@ function VehicleCard({ product, accent, currency, onClick }: {
           {motor && <InfoChip val={motor} />}
           {trans && <InfoChip val={trans} accent={accent} />}
           {comb && <InfoChip val={comb} />}
+          {traccion && <InfoChip val={traccion} />}
+          {carroceria && <InfoChip val={carroceria} />}
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between",

@@ -892,25 +892,27 @@ function ProductoFormPage() {
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Género</label>
-                <div className="flex gap-2">
-                  {(["mujer", "hombre", "unisex"] as const).map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => setGender(g)}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all ${
-                        gender === g
-                          ? "bg-indigo-600 text-white border-indigo-600"
-                          : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
-                      }`}
-                    >
-                      {g === "mujer" ? "Mujer" : g === "hombre" ? "Hombre" : "Unisex"}
-                    </button>
-                  ))}
+              {!storeTypeConfig.hideGender && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Género</label>
+                  <div className="flex gap-2">
+                    {(["mujer", "hombre", "unisex"] as const).map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setGender(g)}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                          gender === g
+                            ? "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
+                        }`}
+                      >
+                        {g === "mujer" ? "Mujer" : g === "hombre" ? "Hombre" : "Unisex"}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoria</label>
@@ -1216,23 +1218,37 @@ function ProductoFormPage() {
                   {storeTypeConfig.extraFields.map((field) => {
                     const attrIdx = attributes.findIndex((a) => a.key === field.label);
                     const val = attrIdx >= 0 ? attributes[attrIdx].value : "";
+                    const onChange = (v: string) => {
+                      if (attrIdx >= 0) {
+                        updateAttribute(attrIdx, "value", v);
+                      } else {
+                        setAttributes((p) => [...p, { key: field.label, value: v }]);
+                        markDirty();
+                      }
+                    };
                     return (
                       <div key={field.key}>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">{field.label}</label>
-                        <input
-                          type={field.type || "text"}
-                          value={val}
-                          onChange={(e) => {
-                            if (attrIdx >= 0) {
-                              updateAttribute(attrIdx, "value", e.target.value);
-                            } else {
-                              setAttributes((p) => [...p, { key: field.label, value: e.target.value }]);
-                              markDirty();
-                            }
-                          }}
-                          placeholder={field.placeholder || ""}
-                          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
+                        {field.options ? (
+                          <select
+                            value={val}
+                            onChange={(e) => onChange(e.target.value)}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                          >
+                            <option value="">Seleccioná...</option>
+                            {field.options.map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type={field.type || "text"}
+                            value={val}
+                            onChange={(e) => onChange(e.target.value)}
+                            placeholder={field.placeholder || ""}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        )}
                       </div>
                     );
                   })}
