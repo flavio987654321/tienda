@@ -579,6 +579,15 @@ export default function AutoDrive() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    if (!products.length) return;
+    const id = new URLSearchParams(window.location.search).get("producto");
+    if (id) {
+      const p = products.find(pr => pr.id === id);
+      if (p) setSelected(p);
+    }
+  }, [products]);
+
   const categoryList = useMemo(() =>
     Array.from(new Set(products.map(p => p.category))).filter(Boolean), [products]);
   const categories = useMemo(() => ["Todos", ...categoryList], [categoryList]);

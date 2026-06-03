@@ -63,7 +63,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
     const qrCanvas = document.getElementById("qr-dl-canvas") as HTMLCanvasElement | null;
     if (!qrCanvas) return;
 
-    const W = 560, H = 760;
+    const W = 600, H = 800;
     const out = document.createElement("canvas");
     out.width = W; out.height = H;
     const ctx = out.getContext("2d")!;
@@ -72,86 +72,83 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, W, H);
 
-    // Top header band
-    ctx.fillStyle = "#1e1b4b";
-    ctx.fillRect(0, 0, W, 90);
-
-    // Header accent stripe
+    // Top header
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(0, 0, W, 110);
     ctx.fillStyle = "#4f46e5";
-    ctx.fillRect(0, 86, W, 4);
+    ctx.fillRect(0, 107, W, 3);
 
-    // Header title
+    // Header text
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 22px Arial, sans-serif";
+    ctx.font = "bold 24px Arial, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("ESCANEÁ Y VE TODOS LOS DETALLES", W / 2, 42);
+    ctx.fillText("ESCANEÁ Y VE TODOS LOS DETALLES", W / 2, 50);
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "15px Arial, sans-serif";
+    ctx.fillText("Apuntá la cámara de tu celular al código QR", W / 2, 80);
 
-    // Header subtitle
-    ctx.fillStyle = "#a5b4fc";
-    ctx.font = "14px Arial, sans-serif";
-    ctx.fillText("Apuntá la cámara de tu celular al código QR", W / 2, 68);
-
-    // Vehicle name — wrap if too long
-    ctx.fillStyle = "#111827";
-    ctx.textAlign = "center";
-    const name = qrProduct.name;
-    const maxW = W - 60;
-    const fontSize = name.length > 40 ? 22 : name.length > 28 ? 26 : 30;
-    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-    // simple word-wrap
-    const words = name.split(" ");
-    let line = "", lines: string[] = [];
-    for (const w of words) {
-      const test = line ? `${line} ${w}` : w;
-      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
-      else line = test;
-    }
-    lines.push(line);
-    const nameY = 148;
-    lines.forEach((l, i) => ctx.fillText(l, W / 2, nameY + i * (fontSize + 6)));
-
-    // Price
-    const priceY = nameY + lines.length * (fontSize + 6) + 16;
-    ctx.fillStyle = "#4f46e5";
-    ctx.font = "bold 38px Arial, sans-serif";
-    ctx.fillText(`$${qrProduct.price.toLocaleString("es-AR")}`, W / 2, priceY);
-
-    // Divider
-    const divY = priceY + 24;
-    ctx.strokeStyle = "#e5e7eb";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(40, divY); ctx.lineTo(W - 40, divY);
-    ctx.stroke();
-
-    // QR code — centered
+    // QR — big and centered, starts early
     const qrSize = qrCanvas.width;
-    const qrX = (W - qrSize) / 2;
-    const qrY = divY + 20;
-    // White box behind QR
-    ctx.fillStyle = "#f9fafb";
+    // Scale QR up to 340px regardless of canvas size
+    const qrDraw = 340;
+    const qrX = (W - qrDraw) / 2;
+    const qrY = 130;
+    // Shadow box
+    ctx.fillStyle = "#f8fafc";
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1.5;
+    const r = 16, bx = qrX - 16, by = qrY - 16, bw = qrDraw + 32, bh = qrDraw + 32;
     ctx.beginPath();
-    const r = 12;
-    const bx = qrX - 12, by = qrY - 12, bw = qrSize + 24, bh = qrSize + 24;
     ctx.moveTo(bx + r, by);
     ctx.lineTo(bx + bw - r, by); ctx.arcTo(bx + bw, by, bx + bw, by + r, r);
     ctx.lineTo(bx + bw, by + bh - r); ctx.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r);
     ctx.lineTo(bx + r, by + bh); ctx.arcTo(bx, by + bh, bx, by + bh - r, r);
     ctx.lineTo(bx, by + r); ctx.arcTo(bx, by, bx + r, by, r);
     ctx.closePath();
-    ctx.fill();
-    ctx.drawImage(qrCanvas, qrX, qrY);
+    ctx.fill(); ctx.stroke();
+    ctx.drawImage(qrCanvas, 0, 0, qrSize, qrSize, qrX, qrY, qrDraw, qrDraw);
+
+    // Divider
+    const divY = qrY + qrDraw + 36;
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(40, divY); ctx.lineTo(W - 40, divY);
+    ctx.stroke();
+
+    // Vehicle name
+    ctx.fillStyle = "#0f172a";
+    ctx.textAlign = "center";
+    const name = qrProduct.name;
+    const maxNameW = W - 80;
+    const fs = name.length > 40 ? 22 : name.length > 28 ? 26 : 30;
+    ctx.font = `bold ${fs}px Arial, sans-serif`;
+    const words = name.split(" ");
+    let line = "", lines: string[] = [];
+    for (const w of words) {
+      const test = line ? `${line} ${w}` : w;
+      if (ctx.measureText(test).width > maxNameW && line) { lines.push(line); line = w; }
+      else line = test;
+    }
+    lines.push(line);
+    const nameY = divY + 34;
+    lines.forEach((l, i) => ctx.fillText(l, W / 2, nameY + i * (fs + 6)));
+
+    // Price
+    const priceY = nameY + lines.length * (fs + 6) + 14;
+    ctx.fillStyle = "#4f46e5";
+    ctx.font = "bold 36px Arial, sans-serif";
+    ctx.fillText(`$${qrProduct.price.toLocaleString("es-AR")}`, W / 2, priceY);
 
     // Footer
-    ctx.fillStyle = "#f3f4f6";
+    ctx.fillStyle = "#f1f5f9";
     ctx.fillRect(0, H - 60, W, 60);
-    ctx.fillStyle = "#6b7280";
+    ctx.fillStyle = "#64748b";
     ctx.font = "13px Arial, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(storeName ? `${storeName} · Más info al escanear` : "Más información disponible al escanear", W / 2, H - 33);
+    ctx.fillText(storeName ? `${storeName} · Más info al escanear` : "Más información disponible al escanear", W / 2, H - 32);
     ctx.fillStyle = "#4f46e5";
     ctx.font = "bold 13px Arial, sans-serif";
-    ctx.fillText(appUrl.replace("https://", ""), W / 2, H - 14);
+    ctx.fillText(appUrl.replace("https://", ""), W / 2, H - 12);
 
     const link = document.createElement("a");
     link.download = `qr-${qrProduct.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 40)}.png`;
@@ -299,7 +296,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
               <QRCodeCanvas
                 id="qr-dl-canvas"
                 value={`${appUrl}/tienda/${storeSlug}?producto=${qrProduct.id}`}
-                size={200}
+                size={240}
                 level="M"
                 marginSize={2}
               />
