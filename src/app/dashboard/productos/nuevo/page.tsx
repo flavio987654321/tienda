@@ -985,29 +985,20 @@ function ProductoFormPage() {
               <div className="bg-white rounded-2xl border border-gray-100 p-6">
                 <h2 className="font-semibold text-gray-900 mb-3">Condición del vehículo</h2>
                 <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${(storeTypeConfig.condicionOptions ?? ["Nuevo","Usado"]).length}, 1fr)` }}>
-                  {(storeTypeConfig.condicionOptions ?? ["Nuevo", "Usado"]).map((opt) => {
-                    const emoji =
-                      opt === "0 km"        ? "✨" :
-                      opt === "Casi nuevo"  ? "🌟" :
-                      opt === "Muy bueno"   ? "👍" :
-                      opt === "Bueno"       ? "✅" :
-                      opt === "Nuevo"       ? "✨" : "🔄";
-                    return (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => { setCondicion(opt); markDirty(); }}
-                        className={`py-3 px-2 rounded-xl text-sm font-semibold border-2 transition-all text-center ${
-                          condicion === opt
-                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                            : "border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-300"
-                        }`}
-                      >
-                        <span className="block text-lg mb-0.5">{emoji}</span>
-                        {opt}
-                      </button>
-                    );
-                  })}
+                  {(storeTypeConfig.condicionOptions ?? ["Nuevo", "Usado"]).map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => { setCondicion(opt); markDirty(); }}
+                      className={`py-2.5 px-2 rounded-xl text-sm font-semibold border-2 transition-all text-center ${
+                        condicion === opt
+                          ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                          : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-300"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -1515,11 +1506,7 @@ function ProductoFormPage() {
                         ? "bg-yellow-100 text-yellow-700"
                         : "bg-gray-100 text-gray-600"
                     }`}>
-                      {condicion === "0 km" ? "✨ 0 km" :
-                       condicion === "Casi nuevo" ? "🌟 Casi nuevo" :
-                       condicion === "Muy bueno" ? "👍 Muy bueno" :
-                       condicion === "Bueno" ? "✅ Bueno" :
-                       condicion === "Nuevo" ? "✨ Nuevo" : "🔄 Usado"}
+                      {condicion}
                     </span>
                   )}
 
