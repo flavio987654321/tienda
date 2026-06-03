@@ -22,7 +22,7 @@ interface Product {
   variants: Variant[];
 }
 
-interface Props { products: Product[]; storeSlug?: string; storeName?: string }
+interface Props { products: Product[]; storeSlug?: string; storeName?: string; storeType?: string }
 
 const PAGE_SIZE = 20;
 
@@ -35,7 +35,8 @@ function parseImages(raw: string): string[] {
   } catch { return []; }
 }
 
-export default function ProductsTable({ products: initialProducts, storeSlug = "", storeName = "" }: Props) {
+export default function ProductsTable({ products: initialProducts, storeSlug = "", storeName = "", storeType = "" }: Props) {
+  const showStock = storeType !== "AUTOS";
   const [products,      setProducts]      = useState(initialProducts);
   const [search,        setSearch]        = useState("");
   const [categoryFilter,setCategoryFilter]= useState("all");
@@ -419,13 +420,15 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
           <option value="hidden">Ocultos</option>
         </select>
 
-        <select value={stockFilter} onChange={e => { setStockFilter(e.target.value); setPage(1); }}
-          className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
-          <option value="all">Todo el stock</option>
-          <option value="out">Sin stock (0 u.)</option>
-          <option value="low">Stock bajo (1–4 u.)</option>
-          <option value="critical">Stock crítico (0–4 u.)</option>
-        </select>
+        {showStock && (
+          <select value={stockFilter} onChange={e => { setStockFilter(e.target.value); setPage(1); }}
+            className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
+            <option value="all">Todo el stock</option>
+            <option value="out">Sin stock (0 u.)</option>
+            <option value="low">Stock bajo (1–4 u.)</option>
+            <option value="critical">Stock crítico (0–4 u.)</option>
+          </select>
+        )}
 
         <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
           className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
@@ -494,10 +497,12 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
 
       {/* Stock legend */}
       <div className="flex items-center gap-4 text-xs text-gray-400">
-        <span className="font-medium text-gray-500">Stock:</span>
-        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500 inline-block" />Sin stock</span>
-        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-400 inline-block" />Bajo (1–4 u.)</span>
-        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500 inline-block" />Normal (5+ u.)</span>
+        {showStock && <>
+          <span className="font-medium text-gray-500">Stock:</span>
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500 inline-block" />Sin stock</span>
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-400 inline-block" />Bajo (1–4 u.)</span>
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500 inline-block" />Normal (5+ u.)</span>
+        </>}
         <span className="ml-auto text-gray-400">
           {filtered.length} producto{filtered.length !== 1 ? "s" : ""}
           {hasFilters ? " encontrados" : ""}
@@ -529,7 +534,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                       <Package className="h-8 w-8 text-gray-200" />
                     </div>
                   )}
-                  <div className={`absolute top-2 right-2 h-2.5 w-2.5 rounded-full border-2 border-white ${stockDot(stock)}`} />
+                  {showStock && <div className={`absolute top-2 right-2 h-2.5 w-2.5 rounded-full border-2 border-white ${stockDot(stock)}`} />}
                   {!product.isActive && (
                     <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
                       <span className="text-xs font-semibold text-gray-400 bg-white/80 px-2 py-1 rounded-lg">Oculto</span>
@@ -575,7 +580,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                 <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Producto</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Categoría</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Precio</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Stock</th>
+                {showStock && <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Stock</th>}
                 <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Estado</th>
                 <th className="px-6 py-4"></th>
               </tr>
@@ -611,7 +616,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                       <p className="font-semibold text-gray-900 text-sm">${product.price.toLocaleString("es-AR")}</p>
                       {product.comparePrice && <p className="text-xs text-gray-400 line-through">${product.comparePrice.toLocaleString("es-AR")}</p>}
                     </td>
-                    <td className="px-6 py-4">{stockLabel(stock)}</td>
+                    {showStock && <td className="px-6 py-4">{stockLabel(stock)}</td>}
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${product.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                         {product.isActive ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
