@@ -473,9 +473,9 @@ export default function Home() {
             </motion.h1>
 
             <motion.p variants={fadeUp} className="text-lg text-gray-400 mb-10 leading-relaxed max-w-lg">
-              Los dueños de tienda consiguen un equipo de ventas sin pagar sueldos.
-              Los afiliados trabajan desde casa, con el celular, sin invertir un peso.
-              Cada venta que se genera, los dos cobran.
+              Una plataforma argentina donde los dueños de tienda escalan con equipo propio
+              y los afiliados generan ingresos reales — sin inversión inicial, sin sueldos fijos,
+              con comisiones automáticas por cada venta.
             </motion.p>
 
             <motion.div variants={fadeUp} className="flex flex-wrap gap-4 mb-14">
@@ -628,8 +628,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} variants={stagger} className="text-center mb-16">
             <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Plataforma completa</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-4">Todo en uno. Sin complicaciones.</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">Tienda, afiliados, comisiones, envíos y cobros en un solo lugar. Para que vos te enfoques en vender.</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-4">Todo integrado. Sin fricción.</motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">Tienda, afiliados, comisiones, envíos y cobros operando en simultáneo. Vos gestionás desde un solo panel.</motion.p>
           </motion.div>
 
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -660,8 +660,8 @@ export default function Home() {
         <div className="relative max-w-7xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
             <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">En acción</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-4">Tu tienda, en cualquier pantalla</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-400 text-lg max-w-xl mx-auto">Diseñada para mobile, perfecta en desktop. Tus clientes compran desde donde quieran.</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-4">Pensada para vender. En todos lados.</motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-400 text-lg max-w-xl mx-auto">Tienda, afiliados, pagos y envíos en un solo lugar. El sistema trabaja para vos mientras vos te enfocás en lo que importa.</motion.p>
           </motion.div>
 
           <div className="grid grid-cols-12 gap-4">
@@ -700,10 +700,10 @@ export default function Home() {
               className="col-span-12 lg:col-span-5 grid grid-cols-2 gap-4"
             >
               {[
-                { src: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=600&q=80", label: "Desde el celular" },
-                { src: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=600&q=80", label: "Envíos rápidos" },
-                { src: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=600&q=80", label: "Pagos seguros" },
-                { src: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=600&q=80", label: "Tu tienda online" },
+                { src: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=600&q=80", label: "Afiliados activos" },
+                { src: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=600&q=80", label: "Envíos integrados" },
+                { src: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=600&q=80", label: "Mercado Pago" },
+                { src: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=600&q=80", label: "Comisiones automáticas" },
               ].map(({ src, label }, i) => (
                 <motion.div
                   key={label}
@@ -726,9 +726,9 @@ export default function Home() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-indigo-900/20 rounded-full blur-3xl" />
         <div className="relative max-w-5xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-16">
-            <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">Simple y rápido</motion.p>
+            <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">El proceso</motion.p>
             <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-4">¿Cómo funciona?</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-400 text-lg max-w-xl mx-auto">Tres pasos para tener tu tienda con equipo propio trabajando para vos.</motion.p>
+            <motion.p variants={fadeUp} className="text-gray-400 text-lg max-w-xl mx-auto">Tres pasos para tener tu tienda con equipo activo generando ventas.</motion.p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
@@ -832,28 +832,28 @@ export default function Home() {
         <div className="relative max-w-7xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
             <motion.p variants={fadeUp} className="text-indigo-400 font-semibold text-sm uppercase tracking-widest mb-3">Para todos</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-4">¿Cuál es tu rol?</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-400 text-lg">Tenés tienda, querés trabajar como afiliado o simplemente comprar — hay un lugar para vos.</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-white mb-4">¿Cuál es tu lugar?</motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-400 text-lg">Dueño de tienda, vendedor independiente o comprador — la plataforma está diseñada para los tres.</motion.p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
                 icon: Store, color: "#6366f1", gradient: "from-indigo-600/20 to-purple-600/10", border: "border-indigo-500/20",
-                title: "Tengo una tienda", sub: "Armá tu equipo de ventas sin pagar sueldos",
-                items: ["Tienda online con dominio personalizable", "10 plantillas de diseño sin código", "Afiliados que venden por vos — gratis hasta que venden", "Control total: vos aprobás quién entra", "Comisiones automáticas y reportes en tiempo real"],
+                title: "Tengo una tienda", sub: "Escalá tus ventas con un equipo de afiliados que trabaja por comisión",
+                items: ["Tienda con subdominio propio incluido", "Productos y variantes ilimitados", "Panel de pedidos, estadísticas y afiliados", "Vos aprobás quién representa tu marca", "Comisiones calculadas y acreditadas automáticamente", "7 días de prueba gratis, sin tarjeta"],
                 cta: "Crear mi tienda gratis", href: "/registro",
               },
               {
                 icon: Users, color: "#a855f7", gradient: "from-purple-600/20 to-pink-600/10", border: "border-purple-500/20",
-                title: "Quiero trabajar", sub: "Trabajá desde casa sin invertir un peso",
-                items: ["Postulate a tiendas y empezá a vender ya", "Tu propio link con seguimiento en tiempo real", "Cuanto más compartís, más ganás — sin límite", "Billetera digital con tu historial completo", "Retirá tus ganancias cuando quieras"],
+                title: "Quiero ser afiliado", sub: "Generá ingresos reales vendiendo productos que ya tienen demanda",
+                items: ["Postulate a tiendas y empezá a vender de inmediato", "Link propio con seguimiento de clics y ventas", "Sin stock, sin inversión, sin riesgo", "Billetera digital con historial de comisiones", "Retirá tus ganancias cuando quieras", "7 días de prueba gratis"],
                 cta: "Quiero ser afiliado", href: "/afiliados",
               },
               {
                 icon: ShoppingCart, color: "#10b981", gradient: "from-emerald-600/20 to-teal-600/10", border: "border-emerald-500/20",
-                title: "Quiero comprar", sub: "Descubrí tiendas argentinas en un solo lugar",
-                items: ["Tiendas locales verificadas y activas", "Pagá con Mercado Pago de forma segura", "Seguí tus envíos en tiempo real", "Guardá favoritos y dejá reseñas", "Tu historial de pedidos siempre a mano"],
+                title: "Quiero comprar", sub: "Explorá tiendas argentinas verificadas, todas en un solo lugar",
+                items: ["Tiendas activas y verificadas por nosotros", "Pagos con Mercado Pago, sin comisiones extra", "Seguimiento de envíos en tiempo real", "Guardá favoritos y dejá reseñas", "Historial de compras siempre disponible"],
                 cta: "Explorar tiendas", href: "/tiendas",
               },
             ].map(({ icon: Icon, color, gradient, border, title, sub, items, cta, href }) => (
@@ -890,9 +890,9 @@ export default function Home() {
       <section className="py-24 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
-            <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Historias reales</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-900">Personas que ya están ganando</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-500 text-lg mt-3 max-w-xl mx-auto">Dueños con equipo. Afiliados con ingresos. Sin inversión inicial.</motion.p>
+            <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Resultados reales</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-900">Quienes ya lo están usando</motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-500 text-lg mt-3 max-w-xl mx-auto">Tiendas que crecieron con equipo. Afiliados que generan ingresos propios. En sus propias palabras.</motion.p>
           </motion.div>
 
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -966,12 +966,12 @@ export default function Home() {
 
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
             <motion.p variants={fadeUp} className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Quiénes somos</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-900 mb-6">Queremos que la gente tenga trabajo.</motion.h2>
+            <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-900 mb-6">Construimos infraestructura para el comercio real.</motion.h2>
             <motion.p variants={fadeUp} className="text-gray-500 leading-relaxed mb-5">
-              Somos un equipo argentino y sabemos cómo está el país. Vimos que había dos problemas sin resolver: dueños de tienda sin equipo para vender, y personas con ganas de trabajar sin oportunidades reales.
+              Vimos que en Argentina hay miles de tiendas que necesitan equipo para vender y miles de personas capacitadas para hacerlo — sin que existiera un canal real para conectarlos. TiendaApps es esa conexión.
             </motion.p>
             <motion.p variants={fadeUp} className="text-gray-500 leading-relaxed mb-8">
-              TiendaApps une esos dos mundos. Un dueño puede tener 10, 20 o 50 personas vendiendo sus productos en redes sin pagar un sueldo fijo. Y cada uno de esos afiliados gana dinero real desde su casa, con su celular, sin haber puesto un peso.
+              Creamos un sistema donde el dueño crece sin contratar personal fijo, el afiliado genera ingresos proporcionales a su esfuerzo y el comprador accede a tiendas locales con la misma confianza de cualquier plataforma grande. Los tres ganan. El sistema funciona solo.
             </motion.p>
             <motion.div variants={fadeUp} className="flex flex-wrap gap-4">
               <Link href="/quienes-somos" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-500/25 hover:scale-105">
@@ -992,11 +992,11 @@ export default function Home() {
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="relative text-center max-w-3xl mx-auto px-6">
           <h2 className="text-5xl lg:text-6xl font-black text-white mb-6 leading-tight">
             Empezá hoy.<br />
-            <span className="gradient-text">Es gratis.</span>
+            <span className="gradient-text">Sin riesgos.</span>
           </h2>
           <p className="text-gray-400 text-xl mb-10">
-            Si tenés una tienda, armá tu equipo sin pagar sueldos.<br />
-            Si buscás trabajo, empezá a ganar desde tu celular.
+            7 días gratis para explorar la plataforma completa.<br />
+            Sin tarjeta de crédito. Sin compromisos.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
