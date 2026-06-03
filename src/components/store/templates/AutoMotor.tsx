@@ -101,19 +101,23 @@ function VehicleModal({ product, accent, currency, whatsapp, products, onClose, 
     return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", onKey); };
   }, [imgs.length, onClose]);
 
+  const [imgZoom, setImgZoom] = useState(false);
+
   return (
     <div onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 1000,
-        overflowY: "auto", padding: "20px 16px 40px", backdropFilter: "blur(4px)" }}>
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000,
+        display: "flex", alignItems: "flex-start", justifyContent: "center",
+        padding: "20px 16px", backdropFilter: "blur(4px)", overflow: "hidden" }}>
       <div onClick={e => e.stopPropagation()}
         style={{ background: "#fff", borderRadius: 8, width: "100%", maxWidth: 960,
-          margin: "0 auto", boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
+          margin: "auto 0", maxHeight: "calc(100vh - 40px)",
+          display: "flex", flexDirection: "column", overflow: "hidden",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }}>
 
-        {/* sticky header */}
+        {/* header — nunca se mueve */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "12px 20px", borderBottom: "1px solid #ebebeb",
-          position: "sticky", top: 0, background: "#fff", zIndex: 2,
-          borderRadius: "8px 8px 0 0" }}>
+          padding: "12px 20px", borderBottom: "1px solid #ebebeb", flexShrink: 0,
+          background: "#fff", borderRadius: "8px 8px 0 0" }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             {product.badge && (
               <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 3,
@@ -140,152 +144,166 @@ function VehicleModal({ product, accent, currency, whatsapp, products, onClose, 
           </button>
         </div>
 
-        {/* main: image + info */}
-        <div className="am-modal-body" style={{ display: "grid" }}>
+        {/* contenido scrolleable */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
 
-          {/* images */}
-          <div style={{ background: "#f5f5f5" }}>
-            <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden" }}>
-              <img src={imgs[imgIdx]} alt={product.name}
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              {imgs.length > 1 && (
-                <>
-                  <button onClick={() => setImgIdx(i => (i - 1 + imgs.length) % imgs.length)}
-                    style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-                      background: "rgba(255,255,255,0.9)", border: "none", width: 36, height: 36,
-                      borderRadius: "50%", cursor: "pointer", fontSize: 20,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>‹</button>
-                  <button onClick={() => setImgIdx(i => (i + 1) % imgs.length)}
-                    style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
-                      background: "rgba(255,255,255,0.9)", border: "none", width: 36, height: 36,
-                      borderRadius: "50%", cursor: "pointer", fontSize: 20,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>›</button>
-                </>
-              )}
-              <div style={{ position: "absolute", bottom: 10, right: 10,
-                background: "rgba(0,0,0,0.55)", color: "#fff", fontSize: 11,
-                padding: "3px 8px", borderRadius: 4 }}>
-                {imgIdx + 1} / {imgs.length}
+          {/* main: imagen + info */}
+          <div className="am-modal-body" style={{ display: "grid" }}>
+
+            {/* galería */}
+            <div style={{ background: "#f0f0f0" }}>
+              <div className="am-img-wrap" style={{ display: "flex" }}>
+
+                {/* miniaturas (izquierda en desktop, abajo en mobile) */}
+                {imgs.length > 1 && (
+                  <div className="am-img-thumbs" style={{ display: "flex", gap: 4,
+                    background: "#e4e4e4", flexShrink: 0 }}>
+                    {imgs.map((src, i) => (
+                      <button key={i} onClick={() => setImgIdx(i)}
+                        style={{ flexShrink: 0, width: 68, height: 52, padding: 0, border: "none",
+                          cursor: "pointer", borderRadius: 3, overflow: "hidden",
+                          outline: i === imgIdx ? `2.5px solid ${accent}` : "2px solid transparent",
+                          opacity: i === imgIdx ? 1 : 0.55, transition: "all 0.15s" }}>
+                        <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* imagen principal con zoom */}
+                <div style={{ flex: 1, position: "relative", aspectRatio: "4/3",
+                  overflow: "hidden", cursor: imgZoom ? "zoom-out" : "zoom-in" }}
+                  onMouseEnter={() => setImgZoom(true)} onMouseLeave={() => setImgZoom(false)}>
+                  <img src={imgs[imgIdx]} alt={product.name}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
+                      transform: imgZoom ? "scale(1.45)" : "scale(1)",
+                      transition: "transform 0.4s ease", transformOrigin: "center" }} />
+                  {imgs.length > 1 && !imgZoom && (
+                    <>
+                      <button onClick={() => setImgIdx(i => (i - 1 + imgs.length) % imgs.length)}
+                        style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
+                          background: "rgba(255,255,255,0.9)", border: "none", width: 34, height: 34,
+                          borderRadius: "50%", cursor: "pointer", fontSize: 20,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>‹</button>
+                      <button onClick={() => setImgIdx(i => (i + 1) % imgs.length)}
+                        style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                          background: "rgba(255,255,255,0.9)", border: "none", width: 34, height: 34,
+                          borderRadius: "50%", cursor: "pointer", fontSize: 20,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>›</button>
+                    </>
+                  )}
+                  <div style={{ position: "absolute", bottom: 8, right: 8,
+                    background: "rgba(0,0,0,0.55)", color: "#fff", fontSize: 11,
+                    padding: "2px 8px", borderRadius: 4, pointerEvents: "none" }}>
+                    {imgIdx + 1} / {imgs.length}
+                  </div>
+                </div>
               </div>
             </div>
-            {imgs.length > 1 && (
-              <div style={{ display: "flex", gap: 4, padding: "8px 8px 10px",
-                overflowX: "auto", background: "#e8e8e8" }}>
-                {imgs.map((src, i) => (
-                  <button key={i} onClick={() => setImgIdx(i)}
-                    style={{ flexShrink: 0, width: 72, height: 50, padding: 0, border: "none",
-                      cursor: "pointer", borderRadius: 3, overflow: "hidden",
-                      outline: i === imgIdx ? `2.5px solid ${accent}` : "2.5px solid transparent",
-                      opacity: i === imgIdx ? 1 : 0.55, transition: "all 0.15s" }}>
-                    <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                  </button>
+
+            {/* info */}
+            <div style={{ padding: "28px 28px 32px", display: "flex", flexDirection: "column", gap: 12 }}>
+              {headerLine && (
+                <p style={{ margin: 0, fontSize: 13, color: "#888" }}>{headerLine}</p>
+              )}
+              <h2 style={{ margin: 0, fontSize: "clamp(18px,2.5vw,24px)", fontWeight: 600,
+                color: "#333", lineHeight: 1.2 }}>{product.name}</h2>
+              {ubicacion && (
+                <p style={{ margin: 0, fontSize: 12, color: "#aaa" }}>📍 {ubicacion}</p>
+              )}
+              <div>
+                <p style={{ margin: 0, fontSize: "clamp(26px,3.5vw,34px)", fontWeight: 700,
+                  color: "#333", letterSpacing: -1, lineHeight: 1 }}>
+                  {fmtPrice(product.price, currency)}
+                </p>
+                {product.comparePrice && (
+                  <p style={{ margin: "4px 0 0", fontSize: 14, color: "#bbb", textDecoration: "line-through" }}>
+                    {fmtPrice(product.comparePrice, currency)}
+                  </p>
+                )}
+              </div>
+              {whatsapp.enabled && waNumber && (
+                <a href={`https://wa.me/${waNumber}?text=${waMsg}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                    background: "#25d366", color: "white", textDecoration: "none",
+                    padding: "14px 20px", borderRadius: 6, fontWeight: 700, fontSize: 14,
+                    boxShadow: "0 4px 16px rgba(37,211,102,0.3)", marginTop: 4 }}>
+                  <WaIcon size={18} /> Consultar por WhatsApp
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* características */}
+          {specs.length > 0 && (
+            <div style={{ padding: "24px 28px", borderTop: "1px solid #f0f0f0" }}>
+              <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600, color: "#333" }}>
+                Características del producto
+              </h3>
+              <div className="am-specs-grid" style={{ display: "grid", gap: "0 32px" }}>
+                {specs.map(s => (
+                  <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 12,
+                    padding: "10px 0", borderBottom: "1px solid #f5f5f5" }}>
+                    <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#f0f0f0",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0, fontSize: 12, color: "#666", fontWeight: 700 }}>
+                      {s.label.charAt(0)}
+                    </div>
+                    <span style={{ fontSize: 13, color: "#555" }}>
+                      {s.label}: <strong style={{ color: "#333" }}>{s.value}</strong>
+                    </span>
+                  </div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* info */}
-          <div style={{ padding: "28px 28px 32px", display: "flex", flexDirection: "column", gap: 12 }}>
-            {headerLine && (
-              <p style={{ margin: 0, fontSize: 13, color: "#888" }}>{headerLine}</p>
-            )}
-            <h2 style={{ margin: 0, fontSize: "clamp(18px,2.5vw,24px)", fontWeight: 600,
-              color: "#333", lineHeight: 1.2 }}>{product.name}</h2>
-            {ubicacion && (
-              <p style={{ margin: 0, fontSize: 12, color: "#aaa" }}>📍 {ubicacion}</p>
-            )}
-            <div>
-              <p style={{ margin: 0, fontSize: "clamp(26px,3.5vw,34px)", fontWeight: 700,
-                color: "#333", letterSpacing: -1, lineHeight: 1 }}>
-                {fmtPrice(product.price, currency)}
+          {/* descripción */}
+          {product.description && (
+            <div style={{ padding: "0 28px 28px", borderTop: "1px solid #f0f0f0" }}>
+              <p style={{ margin: 0, fontSize: 14, color: "#666", lineHeight: 1.75 }}>
+                {product.description}
               </p>
-              {product.comparePrice && (
-                <p style={{ margin: "4px 0 0", fontSize: 14, color: "#bbb", textDecoration: "line-through" }}>
-                  {fmtPrice(product.comparePrice, currency)}
-                </p>
-              )}
             </div>
-            {whatsapp.enabled && waNumber && (
-              <a href={`https://wa.me/${waNumber}?text=${waMsg}`}
-                target="_blank" rel="noopener noreferrer"
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                  background: "#25d366", color: "white", textDecoration: "none",
-                  padding: "14px 20px", borderRadius: 6, fontWeight: 700, fontSize: 14,
-                  boxShadow: "0 4px 16px rgba(37,211,102,0.3)", marginTop: 4 }}>
-                <WaIcon size={18} /> Consultar por WhatsApp
-              </a>
-            )}
-          </div>
-        </div>
+          )}
 
-        {/* características */}
-        {specs.length > 0 && (
-          <div style={{ padding: "24px 28px", borderTop: "1px solid #f0f0f0" }}>
-            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600, color: "#333" }}>
-              Características del producto
-            </h3>
-            <div className="am-specs-grid" style={{ display: "grid", gap: "0 32px" }}>
-              {specs.map((s, idx) => (
-                <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 12,
-                  padding: "10px 0", borderBottom: "1px solid #f5f5f5" }}>
-                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#f0f0f0",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0, fontSize: 12, color: "#666", fontWeight: 700 }}>
-                    {s.label.charAt(0)}
-                  </div>
-                  <span style={{ fontSize: 13, color: "#555" }}>
-                    {s.label}: <strong style={{ color: "#333" }}>{s.value}</strong>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* descripción */}
-        {product.description && (
-          <div style={{ padding: "0 28px 28px", borderTop: "1px solid #f0f0f0" }}>
-            <p style={{ margin: 0, fontSize: 14, color: "#666", lineHeight: 1.75 }}>
-              {product.description}
-            </p>
-          </div>
-        )}
-
-        {/* similares */}
-        {similar.length > 0 && (
-          <div style={{ padding: "24px 28px 32px", borderTop: "1px solid #f0f0f0" }}>
-            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600, color: "#333" }}>
-              Estos vehículos también podrían interesarte
-            </h3>
-            <div className="am-similar-grid" style={{ display: "grid", gap: 12 }}>
-              {similar.map(p => (
-                <div key={p.id} onClick={() => onSelect(p)}
-                  style={{ cursor: "pointer", border: "1px solid #e0e0e0", borderRadius: 6,
-                    overflow: "hidden", background: "#fff" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
-                  <img src={p.images[0] || imgs[0]} alt={p.name}
-                    style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", display: "block" }} />
-                  <div style={{ padding: "10px 12px" }}>
-                    <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 500, color: "#333",
-                      overflow: "hidden", display: "-webkit-box",
-                      WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{p.name}</p>
-                    <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#333" }}>
-                      {fmtPrice(p.price, currency)}
-                    </p>
-                    {(attr(p, "Año") || attr(p, "Km")) && (
-                      <p style={{ margin: "3px 0 0", fontSize: 11, color: "#999" }}>
-                        {[attr(p, "Año"), attr(p, "Km") && `${Number(attr(p, "Km")).toLocaleString("es-AR")} Km`].filter(Boolean).join(" | ")}
+          {/* similares */}
+          {similar.length > 0 && (
+            <div style={{ padding: "24px 28px 32px", borderTop: "1px solid #f0f0f0" }}>
+              <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600, color: "#333" }}>
+                Estos vehículos también podrían interesarte
+              </h3>
+              <div className="am-similar-grid" style={{ display: "grid", gap: 12 }}>
+                {similar.map(p => (
+                  <div key={p.id} onClick={() => onSelect(p)}
+                    style={{ cursor: "pointer", border: "1px solid #e0e0e0", borderRadius: 6,
+                      overflow: "hidden", background: "#fff" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
+                    <img src={p.images[0] || imgs[0]} alt={p.name}
+                      style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", display: "block" }} />
+                    <div style={{ padding: "10px 12px" }}>
+                      <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 500, color: "#333",
+                        overflow: "hidden", display: "-webkit-box",
+                        WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{p.name}</p>
+                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#333" }}>
+                        {fmtPrice(p.price, currency)}
                       </p>
-                    )}
+                      {(attr(p, "Año") || attr(p, "Km")) && (
+                        <p style={{ margin: "3px 0 0", fontSize: 11, color: "#999" }}>
+                          {[attr(p, "Año"), attr(p, "Km") && `${Number(attr(p, "Km")).toLocaleString("es-AR")} Km`].filter(Boolean).join(" | ")}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -507,6 +525,12 @@ export default function AutoMotor() {
         @media(min-width:560px){ .am-specs-grid { grid-template-columns: 1fr 1fr !important } }
         .am-similar-grid { grid-template-columns: repeat(2,1fr) !important }
         @media(min-width:560px){ .am-similar-grid { grid-template-columns: repeat(4,1fr) !important } }
+        .am-img-wrap { flex-direction: column !important }
+        .am-img-thumbs { flex-direction: row !important; overflow-x: auto !important; overflow-y: hidden !important; width: 100% !important; max-height: 64px !important; padding: 6px 8px !important }
+        @media(min-width:700px){
+          .am-img-wrap { flex-direction: row !important }
+          .am-img-thumbs { flex-direction: column !important; overflow-x: hidden !important; overflow-y: auto !important; width: 80px !important; max-height: none !important; padding: 8px 6px !important }
+        }
         .am-svc { grid-template-columns: 1fr !important }
         @media(min-width:560px){ .am-svc { grid-template-columns: repeat(2,1fr) !important } }
         @media(min-width:900px){ .am-svc { grid-template-columns: repeat(4,1fr) !important } }
