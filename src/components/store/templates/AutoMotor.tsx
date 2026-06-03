@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { EditableZone, EditableImageButton, getContrastColor, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import type { ImageOverride } from "@/types/store-config";
 
 function fmtPrice(n: number, currency: string) {
   return (currency === "USD" ? "USD " : "$") + n.toLocaleString("es-AR");
@@ -12,6 +13,29 @@ function attr(p: StorefrontProduct, key: string) {
 }
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+}
+
+/* ── Section bg helpers ───────────────────────────────────── */
+function secBg(ov: ImageOverride | undefined, fallback: string): React.CSSProperties {
+  if (ov?.url) return { backgroundImage: `url(${ov.url})`, backgroundSize: "cover", backgroundPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` };
+  return { background: fallback };
+}
+function secText(ov: ImageOverride | undefined, bg: string): string {
+  if (ov?.url) return ov.overlayType === "light" ? "#0f172a" : "white";
+  return getContrastColor(bg) === "light" ? "white" : "#0f172a";
+}
+function secMid(ov: ImageOverride | undefined, bg: string): string {
+  if (ov?.url) return ov.overlayType === "light" ? "#475569" : "#94a3b8";
+  return getContrastColor(bg) === "light" ? "#94a3b8" : "#475569";
+}
+function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
+  if (!ov?.url || ov.overlayType === "none") return null;
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
+      background: ov.overlayType === "light"
+        ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})`
+        : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />
+  );
 }
 
 function WaIcon() {
@@ -73,7 +97,6 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
           maxHeight: "92vh", overflow: "hidden", border: `1px solid #2d4a6e`,
           display: "flex", flexDirection: "column" }}>
 
-        {/* top bar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
           padding: "12px 18px", borderBottom: "1px solid #1e3a5f", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -103,20 +126,14 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
           </button>
         </div>
 
-        {/* body — side by side */}
         <div className="am-modal-body"
           style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
-
-          {/* LEFT: images */}
           <div className="am-modal-left"
-            style={{ display: "flex", flexDirection: "column", background: "#0f172a",
-              flexShrink: 0 }}>
-            {/* main image */}
+            style={{ display: "flex", flexDirection: "column", background: "#0f172a", flexShrink: 0 }}>
             <div style={{ flex: 1, overflow: "hidden", position: "relative", minHeight: 0 }}>
               <img src={imgs[imgIdx]} alt={product.name}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
-            {/* thumbnail strip */}
             {imgs.length > 1 && (
               <div style={{ display: "flex", gap: 3, padding: "8px", background: "#0f172a",
                 overflowX: "auto", flexShrink: 0 }}>
@@ -134,7 +151,6 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
             )}
           </div>
 
-          {/* RIGHT: info */}
           <div className="am-modal-right"
             style={{ flex: 1, overflowY: "auto", padding: "24px 22px 28px", minWidth: 0 }}>
             <h2 style={{ margin: "0 0 4px", fontSize: "clamp(18px,3vw,24px)",
@@ -184,9 +200,10 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
   );
 }
 
-/* ── Horizontal Vehicle Card (desktop: landscape) ─────────── */
-function VehicleCard({ product, accent, currency, onClick }: {
-  product: StorefrontProduct; accent: string; currency: string; onClick: () => void;
+/* ── Vehicle Card ─────────────────────────────────────────── */
+function VehicleCard({ product, accent, currency, theme = "dark", onClick }: {
+  product: StorefrontProduct; accent: string; currency: string;
+  theme?: "dark" | "light"; onClick: () => void;
 }) {
   const [hov, setHov] = useState(false);
   const img = product.images[0]
@@ -200,16 +217,25 @@ function VehicleCard({ product, accent, currency, onClick }: {
   const carroceria = attr(product, "Carrocería");
   const marca = attr(product, "Marca");
 
+  const D = theme === "dark";
+  const cardBg     = D ? "#1a2d4a" : "white";
+  const borderCol  = D ? (hov ? accent : "#2d4a6e") : (hov ? accent : "#e2e8f0");
+  const titleColor = D ? "white" : "#0f172a";
+  const specLabel  = D ? "#7090b4" : "#94a3b8";
+  const specVal    = D ? "#cbd5e1" : "#1e293b";
+  const divider    = D ? "#1e3a5f" : "#f1f5f9";
+  const catBg      = D ? "rgba(6,15,36,0.75)" : "rgba(255,255,255,0.92)";
+  const catCol     = D ? "#94a3b8" : "#475569";
+
   return (
     <div onClick={onClick}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       className="am-card"
-      style={{ background: "#1a2d4a", borderRadius: 12, overflow: "hidden", cursor: "pointer",
-        border: `1px solid ${hov ? accent : "#2d4a6e"}`,
+      style={{ background: cardBg, borderRadius: 12, overflow: "hidden", cursor: "pointer",
+        border: `1px solid ${borderCol}`,
         boxShadow: hov ? `0 0 24px ${accent}22` : "none",
         transition: "all 0.25s", display: "flex", flexDirection: "column" }}>
 
-      {/* image */}
       <div className="am-card-img"
         style={{ position: "relative", overflow: "hidden", flexShrink: 0 }}>
         <img src={img} alt={product.name}
@@ -224,34 +250,33 @@ function VehicleCard({ product, accent, currency, onClick }: {
           </div>
         )}
         <div style={{ position: "absolute", bottom: 10, right: 10,
-          background: "rgba(6,15,36,0.75)", color: "#94a3b8",
+          background: catBg, color: catCol,
           fontSize: 10, fontWeight: 600, padding: "3px 9px", borderRadius: 20 }}>
           {product.category}
         </div>
       </div>
 
-      {/* info */}
       <div className="am-card-info"
         style={{ padding: "18px 18px 20px", flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
         {marca && (
           <p style={{ margin: 0, fontSize: 10, color: accent, textTransform: "uppercase",
             letterSpacing: 2, fontWeight: 700 }}>{marca}</p>
         )}
-        <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "white",
+        <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: titleColor,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{product.name}</p>
         <p style={{ margin: 0, fontSize: "clamp(20px,3vw,24px)", fontWeight: 900, color: accent }}>
           {fmtPrice(product.price, currency)}
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px",
-          paddingTop: 8, borderTop: "1px solid #1e3a5f" }}>
-          {año && <Spec label="Año" val={año} />}
-          {km && <Spec label="Km" val={`${Number(km).toLocaleString("es-AR")} km`} />}
-          {motor && <Spec label="Motor" val={motor} />}
-          {trans && <Spec label="Caja" val={trans} />}
-          {comb && <Spec label="Combustible" val={comb} />}
-          {traccion && <Spec label="Tracción" val={traccion} />}
-          {carroceria && <Spec label="Carrocería" val={carroceria} />}
+          paddingTop: 8, borderTop: `1px solid ${divider}` }}>
+          {año && <Spec label="Año" val={año} labelCol={specLabel} valCol={specVal} />}
+          {km && <Spec label="Km" val={`${Number(km).toLocaleString("es-AR")} km`} labelCol={specLabel} valCol={specVal} />}
+          {motor && <Spec label="Motor" val={motor} labelCol={specLabel} valCol={specVal} />}
+          {trans && <Spec label="Caja" val={trans} labelCol={specLabel} valCol={specVal} />}
+          {comb && <Spec label="Combustible" val={comb} labelCol={specLabel} valCol={specVal} />}
+          {traccion && <Spec label="Tracción" val={traccion} labelCol={specLabel} valCol={specVal} />}
+          {carroceria && <Spec label="Carrocería" val={carroceria} labelCol={specLabel} valCol={specVal} />}
         </div>
 
         <button style={{ marginTop: "auto", background: hov ? accent : "transparent",
@@ -266,19 +291,19 @@ function VehicleCard({ product, accent, currency, onClick }: {
   );
 }
 
-function Spec({ label, val }: { label: string; val: string }) {
+function Spec({ label, val, labelCol, valCol }: { label: string; val: string; labelCol: string; valCol: string }) {
   return (
     <div>
-      <p style={{ margin: 0, fontSize: 9, color: "#7090b4", textTransform: "uppercase",
-        letterSpacing: 0.8 }}>{label}</p>
-      <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 700, color: "#cbd5e1" }}>{val}</p>
+      <p style={{ margin: 0, fontSize: 9, color: labelCol, textTransform: "uppercase", letterSpacing: 0.8 }}>{label}</p>
+      <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 700, color: valCol }}>{val}</p>
     </div>
   );
 }
 
-/* ── Featured Vehicle (destacado grande) ──────────────────── */
-function FeaturedVehicle({ product, accent, currency, onClick }: {
-  product: StorefrontProduct; accent: string; currency: string; onClick: () => void;
+/* ── Featured Vehicle ─────────────────────────────────────── */
+function FeaturedVehicle({ product, accent, currency, theme = "dark", onClick }: {
+  product: StorefrontProduct; accent: string; currency: string;
+  theme?: "dark" | "light"; onClick: () => void;
 }) {
   const img = product.images[0]
     ?? "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80";
@@ -289,12 +314,18 @@ function FeaturedVehicle({ product, accent, currency, onClick }: {
   const traccion = attr(product, "Tracción");
   const carroceria = attr(product, "Carrocería");
 
+  const D = theme === "dark";
+  const cardBg   = D ? "#152540" : "white";
+  const descCol  = D ? "#94a3b8" : "#64748b";
+  const labelCol = D ? "#7090b4" : "#94a3b8";
+  const valCol   = D ? "#e2e8f0" : "#0f172a";
+
   return (
     <div onClick={onClick}
       className="am-featured"
       style={{ borderRadius: 16, overflow: "hidden", cursor: "pointer",
         border: `1px solid ${accent}55`, display: "flex", flexDirection: "column",
-        background: "#152540" }}>
+        background: cardBg }}>
       <div className="am-featured-img"
         style={{ position: "relative", overflow: "hidden", flexShrink: 0 }}>
         <img src={img} alt={product.name}
@@ -326,15 +357,15 @@ function FeaturedVehicle({ product, accent, currency, onClick }: {
       <div className="am-featured-info"
         style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-          {año && <SpecBig label="Año" val={año} accent={accent} />}
-          {km && <SpecBig label="Kilómetros" val={`${km} km`} accent={accent} />}
-          {motor && <SpecBig label="Motor" val={motor} accent={accent} />}
-          {trans && <SpecBig label="Transmisión" val={trans} accent={accent} />}
-          {traccion && <SpecBig label="Tracción" val={traccion} accent={accent} />}
-          {carroceria && <SpecBig label="Carrocería" val={carroceria} accent={accent} />}
+          {año && <SpecBig label="Año" val={año} accent={accent} labelCol={labelCol} valCol={valCol} />}
+          {km && <SpecBig label="Kilómetros" val={`${km} km`} accent={accent} labelCol={labelCol} valCol={valCol} />}
+          {motor && <SpecBig label="Motor" val={motor} accent={accent} labelCol={labelCol} valCol={valCol} />}
+          {trans && <SpecBig label="Transmisión" val={trans} accent={accent} labelCol={labelCol} valCol={valCol} />}
+          {traccion && <SpecBig label="Tracción" val={traccion} accent={accent} labelCol={labelCol} valCol={valCol} />}
+          {carroceria && <SpecBig label="Carrocería" val={carroceria} accent={accent} labelCol={labelCol} valCol={valCol} />}
         </div>
         {product.description && (
-          <p style={{ margin: 0, fontSize: 13, color: "#94a3b8", lineHeight: 1.6 }}>
+          <p style={{ margin: 0, fontSize: 13, color: descCol, lineHeight: 1.6 }}>
             {product.description}
           </p>
         )}
@@ -349,11 +380,11 @@ function FeaturedVehicle({ product, accent, currency, onClick }: {
   );
 }
 
-function SpecBig({ label, val, accent }: { label: string; val: string; accent: string }) {
+function SpecBig({ label, val, accent, labelCol, valCol }: { label: string; val: string; accent: string; labelCol: string; valCol: string }) {
   return (
     <div style={{ borderLeft: `2px solid ${accent}`, paddingLeft: 10 }}>
-      <p style={{ margin: 0, fontSize: 9, color: "#7090b4", textTransform: "uppercase", letterSpacing: 1 }}>{label}</p>
-      <p style={{ margin: "3px 0 0", fontSize: 15, fontWeight: 700, color: "#e2e8f0" }}>{val}</p>
+      <p style={{ margin: 0, fontSize: 9, color: labelCol, textTransform: "uppercase", letterSpacing: 1 }}>{label}</p>
+      <p style={{ margin: "3px 0 0", fontSize: 15, fontWeight: 700, color: valCol }}>{val}</p>
     </div>
   );
 }
@@ -372,6 +403,49 @@ export default function AutoMotor() {
     ?? "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1920&q=80";
   const nosotrosUrl = config?.imageOverrides?.["nosotrosImage"]?.url
     ?? "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=900&q=80";
+
+  /* ── Section bg / text colors ─────────────────────────── */
+  const sc   = config?.sectionColors ?? {};
+  const iovr = config?.imageOverrides ?? {};
+
+  const statsBg     = sc["bgStats"]     ?? accent;
+  const statsImg    = iovr["sectionbg_bgStats"];
+  const statsText   = secText(statsImg, statsBg);
+
+  const featuredBg  = sc["bgFeatured"]  ?? "#1e293b";
+  const featuredImg = iovr["sectionbg_bgFeatured"];
+  const featText    = secText(featuredImg, featuredBg);
+  const featMid     = secMid(featuredImg, featuredBg);
+
+  const catalogoBg  = sc["bgCatalogo"]  ?? "#162033";
+  const catalogoImg = iovr["sectionbg_bgCatalogo"];
+  const catText     = secText(catalogoImg, catalogoBg);
+  const catMid      = secMid(catalogoImg, catalogoBg);
+  const catTheme    = catText === "white" ? "dark" as const : "light" as const;
+
+  const serviciosBg = sc["bgServicios"] ?? "#0f172a";
+  const serviciosImg= iovr["sectionbg_bgServicios"];
+  const svcText     = secText(serviciosImg, serviciosBg);
+  const svcMid      = secMid(serviciosImg, serviciosBg);
+  const svcIsLight  = svcText === "#0f172a";
+  const svcItemBg   = svcIsLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)";
+  const svcGridBg   = svcIsLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.06)";
+  const svcBorder   = svcIsLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.06)";
+
+  const nosotrosBg  = sc["bgNosotros"]  ?? "#1e293b";
+  const nosotrosImg = iovr["sectionbg_bgNosotros"];
+  const nosText     = secText(nosotrosImg, nosotrosBg);
+  const nosMid      = secMid(nosotrosImg, nosotrosBg);
+
+  const contactoBg  = sc["bgContacto"]  ?? "#0a1525";
+  const contactoImg = iovr["sectionbg_bgContacto"];
+  const conText     = secText(contactoImg, contactoBg);
+  const conMid      = secMid(contactoImg, contactoBg);
+
+  const footerBg    = sc["bgFooter"]    ?? "#070f1e";
+  const footerImg   = iovr["sectionbg_bgFooter"];
+  const ftText      = secText(footerImg, footerBg);
+  const ftMid       = secMid(footerImg, footerBg);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [selected, setSelected] = useState<StorefrontProduct | null>(null);
@@ -392,7 +466,6 @@ export default function AutoMotor() {
     <div style={{ background: "#0f172a", color: "white",
       fontFamily: "'Inter','Segoe UI',sans-serif", minHeight: "100vh" }}>
       <style>{`
-        /* cards: vertical mobile → horizontal desktop */
         .am-card { flex-direction: column !important }
         .am-card-img { aspect-ratio: 16/10; width: 100% }
         @media(min-width:640px){
@@ -400,10 +473,8 @@ export default function AutoMotor() {
           .am-card-img { width: 42% !important; aspect-ratio: unset !important; min-height: 200px }
           .am-card-info { justify-content: center }
         }
-        /* grid: 1 col → 2 col */
         .am-grid { grid-template-columns: 1fr !important }
         @media(min-width:700px){ .am-grid { grid-template-columns: repeat(2,1fr) !important } }
-        /* featured */
         .am-featured { flex-direction: column !important }
         .am-featured-img { aspect-ratio: 16/8; width: 100% }
         .am-featured-overlay { display: flex !important }
@@ -412,16 +483,12 @@ export default function AutoMotor() {
           .am-featured-img { width: 55% !important; aspect-ratio: unset !important; min-height: 340px }
           .am-featured-info { flex: 1 }
         }
-        /* nav */
         .am-nav-links { display: none !important }
         @media(min-width:768px){ .am-nav-links { display: flex !important } .am-burger { display: none !important } }
-        /* stats */
         .am-stats { grid-template-columns: repeat(2,1fr) }
         @media(min-width:640px){ .am-stats { grid-template-columns: repeat(4,1fr) !important } }
-        /* about */
         .am-about { grid-template-columns: 1fr !important }
         @media(min-width:768px){ .am-about { grid-template-columns: 1fr 1fr !important } }
-        /* modal */
         .am-modal { flex-direction: column !important }
         .am-modal-body { flex-direction: column !important }
         .am-modal-left { width: 100% !important; max-height: 55vw; min-height: 220px }
@@ -445,13 +512,11 @@ export default function AutoMotor() {
             color: accent, textTransform: "uppercase" }}>
             <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
           </div>
-          <div className="am-nav-links"
-            style={{ display: "flex", gap: 28, alignItems: "center" }}>
+          <div className="am-nav-links" style={{ display: "flex", gap: 28, alignItems: "center" }}>
             {["Catálogo", "Servicios", "Nosotros", "Contacto"].map(item => (
               <button key={item} onClick={() => scrollTo(item.toLowerCase())}
                 style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer",
-                  fontSize: 13, fontWeight: 500, letterSpacing: 0.5,
-                  textTransform: "uppercase" }}
+                  fontSize: 13, fontWeight: 500, letterSpacing: 0.5, textTransform: "uppercase" }}
                 onMouseEnter={e => (e.currentTarget.style.color = accent)}
                 onMouseLeave={e => (e.currentTarget.style.color = "#94a3b8")}>
                 {item}
@@ -488,7 +553,7 @@ export default function AutoMotor() {
         )}
       </nav>
 
-      {/* Hero — full-screen cinematic */}
+      {/* Hero */}
       <section style={{ position: "relative", minHeight: "100svh",
         display: "flex", alignItems: "flex-end", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0,
@@ -498,12 +563,8 @@ export default function AutoMotor() {
             background: "linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.5) 50%, rgba(15,23,42,0.2) 100%)" }} />
         </div>
         <EditableImageButton field="heroBackground" label="Imagen de fondo del hero" />
-
-        {/* thin gold vertical line */}
         <div style={{ position: "absolute", left: 40, top: "20%", bottom: "20%", width: 1,
-          background: `linear-gradient(to bottom, transparent, ${accent}, transparent)`,
-          opacity: 0.4 }} />
-
+          background: `linear-gradient(to bottom, transparent, ${accent}, transparent)`, opacity: 0.4 }} />
         <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 1200,
           margin: "0 auto", padding: "0 20px 80px 44px" }}>
           <p style={{ margin: "0 0 14px", fontSize: 11, color: accent,
@@ -538,8 +599,6 @@ export default function AutoMotor() {
             )}
           </div>
         </div>
-
-        {/* scroll hint */}
         <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)",
           display: "flex", flexDirection: "column", alignItems: "center", gap: 6, opacity: 0.4 }}>
           <div style={{ width: 1, height: 40, background: `linear-gradient(to bottom, transparent, ${accent})` }} />
@@ -548,10 +607,11 @@ export default function AutoMotor() {
       </section>
 
       {/* Stats */}
-      <section style={{ background: accent }}>
-        <div className="am-stats"
-          style={{ maxWidth: 1200, margin: "0 auto", display: "grid",
-            gridTemplateColumns: "repeat(2,1fr)" }}>
+      <section style={{ position: "relative", ...secBg(statsImg, statsBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgStats" />
+        <SectionOverlay ov={statsImg} />
+        <EditableSectionBg field="bgStats" label="Fondo estadísticas" />
+        <div className="am-stats" style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(2,1fr)" }}>
           {[
             { fv: "stat1", fl: "statLabel1", n: "500+", l: "Vehículos vendidos" },
             { fv: "stat2", fl: "statLabel2", n: "15",   l: "Años de experiencia" },
@@ -561,11 +621,10 @@ export default function AutoMotor() {
             <div key={i} style={{ textAlign: "center", padding: "20px 8px",
               borderRight: i % 2 === 0 ? "1px solid rgba(0,0,0,0.12)" : "none",
               borderBottom: i < 2 ? "1px solid rgba(0,0,0,0.12)" : "none" }}>
-              <p style={{ margin: 0, fontSize: "clamp(24px,5vw,34px)", fontWeight: 900,
-                color: getContrastColor(accent) }}>
+              <p style={{ margin: 0, fontSize: "clamp(24px,5vw,34px)", fontWeight: 900, color: statsText }}>
                 <EditableZone field={s.fv} label={`Stat ${i+1}`}>{s.n}</EditableZone>
               </p>
-              <p style={{ margin: "2px 0 0", fontSize: 10, color: getContrastColor(accent),
+              <p style={{ margin: "2px 0 0", fontSize: 10, color: statsText,
                 opacity: 0.7, textTransform: "uppercase", letterSpacing: 1 }}>
                 <EditableZone field={s.fl} label={`Etiqueta stat ${i+1}`}>{s.l}</EditableZone>
               </p>
@@ -574,10 +633,13 @@ export default function AutoMotor() {
         </div>
       </section>
 
-      {/* Featured vehicle */}
+      {/* Featured */}
       {!loadingProducts && featured && (
-        <section style={{ padding: "72px 20px 0", background: "#1e293b" }}>
-          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <section style={{ padding: "72px 20px 0", position: "relative", ...secBg(featuredImg, featuredBg) }}>
+          <BgDragHandle imgKey="sectionbg_bgFeatured" />
+          <SectionOverlay ov={featuredImg} />
+          <EditableSectionBg field="bgFeatured" label="Fondo vehículo destacado" />
+          <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28 }}>
               <div style={{ width: 32, height: 1, background: accent }} />
               <p style={{ margin: 0, fontSize: 11, color: accent,
@@ -585,15 +647,19 @@ export default function AutoMotor() {
                 <EditableZone field="featuredLabel" label="Etiqueta vehículo destacado">Vehículo destacado</EditableZone>
               </p>
             </div>
-            <FeaturedVehicle product={featured} accent={accent}
-              currency={currency} onClick={() => setSelected(featured)} />
+            <FeaturedVehicle product={featured} accent={accent} currency={currency}
+              theme={featText === "white" ? "dark" : "light"}
+              onClick={() => setSelected(featured)} />
           </div>
         </section>
       )}
 
       {/* Catálogo */}
-      <section id="catálogo" style={{ padding: "72px 20px", background: "#162033" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+      <section id="catálogo" style={{ padding: "72px 20px", position: "relative", ...secBg(catalogoImg, catalogoBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgCatalogo" />
+        <SectionOverlay ov={catalogoImg} />
+        <EditableSectionBg field="bgCatalogo" label="Fondo catálogo" />
+        <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
             <div style={{ width: 32, height: 1, background: accent }} />
             <p style={{ margin: 0, fontSize: 11, color: accent,
@@ -602,17 +668,16 @@ export default function AutoMotor() {
             </p>
           </div>
           <h2 style={{ margin: "0 0 32px 48px", fontSize: "clamp(24px,4vw,38px)",
-            fontWeight: 900, color: "white" }}>
+            fontWeight: 900, color: catText }}>
             <EditableZone field="categoriesHeading" label="Título catálogo">Catálogo de vehículos</EditableZone>
           </h2>
 
-          {/* category filters */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 32 }}>
             {categories.map(cat => (
               <button key={cat} onClick={() => setActiveCategory(cat)}
                 style={{ background: activeCategory === cat ? accent : "transparent",
-                  color: activeCategory === cat ? getContrastColor(accent) : "#94a3b8",
-                  border: activeCategory === cat ? "none" : "1px solid #2d4a6e",
+                  color: activeCategory === cat ? getContrastColor(accent) : catMid,
+                  border: activeCategory === cat ? "none" : `1px solid ${catMid}55`,
                   padding: "8px 18px", borderRadius: 2, cursor: "pointer",
                   fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
                 {cat}
@@ -621,18 +686,18 @@ export default function AutoMotor() {
           </div>
 
           {loadingProducts ? (
-            <div style={{ textAlign: "center", padding: "80px 0", color: "#94a3b8" }}>
+            <div style={{ textAlign: "center", padding: "80px 0", color: catMid }}>
               Cargando vehículos…
             </div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "80px 0", color: "#94a3b8" }}>
+            <div style={{ textAlign: "center", padding: "80px 0", color: catMid }}>
               No hay vehículos en esta categoría.
             </div>
           ) : (
             <div className="am-grid" style={{ display: "grid", gap: 16 }}>
               {filtered.map(p => (
                 <VehicleCard key={p.id} product={p} accent={accent}
-                  currency={currency} onClick={() => setSelected(p)} />
+                  currency={currency} theme={catTheme} onClick={() => setSelected(p)} />
               ))}
             </div>
           )}
@@ -640,9 +705,13 @@ export default function AutoMotor() {
       </section>
 
       {/* Servicios */}
-      <section id="servicios" style={{ padding: "72px 20px", background: "#0f172a",
+      <section id="servicios" style={{ padding: "72px 20px", position: "relative",
+        ...secBg(serviciosImg, serviciosBg),
         borderTop: `1px solid ${accent}22`, borderBottom: `1px solid ${accent}22` }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <BgDragHandle imgKey="sectionbg_bgServicios" />
+        <SectionOverlay ov={serviciosImg} />
+        <EditableSectionBg field="bgServicios" label="Fondo servicios" />
+        <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
             <div style={{ width: 32, height: 1, background: accent }} />
             <p style={{ margin: 0, fontSize: 11, color: accent,
@@ -650,24 +719,24 @@ export default function AutoMotor() {
               <EditableZone field="aboutKicker" label="Kicker servicios">Por qué elegirnos</EditableZone>
             </p>
           </div>
-          <h2 style={{ margin: "0 0 48px 48px", fontSize: "clamp(22px,4vw,34px)", fontWeight: 900 }}>
+          <h2 style={{ margin: "0 0 48px 48px", fontSize: "clamp(22px,4vw,34px)", fontWeight: 900, color: svcText }}>
             <EditableZone field="aboutHeading" label="Título servicios">Servicios y garantías</EditableZone>
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 1,
-            background: "#1e3a5f", border: "1px solid #1e3a5f", borderRadius: 12, overflow: "hidden" }}>
+            background: svcGridBg, border: `1px solid ${svcBorder}`, borderRadius: 12, overflow: "hidden" }}>
             {[
               { fv: "garantia1Title", fl: "garantia1Desc", t: "Inspección técnica", d: "Revisión de 150 puntos antes de la venta." },
               { fv: "garantia2Title", fl: "garantia2Desc", t: "Documentación legal", d: "Transferencia y trámites 100% en regla." },
               { fv: "garantia3Title", fl: "garantia3Desc", t: "Financiación", d: "Planes de cuotas adaptados a tu presupuesto." },
               { fv: "garantia4Title", fl: "garantia4Desc", t: "Asesoría personal", d: "Te acompañamos en cada paso del proceso." },
             ].map((s, i) => (
-              <div key={i} style={{ background: "#152540", padding: "28px 24px",
-                borderLeft: i === 0 ? "none" : "1px solid #1e3a5f" }}>
+              <div key={i} style={{ background: svcItemBg, padding: "28px 24px",
+                borderLeft: i === 0 ? "none" : `1px solid ${svcBorder}` }}>
                 <div style={{ width: 36, height: 3, background: accent, borderRadius: 2, marginBottom: 18 }} />
-                <p style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 800, color: "white" }}>
+                <p style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 800, color: svcText }}>
                   <EditableZone field={s.fv} label={`Servicio ${i+1} — Título`}>{s.t}</EditableZone>
                 </p>
-                <p style={{ margin: 0, fontSize: 13, color: "#94a3b8", lineHeight: 1.6 }}>
+                <p style={{ margin: 0, fontSize: 13, color: svcMid, lineHeight: 1.6 }}>
                   <EditableZone field={s.fl} label={`Servicio ${i+1} — Desc`}>{s.d}</EditableZone>
                 </p>
               </div>
@@ -677,10 +746,12 @@ export default function AutoMotor() {
       </section>
 
       {/* Nosotros */}
-      <section id="nosotros" style={{ padding: "72px 20px", background: "#1e293b" }}>
-        <div className="am-about"
-          style={{ maxWidth: 1200, margin: "0 auto", display: "grid",
-            gridTemplateColumns: "1fr", gap: 56, alignItems: "center" }}>
+      <section id="nosotros" style={{ padding: "72px 20px", position: "relative", ...secBg(nosotrosImg, nosotrosBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgNosotros" />
+        <SectionOverlay ov={nosotrosImg} />
+        <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
+        <div className="am-about" style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", display: "grid",
+          gridTemplateColumns: "1fr", gap: 56, alignItems: "center" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
               <div style={{ width: 32, height: 1, background: accent }} />
@@ -689,13 +760,13 @@ export default function AutoMotor() {
                 <EditableZone field="contactKicker" label="Etiqueta nosotros">Nuestra historia</EditableZone>
               </p>
             </div>
-            <h2 style={{ margin: "0 0 20px 48px", fontSize: "clamp(22px,4vw,34px)", fontWeight: 900 }}>
+            <h2 style={{ margin: "0 0 20px 48px", fontSize: "clamp(22px,4vw,34px)", fontWeight: 900, color: nosText }}>
               <EditableZone field="aboutHeading2" label="Título nosotros">Años de pasión por los vehículos</EditableZone>
             </h2>
-            <p style={{ margin: "0 0 14px 48px", fontSize: 15, color: "#94a3b8", lineHeight: 1.8 }}>
+            <p style={{ margin: "0 0 14px 48px", fontSize: 15, color: nosMid, lineHeight: 1.8 }}>
               <EditableZone field="aboutParagraph1" label="Párrafo 1 Nosotros">Somos una empresa familiar con más de una década en el mercado automotor. Nuestro compromiso es la transparencia total en cada operación.</EditableZone>
             </p>
-            <p style={{ margin: "0 0 28px 48px", fontSize: 15, color: "#94a3b8", lineHeight: 1.8 }}>
+            <p style={{ margin: "0 0 28px 48px", fontSize: 15, color: nosMid, lineHeight: 1.8 }}>
               <EditableZone field="aboutParagraph2" label="Párrafo 2 Nosotros">Contamos con asesores especializados y taller propio para garantizar la calidad de cada vehículo en nuestro stock.</EditableZone>
             </p>
             {whatsapp.enabled && whatsapp.number && (
@@ -708,8 +779,7 @@ export default function AutoMotor() {
               </a>
             )}
           </div>
-          <div style={{ position: "relative", borderRadius: 12, overflow: "hidden",
-            aspectRatio: "4/3" }}>
+          <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", aspectRatio: "4/3" }}>
             <img src={nosotrosUrl} alt="Nosotros"
               style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             <div style={{ position: "absolute", inset: 0,
@@ -720,15 +790,18 @@ export default function AutoMotor() {
       </section>
 
       {/* Contacto */}
-      <section id="contacto" style={{ padding: "72px 20px", background: "#0a1525",
-        borderTop: `1px solid ${accent}22` }}>
-        <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
+      <section id="contacto" style={{ padding: "72px 20px", position: "relative",
+        ...secBg(contactoImg, contactoBg), borderTop: `1px solid ${accent}22` }}>
+        <BgDragHandle imgKey="sectionbg_bgContacto" />
+        <SectionOverlay ov={contactoImg} />
+        <EditableSectionBg field="bgContacto" label="Fondo contacto" />
+        <div style={{ position: "relative", zIndex: 1, maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
           <div style={{ width: 48, height: 1, background: accent, margin: "0 auto 20px" }} />
           <h2 style={{ margin: "0 0 12px", fontSize: "clamp(26px,5vw,42px)",
-            fontWeight: 900, letterSpacing: -1 }}>
+            fontWeight: 900, letterSpacing: -1, color: conText }}>
             <EditableZone field="contactHeading" label="Título contacto">¿Encontraste tu vehículo?</EditableZone>
           </h2>
-          <p style={{ margin: "0 0 36px", fontSize: 15, color: "#94a3b8", lineHeight: 1.7 }}>
+          <p style={{ margin: "0 0 36px", fontSize: 15, color: conMid, lineHeight: 1.7 }}>
             <EditableZone field="contactSubtext" label="Subtítulo contacto">Contactanos y un asesor te responde en minutos para coordinar una visita sin compromiso.</EditableZone>
           </p>
           {whatsapp.enabled && whatsapp.number && (
@@ -745,17 +818,22 @@ export default function AutoMotor() {
       </section>
 
       {/* Footer */}
-      <footer style={{ background: "#070f1e", padding: "24px 20px",
-        borderTop: `1px solid ${accent}22`, textAlign: "center" }}>
-        <p style={{ margin: "0 0 4px", fontWeight: 900, fontSize: 14,
-          color: accent, letterSpacing: 3, textTransform: "uppercase" }}>
-          {storeName}
-        </p>
-        <p style={{ margin: 0, fontSize: 11, color: "#475569" }}>
-          <EditableZone field="footerCopyright" label="Copyright">
-            {`© ${new Date().getFullYear()} ${storeName}. Todos los derechos reservados.`}
-          </EditableZone>
-        </p>
+      <footer style={{ position: "relative", padding: "24px 20px",
+        ...secBg(footerImg, footerBg), borderTop: `1px solid ${accent}22`, textAlign: "center" }}>
+        <BgDragHandle imgKey="sectionbg_bgFooter" />
+        <SectionOverlay ov={footerImg} />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <p style={{ margin: "0 0 4px", fontWeight: 900, fontSize: 14,
+            color: accent, letterSpacing: 3, textTransform: "uppercase" }}>
+            {storeName}
+          </p>
+          <p style={{ margin: 0, fontSize: 11, color: ftMid }}>
+            <EditableZone field="footerCopyright" label="Copyright">
+              {`© ${new Date().getFullYear()} ${storeName}. Todos los derechos reservados.`}
+            </EditableZone>
+          </p>
+        </div>
       </footer>
 
       {selected && (
