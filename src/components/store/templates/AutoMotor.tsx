@@ -37,7 +37,7 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
     { label: "Modelo",      value: attr(product, "Modelo") },
     { label: "Versión",     value: attr(product, "Versión") },
     { label: "Año",         value: attr(product, "Año") },
-    { label: "Kilómetros",  value: attr(product, "Km") ? `${attr(product, "Km")} km` : "" },
+    { label: "Kilómetros",  value: attr(product, "Km") ? `${Number(attr(product, "Km")).toLocaleString("es-AR")} km` : "" },
     { label: "Motor",       value: attr(product, "Motor") },
     { label: "Transmisión", value: attr(product, "Transmisión") },
     { label: "Combustible", value: attr(product, "Combustible") },
@@ -46,6 +46,11 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
     { label: "Color",       value: attr(product, "Color") || (product.colors[0] ?? "") },
     { label: "Puertas",     value: attr(product, "Puertas") ? `${attr(product, "Puertas")} puertas` : "" },
   ].filter(s => s.value);
+
+  const condColor = condicion === "0 km" || condicion === "Nuevo" ? { bg: "#16a34a22", fg: "#4ade80" }
+    : condicion === "Casi nuevo" || condicion === "Muy bueno" ? { bg: "#2563eb22", fg: "#60a5fa" }
+    : condicion === "Bueno" ? { bg: "#d9770622", fg: "#fb923c" }
+    : { bg: "#33333322", fg: "#888" };
 
   const waNumber = whatsapp.number.replace(/\D/g, "");
   const waMsg = encodeURIComponent(
@@ -59,107 +64,120 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
 
   return (
     <div onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 1000,
-        display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 1000,
+        display: "flex", alignItems: "center", justifyContent: "center", padding: "16px",
+        backdropFilter: "blur(4px)" }}>
       <div onClick={e => e.stopPropagation()}
-        style={{ background: "#0d0d0d", borderRadius: 16, width: "100%", maxWidth: 900,
-          maxHeight: "90vh", overflowY: "auto", border: `1px solid ${accent}33` }}>
+        className="am-modal"
+        style={{ background: "#0d0d0d", borderRadius: 16, width: "100%", maxWidth: 1000,
+          maxHeight: "92vh", overflow: "hidden", border: `1px solid #1e1e1e`,
+          display: "flex", flexDirection: "column" }}>
 
+        {/* top bar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "14px 20px", borderBottom: "1px solid #1e1e1e" }}>
-          <span style={{ fontSize: 11, color: accent, textTransform: "uppercase",
-            letterSpacing: 2, fontWeight: 700 }}>{product.category}</span>
-          <button onClick={onClose}
-            style={{ background: "#1a1a1a", border: "none", color: "#888", cursor: "pointer",
-              width: 32, height: 32, borderRadius: "50%", fontSize: 20, lineHeight: 1 }}>×</button>
-        </div>
-
-        {/* image carousel */}
-        <div style={{ position: "relative", background: "#000" }}>
-          <img src={imgs[imgIdx]} alt={product.name}
-            style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
-          {product.badge && (
-            <div style={{ position: "absolute", top: 14, left: 14,
-              background: accent, color: getContrastColor(accent),
-              fontSize: 10, fontWeight: 900, padding: "4px 12px", borderRadius: 2,
-              textTransform: "uppercase", letterSpacing: 1 }}>
-              {product.badge}
-            </div>
-          )}
-          {imgs.length > 1 && (
-            <>
-              <button onClick={() => setImgIdx(i => (i - 1 + imgs.length) % imgs.length)}
-                style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-                  background: "rgba(0,0,0,0.7)", border: `1px solid ${accent}44`, color: accent,
-                  width: 36, height: 36, borderRadius: "50%", cursor: "pointer", fontSize: 18 }}>‹</button>
-              <button onClick={() => setImgIdx(i => (i + 1) % imgs.length)}
-                style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
-                  background: "rgba(0,0,0,0.7)", border: `1px solid ${accent}44`, color: accent,
-                  width: 36, height: 36, borderRadius: "50%", cursor: "pointer", fontSize: 18 }}>›</button>
-              <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)",
-                display: "flex", gap: 6 }}>
-                {imgs.map((_, i) => (
-                  <button key={i} onClick={() => setImgIdx(i)}
-                    style={{ width: i === imgIdx ? 20 : 8, height: 8, borderRadius: 4, border: "none",
-                      cursor: "pointer", background: i === imgIdx ? accent : "rgba(255,255,255,0.3)",
-                      transition: "all 0.2s" }} />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div style={{ padding: "24px 20px 28px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+          padding: "12px 18px", borderBottom: "1px solid #181818", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: 2 }}>
+              {product.category}
+            </span>
             {condicion && (
-              <span style={{
-                fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 20,
+              <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 10px", borderRadius: 20,
                 textTransform: "uppercase", letterSpacing: 0.5,
-                background: condicion === "0 km" || condicion === "Nuevo" ? "#16a34a22" :
-                            condicion === "Casi nuevo" || condicion === "Muy bueno" ? "#2563eb22" :
-                            condicion === "Bueno" ? "#d9770622" : "#55555522",
-                color: condicion === "0 km" || condicion === "Nuevo" ? "#4ade80" :
-                       condicion === "Casi nuevo" || condicion === "Muy bueno" ? "#60a5fa" :
-                       condicion === "Bueno" ? "#fb923c" : "#888",
-              }}>
+                background: condColor.bg, color: condColor.fg }}>
                 {condicion}
               </span>
             )}
+            {product.badge && (
+              <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 10px", borderRadius: 20,
+                textTransform: "uppercase", letterSpacing: 0.5,
+                background: accent + "22", color: accent }}>
+                {product.badge}
+              </span>
+            )}
           </div>
-          <h2 style={{ margin: "0 0 6px", fontSize: "clamp(20px,4vw,26px)", fontWeight: 900, color: "white" }}>
-            {product.name}
-          </h2>
-          <p style={{ margin: "0 0 20px", fontSize: "clamp(22px,4vw,30px)", fontWeight: 900, color: accent }}>
-            {fmtPrice(product.price, currency)}
-          </p>
+          <button onClick={onClose}
+            style={{ background: "#181818", border: "1px solid #2a2a2a", color: "#888",
+              cursor: "pointer", width: 30, height: 30, borderRadius: "50%",
+              fontSize: 18, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            ×
+          </button>
+        </div>
 
-          {specs.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "1px",
-              marginBottom: 20, background: "#1a1a1a", borderRadius: 10, overflow: "hidden",
-              border: "1px solid #1e1e1e" }}>
-              {specs.map(s => (
-                <div key={s.label} style={{ padding: "12px 14px", background: "#111" }}>
-                  <p style={{ margin: 0, fontSize: 9, color: accent, textTransform: "uppercase",
-                    letterSpacing: 1, fontWeight: 700 }}>{s.label}</p>
-                  <p style={{ margin: "4px 0 0", fontSize: 14, fontWeight: 700, color: "#e0e0e0" }}>{s.value}</p>
-                </div>
-              ))}
+        {/* body — side by side */}
+        <div className="am-modal-body"
+          style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
+
+          {/* LEFT: images */}
+          <div className="am-modal-left"
+            style={{ display: "flex", flexDirection: "column", background: "#060606",
+              flexShrink: 0 }}>
+            {/* main image */}
+            <div style={{ flex: 1, overflow: "hidden", position: "relative", minHeight: 0 }}>
+              <img src={imgs[imgIdx]} alt={product.name}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
-          )}
+            {/* thumbnail strip */}
+            {imgs.length > 1 && (
+              <div style={{ display: "flex", gap: 3, padding: "8px", background: "#080808",
+                overflowX: "auto", flexShrink: 0 }}>
+                {imgs.map((src, i) => (
+                  <button key={i} onClick={() => setImgIdx(i)}
+                    style={{ flexShrink: 0, width: 64, height: 44, padding: 0, border: "none",
+                      cursor: "pointer", borderRadius: 4, overflow: "hidden",
+                      outline: i === imgIdx ? `2px solid ${accent}` : "2px solid transparent",
+                      transition: "outline 0.15s", opacity: i === imgIdx ? 1 : 0.45 }}>
+                    <img src={src} alt=""
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-          {product.description && (
-            <p style={{ margin: "0 0 20px", fontSize: 14, color: "#777", lineHeight: 1.7,
-              borderLeft: `2px solid ${accent}`, paddingLeft: 12 }}>{product.description}</p>
-          )}
+          {/* RIGHT: info */}
+          <div className="am-modal-right"
+            style={{ flex: 1, overflowY: "auto", padding: "24px 22px 28px", minWidth: 0 }}>
+            <h2 style={{ margin: "0 0 4px", fontSize: "clamp(18px,3vw,24px)",
+              fontWeight: 900, color: "white", lineHeight: 1.2 }}>
+              {product.name}
+            </h2>
+            <p style={{ margin: "0 0 22px", fontSize: "clamp(22px,3.5vw,30px)",
+              fontWeight: 900, color: accent, letterSpacing: -0.5 }}>
+              {fmtPrice(product.price, currency)}
+            </p>
 
-          {whatsapp.enabled && waNumber && (
-            <a href={`https://wa.me/${waNumber}?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                background: "#25d366", color: "white", textDecoration: "none",
-                padding: "15px 20px", borderRadius: 10, fontWeight: 800, fontSize: 15 }}>
-              <WaIcon /> Consultar por WhatsApp
-            </a>
-          )}
+            {specs.length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px",
+                marginBottom: 20, background: "#181818", borderRadius: 10, overflow: "hidden",
+                border: "1px solid #1e1e1e" }}>
+                {specs.map(s => (
+                  <div key={s.label} style={{ padding: "11px 14px", background: "#0f0f0f" }}>
+                    <p style={{ margin: 0, fontSize: 9, color: accent, textTransform: "uppercase",
+                      letterSpacing: 1, fontWeight: 700 }}>{s.label}</p>
+                    <p style={{ margin: "3px 0 0", fontSize: 13, fontWeight: 700, color: "#ddd" }}>
+                      {s.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {product.description && (
+              <p style={{ margin: "0 0 22px", fontSize: 13, color: "#666", lineHeight: 1.75,
+                borderLeft: `2px solid ${accent}33`, paddingLeft: 14 }}>
+                {product.description}
+              </p>
+            )}
+
+            {whatsapp.enabled && waNumber && (
+              <a href={`https://wa.me/${waNumber}?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                  background: "#25d366", color: "white", textDecoration: "none",
+                  padding: "14px 20px", borderRadius: 10, fontWeight: 800, fontSize: 14 }}>
+                <WaIcon /> Consultar por WhatsApp
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -227,13 +245,13 @@ function VehicleCard({ product, accent, currency, onClick }: {
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px",
           paddingTop: 8, borderTop: "1px solid #1a1a1a" }}>
-          {año && <Spec icon="📅" label="Año" val={año} />}
-          {km && <Spec icon="🛣️" label="Km" val={`${km} km`} />}
-          {motor && <Spec icon="⚙️" label="Motor" val={motor} />}
-          {trans && <Spec icon="🔧" label="Caja" val={trans} />}
-          {comb && <Spec icon="⛽" label="Combustible" val={comb} />}
-          {traccion && <Spec icon="🔄" label="Tracción" val={traccion} />}
-          {carroceria && <Spec icon="🚗" label="Carrocería" val={carroceria} />}
+          {año && <Spec label="Año" val={año} />}
+          {km && <Spec label="Km" val={`${Number(km).toLocaleString("es-AR")} km`} />}
+          {motor && <Spec label="Motor" val={motor} />}
+          {trans && <Spec label="Caja" val={trans} />}
+          {comb && <Spec label="Combustible" val={comb} />}
+          {traccion && <Spec label="Tracción" val={traccion} />}
+          {carroceria && <Spec label="Carrocería" val={carroceria} />}
         </div>
 
         <button style={{ marginTop: "auto", background: hov ? accent : "transparent",
@@ -248,7 +266,7 @@ function VehicleCard({ product, accent, currency, onClick }: {
   );
 }
 
-function Spec({ icon, label, val }: { icon: string; label: string; val: string }) {
+function Spec({ label, val }: { label: string; val: string }) {
   return (
     <div>
       <p style={{ margin: 0, fontSize: 9, color: "#555", textTransform: "uppercase",
@@ -403,6 +421,16 @@ export default function AutoMotor() {
         /* about */
         .am-about { grid-template-columns: 1fr !important }
         @media(min-width:768px){ .am-about { grid-template-columns: 1fr 1fr !important } }
+        /* modal */
+        .am-modal { flex-direction: column !important }
+        .am-modal-body { flex-direction: column !important }
+        .am-modal-left { width: 100% !important; max-height: 55vw; min-height: 220px }
+        .am-modal-right { max-height: 50vh; overflow-y: auto }
+        @media(min-width:700px){
+          .am-modal-body { flex-direction: row !important }
+          .am-modal-left { width: 52% !important; max-height: unset !important }
+          .am-modal-right { max-height: unset !important }
+        }
       `}</style>
 
       {/* Navbar */}
