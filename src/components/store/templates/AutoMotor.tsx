@@ -55,6 +55,7 @@ function VehicleModal({ product, accent, currency, whatsapp, products, onClose, 
   onSelect: (p: StorefrontProduct) => void;
 }) {
   const [imgIdx, setImgIdx] = useState(0);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const imgs = product.images.length > 0
     ? product.images
     : ["https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80"];
@@ -101,15 +102,13 @@ function VehicleModal({ product, accent, currency, whatsapp, products, onClose, 
     return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", onKey); };
   }, [imgs.length, onClose]);
 
-  const [imgZoom, setImgZoom] = useState(false);
-
   return (
     <div onClick={onClose}
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000,
         display: "flex", alignItems: "flex-start", justifyContent: "center",
         padding: "20px 16px", backdropFilter: "blur(4px)", overflow: "hidden" }}>
       <div onClick={e => e.stopPropagation()}
-        style={{ background: "#fff", borderRadius: 8, width: "100%", maxWidth: 960,
+        style={{ background: "#fff", borderRadius: 8, width: "100%", maxWidth: 1100,
           margin: "auto 0", maxHeight: "calc(100vh - 40px)",
           display: "flex", flexDirection: "column", overflow: "hidden",
           boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }}>
@@ -159,7 +158,7 @@ function VehicleModal({ product, accent, currency, whatsapp, products, onClose, 
                   <div className="am-img-thumbs" style={{ display: "flex", gap: 4,
                     background: "#e4e4e4", flexShrink: 0 }}>
                     {imgs.map((src, i) => (
-                      <button key={i} onClick={() => setImgIdx(i)}
+                      <button key={i} onClick={() => { setImgIdx(i); setMousePos(null); }}
                         style={{ flexShrink: 0, width: 68, height: 52, padding: 0, border: "none",
                           cursor: "pointer", borderRadius: 3, overflow: "hidden",
                           outline: i === imgIdx ? `2.5px solid ${accent}` : "2px solid transparent",
@@ -170,15 +169,35 @@ function VehicleModal({ product, accent, currency, whatsapp, products, onClose, 
                   </div>
                 )}
 
-                {/* imagen principal con zoom */}
+                {/* imagen principal con zoom-lente */}
                 <div style={{ flex: 1, position: "relative", aspectRatio: "4/3",
-                  overflow: "hidden", cursor: imgZoom ? "zoom-out" : "zoom-in" }}
-                  onMouseEnter={() => setImgZoom(true)} onMouseLeave={() => setImgZoom(false)}>
+                  overflow: "hidden", cursor: "crosshair" }}
+                  onMouseMove={e => {
+                    const r = e.currentTarget.getBoundingClientRect();
+                    setMousePos({
+                      x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)),
+                      y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)),
+                    });
+                  }}
+                  onMouseLeave={() => setMousePos(null)}>
                   <img src={imgs[imgIdx]} alt={product.name}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
-                      transform: imgZoom ? "scale(1.45)" : "scale(1)",
-                      transition: "transform 0.4s ease", transformOrigin: "center" }} />
-                  {imgs.length > 1 && !imgZoom && (
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  {/* lente cuadrada que sigue el cursor */}
+                  {mousePos && (
+                    <div style={{
+                      position: "absolute",
+                      width: 110, height: 110,
+                      left: `calc(${mousePos.x * 100}% - 55px)`,
+                      top: `calc(${mousePos.y * 100}% - 55px)`,
+                      border: "2px solid rgba(255,255,255,0.95)",
+                      boxShadow: "0 0 0 1px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(0,0,0,0.08)",
+                      background: "rgba(255,255,255,0.12)",
+                      pointerEvents: "none",
+                      boxSizing: "border-box",
+                      zIndex: 2,
+                    }} />
+                  )}
+                  {imgs.length > 1 && !mousePos && (
                     <>
                       <button onClick={() => setImgIdx(i => (i - 1 + imgs.length) % imgs.length)}
                         style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
@@ -203,36 +222,58 @@ function VehicleModal({ product, accent, currency, whatsapp, products, onClose, 
               </div>
             </div>
 
-            {/* info */}
+            {/* info / ventana zoom */}
             <div style={{ padding: "28px 28px 32px", display: "flex", flexDirection: "column", gap: 12 }}>
-              {headerLine && (
-                <p style={{ margin: 0, fontSize: 13, color: "#888" }}>{headerLine}</p>
-              )}
-              <h2 style={{ margin: 0, fontSize: "clamp(18px,2.5vw,24px)", fontWeight: 600,
-                color: "#333", lineHeight: 1.2 }}>{product.name}</h2>
-              {ubicacion && (
-                <p style={{ margin: 0, fontSize: 12, color: "#aaa" }}>📍 {ubicacion}</p>
-              )}
-              <div>
-                <p style={{ margin: 0, fontSize: "clamp(26px,3.5vw,34px)", fontWeight: 700,
-                  color: "#333", letterSpacing: -1, lineHeight: 1 }}>
-                  {fmtPrice(product.price, currency)}
-                </p>
-                {product.comparePrice && (
-                  <p style={{ margin: "4px 0 0", fontSize: 14, color: "#bbb", textDecoration: "line-through" }}>
-                    {fmtPrice(product.comparePrice, currency)}
-                  </p>
-                )}
-              </div>
-              {whatsapp.enabled && waNumber && (
-                <a href={`https://wa.me/${waNumber}?text=${waMsg}`}
-                  target="_blank" rel="noopener noreferrer"
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                    background: "#25d366", color: "white", textDecoration: "none",
-                    padding: "14px 20px", borderRadius: 6, fontWeight: 700, fontSize: 14,
-                    boxShadow: "0 4px 16px rgba(37,211,102,0.3)", marginTop: 4 }}>
-                  <WaIcon size={18} /> Consultar por WhatsApp
-                </a>
+              {mousePos ? (
+                /* ventana de zoom estilo ML */
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: 11, color: "#999", textAlign: "center" }}>Vista ampliada</p>
+                  <div style={{
+                    flex: 1,
+                    minHeight: 260,
+                    backgroundImage: `url(${imgs[imgIdx]})`,
+                    backgroundSize: "350%",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPositionX: `${mousePos.x * 100}%`,
+                    backgroundPositionY: `${mousePos.y * 100}%`,
+                    border: "1px solid #e0e0e0",
+                    borderRadius: 4,
+                    overflow: "hidden",
+                  }} />
+                </div>
+              ) : (
+                /* info normal */
+                <>
+                  {headerLine && (
+                    <p style={{ margin: 0, fontSize: 13, color: "#888" }}>{headerLine}</p>
+                  )}
+                  <h2 style={{ margin: 0, fontSize: "clamp(18px,2.5vw,24px)", fontWeight: 600,
+                    color: "#333", lineHeight: 1.2 }}>{product.name}</h2>
+                  {ubicacion && (
+                    <p style={{ margin: 0, fontSize: 12, color: "#aaa" }}>📍 {ubicacion}</p>
+                  )}
+                  <div>
+                    <p style={{ margin: 0, fontSize: "clamp(26px,3.5vw,34px)", fontWeight: 700,
+                      color: "#333", letterSpacing: -1, lineHeight: 1 }}>
+                      {fmtPrice(product.price, currency)}
+                    </p>
+                    {product.comparePrice && (
+                      <p style={{ margin: "4px 0 0", fontSize: 14, color: "#bbb", textDecoration: "line-through" }}>
+                        {fmtPrice(product.comparePrice, currency)}
+                      </p>
+                    )}
+                  </div>
+                  {whatsapp.enabled && waNumber && (
+                    <a href={`https://wa.me/${waNumber}?text=${waMsg}`}
+                      target="_blank" rel="noopener noreferrer"
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                        background: "#25d366", color: "white", textDecoration: "none",
+                        padding: "14px 20px", borderRadius: 6, fontWeight: 700, fontSize: 14,
+                        boxShadow: "0 4px 16px rgba(37,211,102,0.3)", marginTop: 4 }}>
+                      <WaIcon size={18} /> Consultar por WhatsApp
+                    </a>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -520,7 +561,7 @@ export default function AutoMotor() {
         .am-about { grid-template-columns: 1fr !important }
         @media(min-width:768px){ .am-about { grid-template-columns: 1fr 1fr !important } }
         .am-modal-body { grid-template-columns: 1fr !important }
-        @media(min-width:700px){ .am-modal-body { grid-template-columns: 1fr 1fr !important } }
+        @media(min-width:700px){ .am-modal-body { grid-template-columns: 3fr 2fr !important } }
         .am-specs-grid { grid-template-columns: 1fr !important }
         @media(min-width:560px){ .am-specs-grid { grid-template-columns: 1fr 1fr !important } }
         .am-similar-grid { grid-template-columns: repeat(2,1fr) !important }
