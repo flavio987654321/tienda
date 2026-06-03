@@ -50,7 +50,7 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
   const condColor = condicion === "0 km" || condicion === "Nuevo" ? { bg: "#16a34a22", fg: "#4ade80" }
     : condicion === "Casi nuevo" || condicion === "Muy bueno" ? { bg: "#2563eb22", fg: "#60a5fa" }
     : condicion === "Bueno" ? { bg: "#d9770622", fg: "#fb923c" }
-    : { bg: "#33333322", fg: "#888" };
+    : { bg: "#1e3a5f44", fg: "#94a3b8" };
 
   const waNumber = whatsapp.number.replace(/\D/g, "");
   const waMsg = encodeURIComponent(
@@ -64,20 +64,20 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
 
   return (
     <div onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 1000,
+      style={{ position: "fixed", inset: 0, background: "rgba(6,15,36,0.90)", zIndex: 1000,
         display: "flex", alignItems: "center", justifyContent: "center", padding: "16px",
         backdropFilter: "blur(4px)" }}>
       <div onClick={e => e.stopPropagation()}
         className="am-modal"
-        style={{ background: "#0d0d0d", borderRadius: 16, width: "100%", maxWidth: 1000,
-          maxHeight: "92vh", overflow: "hidden", border: `1px solid #1e1e1e`,
+        style={{ background: "#152540", borderRadius: 16, width: "100%", maxWidth: 1000,
+          maxHeight: "92vh", overflow: "hidden", border: `1px solid #2d4a6e`,
           display: "flex", flexDirection: "column" }}>
 
         {/* top bar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "12px 18px", borderBottom: "1px solid #181818", flexShrink: 0 }}>
+          padding: "12px 18px", borderBottom: "1px solid #1e3a5f", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: 2 }}>
+            <span style={{ fontSize: 10, color: "#7090b4", textTransform: "uppercase", letterSpacing: 2 }}>
               {product.category}
             </span>
             {condicion && (
@@ -96,7 +96,7 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
             )}
           </div>
           <button onClick={onClose}
-            style={{ background: "#181818", border: "1px solid #2a2a2a", color: "#888",
+            style={{ background: "#1e3a5f", border: "1px solid #2d4a6e", color: "#94a3b8",
               cursor: "pointer", width: 30, height: 30, borderRadius: "50%",
               fontSize: 18, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
             ×
@@ -109,7 +109,7 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
 
           {/* LEFT: images */}
           <div className="am-modal-left"
-            style={{ display: "flex", flexDirection: "column", background: "#060606",
+            style={{ display: "flex", flexDirection: "column", background: "#0f172a",
               flexShrink: 0 }}>
             {/* main image */}
             <div style={{ flex: 1, overflow: "hidden", position: "relative", minHeight: 0 }}>
@@ -118,7 +118,7 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
             </div>
             {/* thumbnail strip */}
             {imgs.length > 1 && (
-              <div style={{ display: "flex", gap: 3, padding: "8px", background: "#080808",
+              <div style={{ display: "flex", gap: 3, padding: "8px", background: "#0f172a",
                 overflowX: "auto", flexShrink: 0 }}>
                 {imgs.map((src, i) => (
                   <button key={i} onClick={() => setImgIdx(i)}
@@ -148,13 +148,13 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
 
             {specs.length > 0 && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px",
-                marginBottom: 20, background: "#181818", borderRadius: 10, overflow: "hidden",
-                border: "1px solid #1e1e1e" }}>
+                marginBottom: 20, background: "#1e3a5f", borderRadius: 10, overflow: "hidden",
+                border: "1px solid #2d4a6e" }}>
                 {specs.map(s => (
-                  <div key={s.label} style={{ padding: "11px 14px", background: "#0f0f0f" }}>
+                  <div key={s.label} style={{ padding: "11px 14px", background: "#1a2d4a" }}>
                     <p style={{ margin: 0, fontSize: 9, color: accent, textTransform: "uppercase",
                       letterSpacing: 1, fontWeight: 700 }}>{s.label}</p>
-                    <p style={{ margin: "3px 0 0", fontSize: 13, fontWeight: 700, color: "#ddd" }}>
+                    <p style={{ margin: "3px 0 0", fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>
                       {s.value}
                     </p>
                   </div>
@@ -163,7 +163,7 @@ function VehicleModal({ product, accent, currency, whatsapp, onClose }: {
             )}
 
             {product.description && (
-              <p style={{ margin: "0 0 22px", fontSize: 13, color: "#666", lineHeight: 1.75,
+              <p style={{ margin: "0 0 22px", fontSize: 13, color: "#94a3b8", lineHeight: 1.75,
                 borderLeft: `2px solid ${accent}33`, paddingLeft: 14 }}>
                 {product.description}
               </p>
@@ -204,8 +204,8 @@ function VehicleCard({ product, accent, currency, onClick }: {
     <div onClick={onClick}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       className="am-card"
-      style={{ background: "#0f0f0f", borderRadius: 12, overflow: "hidden", cursor: "pointer",
-        border: `1px solid ${hov ? accent : "#1e1e1e"}`,
+      style={{ background: "#1a2d4a", borderRadius: 12, overflow: "hidden", cursor: "pointer",
+        border: `1px solid ${hov ? accent : "#2d4a6e"}`,
         boxShadow: hov ? `0 0 24px ${accent}22` : "none",
         transition: "all 0.25s", display: "flex", flexDirection: "column" }}>
 
@@ -224,7 +224,7 @@ function VehicleCard({ product, accent, currency, onClick }: {
           </div>
         )}
         <div style={{ position: "absolute", bottom: 10, right: 10,
-          background: "rgba(0,0,0,0.75)", color: "#aaa",
+          background: "rgba(6,15,36,0.75)", color: "#94a3b8",
           fontSize: 10, fontWeight: 600, padding: "3px 9px", borderRadius: 20 }}>
           {product.category}
         </div>
@@ -244,7 +244,7 @@ function VehicleCard({ product, accent, currency, onClick }: {
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px",
-          paddingTop: 8, borderTop: "1px solid #1a1a1a" }}>
+          paddingTop: 8, borderTop: "1px solid #1e3a5f" }}>
           {año && <Spec label="Año" val={año} />}
           {km && <Spec label="Km" val={`${Number(km).toLocaleString("es-AR")} km`} />}
           {motor && <Spec label="Motor" val={motor} />}
@@ -269,9 +269,9 @@ function VehicleCard({ product, accent, currency, onClick }: {
 function Spec({ label, val }: { label: string; val: string }) {
   return (
     <div>
-      <p style={{ margin: 0, fontSize: 9, color: "#555", textTransform: "uppercase",
+      <p style={{ margin: 0, fontSize: 9, color: "#7090b4", textTransform: "uppercase",
         letterSpacing: 0.8 }}>{label}</p>
-      <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 700, color: "#ccc" }}>{val}</p>
+      <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 700, color: "#cbd5e1" }}>{val}</p>
     </div>
   );
 }
@@ -294,13 +294,13 @@ function FeaturedVehicle({ product, accent, currency, onClick }: {
       className="am-featured"
       style={{ borderRadius: 16, overflow: "hidden", cursor: "pointer",
         border: `1px solid ${accent}55`, display: "flex", flexDirection: "column",
-        background: "#0d0d0d" }}>
+        background: "#152540" }}>
       <div className="am-featured-img"
         style={{ position: "relative", overflow: "hidden", flexShrink: 0 }}>
         <img src={img} alt={product.name}
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", inset: 0,
-          background: "linear-gradient(to right, rgba(0,0,0,0.7) 0%, transparent 60%)" }} />
+          background: "linear-gradient(to right, rgba(6,15,36,0.7) 0%, transparent 60%)" }} />
         <div className="am-featured-overlay"
           style={{ position: "absolute", inset: 0, padding: "28px 32px",
             display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
@@ -334,7 +334,7 @@ function FeaturedVehicle({ product, accent, currency, onClick }: {
           {carroceria && <SpecBig label="Carrocería" val={carroceria} accent={accent} />}
         </div>
         {product.description && (
-          <p style={{ margin: 0, fontSize: 13, color: "#888", lineHeight: 1.6 }}>
+          <p style={{ margin: 0, fontSize: 13, color: "#94a3b8", lineHeight: 1.6 }}>
             {product.description}
           </p>
         )}
@@ -352,8 +352,8 @@ function FeaturedVehicle({ product, accent, currency, onClick }: {
 function SpecBig({ label, val, accent }: { label: string; val: string; accent: string }) {
   return (
     <div style={{ borderLeft: `2px solid ${accent}`, paddingLeft: 10 }}>
-      <p style={{ margin: 0, fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: 1 }}>{label}</p>
-      <p style={{ margin: "3px 0 0", fontSize: 15, fontWeight: 700, color: "#ddd" }}>{val}</p>
+      <p style={{ margin: 0, fontSize: 9, color: "#7090b4", textTransform: "uppercase", letterSpacing: 1 }}>{label}</p>
+      <p style={{ margin: "3px 0 0", fontSize: 15, fontWeight: 700, color: "#e2e8f0" }}>{val}</p>
     </div>
   );
 }
@@ -389,7 +389,7 @@ export default function AutoMotor() {
   const featured = products.find(p => p.badge === "DESTACADO") ?? products[0] ?? null;
 
   return (
-    <div style={{ background: "#080808", color: "white",
+    <div style={{ background: "#0f172a", color: "white",
       fontFamily: "'Inter','Segoe UI',sans-serif", minHeight: "100vh" }}>
       <style>{`
         /* cards: vertical mobile → horizontal desktop */
@@ -435,7 +435,7 @@ export default function AutoMotor() {
 
       {/* Navbar */}
       <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-        background: scrolled ? "rgba(8,8,8,0.98)" : "transparent",
+        background: scrolled ? "rgba(15,23,42,0.98)" : "transparent",
         backdropFilter: scrolled ? "blur(16px)" : "none",
         borderBottom: scrolled ? `1px solid ${accent}22` : "none",
         transition: "all 0.3s", padding: "0 20px" }}>
@@ -449,11 +449,11 @@ export default function AutoMotor() {
             style={{ display: "flex", gap: 28, alignItems: "center" }}>
             {["Catálogo", "Servicios", "Nosotros", "Contacto"].map(item => (
               <button key={item} onClick={() => scrollTo(item.toLowerCase())}
-                style={{ background: "none", border: "none", color: "#999", cursor: "pointer",
+                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer",
                   fontSize: 13, fontWeight: 500, letterSpacing: 0.5,
                   textTransform: "uppercase" }}
                 onMouseEnter={e => (e.currentTarget.style.color = accent)}
-                onMouseLeave={e => (e.currentTarget.style.color = "#999")}>
+                onMouseLeave={e => (e.currentTarget.style.color = "#94a3b8")}>
                 {item}
               </button>
             ))}
@@ -474,13 +474,13 @@ export default function AutoMotor() {
           </button>
         </div>
         {menuOpen && (
-          <div style={{ background: "#0a0a0a", borderTop: `1px solid ${accent}22`,
+          <div style={{ background: "#0f172a", borderTop: `1px solid ${accent}22`,
             padding: "12px 20px 20px", display: "flex", flexDirection: "column", gap: 4 }}>
             {["catálogo", "servicios", "nosotros", "contacto"].map(item => (
               <button key={item} onClick={() => { scrollTo(item); setMenuOpen(false); }}
-                style={{ background: "none", border: "none", color: "#aaa", cursor: "pointer",
+                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer",
                   textAlign: "left", padding: "10px 4px", fontSize: 14, fontWeight: 600,
-                  textTransform: "uppercase", letterSpacing: 1, borderBottom: "1px solid #111" }}>
+                  textTransform: "uppercase", letterSpacing: 1, borderBottom: "1px solid #1e293b" }}>
                 {item}
               </button>
             ))}
@@ -495,7 +495,7 @@ export default function AutoMotor() {
           backgroundImage: `url(${heroBgUrl})`,
           backgroundSize: "cover", backgroundPosition: "center" }}>
           <div style={{ position: "absolute", inset: 0,
-            background: "linear-gradient(135deg, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.2) 100%)" }} />
+            background: "linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.5) 50%, rgba(15,23,42,0.2) 100%)" }} />
         </div>
         <EditableImageButton field="heroBackground" label="Imagen de fondo del hero" />
 
@@ -514,7 +514,7 @@ export default function AutoMotor() {
             fontWeight: 900, lineHeight: 1.0, maxWidth: 700, letterSpacing: -1 }}>
             <EditableZone field="heroHeading" label="Título principal">{"Tu próximo\nvehículo\nte espera."}</EditableZone>
           </h1>
-          <p style={{ margin: "0 0 36px", fontSize: "clamp(14px,2vw,17px)", color: "#777",
+          <p style={{ margin: "0 0 36px", fontSize: "clamp(14px,2vw,17px)", color: "#94a3b8",
             maxWidth: 440, lineHeight: 1.7 }}>
             <EditableZone field="heroSubtext" label="Subtítulo">Stock premium · Financiación disponible · Transferencia en regla.</EditableZone>
           </p>
@@ -576,7 +576,7 @@ export default function AutoMotor() {
 
       {/* Featured vehicle */}
       {!loadingProducts && featured && (
-        <section style={{ padding: "72px 20px 0", background: "#111318" }}>
+        <section style={{ padding: "72px 20px 0", background: "#1e293b" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28 }}>
               <div style={{ width: 32, height: 1, background: accent }} />
@@ -592,7 +592,7 @@ export default function AutoMotor() {
       )}
 
       {/* Catálogo */}
-      <section id="catálogo" style={{ padding: "72px 20px", background: "#f0efe9" }}>
+      <section id="catálogo" style={{ padding: "72px 20px", background: "#162033" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
             <div style={{ width: 32, height: 1, background: accent }} />
@@ -602,7 +602,7 @@ export default function AutoMotor() {
             </p>
           </div>
           <h2 style={{ margin: "0 0 32px 48px", fontSize: "clamp(24px,4vw,38px)",
-            fontWeight: 900, color: "#111" }}>
+            fontWeight: 900, color: "white" }}>
             <EditableZone field="categoriesHeading" label="Título catálogo">Catálogo de vehículos</EditableZone>
           </h2>
 
@@ -610,9 +610,9 @@ export default function AutoMotor() {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 32 }}>
             {categories.map(cat => (
               <button key={cat} onClick={() => setActiveCategory(cat)}
-                style={{ background: activeCategory === cat ? accent : "white",
-                  color: activeCategory === cat ? getContrastColor(accent) : "#555",
-                  border: activeCategory === cat ? "none" : "1px solid #d0cfc8",
+                style={{ background: activeCategory === cat ? accent : "transparent",
+                  color: activeCategory === cat ? getContrastColor(accent) : "#94a3b8",
+                  border: activeCategory === cat ? "none" : "1px solid #2d4a6e",
                   padding: "8px 18px", borderRadius: 2, cursor: "pointer",
                   fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
                 {cat}
@@ -621,11 +621,11 @@ export default function AutoMotor() {
           </div>
 
           {loadingProducts ? (
-            <div style={{ textAlign: "center", padding: "80px 0", color: "#888" }}>
+            <div style={{ textAlign: "center", padding: "80px 0", color: "#94a3b8" }}>
               Cargando vehículos…
             </div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "80px 0", color: "#888" }}>
+            <div style={{ textAlign: "center", padding: "80px 0", color: "#94a3b8" }}>
               No hay vehículos en esta categoría.
             </div>
           ) : (
@@ -640,7 +640,7 @@ export default function AutoMotor() {
       </section>
 
       {/* Servicios */}
-      <section id="servicios" style={{ padding: "72px 20px", background: "#080808",
+      <section id="servicios" style={{ padding: "72px 20px", background: "#0f172a",
         borderTop: `1px solid ${accent}22`, borderBottom: `1px solid ${accent}22` }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
@@ -654,20 +654,20 @@ export default function AutoMotor() {
             <EditableZone field="aboutHeading" label="Título servicios">Servicios y garantías</EditableZone>
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 1,
-            background: "#1a1a1a", border: "1px solid #1a1a1a", borderRadius: 12, overflow: "hidden" }}>
+            background: "#1e3a5f", border: "1px solid #1e3a5f", borderRadius: 12, overflow: "hidden" }}>
             {[
               { fv: "garantia1Title", fl: "garantia1Desc", t: "Inspección técnica", d: "Revisión de 150 puntos antes de la venta." },
               { fv: "garantia2Title", fl: "garantia2Desc", t: "Documentación legal", d: "Transferencia y trámites 100% en regla." },
               { fv: "garantia3Title", fl: "garantia3Desc", t: "Financiación", d: "Planes de cuotas adaptados a tu presupuesto." },
               { fv: "garantia4Title", fl: "garantia4Desc", t: "Asesoría personal", d: "Te acompañamos en cada paso del proceso." },
             ].map((s, i) => (
-              <div key={i} style={{ background: "#0d0d0d", padding: "28px 24px",
-                borderLeft: i === 0 ? "none" : "1px solid #1a1a1a" }}>
+              <div key={i} style={{ background: "#152540", padding: "28px 24px",
+                borderLeft: i === 0 ? "none" : "1px solid #1e3a5f" }}>
                 <div style={{ width: 36, height: 3, background: accent, borderRadius: 2, marginBottom: 18 }} />
                 <p style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 800, color: "white" }}>
                   <EditableZone field={s.fv} label={`Servicio ${i+1} — Título`}>{s.t}</EditableZone>
                 </p>
-                <p style={{ margin: 0, fontSize: 13, color: "#666", lineHeight: 1.6 }}>
+                <p style={{ margin: 0, fontSize: 13, color: "#94a3b8", lineHeight: 1.6 }}>
                   <EditableZone field={s.fl} label={`Servicio ${i+1} — Desc`}>{s.d}</EditableZone>
                 </p>
               </div>
@@ -677,7 +677,7 @@ export default function AutoMotor() {
       </section>
 
       {/* Nosotros */}
-      <section id="nosotros" style={{ padding: "72px 20px", background: "#111318" }}>
+      <section id="nosotros" style={{ padding: "72px 20px", background: "#1e293b" }}>
         <div className="am-about"
           style={{ maxWidth: 1200, margin: "0 auto", display: "grid",
             gridTemplateColumns: "1fr", gap: 56, alignItems: "center" }}>
@@ -692,10 +692,10 @@ export default function AutoMotor() {
             <h2 style={{ margin: "0 0 20px 48px", fontSize: "clamp(22px,4vw,34px)", fontWeight: 900 }}>
               <EditableZone field="aboutHeading2" label="Título nosotros">Años de pasión por los vehículos</EditableZone>
             </h2>
-            <p style={{ margin: "0 0 14px 48px", fontSize: 15, color: "#888", lineHeight: 1.8 }}>
+            <p style={{ margin: "0 0 14px 48px", fontSize: 15, color: "#94a3b8", lineHeight: 1.8 }}>
               <EditableZone field="aboutParagraph1" label="Párrafo 1 Nosotros">Somos una empresa familiar con más de una década en el mercado automotor. Nuestro compromiso es la transparencia total en cada operación.</EditableZone>
             </p>
-            <p style={{ margin: "0 0 28px 48px", fontSize: 15, color: "#888", lineHeight: 1.8 }}>
+            <p style={{ margin: "0 0 28px 48px", fontSize: 15, color: "#94a3b8", lineHeight: 1.8 }}>
               <EditableZone field="aboutParagraph2" label="Párrafo 2 Nosotros">Contamos con asesores especializados y taller propio para garantizar la calidad de cada vehículo en nuestro stock.</EditableZone>
             </p>
             {whatsapp.enabled && whatsapp.number && (
@@ -713,14 +713,14 @@ export default function AutoMotor() {
             <img src={nosotrosUrl} alt="Nosotros"
               style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             <div style={{ position: "absolute", inset: 0,
-              background: `linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.7))` }} />
+              background: `linear-gradient(to bottom, transparent 60%, rgba(6,15,36,0.7))` }} />
             <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
           </div>
         </div>
       </section>
 
       {/* Contacto */}
-      <section id="contacto" style={{ padding: "72px 20px", background: "#040404",
+      <section id="contacto" style={{ padding: "72px 20px", background: "#0a1525",
         borderTop: `1px solid ${accent}22` }}>
         <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
           <div style={{ width: 48, height: 1, background: accent, margin: "0 auto 20px" }} />
@@ -728,7 +728,7 @@ export default function AutoMotor() {
             fontWeight: 900, letterSpacing: -1 }}>
             <EditableZone field="contactHeading" label="Título contacto">¿Encontraste tu vehículo?</EditableZone>
           </h2>
-          <p style={{ margin: "0 0 36px", fontSize: 15, color: "#666", lineHeight: 1.7 }}>
+          <p style={{ margin: "0 0 36px", fontSize: 15, color: "#94a3b8", lineHeight: 1.7 }}>
             <EditableZone field="contactSubtext" label="Subtítulo contacto">Contactanos y un asesor te responde en minutos para coordinar una visita sin compromiso.</EditableZone>
           </p>
           {whatsapp.enabled && whatsapp.number && (
@@ -745,13 +745,13 @@ export default function AutoMotor() {
       </section>
 
       {/* Footer */}
-      <footer style={{ background: "#030303", padding: "24px 20px",
+      <footer style={{ background: "#070f1e", padding: "24px 20px",
         borderTop: `1px solid ${accent}22`, textAlign: "center" }}>
         <p style={{ margin: "0 0 4px", fontWeight: 900, fontSize: 14,
           color: accent, letterSpacing: 3, textTransform: "uppercase" }}>
           {storeName}
         </p>
-        <p style={{ margin: 0, fontSize: 11, color: "#333" }}>
+        <p style={{ margin: 0, fontSize: 11, color: "#475569" }}>
           <EditableZone field="footerCopyright" label="Copyright">
             {`© ${new Date().getFullYear()} ${storeName}. Todos los derechos reservados.`}
           </EditableZone>
