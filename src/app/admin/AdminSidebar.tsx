@@ -7,6 +7,7 @@ import {
   LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck, Wallet, BadgeCheck,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -86,8 +87,18 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
         .catch(() => {});
     }
     fetchCount();
-    const interval = setInterval(fetchCount, 60_000);
-    return () => clearInterval(interval);
+
+    const supabase = createSupabaseBrowserClient();
+    const channel = supabase
+      .channel("admin-pending-verif")
+      .on(
+        "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
+        { event: "*", schema: "public", table: "VerificationRequest" },
+        () => fetchCount()
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   return (
