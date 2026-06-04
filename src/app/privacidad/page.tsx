@@ -16,6 +16,20 @@ const CONTENT = {
           "Datos de operación: pedidos, afiliados, estadísticas de ventas.",
           "Datos de pago: procesados por Mercado Pago. No almacenamos datos de tarjetas.",
           "Datos de uso: sesiones, acciones en el panel y eventos de la plataforma.",
+          "Datos de verificación de identidad (voluntario y con consentimiento explícito): imágenes de DNI y selfie. Ver sección 3 bis para el detalle completo.",
+        ],
+      },
+      {
+        title: "3 bis. Verificación de identidad — datos sensibles",
+        body: "El programa de Verificación de identidad es completamente voluntario. Si decidís participar, recopilamos documentos que constituyen datos sensibles según el art. 2 de la Ley 25.326 de Protección de Datos Personales:",
+        list: [
+          "Qué recopilamos: imagen del frente de tu DNI, imagen del dorso de tu DNI y una fotografía (selfie) sosteniéndolo.",
+          "Finalidad exclusiva: confirmar que sos una persona física real, para mostrar el badge azul de verificación en tu tienda pública.",
+          "Quién accede: únicamente el equipo de administración de TiendaApps, a través de URLs temporales con vencimiento de 1 hora. No se comparten con terceros, otros usuarios ni socios comerciales.",
+          "Dónde se almacenan: en un bucket privado de Supabase Storage (servidores AWS us-east-1) con acceso restringido. No son accesibles públicamente.",
+          "Retención: si la verificación es aprobada, los documentos se conservan mientras el badge esté activo. Si es rechazada o solicitás la eliminación, los archivos se eliminan dentro de los 30 días.",
+          "Es voluntario: la verificación no es obligatoria. Podés usar la plataforma sin verificarte. Podés solicitar la eliminación de tus documentos en cualquier momento escribiendo a marketplacemitienda@gmail.com con el asunto 'Eliminar documentos de verificación — [tu email]'.",
+          "Consentimiento expreso: al enviar el formulario de verificación y confirmar el envío, otorgás consentimiento expreso e informado para el tratamiento de tus datos sensibles conforme al art. 7 de la Ley 25.326. Podés revocar este consentimiento en cualquier momento solicitando la eliminación de tus documentos.",
         ],
       },
       {
@@ -38,7 +52,7 @@ const CONTENT = {
         title: "4. Procesadores de datos (terceros que procesan tus datos)",
         body: "No vendemos tus datos. Trabajamos con los siguientes proveedores que procesan datos en tu nombre:",
         list: [
-          "Supabase (supabase.com): gestión de autenticación y base de datos. Servidores en AWS us-east-1. Política de privacidad: supabase.com/privacy",
+          "Supabase (supabase.com): gestión de autenticación, base de datos y almacenamiento de archivos (incluyendo documentos de verificación en bucket privado). Servidores en AWS us-east-1. Política de privacidad: supabase.com/privacy",
           "Vercel (vercel.com): hosting y ejecución de la plataforma. Servidores en AWS/Cloudflare. Política de privacidad: vercel.com/legal/privacy-policy",
           "Mercado Pago (mercadopago.com.ar): procesamiento de pagos de suscripción. Nunca almacenamos datos de tarjetas — Mercado Pago gestiona todo con cumplimiento PCI-DSS nivel 1. Política de privacidad: mercadopago.com.ar/privacidad",
           "Nodemailer / SMTP: envío de emails transaccionales (confirmaciones, alertas). Solo se comparte el email necesario para cada mensaje.",
@@ -266,7 +280,7 @@ export default async function PrivacidadPage({
           </div>
 
           <h1 className="text-4xl font-black mb-2">Política de Privacidad</h1>
-          <p className="text-gray-500 text-sm mb-3">Última actualización: mayo 2026</p>
+          <p className="text-gray-500 text-sm mb-3">Última actualización: junio 2026</p>
 
           {/* Tabs por tipo */}
           <div className="flex gap-2 mb-10 flex-wrap">

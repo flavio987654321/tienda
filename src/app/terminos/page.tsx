@@ -54,6 +54,19 @@ const CONTENT = {
         body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. Al aceptar un afiliado y activar el programa, aceptás los Términos del Programa de Afiliados y te comprometés a pagarle la comisión configurada por cada venta válida generada a través de su link. Las comisiones se acreditan al confirmar el pago del pedido. Adicionalmente, cuando un potencial cliente consulta por WhatsApp a través del link de un afiliado, la Plataforma registra esa consulta en tu panel. Si confirmás la consulta como venta, la comisión se acredita automáticamente en la billetera del afiliado. Si la rechazás, no se genera comisión. Los datos del consultante (nombre, teléfono, mensaje) quedan registrados y son de tu responsabilidad conforme a la Ley 25.326. TiendaApps actúa como intermediaria tecnológica en la gestión de comisiones.",
       },
       {
+        title: "6 bis. Programa de Verificación de identidad",
+        body: "TiendaApps ofrece un programa voluntario de verificación de identidad. Al participar aceptás las siguientes condiciones:",
+        list: [
+          "Es voluntario: la verificación no es un requisito para operar tu tienda. Podés usar todas las funciones de la plataforma sin verificarte.",
+          "Qué implica: debés enviar una fotografía del frente y dorso de tu DNI y una selfie sosteniéndolo. Esos documentos son revisados exclusivamente por el equipo de administración de TiendaApps.",
+          "Aprobación a criterio de TiendaApps: la aprobación o el rechazo queda a criterio exclusivo de TiendaApps. No garantizamos la aprobación de todas las solicitudes.",
+          "El badge azul es revocable: si detectamos que la documentación enviada fue alterada, no pertenece al titular de la cuenta, o existe uso fraudulento del badge, podemos removerlo y suspender la cuenta sin previo aviso.",
+          "Documentación falsa o ajena: el envío de documentos que no sean propios o que hayan sido alterados constituye una violación grave de estos términos y puede derivar en la suspensión permanente de la cuenta, la cancelación de suscripciones activas sin reembolso y la denuncia ante las autoridades competentes.",
+          "Retiro voluntario: podés solicitar la eliminación de tus documentos y el retiro del badge en cualquier momento escribiendo a marketplacemitienda@gmail.com con el asunto 'Eliminar documentos de verificación — [tu email]'. Tu tienda seguirá funcionando con normalidad.",
+          "Privacidad: el tratamiento de los documentos de identidad se rige por la sección 3 bis de la Política de Privacidad y el art. 7 de la Ley 25.326.",
+        ],
+      },
+      {
         title: "7. Cancelación y acceso",
         body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tu tienda permanecerá visible hasta el fin del período abonado. Tras el vencimiento y período de gracia, la tienda se ocultará pero tus datos no se borran — podés reactivarla en cualquier momento. La cancelación no extingue las obligaciones de pago de comisiones ya acreditadas en billeteras de afiliados activos.",
       },
@@ -234,7 +247,7 @@ export default async function TerminosPage({
           </div>
 
           <h1 className="text-4xl font-black mb-2">Términos y Condiciones</h1>
-          <p className="text-gray-500 text-sm mb-3">Última actualización: mayo 2026</p>
+          <p className="text-gray-500 text-sm mb-3">Última actualización: junio 2026</p>
 
           {/* Tabs por tipo */}
           <div className="flex gap-2 mb-10 flex-wrap">
