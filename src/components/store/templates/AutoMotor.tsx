@@ -510,8 +510,20 @@ export default function AutoMotor() {
   const storeName = config?.storeName ?? "AUTO MOTOR";
   const whatsapp = config?.whatsapp ?? { enabled: false, number: "" };
 
-  const heroBgUrl = config?.imageOverrides?.["heroBackground"]?.url
-    ?? "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1920&q=80";
+  const heroOv          = config?.imageOverrides?.["heroBackground"];
+  const heroBgUrl       = heroOv?.url ?? "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1920&q=80";
+  const heroOverlayType = heroOv?.overlayType ?? "dark";
+  const heroOverlayOp   = heroOv?.overlayOpacity ?? 0.65;
+  const heroPosX        = heroOv?.posX ?? 50;
+  const heroPosY        = heroOv?.posY ?? 40;
+  // Texto del hero y nav adapta al tipo de capa
+  const heroIsLight     = heroOverlayType === "light";
+  const heroTextColor   = heroIsLight ? "#111111" : "#ffffff";
+  const heroMidColor    = heroIsLight ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
+  const heroNavText     = heroIsLight ? "#111111" : "#ffffff";
+  const heroNavMid      = heroIsLight ? "#555555" : "rgba(255,255,255,0.65)";
+  const heroNavBorder   = heroIsLight ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.3)";
+
   const nosotrosUrl = config?.imageOverrides?.["nosotrosImage"]?.url
     ?? "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=900&q=80";
 
@@ -637,7 +649,7 @@ export default function AutoMotor() {
         <div style={{ maxWidth: 1200, margin: "0 auto", height: 68,
           display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 900, fontSize: 15, letterSpacing: 4,
-            color: scrolled ? "#111" : "white", textTransform: "uppercase",
+            color: scrolled ? "#111" : heroNavText, textTransform: "uppercase",
             transition: "color 0.35s" }}>
             <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
             <VerifiedIconButton isVerified={config?.isVerified} info={config?.verifiedInfo} />
@@ -646,11 +658,11 @@ export default function AutoMotor() {
             {[["Catálogo", "catálogo"], ["Servicios", "servicios"], ["Nosotros", "nosotros"], ["Contacto", "contacto"]].map(([label, id]) => (
               <button key={id} onClick={() => smoothScrollTo(id)}
                 style={{ background: "none", border: "none",
-                  color: scrolled ? "#888" : "rgba(255,255,255,0.65)",
+                  color: scrolled ? "#888" : heroNavMid,
                   cursor: "pointer", fontSize: 11, fontWeight: 600,
                   letterSpacing: 2, textTransform: "uppercase", transition: "color 0.15s" }}
                 onMouseEnter={e => (e.currentTarget.style.color = accent)}
-                onMouseLeave={e => (e.currentTarget.style.color = scrolled ? "#888" : "rgba(255,255,255,0.65)")}>
+                onMouseLeave={e => (e.currentTarget.style.color = scrolled ? "#888" : heroNavMid)}>
                 {label}
               </button>
             ))}
@@ -665,8 +677,8 @@ export default function AutoMotor() {
             )}
           </div>
           <button className="am-burger" onClick={() => setMenuOpen(m => !m)}
-            style={{ background: "none", border: `1px solid ${scrolled ? "#e0e0e0" : "rgba(255,255,255,0.3)"}`,
-              color: scrolled ? "#555" : "white", padding: "7px 11px", cursor: "pointer", fontSize: 18 }}>
+            style={{ background: "none", border: `1px solid ${scrolled ? "#e0e0e0" : heroNavBorder}`,
+              color: scrolled ? "#555" : heroNavText, padding: "7px 11px", cursor: "pointer", fontSize: 18 }}>
             {menuOpen ? "×" : "☰"}
           </button>
         </div>
@@ -691,9 +703,13 @@ export default function AutoMotor() {
         display: "flex", alignItems: "flex-end", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0,
           backgroundImage: `url(${heroBgUrl})`,
-          backgroundSize: "cover", backgroundPosition: "center 40%" }}>
-          <div style={{ position: "absolute", inset: 0,
-            background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 100%)" }} />
+          backgroundSize: "cover", backgroundPosition: `${heroPosX}% ${heroPosY}%` }}>
+          {heroOverlayType !== "none" && (
+            <div style={{ position: "absolute", inset: 0,
+              background: heroIsLight
+                ? `rgba(255,255,255,${heroOverlayOp})`
+                : `linear-gradient(to top, rgba(0,0,0,${heroOverlayOp}) 0%, rgba(0,0,0,${+(heroOverlayOp * 0.4).toFixed(2)}) 40%, rgba(0,0,0,${+(heroOverlayOp * 0.1).toFixed(2)}) 100%)` }} />
+          )}
         </div>
         <EditableImageButton field="heroBackground" label="Imagen de fondo del hero" />
         <div style={{ position: "relative", zIndex: 1, width: "100%",
@@ -703,12 +719,12 @@ export default function AutoMotor() {
             <EditableZone field="heroBadge" label="Badge hero">Concesionaria Oficial</EditableZone>
           </p>
           <h1 style={{ margin: "0 0 18px", fontSize: "clamp(40px,7vw,80px)",
-            fontWeight: 900, lineHeight: 0.92, color: "white", letterSpacing: -2,
+            fontWeight: 900, lineHeight: 0.92, color: heroTextColor, letterSpacing: -2,
             maxWidth: 720, textTransform: "uppercase" }}>
             <EditableZone field="heroHeading" label="Título principal">{"Tu próximo\nvehículo\nte espera."}</EditableZone>
           </h1>
           <p style={{ margin: "0 0 36px", fontSize: "clamp(14px,1.8vw,16px)",
-            color: "rgba(255,255,255,0.55)", maxWidth: 400, lineHeight: 1.85,
+            color: heroMidColor, maxWidth: 400, lineHeight: 1.85,
             fontWeight: 300, letterSpacing: 0.3 }}>
             <EditableZone field="heroSubtext" label="Subtítulo">Stock premium · Financiación disponible · Transferencia en regla.</EditableZone>
           </p>
@@ -723,8 +739,8 @@ export default function AutoMotor() {
               <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ display: "inline-flex", alignItems: "center", gap: 8,
-                  background: "transparent", color: "rgba(255,255,255,0.8)",
-                  textDecoration: "none", border: "1px solid rgba(255,255,255,0.25)",
+                  background: "transparent", color: heroMidColor,
+                  textDecoration: "none", border: `1px solid ${heroNavBorder}`,
                   padding: "15px 28px", fontWeight: 600, fontSize: 12,
                   letterSpacing: 1, textTransform: "uppercase" }}>
                 <WaIcon />
