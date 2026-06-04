@@ -57,17 +57,107 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 5 * 1024 * 1024;
 const MIN_BYTES = 10 * 1024; // 10KB mínimo para evitar imágenes en blanco
 
-function FileInput({ label, file, onChange, error, onError, capture }: {
+function CameraModal({ facingMode, label, onCapture, onClose }: {
+  facingMode: "user" | "environment";
+  label: string;
+  onCapture: (f: File) => void;
+  onClose: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [ready, setReady] = useState(false);
+  const [camError, setCamError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    navigator.mediaDevices.getUserMedia({ video: { facingMode } })
+      .then((stream) => {
+        if (!active) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().then(() => setReady(true));
+        }
+      })
+      .catch(() => setCamError("No se pudo acceder a la cámara. Verificá que hayas dado permiso."));
+    return () => {
+      active = false;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, [facingMode]);
+
+  function capture() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d")!.drawImage(video, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], `camara-${Date.now()}.jpg`, { type: "image/jpeg" });
+      onCapture(file);
+      onClose();
+    }, "image/jpeg", 0.92);
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/80 flex flex-col items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl overflow-hidden shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <p className="font-semibold text-gray-800 text-sm">{label}</p>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="relative bg-black aspect-video">
+          <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
+          {!ready && !camError && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 text-white animate-spin" />
+            </div>
+          )}
+          {camError && (
+            <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+              <p className="text-white text-sm">{camError}</p>
+            </div>
+          )}
+        </div>
+        <canvas ref={canvasRef} className="hidden" />
+        <div className="p-4 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={capture}
+            disabled={!ready}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            <Camera className="h-4 w-4" /> Capturar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FileInput({ label, file, onChange, error, onError, facingMode = "environment" }: {
   label: string;
   file: File | null;
   onChange: (f: File | null) => void;
   error?: string;
   onError?: (msg: string) => void;
-  capture?: "user" | "environment";
+  facingMode?: "user" | "environment";
 }) {
   const galleryRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
 
   useEffect(() => {
     if (!file) { setPreview(null); return; }
@@ -81,33 +171,32 @@ function FileInput({ label, file, onChange, error, onError, capture }: {
     if (!ALLOWED_TYPES.includes(f.type)) {
       onError?.("Solo se aceptan imágenes JPG, PNG o WEBP.");
       if (galleryRef.current) galleryRef.current.value = "";
-      if (cameraRef.current) cameraRef.current.value = "";
       return;
     }
     if (f.size > MAX_BYTES) {
       onError?.("La imagen no puede pesar más de 5MB.");
       if (galleryRef.current) galleryRef.current.value = "";
-      if (cameraRef.current) cameraRef.current.value = "";
       return;
     }
     if (f.size < MIN_BYTES) {
       onError?.("La imagen parece estar vacía o corrupta (menos de 10KB).");
       if (galleryRef.current) galleryRef.current.value = "";
-      if (cameraRef.current) cameraRef.current.value = "";
       return;
     }
     onError?.("");
     onChange(f);
   }
 
-  function clearFile() {
-    handleFile(null);
-    if (galleryRef.current) galleryRef.current.value = "";
-    if (cameraRef.current) cameraRef.current.value = "";
-  }
-
   return (
     <div>
+      {showCamera && (
+        <CameraModal
+          facingMode={facingMode}
+          label={label}
+          onCapture={(f) => { onError?.(""); onChange(f); }}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
       <p className="text-xs font-medium text-gray-600 mb-1">{label}</p>
       <div className={`border-2 border-dashed rounded-xl overflow-hidden transition-colors ${
         error ? "border-red-300 bg-red-50" : file ? "border-indigo-300 bg-indigo-50" : "border-gray-200"
@@ -117,7 +206,7 @@ function FileInput({ label, file, onChange, error, onError, capture }: {
             <img src={preview} alt={label} className="w-full h-28 object-cover" />
             <button
               type="button"
-              onClick={clearFile}
+              onClick={() => handleFile(null)}
               className="absolute top-1.5 right-1.5 bg-white/90 hover:bg-red-50 text-gray-500 hover:text-red-500 rounded-full p-1 shadow transition-colors"
             >
               <X className="h-3.5 w-3.5" />
@@ -139,9 +228,9 @@ function FileInput({ label, file, onChange, error, onError, capture }: {
             </button>
             <button
               type="button"
-              onClick={() => cameraRef.current?.click()}
-              title="Sacar foto con la cámara"
-              className="sm:hidden px-3 border-l border-dashed border-gray-200 hover:bg-indigo-50/50 text-gray-400 hover:text-indigo-600 transition-colors"
+              onClick={() => setShowCamera(true)}
+              title="Usar cámara"
+              className="px-3 border-l border-dashed border-gray-200 hover:bg-indigo-50/50 text-gray-400 hover:text-indigo-600 transition-colors"
             >
               <Camera className="h-4 w-4" />
             </button>
@@ -149,20 +238,10 @@ function FileInput({ label, file, onChange, error, onError, capture }: {
         )}
       </div>
       {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
-      {/* Input galería (sin capture) */}
       <input
         ref={galleryRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-      />
-      {/* Input cámara (con capture) */}
-      <input
-        ref={cameraRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        capture={capture ?? "environment"}
         className="hidden"
         onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
       />
@@ -447,9 +526,9 @@ export default function PerfilPage() {
                     <p className="text-sm text-gray-500">Subí una foto de tu DNI (frente y dorso) y una selfie sosteniéndolo. Solo lo ve el equipo de TiendaApps.</p>
                   )}
 
-                  <FileInput label="DNI — frente" file={dniFront} onChange={setDniFront} error={fileErrors.dniFront} onError={(m) => setFileError("dniFront", m)} />
-                  <FileInput label="DNI — dorso" file={dniBack} onChange={setDniBack} error={fileErrors.dniBack} onError={(m) => setFileError("dniBack", m)} />
-                  <FileInput label="Selfie sosteniendo el DNI" file={selfie} onChange={setSelfie} error={fileErrors.selfie} onError={(m) => setFileError("selfie", m)} capture="user" />
+                  <FileInput label="DNI — frente" file={dniFront} onChange={setDniFront} error={fileErrors.dniFront} onError={(m) => setFileError("dniFront", m)} facingMode="environment" />
+                  <FileInput label="DNI — dorso" file={dniBack} onChange={setDniBack} error={fileErrors.dniBack} onError={(m) => setFileError("dniBack", m)} facingMode="environment" />
+                  <FileInput label="Selfie sosteniendo el DNI" file={selfie} onChange={setSelfie} error={fileErrors.selfie} onError={(m) => setFileError("selfie", m)} facingMode="user" />
 
                   {submitError && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5 text-center">{submitError}</p>}
                   {submitted && <p className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl px-4 py-2.5 text-center">¡Solicitud enviada! Te avisamos cuando esté aprobada.</p>}
