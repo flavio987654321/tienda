@@ -7,6 +7,7 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
+import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 
 const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
@@ -95,6 +96,7 @@ export default function BohoTerra() {
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [announcementIdx,     setAnnouncementIdx]     = useState(0);
   const [openPolicyField,     setOpenPolicyField]     = useState<string | null>(null);
+  const [showReport,          setShowReport]          = useState(false);
   const [isMobile,            setIsMobile]            = useState(false);
   const [reelIndex,           setReelIndex]           = useState(0);
   const [mobileMenuOpen,      setMobileMenuOpen]      = useState(false);
@@ -795,9 +797,19 @@ export default function BohoTerra() {
               )
             ))}
           </div>
-          <p style={{ fontSize:11, color:footerMid, margin:0, opacity:0.6 }}>
-            <EditableZone field="footerCopyright" label="Copyright">© 2025 Terra · Moda consciente · Mendoza, Argentina</EditableZone>
-          </p>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:"8px 16px", alignItems:"center" }}>
+            <p style={{ fontSize:11, color:footerMid, margin:0, opacity:0.6 }}>
+              <EditableZone field="footerCopyright" label="Copyright">© 2025 Terra · Moda consciente · Mendoza, Argentina</EditableZone>
+            </p>
+            {!editMode && (
+              <button onClick={() => setShowReport(true)}
+                style={{ fontSize:11, color:footerMid, opacity:0.5, background:"none", border:"none", cursor:"pointer", padding:0 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.5"; }}>
+                Reportar tienda
+              </button>
+            )}
+          </div>
 
         </div>
         </div>
@@ -805,6 +817,10 @@ export default function BohoTerra() {
 
       {openPolicyField && (
         <PolicyEditorModal field={openPolicyField} onClose={() => setOpenPolicyField(null)} />
+      )}
+
+      {showReport && (
+        <ReportStoreModal slug={storeConfig?.slug ?? ""} onClose={() => setShowReport(false)} />
       )}
 
       {/* ── MODAL PRODUCTO */}

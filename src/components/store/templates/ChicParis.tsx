@@ -7,6 +7,7 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
+import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 
 type Product = StorefrontProduct;
@@ -71,6 +72,7 @@ export default function ChicParis() {
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
+  const [showReport,     setShowReport]     = useState(false);
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
@@ -923,9 +925,19 @@ export default function ChicParis() {
                 )
               ))}
             </div>
-            <p style={{ margin: 0, fontSize: 11, color: footerText, opacity: 0.4 }}>
-              <EditableZone field="footerCopyright" label="Copyright">© 2025 Chic Paris. Todos los derechos reservados.</EditableZone>
-            </p>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:"8px 20px", alignItems:"center" }}>
+              <p style={{ margin: 0, fontSize: 11, color: footerText, opacity: 0.4 }}>
+                <EditableZone field="footerCopyright" label="Copyright">© 2025 Chic Paris. Todos los derechos reservados.</EditableZone>
+              </p>
+              {!editMode && (
+                <button onClick={() => setShowReport(true)}
+                  style={{ fontSize:11, color:footerText, opacity:0.4, background:"none", border:"none", cursor:"pointer", padding:0 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.8"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.4"; }}>
+                  Reportar tienda
+                </button>
+              )}
+            </div>
           </div>
 
         </div>
@@ -933,6 +945,10 @@ export default function ChicParis() {
 
       {openPolicyField && (
         <PolicyEditorModal field={openPolicyField} onClose={() => setOpenPolicyField(null)} />
+      )}
+
+      {showReport && (
+        <ReportStoreModal slug={storeConfig?.slug ?? ""} onClose={() => setShowReport(false)} />
       )}
 
       {/* ── SEARCH OVERLAY ── */}

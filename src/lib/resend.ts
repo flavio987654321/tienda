@@ -167,6 +167,52 @@ export async function sendVerificationNewRequestAdminEmail({
   });
 }
 
+export async function sendStoreReportAdminEmail({
+  storeName,
+  storeSlug,
+  reason,
+  description,
+  reporterEmail,
+}: {
+  storeName: string;
+  storeSlug: string;
+  reason: string;
+  description?: string;
+  reporterEmail?: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to: "marketplacemitienda@gmail.com",
+    subject: `Nueva denuncia recibida — ${storeName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#dc2626;border-radius:16px;padding:28px 24px;margin-bottom:24px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.7);font-size:13px;margin:0 0 4px;font-weight:500;">TiendaApps Admin</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:800;">⚠️ Nueva denuncia recibida</h1>
+        </div>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:20px;margin-bottom:20px;">
+          <p style="font-size:13px;color:#991b1b;margin:0 0 4px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Tienda denunciada</p>
+          <p style="font-size:16px;font-weight:700;color:#111827;margin:0 0 4px;">${storeName}</p>
+          <p style="font-size:13px;color:#6b7280;margin:0;">tiendaapps.com/tienda/${storeSlug}</p>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px;">
+          <p style="font-size:13px;color:#374151;margin:0 0 6px;font-weight:600;">Motivo: <span style="color:#dc2626;">${reason}</span></p>
+          ${description ? `<p style="font-size:14px;color:#374151;margin:8px 0 0;">${description}</p>` : ""}
+          ${reporterEmail ? `<p style="font-size:13px;color:#6b7280;margin:10px 0 0;">Reportado por: ${reporterEmail}</p>` : ""}
+        </div>
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${APP_URL}/admin/denuncias"
+             style="display:inline-block;background:#dc2626;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            Ver en el panel
+          </a>
+        </div>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">Panel admin · TiendaApps</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendSubscriptionConfirmationEmail({
   to,
   userName,

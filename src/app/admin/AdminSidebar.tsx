@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck, Wallet, BadgeCheck,
+  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck, Wallet, BadgeCheck, Flag,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -15,11 +15,12 @@ const NAV = [
   { href: "/admin/usuarios", label: "Usuarios", icon: Users },
   { href: "/admin/tiendas", label: "Tiendas", icon: Store },
   { href: "/admin/verificaciones", label: "Verificaciones", icon: BadgeCheck },
+  { href: "/admin/denuncias", label: "Denuncias", icon: Flag },
   { href: "/admin/retiros", label: "Retiros", icon: Wallet },
   { href: "/admin/auditoria", label: "Auditoría", icon: ShieldCheck },
 ];
 
-function NavLinks({ pathname, pendingVerif, onNavigate }: { pathname: string; pendingVerif: number; onNavigate?: () => void }) {
+function NavLinks({ pathname, pendingVerif, pendingReports, onNavigate }: { pathname: string; pendingVerif: number; pendingReports: number; onNavigate?: () => void }) {
   function isActive(href: string, exact?: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
   }
@@ -41,6 +42,11 @@ function NavLinks({ pathname, pendingVerif, onNavigate }: { pathname: string; pe
           {href === "/admin/verificaciones" && pendingVerif > 0 && (
             <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
               {pendingVerif > 99 ? "99+" : pendingVerif}
+            </span>
+          )}
+          {href === "/admin/denuncias" && pendingReports > 0 && (
+            <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
+              {pendingReports > 99 ? "99+" : pendingReports}
             </span>
           )}
         </Link>
@@ -76,17 +82,22 @@ function UserFooter({ user, onSignOut }: { user: { name: string | null; email: s
 export default function AdminSidebar({ user }: { user: { name: string | null; email: string } }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pendingVerif, setPendingVerif] = useState(0);
+  const [pendingReports, setPendingReports] = useState(0);
   const pathname = usePathname();
   const { signOut } = useAuth();
 
   useEffect(() => {
-    function fetchCount() {
+    function fetchCounts() {
       fetch("/api/admin/verificacion?count=1")
         .then((r) => r.json())
         .then((d) => { if (typeof d.count === "number") setPendingVerif(d.count); })
         .catch(() => {});
+      fetch("/api/admin/denuncias?count=1")
+        .then((r) => r.json())
+        .then((d) => { if (typeof d.count === "number") setPendingReports(d.count); })
+        .catch(() => {});
     }
-    fetchCount();
+    fetchCounts();
 
     const supabase = createSupabaseBrowserClient();
     const channel = supabase
@@ -94,7 +105,12 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
       .on(
         "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
         { event: "*", schema: "public", table: "VerificationRequest" },
-        () => fetchCount()
+        () => fetchCounts()
+      )
+      .on(
+        "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
+        { event: "*", schema: "public", table: "StoreReport" },
+        () => fetchCounts()
       )
       .subscribe();
 
@@ -117,7 +133,7 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
             </div>
           </div>
         </div>
-        <NavLinks pathname={pathname} pendingVerif={pathname.startsWith("/admin/verificaciones") ? 0 : pendingVerif} />
+        <NavLinks pathname={pathname} pendingVerif={pathname.startsWith("/admin/verificaciones") ? 0 : pendingVerif} pendingReports={pathname.startsWith("/admin/denuncias") ? 0 : pendingReports} />
         <UserFooter user={user} onSignOut={() => signOut("/")} />
       </aside>
 
@@ -163,7 +179,7 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <NavLinks pathname={pathname} pendingVerif={pathname.startsWith("/admin/verificaciones") ? 0 : pendingVerif} onNavigate={() => setMobileOpen(false)} />
+            <NavLinks pathname={pathname} pendingVerif={pathname.startsWith("/admin/verificaciones") ? 0 : pendingVerif} pendingReports={pathname.startsWith("/admin/denuncias") ? 0 : pendingReports} onNavigate={() => setMobileOpen(false)} />
             <UserFooter user={user} onSignOut={() => { setMobileOpen(false); signOut("/"); }} />
           </aside>
         </div>

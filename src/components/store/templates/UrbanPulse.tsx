@@ -7,6 +7,7 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
+import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 
 type Product = StorefrontProduct;
@@ -74,6 +75,7 @@ export default function UrbanPulse() {
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
+  const [showReport,     setShowReport]     = useState(false);
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
@@ -915,9 +917,17 @@ export default function UrbanPulse() {
                 )
               ))}
             </div>
-            <div style={{ display:"flex", gap:24, alignItems:"center" }}>
+            <div style={{ display:"flex", gap:24, alignItems:"center", flexWrap:"wrap" }}>
               <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerCopyright" label="Copyright">© 2025 UrbanPulse. Todos los derechos reservados.</EditableZone></p>
               <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerMadeIn" label="Hecho en">Hecho en Argentina</EditableZone></p>
+              {!editMode && (
+                <button onClick={() => setShowReport(true)}
+                  style={{ fontSize:12, color:footerUpMid, opacity:0.5, background:"none", border:"none", cursor:"pointer", padding:0 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.5"; }}>
+                  Reportar tienda
+                </button>
+              )}
             </div>
 
           </div>
@@ -927,6 +937,10 @@ export default function UrbanPulse() {
 
       {openPolicyField && (
         <PolicyEditorModal field={openPolicyField} onClose={() => setOpenPolicyField(null)} />
+      )}
+
+      {showReport && (
+        <ReportStoreModal slug={storeConfig?.slug ?? ""} onClose={() => setShowReport(false)} />
       )}
 
       {/* WHATSAPP */}

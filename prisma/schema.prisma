@@ -190,6 +190,7 @@ model Store {
   leads               Lead[]
   publicReviews       PublicReview[]
   verificationRequest VerificationRequest?
+  storeReports        StoreReport[]
 }
 
 model VerificationRequest {
@@ -647,4 +648,19 @@ model Lead {
 
   @@index([storeId, createdAt(sort: Desc)])
   @@index([affiliateId])
+}
+
+model StoreReport {
+  id           String   @id @default(cuid())
+  storeId      String
+  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  reporterEmail String?
+  reason       String
+  description  String?
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([storeId])
+  @@index([status, createdAt(sort: Desc)])
 }

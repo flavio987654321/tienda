@@ -5,6 +5,7 @@ import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, get
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
+import ReportStoreModal from "@/components/store/ReportStoreModal";
 
 function fmtPrice(n: number, currency: string) {
   return (currency === "USD" ? "USD " : "$") + n.toLocaleString("es-AR");
@@ -578,6 +579,7 @@ export default function AutoMotor() {
   const [selected, setSelected]       = useState<StorefrontProduct | null>(null);
   const [activeCategory, setActiveCategory] = useState("Todos");
   const [scrolled, setScrolled]       = useState(false);
+  const [showReport, setShowReport]   = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -1061,13 +1063,39 @@ export default function AutoMotor() {
             color: accent, letterSpacing: 5, textTransform: "uppercase" }}>
             {storeName}
           </p>
-          <p style={{ margin: 0, fontSize: 11, color: ftMid, letterSpacing: 0.5 }}>
+          <p style={{ margin: "0 0 12px", fontSize: 11, color: ftMid, letterSpacing: 0.5 }}>
             <EditableZone field="footerCopyright" label="Copyright">
               {`© ${new Date().getFullYear()} ${storeName}. Todos los derechos reservados.`}
             </EditableZone>
           </p>
+          <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px", marginBottom: 8 }}>
+            {[
+              { label: "Política de devoluciones", tipo: "devoluciones" },
+              { label: "Política de envíos",       tipo: "envios" },
+              { label: "Términos y condiciones",   tipo: "terminos" },
+            ].map(({ label, tipo }) => (
+              <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`}
+                style={{ fontSize:10, color:ftMid, opacity:0.5, textDecoration:"none", letterSpacing:0.5 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.5"; }}>
+                {label}
+              </a>
+            ))}
+            {!editMode && (
+              <button onClick={() => setShowReport(true)}
+                style={{ fontSize:10, color:ftMid, opacity:0.5, background:"none", border:"none", cursor:"pointer", padding:0, letterSpacing:0.5 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.5"; }}>
+                Reportar tienda
+              </button>
+            )}
+          </div>
         </div>
       </footer>
+
+      {showReport && (
+        <ReportStoreModal slug={config?.slug ?? ""} onClose={() => setShowReport(false)} />
+      )}
 
       {selected && (
         <VehicleModal product={selected} accent={accent} currency={currency}
