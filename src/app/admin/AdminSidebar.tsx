@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -18,7 +18,7 @@ const NAV = [
   { href: "/admin/auditoria", label: "Auditoría", icon: ShieldCheck },
 ];
 
-function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function NavLinks({ pathname, pendingVerif, onNavigate }: { pathname: string; pendingVerif: number; onNavigate?: () => void }) {
   function isActive(href: string, exact?: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
   }
@@ -36,7 +36,12 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
           }`}
         >
           <Icon className="h-5 w-5 flex-shrink-0" />
-          {label}
+          <span className="flex-1">{label}</span>
+          {href === "/admin/verificaciones" && pendingVerif > 0 && (
+            <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
+              {pendingVerif > 99 ? "99+" : pendingVerif}
+            </span>
+          )}
         </Link>
       ))}
     </nav>
@@ -69,8 +74,21 @@ function UserFooter({ user, onSignOut }: { user: { name: string | null; email: s
 
 export default function AdminSidebar({ user }: { user: { name: string | null; email: string } }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [pendingVerif, setPendingVerif] = useState(0);
   const pathname = usePathname();
   const { signOut } = useAuth();
+
+  useEffect(() => {
+    function fetchCount() {
+      fetch("/api/admin/verificacion?count=1")
+        .then((r) => r.json())
+        .then((d) => { if (typeof d.count === "number") setPendingVerif(d.count); })
+        .catch(() => {});
+    }
+    fetchCount();
+    const interval = setInterval(fetchCount, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <>
@@ -88,7 +106,7 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
             </div>
           </div>
         </div>
-        <NavLinks pathname={pathname} />
+        <NavLinks pathname={pathname} pendingVerif={pathname.startsWith("/admin/verificaciones") ? 0 : pendingVerif} />
         <UserFooter user={user} onSignOut={() => signOut("/")} />
       </aside>
 
@@ -134,7 +152,7 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <NavLinks pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+            <NavLinks pathname={pathname} pendingVerif={pathname.startsWith("/admin/verificaciones") ? 0 : pendingVerif} onNavigate={() => setMobileOpen(false)} />
             <UserFooter user={user} onSignOut={() => { setMobileOpen(false); signOut("/"); }} />
           </aside>
         </div>

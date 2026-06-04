@@ -12,6 +12,11 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") ?? "PENDING";
 
+  if (searchParams.get("count") === "1") {
+    const count = await prisma.verificationRequest.count({ where: { status: "PENDING" } });
+    return NextResponse.json({ count });
+  }
+
   const requests = await prisma.verificationRequest.findMany({
     where: status === "ALL" ? {} : { status },
     orderBy: { createdAt: "asc" },
