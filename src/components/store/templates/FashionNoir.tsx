@@ -457,8 +457,11 @@ export default function FashionNoir() {
       {/* ── NAVBAR ─────────────────────────────────────────── */}
       <nav style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex:100, transition:"background 0.4s, top 0.3s", background: (isPreview || scrolled) ? "rgba(10,10,10,0.97)" : "transparent", backdropFilter: (isPreview || scrolled) ? "blur(12px)" : "none", borderBottom: (isPreview || scrolled) ? `1px solid rgba(201,168,76,0.15)` : "none" }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 32px", height:72, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <button onClick={() => scrollTo("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:26, fontWeight:700, letterSpacing:6, color:G, maxWidth:240, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
-            <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "NOIR"}</EditableZone>
+          <button onClick={() => scrollTo("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:26, fontWeight:700, letterSpacing:6, color:G, display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+            <span style={{ maxWidth:220, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+              <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "NOIR"}</EditableZone>
+            </span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={storeConfig?.isVerified ? (storeConfig?.colors?.accent ?? "#c9a84c") : "#4b5563"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" title={storeConfig?.isVerified ? "Tienda verificada" : "Sin verificar"}><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="m9 12 2 2 4-4"/></svg>
           </button>
           {!isMobile && <div style={{ display:"flex", gap:28, alignItems:"center" }}>
             {/* CATEGORÍAS dropdown */}

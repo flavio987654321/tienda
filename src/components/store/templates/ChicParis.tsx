@@ -431,10 +431,11 @@ export default function ChicParis() {
           </nav>}
 
           {/* Logo center */}
-          <a onClick={() => scrollTo("hero")} style={{ cursor: "pointer", textDecoration: "none" }}>
+          <a onClick={() => scrollTo("hero")} style={{ cursor: "pointer", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: 4, textTransform: "uppercase", color: (isPreview || scrolled) ? "#111" : "#fff", transition: "color 0.3s" }}>
               <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "CHIC PARIS"}</EditableZone>
             </span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={storeConfig?.isVerified ? (storeConfig?.colors?.accent ?? "#c0392b") : "#d1d5db"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" title={storeConfig?.isVerified ? "Tienda verificada" : "Sin verificar"}><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="m9 12 2 2 4-4"/></svg>
           </a>
 
           {/* Nav right */}

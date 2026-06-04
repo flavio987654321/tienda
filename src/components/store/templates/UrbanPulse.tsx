@@ -371,10 +371,13 @@ export default function UrbanPulse() {
 
       {/* NAVBAR */}
       <nav style={{ position:"sticky", top:0, zIndex:100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"all 0.3s", padding:"0 20px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <div style={{ fontWeight:900, fontSize:18, letterSpacing:4, textTransform:"uppercase", maxWidth:220, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flexShrink:0 }}>
-          <EditableZone field="storeName" label="Nombre de la tienda">
-            {storeConfig?.storeName ?? <span>URBAN<span style={{ background:DARK, color:ACC, padding:"3px 7px", marginLeft:2 }}>PULSE</span></span>}
-          </EditableZone>
+        <div style={{ display:"flex", alignItems:"center", gap:6, fontWeight:900, fontSize:18, letterSpacing:4, textTransform:"uppercase", flexShrink:0 }}>
+          <span style={{ maxWidth:200, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+            <EditableZone field="storeName" label="Nombre de la tienda">
+              {storeConfig?.storeName ?? <span>URBAN<span style={{ background:DARK, color:ACC, padding:"3px 7px", marginLeft:2 }}>PULSE</span></span>}
+            </EditableZone>
+          </span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={storeConfig?.isVerified ? (storeConfig?.colors?.accent ?? "#d4ff00") : "#4b5563"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" title={storeConfig?.isVerified ? "Tienda verificada" : "Sin verificar"}><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="m9 12 2 2 4-4"/></svg>
         </div>
         {!isMobile && <div style={{ display:"flex", gap:28, alignItems:"center" }}>
           {/* CATEGORÍAS dropdown */}

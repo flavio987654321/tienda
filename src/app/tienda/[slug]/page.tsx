@@ -7,7 +7,6 @@ import type { StoreConfig } from "@/types/store-config";
 import { DEFAULT_CONFIG } from "@/types/store-config";
 import ComingSoonPage from "./ComingSoonPage";
 import OwnerPreviewBadge from "./OwnerPreviewBadge";
-import VerifiedBadge from "@/components/store/VerifiedBadge";
 import { getCurrentUser } from "@/lib/auth-session";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +119,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
       tipoTienda: store.tipoTienda ?? "GENERAL",
       tieneVentaMayorista: store.tieneVentaMayorista ?? false,
       isOwner,
+      isVerified: store.isVerified,
       // Solo mostrar el flyer si el dueño tiene Premium
       flyerConfig: ownerIsPremium ? parsed.flyerConfig : undefined,
     };
@@ -134,22 +134,6 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
   return (
     <>
       <StorefrontTemplateRenderer config={config} />
-      {store.isVerified && (
-        <div className="fixed bottom-4 left-4 z-50">
-          <VerifiedBadge
-            info={{
-              showName: store.verifiedShowName,
-              name: store.owner?.name ?? null,
-              showCity: store.verifiedShowCity,
-              city: store.owner?.city ?? null,
-              showPhone: store.verifiedShowPhone,
-              phone: store.owner?.phone ?? null,
-              showSince: store.verifiedShowSince,
-              memberSince,
-            }}
-          />
-        </div>
-      )}
       {!store.isPublished && isOwner && (
         <OwnerPreviewBadge
           name={store.name}
