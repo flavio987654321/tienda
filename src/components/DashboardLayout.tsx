@@ -205,19 +205,17 @@ export default function DashboardLayout({
           {/* Info de usuario — icono siempre visible, texto solo expandido */}
           <Link
             href="/dashboard/perfil"
-            title="Mi perfil"
+            title={isVerified ? "Perfil — Verificado" : "Perfil — Sin verificar"}
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
           >
             <div className="relative shrink-0">
               <UserCircle className="h-4 w-4" />
-              {isVerified && (
-                <BadgeCheck className="absolute -bottom-1 -right-1 h-3 w-3 text-blue-500 bg-white rounded-full" />
-              )}
+              <BadgeCheck className={`absolute -bottom-1 -right-1 h-3 w-3 bg-white rounded-full ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
             </div>
             <div className="flex-1 max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
               <div className="flex items-center gap-1">
                 <p className="text-xs font-medium text-gray-700 truncate whitespace-nowrap">{userName}</p>
-                {isVerified && <BadgeCheck className="h-3 w-3 text-blue-500 shrink-0" />}
+                <BadgeCheck className={`h-3 w-3 shrink-0 ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
               </div>
               <p className="text-xs text-gray-400 truncate whitespace-nowrap">{userEmail}</p>
             </div>

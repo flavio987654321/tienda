@@ -88,6 +88,17 @@ export async function POST(req: Request) {
       });
     }
 
+    // Notificar al dueño que la solicitud fue recibida
+    await prisma.notification.create({
+      data: {
+        userId: user.id,
+        type: "VERIFICACION_ENVIADA",
+        title: "Solicitud de verificación recibida",
+        body: "Recibimos tus documentos. Los revisaremos en las próximas 24 a 48hs y te avisamos el resultado.",
+        link: "/dashboard/perfil",
+      },
+    });
+
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     console.error("VERIFICACION ERROR:", e?.message);

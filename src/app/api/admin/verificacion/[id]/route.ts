@@ -30,6 +30,11 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Esta solicitud ya fue procesada" }, { status: 400 });
   }
 
+  const store = await prisma.store.findUnique({
+    where: { id: request.storeId },
+    select: { ownerId: true },
+  });
+
   if (action === "APPROVE") {
     await prisma.$transaction([
       prisma.verificationRequest.update({
@@ -40,12 +45,32 @@ export async function POST(req: NextRequest, { params }: Params) {
         where: { id: request.storeId },
         data: { isVerified: true },
       }),
+      ...(store ? [prisma.notification.create({
+        data: {
+          userId: store.ownerId,
+          type: "VERIFICACION_APROBADA",
+          title: "¡Tu identidad fue verificada!",
+          body: "Tu tienda ahora muestra el badge azul de verificación. Activá los datos que querés mostrar al público desde Perfil.",
+          link: "/dashboard/perfil",
+        },
+      })] : []),
     ]);
   } else {
-    await prisma.verificationRequest.update({
-      where: { id },
-      data: { status: "REJECTED", reviewedAt: new Date(), reviewNote: note.trim() },
-    });
+    await prisma.$transaction([
+      prisma.verificationRequest.update({
+        where: { id },
+        data: { status: "REJECTED", reviewedAt: new Date(), reviewNote: note.trim() },
+      }),
+      ...(store ? [prisma.notification.create({
+        data: {
+          userId: store.ownerId,
+          type: "VERIFICACION_RECHAZADA",
+          title: "Solicitud de verificación rechazada",
+          body: note.trim(),
+          link: "/dashboard/perfil",
+        },
+      })] : []),
+    ]);
   }
 
   return NextResponse.json({ ok: true });

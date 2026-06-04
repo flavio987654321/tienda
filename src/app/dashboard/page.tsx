@@ -8,7 +8,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   ShoppingBag, Package, Users, TrendingUp,
-  Plus, Store, ArrowRight, Share2, Star
+  Plus, Store, ArrowRight, Share2, Star, BadgeCheck
 } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -21,6 +21,7 @@ export default async function DashboardPage() {
     where: { ownerId: userId },
     include: {
       _count: { select: { products: true, orders: true, affiliates: true } },
+      verificationRequest: { select: { status: true } },
     },
   });
 
@@ -79,7 +80,14 @@ export default async function DashboardPage() {
           <h1 className="text-2xl font-bold text-gray-900">
             Bienvenida, {user.name?.split(" ")[0]} 👋
           </h1>
-          <p className="text-gray-500 mt-1">Resumen de tu tienda <strong>{store?.name}</strong></p>
+          <p className="text-gray-500 mt-1 flex items-center gap-1.5 flex-wrap">
+            Resumen de tu tienda <strong>{store?.name}</strong>
+            {store && (
+              <span title={store.isVerified ? "Identidad verificada" : store.verificationRequest?.status === "PENDING" ? "Verificación en revisión" : "Sin verificar — ir a Perfil"}>
+                <BadgeCheck className={`h-4 w-4 inline ${store.isVerified ? "text-blue-500" : store.verificationRequest?.status === "PENDING" ? "text-yellow-400" : "text-gray-300"}`} />
+              </span>
+            )}
+          </p>
         </div>
 
         {store && (

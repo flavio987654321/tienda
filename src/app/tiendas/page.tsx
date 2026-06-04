@@ -169,6 +169,14 @@ export default function TiendasPage() {
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                  {store.isVerified && (
+                    <div className="absolute top-2.5 right-2.5">
+                      <div className="flex items-center gap-1 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-md">
+                        <BadgeCheck className="h-3 w-3" />
+                        Verificado
+                      </div>
+                    </div>
+                  )}
                   {store.categories[0] && (
                     <div className="absolute bottom-3 left-3">
                       <span className="bg-white/20 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full border border-white/20 capitalize">
@@ -181,9 +189,6 @@ export default function TiendasPage() {
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <h3 className="font-bold text-gray-900 text-sm truncate">{store.name}</h3>
-                      {store.isVerified && (
-                        <span title="Tienda verificada"><BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" /></span>
-                      )}
                     </div>
                     <div className="w-2.5 h-2.5 rounded-full shrink-0 ml-2" style={{ backgroundColor: store.primaryColor }} />
                   </div>
