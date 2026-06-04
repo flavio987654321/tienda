@@ -118,7 +118,8 @@ function ProductosPageInner() {
   const [accentOverride, setAccentOverride] = useState<string | null>(null);
   const [isOwner,    setIsOwner]    = useState(false);
 
-  const storeIdRef = useRef<string | null>(null);
+  const storeIdRef  = useRef<string | null>(null);
+  const dbNameRef   = useRef<string>("Tienda");
 
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews,          setReviews]          = useState<PReview[]>([]);
@@ -189,6 +190,7 @@ function ProductosPageInner() {
       .then(data => {
         if (!data?.store) { setError("Tienda no encontrada"); return; }
         storeIdRef.current = data.store.id ?? null;
+        dbNameRef.current  = data.store.name ?? "Tienda";
         setIsOwner(data.isOwner ?? false);
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
@@ -204,10 +206,10 @@ function ProductosPageInner() {
   }, [slug]);
 
   useEffect(() => {
-    if (storeName && storeName !== "Tienda") {
-      document.title = `${storeName} — Catálogo completo`;
+    if (!loading && dbNameRef.current !== "Tienda") {
+      document.title = `${dbNameRef.current} — Catálogo completo`;
     }
-  }, [storeName]);
+  }, [loading]);
 
   // ── Filtros y ordenamiento ──────────────────────────────────────────────────
   const [search,            setSearch]            = useState("");
