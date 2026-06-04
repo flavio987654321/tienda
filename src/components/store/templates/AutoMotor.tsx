@@ -639,7 +639,7 @@ export default function AutoMotor() {
             color: scrolled ? "#111" : "white", textTransform: "uppercase",
             transition: "color 0.35s" }}>
             <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={config?.isVerified ? accent : "#6b7280"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" title={config?.isVerified ? "Tienda verificada" : "Sin verificar"}><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={config?.isVerified ? accent : "#6b7280"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="m9 12 2 2 4-4"/></svg>
           </div>
           <div className="am-nav-links" style={{ display: "flex", gap: 36, alignItems: "center" }}>
             {[["Catálogo", "catálogo"], ["Servicios", "servicios"], ["Nosotros", "nosotros"], ["Contacto", "contacto"]].map(([label, id]) => (
