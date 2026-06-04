@@ -182,7 +182,7 @@ export default function TiendasPage() {
                     <div className="flex items-center gap-1.5 min-w-0">
                       <h3 className="font-bold text-gray-900 text-sm truncate">{store.name}</h3>
                       {store.isVerified && (
-                        <BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" title="Tienda verificada" />
+                        <span title="Tienda verificada"><BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" /></span>
                       )}
                     </div>
                     <div className="w-2.5 h-2.5 rounded-full shrink-0 ml-2" style={{ backgroundColor: store.primaryColor }} />

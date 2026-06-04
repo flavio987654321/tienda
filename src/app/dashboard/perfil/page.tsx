@@ -204,7 +204,7 @@ export default function PerfilPage() {
           </div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-gray-900">{profile?.name || "Mi perfil"}</h1>
-            {isVerified && <BadgeCheck className="h-5 w-5 text-blue-500" title="Identidad verificada" />}
+            {isVerified && <span title="Identidad verificada"><BadgeCheck className="h-5 w-5 text-blue-500" /></span>}
           </div>
           <p className="text-gray-400 text-sm mt-0.5">{profile?.email}</p>
         </div>
