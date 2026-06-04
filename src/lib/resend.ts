@@ -134,6 +134,39 @@ export async function sendVerificationRejectedEmail({
   });
 }
 
+export async function sendVerificationNewRequestAdminEmail({
+  ownerName,
+  ownerEmail,
+}: {
+  ownerName: string;
+  ownerEmail: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to: "marketplacemitienda@gmail.com",
+    subject: `Nueva solicitud de verificación — ${ownerName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#f59e0b;border-radius:16px;padding:28px 24px;margin-bottom:24px;text-align:center;">
+          <p style="color:rgba(0,0,0,0.6);font-size:13px;margin:0 0 4px;font-weight:500;">TiendaApps Admin</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:800;">Nueva verificación pendiente</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:20px;">
+          <strong>${ownerName}</strong> (${ownerEmail}) envió una solicitud de verificación de identidad.
+        </p>
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${APP_URL}/admin/verificaciones"
+             style="display:inline-block;background:#f59e0b;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            Revisar ahora
+          </a>
+        </div>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">Panel admin · TiendaApps</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendSubscriptionConfirmationEmail({
   to,
   userName,
