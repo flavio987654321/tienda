@@ -71,7 +71,7 @@ function CameraModal({ facingMode, label, onCapture, onClose }: {
 
   useEffect(() => {
     let active = true;
-    navigator.mediaDevices.getUserMedia({ video: { facingMode } })
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode } } })
       .then((stream) => {
         if (!active) { stream.getTracks().forEach((t) => t.stop()); return; }
         streamRef.current = stream;
