@@ -120,6 +120,12 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
       tieneVentaMayorista: store.tieneVentaMayorista ?? false,
       isOwner,
       isVerified: store.isVerified,
+      verifiedInfo: {
+        showName: store.verifiedShowName, name: store.owner?.name ?? null,
+        showCity: store.verifiedShowCity, city: store.owner?.city ?? null,
+        showPhone: store.verifiedShowPhone, phone: store.owner?.phone ?? null,
+        showSince: store.verifiedShowSince, memberSince,
+      },
       // Solo mostrar el flyer si el dueño tiene Premium
       flyerConfig: ownerIsPremium ? parsed.flyerConfig : undefined,
     };

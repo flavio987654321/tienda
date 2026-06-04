@@ -64,6 +64,12 @@ export type StoreConfig = {
   previewFill?: boolean;
   isOwner?: boolean;
   isVerified?: boolean;
+  verifiedInfo?: {
+    showName: boolean; name: string | null;
+    showCity: boolean; city: string | null;
+    showPhone: boolean; phone: string | null;
+    showSince: boolean; memberSince: string | null;
+  };
   tipoTienda?: string;
   tieneVentaMayorista?: boolean;
   ocultarPreciosPublico?: boolean;
