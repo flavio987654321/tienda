@@ -36,13 +36,18 @@ export default function VerifiedIconButton({
     (info.showName && info.name) ||
     (info.showCity && info.city) ||
     (info.showPhone && info.phone) ||
-    info.showSince
+    (info.showSince && info.memberSince)
   );
 
   return (
-    <div ref={ref} style={{ position: "relative", display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
+    <div
+      ref={ref}
+      onClick={(e) => e.stopPropagation()}
+      style={{ position: "relative", display: "inline-flex", alignItems: "center", flexShrink: 0 }}
+    >
       <button
-        onClick={() => { if (isVerified) setOpen((v) => !v); }}
+        type="button"
+        onClick={(e) => { e.stopPropagation(); if (isVerified) setOpen((v) => !v); }}
         style={{
           background: "none",
           border: "none",
@@ -80,25 +85,30 @@ export default function VerifiedIconButton({
           background: "#fff",
           border: "1px solid #e5e7eb",
           borderRadius: 12,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.14)",
           padding: "14px 18px",
-          minWidth: 200,
-          zIndex: 200,
+          minWidth: 210,
+          zIndex: 9999,
           whiteSpace: "nowrap",
+          // reset herencia de estilos del template
+          fontFamily: "'Inter', system-ui, sans-serif",
+          textTransform: "none",
+          letterSpacing: "normal",
+          fontStyle: "normal",
+          fontWeight: "normal",
         }}>
           {/* flecha */}
           <div style={{
             position: "absolute",
             top: -7,
             left: "50%",
-            transform: "translateX(-50%)",
+            transform: "translateX(-50%) rotate(45deg)",
             width: 12,
             height: 12,
             background: "#fff",
             border: "1px solid #e5e7eb",
             borderBottom: "none",
             borderRight: "none",
-            rotate: "45deg",
           }} />
 
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: hasData ? 10 : 0 }}>
@@ -110,7 +120,7 @@ export default function VerifiedIconButton({
           </div>
 
           {hasData && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {info!.showName && info!.name && (
                 <Row icon="👤" text={info!.name} />
               )}
@@ -129,7 +139,7 @@ export default function VerifiedIconButton({
                 </a>
               )}
               {info!.showSince && info!.memberSince && (
-                <Row icon="📅" text={`Vendedor desde ${info!.memberSince}`} />
+                <Row icon="📅" text={`En TiendaApps desde ${info!.memberSince}`} />
               )}
             </div>
           )}
