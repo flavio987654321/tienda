@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
@@ -101,6 +101,7 @@ export default function BohoTerra() {
   const [reelIndex,           setReelIndex]           = useState(0);
   const [mobileMenuOpen,      setMobileMenuOpen]      = useState(false);
   const [mobileCatsOpen,      setMobileCatsOpen]      = useState(false);
+  const [mobileOpenCat,       setMobileOpenCat]       = useState<string | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -439,7 +440,7 @@ export default function BohoTerra() {
               {cartCount>0 && <span style={{ position:"absolute", top:-5, right:-5, background:A, color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
             </button>
             {isMobile && (
-              <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); }} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center", flexDirection:"column", gap:4 }}>
+              <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center", flexDirection:"column", gap:4 }}>
                 <span style={{ display:"block", width:22, height:2, background:T, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(4px, 4px)" : "none" }}/>
                 <span style={{ display:"block", width:22, height:2, background:T, transition:"all 0.3s", opacity: mobileMenuOpen ? 0 : 1 }}/>
                 <span style={{ display:"block", width:22, height:2, background:T, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(-45deg) translate(4px, -4px)" : "none" }}/>
@@ -459,12 +460,29 @@ export default function BohoTerra() {
                 Categorías
                 <span style={{ fontSize:10, opacity:0.55, transition:"transform 0.2s", transform: mobileCatsOpen ? "rotate(180deg)" : "none", display:"inline-block" }}>▾</span>
               </button>
-              {mobileCatsOpen && categoryList.map(cat => (
-                <button key={cat} onClick={() => { changeCategory(cat); scrollTo("coleccion"); setMobileMenuOpen(false); setMobileCatsOpen(false); }}
-                  style={{ display:"block", width:"100%", background:"rgba(44,34,24,0.03)", border:"none", borderBottom:`1px solid rgba(44,34,24,0.04)`, color:T, padding:"13px 24px 13px 40px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
-                  {cat}
-                </button>
-              ))}
+              {mobileCatsOpen && categoryList.map(cat => {
+                const subs = subcategoriesFor[cat] || [];
+                return (
+                  <Fragment key={cat}>
+                    <button onClick={() => {
+                      if (subs.length > 0) {
+                        setMobileOpenCat(prev => prev === cat ? null : cat);
+                      } else {
+                        changeCategory(cat); scrollTo("coleccion"); setMobileMenuOpen(false); setMobileCatsOpen(false);
+                      }
+                    }} style={{ display:"flex", width:"100%", background:"rgba(44,34,24,0.03)", border:"none", borderBottom:`1px solid rgba(44,34,24,0.04)`, color: activeCategory===cat ? A : T, padding:"13px 24px 13px 40px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
+                      {cat}
+                      {subs.length > 0 && <span style={{ fontSize:12, opacity:0.5, transition:"transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display:"inline-block" }}>›</span>}
+                    </button>
+                    {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
+                      <button key={sub} onClick={() => { changeCategory(cat); scrollTo("coleccion"); setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
+                        style={{ display:"block", width:"100%", background:"rgba(44,34,24,0.05)", border:"none", borderBottom:`1px solid rgba(44,34,24,0.03)`, color:MID, padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+                        {sub}
+                      </button>
+                    ))}
+                  </Fragment>
+                );
+              })}
             </>
           )}
           {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (

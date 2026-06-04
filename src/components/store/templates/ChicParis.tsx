@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
@@ -62,6 +62,8 @@ export default function ChicParis() {
   const [isMobile,        setIsMobile]        = useState(false);
   const [reelIndex,       setReelIndex]       = useState(0);
   const [mobileMenuOpen,  setMobileMenuOpen]  = useState(false);
+  const [mobileCatsOpen,  setMobileCatsOpen]  = useState(false);
+  const [mobileOpenCat,   setMobileOpenCat]   = useState<string | null>(null);
   const [heroSlide,       setHeroSlide]       = useState(0);
   const [heroPaused,      setHeroPaused]      = useState(false);
   const [openPolicyField, setOpenPolicyField] = useState<string | null>(null);
@@ -470,7 +472,7 @@ export default function ChicParis() {
               )}
             </button>
             {isMobile && (
-              <button onClick={() => setMobileMenuOpen(o => !o)} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "center" }}>
+              <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "center" }}>
                 <span style={{ display: "block", width: 20, height: 2, background: "currentColor", transition: "all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(3px,3px)" : "none" }}/>
                 <span style={{ display: "block", width: 20, height: 2, background: "currentColor", transition: "all 0.3s", opacity: mobileMenuOpen ? 0 : 1 }}/>
                 <span style={{ display: "block", width: 20, height: 2, background: "currentColor", transition: "all 0.3s", transform: mobileMenuOpen ? "rotate(-45deg) translate(3px,-3px)" : "none" }}/>
@@ -481,12 +483,39 @@ export default function ChicParis() {
       </header>
       {isMobile && mobileMenuOpen && (
         <div style={{ position: isPreview ? "sticky" : "fixed", top: isPreview ? 0 : 68 + (promoBannerEnabled ? PROMO_BAR_H : 0), left: 0, right: 0, bottom: 0, background: "#fff", zIndex: 999, overflowY: "auto" }}>
-          {categoryList.map(cat => (
-            <button key={cat} onClick={() => { changeCategory(cat); scrollTo("productos"); setMobileMenuOpen(false); }}
-              style={{ display: "block", width: "100%", background: "none", border: "none", borderBottom: "1px solid #f0f0f0", color: "#111", padding: "16px 24px", fontSize: 12, textAlign: "left", cursor: "pointer", letterSpacing: 2, fontWeight: 600, textTransform: "uppercase" }}>
-              {cat}
-            </button>
-          ))}
+          {/* Categorías — acordeón */}
+          {categoryList.length > 0 && (
+            <>
+              <button onClick={() => setMobileCatsOpen(o => !o)}
+                style={{ display: "flex", width: "100%", background: "none", border: "none", borderBottom: "1px solid #f0f0f0", color: "#111", padding: "16px 24px", fontSize: 12, textAlign: "left", cursor: "pointer", letterSpacing: 2, fontWeight: 600, textTransform: "uppercase", alignItems: "center", justifyContent: "space-between" }}>
+                Categorías
+                <span style={{ fontSize: 10, opacity: 0.45, transition: "transform 0.2s", transform: mobileCatsOpen ? "rotate(180deg)" : "none", display: "inline-block" }}>▾</span>
+              </button>
+              {mobileCatsOpen && categoryList.map(cat => {
+                const subs = subcategoriesFor[cat] || [];
+                return (
+                  <Fragment key={cat}>
+                    <button onClick={() => {
+                      if (subs.length > 0) {
+                        setMobileOpenCat(prev => prev === cat ? null : cat);
+                      } else {
+                        changeCategory(cat); scrollTo("productos"); setMobileMenuOpen(false); setMobileCatsOpen(false);
+                      }
+                    }} style={{ display: "flex", width: "100%", background: "#fafafa", border: "none", borderBottom: "1px solid #f0f0f0", color: activeCategory===cat ? ACC : "#111", padding: "13px 24px 13px 40px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 2, fontWeight: 600, textTransform: "uppercase", alignItems: "center", justifyContent: "space-between" }}>
+                      {cat}
+                      {subs.length > 0 && <span style={{ fontSize: 12, opacity: 0.4, transition: "transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display: "inline-block" }}>›</span>}
+                    </button>
+                    {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
+                      <button key={sub} onClick={() => { changeCategory(cat); scrollTo("productos"); setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
+                        style={{ display: "block", width: "100%", background: "#f5f5f5", border: "none", borderBottom: "1px solid #ebebeb", color: "#555", padding: "11px 24px 11px 60px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 1, fontWeight: 500, textTransform: "uppercase" }}>
+                        {sub}
+                      </button>
+                    ))}
+                  </Fragment>
+                );
+              })}
+            </>
+          )}
           {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
             <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("productos"); setMobileMenuOpen(false); }}
               style={{ display: "block", width: "100%", background: "none", border: "none", borderBottom: "1px solid #f0f0f0", color: activeGender===g ? ACC : "#111", padding: "16px 24px", fontSize: 12, textAlign: "left", cursor: "pointer", letterSpacing: 2, fontWeight: 600, textTransform: "uppercase" }}>

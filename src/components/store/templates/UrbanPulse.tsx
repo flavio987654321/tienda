@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
@@ -69,6 +69,8 @@ export default function UrbanPulse() {
   const [isMobile,         setIsMobile]         = useState(false);
   const [reelIndex,        setReelIndex]        = useState(0);
   const [mobileMenuOpen,   setMobileMenuOpen]   = useState(false);
+  const [mobileCatsOpen,   setMobileCatsOpen]   = useState(false);
+  const [mobileOpenCat,    setMobileOpenCat]    = useState<string | null>(null);
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -477,7 +479,7 @@ export default function UrbanPulse() {
             {cartCount > 0 ? cartCount : ""}
           </button>
           {isMobile && (
-            <button onClick={() => setMobileMenuOpen(o => !o)} style={{ background:"none", border:"none", color:DARK, cursor:"pointer", padding:4, display:"flex", flexDirection:"column", gap:4, alignItems:"center" }}>
+            <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} style={{ background:"none", border:"none", color:DARK, cursor:"pointer", padding:4, display:"flex", flexDirection:"column", gap:4, alignItems:"center" }}>
               <span style={{ display:"block", width:20, height:2.5, background:DARK, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(3px,4px)" : "none" }}/>
               <span style={{ display:"block", width:20, height:2.5, background:DARK, transition:"all 0.3s", opacity: mobileMenuOpen ? 0 : 1 }}/>
               <span style={{ display:"block", width:20, height:2.5, background:DARK, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(-45deg) translate(3px,-4px)" : "none" }}/>
@@ -487,12 +489,39 @@ export default function UrbanPulse() {
       </nav>
       {isMobile && mobileMenuOpen && (
         <div style={{ position:"fixed", top:64, left:0, right:0, bottom:0, background:WHITE, zIndex:99, overflowY:"auto" }}>
-          {categoryList.map(cat => (
-            <button key={cat} onClick={() => { changeCategory(cat); scrollTo("productos"); setMobileMenuOpen(false); }}
-              style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`2px solid ${DARK}`, color:DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase" }}>
-              {cat}
-            </button>
-          ))}
+          {/* Categorías — acordeón */}
+          {categoryList.length > 0 && (
+            <>
+              <button onClick={() => setMobileCatsOpen(o => !o)}
+                style={{ display:"flex", width:"100%", background:"none", border:"none", borderBottom:`2px solid ${DARK}`, color:DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
+                Categorías
+                <span style={{ fontSize:10, opacity:0.5, transition:"transform 0.2s", transform: mobileCatsOpen ? "rotate(180deg)" : "none", display:"inline-block" }}>▾</span>
+              </button>
+              {mobileCatsOpen && categoryList.map(cat => {
+                const subs = subcategoriesFor[cat] || [];
+                return (
+                  <Fragment key={cat}>
+                    <button onClick={() => {
+                      if (subs.length > 0) {
+                        setMobileOpenCat(prev => prev === cat ? null : cat);
+                      } else {
+                        changeCategory(cat); scrollTo("productos"); setMobileMenuOpen(false); setMobileCatsOpen(false);
+                      }
+                    }} style={{ display:"flex", width:"100%", background:"#f5f5f5", border:"none", borderBottom:`1px solid rgba(0,0,0,0.1)`, color: activeCategory===cat ? ACC : DARK, padding:"13px 24px 13px 40px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
+                      {cat}
+                      {subs.length > 0 && <span style={{ fontSize:12, opacity:0.5, transition:"transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display:"inline-block" }}>›</span>}
+                    </button>
+                    {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
+                      <button key={sub} onClick={() => { changeCategory(cat); scrollTo("productos"); setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
+                        style={{ display:"block", width:"100%", background:"#ebebeb", border:"none", borderBottom:`1px solid rgba(0,0,0,0.07)`, color:"#555", padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, fontWeight:700, textTransform:"uppercase" }}>
+                        {sub}
+                      </button>
+                    ))}
+                  </Fragment>
+                );
+              })}
+            </>
+          )}
           {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
             <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("productos"); setMobileMenuOpen(false); }}
               style={{ display:"block", width:"100%", background: activeGender===g ? DARK : "none", border:"none", borderBottom:`2px solid ${DARK}`, color: activeGender===g ? ACC : DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase" }}>
