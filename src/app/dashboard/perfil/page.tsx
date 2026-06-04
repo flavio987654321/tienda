@@ -197,7 +197,7 @@ function FileInput({ label, file, onChange, error, onError, facingMode = "enviro
   }, [file]);
 
   function handleFile(f: File | null) {
-    if (!f) { onChange(null); onError?.(""); return; }
+    if (!f) { onChange(null); onError?.(""); if (galleryRef.current) galleryRef.current.value = ""; return; }
     if (!ALLOWED_TYPES.includes(f.type)) {
       onError?.("Solo se aceptan imágenes JPG, PNG o WEBP.");
       if (galleryRef.current) galleryRef.current.value = "";
