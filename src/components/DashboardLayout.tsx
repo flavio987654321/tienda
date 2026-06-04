@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle, Loader2, MessageCircle } from "lucide-react";
+import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle, Loader2, MessageCircle, BadgeCheck } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 
@@ -42,6 +42,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const { signOut, status } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -58,6 +59,13 @@ export default function DashboardLayout({
   useEffect(() => {
     setPendingAffiliateCount(initialPendingAffiliateCount);
   }, [initialPendingAffiliateCount]);
+
+  useEffect(() => {
+    fetch("/api/verificacion")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.store?.isVerified) setIsVerified(true); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setLowStockCount(initialLowStockCount);
@@ -200,9 +208,17 @@ export default function DashboardLayout({
             title="Mi perfil"
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
           >
-            <UserCircle className="h-4 w-4 shrink-0" />
+            <div className="relative shrink-0">
+              <UserCircle className="h-4 w-4" />
+              {isVerified && (
+                <BadgeCheck className="absolute -bottom-1 -right-1 h-3 w-3 text-blue-500 bg-white rounded-full" />
+              )}
+            </div>
             <div className="flex-1 max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
-              <p className="text-xs font-medium text-gray-700 truncate whitespace-nowrap">{userName}</p>
+              <div className="flex items-center gap-1">
+                <p className="text-xs font-medium text-gray-700 truncate whitespace-nowrap">{userName}</p>
+                {isVerified && <BadgeCheck className="h-3 w-3 text-blue-500 shrink-0" />}
+              </div>
               <p className="text-xs text-gray-400 truncate whitespace-nowrap">{userEmail}</p>
             </div>
           </Link>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Eye, Search, ChevronLeft, ChevronRight, Package } from "lucide-react";
+import { BadgeCheck, Eye, Search, ChevronLeft, ChevronRight, Package } from "lucide-react";
 
 type StoreItem = {
   id: string;
@@ -16,6 +16,7 @@ type StoreItem = {
   coverImg: string | null;
   banner: string | null;
   heroImg: string | null;
+  isVerified: boolean;
 };
 
 const CATEGORIES = ["Todas", "ropa", "joyeria", "hogar", "tecnologia", "deportes", "belleza", "alimentacion", "infantil", "general"];
@@ -178,8 +179,13 @@ export default function TiendasPage() {
                 </div>
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-bold text-gray-900 text-sm">{store.name}</h3>
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: store.primaryColor }} />
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <h3 className="font-bold text-gray-900 text-sm truncate">{store.name}</h3>
+                      {store.isVerified && (
+                        <BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" title="Tienda verificada" />
+                      )}
+                    </div>
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0 ml-2" style={{ backgroundColor: store.primaryColor }} />
                   </div>
                   {store.description && (
                     <p className="text-xs text-gray-400 line-clamp-1 mb-2">{store.description}</p>

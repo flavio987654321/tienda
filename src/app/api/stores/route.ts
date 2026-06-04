@@ -78,6 +78,7 @@ export async function GET(req: NextRequest) {
       categories,
       coverImg,
       heroImg,
+      isVerified: s.isVerified,
     };
   });
 
