@@ -115,6 +115,7 @@ function ProductosPageInner() {
   const [error,      setError]      = useState<string | null>(null);
   const [storeName,  setStoreName]  = useState("Tienda");
   const [template,   setTemplate]   = useState(tParam && THEMES[tParam] ? tParam : "fashion-noir");
+  const [accentOverride, setAccentOverride] = useState<string | null>(null);
   const [isOwner,    setIsOwner]    = useState(false);
 
   const storeIdRef = useRef<string | null>(null);
@@ -192,6 +193,7 @@ function ProductosPageInner() {
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.template && !tParam) setTemplate(cfg.template);
+          if (cfg.colors?.accent) setAccentOverride(cfg.colors.accent);
           if (cfg.storeName) setStoreName(cfg.storeName);
           else if (data.store.name) setStoreName(data.store.name);
         } catch { if (data.store.name) setStoreName(data.store.name); }
@@ -353,7 +355,8 @@ function ProductosPageInner() {
 
   // ── Tema activo ─────────────────────────────────────────────────────────────
   const th: Theme = THEMES[template] ?? THEMES["fashion-noir"];
-  const { BG, S, T, G, MID, border, borderFaint, inputBorder, inputBg, serif, sans, dark } = th;
+  const G = accentOverride ?? th.G;
+  const { BG, S, T, MID, border, borderFaint, inputBorder, inputBg, serif, sans, dark } = th;
 
   // ── Enviar reseña ──────────────────────────────────────────────────────────
   const submitReview = async (e: React.FormEvent) => {
