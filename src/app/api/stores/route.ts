@@ -78,7 +78,6 @@ export async function GET(req: NextRequest) {
       categories,
       coverImg,
       heroImg,
-      previewImage: s.previewImage ?? null,
       isVerified: s.isVerified,
     };
   });

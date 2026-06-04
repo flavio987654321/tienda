@@ -20,6 +20,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     // Fetch store data from our existing API (Node.js runtime, has Prisma)
     const apiRes = await fetch(`${origin}/api/stores?slug=${encodeURIComponent(slug)}&limit=1`, {
       headers: { "x-internal": "1" },
+      cache: "no-store",
     });
 
     if (!apiRes.ok) return new Response("Not found", { status: 404 });
@@ -183,7 +184,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
         width: 1200,
         height: 630,
         headers: {
-          "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+          "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
         },
       }
     );

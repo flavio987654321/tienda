@@ -1442,19 +1442,12 @@ export default function ConfiguracionPage() {
       setIsDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2200);
-      // Capturar preview en background (no bloquea el flujo si falla)
-      captureAndSavePreview();
     } catch {
       setSaveError("No se pudo guardar. Intentá de nuevo.");
       setTimeout(() => setSaveError(null), 3000);
     } finally {
       setSaving(false);
     }
-  };
-
-  const captureAndSavePreview = () => {
-    // Best-effort: el servidor captura el OG image y lo cachea como previewImage
-    fetch("/api/store/preview", { method: "POST" }).catch(() => {});
   };
 
   const handleDelete = async () => {
