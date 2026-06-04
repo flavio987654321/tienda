@@ -97,6 +97,10 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
     );
   }
 
+  const memberSince = store.owner?.createdAt
+    ? new Date(store.owner.createdAt).toLocaleDateString("es-AR", { month: "long", year: "numeric" })
+    : null;
+
   let config: StoreConfig;
   try {
     const parsed = JSON.parse(store.storeConfig || "{}");
@@ -132,10 +136,6 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
   } catch {
     notFound();
   }
-
-  const memberSince = store.owner?.createdAt
-    ? new Date(store.owner.createdAt).toLocaleDateString("es-AR", { month: "long", year: "numeric" })
-    : null;
 
   return (
     <>
