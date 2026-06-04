@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { BadgeCheck, Clock, Loader2, Save, ShieldAlert, Upload, X } from "lucide-react";
+import { BadgeCheck, Camera, Clock, Loader2, Save, ShieldAlert, Upload, X } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -57,14 +57,16 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 5 * 1024 * 1024;
 const MIN_BYTES = 10 * 1024; // 10KB mínimo para evitar imágenes en blanco
 
-function FileInput({ label, file, onChange, error, onError }: {
+function FileInput({ label, file, onChange, error, onError, capture }: {
   label: string;
   file: File | null;
   onChange: (f: File | null) => void;
   error?: string;
   onError?: (msg: string) => void;
+  capture?: "user" | "environment";
 }) {
-  const ref = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
   useEffect(() => {
@@ -78,38 +80,44 @@ function FileInput({ label, file, onChange, error, onError }: {
     if (!f) { onChange(null); onError?.(""); return; }
     if (!ALLOWED_TYPES.includes(f.type)) {
       onError?.("Solo se aceptan imágenes JPG, PNG o WEBP.");
-      if (ref.current) ref.current.value = "";
+      if (galleryRef.current) galleryRef.current.value = "";
+      if (cameraRef.current) cameraRef.current.value = "";
       return;
     }
     if (f.size > MAX_BYTES) {
       onError?.("La imagen no puede pesar más de 5MB.");
-      if (ref.current) ref.current.value = "";
+      if (galleryRef.current) galleryRef.current.value = "";
+      if (cameraRef.current) cameraRef.current.value = "";
       return;
     }
     if (f.size < MIN_BYTES) {
       onError?.("La imagen parece estar vacía o corrupta (menos de 10KB).");
-      if (ref.current) ref.current.value = "";
+      if (galleryRef.current) galleryRef.current.value = "";
+      if (cameraRef.current) cameraRef.current.value = "";
       return;
     }
     onError?.("");
     onChange(f);
   }
 
+  function clearFile() {
+    handleFile(null);
+    if (galleryRef.current) galleryRef.current.value = "";
+    if (cameraRef.current) cameraRef.current.value = "";
+  }
+
   return (
     <div>
       <p className="text-xs font-medium text-gray-600 mb-1">{label}</p>
-      <div
-        onClick={() => ref.current?.click()}
-        className={`border-2 border-dashed rounded-xl overflow-hidden cursor-pointer transition-colors ${
-          error ? "border-red-300 bg-red-50" : file ? "border-indigo-300 bg-indigo-50" : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50"
-        }`}
-      >
+      <div className={`border-2 border-dashed rounded-xl overflow-hidden transition-colors ${
+        error ? "border-red-300 bg-red-50" : file ? "border-indigo-300 bg-indigo-50" : "border-gray-200"
+      }`}>
         {preview ? (
           <div className="relative">
             <img src={preview} alt={label} className="w-full h-28 object-cover" />
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); handleFile(null); if (ref.current) ref.current.value = ""; }}
+              onClick={clearFile}
               className="absolute top-1.5 right-1.5 bg-white/90 hover:bg-red-50 text-gray-500 hover:text-red-500 rounded-full p-1 shadow transition-colors"
             >
               <X className="h-3.5 w-3.5" />
@@ -120,17 +128,41 @@ function FileInput({ label, file, onChange, error, onError }: {
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-3 py-2.5">
-            <Upload className="h-4 w-4 text-gray-400 shrink-0" />
-            <span className="text-xs text-gray-500">Seleccionar (JPG/PNG/WEBP, máx 5MB)</span>
+          <div className="flex items-stretch">
+            <button
+              type="button"
+              onClick={() => galleryRef.current?.click()}
+              className="flex-1 flex items-center gap-2 px-3 py-2.5 hover:bg-indigo-50/50 transition-colors"
+            >
+              <Upload className="h-4 w-4 text-gray-400 shrink-0" />
+              <span className="text-xs text-gray-500 text-left">Elegir foto (máx 5MB)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => cameraRef.current?.click()}
+              title="Sacar foto ahora"
+              className="px-3 border-l border-dashed border-gray-200 hover:bg-indigo-50/50 text-gray-400 hover:text-indigo-600 transition-colors"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
           </div>
         )}
       </div>
       {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+      {/* Input galería (sin capture) */}
       <input
-        ref={ref}
+        ref={galleryRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+      />
+      {/* Input cámara (con capture) */}
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        capture={capture ?? "environment"}
         className="hidden"
         onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
       />
@@ -417,7 +449,7 @@ export default function PerfilPage() {
 
                   <FileInput label="DNI — frente" file={dniFront} onChange={setDniFront} error={fileErrors.dniFront} onError={(m) => setFileError("dniFront", m)} />
                   <FileInput label="DNI — dorso" file={dniBack} onChange={setDniBack} error={fileErrors.dniBack} onError={(m) => setFileError("dniBack", m)} />
-                  <FileInput label="Selfie sosteniendo el DNI" file={selfie} onChange={setSelfie} error={fileErrors.selfie} onError={(m) => setFileError("selfie", m)} />
+                  <FileInput label="Selfie sosteniendo el DNI" file={selfie} onChange={setSelfie} error={fileErrors.selfie} onError={(m) => setFileError("selfie", m)} capture="user" />
 
                   {submitError && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5 text-center">{submitError}</p>}
                   {submitted && <p className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl px-4 py-2.5 text-center">¡Solicitud enviada! Te avisamos cuando esté aprobada.</p>}
