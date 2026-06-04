@@ -1012,6 +1012,7 @@ export default function AutoMotor() {
           <div style={{ position: "relative", overflow: "hidden", aspectRatio: "4/3" }}>
             <img src={nosotrosUrl} alt="Nosotros"
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            {(() => { const ov = config?.imageOverrides?.["nosotrosImage"]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
             <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
           </div>
         </div>

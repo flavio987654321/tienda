@@ -715,6 +715,9 @@ export default function ChicParis() {
                         <span style={{ fontSize: 11, color: "#a09080", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Subí tu foto</span>
                       </div>
                   }
+                  {ov?.overlayType && ov.overlayType !== "none" && (
+                    <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />
+                  )}
                 </div>
               );
             })()}

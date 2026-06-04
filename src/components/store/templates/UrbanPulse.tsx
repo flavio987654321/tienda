@@ -594,6 +594,7 @@ export default function UrbanPulse() {
               <img src={c.img} alt={c.label} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.[c.field]?.posX ?? 50}% ${storeConfig?.imageOverrides?.[c.field]?.posY ?? 50}%`, display:"block" }} />
               <BgDragHandle imgKey={c.field} />
               <EditableImageButton field={c.field} label={`Imagen ${c.label}`} />
+              {(() => { const ov = storeConfig?.imageOverrides?.[c.field]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
               <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 55%)" }} />
               <div style={{ position:"absolute", bottom:24, left:24 }}>
                 <p style={{ color:WHITE, fontSize:26, fontWeight:900, textTransform:"uppercase", letterSpacing:2, margin:"0 0 6px" }}>{c.label}</p>
@@ -784,6 +785,7 @@ export default function UrbanPulse() {
         </div>
         <div style={{ position:"relative", overflow:"hidden" }}>
           <img src={storeConfig?.imageOverrides?.["nosotrosImage"]?.url ?? "https://picsum.photos/seed/up_about/600/700"} alt="Nosotros" style={{ width:"100%", aspectRatio:"4/5", objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.["nosotrosImage"]?.posX ?? 50}% ${storeConfig?.imageOverrides?.["nosotrosImage"]?.posY ?? 50}%`, display:"block" }} />
+          {(() => { const ov = storeConfig?.imageOverrides?.["nosotrosImage"]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
           <BgDragHandle imgKey="nosotrosImage" />
           <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
           <div style={{ position:"absolute", bottom:-16, left:-16, background:ACC, padding:"20px 28px" }}>

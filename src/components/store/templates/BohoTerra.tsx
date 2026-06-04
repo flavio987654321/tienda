@@ -496,16 +496,25 @@ export default function BohoTerra() {
         <div style={{ flex:1, display: isMobile ? "none" : "grid", gridTemplateRows:"1fr 1fr", gridTemplateColumns:"1fr 1fr", gap:4, padding:4 }}>
           <div style={{ overflow:"hidden", gridRow:"1/3", position:"relative" }}>
             <img src={heroImage1Ov?.url ?? "https://picsum.photos/seed/terra-h1/600/900"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${heroImage1Ov?.posX ?? 50}% ${heroImage1Ov?.posY ?? 50}%`, display:"block" }}/>
+            {heroImage1Ov?.overlayType && heroImage1Ov.overlayType !== "none" && (
+              <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: heroImage1Ov.overlayType === "light" ? `rgba(255,255,255,${heroImage1Ov.overlayOpacity ?? 0.45})` : `rgba(44,34,24,${heroImage1Ov.overlayOpacity ?? 0.45})` }} />
+            )}
             <BgDragHandle imgKey="heroImage1" />
             <EditableImageButton field="heroImage1" label="Imagen hero izquierda" />
           </div>
           <div style={{ overflow:"hidden", position:"relative" }}>
             <img src={heroImage2Ov?.url ?? "https://picsum.photos/seed/terra-h2/600/500"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${heroImage2Ov?.posX ?? 50}% ${heroImage2Ov?.posY ?? 50}%`, display:"block" }}/>
+            {heroImage2Ov?.overlayType && heroImage2Ov.overlayType !== "none" && (
+              <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: heroImage2Ov.overlayType === "light" ? `rgba(255,255,255,${heroImage2Ov.overlayOpacity ?? 0.45})` : `rgba(44,34,24,${heroImage2Ov.overlayOpacity ?? 0.45})` }} />
+            )}
             <BgDragHandle imgKey="heroImage2" />
             <EditableImageButton field="heroImage2" label="Imagen hero superior" />
           </div>
           <div style={{ overflow:"hidden", position:"relative" }}>
             <img src={heroImage3Ov?.url ?? "https://picsum.photos/seed/terra-h3/600/500"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${heroImage3Ov?.posX ?? 50}% ${heroImage3Ov?.posY ?? 50}%`, display:"block" }}/>
+            {heroImage3Ov?.overlayType && heroImage3Ov.overlayType !== "none" && (
+              <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: heroImage3Ov.overlayType === "light" ? `rgba(255,255,255,${heroImage3Ov.overlayOpacity ?? 0.45})` : `rgba(44,34,24,${heroImage3Ov.overlayOpacity ?? 0.45})` }} />
+            )}
             <BgDragHandle imgKey="heroImage3" />
             <EditableImageButton field="heroImage3" label="Imagen hero inferior" />
           </div>

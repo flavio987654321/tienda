@@ -703,6 +703,7 @@ export default function FashionNoir() {
                   onMouseEnter={e => (e.currentTarget.style.transform="scale(1.06)")}
                   onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}/>
                 <EditableImageButton field={cat.field} label={`Imagen ${cat.label}`} />
+                {(() => { const ov = storeConfig?.imageOverrides?.[cat.field]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
                 <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(10,10,10,0.75) 30%, transparent)" }}/>
                 <div style={{ position:"absolute", bottom:32, left:0, right:0, textAlign:"center" }}>
                   <p style={{ fontFamily:"Georgia, serif", fontSize:24, color:T, margin:0, fontWeight:700 }}>{cat.label}</p>
@@ -803,7 +804,7 @@ export default function FashionNoir() {
             <img src={nosotrosImageUrl} alt="Nuestra historia" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${nosotrosPosX}% ${nosotrosPosY}%`, display:"block" }}/>
             <BgDragHandle imgKey="nosotrosImage" />
             <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
-            <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.25)" }}/>
+            {(() => { const ov = storeConfig?.imageOverrides?.["nosotrosImage"]; if (ov?.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov?.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.25})` : `rgba(10,10,10,${ov?.overlayOpacity ?? 0.25})` }} />; })()}
           </div>
           <div style={{ padding: isMobile ? "40px 20px" : "80px 72px", display:"flex", flexDirection:"column", justifyContent:"center", gap:24, background:nosotrosPanelBg, position:"relative" }}>
             <EditableSectionBg field="bgNosotrosPanel" label="Fondo nosotros" />

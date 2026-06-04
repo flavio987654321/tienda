@@ -777,6 +777,7 @@ export default function AutoDrive() {
                 display: "block", opacity: 0.92 }} />
             <div style={{ position: "absolute", inset: 0,
               background: "linear-gradient(to right, rgba(247,248,250,0.9) 0%, rgba(247,248,250,0) 25%)" }} />
+            {(() => { const ov = config?.imageOverrides?.["heroImage"]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
             <EditableImageButton field="heroImage" label="Imagen del hero" />
             {!loadingProducts && (
               <div style={{ position: "absolute", bottom: 20, left: 20,
@@ -974,6 +975,7 @@ export default function AutoDrive() {
           <div style={{ borderRadius: 16, overflow: "hidden", aspectRatio: "4/3", position: "relative" }}>
             <img src={nosotrosUrl} alt="Nosotros"
               style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            {(() => { const ov = config?.imageOverrides?.["nosotrosImage"]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
             <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
           </div>
           <div>
