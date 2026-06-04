@@ -69,33 +69,45 @@ function CameraModal({ facingMode, label, onCapture, onClose }: {
   const [ready, setReady] = useState(false);
   const [camError, setCamError] = useState("");
 
-  useEffect(() => {
-    let active = true;
+  function startCamera() {
+    setCamError("");
+    setReady(false);
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCamError("Tu navegador no soporta acceso a cámara. Probá con Chrome o Edge actualizados.");
+      return;
+    }
+
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode } } })
       .then((stream) => {
-        if (!active) { stream.getTracks().forEach((t) => t.stop()); return; }
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          videoRef.current.play().then(() => setReady(true));
+          videoRef.current.play().then(() => setReady(true)).catch(() => {});
         }
       })
       .catch((err: unknown) => {
         const name = err instanceof Error ? err.name : "";
         if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-          setCamError("El acceso a la cámara está bloqueado. Hacé clic en el candado (🔒) en la barra del navegador → Cámara → Permitir, y volvé a intentarlo.");
+          setCamError("Acceso bloqueado. Hacé clic en el candado en la barra del navegador → Cámara → Permitir → recargá la página e intentá de nuevo.");
         } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
           setCamError("No se encontró ninguna cámara en este dispositivo. Subí la foto desde tu galería.");
         } else if (name === "NotReadableError" || name === "TrackStartError") {
           setCamError("La cámara está siendo usada por otra aplicación. Cerrala y volvé a intentar.");
         } else {
-          setCamError("No se pudo acceder a la cámara. Verificá los permisos del navegador e intentá de nuevo.");
+          setCamError(`No se pudo acceder a la cámara (${name || "error desconocido"}). Verificá permisos e intentá de nuevo.`);
         }
       });
+  }
+
+  useEffect(() => {
+    startCamera();
     return () => {
-      active = false;
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facingMode]);
 
   function capture() {
@@ -130,8 +142,15 @@ function CameraModal({ facingMode, label, onCapture, onClose }: {
             </div>
           )}
           {camError && (
-            <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center gap-3">
               <p className="text-white text-sm">{camError}</p>
+              <button
+                type="button"
+                onClick={startCamera}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold rounded-lg border border-white/40 transition-colors"
+              >
+                Reintentar
+              </button>
             </div>
           )}
         </div>
@@ -212,7 +231,7 @@ function FileInput({ label, file, onChange, error, onError, facingMode = "enviro
       <div className={`border-2 border-dashed rounded-xl overflow-hidden transition-colors ${
         error ? "border-red-300 bg-red-50" : file ? "border-indigo-300 bg-indigo-50" : "border-gray-200"
       }`}>
-        {preview ? (
+        {file && preview ? (
           <div className="relative">
             <img src={preview} alt={label} className="w-full h-28 object-cover" />
             <button
@@ -224,7 +243,7 @@ function FileInput({ label, file, onChange, error, onError, facingMode = "enviro
             </button>
             <div className="px-3 py-1.5 flex items-center gap-1.5 bg-indigo-50">
               <BadgeCheck className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-              <span className="text-xs text-indigo-700 truncate">{file!.name}</span>
+              <span className="text-xs text-indigo-700 truncate">{file.name}</span>
             </div>
           </div>
         ) : (
