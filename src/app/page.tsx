@@ -779,13 +779,17 @@ export default function Home() {
                     {store ? (
                       <Link href={`/tienda/${store.slug}`} className="block bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
                         <div className="relative overflow-hidden h-48" style={{ backgroundColor: store.primaryColor + "18" }}>
-                          {/* Iframe mostrando la tienda real escalada al 25% */}
+                          {/* Iframe mostrando la tienda real escalada al 25%.
+                              left: calc(50% - 160px) = center del contenedor menos la mitad del ancho visual (1280*0.25/2).
+                              top: -20px skips ~80px of page (navbar) en coords del iframe. */}
                           <iframe
                             src={`/tienda/${store.slug}`}
-                            className="absolute top-0 left-0 border-0 pointer-events-none"
+                            className="absolute border-0 pointer-events-none"
                             style={{
-                              width: "400%",
-                              height: "400%",
+                              top: "-20px",
+                              left: "calc(50% - 160px)",
+                              width: "1280px",
+                              height: "800px",
                               transform: "scale(0.25)",
                               transformOrigin: "top left",
                             }}
