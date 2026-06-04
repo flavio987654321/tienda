@@ -778,8 +778,22 @@ export default function Home() {
                   <Card3D>
                     {store ? (
                       <Link href={`/tienda/${store.slug}`} className="block bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
-                        <div className="relative overflow-hidden h-48">
-                          <img src={`/api/og/store/${store.slug}?v=${store.updatedAt}`} alt={store.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <div className="relative overflow-hidden h-48" style={{ backgroundColor: store.primaryColor + "18" }}>
+                          {/* Iframe mostrando la tienda real escalada al 25% */}
+                          <iframe
+                            src={`/tienda/${store.slug}`}
+                            className="absolute top-0 left-0 border-0 pointer-events-none"
+                            style={{
+                              width: "400%",
+                              height: "400%",
+                              transform: "scale(0.25)",
+                              transformOrigin: "top left",
+                            }}
+                            loading="lazy"
+                            tabIndex={-1}
+                            aria-hidden="true"
+                            title=""
+                          />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                           <div className="absolute bottom-3 left-3">
                             <span className="bg-white/20 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full border border-white/20">
