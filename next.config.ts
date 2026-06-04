@@ -10,7 +10,7 @@ const csp = [
   `img-src 'self' data: blob: https: https://${supabaseHost} https://res.cloudinary.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com`,
   `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.mercadopago.com https://api.mercadolibre.com https://*.mercadolibre.com`,
   "media-src 'self' blob: https: https://res.cloudinary.com https://www.youtube.com https://www.instagram.com https://*.cdninstagram.com",
-  "frame-src https://www.youtube.com https://www.instagram.com https://sdk.mercadopago.com https://www.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com",
+  "frame-src 'self' https://www.youtube.com https://www.instagram.com https://sdk.mercadopago.com https://www.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com",
   `script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
@@ -51,6 +51,15 @@ const previewHeaders = securityHeaders.map((h) => {
   return h;
 });
 
+// Páginas de tienda pública: pago habilitado + pueden ser embebidas en iframe same-origin
+const cspStorePublic = cspPayment
+  .replace("frame-ancestors 'none'", "frame-ancestors 'self'");
+const storePublicHeaders = paymentHeaders.map((h) => {
+  if (h.key === "Content-Security-Policy") return { key: h.key, value: cspStorePublic };
+  if (h.key === "X-Frame-Options") return { key: h.key, value: "SAMEORIGIN" };
+  return h;
+});
+
 const nextConfig: NextConfig = {
   experimental: {
     staleTimes: {
@@ -61,7 +70,9 @@ const nextConfig: NextConfig = {
     return [
       { source: "/((?!preview\\/).*)", headers: securityHeaders },
       // Páginas donde carga el SDK de MercadoPago (checkout de tienda + suscripciones + dashboard)
-      { source: "/(precios|tienda/.*|dashboard.*)", headers: paymentHeaders },
+      { source: "/(precios|dashboard.*)", headers: paymentHeaders },
+      // Tiendas públicas: pago habilitado + embebibles en iframe same-origin (para previews en cards)
+      { source: "/tienda/(.*)", headers: storePublicHeaders },
       // Preview de templates — permite iframe same-origin para el editor de diseño
       { source: "/preview/(.*)", headers: previewHeaders },
     ];
