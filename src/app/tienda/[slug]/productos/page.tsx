@@ -203,6 +203,12 @@ function ProductosPageInner() {
       .finally(() => setLoading(false));
   }, [slug]);
 
+  useEffect(() => {
+    if (storeName && storeName !== "Tienda") {
+      document.title = `${storeName} — Catálogo completo`;
+    }
+  }, [storeName]);
+
   // ── Filtros y ordenamiento ──────────────────────────────────────────────────
   const [search,            setSearch]            = useState("");
   const [activeCategory,    setActiveCategory]    = useState("Todos");
