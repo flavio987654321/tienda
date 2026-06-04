@@ -80,7 +80,18 @@ function CameraModal({ facingMode, label, onCapture, onClose }: {
           videoRef.current.play().then(() => setReady(true));
         }
       })
-      .catch(() => setCamError("No se pudo acceder a la cámara. Verificá que hayas dado permiso."));
+      .catch((err: unknown) => {
+        const name = err instanceof Error ? err.name : "";
+        if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+          setCamError("El acceso a la cámara está bloqueado. Hacé clic en el candado (🔒) en la barra del navegador → Cámara → Permitir, y volvé a intentarlo.");
+        } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+          setCamError("No se encontró ninguna cámara en este dispositivo. Subí la foto desde tu galería.");
+        } else if (name === "NotReadableError" || name === "TrackStartError") {
+          setCamError("La cámara está siendo usada por otra aplicación. Cerrala y volvé a intentar.");
+        } else {
+          setCamError("No se pudo acceder a la cámara. Verificá los permisos del navegador e intentá de nuevo.");
+        }
+      });
     return () => {
       active = false;
       streamRef.current?.getTracks().forEach((t) => t.stop());
