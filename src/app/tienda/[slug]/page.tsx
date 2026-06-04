@@ -7,6 +7,7 @@ import type { StoreConfig } from "@/types/store-config";
 import { DEFAULT_CONFIG } from "@/types/store-config";
 import ComingSoonPage from "./ComingSoonPage";
 import OwnerPreviewBadge from "./OwnerPreviewBadge";
+import VisitorBackButton from "./VisitorBackButton";
 import { getCurrentUser } from "@/lib/auth-session";
 
 export const dynamic = "force-dynamic";
@@ -140,6 +141,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
   return (
     <>
       <StorefrontTemplateRenderer config={config} />
+      {!isOwner && <VisitorBackButton />}
       {!store.isPublished && isOwner && (
         <OwnerPreviewBadge
           name={store.name}
