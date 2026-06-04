@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { sendVerificationApprovedEmail, sendVerificationRejectedEmail } from "@/lib/resend";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const store = await prisma.store.findUnique({
     where: { id: request.storeId },
-    select: { ownerId: true },
+    select: { ownerId: true, owner: { select: { email: true, name: true } } },
   });
 
   if (action === "APPROVE") {
@@ -55,6 +56,9 @@ export async function POST(req: NextRequest, { params }: Params) {
         },
       })] : []),
     ]);
+    if (store?.owner) {
+      sendVerificationApprovedEmail({ to: store.owner.email, userName: store.owner.name ?? "" }).catch(() => {});
+    }
   } else {
     await prisma.$transaction([
       prisma.verificationRequest.update({
@@ -71,6 +75,9 @@ export async function POST(req: NextRequest, { params }: Params) {
         },
       })] : []),
     ]);
+    if (store?.owner) {
+      sendVerificationRejectedEmail({ to: store.owner.email, userName: store.owner.name ?? "", reason: note.trim() }).catch(() => {});
+    }
   }
 
   return NextResponse.json({ ok: true });

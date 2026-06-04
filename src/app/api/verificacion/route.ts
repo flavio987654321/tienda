@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { sendVerificationReceivedEmail } from "@/lib/resend";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -88,7 +89,8 @@ export async function POST(req: Request) {
       });
     }
 
-    // Notificar al dueño que la solicitud fue recibida
+    // Email + notificación al dueño
+    sendVerificationReceivedEmail({ to: user.email, userName: user.name ?? "" }).catch(() => {});
     await prisma.notification.create({
       data: {
         userId: user.id,
