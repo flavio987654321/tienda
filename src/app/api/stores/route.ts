@@ -79,6 +79,7 @@ export async function GET(req: NextRequest) {
       coverImg,
       heroImg,
       isVerified: s.isVerified,
+      updatedAt: s.updatedAt.getTime(),
     };
   });
 

@@ -12,12 +12,29 @@ function darken(hex: string, amount = 50): string {
   return `rgb(${r},${g},${b})`;
 }
 
+async function urlToDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return null;
+    const contentType = res.headers.get("content-type") || "image/jpeg";
+    const buf = await res.arrayBuffer();
+    const uint8 = new Uint8Array(buf);
+    let binary = "";
+    const CHUNK = 0x8000;
+    for (let i = 0; i < uint8.length; i += CHUNK) {
+      binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK));
+    }
+    return `data:${contentType};base64,${btoa(binary)}`;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: NextRequest, context: RouteContext) {
   try {
     const { slug } = await context.params;
     const origin = new URL(req.url).origin;
 
-    // Fetch store data from our existing API (Node.js runtime, has Prisma)
     const apiRes = await fetch(`${origin}/api/stores?slug=${encodeURIComponent(slug)}&limit=1`, {
       headers: { "x-internal": "1" },
       cache: "no-store",
@@ -39,6 +56,10 @@ export async function GET(req: NextRequest, context: RouteContext) {
     const colorDark = darken(color);
     const displayText = store.description || null;
 
+    // Pre-fetch background image as base64 so Satori doesn't have to
+    // resolve external URLs (which can fail silently in edge runtime).
+    const bgDataUrl = bgUrl ? await urlToDataUrl(bgUrl) : null;
+
     return new ImageResponse(
       (
         <div
@@ -47,14 +68,13 @@ export async function GET(req: NextRequest, context: RouteContext) {
             height: "100%",
             display: "flex",
             position: "relative",
-            background: bgUrl ? "#111" : `linear-gradient(135deg, ${color} 0%, ${colorDark} 100%)`,
+            background: bgDataUrl ? "#111" : `linear-gradient(135deg, ${color} 0%, ${colorDark} 100%)`,
           }}
         >
-          {/* Background image — Satori fetches by URL in edge runtime */}
-          {bgUrl && (
+          {bgDataUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={bgUrl}
+              src={bgDataUrl}
               alt=""
               style={{
                 position: "absolute",
@@ -75,7 +95,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
               left: 0,
               right: 0,
               bottom: 0,
-              background: bgUrl
+              background: bgDataUrl
                 ? "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.78) 100%)"
                 : "linear-gradient(to bottom, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.35) 100%)",
               display: "flex",
@@ -184,7 +204,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
         width: 1200,
         height: 630,
         headers: {
-          "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+          "Cache-Control": "no-store",
         },
       }
     );

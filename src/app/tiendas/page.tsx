@@ -17,6 +17,7 @@ type StoreItem = {
   banner: string | null;
   heroImg: string | null;
   isVerified: boolean;
+  updatedAt: number;
 };
 
 const CATEGORIES = ["Todas", "ropa", "joyeria", "hogar", "tecnologia", "deportes", "belleza", "alimentacion", "infantil", "general"];
@@ -153,7 +154,7 @@ export default function TiendasPage() {
               >
                 <div className="relative overflow-hidden h-44">
                   <img
-                    src={`/api/og/store/${store.slug}`}
+                    src={`/api/og/store/${store.slug}?v=${store.updatedAt}`}
                     alt={store.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     onError={(e) => {
