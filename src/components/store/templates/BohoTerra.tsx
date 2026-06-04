@@ -100,6 +100,7 @@ export default function BohoTerra() {
   const [isMobile,            setIsMobile]            = useState(false);
   const [reelIndex,           setReelIndex]           = useState(0);
   const [mobileMenuOpen,      setMobileMenuOpen]      = useState(false);
+  const [mobileCatsOpen,      setMobileCatsOpen]      = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -438,7 +439,7 @@ export default function BohoTerra() {
               {cartCount>0 && <span style={{ position:"absolute", top:-5, right:-5, background:A, color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
             </button>
             {isMobile && (
-              <button onClick={() => setMobileMenuOpen(o => !o)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center", flexDirection:"column", gap:4 }}>
+              <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); }} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center", flexDirection:"column", gap:4 }}>
                 <span style={{ display:"block", width:22, height:2, background:T, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(4px, 4px)" : "none" }}/>
                 <span style={{ display:"block", width:22, height:2, background:T, transition:"all 0.3s", opacity: mobileMenuOpen ? 0 : 1 }}/>
                 <span style={{ display:"block", width:22, height:2, background:T, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(-45deg) translate(4px, -4px)" : "none" }}/>
@@ -450,12 +451,22 @@ export default function BohoTerra() {
       {/* ── MOBILE MENU */}
       {isMobile && mobileMenuOpen && (
         <div style={{ position: isPreview ? "sticky" : "fixed", top: isPreview ? 0 : 60 + announcementBarHeight, left:0, right:0, bottom:0, background:BG, zIndex:99, overflowY:"auto", paddingTop:8 }}>
-          {categoryList.map(cat => (
-            <button key={cat} onClick={() => { changeCategory(cat); scrollTo("coleccion"); setMobileMenuOpen(false); }}
-              style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(44,34,24,0.06)`, color:T, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
-              {cat}
-            </button>
-          ))}
+          {/* Categorías — acordeón colapsable */}
+          {categoryList.length > 0 && (
+            <>
+              <button onClick={() => setMobileCatsOpen(o => !o)}
+                style={{ display:"flex", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(44,34,24,0.06)`, color:T, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
+                Categorías
+                <span style={{ fontSize:10, opacity:0.55, transition:"transform 0.2s", transform: mobileCatsOpen ? "rotate(180deg)" : "none", display:"inline-block" }}>▾</span>
+              </button>
+              {mobileCatsOpen && categoryList.map(cat => (
+                <button key={cat} onClick={() => { changeCategory(cat); scrollTo("coleccion"); setMobileMenuOpen(false); setMobileCatsOpen(false); }}
+                  style={{ display:"block", width:"100%", background:"rgba(44,34,24,0.03)", border:"none", borderBottom:`1px solid rgba(44,34,24,0.04)`, color:T, padding:"13px 24px 13px 40px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+                  {cat}
+                </button>
+              ))}
+            </>
+          )}
           {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
             <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("coleccion"); setMobileMenuOpen(false); }}
               style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(44,34,24,0.06)`, color: activeGender===g ? A : T, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
