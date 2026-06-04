@@ -168,6 +168,8 @@ model Store {
   mpRefreshToken  String?
   mpSellerId      String?
   mpConnectedAt   DateTime?
+  // Preview image generada al guardar el template
+  previewImage         String?
   // Verificación de identidad
   isVerified           Boolean  @default(false)
   verifiedShowName     Boolean  @default(false)

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useRef, useEffect } from "react";
+import { toPng } from "html-to-image";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TemplateId, TextOverride, ImageOverride } from "@/types/store-config";
@@ -1289,6 +1290,7 @@ export default function ConfiguracionPage() {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [imageLoadingFields, setImageLoadingFields] = useState<Record<string, boolean>>({});
   const [storeTipoTienda, setStoreTipoTienda] = useState<string>("GENERAL");
+  const previewRef = useRef<HTMLDivElement>(null);
 
   /* Cargar config guardada al montar */
   const allTemplates = CATEGORIES.flatMap(c => c.templates);
@@ -1442,11 +1444,40 @@ export default function ConfiguracionPage() {
       setIsDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2200);
+      // Capturar preview en background (no bloquea el flujo si falla)
+      captureAndSavePreview();
     } catch {
       setSaveError("No se pudo guardar. Intentá de nuevo.");
       setTimeout(() => setSaveError(null), 3000);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const captureAndSavePreview = async () => {
+    if (!previewRef.current || !storeSlug) return;
+    try {
+      const dataUrl = await toPng(previewRef.current, {
+        quality: 0.85,
+        pixelRatio: 1,
+        skipFonts: false,
+        cacheBust: true,
+      });
+      const blob = await (await fetch(dataUrl)).blob();
+      const supabase = createSupabaseBrowserClient();
+      const path = `tienda-imagenes/previews/${storeSlug}.png`;
+      const { error: upErr } = await supabase.storage
+        .from("tienda-imagenes")
+        .upload(path, blob, { upsert: true, contentType: "image/png" });
+      if (upErr) return;
+      const { data } = supabase.storage.from("tienda-imagenes").getPublicUrl(path);
+      await fetch("/api/store/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ previewImage: data.publicUrl }),
+      });
+    } catch {
+      // Silencioso — el preview es best-effort
     }
   };
 
@@ -1807,7 +1838,7 @@ export default function ConfiguracionPage() {
           imageLoading: imageLoadingFields,
         }}>
           <div style={{ flex: 1, overflow: "hidden", position: "relative", padding: "12px 16px 0" }}>
-            <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
+            <div ref={previewRef} style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
               transform: "translateZ(0)" }}>
               <StoreConfigContext.Provider value={{ ...config, previewFill: true }}>

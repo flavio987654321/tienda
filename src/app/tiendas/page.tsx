@@ -16,6 +16,7 @@ type StoreItem = {
   coverImg: string | null;
   banner: string | null;
   heroImg: string | null;
+  previewImage: string | null;
   isVerified: boolean;
 };
 
@@ -153,7 +154,7 @@ export default function TiendasPage() {
               >
                 <div className="relative overflow-hidden h-44">
                   <img
-                    src={`/api/og/store/${store.slug}`}
+                    src={store.previewImage || `/api/og/store/${store.slug}`}
                     alt={store.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     onError={(e) => {
