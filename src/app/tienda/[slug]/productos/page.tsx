@@ -192,13 +192,12 @@ function ProductosPageInner() {
         storeIdRef.current = data.store.id ?? null;
         dbNameRef.current  = data.store.name ?? "Tienda";
         setIsOwner(data.isOwner ?? false);
+        setStoreName(data.store.name ?? "Tienda");
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.template && !tParam) setTemplate(cfg.template);
           if (cfg.colors?.accent) setAccentOverride(cfg.colors.accent);
-          if (cfg.storeName) setStoreName(cfg.storeName);
-          else if (data.store.name) setStoreName(data.store.name);
-        } catch { if (data.store.name) setStoreName(data.store.name); }
+        } catch {}
         setProducts((data.store.products ?? []).map(mapProduct));
       })
       .catch(() => setError("No se pudo cargar la tienda. Intentá de nuevo."))
