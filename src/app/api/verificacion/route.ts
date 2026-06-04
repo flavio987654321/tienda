@@ -53,8 +53,19 @@ export async function POST(req: Request) {
   }
 
   const MAX_SIZE = 5 * 1024 * 1024;
-  if (dniFrontFile.size > MAX_SIZE || dniBackFile.size > MAX_SIZE || selfieFile.size > MAX_SIZE) {
-    return NextResponse.json({ error: "Cada imagen debe pesar menos de 5MB" }, { status: 400 });
+  const MIN_SIZE = 10 * 1024;
+  const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+  for (const [name, file] of [["DNI frente", dniFrontFile], ["DNI dorso", dniBackFile], ["Selfie", selfieFile]] as [string, File][]) {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json({ error: `${name}: solo se aceptan imágenes JPG, PNG o WEBP.` }, { status: 400 });
+    }
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json({ error: `${name}: la imagen no puede pesar más de 5MB.` }, { status: 400 });
+    }
+    if (file.size < MIN_SIZE) {
+      return NextResponse.json({ error: `${name}: la imagen parece estar vacía o corrupta.` }, { status: 400 });
+    }
   }
 
   const supabase = createSupabaseAdminClient();

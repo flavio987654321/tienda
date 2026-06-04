@@ -53,33 +53,87 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
   );
 }
 
-function FileInput({ label, file, onChange }: { label: string; file: File | null; onChange: (f: File | null) => void }) {
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_BYTES = 5 * 1024 * 1024;
+const MIN_BYTES = 10 * 1024; // 10KB mínimo para evitar imágenes en blanco
+
+function FileInput({ label, file, onChange, error, onError }: {
+  label: string;
+  file: File | null;
+  onChange: (f: File | null) => void;
+  error?: string;
+  onError?: (msg: string) => void;
+}) {
   const ref = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file) { setPreview(null); return; }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  function handleFile(f: File | null) {
+    if (!f) { onChange(null); onError?.(""); return; }
+    if (!ALLOWED_TYPES.includes(f.type)) {
+      onError?.("Solo se aceptan imágenes JPG, PNG o WEBP.");
+      if (ref.current) ref.current.value = "";
+      return;
+    }
+    if (f.size > MAX_BYTES) {
+      onError?.("La imagen no puede pesar más de 5MB.");
+      if (ref.current) ref.current.value = "";
+      return;
+    }
+    if (f.size < MIN_BYTES) {
+      onError?.("La imagen parece estar vacía o corrupta (menos de 10KB).");
+      if (ref.current) ref.current.value = "";
+      return;
+    }
+    onError?.("");
+    onChange(f);
+  }
+
   return (
     <div>
       <p className="text-xs font-medium text-gray-600 mb-1">{label}</p>
       <div
         onClick={() => ref.current?.click()}
-        className={`flex items-center gap-2 border-2 border-dashed rounded-xl px-3 py-2.5 cursor-pointer transition-colors ${
-          file ? "border-indigo-300 bg-indigo-50" : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50"
+        className={`border-2 border-dashed rounded-xl overflow-hidden cursor-pointer transition-colors ${
+          error ? "border-red-300 bg-red-50" : file ? "border-indigo-300 bg-indigo-50" : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50"
         }`}
       >
-        {file ? (
-          <>
-            <BadgeCheck className="h-4 w-4 text-indigo-600 shrink-0" />
-            <span className="text-xs text-indigo-700 truncate flex-1">{file.name}</span>
-            <button type="button" onClick={(e) => { e.stopPropagation(); onChange(null); if (ref.current) ref.current.value = ""; }} className="text-gray-400 hover:text-red-500">
+        {preview ? (
+          <div className="relative">
+            <img src={preview} alt={label} className="w-full h-28 object-cover" />
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); handleFile(null); if (ref.current) ref.current.value = ""; }}
+              className="absolute top-1.5 right-1.5 bg-white/90 hover:bg-red-50 text-gray-500 hover:text-red-500 rounded-full p-1 shadow transition-colors"
+            >
               <X className="h-3.5 w-3.5" />
             </button>
-          </>
+            <div className="px-3 py-1.5 flex items-center gap-1.5 bg-indigo-50">
+              <BadgeCheck className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+              <span className="text-xs text-indigo-700 truncate">{file!.name}</span>
+            </div>
+          </div>
         ) : (
-          <>
+          <div className="flex items-center gap-2 px-3 py-2.5">
             <Upload className="h-4 w-4 text-gray-400 shrink-0" />
-            <span className="text-xs text-gray-500">Seleccionar (JPG/PNG, máx 5MB)</span>
-          </>
+            <span className="text-xs text-gray-500">Seleccionar (JPG/PNG/WEBP, máx 5MB)</span>
+          </div>
         )}
       </div>
-      <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => onChange(e.target.files?.[0] ?? null)} />
+      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+      <input
+        ref={ref}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+      />
     </div>
   );
 }
@@ -118,10 +172,15 @@ export default function PerfilPage() {
   const [dniFront, setDniFront] = useState<File | null>(null);
   const [dniBack, setDniBack] = useState<File | null>(null);
   const [selfie, setSelfie] = useState<File | null>(null);
+  const [fileErrors, setFileErrors] = useState({ dniFront: "", dniBack: "", selfie: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+
+  function setFileError(key: "dniFront" | "dniBack" | "selfie", msg: string) {
+    setFileErrors((prev) => ({ ...prev, [key]: msg }));
+  }
 
   useEffect(() => {
     fetch("/api/perfil").then((r) => r.json()).then((d) => {
@@ -356,16 +415,16 @@ export default function PerfilPage() {
                     <p className="text-sm text-gray-500">Subí una foto de tu DNI (frente y dorso) y una selfie sosteniéndolo. Solo lo ve el equipo de TiendaApps.</p>
                   )}
 
-                  <FileInput label="DNI — frente" file={dniFront} onChange={setDniFront} />
-                  <FileInput label="DNI — dorso" file={dniBack} onChange={setDniBack} />
-                  <FileInput label="Selfie sosteniendo el DNI" file={selfie} onChange={setSelfie} />
+                  <FileInput label="DNI — frente" file={dniFront} onChange={setDniFront} error={fileErrors.dniFront} onError={(m) => setFileError("dniFront", m)} />
+                  <FileInput label="DNI — dorso" file={dniBack} onChange={setDniBack} error={fileErrors.dniBack} onError={(m) => setFileError("dniBack", m)} />
+                  <FileInput label="Selfie sosteniendo el DNI" file={selfie} onChange={setSelfie} error={fileErrors.selfie} onError={(m) => setFileError("selfie", m)} />
 
                   {submitError && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5 text-center">{submitError}</p>}
                   {submitted && <p className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl px-4 py-2.5 text-center">¡Solicitud enviada! Te avisamos cuando esté aprobada.</p>}
 
                   <button
                     type="button"
-                    disabled={submitting || !dniFront || !dniBack || !selfie}
+                    disabled={submitting || !dniFront || !dniBack || !selfie || Object.values(fileErrors).some(Boolean)}
                     onClick={() => setShowSubmitConfirm(true)}
                     className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                   >
