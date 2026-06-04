@@ -185,7 +185,7 @@ function LoginForm() {
             </motion.div>
           )}
 
-          <h1 className="text-4xl font-black text-white mb-2">Bienvenida</h1>
+          <h1 className="text-4xl font-black text-white mb-2">Bienvenido</h1>
           <p className="text-gray-500 mb-8">Ingresá a tu cuenta para continuar.</p>
 
           {error && (

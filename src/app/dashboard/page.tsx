@@ -78,7 +78,7 @@ export default async function DashboardPage() {
       <div>
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">
-            Bienvenida, {user.name?.split(" ")[0]} 👋
+            Bienvenido, {user.name?.split(" ")[0]} 👋
           </h1>
           <p className="text-gray-500 mt-1 flex items-center gap-1.5 flex-wrap">
             Resumen de tu tienda <strong>{store?.name}</strong>
