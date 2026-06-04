@@ -140,8 +140,8 @@ function FileInput({ label, file, onChange, error, onError, capture }: {
             <button
               type="button"
               onClick={() => cameraRef.current?.click()}
-              title="Sacar foto ahora"
-              className="px-3 border-l border-dashed border-gray-200 hover:bg-indigo-50/50 text-gray-400 hover:text-indigo-600 transition-colors"
+              title="Sacar foto con la cámara"
+              className="sm:hidden px-3 border-l border-dashed border-gray-200 hover:bg-indigo-50/50 text-gray-400 hover:text-indigo-600 transition-colors"
             >
               <Camera className="h-4 w-4" />
             </button>
