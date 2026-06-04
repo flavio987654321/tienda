@@ -629,7 +629,7 @@ export default function BohoTerra() {
           <img src={nosotrosImageOv?.url ?? "https://picsum.photos/seed/terra-about/1920/600"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${nosotrosImageOv?.posX ?? 50}% ${nosotrosImageOv?.posY ?? 35}%` }}/>
           <BgDragHandle imgKey="nosotrosImage" />
           <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
-          <div style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.45)" }}/>
+          <div style={{ position:"absolute", inset:0, background: nosotrosImageOv?.overlayType === "none" ? "transparent" : nosotrosImageOv?.overlayType === "light" ? `rgba(255,255,255,${nosotrosImageOv?.overlayOpacity ?? 0.45})` : `rgba(44,34,24,${nosotrosImageOv?.overlayOpacity ?? 0.45})` }}/>
           <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
             <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,4vw,54px)", fontStyle:"italic", color:"#faf7f2", textAlign:"center", lineHeight:1.3 }}>
               <EditableZone field="quoteText" label="Frase destacada">Hechas con las manos y el corazón.</EditableZone>
@@ -659,7 +659,7 @@ export default function BohoTerra() {
         <img src={contactBgOv?.url ?? "https://picsum.photos/seed/terra-contact/1920/700"} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:`${contactBgOv?.posX ?? 50}% ${contactBgOv?.posY ?? 60}%` }}/>
         <BgDragHandle imgKey="contactBackground" />
         <EditableImageButton field="contactBackground" label="Imagen fondo contacto" />
-        <div style={{ position:"absolute", inset:0, background:"rgba(250,247,242,0.88)" }}/>
+        <div style={{ position:"absolute", inset:0, background: contactBgOv?.overlayType === "none" ? "transparent" : contactBgOv?.overlayType === "dark" ? `rgba(0,0,0,${contactBgOv?.overlayOpacity ?? 0.88})` : `rgba(250,247,242,${contactBgOv?.overlayOpacity ?? 0.88})` }}/>
         <div style={{ position:"relative", maxWidth:1280, margin:"0 auto", padding: isMobile ? "48px 20px" : "80px 40px", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 0 : 80, alignItems:"center", minHeight: isMobile ? "auto" : 500 }}>
           {/* izq — texto e info */}
           <div>
