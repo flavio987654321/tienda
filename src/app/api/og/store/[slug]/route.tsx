@@ -12,12 +12,21 @@ function darken(hex: string, amount = 50): string {
   return `rgb(${r},${g},${b})`;
 }
 
+const MAX_IMAGE_BYTES = 1.5 * 1024 * 1024; // 1.5 MB limit
+
 async function urlToDataUrl(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url, { cache: "no-store" });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000); // 4s max
+    const res = await fetch(url, { cache: "no-store", signal: controller.signal });
+    clearTimeout(timer);
     if (!res.ok) return null;
     const contentType = res.headers.get("content-type") || "image/jpeg";
+    if (!contentType.startsWith("image/")) return null;
+    const cl = res.headers.get("content-length");
+    if (cl && parseInt(cl) > MAX_IMAGE_BYTES) return null;
     const buf = await res.arrayBuffer();
+    if (buf.byteLength > MAX_IMAGE_BYTES) return null;
     const uint8 = new Uint8Array(buf);
     let binary = "";
     const CHUNK = 0x8000;
@@ -68,7 +77,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
             height: "100%",
             display: "flex",
             position: "relative",
-            background: bgDataUrl ? "#111" : `linear-gradient(135deg, ${color} 0%, ${colorDark} 100%)`,
+            background: `linear-gradient(135deg, ${color} 0%, ${colorDark} 100%)`,
           }}
         >
           {bgDataUrl && (
