@@ -353,10 +353,12 @@ export default function ChicParis() {
   return (
     <div style={{ fontFamily: "'Inter','Helvetica Neue',Arial,sans-serif", background: "#fff", color: "#111", minHeight: "100vh" }}>
       <style>{`
-        .cp-prod:hover .cp-img { transform:scale(1.05); }
-        .cp-prod:hover .cp-overlay { opacity:1; }
         .cp-img { transition:transform 0.45s ease; }
         .cp-overlay { opacity:0; transition:opacity 0.3s; }
+        @media (hover:hover) and (pointer:fine) {
+          .cp-prod:hover .cp-img { transform:scale(1.05); }
+          .cp-prod:hover .cp-overlay { opacity:1; }
+        }
         .cp-btn:hover { opacity:0.85; }
         @keyframes cp-toast { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
@@ -695,7 +697,7 @@ export default function ChicParis() {
             </div>
           ) : (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 24 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fill,minmax(260px,1fr))", gap: isMobile ? 12 : 24 }}>
                 {filtered.map(product => (
                   <div key={product.id} className="cp-prod" onClick={() => openModal(product)} style={{ cursor: "pointer", background: "#fff", borderRadius: 4, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                     <div style={{ position: "relative", overflow: "hidden", aspectRatio: "3/4" }}>

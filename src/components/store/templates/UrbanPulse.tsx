@@ -349,9 +349,11 @@ export default function UrbanPulse() {
         .up-fade { animation:up-fade 0.25s ease; }
         .up-stroke { -webkit-text-stroke:2px #0f0f0f; color:transparent; }
         .up-prod-img { transition:transform 0.5s ease; }
-        .up-prod:hover .up-prod-img { transform:scale(1.06); }
-        .up-cat:hover img { transform:scale(1.08); }
         .up-cat img { transition:transform 0.5s ease; }
+        @media (hover:hover) and (pointer:fine) {
+          .up-prod:hover .up-prod-img { transform:scale(1.06); }
+          .up-cat:hover img { transform:scale(1.08); }
+        }
       `}</style>
 
       {/* TOAST */}
