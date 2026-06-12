@@ -345,6 +345,19 @@ function ProductosPageInner() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  useEffect(() => {
+    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
+    const preventGesture = (e: Event) => { e.preventDefault(); };
+    document.addEventListener("touchmove", preventPinch, { passive: false });
+    document.addEventListener("gesturestart", preventGesture as EventListener);
+    document.addEventListener("gesturechange", preventGesture as EventListener);
+    return () => {
+      document.removeEventListener("touchmove", preventPinch);
+      document.removeEventListener("gesturestart", preventGesture as EventListener);
+      document.removeEventListener("gesturechange", preventGesture as EventListener);
+    };
+  }, []);
+
   // ── Cargar reseñas al abrir modal ──────────────────────────────────────────
   useEffect(() => {
     if (!modalProduct || !slug) return;
@@ -421,6 +434,7 @@ function ProductosPageInner() {
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:backdropNav, backdropFilter:"blur(12px)", borderBottom:`1px solid ${borderFaint}` }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 clamp(16px,4vw,32px)", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div style={{ visibility: isMobile ? "hidden" : "visible", pointerEvents: isMobile ? "none" : "auto" }}>
           {fromEditor ? (
             <Link href="/dashboard/configuracion"
               style={{ color:T, textDecoration:"none", fontSize:11, letterSpacing:3, textTransform:"uppercase", opacity:0.5, display:"flex", alignItems:"center", gap:8, transition:"opacity 0.2s" }}
@@ -443,6 +457,7 @@ function ProductosPageInner() {
               ← Volver a la tienda
             </Link>
           )}
+          </div>
           <span style={{ fontFamily:serif, fontSize:20, fontWeight:700, letterSpacing:5, color:G }}>{storeName}</span>
           <button onClick={() => setCartOpen(true)} style={{ position:"relative", background:"none", border:`1px solid ${border}`, color:T, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"border-color 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.borderColor=G)}
@@ -639,7 +654,9 @@ function ProductosPageInner() {
       {modalProduct && (
         <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => setModalProduct(null)}>
           <div style={{ position:"absolute", inset:0, background:overlayBg, backdropFilter:"blur(8px)" }}/>
-          <div style={{ position:"relative", background:S, maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }} onClick={e => e.stopPropagation()}>
+          <div style={{ position:"relative", background:S, maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setModalProduct(null)} style={{ position:"absolute", top:10, right:10, zIndex:10, background:"none", border:`1px solid ${border}`, color:T, width:32, height:32, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+            <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
             {/* Galería */}
             <div>
               <div style={{ position:"relative" }}>
@@ -669,8 +686,6 @@ function ProductosPageInner() {
             </div>
             {/* Detalle */}
             <div style={{ padding:"clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)", display:"flex", flexDirection:"column", gap:18, overflowY:"auto" }}>
-              <button onClick={() => setModalProduct(null)}
-                style={{ alignSelf:"flex-end", background:"none", border:`1px solid ${border}`, color:T, width:32, height:32, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
               <div>
                 <p style={{ fontSize:10, letterSpacing:3, color:G, textTransform:"uppercase", marginBottom:6 }}>
                   {modalProduct.category}{modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
@@ -830,6 +845,7 @@ function ProductosPageInner() {
                   </div>
                 )}
               </div>
+            </div>
             </div>
           </div>
         </div>

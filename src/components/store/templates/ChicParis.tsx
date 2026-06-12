@@ -79,9 +79,16 @@ export default function ChicParis() {
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
   useEffect(() => {
     if (lightboxSrc) return;
-    const handler = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
-    document.addEventListener("touchmove", handler, { passive: false });
-    return () => document.removeEventListener("touchmove", handler);
+    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
+    const preventGesture = (e: Event) => { e.preventDefault(); };
+    document.addEventListener("touchmove", preventPinch, { passive: false });
+    document.addEventListener("gesturestart", preventGesture as EventListener);
+    document.addEventListener("gesturechange", preventGesture as EventListener);
+    return () => {
+      document.removeEventListener("touchmove", preventPinch);
+      document.removeEventListener("gesturestart", preventGesture as EventListener);
+      document.removeEventListener("gesturechange", preventGesture as EventListener);
+    };
   }, [lightboxSrc]);
 
   const storeConfig = useStoreConfig();
