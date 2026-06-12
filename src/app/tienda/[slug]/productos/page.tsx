@@ -369,6 +369,12 @@ function ProductosPageInner() {
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
   );
 
+  // ── Bloquear scroll del body cuando el modal está abierto ─────────────────
+  useEffect(() => {
+    document.body.style.overflow = modalProduct ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [modalProduct]);
+
   // ── Cargar reseñas al abrir modal ──────────────────────────────────────────
   useEffect(() => {
     if (!modalProduct || !slug) return;
@@ -665,7 +671,7 @@ function ProductosPageInner() {
       {modalProduct && (
         <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
           <div style={{ position:"absolute", inset:0, background:overlayBg, backdropFilter:"blur(8px)" }}/>
-          <div style={{ position:"relative", background:S, ...(isMobile ? {width:"100%",height:"100vh"} : {maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh"}), overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
+          <div style={{ position: isMobile ? "absolute" : "relative", ...(isMobile ? {top:0,right:0,bottom:0,left:0} : {maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh"}), background:S, overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
             <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:10, right:10, zIndex:10, background:"rgba(0,0,0,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>×</button>
             <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
             {/* Galería */}
