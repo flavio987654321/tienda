@@ -410,7 +410,7 @@ function ProductosPageInner() {
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
     <div style={{ background:BG, color:T, minHeight:"100vh", fontFamily:sans }}>
-      <style>{`.st-tabs::-webkit-scrollbar{display:none}.st-tabs{scrollbar-width:none;-ms-overflow-style:none}`}</style>
+      <style>{`.st-tabs::-webkit-scrollbar{display:none}.st-tabs{scrollbar-width:none;-ms-overflow-style:none}@media(hover:hover) and (pointer:fine){.pc-img:hover{transform:scale(1.05)}}.pc-img{transition:transform 0.5s ease}`}</style>
 
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:backdropNav, backdropFilter:"blur(12px)", borderBottom:`1px solid ${borderFaint}` }}>
@@ -495,6 +495,9 @@ function ProductosPageInner() {
         </div>
 
         {/* ── FILTROS DE CATEGORÍA ───────────────────────────────────── */}
+        {hoveredCatMenu !== null && (
+          <div style={{ position:"fixed", inset:0, zIndex:350 }} onClick={() => setHoveredCatMenu(null)} />
+        )}
         <div className="st-tabs" style={{ display:"flex", gap:8, flexWrap:"nowrap", overflowX:"auto", marginBottom:40, borderBottom:`1px solid ${borderFaint}`, paddingBottom:24, WebkitOverflowScrolling:"touch" as any }}>
           {CATEGORIES.map(cat => {
             const subcats = cat !== "Todos" ? (subcategoriesFor[cat] || []) : [];
@@ -503,7 +506,13 @@ function ProductosPageInner() {
               <div key={cat} style={{ position:"relative" }}
                 onMouseEnter={() => subcats.length > 0 && setHoveredCatMenu(cat)}
                 onMouseLeave={() => setHoveredCatMenu(null)}>
-                <button onClick={() => changeCategory(cat)}
+                <button onClick={() => {
+                  if (subcats.length > 0) {
+                    setHoveredCatMenu(hoveredCatMenu === cat ? null : cat);
+                  } else {
+                    changeCategory(cat);
+                  }
+                }}
                   style={{ background: isActive ? G : "transparent", color: isActive ? (dark?"#000":"#fff") : T, border:`1px solid ${isActive ? G : border}`, padding:"9px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", transition:"all 0.2s", display:"flex", alignItems:"center", gap:5 }}>
                   {cat}
                   {subcats.length > 0 && <span style={{ opacity:0.55, fontSize:9 }}>▾</span>}
@@ -549,9 +558,8 @@ function ProductosPageInner() {
                   <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:14 }}>
                     {product.images[0] ? (
                       <img src={product.images[0]} alt={product.name}
-                        style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", transition:"transform 0.5s ease" }}
-                        onMouseEnter={e => (e.currentTarget.style.transform="scale(1.05)")}
-                        onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}
+                        className="pc-img"
+                        style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
                         onError={e => { e.currentTarget.style.opacity="0"; }}/>
                     ) : (
                       <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", opacity:0.15 }}>

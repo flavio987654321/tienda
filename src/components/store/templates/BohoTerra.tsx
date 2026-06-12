@@ -319,6 +319,7 @@ export default function BohoTerra() {
   const maxIdx      = Math.max(0, carouselProducts.length - CARDS_PER_VIEW);
   const prevSlide   = () => setCarouselIdx(i => Math.max(0, i - 1));
   const nextSlide   = () => setCarouselIdx(i => Math.min(maxIdx, i + 1));
+  const carouselSwipe = useTouchSwipe(nextSlide, prevSlide);
 
   const iStyle:React.CSSProperties = { display:"block", width:"100%", marginBottom:10, background:"#fff", border:`1px solid #d5c9be`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:"inherit" };
   const onFI = (e:React.FocusEvent<HTMLInputElement|HTMLTextAreaElement>) => (e.target.style.borderColor=A);
@@ -588,7 +589,7 @@ export default function BohoTerra() {
         </div>
 
         {/* carrusel — overflow visible para que se vean las tarjetas */}
-        <div style={{ position:"relative" }}>
+        <div style={{ position:"relative" }} {...carouselSwipe}>
           {/* área deslizante */}
           <div ref={carouselRef} style={{ overflow:"hidden", padding: isMobile ? "0 16px" : "0 40px" }}>
             <div style={{ display:"flex", gap:20, transition:"transform 0.45s cubic-bezier(.4,0,.2,1)", transform:`translateX(calc(-${carouselIdx} * (100% / ${CARDS_PER_VIEW} + 20px / ${CARDS_PER_VIEW})))` }}>
