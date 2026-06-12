@@ -410,6 +410,7 @@ function ProductosPageInner() {
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
     <div style={{ background:BG, color:T, minHeight:"100vh", fontFamily:sans }}>
+      <style>{`.st-tabs::-webkit-scrollbar{display:none}.st-tabs{scrollbar-width:none;-ms-overflow-style:none}`}</style>
 
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:backdropNav, backdropFilter:"blur(12px)", borderBottom:`1px solid ${borderFaint}` }}>
@@ -494,7 +495,7 @@ function ProductosPageInner() {
         </div>
 
         {/* ── FILTROS DE CATEGORÍA ───────────────────────────────────── */}
-        <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:40, borderBottom:`1px solid ${borderFaint}`, paddingBottom:24 }}>
+        <div className="st-tabs" style={{ display:"flex", gap:8, flexWrap:"nowrap", overflowX:"auto", marginBottom:40, borderBottom:`1px solid ${borderFaint}`, paddingBottom:24, WebkitOverflowScrolling:"touch" as any }}>
           {CATEGORIES.map(cat => {
             const subcats = cat !== "Todos" ? (subcategoriesFor[cat] || []) : [];
             const isActive = activeCategory === cat;

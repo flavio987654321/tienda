@@ -127,6 +127,7 @@ function VehiculosPageInner() {
   return (
     <div style={{ background: BG, color: T, minHeight: "100vh", fontFamily: "'Inter','Segoe UI',system-ui,sans-serif" }}>
       <style>{AM_MODAL_CSS}{`
+        .st-tabs::-webkit-scrollbar{display:none}.st-tabs{scrollbar-width:none;-ms-overflow-style:none}
         .av-grid { display:grid; gap:20px; grid-template-columns:1fr }
         @media(min-width:560px){ .av-grid { grid-template-columns:repeat(2,1fr) } }
         @media(min-width:900px){ .av-grid { grid-template-columns:repeat(3,1fr) } }
@@ -226,8 +227,8 @@ function VehiculosPageInner() {
 
         {/* ── FILTROS ────────────────────────────────────────────────────── */}
         {categories.length > 1 && (
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:40,
-            borderBottom:`1px solid ${borderFaint}`, paddingBottom:24 }}>
+          <div className="st-tabs" style={{ display:"flex", gap:8, flexWrap:"nowrap", overflowX:"auto", marginBottom:40,
+            borderBottom:`1px solid ${borderFaint}`, paddingBottom:24, WebkitOverflowScrolling:"touch" as any }}>
             {categories.map(cat => {
               const isActive = activeCategory === cat;
               return (

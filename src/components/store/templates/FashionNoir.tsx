@@ -5,6 +5,7 @@ import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, Bg
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
+import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
@@ -143,6 +144,10 @@ export default function FashionNoir() {
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
   } = useCartLogic(storefront);
+  const imgSwipe = useTouchSwipe(
+    () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
+    () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
+  );
 
   function openInquiry(product: StorefrontProduct) {
     setModalProduct(null);
@@ -1035,7 +1040,7 @@ export default function FashionNoir() {
           <div style={{ position:"relative", background:S, maxWidth:960, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }} onClick={e => e.stopPropagation()}>
             <div>
               {/* Imagen principal con flechas */}
-              <div style={{ position:"relative" }}>
+              <div style={{ position:"relative" }} {...imgSwipe}>
                 <img src={modalProduct.images[modalImg]} alt="" style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}
                   onError={e => { e.currentTarget.style.opacity="0"; }}/>
                 {modalProduct.images.length > 1 && (

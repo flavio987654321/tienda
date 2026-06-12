@@ -5,6 +5,7 @@ import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, Bg
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
+import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
@@ -173,6 +174,10 @@ export default function ChicParis() {
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
   } = useCartLogic(storefront);
+  const imgSwipe = useTouchSwipe(
+    () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
+    () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
+  );
 
   const selectedVariantStock = useMemo(() => {
     if (!modalProduct?.variants.length) return null;
@@ -1020,7 +1025,7 @@ export default function ChicParis() {
           <div style={{ background: "#fff", width: "100%", maxWidth: 860, maxHeight: "90vh", overflow: "auto", display: "flex", flexDirection: isMobile ? "column" : "row", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.35)" }}
             onClick={e => e.stopPropagation()}>
             {/* Images */}
-            <div style={{ width: isMobile ? "100%" : "48%", flexShrink: 0, position: "relative", overflow: "hidden", aspectRatio: isMobile ? "4/3" : undefined }}>
+            <div style={{ width: isMobile ? "100%" : "48%", flexShrink: 0, position: "relative", overflow: "hidden", aspectRatio: isMobile ? "4/3" : undefined }} {...imgSwipe}>
               <img src={modalProduct.images[modalImg] ?? "/placeholder.jpg"} alt={modalProduct.name}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               {modalProduct.images.length > 1 && (<>

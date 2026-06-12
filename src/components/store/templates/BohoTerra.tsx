@@ -5,6 +5,7 @@ import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, Bg
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
+import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
@@ -123,6 +124,10 @@ export default function BohoTerra() {
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
   } = useCartLogic(storefront);
+  const imgSwipe = useTouchSwipe(
+    () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
+    () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
+  );
 
   const selectedVariantStock = useMemo(() => {
     if (!modalProduct?.variants.length) return null;
@@ -858,7 +863,7 @@ export default function BohoTerra() {
           <div style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.65)", backdropFilter:"blur(8px)" }}/>
           <div style={{ position:"relative", background:"#fff", maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }} onClick={e=>e.stopPropagation()}>
             <div>
-              <div style={{ position:"relative" }}>
+              <div style={{ position:"relative" }} {...imgSwipe}>
                 <img src={modalProduct.images[modalImg]} alt="" style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}/>
                 {modalProduct.images.length > 1 && (<>
                   <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}

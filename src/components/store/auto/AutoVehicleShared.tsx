@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
+import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { getContrastColor } from "@/contexts/EditContext";
 
 export function fmtPrice(n: number, currency: string) {
@@ -54,6 +55,12 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
 }) {
   const [imgIdx, setImgIdx] = useState(0);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => { setIsTouch(window.matchMedia("(pointer: coarse)").matches); }, []);
+  const imgSwipe = useTouchSwipe(
+    () => setImgIdx(i => (i + 1) % imgs.length),
+    () => setImgIdx(i => (i - 1 + imgs.length) % imgs.length)
+  );
   const imgs = product.images.length > 0
     ? product.images
     : ["https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80"];
@@ -164,15 +171,17 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                   </div>
                 )}
                 <div style={{ flex: 1, position: "relative", aspectRatio: "4/3",
-                  overflow: "hidden", cursor: "crosshair" }}
+                  overflow: "hidden", cursor: isTouch ? "default" : "crosshair" }}
                   onMouseMove={e => {
+                    if (isTouch) return;
                     const r = e.currentTarget.getBoundingClientRect();
                     setMousePos({
                       x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)),
                       y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)),
                     });
                   }}
-                  onMouseLeave={() => setMousePos(null)}>
+                  onMouseLeave={() => setMousePos(null)}
+                  {...imgSwipe}>
                   <img src={imgs[imgIdx]} alt={product.name}
                     style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                   {mousePos && (
@@ -187,7 +196,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                       pointerEvents: "none", boxSizing: "border-box", zIndex: 2,
                     }} />
                   )}
-                  {imgs.length > 1 && !mousePos && (
+                  {imgs.length > 1 && (!mousePos || isTouch) && (
                     <>
                       <button onClick={() => setImgIdx(i => (i - 1 + imgs.length) % imgs.length)}
                         style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
