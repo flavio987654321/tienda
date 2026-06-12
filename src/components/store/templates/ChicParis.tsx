@@ -1244,7 +1244,7 @@ export default function ChicParis() {
 
       {/* ── CART ── */}
       {cartOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 9500, display: "flex", justifyContent: "flex-end" }} onClick={() => setCartOpen(false)}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 9500, display: "flex", justifyContent: "flex-end", overflow: "hidden" }} onClick={() => setCartOpen(false)}>
           <div style={{ width: isMobile ? "100%" : 400, background: "#fff", height: "100%", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(0,0,0,0.15)" }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: "20px 24px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>Tu carrito ({cartCount})</h3>

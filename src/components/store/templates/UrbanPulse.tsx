@@ -1265,7 +1265,7 @@ export default function UrbanPulse() {
 
       {/* CART DRAWER */}
       {cartOpen && (
-        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex:700 }}>
+        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex:700, overflow:"hidden" }}>
           <div onClick={() => setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.5)" }} />
           <div style={{ position:"absolute", right:0, top:0, bottom:0, left: isMobile ? 0 : "auto", width: isMobile ? "auto" : 440, background:WHITE, display:"flex", flexDirection:"column" }}>
             <div style={{ padding:"20px 24px", borderBottom:`3px solid ${DARK}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>

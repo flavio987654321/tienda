@@ -14,6 +14,10 @@
   --font-mono: "Courier New", Courier, monospace;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   background: #ffffff;
   color: #171717;
