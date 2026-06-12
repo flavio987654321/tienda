@@ -103,6 +103,7 @@ export default function BohoTerra() {
   const [mobileMenuOpen,      setMobileMenuOpen]      = useState(false);
   const [mobileCatsOpen,      setMobileCatsOpen]      = useState(false);
   const [mobileOpenCat,       setMobileOpenCat]       = useState<string | null>(null);
+  const [lightboxSrc,         setLightboxSrc]         = useState<string|null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -860,12 +861,14 @@ export default function BohoTerra() {
 
       {/* ── MODAL PRODUCTO */}
       {modalProduct && (
-        <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={()=>setModalProduct(null)}>
+        <div style={{ position:"fixed", inset:0, zIndex:600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={()=>{ setModalProduct(null); setLightboxSrc(null); }}>
           <div style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.65)", backdropFilter:"blur(8px)" }}/>
           <div style={{ position:"relative", background:"#fff", maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }} onClick={e=>e.stopPropagation()}>
+            <button onClick={()=>{ setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(44,34,24,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
             <div>
               <div style={{ position:"relative" }} {...imgSwipe}>
-                <img src={modalProduct.images[modalImg]} alt="" style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}/>
+                <img src={modalProduct.images[modalImg]} alt="" style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block", cursor:"zoom-in" }}
+                  onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                 {modalProduct.images.length > 1 && (<>
                   <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
                     style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.85)", border:"none", width:32, height:32, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>‹</button>
@@ -881,8 +884,7 @@ export default function BohoTerra() {
                 ))}
               </div>
             </div>
-            <div style={{ padding:"40px 36px", display:"flex", flexDirection:"column", gap:18 }}>
-              <button onClick={()=>setModalProduct(null)} style={{ alignSelf:"flex-end", background:"none", border:`1px solid rgba(44,34,24,0.2)`, color:T, width:32, height:32, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+            <div style={{ padding: isMobile ? "20px 20px" : "40px 36px", display:"flex", flexDirection:"column", gap:18 }}>
               <div>
                 <p style={{ fontSize:10, letterSpacing:4, color:A, textTransform:"uppercase", marginBottom:6 }}>{modalProduct.category}</p>
                 <h2 style={{ fontFamily:"Georgia, serif", fontSize:24, fontStyle:"italic", margin:0, lineHeight:1.2, color:T }}>{modalProduct.name}</h2>
@@ -1282,6 +1284,15 @@ export default function BohoTerra() {
               </form>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── LIGHTBOX ───────────────────────────────────────── */}
+      {lightboxSrc && (
+        <div style={{ position:"fixed", inset:0, zIndex:700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+          onClick={() => setLightboxSrc(null)}>
+          <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
+          <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}
 

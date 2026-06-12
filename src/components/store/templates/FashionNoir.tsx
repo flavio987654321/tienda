@@ -97,6 +97,7 @@ export default function FashionNoir() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
+  const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
@@ -1035,14 +1036,16 @@ export default function FashionNoir() {
 
       {/* ── MODAL PRODUCTO ─────────────────────────────────── */}
       {modalProduct && (
-        <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => setModalProduct(null)}>
+        <div style={{ position:"fixed", inset:0, zIndex:600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
           <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.88)", backdropFilter:"blur(8px)" }}/>
           <div style={{ position:"relative", background:S, maxWidth:960, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(10,10,10,0.65)", border:"none", color:T, width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>×</button>
             <div>
               {/* Imagen principal con flechas */}
               <div style={{ position:"relative" }} {...imgSwipe}>
-                <img src={modalProduct.images[modalImg]} alt="" style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}
-                  onError={e => { e.currentTarget.style.opacity="0"; }}/>
+                <img src={modalProduct.images[modalImg]} alt="" style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block", cursor:"zoom-in" }}
+                  onError={e => { e.currentTarget.style.opacity="0"; }}
+                  onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                 {modalProduct.images.length > 1 && (
                   <>
                     <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
@@ -1076,8 +1079,7 @@ export default function FashionNoir() {
                 </div>
               )}
             </div>
-            <div style={{ padding:"40px 36px", display:"flex", flexDirection:"column", gap:20 }}>
-              <button onClick={() => setModalProduct(null)} style={{ alignSelf:"flex-end", background:"none", border:`1px solid rgba(240,235,227,0.2)`, color:T, width:34, height:34, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+            <div style={{ padding: isMobile ? "20px 20px" : "40px 36px", display:"flex", flexDirection:"column", gap:20 }}>
               <div>
                 <p style={{ fontSize:10, letterSpacing:3, color:G, textTransform:"uppercase", marginBottom:8, opacity:0.8 }}>
                   {modalProduct.category}
@@ -1531,6 +1533,15 @@ export default function FashionNoir() {
           </div>
         </div>
       </div>
+
+      {/* ── LIGHTBOX ───────────────────────────────────────── */}
+      {lightboxSrc && (
+        <div style={{ position:"fixed", inset:0, zIndex:700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+          onClick={() => setLightboxSrc(null)}>
+          <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
+          <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+        </div>
+      )}
 
       {/* ── WHATSAPP BUTTON ────────────────────────────────── */}
       {(!storeConfig || storeConfig.whatsapp.enabled) && (

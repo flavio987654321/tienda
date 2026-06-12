@@ -79,6 +79,7 @@ export default function UrbanPulse() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
+  const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
@@ -1050,10 +1051,11 @@ export default function UrbanPulse() {
           <div onClick={() => setModalProduct(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)" }} />
           <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
             <div style={{ background:WHITE, width:"100%", maxWidth:860, maxHeight:"92vh", overflowY:"auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", position:"relative" }}>
-              <button onClick={() => setModalProduct(null)} style={{ position:"absolute", top:0, right:0, background:DARK, border:"none", color:ACC, width:40, height:40, fontSize:18, cursor:"pointer", zIndex:10, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+              <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:0, right:0, background:DARK, border:"none", color:ACC, width:40, height:40, fontSize:18, cursor:"pointer", zIndex:10, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
               <div>
                 <div style={{ position:"relative" }} {...imgSwipe}>
-                  <img src={modalProduct.images[modalImg]} alt={modalProduct.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
+                  <img src={modalProduct.images[modalImg]} alt={modalProduct.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block", cursor:"zoom-in" }}
+                    onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                   {modalProduct.images.length > 1 && (<>
                     <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
                       style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.9)", border:"none", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:700, zIndex:2 }}>‹</button>
@@ -1421,6 +1423,15 @@ export default function UrbanPulse() {
               </form>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── LIGHTBOX ───────────────────────────────────────── */}
+      {lightboxSrc && (
+        <div style={{ position:"fixed", inset:0, zIndex:700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+          onClick={() => setLightboxSrc(null)}>
+          <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
+          <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}
     </div>

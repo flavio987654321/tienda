@@ -76,6 +76,7 @@ export default function ChicParis() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
+  const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
@@ -1024,12 +1025,14 @@ export default function ChicParis() {
       {modalProduct && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(4px)" }}
           onClick={() => setModalProduct(null)}>
-          <div style={{ background: "#fff", width: "100%", maxWidth: 860, maxHeight: "90vh", overflow: "auto", display: "flex", flexDirection: isMobile ? "column" : "row", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.35)" }}
+          <div style={{ background: "#fff", width: "100%", maxWidth: 860, maxHeight: "90vh", overflow: "auto", display: "flex", flexDirection: isMobile ? "column" : "row", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", position:"relative" }}
             onClick={e => e.stopPropagation()}>
+            <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(0,0,0,0.5)", border:"none", color:"#fff", width:36, height:36, borderRadius:"50%", cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
             {/* Images */}
             <div style={{ width: isMobile ? "100%" : "48%", flexShrink: 0, position: "relative", overflow: "hidden", aspectRatio: isMobile ? "4/3" : undefined }} {...imgSwipe}>
               <img src={modalProduct.images[modalImg] ?? "/placeholder.jpg"} alt={modalProduct.name}
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", cursor:"zoom-in" }}
+                onClick={() => setLightboxSrc(modalProduct.images[modalImg] ?? "/placeholder.jpg")} />
               {modalProduct.images.length > 1 && (<>
                 <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
                   style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", border: "none", width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, zIndex: 2 }}>‹</button>
@@ -1044,8 +1047,7 @@ export default function ChicParis() {
               </>)}
             </div>
             {/* Details */}
-            <div style={{ flex: 1, padding: 32, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-              <button onClick={() => setModalProduct(null)} style={{ alignSelf: "flex-end", background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#999", marginBottom: 8 }}>×</button>
+            <div style={{ flex: 1, padding: isMobile ? "20px 20px" : 32, overflowY: "auto", display: "flex", flexDirection: "column" }}>
               <p style={{ margin: "0 0 6px", fontSize: 10, color: "#999", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>{modalProduct.category}</p>
               <h2 style={{ margin: "0 0 10px", fontSize: 22, fontWeight: 900, color: "#111", lineHeight: 1.2 }}>{modalProduct.name}</h2>
               <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
@@ -1434,6 +1436,15 @@ export default function ChicParis() {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── LIGHTBOX ───────────────────────────────────────── */}
+      {lightboxSrc && (
+        <div style={{ position:"fixed", inset:0, zIndex:9500, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+          onClick={() => setLightboxSrc(null)}>
+          <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
+          <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}
 

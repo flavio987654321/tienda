@@ -56,6 +56,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   const [imgIdx, setImgIdx] = useState(0);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const [isTouch, setIsTouch] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string|null>(null);
   useEffect(() => { setIsTouch(window.matchMedia("(pointer: coarse)").matches); }, []);
   const imgSwipe = useTouchSwipe(
     () => setImgIdx(i => (i + 1) % imgs.length),
@@ -183,7 +184,8 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                   onMouseLeave={() => setMousePos(null)}
                   {...imgSwipe}>
                   <img src={imgs[imgIdx]} alt={product.name}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", cursor: isTouch ? "zoom-in" : undefined }}
+                    onClick={() => { if (isTouch) setLightboxSrc(imgs[imgIdx]); }} />
                   {mousePos && (
                     <div style={{
                       position: "absolute",
@@ -354,6 +356,15 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
           )}
         </div>
       </div>
+
+      {/* ── LIGHTBOX ───────────────────────────────────────── */}
+      {lightboxSrc && (
+        <div style={{ position:"fixed", inset:0, zIndex:1100, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+          onClick={() => setLightboxSrc(null)}>
+          <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
+          <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+        </div>
+      )}
     </div>
   );
 }
