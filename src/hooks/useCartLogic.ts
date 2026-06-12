@@ -88,6 +88,30 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Bloquear scroll del body cuando el modal está abierto (fix iOS Safari)
+  useEffect(() => {
+    if (modalProduct) {
+      const scrollY = window.scrollY;
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
+    } else {
+      const top = document.body.style.top;
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      if (top) window.scrollTo(0, parseInt(top) * -1);
+    }
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+    };
+  }, [modalProduct]);
+
   // Derived values
   const cartTotal      = cartItems.reduce((s, i) => {
     const useWholesale = isWholesale && i.product.precioMayorista && i.product.cantMinMayorista && i.qty >= i.product.cantMinMayorista;

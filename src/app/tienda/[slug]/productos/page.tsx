@@ -369,12 +369,6 @@ function ProductosPageInner() {
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
   );
 
-  // ── Bloquear scroll del body cuando el modal está abierto ─────────────────
-  useEffect(() => {
-    document.body.style.overflow = modalProduct ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [modalProduct]);
-
   // ── Cargar reseñas al abrir modal ──────────────────────────────────────────
   useEffect(() => {
     if (!modalProduct || !slug) return;
