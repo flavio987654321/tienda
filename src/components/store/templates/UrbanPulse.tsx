@@ -80,6 +80,12 @@ export default function UrbanPulse() {
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
+  useEffect(() => {
+    if (lightboxSrc) return;
+    const handler = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
+    document.addEventListener("touchmove", handler, { passive: false });
+    return () => document.removeEventListener("touchmove", handler);
+  }, [lightboxSrc]);
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
@@ -1050,8 +1056,9 @@ export default function UrbanPulse() {
         <div className="up-fade" style={{ position:"fixed", inset:0, zIndex:600 }}>
           <div onClick={() => setModalProduct(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)" }} />
           <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-            <div style={{ background:WHITE, width:"100%", maxWidth:860, maxHeight:"92vh", overflowY:"auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", position:"relative" }}>
+            <div style={{ background:WHITE, width:"100%", maxWidth:860, maxHeight:"92vh", overflow:"hidden", display:"flex", flexDirection:"column", position:"relative" }}>
               <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:0, right:0, background:DARK, border:"none", color:ACC, width:40, height:40, fontSize:18, cursor:"pointer", zIndex:10, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+              <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
               <div>
                 <div style={{ position:"relative" }} {...imgSwipe}>
                   <img src={modalProduct.images[modalImg]} alt={modalProduct.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block", cursor:"zoom-in" }}
@@ -1239,6 +1246,7 @@ export default function UrbanPulse() {
                     </div>
                   )}
                 </div>
+              </div>
               </div>
             </div>
           </div>

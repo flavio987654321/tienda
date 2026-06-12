@@ -98,6 +98,12 @@ export default function FashionNoir() {
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
+  useEffect(() => {
+    if (lightboxSrc) return;
+    const handler = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
+    document.addEventListener("touchmove", handler, { passive: false });
+    return () => document.removeEventListener("touchmove", handler);
+  }, [lightboxSrc]);
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
@@ -1038,8 +1044,9 @@ export default function FashionNoir() {
       {modalProduct && (
         <div style={{ position:"fixed", inset:0, zIndex:600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
           <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.88)", backdropFilter:"blur(8px)" }}/>
-          <div style={{ position:"relative", background:S, maxWidth:960, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }} onClick={e => e.stopPropagation()}>
+          <div style={{ position:"relative", background:S, maxWidth:960, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
             <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(10,10,10,0.65)", border:"none", color:T, width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>×</button>
+            <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
             <div>
               {/* Imagen principal con flechas */}
               <div style={{ position:"relative" }} {...imgSwipe}>
@@ -1254,6 +1261,7 @@ export default function FashionNoir() {
                   </div>
                 )}
               </div>
+            </div>
             </div>
           </div>
         </div>

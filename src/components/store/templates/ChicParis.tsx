@@ -77,6 +77,12 @@ export default function ChicParis() {
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
+  useEffect(() => {
+    if (lightboxSrc) return;
+    const handler = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
+    document.addEventListener("touchmove", handler, { passive: false });
+    return () => document.removeEventListener("touchmove", handler);
+  }, [lightboxSrc]);
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
@@ -1025,9 +1031,10 @@ export default function ChicParis() {
       {modalProduct && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(4px)" }}
           onClick={() => setModalProduct(null)}>
-          <div style={{ background: "#fff", width: "100%", maxWidth: 860, maxHeight: "90vh", overflow: "auto", display: "flex", flexDirection: isMobile ? "column" : "row", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", position:"relative" }}
+          <div style={{ background: "#fff", width: "100%", maxWidth: 860, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", position:"relative" }}
             onClick={e => e.stopPropagation()}>
             <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(0,0,0,0.5)", border:"none", color:"#fff", width:36, height:36, borderRadius:"50%", cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+            <div style={{ overflow:"auto", flex:1, minHeight:0, display:"flex", flexDirection: isMobile ? "column" : "row" }}>
             {/* Images */}
             <div style={{ width: isMobile ? "100%" : "48%", flexShrink: 0, position: "relative", overflow: "hidden", aspectRatio: isMobile ? "4/3" : undefined }} {...imgSwipe}>
               <img src={modalProduct.images[modalImg] ?? "/placeholder.jpg"} alt={modalProduct.name}
@@ -1219,6 +1226,7 @@ export default function ChicParis() {
                   </div>
                 )}
               </div>
+            </div>
             </div>
           </div>
         </div>
