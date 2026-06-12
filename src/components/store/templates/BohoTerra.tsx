@@ -105,9 +105,12 @@ export default function BohoTerra() {
   const [mobileOpenCat,       setMobileOpenCat]       = useState<string | null>(null);
   const [lightboxSrc,         setLightboxSrc]         = useState<string|null>(null);
   useEffect(() => {
-    if (lightboxSrc) return;
-    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
-    const preventGesture = (e: Event) => { e.preventDefault(); };
+    const allowsPinch = (el: Element | null) => {
+      while (el) { if ((el as HTMLElement).style?.touchAction?.includes("pinch-zoom")) return true; el = el.parentElement; }
+      return false;
+    };
+    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1 && !allowsPinch(e.target as Element)) e.preventDefault(); };
+    const preventGesture = (e: Event) => { if (!allowsPinch((e as any).target as Element)) e.preventDefault(); };
     document.addEventListener("touchmove", preventPinch, { passive: false });
     document.addEventListener("gesturestart", preventGesture as EventListener);
     document.addEventListener("gesturechange", preventGesture as EventListener);
@@ -116,7 +119,7 @@ export default function BohoTerra() {
       document.removeEventListener("gesturestart", preventGesture as EventListener);
       document.removeEventListener("gesturechange", preventGesture as EventListener);
     };
-  }, [lightboxSrc]);
+  }, []);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -1071,7 +1074,7 @@ export default function BohoTerra() {
       {/* ── CARRITO */}
       <div style={{ position:"fixed", inset:0, zIndex:150, pointerEvents:cartOpen?"auto":"none" }}>
         <div onClick={()=>setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.4)", opacity:cartOpen?1:0, transition:"opacity 0.3s" }}/>
-        <div style={{ position:"absolute", top:0, right:0, bottom:0, width: isMobile ? "100vw" : 400, background:"#fff", transform:cartOpen?"translateX(0)":"translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:`1px solid rgba(44,34,24,0.08)` }}>
+        <div style={{ position:"absolute", top:0, right:0, bottom:0, left: isMobile ? 0 : "auto", width: isMobile ? "auto" : 400, background:"#fff", transform:cartOpen?"translateX(0)":"translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:`1px solid rgba(44,34,24,0.08)` }}>
           <div style={{ padding:"20px 24px 14px", borderBottom:`1px solid rgba(44,34,24,0.06)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:18, margin:0, color:T }}>Tu carrito <span style={{ fontStyle:"normal", fontSize:13, color:MID, fontFamily:"'Helvetica Neue', sans-serif" }}>({cartCount})</span></p>
             <button onClick={()=>setCartOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:22, cursor:"pointer" }}>×</button>

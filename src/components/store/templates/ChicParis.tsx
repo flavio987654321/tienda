@@ -78,9 +78,12 @@ export default function ChicParis() {
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
   useEffect(() => {
-    if (lightboxSrc) return;
-    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
-    const preventGesture = (e: Event) => { e.preventDefault(); };
+    const allowsPinch = (el: Element | null) => {
+      while (el) { if ((el as HTMLElement).style?.touchAction?.includes("pinch-zoom")) return true; el = el.parentElement; }
+      return false;
+    };
+    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1 && !allowsPinch(e.target as Element)) e.preventDefault(); };
+    const preventGesture = (e: Event) => { if (!allowsPinch((e as any).target as Element)) e.preventDefault(); };
     document.addEventListener("touchmove", preventPinch, { passive: false });
     document.addEventListener("gesturestart", preventGesture as EventListener);
     document.addEventListener("gesturechange", preventGesture as EventListener);
@@ -89,7 +92,7 @@ export default function ChicParis() {
       document.removeEventListener("gesturestart", preventGesture as EventListener);
       document.removeEventListener("gesturechange", preventGesture as EventListener);
     };
-  }, [lightboxSrc]);
+  }, []);
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
@@ -1241,9 +1244,8 @@ export default function ChicParis() {
 
       {/* ── CART ── */}
       {cartOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 9500, display: "flex" }} onClick={() => setCartOpen(false)}>
-          <div style={{ flex: 1 }} />
-          <div style={{ width: isMobile ? "100vw" : 400, background: "#fff", height: "100%", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(0,0,0,0.15)" }} onClick={e => e.stopPropagation()}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 9500, display: "flex", justifyContent: "flex-end" }} onClick={() => setCartOpen(false)}>
+          <div style={{ width: isMobile ? "100%" : 400, background: "#fff", height: "100%", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(0,0,0,0.15)" }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: "20px 24px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>Tu carrito ({cartCount})</h3>
               <button onClick={() => setCartOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: "#999" }}>×</button>

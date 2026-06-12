@@ -141,6 +141,23 @@ export default function AutoDrive() {
   const [showReport, setShowReport]     = useState(false);
 
   useEffect(() => {
+    const allowsPinch = (el: Element | null) => {
+      while (el) { if ((el as HTMLElement).style?.touchAction?.includes("pinch-zoom")) return true; el = el.parentElement; }
+      return false;
+    };
+    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1 && !allowsPinch(e.target as Element)) e.preventDefault(); };
+    const preventGesture = (e: Event) => { if (!allowsPinch((e as any).target as Element)) e.preventDefault(); };
+    document.addEventListener("touchmove", preventPinch, { passive: false });
+    document.addEventListener("gesturestart", preventGesture as EventListener);
+    document.addEventListener("gesturechange", preventGesture as EventListener);
+    return () => {
+      document.removeEventListener("touchmove", preventPinch);
+      document.removeEventListener("gesturestart", preventGesture as EventListener);
+      document.removeEventListener("gesturechange", preventGesture as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);

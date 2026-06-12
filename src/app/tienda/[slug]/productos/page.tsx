@@ -348,9 +348,12 @@ function ProductosPageInner() {
   }, []);
 
   useEffect(() => {
-    if (lightboxSrc) return;
-    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
-    const preventGesture = (e: Event) => { e.preventDefault(); };
+    const allowsPinch = (el: Element | null) => {
+      while (el) { if ((el as HTMLElement).style?.touchAction?.includes("pinch-zoom")) return true; el = el.parentElement; }
+      return false;
+    };
+    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1 && !allowsPinch(e.target as Element)) e.preventDefault(); };
+    const preventGesture = (e: Event) => { if (!allowsPinch((e as any).target as Element)) e.preventDefault(); };
     document.addEventListener("touchmove", preventPinch, { passive: false });
     document.addEventListener("gesturestart", preventGesture as EventListener);
     document.addEventListener("gesturechange", preventGesture as EventListener);
@@ -359,7 +362,7 @@ function ProductosPageInner() {
       document.removeEventListener("gesturestart", preventGesture as EventListener);
       document.removeEventListener("gesturechange", preventGesture as EventListener);
     };
-  }, [lightboxSrc]);
+  }, []);
 
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },

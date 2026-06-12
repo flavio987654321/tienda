@@ -81,9 +81,12 @@ export default function UrbanPulse() {
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
   useEffect(() => {
-    if (lightboxSrc) return;
-    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
-    const preventGesture = (e: Event) => { e.preventDefault(); };
+    const allowsPinch = (el: Element | null) => {
+      while (el) { if ((el as HTMLElement).style?.touchAction?.includes("pinch-zoom")) return true; el = el.parentElement; }
+      return false;
+    };
+    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1 && !allowsPinch(e.target as Element)) e.preventDefault(); };
+    const preventGesture = (e: Event) => { if (!allowsPinch((e as any).target as Element)) e.preventDefault(); };
     document.addEventListener("touchmove", preventPinch, { passive: false });
     document.addEventListener("gesturestart", preventGesture as EventListener);
     document.addEventListener("gesturechange", preventGesture as EventListener);
@@ -92,7 +95,7 @@ export default function UrbanPulse() {
       document.removeEventListener("gesturestart", preventGesture as EventListener);
       document.removeEventListener("gesturechange", preventGesture as EventListener);
     };
-  }, [lightboxSrc]);
+  }, []);
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
@@ -1264,7 +1267,7 @@ export default function UrbanPulse() {
       {cartOpen && (
         <div className="up-fade" style={{ position:"fixed", inset:0, zIndex:700 }}>
           <div onClick={() => setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.5)" }} />
-          <div style={{ position:"absolute", right:0, top:0, bottom:0, width: isMobile ? "100vw" : 440, background:WHITE, display:"flex", flexDirection:"column" }}>
+          <div style={{ position:"absolute", right:0, top:0, bottom:0, left: isMobile ? 0 : "auto", width: isMobile ? "auto" : 440, background:WHITE, display:"flex", flexDirection:"column" }}>
             <div style={{ padding:"20px 24px", borderBottom:`3px solid ${DARK}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <h3 style={{ margin:0, fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase" }}>Carrito ({cartCount})</h3>
               <button onClick={() => setCartOpen(false)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer" }}>✕</button>

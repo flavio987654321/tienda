@@ -99,9 +99,12 @@ export default function FashionNoir() {
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
   useEffect(() => {
-    if (lightboxSrc) return;
-    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
-    const preventGesture = (e: Event) => { e.preventDefault(); };
+    const allowsPinch = (el: Element | null) => {
+      while (el) { if ((el as HTMLElement).style?.touchAction?.includes("pinch-zoom")) return true; el = el.parentElement; }
+      return false;
+    };
+    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1 && !allowsPinch(e.target as Element)) e.preventDefault(); };
+    const preventGesture = (e: Event) => { if (!allowsPinch((e as any).target as Element)) e.preventDefault(); };
     document.addEventListener("touchmove", preventPinch, { passive: false });
     document.addEventListener("gesturestart", preventGesture as EventListener);
     document.addEventListener("gesturechange", preventGesture as EventListener);
@@ -110,7 +113,7 @@ export default function FashionNoir() {
       document.removeEventListener("gesturestart", preventGesture as EventListener);
       document.removeEventListener("gesturechange", preventGesture as EventListener);
     };
-  }, [lightboxSrc]);
+  }, []);
 
   const storeConfig = useStoreConfig();
   const isPreview   = !!storeConfig?.previewFill;
@@ -1433,7 +1436,7 @@ export default function FashionNoir() {
       {/* ── CARRITO ────────────────────────────────────────── */}
       <div style={{ position:"fixed", inset:0, zIndex:150, pointerEvents: cartOpen ? "auto" : "none" }}>
         <div onClick={() => setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.6)", opacity: cartOpen ? 1 : 0, transition:"opacity 0.3s" }}/>
-        <div style={{ position:"absolute", top:0, right:0, bottom:0, width: isMobile ? "100vw" : 420, background:S, transform: cartOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
+        <div style={{ position:"absolute", top:0, right:0, bottom:0, left: isMobile ? 0 : "auto", width: isMobile ? "auto" : 420, background:S, transform: cartOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
           <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid rgba(240,235,227,0.07)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <p style={{ fontFamily:"Georgia, serif", fontSize:18, margin:0 }}>Tu carrito <span style={{ fontSize:13, color:"#555" }}>({cartCount})</span></p>
             <button onClick={() => setCartOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
