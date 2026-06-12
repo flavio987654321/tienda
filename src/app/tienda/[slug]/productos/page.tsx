@@ -110,6 +110,8 @@ function ProductosPageInner() {
   const slug         = params?.slug as string;
   const tParam       = searchParams?.get("t") ?? null;
   const fromEditor   = searchParams?.get("from") === "editor";
+  const catParam     = searchParams?.get("categoria") ?? null;
+  const subCatParam  = searchParams?.get("subcategoria") ?? null;
 
   const [products,   setProducts]   = useState<StorefrontProduct[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -214,8 +216,8 @@ function ProductosPageInner() {
 
   // ── Filtros y ordenamiento ──────────────────────────────────────────────────
   const [search,            setSearch]            = useState("");
-  const [activeCategory,    setActiveCategory]    = useState("Todos");
-  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+  const [activeCategory,    setActiveCategory]    = useState(catParam ?? "Todos");
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(subCatParam);
   const [hoveredCatMenu,    setHoveredCatMenu]    = useState<string | null>(null);
   const [sortBy,            setSortBy]            = useState("newest");
   const [page,              setPage]              = useState(1);
