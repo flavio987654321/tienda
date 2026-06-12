@@ -74,6 +74,7 @@ export default function AutoDrive() {
   const config = useStoreConfig();
   const { products, loadingProducts } = useStorefront();
   const { editMode } = useEditContext();
+  const isPreview = !!config?.previewFill;
   const accent = config?.colors.accent ?? "#2563eb";
   const currency = config?.currency ?? "ARS";
   const storeName = config?.storeName ?? "AUTO DRIVE";
@@ -236,7 +237,7 @@ export default function AutoDrive() {
                 {label}
               </button>
             ))}
-            <Link href={`/tienda/${config?.slug ?? ""}/vehiculos`}
+            <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
               style={{ border: `1px solid #e0e0e0`, color: "#555", padding: "6px 16px",
                 fontSize: 12, fontWeight: 600, letterSpacing: 0.5, textDecoration: "none",
                 borderRadius: 6, transition: "all 0.15s" }}
@@ -271,7 +272,7 @@ export default function AutoDrive() {
                 {label}
               </button>
             ))}
-            <Link href={`/tienda/${config?.slug ?? ""}/vehiculos`}
+            <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
               style={{ display: "block", color: accent, padding: "12px 0", fontSize: 14,
                 fontWeight: 600, textDecoration: "none" }}
               onClick={() => setMenuOpen(false)}>
@@ -503,7 +504,7 @@ export default function AutoDrive() {
               </div>
               {filtered.length > 8 && (
                 <div style={{ textAlign: "center", marginTop: 48 }}>
-                  <Link href={`/tienda/${config?.slug ?? ""}/vehiculos`}
+                  <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
                     style={{ display: "inline-block", background: accent, color: "#fff",
                       textDecoration: "none", padding: "14px 40px", borderRadius: 8,
                       fontSize: 13, fontWeight: 700, transition: "opacity 0.2s" }}

@@ -67,6 +67,7 @@ export default function AutoMotor() {
   const config = useStoreConfig();
   const { products, loadingProducts } = useStorefront();
   const { editMode } = useEditContext();
+  const isPreview = !!config?.previewFill;
   const accent = config?.colors.accent ?? "#c9a227";
   const currency = config?.currency ?? "ARS";
   const storeName = config?.storeName ?? "AUTO MOTOR";
@@ -230,7 +231,7 @@ export default function AutoMotor() {
                 {label}
               </button>
             ))}
-            <Link href={`/tienda/${config?.slug ?? ""}/vehiculos`}
+            <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
               style={{ background: "none", border: `1px solid ${scrolled ? "#d0d0d0" : heroNavBorder}`,
                 color: scrolled ? "#555" : heroNavText, padding: "7px 18px",
                 fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase",
@@ -267,7 +268,7 @@ export default function AutoMotor() {
                 {label}
               </button>
             ))}
-            <Link href={`/tienda/${config?.slug ?? ""}/vehiculos`}
+            <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
               style={{ display: "block", color: accent, padding: "12px 0", fontSize: 12, fontWeight: 700,
                 textTransform: "uppercase", letterSpacing: 2, textDecoration: "none" }}
               onClick={() => setMenuOpen(false)}>
@@ -526,7 +527,7 @@ export default function AutoMotor() {
                       Ver menos
                     </button>
                   ) : (
-                    <Link href={`/tienda/${config?.slug ?? ""}/vehiculos`}
+                    <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
                       style={{ display: "inline-block", background: accent, color: getContrastColor(accent),
                         textDecoration: "none", padding: "14px 40px",
                         fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase",
