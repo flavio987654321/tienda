@@ -827,14 +827,6 @@ export default function FashionNoir() {
             Mostrando {Math.min(visibleCount, allFiltered.length)} de {allFiltered.length} piezas
           </p>
           <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
-            {hasMore && (
-              <button onClick={() => setVisibleCount(v => v + 8)}
-                style={{ background:"transparent", color:productosText, border:`1px solid rgba(240,235,227,0.25)`, padding:"14px 36px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:600, cursor:"pointer", transition:"all 0.25s" }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor=G; e.currentTarget.style.color=G; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(240,235,227,0.25)"; e.currentTarget.style.color=productosText; }}>
-                Ver 8 más
-              </button>
-            )}
             <a href={`/tienda/${storeConfig?.slug ?? ""}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}`}
               style={{ background:G, color:BG, padding:"14px 36px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:700, cursor:"pointer", textDecoration:"none", display:"inline-block", transition:"opacity 0.2s" }}
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity="0.85"; }}
