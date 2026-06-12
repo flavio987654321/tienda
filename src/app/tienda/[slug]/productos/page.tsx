@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct, PlaceOrderParams } from "@/hooks/useStorefront";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
+import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 
 // ── Tipos extra ──────────────────────────────────────────────────────────────
 const SIZE_ATTRS  = [
@@ -129,6 +130,7 @@ function ProductosPageInner() {
   const [reviewDone,       setReviewDone]       = useState(false);
   const [isMobile,         setIsMobile]         = useState(false);
   const [reelIndex,        setReelIndex]        = useState(0);
+  const [lightboxSrc,      setLightboxSrc]      = useState<string|null>(null);
 
   // ── Funciones estables para useCartLogic ──────────────────────────────────
   const resolveVariantId = useCallback((product: StorefrontProduct, sizeValue: string, colorValue: string): string | null => {
@@ -346,6 +348,7 @@ function ProductosPageInner() {
   }, []);
 
   useEffect(() => {
+    if (lightboxSrc) return;
     const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
     const preventGesture = (e: Event) => { e.preventDefault(); };
     document.addEventListener("touchmove", preventPinch, { passive: false });
@@ -356,7 +359,12 @@ function ProductosPageInner() {
       document.removeEventListener("gesturestart", preventGesture as EventListener);
       document.removeEventListener("gesturechange", preventGesture as EventListener);
     };
-  }, []);
+  }, [lightboxSrc]);
+
+  const imgSwipe = useTouchSwipe(
+    () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
+    () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
+  );
 
   // ── Cargar reseñas al abrir modal ──────────────────────────────────────────
   useEffect(() => {
@@ -434,7 +442,7 @@ function ProductosPageInner() {
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:backdropNav, backdropFilter:"blur(12px)", borderBottom:`1px solid ${borderFaint}` }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 clamp(16px,4vw,32px)", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <div style={{ visibility: isMobile ? "hidden" : "visible", pointerEvents: isMobile ? "none" : "auto" }}>
+          <div style={{ visibility: isMobile ? "hidden" : "visible", pointerEvents: isMobile ? "none" : "auto", width: isMobile ? 44 : "auto" }}>
           {fromEditor ? (
             <Link href="/dashboard/configuracion"
               style={{ color:T, textDecoration:"none", fontSize:11, letterSpacing:3, textTransform:"uppercase", opacity:0.5, display:"flex", alignItems:"center", gap:8, transition:"opacity 0.2s" }}
@@ -652,17 +660,18 @@ function ProductosPageInner() {
 
       {/* ── MODAL PRODUCTO ─────────────────────────────────────────────── */}
       {modalProduct && (
-        <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => setModalProduct(null)}>
+        <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
           <div style={{ position:"absolute", inset:0, background:overlayBg, backdropFilter:"blur(8px)" }}/>
           <div style={{ position:"relative", background:S, maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setModalProduct(null)} style={{ position:"absolute", top:10, right:10, zIndex:10, background:"none", border:`1px solid ${border}`, color:T, width:32, height:32, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+            <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:10, right:10, zIndex:10, background:"rgba(0,0,0,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>×</button>
             <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
             {/* Galería */}
             <div>
-              <div style={{ position:"relative" }}>
+              <div style={{ position:"relative" }} {...imgSwipe}>
                 <img src={modalProduct.images[modalImg] ?? ""} alt={modalProduct.name}
-                  style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}
-                  onError={e => { e.currentTarget.style.opacity="0"; }}/>
+                  style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block", cursor:"zoom-in" }}
+                  onError={e => { e.currentTarget.style.opacity="0"; }}
+                  onClick={() => setLightboxSrc(modalProduct.images[modalImg] ?? "")} />
                 {modalProduct.images.length > 1 && (<>
                   <button onClick={() => setModalImg(i => (i-1+modalProduct.images.length)%modalProduct.images.length)}
                     style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.45)", border:"none", color:"#fff", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, borderRadius:2 }}>‹</button>
@@ -848,6 +857,15 @@ function ProductosPageInner() {
             </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── LIGHTBOX ──────────────────────────────────────────────────── */}
+      {lightboxSrc && (
+        <div style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+          onClick={() => setLightboxSrc(null)}>
+          <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
+          <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}
 
