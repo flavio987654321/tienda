@@ -101,6 +101,7 @@ export default function UrbanPulse() {
   const isPreview   = !!storeConfig?.previewFill;
   const isOwner     = !!storeConfig?.isOwner;
   const blockBuy    = isPreview || isOwner;
+  const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
   const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
@@ -497,11 +498,6 @@ export default function UrbanPulse() {
               </div>
             )}
           </div>
-          <button onClick={() => setCartOpen(true)}
-            style={{ background:DARK, border:"none", color:ACC, padding:"10px 14px", display:"flex", alignItems:"center", gap:6, fontSize:11, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", marginLeft:4 }}>
-            <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-            {cartCount > 0 ? cartCount : ""}
-          </button>
           {isMobile && (
             <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} style={{ background:"none", border:"none", color:DARK, cursor:"pointer", padding:4, display:"flex", flexDirection:"column", gap:4, alignItems:"center" }}>
               <span style={{ display:"block", width:20, height:2.5, background:DARK, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(3px,4px)" : "none" }}/>
@@ -995,6 +991,15 @@ export default function UrbanPulse() {
       {showReport && (
         <ReportStoreModal slug={storeConfig?.slug ?? ""} onClose={() => setShowReport(false)} />
       )}
+
+      {/* ── FLOATING CART BUTTON ────────────────────────────── */}
+      <button onClick={() => setCartOpen(true)}
+        style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:500, width:52, height:52, borderRadius:"50%", background:ACC, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(0,0,0,0.25)", transition:"transform 0.2s" }}
+        onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
+        onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
+        <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={getContrastColor(ACC)==="light"?"#fff":DARK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        {cartCount > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:"#e53e3e", color:"#fff", borderRadius:"50%", width:20, height:20, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
+      </button>
 
       {/* WHATSAPP */}
       {(!storeConfig || storeConfig.whatsapp.enabled) && (
