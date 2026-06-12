@@ -665,7 +665,7 @@ function ProductosPageInner() {
       {modalProduct && (
         <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
           <div style={{ position:"absolute", inset:0, background:overlayBg, backdropFilter:"blur(8px)" }}/>
-          <div style={{ position:"relative", background:S, maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
+          <div style={{ position:"relative", background:S, ...(isMobile ? {width:"100%",height:"100vh"} : {maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh"}), overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
             <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:10, right:10, zIndex:10, background:"rgba(0,0,0,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>×</button>
             <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
             {/* Galería */}
@@ -697,7 +697,7 @@ function ProductosPageInner() {
               )}
             </div>
             {/* Detalle */}
-            <div style={{ padding:"clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)", display:"flex", flexDirection:"column", gap:18, overflowY:"auto" }}>
+            <div style={{ padding:"clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)", display:"flex", flexDirection:"column", gap:18, overflowY: isMobile ? "visible" : "auto" }}>
               <div>
                 <p style={{ fontSize:10, letterSpacing:3, color:G, textTransform:"uppercase", marginBottom:6 }}>
                   {modalProduct.category}{modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
@@ -875,7 +875,7 @@ function ProductosPageInner() {
       {/* ── CARRITO ────────────────────────────────────────────────────── */}
       <div style={{ position:"fixed", inset:0, zIndex:150, pointerEvents: cartOpen ? "auto" : "none" }}>
         <div onClick={() => setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.55)", opacity: cartOpen?1:0, transition:"opacity 0.3s" }}/>
-        <div style={{ position:"absolute", top:0, right:0, bottom:0, width:420, maxWidth:"100vw", background:S, transform: cartOpen?"translateX(0)":"translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
+        <div style={{ position:"absolute", top:0, right:0, bottom:0, left: isMobile ? 0 : "auto", width: isMobile ? "auto" : 420, background:S, transform: cartOpen?"translateX(0)":"translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
           <div style={{ padding:"22px 22px 14px", borderBottom:`1px solid ${borderFaint}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <p style={{ fontFamily:serif, fontSize:18, margin:0, color:T }}>Tu carrito <span style={{ fontSize:13, color:MID }}>({cartCount})</span></p>
             <button onClick={() => setCartOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
