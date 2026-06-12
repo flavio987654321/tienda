@@ -410,11 +410,17 @@ function ProductosPageInner() {
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
     <div style={{ background:BG, color:T, minHeight:"100vh", fontFamily:sans }}>
-      <style>{`.st-tabs::-webkit-scrollbar{display:none}.st-tabs{scrollbar-width:none;-ms-overflow-style:none}@media(hover:hover) and (pointer:fine){.pc-img:hover{transform:scale(1.05)}}.pc-img{transition:transform 0.5s ease}`}</style>
+      <style>{`
+  .st-tabs::-webkit-scrollbar{display:none}.st-tabs{scrollbar-width:none;-ms-overflow-style:none}
+  @media(hover:hover) and (pointer:fine){.pc-img:hover{transform:scale(1.05)}}.pc-img{transition:transform 0.5s ease}
+  .pc-grid{display:grid;gap:16px;grid-template-columns:repeat(2,1fr);margin-bottom:56px}
+  @media(min-width:560px){.pc-grid{gap:20px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}}
+  @media(min-width:900px){.pc-grid{gap:24px}}
+`}</style>
 
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:backdropNav, backdropFilter:"blur(12px)", borderBottom:`1px solid ${borderFaint}` }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 32px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 clamp(16px,4vw,32px)", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           {fromEditor ? (
             <Link href="/dashboard/configuracion"
               style={{ color:T, textDecoration:"none", fontSize:11, letterSpacing:3, textTransform:"uppercase", opacity:0.5, display:"flex", alignItems:"center", gap:8, transition:"opacity 0.2s" }}
@@ -451,7 +457,7 @@ function ProductosPageInner() {
         </div>
       </div>
 
-      <div style={{ maxWidth:1280, margin:"0 auto", padding:"48px 32px" }}>
+      <div style={{ maxWidth:1280, margin:"0 auto", padding:"clamp(32px,5vw,48px) clamp(16px,4vw,32px)" }}>
 
         {/* ── TÍTULO + BÚSQUEDA ──────────────────────────────────────── */}
         <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", marginBottom:40, flexWrap:"wrap", gap:16 }}>
@@ -471,7 +477,7 @@ function ProductosPageInner() {
                 value={search}
                 onChange={e => { setSearch(e.target.value); setPage(1); }}
                 placeholder="Buscar productos..."
-                style={{ background:S, border:`1px solid ${border}`, color:T, padding:"11px 16px 11px 40px", fontSize:13, outline:"none", width:230, boxSizing:"border-box" as const }}
+                style={{ background:S, border:`1px solid ${border}`, color:T, padding:"11px 16px 11px 40px", fontSize:13, outline:"none", width:"clamp(180px,50vw,230px)", boxSizing:"border-box" as const }}
                 onFocus={e => (e.target.style.borderColor=G)}
                 onBlur={e => (e.target.style.borderColor=border)}
               />
@@ -550,7 +556,7 @@ function ProductosPageInner() {
             <p style={{ fontSize:13 }}>Probá con otra búsqueda o categoría</p>
           </div>
         ) : (
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:24, marginBottom:56 }}>
+          <div className="pc-grid">
             {paginated.map(product => {
               const isFav = favorites.includes(product.id);
               return (
@@ -662,7 +668,7 @@ function ProductosPageInner() {
               )}
             </div>
             {/* Detalle */}
-            <div style={{ padding:"36px 32px", display:"flex", flexDirection:"column", gap:18, overflowY:"auto" }}>
+            <div style={{ padding:"clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)", display:"flex", flexDirection:"column", gap:18, overflowY:"auto" }}>
               <button onClick={() => setModalProduct(null)}
                 style={{ alignSelf:"flex-end", background:"none", border:`1px solid ${border}`, color:T, width:32, height:32, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
               <div>

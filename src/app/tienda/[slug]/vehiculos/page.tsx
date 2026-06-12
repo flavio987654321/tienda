@@ -137,7 +137,7 @@ function VehiculosPageInner() {
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:backdropNav,
         backdropFilter:"blur(12px)", borderBottom:`1px solid ${borderFaint}` }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 32px", height:64,
+        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 clamp(16px,4vw,32px)", height:64,
           display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           {fromEditor ? (
             <Link href="/dashboard/configuracion"
@@ -168,7 +168,7 @@ function VehiculosPageInner() {
         </div>
       </div>
 
-      <div style={{ maxWidth:1280, margin:"0 auto", padding:"48px 32px" }}>
+      <div style={{ maxWidth:1280, margin:"0 auto", padding:"clamp(32px,5vw,48px) clamp(16px,4vw,32px)" }}>
 
         {/* ── TÍTULO + CONTROLES ─────────────────────────────────────────── */}
         <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between",
@@ -194,7 +194,7 @@ function VehiculosPageInner() {
                 placeholder="Buscar marca, modelo..."
                 style={{ background:S, border:`1px solid ${border}`, color:T,
                   padding:"11px 16px 11px 40px", fontSize:13, outline:"none",
-                  width:230, boxSizing:"border-box" as const, borderRadius:3 }}
+                  width:"clamp(180px,50vw,230px)", boxSizing:"border-box" as const, borderRadius:3 }}
                 onFocus={e => (e.target.style.borderColor=accent)}
                 onBlur={e => (e.target.style.borderColor=border)}
               />
