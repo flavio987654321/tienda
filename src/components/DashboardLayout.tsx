@@ -1,25 +1,30 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle, Loader2, MessageCircle, BadgeCheck, CreditCard } from "lucide-react";
+import {
+  ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut,
+  BarChart2, Tag, UserCircle, Loader2, MessageCircle, BadgeCheck,
+  CreditCard, Menu, X, Wallet,
+} from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 
 const LEADS_STORE_TYPES = ["VEHICULOS", "INMOBILIARIA"];
 
 const allNavItems = [
-  { href: "/dashboard", label: "Inicio", icon: TrendingUp },
-  { href: "/dashboard/metricas", label: "Métricas", icon: BarChart2 },
-  { href: "/dashboard/productos", label: "Productos", icon: Package },
-  { href: "/dashboard/pedidos", label: "Pedidos", icon: ShoppingBag },
-  { href: "/dashboard/consultas", label: "Consultas", icon: MessageCircle, onlyFor: LEADS_STORE_TYPES },
-  { href: "/dashboard/vendedoras", label: "Afiliados", icon: Users },
-  { href: "/dashboard/cupones", label: "Cupones", icon: Tag },
-  { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store },
-  { href: "/dashboard/mi-plan", label: "Mi plan", icon: CreditCard },
+  { href: "/dashboard",               label: "Inicio",    icon: TrendingUp   },
+  { href: "/dashboard/metricas",      label: "Métricas",  icon: BarChart2    },
+  { href: "/dashboard/productos",     label: "Productos", icon: Package      },
+  { href: "/dashboard/pedidos",       label: "Pedidos",   icon: ShoppingBag  },
+  { href: "/dashboard/consultas",     label: "Consultas", icon: MessageCircle, onlyFor: LEADS_STORE_TYPES },
+  { href: "/dashboard/vendedoras",    label: "Afiliados", icon: Users        },
+  { href: "/dashboard/cupones",       label: "Cupones",   icon: Tag          },
+  { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store        },
+  { href: "/dashboard/pagos",         label: "Pagos",     icon: Wallet       },
+  { href: "/dashboard/mi-plan",       label: "Mi plan",   icon: CreditCard   },
 ];
 
 export default function DashboardLayout({
@@ -44,12 +49,11 @@ export default function DashboardLayout({
   const { signOut, status } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
-  }, [status, router]);
+  // Swipe-to-close: track touch start X
+  const touchStartX = useRef<number | null>(null);
+
   const [pendingAffiliateCount, setPendingAffiliateCount] = useState(initialPendingAffiliateCount);
   const [lowStockCount, setLowStockCount] = useState(initialLowStockCount);
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
@@ -57,9 +61,10 @@ export default function DashboardLayout({
   const [storeType, setStoreType] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
 
-  useEffect(() => {
-    setPendingAffiliateCount(initialPendingAffiliateCount);
-  }, [initialPendingAffiliateCount]);
+  useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
+  useEffect(() => { setPendingAffiliateCount(initialPendingAffiliateCount); }, [initialPendingAffiliateCount]);
+  useEffect(() => { setLowStockCount(initialLowStockCount); }, [initialLowStockCount]);
 
   useEffect(() => {
     fetch("/api/verificacion")
@@ -69,45 +74,32 @@ export default function DashboardLayout({
   }, []);
 
   useEffect(() => {
-    setLowStockCount(initialLowStockCount);
-  }, [initialLowStockCount]);
-
-  // I-07: indicador de conexión
-  useEffect(() => {
     setIsOnline(navigator.onLine);
-    const onOnline  = () => setIsOnline(true);
-    const onOffline = () => setIsOnline(false);
-    window.addEventListener("online",  onOnline);
-    window.addEventListener("offline", onOffline);
-    return () => {
-      window.removeEventListener("online",  onOnline);
-      window.removeEventListener("offline", onOffline);
-    };
+    const up = () => setIsOnline(true);
+    const dn = () => setIsOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", dn);
+    return () => { window.removeEventListener("online", up); window.removeEventListener("offline", dn); };
   }, []);
 
-  // K-05: solo Realtime para afiliadas — sin polling duplicado
   const fetchAffiliateCount = useCallback(() => {
     fetch("/api/vendedoras")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        const pendingCount = Array.isArray(data?.affiliates)
+        const n = Array.isArray(data?.affiliates)
           ? data.affiliates.filter((a: { status?: string }) => a.status === "PENDING").length
           : 0;
-        setPendingAffiliateCount(pendingCount);
+        setPendingAffiliateCount(n);
       })
       .catch(() => {});
   }, []);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
-    const channel = supabase.channel("dashboard-layout-affiliates");
-    channel.on(
-      "postgres_changes" as Parameters<typeof channel.on>[0],
-      { event: "*", schema: "public", table: "Affiliate" },
-      () => fetchAffiliateCount()
-    );
-    channel.subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const ch = supabase.channel("dashboard-layout-affiliates");
+    ch.on("postgres_changes" as Parameters<typeof ch.on>[0], { event: "*", schema: "public", table: "Affiliate" }, () => fetchAffiliateCount());
+    ch.subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, [fetchAffiliateCount]);
 
   useEffect(() => {
@@ -120,7 +112,6 @@ export default function DashboardLayout({
       .catch(() => {});
   }, []);
 
-  // I-08: badge de leads pendientes para Consultas
   useEffect(() => {
     if (!storeType || !LEADS_STORE_TYPES.includes(storeType)) return;
     fetch("/api/leads?status=PENDING&count=1")
@@ -129,12 +120,39 @@ export default function DashboardLayout({
       .catch(() => {});
   }, [storeType]);
 
+  const visibleNavItems = allNavItems.filter(
+    ({ onlyFor }) => !onlyFor || (storeType && onlyFor.includes(storeType))
+  );
+
+  // Badge helpers — single source of truth
+  function getBadge(href: string) {
+    const isAffil = href === "/dashboard/vendedoras" && pendingAffiliateCount > 0;
+    const isStock = href === "/dashboard/productos"  && lowStockCount > 0;
+    const isOrder = href === "/dashboard/pedidos"    && pendingOrderCount > 0;
+    const isLeads = href === "/dashboard/consultas"  && pendingLeadsCount > 0;
+    const count   = isAffil ? pendingAffiliateCount : isStock ? lowStockCount : isLeads ? pendingLeadsCount : pendingOrderCount;
+    const color   = isAffil || isLeads ? "bg-red-500" : isStock ? "bg-orange-500" : "bg-yellow-500";
+    return { has: isAffil || isStock || isOrder || isLeads, count, color };
+  }
+
+  const anyBadge = pendingAffiliateCount > 0 || pendingOrderCount > 0 || lowStockCount > 0 || pendingLeadsCount > 0;
+
+  // Swipe handlers for mobile drawer
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current === null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    if (delta < -60) setMobileOpen(false); // swipe left to close
+    touchStartX.current = null;
+  }
+
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden text-gray-900 [color-scheme:light]">
-      {/* Sidebar — collapsed (w-14) por defecto, se expande al hover (w-60) como overlay */}
-      <aside className="group fixed left-0 top-0 h-full w-14 hover:w-60 bg-white border-r border-gray-100 flex flex-col z-[60] transition-[width] duration-200 overflow-hidden hover:shadow-xl">
 
-        {/* Logo */}
+      {/* ── DESKTOP Sidebar (lg+) ─────────────────────────────────────────── */}
+      <aside className="group hidden lg:flex fixed left-0 top-0 h-full w-14 hover:w-60 bg-white border-r border-gray-100 flex-col z-[60] transition-[width] duration-200 overflow-hidden hover:shadow-xl">
         <Link href="/" className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 shrink-0 hover:bg-gray-50 transition-colors">
           <ShoppingBag className="h-6 w-6 text-indigo-600 shrink-0" />
           <span className="font-bold text-gray-900 whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
@@ -142,38 +160,27 @@ export default function DashboardLayout({
           </span>
         </Link>
 
-        {/* Nav items */}
         <nav className="flex-1 p-2 space-y-0.5 overflow-hidden">
-          {allNavItems.filter(({ onlyFor }) => !onlyFor || (storeType && onlyFor.includes(storeType))).map(({ href, label, icon: Icon }) => {
+          {visibleNavItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
-            const showAffiliateBadge = href === "/dashboard/vendedoras" && pendingAffiliateCount > 0;
-            const showStockBadge = href === "/dashboard/productos" && lowStockCount > 0;
-            const showOrderBadge = href === "/dashboard/pedidos" && pendingOrderCount > 0;
-            const showLeadsBadge = href === "/dashboard/consultas" && pendingLeadsCount > 0;
-            const hasBadge = showAffiliateBadge || showStockBadge || showOrderBadge || showLeadsBadge;
-            const badgeCount = showAffiliateBadge ? pendingAffiliateCount : showStockBadge ? lowStockCount : showLeadsBadge ? pendingLeadsCount : pendingOrderCount;
-            const badgeColor = showAffiliateBadge ? "bg-red-500" : showStockBadge ? "bg-orange-500" : showLeadsBadge ? "bg-red-500" : "bg-yellow-500";
+            const { has, count, color } = getBadge(href);
             return (
               <Link
                 key={href}
                 href={href}
                 className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  active ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="flex-1 whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
                   {label}
                 </span>
-                {hasBadge && (
+                {has && (
                   <>
-                    {/* Punto indicador en modo colapsado */}
-                    <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${badgeColor} group-hover:hidden`} />
-                    {/* Badge con número en modo expandido */}
-                    <span className={`hidden group-hover:inline-flex shrink-0 min-w-5 rounded-full ${badgeColor} px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white`}>
-                      {badgeCount > 9 ? "9+" : badgeCount}
+                    <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${color} group-hover:hidden`} />
+                    <span className={`hidden group-hover:inline-flex shrink-0 min-w-5 rounded-full ${color} px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white`}>
+                      {count > 9 ? "9+" : count}
                     </span>
                   </>
                 )}
@@ -182,16 +189,10 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        {/* Sección inferior */}
         <div className="p-2 border-t border-gray-100 space-y-0.5 shrink-0">
-          <Link
-            href="/dashboard/ajustes"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors"
-          >
+          <Link href="/dashboard/ajustes" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors">
             <Settings className="h-4 w-4 shrink-0" />
-            <span className="whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
-              Configuración
-            </span>
+            <span className="whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">Configuración</span>
           </Link>
           <button
             onClick={async () => { setSigningOut(true); await signOut("/"); }}
@@ -203,12 +204,7 @@ export default function DashboardLayout({
               {signingOut ? "Cerrando..." : "Cerrar sesión"}
             </span>
           </button>
-          {/* Info de usuario — icono siempre visible, texto solo expandido */}
-          <Link
-            href="/dashboard/perfil"
-            title={isVerified ? "Perfil — Verificado" : "Perfil — Sin verificar"}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
-          >
+          <Link href="/dashboard/perfil" title={isVerified ? "Perfil — Verificado" : "Perfil"} className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors">
             <div className="relative shrink-0">
               <UserCircle className="h-4 w-4" />
               <BadgeCheck className={`absolute -bottom-1 -right-1 h-3 w-3 bg-white rounded-full ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
@@ -221,19 +217,138 @@ export default function DashboardLayout({
               <p className="text-xs text-gray-400 truncate whitespace-nowrap">{userEmail}</p>
             </div>
           </Link>
+          {!isOnline && (
+            <div className="mx-2 mb-2 rounded-xl bg-orange-50 border border-orange-200 px-3 py-2">
+              <p className="text-[11px] font-semibold text-orange-600 leading-tight">Sin conexión</p>
+              <p className="text-[10px] text-orange-400 leading-tight">Los datos pueden estar desactualizados</p>
+            </div>
+          )}
         </div>
-
-        {/* I-07: indicador de reconexión */}
-        {!isOnline && (
-          <div className="mx-2 mb-2 rounded-xl bg-orange-50 border border-orange-200 px-3 py-2">
-            <p className="text-[11px] font-semibold text-orange-600 leading-tight">Sin conexión</p>
-            <p className="text-[10px] text-orange-400 leading-tight">Los datos pueden estar desactualizados</p>
-          </div>
-        )}
       </aside>
 
-      <main className={`ml-14 flex-1 flex flex-col bg-gray-50 ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
-        <div className="flex justify-end items-center px-4 pt-3 pb-0 shrink-0">
+      {/* ── MOBILE Top Bar (< lg) ────────────────────────────────────────── */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-[60] h-14 bg-white border-b border-gray-100 flex items-center justify-between px-3">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors"
+          aria-label="Abrir menú"
+        >
+          <Menu className="h-5 w-5 text-gray-600" />
+          {anyBadge && (
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
+          )}
+        </button>
+
+        <Link href="/" className="flex items-center gap-2">
+          <ShoppingBag className="h-5 w-5 text-indigo-600" />
+          <span className="font-bold text-gray-900 text-sm">TiendaApps</span>
+        </Link>
+
+        {userId && <NotificationBell userId={userId} />}
+      </header>
+
+      {/* ── MOBILE Drawer (< lg) ─────────────────────────────────────────── */}
+      {mobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-[70]">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+            onClick={() => setMobileOpen(false)}
+          />
+          {/* Sliding panel — swipe left to close */}
+          <div
+            className="relative w-72 max-w-[85vw] h-full bg-white flex flex-col shadow-2xl animate-slide-in-left"
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+          >
+            {/* Panel header */}
+            <div className="flex items-center justify-between h-14 px-4 border-b border-gray-100 shrink-0">
+              <Link href="/" className="flex items-center gap-2">
+                <ShoppingBag className="h-5 w-5 text-indigo-600" />
+                <span className="font-bold text-gray-900 text-sm">TiendaApps</span>
+              </Link>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                aria-label="Cerrar menú"
+              >
+                <X className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Nav items — always expanded (no hover trick needed) */}
+            <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+              {visibleNavItems.map(({ href, label, icon: Icon }) => {
+                const active = pathname === href;
+                const { has, count, color } = getBadge(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors active:scale-[0.98] ${
+                      active ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50 active:bg-gray-100"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <span className="flex-1">{label}</span>
+                    {has && (
+                      <span className={`shrink-0 min-w-5 rounded-full ${color} px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white`}>
+                        {count > 9 ? "9+" : count}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Bottom section */}
+            <div className="p-3 border-t border-gray-100 space-y-0.5 shrink-0">
+              <Link
+                href="/dashboard/ajustes"
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-gray-500 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <Settings className="h-5 w-5 shrink-0" />
+                <span>Configuración</span>
+              </Link>
+              <button
+                onClick={async () => { setSigningOut(true); await signOut("/"); }}
+                disabled={signingOut}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-60"
+              >
+                {signingOut ? <Loader2 className="h-5 w-5 shrink-0 animate-spin" /> : <LogOut className="h-5 w-5 shrink-0" />}
+                <span>{signingOut ? "Cerrando..." : "Cerrar sesión"}</span>
+              </button>
+              <Link
+                href="/dashboard/perfil"
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <div className="relative shrink-0">
+                  <UserCircle className="h-5 w-5" />
+                  <BadgeCheck className={`absolute -bottom-1 -right-1 h-3 w-3 bg-white rounded-full ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1">
+                    <p className="text-xs font-medium text-gray-700 truncate">{userName}</p>
+                    <BadgeCheck className={`h-3 w-3 shrink-0 ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
+                  </div>
+                  <p className="text-xs text-gray-400 truncate">{userEmail}</p>
+                </div>
+              </Link>
+              {!isOnline && (
+                <div className="mt-1 rounded-xl bg-orange-50 border border-orange-200 px-3 py-2.5">
+                  <p className="text-xs font-semibold text-orange-600">Sin conexión</p>
+                  <p className="text-[11px] text-orange-400 leading-tight mt-0.5">Los datos pueden estar desactualizados</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Main content ─────────────────────────────────────────────────── */}
+      <main className={`lg:ml-14 flex-1 flex flex-col bg-gray-50 pt-14 lg:pt-0 ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
+        {/* Notification bell — desktop only (mobile bell is in the top bar) */}
+        <div className="hidden lg:flex justify-end items-center px-4 pt-3 pb-0 shrink-0">
           {userId && <NotificationBell userId={userId} />}
         </div>
         <div className={`flex-1 ${fullHeight ? "overflow-hidden min-h-0" : "p-4 pt-2"}`}>

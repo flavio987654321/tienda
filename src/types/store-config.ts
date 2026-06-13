@@ -27,6 +27,44 @@ export type FlyerConfig = {
   images: string[]; // hasta 3 URLs de Supabase Storage
 };
 
+export type PaymentMethodTransferencia = {
+  enabled: boolean;
+  titular: string;
+  cbu: string;
+  cvu: string;
+  alias: string;
+  banco: string;
+  cuil: string;
+  instrucciones: string;
+};
+
+export type PaymentMethodEfectivo = {
+  enabled: boolean;
+  instrucciones: string;
+};
+
+export type StorePaymentInfo = {
+  transferencia: PaymentMethodTransferencia;
+  efectivo: PaymentMethodEfectivo;
+};
+
+export const DEFAULT_PAYMENT_INFO: StorePaymentInfo = {
+  transferencia: {
+    enabled: false,
+    titular: "",
+    cbu: "",
+    cvu: "",
+    alias: "",
+    banco: "",
+    cuil: "",
+    instrucciones: "",
+  },
+  efectivo: {
+    enabled: false,
+    instrucciones: "",
+  },
+};
+
 export type StoreConfig = {
   template: TemplateId;
   storeId?: string;
@@ -76,6 +114,12 @@ export type StoreConfig = {
   ocultarPreciosPublico?: boolean;
   featuredCategories?: string[];
   flyerConfig?: FlyerConfig;
+  paymentInfo?: StorePaymentInfo;
+  policies?: {
+    returns?: string;
+    shipping?: string;
+    terms?: string;
+  };
 };
 
 export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: string }> = {

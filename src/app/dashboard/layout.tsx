@@ -5,7 +5,14 @@ import SubscriptionGate from "@/components/subscription/SubscriptionGate";
 import SubscriptionRealtimeRefresher from "@/components/subscription/SubscriptionRealtimeRefresher";
 import SubscriptionSuccessBanner from "@/components/subscription/SubscriptionSuccessBanner";
 import StoreTypeModal from "./productos/StoreTypeModal";
+import PWAManager from "@/components/PWAManager";
+import DashboardSplashScreen from "@/components/DashboardSplashScreen";
 import { Suspense } from "react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  manifest: "/api/manifest/dashboard",
+};
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -47,9 +54,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <>
+      <DashboardSplashScreen />
+      <PWAManager />
       {user && <SubscriptionRealtimeRefresher userId={user.id} />}
       <Suspense><SubscriptionSuccessBanner /></Suspense>
-      {gate && <div className="pl-14 bg-gray-50 [color-scheme:light]">{gate}</div>}
+      {gate && <div className="pt-14 lg:pt-0 lg:pl-14 bg-gray-50 [color-scheme:light]">{gate}</div>}
       {storeTypeGate}
       {children}
     </>

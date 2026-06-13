@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createNotification } from "@/lib/notifications";
-import { sendOrderConfirmationEmail } from "@/lib/email";
+import { sendOrderConfirmationEmail, sendNewOrderToOwnerEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/push";
 
 type CheckoutItem = {
@@ -286,36 +286,101 @@ export async function POST(req: NextRequest) {
       }).catch((err) => console.error("[push] new order:", err));
     }
 
-    // Email de confirmación al comprador (no bloquea la respuesta si falla)
+    // Emails de confirmación — no bloquean la respuesta si fallan
     const storeForEmail = await prisma.store.findUnique({
       where: { id: order.storeId },
-      select: { name: true, slug: true },
+      select: {
+        name: true,
+        slug: true,
+        storeConfig: true,
+        policyReturns: true,
+        policyShipping: true,
+        policyTerms: true,
+        policyReturnsActive: true,
+        policyShippingActive: true,
+        policyTermsActive: true,
+        owner: { select: { email: true, name: true } },
+      },
     });
-    if (storeForEmail && customer.email) {
+    if (storeForEmail) {
       const productIds = order.items.map((i) => i.productId);
-      const productNames = await prisma.product.findMany({
-        where: { id: { in: productIds } },
-        select: { id: true, name: true },
-      });
-      const nameMap = Object.fromEntries(productNames.map((p) => [p.id, p.name]));
+      const variantIds = order.items.map((i) => i.variantId).filter((v): v is string => !!v);
 
-      sendOrderConfirmationEmail({
-        buyerEmail: customer.email,
-        buyerName: customer.name,
+      const [productNames, variantData] = await Promise.all([
+        prisma.product.findMany({
+          where: { id: { in: productIds } },
+          select: { id: true, name: true },
+        }),
+        variantIds.length > 0
+          ? prisma.productVariant.findMany({
+              where: { id: { in: variantIds } },
+              select: { id: true, name: true, value: true },
+            })
+          : Promise.resolve([]),
+      ]);
+
+      const nameMap = Object.fromEntries(productNames.map((p) => [p.id, p.name]));
+      const variantMap = Object.fromEntries(variantData.map((v) => [v.id, `${v.name}: ${v.value}`]));
+
+      const emailItems = order.items.map((item) => ({
+        name: nameMap[item.productId] ?? "Producto",
+        variant: item.variantId ? (variantMap[item.variantId] ?? null) : null,
+        quantity: item.quantity,
+        price: item.price,
+      }));
+
+      let paymentInfo = null;
+      let policies = null;
+      try {
+        const cfg = JSON.parse(storeForEmail.storeConfig || "{}");
+        if (cfg.paymentInfo) paymentInfo = cfg.paymentInfo;
+      } catch { /* noop */ }
+      if (storeForEmail.policyReturnsActive || storeForEmail.policyShippingActive || storeForEmail.policyTermsActive) {
+        policies = {
+          returns: storeForEmail.policyReturnsActive ? (storeForEmail.policyReturns ?? undefined) : undefined,
+          shipping: storeForEmail.policyShippingActive ? (storeForEmail.policyShipping ?? undefined) : undefined,
+          terms: storeForEmail.policyTermsActive ? (storeForEmail.policyTerms ?? undefined) : undefined,
+        };
+      }
+
+      const emailPayload = {
         orderId: order.id,
-        storeName: storeForEmail.name,
-        storeSlug: storeForEmail.slug,
-        items: order.items.map((item) => ({
-          name: nameMap[item.productId] ?? "Producto",
-          quantity: item.quantity,
-          price: item.price,
-        })),
+        storeName: storeForEmail.name ?? "",
+        storeSlug: storeForEmail.slug ?? "",
+        items: emailItems,
         subtotal: order.subtotal,
         discountAmount: order.discountAmount,
         shippingCost: order.shippingCost,
         shippingMethod: shipping.label,
         total: order.total,
-      }).catch((e) => console.error("Error enviando email de confirmación:", e));
+        paymentInfo,
+        policies,
+      };
+
+      if (customer.email) {
+        sendOrderConfirmationEmail({
+          buyerEmail: customer.email,
+          buyerName: customer.name,
+          ...emailPayload,
+        }).catch((e) => console.error("[email] buyer confirmation:", e));
+      }
+
+      const ownerEmail = storeForEmail.owner?.email;
+      if (ownerEmail) {
+        sendNewOrderToOwnerEmail({
+          ownerEmail,
+          ownerName: storeForEmail.owner?.name ?? "",
+          customer: {
+            name: customer.name,
+            email: customer.email,
+            phone: customer.phone,
+            street: customer.street,
+            city: customer.city,
+            province: customer.province,
+          },
+          ...emailPayload,
+        }).catch((e) => console.error("[email] owner new order:", e));
+      }
     }
 
     return NextResponse.json({ order });

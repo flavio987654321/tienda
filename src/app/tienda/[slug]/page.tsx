@@ -8,7 +8,10 @@ import { DEFAULT_CONFIG } from "@/types/store-config";
 import ComingSoonPage from "./ComingSoonPage";
 import OwnerPreviewBadge from "./OwnerPreviewBadge";
 import VisitorBackButton from "./VisitorBackButton";
+import PwaSplashScreen from "@/components/store/PwaSplashScreen";
+import PwaInstallBanner from "@/components/store/PwaInstallBanner";
 import { getCurrentUser } from "@/lib/auth-session";
+import { isSubscriptionActive } from "@/lib/subscription";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +24,10 @@ export async function generateMetadata({ params }: TiendaPageProps): Promise<Met
 
   const store = await prisma.store.findFirst({
     where: { slug, isActive: true },
-    select: { name: true, description: true, logo: true, tagline: true, storeConfig: true, isPublished: true },
+    select: {
+      name: true, description: true, logo: true, tagline: true, storeConfig: true, isPublished: true,
+      owner: { select: { subscription: { select: { tier: true, status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true } } } },
+    },
   });
 
   if (!store) return {};
@@ -35,10 +41,13 @@ export async function generateMetadata({ params }: TiendaPageProps): Promise<Met
     ? (store.description || store.tagline || `Comprá en ${baseName}`)
     : `${baseName} está preparando algo especial. ¡Volvé pronto!`;
 
+  const sub = store.owner?.subscription;
+  const isPremium = sub?.tier === "PREMIUM" && sub.status != null && isSubscriptionActive(sub as Parameters<typeof isSubscriptionActive>[0]);
+
   return {
     title,
     description,
-    manifest: `/api/manifest/${slug}`,
+    ...(isPremium ? { manifest: `/api/manifest/${slug}` } : {}),
     openGraph: { title, description, type: "website", siteName: baseName },
     twitter: { card: "summary_large_image", title, description },
   };
@@ -138,8 +147,23 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
     notFound();
   }
 
+  const splashColor = store.logoColor || store.primaryColor || "#6366f1";
+
   return (
     <>
+      <PwaSplashScreen
+        logo={store.logo ?? null}
+        color={splashColor}
+        name={store.name ?? "Tienda"}
+      />
+      {ownerIsPremium && !isOwner && (
+        <PwaInstallBanner
+          logo={store.logo ?? null}
+          name={store.name ?? "Tienda"}
+          color={splashColor}
+          slug={slug}
+        />
+      )}
       <StorefrontTemplateRenderer config={config} />
       {!isOwner && <VisitorBackButton />}
       {!store.isPublished && isOwner && (

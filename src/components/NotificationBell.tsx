@@ -141,7 +141,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 z-50 w-80 rounded-2xl border border-gray-100 bg-white shadow-xl dark:bg-[#0f1629] dark:border-white/10">
+        <div className="absolute right-0 top-11 z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-gray-100 bg-white shadow-xl dark:bg-[#0f1629] dark:border-white/10">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/10">
             <p className="font-bold text-sm text-gray-900 dark:text-white">Notificaciones</p>
             <div className="flex items-center gap-2">

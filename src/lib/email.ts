@@ -409,6 +409,64 @@ export async function sendCommissionEarnedEmail({
   });
 }
 
+function buildPaymentBlock(paymentInfo?: {
+  transferencia?: { enabled?: boolean; titular?: string; cbu?: string; cvu?: string; alias?: string; banco?: string; cuil?: string; instrucciones?: string };
+  efectivo?: { enabled?: boolean; instrucciones?: string };
+} | null): string {
+  const t = paymentInfo?.transferencia;
+  const e = paymentInfo?.efectivo;
+  const hasTransfer = t?.enabled && (t.cbu || t.cvu || t.alias);
+  const hasEfectivo = e?.enabled && e.instrucciones;
+  if (!hasTransfer && !hasEfectivo) return "";
+
+  const rows: string[] = [];
+
+  if (hasTransfer) {
+    rows.push(`<p style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 10px;">Datos para transferir</p>`);
+    if (t!.titular) rows.push(payRow("Titular", escapeHtml(t!.titular)));
+    if (t!.cbu)     rows.push(payRow("CBU", `<span style="font-family:monospace;letter-spacing:0.05em;">${escapeHtml(t!.cbu)}</span>`));
+    if (t!.cvu)     rows.push(payRow("CVU", `<span style="font-family:monospace;letter-spacing:0.05em;">${escapeHtml(t!.cvu)}</span>`));
+    if (t!.alias)   rows.push(payRow("Alias", `<strong>${escapeHtml(t!.alias)}</strong>`));
+    if (t!.banco)   rows.push(payRow("Banco", escapeHtml(t!.banco)));
+    if (t!.cuil)    rows.push(payRow("CUIL/CUIT", escapeHtml(t!.cuil)));
+    if (t!.instrucciones) {
+      rows.push(`<div style="background:#f0f0ff;border-radius:8px;padding:10px 12px;margin-top:8px;font-size:13px;color:#4338ca;line-height:1.6;">${escapeHtml(t!.instrucciones)}</div>`);
+    }
+  }
+
+  if (hasEfectivo) {
+    if (hasTransfer) rows.push(`<hr style="border:none;border-top:1px solid #f3f4f6;margin:14px 0;" />`);
+    rows.push(`<p style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 10px;">Pago en efectivo</p>`);
+    rows.push(`<p style="font-size:13px;color:#374151;line-height:1.6;margin:0;">${escapeHtml(e!.instrucciones!)}</p>`);
+  }
+
+  return `
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:28px;">
+      ${rows.join("")}
+    </div>`;
+}
+
+function payRow(label: string, value: string): string {
+  return `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:12px;">
+    <span style="font-size:13px;color:#6b7280;white-space:nowrap;">${label}</span>
+    <span style="font-size:14px;color:#111827;text-align:right;">${value}</span>
+  </div>`;
+}
+
+function buildPoliciesBlock(policies?: { returns?: string; shipping?: string; terms?: string } | null): string {
+  if (!policies) return "";
+  const items: string[] = [];
+  if (policies.returns?.trim()) items.push(`<li style="margin-bottom:4px;"><strong>Devoluciones:</strong> ${escapeHtml(policies.returns.slice(0, 300))}${policies.returns.length > 300 ? "…" : ""}</li>`);
+  if (policies.shipping?.trim()) items.push(`<li style="margin-bottom:4px;"><strong>Envíos:</strong> ${escapeHtml(policies.shipping.slice(0, 300))}${policies.shipping.length > 300 ? "…" : ""}</li>`);
+  if (policies.terms?.trim()) items.push(`<li style="margin-bottom:4px;"><strong>Términos:</strong> ${escapeHtml(policies.terms.slice(0, 300))}${policies.terms.length > 300 ? "…" : ""}</li>`);
+  if (!items.length) return "";
+  return `
+    <div style="margin-bottom:28px;">
+      <p style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 10px;">Políticas de la tienda</p>
+      <ul style="font-size:12px;color:#6b7280;line-height:1.7;padding-left:16px;margin:0;">${items.join("")}</ul>
+    </div>`;
+}
+
 export async function sendOrderConfirmationEmail({
   buyerEmail,
   buyerName,
@@ -421,13 +479,159 @@ export async function sendOrderConfirmationEmail({
   shippingCost,
   shippingMethod,
   total,
+  paymentInfo,
+  policies,
 }: {
   buyerEmail: string;
   buyerName: string;
   orderId: string;
   storeName: string;
   storeSlug: string;
-  items: { name: string; quantity: number; price: number }[];
+  items: { name: string; variant?: string | null; quantity: number; price: number }[];
+  subtotal: number;
+  discountAmount: number;
+  shippingCost: number;
+  shippingMethod: string;
+  total: number;
+  paymentInfo?: {
+    transferencia?: { enabled?: boolean; titular?: string; cbu?: string; cvu?: string; alias?: string; banco?: string; cuil?: string; instrucciones?: string };
+    efectivo?: { enabled?: boolean; instrucciones?: string };
+  } | null;
+  policies?: { returns?: string; shipping?: string; terms?: string } | null;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
+  const shortId = orderId.slice(-8).toUpperCase();
+
+  const itemRows = items
+    .map(
+      (item) => `
+        <tr>
+          <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6;">
+            <span style="font-size:14px;font-weight:600;color:#111827;display:block;">${escapeHtml(item.name)}</span>
+            ${item.variant ? `<span style="font-size:12px;color:#9ca3af;display:block;margin-top:2px;">${escapeHtml(item.variant)}</span>` : ""}
+          </td>
+          <td style="padding:12px 16px;font-size:13px;color:#6b7280;text-align:center;border-bottom:1px solid #f3f4f6;white-space:nowrap;">
+            ${item.quantity} × ${fmt(item.price)}
+          </td>
+          <td style="padding:12px 16px;font-size:14px;font-weight:600;color:#111827;text-align:right;border-bottom:1px solid #f3f4f6;white-space:nowrap;">
+            ${fmt(item.price * item.quantity)}
+          </td>
+        </tr>`
+    )
+    .join("");
+
+  await transporter.sendMail({
+    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    to: buyerEmail,
+    subject: `Gracias por tu compra en ${storeName} — Pedido #${shortId}`,
+    html: `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:32px 16px;color:#111827;background:#ffffff;">
+
+        <!-- Header -->
+        <div style="background:#111827;border-radius:16px;padding:32px 28px;margin-bottom:28px;text-align:center;">
+          <p style="color:#9ca3af;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px;font-weight:600;">${escapeHtml(storeName)}</p>
+          <h1 style="color:#ffffff;font-size:22px;margin:0 0 6px;font-weight:800;letter-spacing:-0.02em;">Gracias por tu compra</h1>
+          <p style="color:#6b7280;font-size:13px;margin:0;">Pedido <span style="color:#e5e7eb;font-weight:700;">#${shortId}</span></p>
+        </div>
+
+        <!-- Greeting -->
+        <p style="font-size:15px;color:#374151;margin:0 0 6px;">Hola <strong>${escapeHtml(buyerName)}</strong>,</p>
+        <p style="font-size:15px;color:#6b7280;margin:0 0 28px;line-height:1.6;">
+          Recibimos tu pedido. El vendedor lo revisará y se va a poner en contacto con vos para coordinar el pago y el envío.
+        </p>
+
+        <!-- Products table -->
+        <p style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Detalle del pedido</p>
+        <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:20px;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+                <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Producto</th>
+                <th style="padding:10px 16px;text-align:center;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Cant. × P.U.</th>
+                <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Total</th>
+              </tr>
+            </thead>
+            <tbody>${itemRows}</tbody>
+          </table>
+        </div>
+
+        <!-- Totals -->
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px;margin-bottom:28px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#6b7280;">Subtotal</span>
+            <span style="font-size:14px;color:#374151;">${fmt(subtotal)}</span>
+          </div>
+          ${discountAmount > 0 ? `
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">Descuento aplicado</span>
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(discountAmount)}</span>
+          </div>` : ""}
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#6b7280;">Costo de envío</span>
+            <span style="font-size:14px;color:#374151;">${shippingCost === 0 ? "Sin cargo" : fmt(shippingCost)}</span>
+          </div>
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">${escapeHtml(shippingMethod)}</div>
+          <div style="border-top:1px solid #e5e7eb;padding-top:14px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:15px;font-weight:700;color:#111827;">Total</span>
+            <span style="font-size:20px;font-weight:800;color:#111827;">${fmt(total)}</span>
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div style="text-align:center;margin-bottom:28px;">
+          <a href="${appUrl}/mi-cuenta"
+             style="display:inline-block;background:#111827;color:#ffffff;padding:14px 36px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;letter-spacing:0.01em;">
+            Ver estado de mi pedido
+          </a>
+        </div>
+
+        ${buildPaymentBlock(paymentInfo)}
+
+        <!-- Consumer rights -->
+        <div style="background:#fffbeb;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;font-size:13px;color:#78350f;margin-bottom:28px;line-height:1.6;">
+          <strong>Ley 24.240 — Derechos del consumidor:</strong> Tenés derecho a solicitar cambio o devolución dentro de los 10 días corridos si el producto no coincide con lo publicado.
+        </div>
+
+        ${buildPoliciesBlock(policies)}
+
+        <!-- Footer -->
+        <p style="color:#d1d5db;font-size:11px;text-align:center;margin:0;">
+          ${escapeHtml(storeName)} · Pedido <strong>#${shortId}</strong>
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendNewOrderToOwnerEmail({
+  ownerEmail,
+  ownerName,
+  storeName,
+  orderId,
+  customer,
+  items,
+  subtotal,
+  discountAmount,
+  shippingCost,
+  shippingMethod,
+  total,
+}: {
+  ownerEmail: string;
+  ownerName: string;
+  storeName: string;
+  orderId: string;
+  customer: {
+    name: string;
+    email: string;
+    phone?: string;
+    street?: string;
+    city?: string;
+    province?: string;
+  };
+  items: { name: string; variant?: string | null; quantity: number; price: number }[];
   subtotal: number;
   discountAmount: number;
   shippingCost: number;
@@ -438,81 +642,114 @@ export async function sendOrderConfirmationEmail({
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
+  const shortId = orderId.slice(-8).toUpperCase();
 
   const itemRows = items
     .map(
       (item) => `
-        <tr style="border-bottom:1px solid #f3f4f6;">
-          <td style="padding:10px 16px;font-size:14px;color:#111827;">${item.name}</td>
-          <td style="padding:10px 16px;font-size:14px;color:#6b7280;text-align:center;">${item.quantity}</td>
-          <td style="padding:10px 16px;font-size:14px;color:#111827;text-align:right;">${fmt(item.price * item.quantity)}</td>
+        <tr>
+          <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6;">
+            <span style="font-size:14px;font-weight:600;color:#111827;display:block;">${escapeHtml(item.name)}</span>
+            ${item.variant ? `<span style="font-size:12px;color:#9ca3af;display:block;margin-top:2px;">${escapeHtml(item.variant)}</span>` : ""}
+          </td>
+          <td style="padding:12px 16px;font-size:13px;color:#6b7280;text-align:center;border-bottom:1px solid #f3f4f6;white-space:nowrap;">
+            ${item.quantity} × ${fmt(item.price)}
+          </td>
+          <td style="padding:12px 16px;font-size:14px;font-weight:600;color:#111827;text-align:right;border-bottom:1px solid #f3f4f6;white-space:nowrap;">
+            ${fmt(item.price * item.quantity)}
+          </td>
         </tr>`
     )
     .join("");
 
+  const addressParts = [customer.street, customer.city, customer.province].filter(Boolean);
+  const addressLine = addressParts.length > 0 ? escapeHtml(addressParts.join(", ")) : null;
+
   await transporter.sendMail({
-    from: `"${storeName}" <${process.env.SMTP_USER}>`,
-    to: buyerEmail,
-    subject: `Tu pedido en ${storeName} fue recibido`,
+    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    to: ownerEmail,
+    subject: `Nuevo pedido #${shortId} en ${storeName}`,
     html: `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
-        <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
-          <p style="color:#e0e7ff;font-size:13px;margin:0 0 4px;">${storeName}</p>
-          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">¡Tu pedido fue recibido!</h1>
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:32px 16px;color:#111827;background:#ffffff;">
+
+        <!-- Header -->
+        <div style="background:#111827;border-radius:16px;padding:28px;margin-bottom:28px;">
+          <p style="color:#9ca3af;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 8px;font-weight:600;">${escapeHtml(storeName)}</p>
+          <h1 style="color:#ffffff;font-size:22px;margin:0 0 6px;font-weight:800;letter-spacing:-0.02em;">Nuevo pedido recibido</h1>
+          <p style="color:#6b7280;font-size:13px;margin:0;">Pedido <span style="color:#e5e7eb;font-weight:700;">#${shortId}</span> · ${new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })}</p>
         </div>
 
-        <p style="color:#374151;font-size:15px;margin-bottom:4px;">Hola <strong>${escapeHtml(buyerName)}</strong>,</p>
-        <p style="color:#374151;font-size:15px;margin-bottom:24px;">
-          Gracias por tu compra en <strong>${escapeHtml(storeName)}</strong>. El vendedor revisará tu pedido y se pondrá en contacto para coordinar el pago y el envío.
-        </p>
+        <!-- Customer card -->
+        <p style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Datos del comprador</p>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px;margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:4px;">
+            <span style="font-size:13px;color:#6b7280;">Nombre</span>
+            <span style="font-size:14px;font-weight:600;color:#111827;">${escapeHtml(customer.name)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:4px;">
+            <span style="font-size:13px;color:#6b7280;">Email</span>
+            <span style="font-size:14px;color:#374151;">${escapeHtml(customer.email)}</span>
+          </div>
+          ${customer.phone ? `
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:4px;">
+            <span style="font-size:13px;color:#6b7280;">Teléfono</span>
+            <span style="font-size:14px;color:#374151;">${escapeHtml(customer.phone)}</span>
+          </div>` : ""}
+          ${addressLine ? `
+          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;">
+            <span style="font-size:13px;color:#6b7280;">Dirección</span>
+            <span style="font-size:14px;color:#374151;text-align:right;">${addressLine}</span>
+          </div>` : ""}
+        </div>
 
-        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:20px;">
+        <!-- Products table -->
+        <p style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Productos</p>
+        <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:20px;">
           <table style="width:100%;border-collapse:collapse;">
             <thead>
-              <tr style="background:#f9fafb;">
-                <th style="padding:10px 16px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;">Producto</th>
-                <th style="padding:10px 16px;text-align:center;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;">Cant.</th>
-                <th style="padding:10px 16px;text-align:right;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;">Subtotal</th>
+              <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+                <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Producto</th>
+                <th style="padding:10px 16px;text-align:center;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Cant. × P.U.</th>
+                <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Total</th>
               </tr>
             </thead>
             <tbody>${itemRows}</tbody>
           </table>
         </div>
 
-        <div style="background:#f9fafb;border-radius:12px;padding:16px;margin-bottom:24px;">
-          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <!-- Totals -->
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px;margin-bottom:28px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
             <span style="font-size:14px;color:#6b7280;">Subtotal</span>
-            <span style="font-size:14px;color:#111827;">${fmt(subtotal)}</span>
+            <span style="font-size:14px;color:#374151;">${fmt(subtotal)}</span>
           </div>
           ${discountAmount > 0 ? `
-          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-            <span style="font-size:14px;color:#16a34a;">Descuento</span>
-            <span style="font-size:14px;color:#16a34a;">−${fmt(discountAmount)}</span>
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">Descuento</span>
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(discountAmount)}</span>
           </div>` : ""}
-          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-            <span style="font-size:14px;color:#6b7280;">Envío (${shippingMethod})</span>
-            <span style="font-size:14px;color:#111827;">${shippingCost === 0 ? "Gratis" : fmt(shippingCost)}</span>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:14px;color:#6b7280;">Envío</span>
+            <span style="font-size:14px;color:#374151;">${shippingCost === 0 ? "Sin cargo" : fmt(shippingCost)}</span>
           </div>
-          <hr style="border:none;border-top:1px solid #e5e7eb;margin:10px 0;" />
-          <div style="display:flex;justify-content:space-between;">
-            <span style="font-size:15px;font-weight:700;color:#111827;">Total</span>
-            <span style="font-size:16px;font-weight:800;color:#6366f1;">${fmt(total)}</span>
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">${escapeHtml(shippingMethod)}</div>
+          <div style="border-top:1px solid #e5e7eb;padding-top:14px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:15px;font-weight:700;color:#111827;">Total a cobrar</span>
+            <span style="font-size:22px;font-weight:800;color:#111827;">${fmt(total)}</span>
           </div>
         </div>
 
-        <div style="text-align:center;margin-bottom:24px;">
-          <a href="${appUrl}/mi-cuenta"
-             style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;">
-            Ver mis pedidos
+        <!-- CTA -->
+        <div style="text-align:center;margin-bottom:32px;">
+          <a href="${appUrl}/dashboard/pedidos/${orderId}"
+             style="display:inline-block;background:#111827;color:#ffffff;padding:15px 40px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;letter-spacing:0.01em;">
+            Ver pedido en el panel
           </a>
         </div>
 
-        <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;font-size:13px;color:#92400e;margin-bottom:20px;">
-          <strong>Tus derechos como consumidor:</strong> Según la Ley 24.240, tenés derecho a solicitar cambio o devolución dentro de los 10 días corridos si el producto no coincide con lo publicado. Podés contactar a la tienda desde esta página o enviando un email a soporte.
-        </div>
-
-        <p style="color:#9ca3af;font-size:12px;text-align:center;">
-          Número de pedido: <strong>${orderId.slice(-8).toUpperCase()}</strong> · ${storeName}
+        <!-- Footer -->
+        <p style="color:#d1d5db;font-size:11px;text-align:center;margin:0;">
+          TiendaApps · ${escapeHtml(storeName)} · Pedido <strong>#${shortId}</strong>
         </p>
       </div>
     `,
