@@ -24,7 +24,7 @@ function money(n: number) {
 const PLAN_CONFIG = {
   OWNER: {
     BASIC: {
-      name: "Dueño Básico",
+      name: "Tienda Pro",
       gradient: "from-indigo-600 to-violet-600",
       lightGradient: "from-indigo-50 to-violet-50",
       border: "border-indigo-200",
@@ -32,7 +32,7 @@ const PLAN_CONFIG = {
       features: ["Tienda personalizada", "Productos ilimitados", "Panel de pedidos", "Afiliados", "Cupones de descuento"],
     },
     PREMIUM: {
-      name: "Dueño Premium",
+      name: "Tienda Premium",
       gradient: "from-violet-600 to-fuchsia-600",
       lightGradient: "from-violet-50 to-fuchsia-50",
       border: "border-violet-200",
@@ -195,6 +195,75 @@ export default function MiPlanClient({ sub, userRole }: Props) {
           ))}
         </div>
       </div>
+
+      {/* Features exclusivas Premium */}
+      {planRole === "OWNER" && (
+        planTier === "PREMIUM" ? (
+          <div className="rounded-3xl border border-violet-100 bg-gradient-to-br from-violet-50 to-fuchsia-50 p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Crown className="h-4 w-4 text-violet-500" />
+              <p className="text-xs font-bold text-violet-600 uppercase tracking-widest">Tus beneficios exclusivos</p>
+            </div>
+            <div className="space-y-3">
+              <a
+                href="/dashboard/ajustes"
+                className="flex items-center justify-between p-4 bg-white rounded-2xl border border-violet-100 hover:border-violet-300 transition-colors group shadow-sm"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
+                    <Zap className="h-5 w-5 text-violet-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-800">Tu tienda como app (PWA)</p>
+                    <p className="text-xs text-gray-500">Los clientes pueden instalarla en su celular</p>
+                  </div>
+                </div>
+                <ArrowRight className="h-4 w-4 text-violet-400 group-hover:translate-x-0.5 transition-transform" />
+              </a>
+              <a
+                href="/dashboard/configuracion"
+                className="flex items-center justify-between p-4 bg-white rounded-2xl border border-violet-100 hover:border-violet-300 transition-colors group shadow-sm"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-fuchsia-100 rounded-xl flex items-center justify-center">
+                    <Star className="h-5 w-5 text-fuchsia-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-800">Flyers publicitarios</p>
+                    <p className="text-xs text-gray-500">Popup automático al entrar a tu tienda</p>
+                  </div>
+                </div>
+                <ArrowRight className="h-4 w-4 text-fuchsia-400 group-hover:translate-x-0.5 transition-transform" />
+              </a>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <Crown className="h-4 w-4 text-violet-400" />
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Solo en Premium</p>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Desbloqueá estas funciones mejorando tu plan.</p>
+            <div className="space-y-3">
+              {[
+                { icon: Zap, color: "violet", label: "Tu tienda como app (PWA)", desc: "Los clientes pueden instalarla en su celular" },
+                { icon: Star, color: "fuchsia", label: "Flyers publicitarios", desc: "Popup automático al entrar a tu tienda" },
+              ].map(({ icon: Icon, color, label, desc }) => (
+                <div key={label} className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100 opacity-70">
+                  <div className={`w-10 h-10 bg-${color}-100 rounded-xl flex items-center justify-center`}>
+                    <Icon className={`h-5 w-5 text-${color}-400`} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-600">{label}</p>
+                    <p className="text-xs text-gray-400">{desc}</p>
+                  </div>
+                  <span className="ml-auto text-xs font-bold text-violet-500 bg-violet-50 border border-violet-200 px-2.5 py-1 rounded-full shrink-0">Premium</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      )}
 
       {/* Acciones */}
       <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
