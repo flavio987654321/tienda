@@ -154,6 +154,32 @@ export default function ChicParis() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      const y = window.scrollY;
+      document.body.dataset.scrollY = String(y);
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${y}px`;
+      document.body.style.width = "100%";
+    } else {
+      const y = parseInt(document.body.dataset.scrollY || "0");
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      window.scrollTo(0, y);
+    }
+    return () => {
+      const y = parseInt(document.body.dataset.scrollY || "0");
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      if (y) window.scrollTo(0, y);
+    };
+  }, [mobileMenuOpen]);
+
   // banner auto-advance — disabled entirely in edit mode
   useEffect(() => {
     if (heroPaused || editMode) return;
@@ -523,7 +549,7 @@ export default function ChicParis() {
         </div>
       </header>
       {isMobile && mobileMenuOpen && (
-        <div style={{ position: isPreview ? "sticky" : "fixed", top: isPreview ? 0 : 68 + (showAnnouncement ? PROMO_BAR_H : 0), left: 0, right: 0, bottom: 0, background: "#fff", zIndex: 999, overflowY: "auto" }}>
+        <div style={{ position: isPreview ? "sticky" : "fixed", top: isPreview ? 0 : 68 + (showAnnouncement ? PROMO_BAR_H : 0), left: 0, right: 0, bottom: 0, background: "#fff", zIndex: 999, overflowY: "auto", overscrollBehavior: "contain" }}>
           {/* Categorías — acordeón */}
           {categoryList.length > 0 && (
             <>

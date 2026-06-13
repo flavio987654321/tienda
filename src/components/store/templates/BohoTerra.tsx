@@ -246,6 +246,32 @@ export default function BohoTerra() {
   }, []);
 
   useEffect(() => {
+    if (mobileMenuOpen) {
+      const y = window.scrollY;
+      document.body.dataset.scrollY = String(y);
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${y}px`;
+      document.body.style.width = "100%";
+    } else {
+      const y = parseInt(document.body.dataset.scrollY || "0");
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      window.scrollTo(0, y);
+    }
+    return () => {
+      const y = parseInt(document.body.dataset.scrollY || "0");
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      if (y) window.scrollTo(0, y);
+    };
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
     if (!showAnnouncement) return;
     const interval = setInterval(() => {
       setAnnouncementIdx(i => (i + 1) % announcementMessages.length);
@@ -473,7 +499,7 @@ export default function BohoTerra() {
       </nav>
       {/* ── MOBILE MENU */}
       {isMobile && mobileMenuOpen && (
-        <div style={{ position: isPreview ? "sticky" : "fixed", top: isPreview ? 0 : 60 + announcementBarHeight, left:0, right:0, bottom:0, background:BG, zIndex:99, overflowY:"auto", paddingTop:8 }}>
+        <div style={{ position: isPreview ? "sticky" : "fixed", top: isPreview ? 0 : 60 + announcementBarHeight, left:0, right:0, bottom:0, background:BG, zIndex:99, overflowY:"auto", overscrollBehavior:"contain", paddingTop:8 }}>
           {/* Categorías — acordeón colapsable */}
           {categoryList.length > 0 && (
             <>
