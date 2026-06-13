@@ -510,40 +510,41 @@ export default function UrbanPulse() {
       </nav>
       {isMobile && mobileMenuOpen && (
         <div style={{ position:"fixed", top:64, left:0, right:0, bottom:0, background:WHITE, zIndex:99, overflowY:"auto" }}>
-          {/* Categorías — acordeón */}
-          {categoryList.length > 0 && (
-            <>
-              <button onClick={() => setMobileCatsOpen(o => !o)}
-                style={{ display:"flex", width:"100%", background:"none", border:"none", borderBottom:`2px solid ${DARK}`, color:DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
-                Categorías
-                <span style={{ fontSize:10, opacity:0.5, transition:"transform 0.2s", transform: mobileCatsOpen ? "rotate(180deg)" : "none", display:"inline-block" }}>▾</span>
-              </button>
-              {mobileCatsOpen && categoryList.map(cat => {
-                const subs = subcategoriesFor[cat] || [];
-                return (
-                  <Fragment key={cat}>
-                    <button onClick={() => {
-                      if (subs.length > 0) {
-                        setMobileOpenCat(prev => prev === cat ? null : cat);
-                      } else {
-                        window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`;
-                        setMobileMenuOpen(false); setMobileCatsOpen(false);
-                      }
-                    }} style={{ display:"flex", width:"100%", background:"#f5f5f5", border:"none", borderBottom:`1px solid rgba(0,0,0,0.1)`, color: activeCategory===cat ? ACC : DARK, padding:"13px 24px 13px 40px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
-                      {cat}
-                      {subs.length > 0 && <span style={{ fontSize:12, opacity:0.5, transition:"transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display:"inline-block" }}>›</span>}
+          {/* Categorías — acordeón (siempre visible, igual que en desktop) */}
+          <>
+            <button onClick={() => setMobileCatsOpen(o => !o)}
+              style={{ display:"flex", width:"100%", background:"none", border:"none", borderBottom:`2px solid ${DARK}`, color:DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
+              Categorías
+              <span style={{ fontSize:10, opacity:0.5, transition:"transform 0.2s", transform: mobileCatsOpen ? "rotate(180deg)" : "none", display:"inline-block" }}>▾</span>
+            </button>
+            {mobileCatsOpen && categoryList.map(cat => {
+              const subs = subcategoriesFor[cat] || [];
+              return (
+                <Fragment key={cat}>
+                  <button onClick={() => {
+                    if (subs.length > 0) {
+                      setMobileOpenCat(prev => prev === cat ? null : cat);
+                    } else {
+                      window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`;
+                      setMobileMenuOpen(false); setMobileCatsOpen(false);
+                    }
+                  }} style={{ display:"flex", width:"100%", background:"#f5f5f5", border:"none", borderBottom:`1px solid rgba(0,0,0,0.1)`, color: activeCategory===cat ? ACC : DARK, padding:"13px 24px 13px 40px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
+                    {cat}
+                    {subs.length > 0 && <span style={{ fontSize:12, opacity:0.5, transition:"transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display:"inline-block" }}>›</span>}
+                  </button>
+                  {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
+                    <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
+                      style={{ display:"block", width:"100%", background:"#ebebeb", border:"none", borderBottom:`1px solid rgba(0,0,0,0.07)`, color:"#555", padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, fontWeight:700, textTransform:"uppercase" }}>
+                      {sub}
                     </button>
-                    {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
-                      <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
-                        style={{ display:"block", width:"100%", background:"#ebebeb", border:"none", borderBottom:`1px solid rgba(0,0,0,0.07)`, color:"#555", padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, fontWeight:700, textTransform:"uppercase" }}>
-                        {sub}
-                      </button>
-                    ))}
-                  </Fragment>
-                );
-              })}
-            </>
-          )}
+                  ))}
+                </Fragment>
+              );
+            })}
+            {mobileCatsOpen && categoryList.length === 0 && (
+              <p style={{ padding:"12px 40px", fontSize:11, color:MID, margin:0, fontStyle:"italic" }}>Sin categorías disponibles</p>
+            )}
+          </>
           {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
             <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("productos"); setMobileMenuOpen(false); }}
               style={{ display:"block", width:"100%", background: activeGender===g ? DARK : "none", border:"none", borderBottom:`2px solid ${DARK}`, color: activeGender===g ? ACC : DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase" }}>
@@ -1082,9 +1083,12 @@ export default function UrbanPulse() {
                     onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                   {modalProduct.images.length > 1 && (<>
                     <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
-                      style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.9)", border:"none", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:700, zIndex:2 }}>‹</button>
+                      style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.55)", border:"none", color:"#fff", width:42, height:42, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, fontWeight:700, zIndex:2, borderRadius:2 }}>‹</button>
                     <button onClick={() => setModalImg(i => (i + 1) % modalProduct.images.length)}
-                      style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.9)", border:"none", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:700, zIndex:2 }}>›</button>
+                      style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.55)", border:"none", color:"#fff", width:42, height:42, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, fontWeight:700, zIndex:2, borderRadius:2 }}>›</button>
+                    <div style={{ position:"absolute", bottom:8, right:8, background:"rgba(0,0,0,0.5)", color:"#fff", fontSize:10, letterSpacing:1, padding:"3px 8px", borderRadius:2, zIndex:2 }}>
+                      {modalImg+1} / {modalProduct.images.length}
+                    </div>
                   </>)}
                 </div>
                 {modalProduct.images.length > 1 && (
