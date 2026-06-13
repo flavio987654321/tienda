@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle, Loader2, MessageCircle, BadgeCheck } from "lucide-react";
+import { ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut, BarChart2, Tag, UserCircle, Loader2, MessageCircle, BadgeCheck, CreditCard } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 
@@ -19,6 +19,7 @@ const allNavItems = [
   { href: "/dashboard/vendedoras", label: "Afiliados", icon: Users },
   { href: "/dashboard/cupones", label: "Cupones", icon: Tag },
   { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store },
+  { href: "/dashboard/mi-plan", label: "Mi plan", icon: CreditCard },
 ];
 
 export default function DashboardLayout({
