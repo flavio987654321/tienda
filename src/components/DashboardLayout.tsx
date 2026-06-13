@@ -242,7 +242,7 @@ export default function DashboardLayout({
           </span>
         </Link>
 
-        <nav className="flex-1 p-2 overflow-y-auto overflow-x-hidden space-y-0.5">
+        <nav className="flex-1 p-2 overflow-y-auto overflow-x-hidden space-y-0.5 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
           {NAV_GROUPS.map((group, gi) => {
             const visible = filterItems(group.items);
             if (visible.length === 0) return null;
