@@ -51,6 +51,7 @@ export default function PWAManager() {
     if (!("serviceWorker" in navigator)) return;
 
     let updateInterval: ReturnType<typeof setInterval>;
+    let onVisibility: (() => void) | null = null;
 
     navigator.serviceWorker
       .register("/sw.js", { updateViaCache: "none" })
@@ -76,6 +77,12 @@ export default function PWAManager() {
 
         // Silently poll for updates every hour.
         updateInterval = setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
+
+        // Check for updates when the app comes back to the foreground.
+        onVisibility = () => {
+          if (document.visibilityState === "visible") reg.update().catch(() => {});
+        };
+        document.addEventListener("visibilitychange", onVisibility);
       })
       .catch(() => {});
 
@@ -91,6 +98,7 @@ export default function PWAManager() {
 
     return () => {
       clearInterval(updateInterval);
+      if (onVisibility) document.removeEventListener("visibilitychange", onVisibility);
       navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
       navigator.serviceWorker.removeEventListener("message", onMessage);
     };
