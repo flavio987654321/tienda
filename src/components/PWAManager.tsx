@@ -43,6 +43,8 @@ type PromptState = "idle" | "loading" | "error";
 export default function PWAManager() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [showUpdatedToast, setShowUpdatedToast] = useState(false);
   const [showNotifBanner, setShowNotifBanner] = useState(false);
   const [promptState, setPromptState] = useState<PromptState>("idle");
 
@@ -115,9 +117,22 @@ export default function PWAManager() {
     return () => clearTimeout(t);
   }, []);
 
+  // ── Toast post-reload ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (sessionStorage.getItem("pwa_just_updated")) {
+      sessionStorage.removeItem("pwa_just_updated");
+      setShowUpdatedToast(true);
+      setTimeout(() => setShowUpdatedToast(false), 3500);
+    }
+  }, []);
+
   // ── Handlers ─────────────────────────────────────────────────────────────
   const applyUpdate = useCallback(() => {
-    waitingWorker?.postMessage({ type: "SKIP_WAITING" });
+    setUpdating(true);
+    sessionStorage.setItem("pwa_just_updated", "1");
+    setTimeout(() => {
+      waitingWorker?.postMessage({ type: "SKIP_WAITING" });
+    }, 600);
   }, [waitingWorker]);
 
   const dismissUpdate = useCallback(() => setUpdateAvailable(false), []);
@@ -154,23 +169,37 @@ export default function PWAManager() {
       {/* ── Update Banner ──────────────────────────────────────────────── */}
       {updateAvailable && (
         <div className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-gray-700 bg-gray-900 px-4 py-3 shadow-2xl w-[calc(100%-2rem)] max-w-sm">
-          <RefreshCw className="h-4 w-4 shrink-0 text-indigo-400" />
+          <RefreshCw className={`h-4 w-4 shrink-0 text-indigo-400 ${updating ? "animate-spin" : ""}`} />
           <p className="flex-1 text-sm text-white">
-            <span className="font-semibold">Nueva versión disponible</span>
+            <span className="font-semibold">{updating ? "Actualizando..." : "Nueva versión disponible"}</span>
           </p>
-          <button
-            onClick={applyUpdate}
-            className="whitespace-nowrap text-xs font-bold text-indigo-400 transition-colors hover:text-indigo-200"
-          >
-            Actualizar
-          </button>
-          <button
-            onClick={dismissUpdate}
-            className="text-gray-500 transition-colors hover:text-gray-300"
-            aria-label="Cerrar"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+          {!updating && (
+            <>
+              <button
+                onClick={applyUpdate}
+                className="whitespace-nowrap text-xs font-bold text-indigo-400 transition-colors hover:text-indigo-200"
+              >
+                Actualizar
+              </button>
+              <button
+                onClick={dismissUpdate}
+                className="text-gray-500 transition-colors hover:text-gray-300"
+                aria-label="Cerrar"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Updated Toast ───────────────────────────────────────────────── */}
+      {showUpdatedToast && (
+        <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 flex items-center gap-2.5 rounded-2xl border border-emerald-500/30 bg-gray-900 px-4 py-3 shadow-2xl w-[calc(100%-2rem)] max-w-sm">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
+            <span className="text-xs text-emerald-400 font-bold">✓</span>
+          </div>
+          <p className="text-sm text-white font-semibold">App actualizada correctamente</p>
         </div>
       )}
 
