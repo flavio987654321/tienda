@@ -6,6 +6,7 @@ import Link from "next/link";
 import DangerZone from "@/app/dashboard/configuracion/DangerZone";
 import AjustesClient from "./AjustesClient";
 import MpConnectButton from "./MpConnectButton";
+import LogoUploadCard from "@/components/LogoUploadCard";
 
 export default async function AjustesPage() {
   const user = await getCurrentUser();
@@ -16,7 +17,10 @@ export default async function AjustesPage() {
     getUserSubscription(user.id),
     prisma.store.findUnique({
       where: { ownerId: user.id },
-      select: { slug: true, customDomain: true, mpConnectedAt: true, mpSellerId: true },
+      select: {
+        slug: true, customDomain: true, mpConnectedAt: true, mpSellerId: true,
+        name: true, logo: true, logoColor: true, primaryColor: true,
+      },
     }),
   ]);
 
@@ -30,8 +34,20 @@ export default async function AjustesPage() {
           ← Volver al panel
         </Link>
         <h1 className="text-2xl font-black text-gray-900 mt-3">Configuración</h1>
-        <p className="text-gray-500 text-sm mt-1">Dominios, instalación como app y opciones de cuenta.</p>
+        <p className="text-gray-500 text-sm mt-1">Logo, dominio, pagos y opciones de cuenta.</p>
       </div>
+
+      {store && (
+        <div className="mb-5">
+          <LogoUploadCard
+            storeName={store.name}
+            initialLogo={store.logo}
+            initialLogoColor={store.logoColor}
+            primaryColor={store.primaryColor}
+            isPremium={isPremium}
+          />
+        </div>
+      )}
 
       <AjustesClient
         slug={store?.slug ?? ""}

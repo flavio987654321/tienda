@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Users, Store, ShoppingBag, MessageSquare, TrendingUp, Ban, Trash2 } from "lucide-react";
+import { Users, Store, ShoppingBag, MessageSquare, TrendingUp, Ban, Trash2, BadgeCheck, Wallet, AlertTriangle } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Stats = {
@@ -12,6 +12,7 @@ type Stats = {
   totalTestimonials: number; pendingTestimonials: number;
   activeSubscriptions: number;
   totalBanned: number; totalDeleted: number;
+  pendingVerifications: number; pendingRetiros: number;
 };
 
 const COLOR_MAP: Record<string, string> = {
@@ -22,8 +23,7 @@ const COLOR_MAP: Record<string, string> = {
   pink:   "bg-pink-500/10 text-pink-400 border-pink-500/20",
 };
 
-// Tablas a escuchar en Realtime
-const WATCHED_TABLES = ["User", "Store", "Order", "Subscription", "Testimonial"];
+const WATCHED_TABLES = ["User", "Store", "Order", "Subscription", "Testimonial", "VerificationRequest", "WalletWithdrawal"];
 
 export default function AdminStatsRealtime({ initial }: { initial: Stats }) {
   const [stats, setStats] = useState<Stats>(initial);
@@ -72,10 +72,12 @@ export default function AdminStatsRealtime({ initial }: { initial: Stats }) {
     {
       label: "Pedidos totales", value: stats.totalOrders, icon: ShoppingBag, color: "emerald",
       sub: `${stats.pendingOrders} pendientes de procesar`,
+      href: "/admin/tiendas",
     },
     {
       label: "Suscripciones activas", value: stats.activeSubscriptions, icon: TrendingUp, color: "amber",
       sub: "Trial + activas",
+      href: "/admin/usuarios",
     },
     {
       label: "Testimonios", value: stats.totalTestimonials, icon: MessageSquare, color: "pink",
@@ -85,8 +87,51 @@ export default function AdminStatsRealtime({ initial }: { initial: Stats }) {
     },
   ];
 
+  const pendientes = [
+    stats.pendingVerifications > 0 && {
+      label: `${stats.pendingVerifications} verificación${stats.pendingVerifications > 1 ? "es" : ""} de identidad esperando revisión`,
+      href: "/admin/verificaciones",
+      icon: BadgeCheck,
+    },
+    stats.pendingRetiros > 0 && {
+      label: `${stats.pendingRetiros} retiro${stats.pendingRetiros > 1 ? "s" : ""} pendiente${stats.pendingRetiros > 1 ? "s" : ""} de transferencia`,
+      href: "/admin/retiros",
+      icon: Wallet,
+    },
+    stats.pendingTestimonials > 0 && {
+      label: `${stats.pendingTestimonials} testimonio${stats.pendingTestimonials > 1 ? "s" : ""} sin moderar`,
+      href: "/admin/testimonios",
+      icon: MessageSquare,
+    },
+  ].filter(Boolean) as { label: string; href: string; icon: React.ElementType }[];
+
   return (
     <div className={`transition-all duration-500 ${pulse ? "opacity-70" : "opacity-100"}`}>
+
+      {/* Pendientes de acción */}
+      {pendientes.length > 0 && (
+        <div className="mb-6 bg-amber-500/5 border border-amber-500/20 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="h-4 w-4 text-amber-400" />
+            <p className="text-amber-400 text-sm font-semibold">Pendientes de acción</p>
+          </div>
+          <div className="space-y-2">
+            {pendientes.map(({ label, href, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center gap-3 text-sm text-gray-300 hover:text-white transition-colors group"
+              >
+                <Icon className="h-4 w-4 text-amber-400 flex-shrink-0" />
+                <span>{label}</span>
+                <span className="ml-auto text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity text-xs">Ir →</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tarjetas de métricas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
         {cards.map(({ label, value, icon: Icon, color, sub, alert, href }) => {
           const inner = (
@@ -102,14 +147,12 @@ export default function AdminStatsRealtime({ initial }: { initial: Stats }) {
               <p className="text-4xl font-black text-white mb-1">{value.toLocaleString("es-AR")}</p>
               <p className="text-white font-semibold text-sm mb-1">{label}</p>
               <p className="text-gray-500 text-xs">{sub}</p>
-              {href && <p className="text-indigo-400 text-xs mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Ver detalle →</p>}
+              <p className="text-indigo-400 text-xs mt-3 opacity-0 group-hover:opacity-100 transition-opacity">Ver detalle →</p>
             </>
           );
-          const cls = `relative bg-gray-900/50 border rounded-2xl p-6 transition-all ${alert ? "border-yellow-500/30" : "border-white/5"} ${href ? "hover:border-indigo-500/40 hover:bg-gray-900/80 cursor-pointer group" : ""}`;
-          return href ? (
+          const cls = `relative bg-gray-900/50 border rounded-2xl p-6 transition-all ${alert ? "border-yellow-500/30" : "border-white/5"} hover:border-indigo-500/40 hover:bg-gray-900/80 cursor-pointer group`;
+          return (
             <Link key={label} href={href} className={cls}>{inner}</Link>
-          ) : (
-            <div key={label} className={cls}>{inner}</div>
           );
         })}
       </div>

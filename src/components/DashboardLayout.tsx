@@ -14,17 +14,46 @@ import NotificationBell from "@/components/NotificationBell";
 
 const LEADS_STORE_TYPES = ["VEHICULOS", "INMOBILIARIA"];
 
-const allNavItems = [
-  { href: "/dashboard",               label: "Inicio",    icon: TrendingUp   },
-  { href: "/dashboard/metricas",      label: "Métricas",  icon: BarChart2    },
-  { href: "/dashboard/productos",     label: "Productos", icon: Package      },
-  { href: "/dashboard/pedidos",       label: "Pedidos",   icon: ShoppingBag  },
-  { href: "/dashboard/consultas",     label: "Consultas", icon: MessageCircle, onlyFor: LEADS_STORE_TYPES },
-  { href: "/dashboard/vendedoras",    label: "Afiliados", icon: Users        },
-  { href: "/dashboard/cupones",       label: "Cupones",   icon: Tag          },
-  { href: "/dashboard/configuracion", label: "Mi tienda", icon: Store        },
-  { href: "/dashboard/pagos",         label: "Pagos",     icon: Wallet       },
-  { href: "/dashboard/mi-plan",       label: "Mi plan",   icon: CreditCard   },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  exact?: boolean;
+  onlyFor?: string[];
+};
+
+type NavGroup = {
+  label: string | null;
+  items: NavItem[];
+};
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: null,
+    items: [
+      { href: "/dashboard",            label: "Inicio",     icon: TrendingUp,    exact: true },
+      { href: "/dashboard/pedidos",    label: "Pedidos",    icon: ShoppingBag },
+      { href: "/dashboard/consultas",  label: "Consultas",  icon: MessageCircle, onlyFor: LEADS_STORE_TYPES },
+      { href: "/dashboard/productos",  label: "Productos",  icon: Package },
+      { href: "/dashboard/cupones",    label: "Cupones",    icon: Tag },
+      { href: "/dashboard/vendedoras", label: "Afiliados",  icon: Users },
+    ],
+  },
+  {
+    label: "Mi tienda",
+    items: [
+      { href: "/dashboard/configuracion", label: "Diseño",         icon: Store },
+      { href: "/dashboard/ajustes",       label: "Configuración",  icon: Settings },
+      { href: "/dashboard/pagos",         label: "Pagos",          icon: Wallet },
+    ],
+  },
+  {
+    label: "Cuenta",
+    items: [
+      { href: "/dashboard/metricas",  label: "Estadísticas", icon: BarChart2 },
+      { href: "/dashboard/mi-plan",   label: "Mi plan",      icon: CreditCard },
+    ],
+  },
 ];
 
 export default function DashboardLayout({
@@ -51,7 +80,6 @@ export default function DashboardLayout({
   const [isVerified, setIsVerified] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Swipe-to-close: track touch start X
   const touchStartX = useRef<number | null>(null);
 
   const [pendingAffiliateCount, setPendingAffiliateCount] = useState(initialPendingAffiliateCount);
@@ -120,11 +148,10 @@ export default function DashboardLayout({
       .catch(() => {});
   }, [storeType]);
 
-  const visibleNavItems = allNavItems.filter(
-    ({ onlyFor }) => !onlyFor || (storeType && onlyFor.includes(storeType))
-  );
+  function isActive(href: string, exact?: boolean) {
+    return exact ? pathname === href : pathname.startsWith(href);
+  }
 
-  // Badge helpers — single source of truth
   function getBadge(href: string) {
     const isAffil = href === "/dashboard/vendedoras" && pendingAffiliateCount > 0;
     const isStock = href === "/dashboard/productos"  && lowStockCount > 0;
@@ -137,15 +164,70 @@ export default function DashboardLayout({
 
   const anyBadge = pendingAffiliateCount > 0 || pendingOrderCount > 0 || lowStockCount > 0 || pendingLeadsCount > 0;
 
-  // Swipe handlers for mobile drawer
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
   }
   function onTouchEnd(e: React.TouchEvent) {
     if (touchStartX.current === null) return;
     const delta = e.changedTouches[0].clientX - touchStartX.current;
-    if (delta < -60) setMobileOpen(false); // swipe left to close
+    if (delta < -60) setMobileOpen(false);
     touchStartX.current = null;
+  }
+
+  function filterItems(items: NavItem[]) {
+    return items.filter(({ onlyFor }) => !onlyFor || (storeType && onlyFor.includes(storeType)));
+  }
+
+  function renderDesktopLink(item: NavItem) {
+    const { href, label, icon: Icon, exact } = item;
+    const active = isActive(href, exact);
+    const { has, count, color } = getBadge(href);
+    return (
+      <Link
+        key={href}
+        href={href}
+        className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+          active ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+        }`}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        <span className="flex-1 whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
+          {label}
+        </span>
+        {has && (
+          <>
+            <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${color} group-hover:hidden`} />
+            <span className={`hidden group-hover:inline-flex shrink-0 min-w-5 rounded-full ${color} px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white`}>
+              {count > 9 ? "9+" : count}
+            </span>
+          </>
+        )}
+      </Link>
+    );
+  }
+
+  function renderMobileLink(item: NavItem, onNavigate: () => void) {
+    const { href, label, icon: Icon, exact } = item;
+    const active = isActive(href, exact);
+    const { has, count, color } = getBadge(href);
+    return (
+      <Link
+        key={href}
+        href={href}
+        onClick={onNavigate}
+        className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors active:scale-[0.98] ${
+          active ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50 active:bg-gray-100"
+        }`}
+      >
+        <Icon className="h-5 w-5 shrink-0" />
+        <span className="flex-1">{label}</span>
+        {has && (
+          <span className={`shrink-0 min-w-5 rounded-full ${color} px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white`}>
+            {count > 9 ? "9+" : count}
+          </span>
+        )}
+      </Link>
+    );
   }
 
   return (
@@ -160,40 +242,32 @@ export default function DashboardLayout({
           </span>
         </Link>
 
-        <nav className="flex-1 p-2 space-y-0.5 overflow-hidden">
-          {visibleNavItems.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href;
-            const { has, count, color } = getBadge(href);
+        <nav className="flex-1 p-2 overflow-y-auto overflow-x-hidden space-y-0.5">
+          {NAV_GROUPS.map((group, gi) => {
+            const visible = filterItems(group.items);
+            if (visible.length === 0) return null;
             return (
-              <Link
-                key={href}
-                href={href}
-                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  active ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="flex-1 whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
-                  {label}
-                </span>
-                {has && (
-                  <>
-                    <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${color} group-hover:hidden`} />
-                    <span className={`hidden group-hover:inline-flex shrink-0 min-w-5 rounded-full ${color} px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white`}>
-                      {count > 9 ? "9+" : count}
-                    </span>
-                  </>
+              <div key={gi}>
+                {gi > 0 && (
+                  <div className="flex items-center gap-2 pt-3 pb-1 px-1">
+                    <div className="h-px bg-gray-100 flex-1" />
+                    {group.label && (
+                      <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200 text-[10px] font-semibold uppercase tracking-widest text-gray-400 whitespace-nowrap">
+                        {group.label}
+                      </span>
+                    )}
+                    <div className="h-px bg-gray-100 flex-1" />
+                  </div>
                 )}
-              </Link>
+                <div className="space-y-0.5">
+                  {visible.map(renderDesktopLink)}
+                </div>
+              </div>
             );
           })}
         </nav>
 
         <div className="p-2 border-t border-gray-100 space-y-0.5 shrink-0">
-          <Link href="/dashboard/ajustes" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors">
-            <Settings className="h-4 w-4 shrink-0" />
-            <span className="whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">Configuración</span>
-          </Link>
           <button
             onClick={async () => { setSigningOut(true); await signOut("/login"); }}
             disabled={signingOut}
@@ -250,18 +324,15 @@ export default function DashboardLayout({
       {/* ── MOBILE Drawer (< lg) ─────────────────────────────────────────── */}
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-[70]">
-          {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
             onClick={() => setMobileOpen(false)}
           />
-          {/* Sliding panel — swipe left to close */}
           <div
             className="relative w-72 max-w-[85vw] h-full bg-white flex flex-col shadow-2xl animate-slide-in-left"
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
           >
-            {/* Panel header */}
             <div className="flex items-center justify-between h-14 px-4 border-b border-gray-100 shrink-0">
               <Link href="/" className="flex items-center gap-2">
                 <ShoppingBag className="h-5 w-5 text-indigo-600" />
@@ -276,40 +347,30 @@ export default function DashboardLayout({
               </button>
             </div>
 
-            {/* Nav items — always expanded (no hover trick needed) */}
-            <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-              {visibleNavItems.map(({ href, label, icon: Icon }) => {
-                const active = pathname === href;
-                const { has, count, color } = getBadge(href);
+            <nav className="flex-1 p-3 overflow-y-auto space-y-0.5">
+              {NAV_GROUPS.map((group, gi) => {
+                const visible = filterItems(group.items);
+                if (visible.length === 0) return null;
                 return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors active:scale-[0.98] ${
-                      active ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50 active:bg-gray-100"
-                    }`}
-                  >
-                    <Icon className="h-5 w-5 shrink-0" />
-                    <span className="flex-1">{label}</span>
-                    {has && (
-                      <span className={`shrink-0 min-w-5 rounded-full ${color} px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white`}>
-                        {count > 9 ? "9+" : count}
-                      </span>
+                  <div key={gi}>
+                    {gi > 0 && (
+                      <div className="pt-3 pb-1 px-3">
+                        {group.label && (
+                          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                            {group.label}
+                          </p>
+                        )}
+                      </div>
                     )}
-                  </Link>
+                    <div className="space-y-0.5">
+                      {visible.map((item) => renderMobileLink(item, () => setMobileOpen(false)))}
+                    </div>
+                  </div>
                 );
               })}
             </nav>
 
-            {/* Bottom section */}
             <div className="p-3 border-t border-gray-100 space-y-0.5 shrink-0">
-              <Link
-                href="/dashboard/ajustes"
-                className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-gray-500 hover:bg-gray-50 active:bg-gray-100 transition-colors"
-              >
-                <Settings className="h-5 w-5 shrink-0" />
-                <span>Configuración</span>
-              </Link>
               <button
                 onClick={async () => { setSigningOut(true); await signOut("/login"); }}
                 disabled={signingOut}
@@ -320,6 +381,7 @@ export default function DashboardLayout({
               </button>
               <Link
                 href="/dashboard/perfil"
+                onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-gray-50 active:bg-gray-100 transition-colors"
               >
                 <div className="relative shrink-0">
@@ -347,7 +409,6 @@ export default function DashboardLayout({
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <main className={`lg:ml-14 flex-1 flex flex-col bg-gray-50 pt-14 lg:pt-0 ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
-        {/* Notification bell — desktop only (mobile bell is in the top bar) */}
         <div className="hidden lg:flex justify-end items-center px-4 pt-3 pb-0 shrink-0">
           {userId && <NotificationBell userId={userId} />}
         </div>

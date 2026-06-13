@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { CheckCircle, Loader2, Copy, Wallet } from "lucide-react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Withdrawal = {
   id: string;
@@ -29,12 +30,26 @@ export default function AdminRetirosPage() {
   const [processing, setProcessing] = useState<Record<string, boolean>>({});
   const [done, setDone] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
+  const fetchWithdrawals = useCallback(() => {
     fetch("/api/admin/retiros")
       .then((r) => r.json())
       .then((d) => setWithdrawals(d.withdrawals ?? []))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchWithdrawals();
+    const supabase = createSupabaseBrowserClient();
+    const channel = supabase
+      .channel("admin-retiros-rt")
+      .on(
+        "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
+        { event: "*", schema: "public", table: "WalletWithdrawal" },
+        () => fetchWithdrawals()
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchWithdrawals]);
 
   async function markSent(id: string) {
     setProcessing((p) => ({ ...p, [id]: true }));

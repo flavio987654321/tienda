@@ -9,47 +9,84 @@ import {
 import { useAuth } from "@/components/AuthProvider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-const NAV = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/testimonios", label: "Testimonios", icon: MessageSquare },
-  { href: "/admin/usuarios", label: "Usuarios", icon: Users },
-  { href: "/admin/tiendas", label: "Tiendas", icon: Store },
-  { href: "/admin/verificaciones", label: "Verificaciones", icon: BadgeCheck },
-  { href: "/admin/denuncias", label: "Denuncias", icon: Flag },
-  { href: "/admin/retiros", label: "Retiros", icon: Wallet },
-  { href: "/admin/auditoria", label: "Auditoría", icon: ShieldCheck },
+const NAV_GROUPS = [
+  {
+    label: "Gestión",
+    items: [
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { href: "/admin/usuarios", label: "Usuarios", icon: Users },
+      { href: "/admin/tiendas", label: "Tiendas", icon: Store },
+    ],
+  },
+  {
+    label: "Moderación",
+    items: [
+      { href: "/admin/verificaciones", label: "Verificaciones", icon: BadgeCheck },
+      { href: "/admin/denuncias", label: "Denuncias", icon: Flag },
+      { href: "/admin/testimonios", label: "Testimonios", icon: MessageSquare },
+    ],
+  },
+  {
+    label: "Operaciones",
+    items: [
+      { href: "/admin/retiros", label: "Retiros", icon: Wallet },
+    ],
+  },
+  {
+    label: "Sistema",
+    items: [
+      { href: "/admin/auditoria", label: "Historial", icon: ShieldCheck },
+    ],
+  },
 ];
 
-function NavLinks({ pathname, pendingVerif, pendingReports, onNavigate }: { pathname: string; pendingVerif: number; pendingReports: number; onNavigate?: () => void }) {
+type Badges = { pendingVerif: number; pendingReports: number; pendingRetiros: number };
+
+function NavLinks({ pathname, badges, onNavigate }: { pathname: string; badges: Badges; onNavigate?: () => void }) {
   function isActive(href: string, exact?: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
   }
+
+  function getBadge(href: string): number {
+    if (href === "/admin/verificaciones" && !pathname.startsWith("/admin/verificaciones")) return badges.pendingVerif;
+    if (href === "/admin/denuncias" && !pathname.startsWith("/admin/denuncias")) return badges.pendingReports;
+    if (href === "/admin/retiros" && !pathname.startsWith("/admin/retiros")) return badges.pendingRetiros;
+    return 0;
+  }
+
   return (
-    <nav className="flex-1 px-3 py-4 space-y-1">
-      {NAV.map(({ href, label, icon: Icon, exact }) => (
-        <Link
-          key={href}
-          href={href}
-          onClick={onNavigate}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-            isActive(href, exact)
-              ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/20"
-              : "text-gray-400 hover:text-white hover:bg-white/5"
-          }`}
-        >
-          <Icon className="h-5 w-5 flex-shrink-0" />
-          <span className="flex-1">{label}</span>
-          {href === "/admin/verificaciones" && pendingVerif > 0 && (
-            <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
-              {pendingVerif > 99 ? "99+" : pendingVerif}
-            </span>
-          )}
-          {href === "/admin/denuncias" && pendingReports > 0 && (
-            <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
-              {pendingReports > 99 ? "99+" : pendingReports}
-            </span>
-          )}
-        </Link>
+    <nav className="flex-1 px-3 py-4 space-y-4">
+      {NAV_GROUPS.map((group) => (
+        <div key={group.label}>
+          <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-600">
+            {group.label}
+          </p>
+          <div className="space-y-0.5">
+            {group.items.map(({ href, label, icon: Icon, exact }) => {
+              const badge = getBadge(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={onNavigate}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    isActive(href, exact)
+                      ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/20"
+                      : "text-gray-400 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  <span className="flex-1">{label}</span>
+                  {badge > 0 && (
+                    <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       ))}
     </nav>
   );
@@ -81,8 +118,7 @@ function UserFooter({ user, onSignOut }: { user: { name: string | null; email: s
 
 export default function AdminSidebar({ user }: { user: { name: string | null; email: string } }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [pendingVerif, setPendingVerif] = useState(0);
-  const [pendingReports, setPendingReports] = useState(0);
+  const [badges, setBadges] = useState<Badges>({ pendingVerif: 0, pendingReports: 0, pendingRetiros: 0 });
   const pathname = usePathname();
   const { signOut } = useAuth();
 
@@ -90,18 +126,22 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
     function fetchCounts() {
       fetch("/api/admin/verificacion?count=1")
         .then((r) => r.json())
-        .then((d) => { if (typeof d.count === "number") setPendingVerif(d.count); })
+        .then((d) => { if (typeof d.count === "number") setBadges((b) => ({ ...b, pendingVerif: d.count })); })
         .catch(() => {});
       fetch("/api/admin/denuncias?count=1")
         .then((r) => r.json())
-        .then((d) => { if (typeof d.count === "number") setPendingReports(d.count); })
+        .then((d) => { if (typeof d.count === "number") setBadges((b) => ({ ...b, pendingReports: d.count })); })
+        .catch(() => {});
+      fetch("/api/admin/retiros?count=1")
+        .then((r) => r.json())
+        .then((d) => { if (typeof d.count === "number") setBadges((b) => ({ ...b, pendingRetiros: d.count })); })
         .catch(() => {});
     }
     fetchCounts();
 
     const supabase = createSupabaseBrowserClient();
     const channel = supabase
-      .channel("admin-pending-verif")
+      .channel("admin-pending-counts")
       .on(
         "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
         { event: "*", schema: "public", table: "VerificationRequest" },
@@ -110,6 +150,11 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
       .on(
         "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
         { event: "*", schema: "public", table: "StoreReport" },
+        () => fetchCounts()
+      )
+      .on(
+        "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
+        { event: "*", schema: "public", table: "WalletWithdrawal" },
         () => fetchCounts()
       )
       .subscribe();
@@ -133,7 +178,7 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
             </div>
           </div>
         </div>
-        <NavLinks pathname={pathname} pendingVerif={pathname.startsWith("/admin/verificaciones") ? 0 : pendingVerif} pendingReports={pathname.startsWith("/admin/denuncias") ? 0 : pendingReports} />
+        <NavLinks pathname={pathname} badges={badges} />
         <UserFooter user={user} onSignOut={() => signOut("/")} />
       </aside>
 
@@ -179,7 +224,7 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <NavLinks pathname={pathname} pendingVerif={pathname.startsWith("/admin/verificaciones") ? 0 : pendingVerif} pendingReports={pathname.startsWith("/admin/denuncias") ? 0 : pendingReports} onNavigate={() => setMobileOpen(false)} />
+            <NavLinks pathname={pathname} badges={badges} onNavigate={() => setMobileOpen(false)} />
             <UserFooter user={user} onSignOut={() => { setMobileOpen(false); signOut("/"); }} />
           </aside>
         </div>

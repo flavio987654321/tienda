@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { CheckCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertCircle, ChevronDown } from "lucide-react";
 import AdminStatsRealtime from "./AdminStatsRealtime";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +31,7 @@ async function getStats() {
     totalTestimonials, pendingTestimonials,
     activeSubscriptions,
     totalBanned, totalDeleted,
+    pendingVerifications, pendingRetiros,
   ] = await Promise.all([
     prisma.user.count({ where: ACTIVE_USER }),
     prisma.user.count({ where: { role: "OWNER",  banned: false, NOT: DELETED } }),
@@ -45,6 +46,8 @@ async function getStats() {
     prisma.subscription.count({ where: { status: { in: ["ACTIVE", "TRIAL"] } } }),
     prisma.user.count({ where: { banned: true, NOT: DELETED } }),
     prisma.user.count({ where: DELETED }),
+    prisma.verificationRequest.count({ where: { status: "PENDING" } }),
+    prisma.walletWithdrawal.count({ where: { status: "PENDING" } }),
   ]);
 
   return {
@@ -54,6 +57,7 @@ async function getStats() {
     totalTestimonials, pendingTestimonials,
     activeSubscriptions,
     totalBanned, totalDeleted,
+    pendingVerifications, pendingRetiros,
   };
 }
 
@@ -67,28 +71,24 @@ export default async function AdminPage() {
         <p className="text-gray-400 text-sm">Resumen general de la plataforma</p>
       </div>
 
-      {/* Stats con Realtime — se actualiza cuando hay cambios en la DB */}
+      {/* Stats con Realtime */}
       <AdminStatsRealtime initial={initialStats} />
 
-      {/* Estado del sistema */}
-      <div className="mt-6 bg-gray-900/30 border border-white/5 rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            {sys.db && sys.auth && sys.mp ? (
-              <CheckCircle className="h-5 w-5 text-emerald-400" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-red-400" />
-            )}
-            <div>
-              <h2 className="text-white font-bold">Estado del sistema</h2>
-              <p className="text-gray-500 text-xs mt-0.5">Servicios que sostienen la plataforma</p>
-            </div>
-          </div>
-          <span className={`text-xs font-bold px-3 py-1 rounded-full ${sys.db && sys.auth && sys.mp ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
+      {/* Estado del sistema — sección secundaria al pie */}
+      <details className="mt-8 group">
+        <summary className="flex items-center gap-2 cursor-pointer list-none text-gray-500 hover:text-gray-300 transition-colors text-sm select-none">
+          {sys.db && sys.auth && sys.mp ? (
+            <CheckCircle className="h-4 w-4 text-emerald-500" />
+          ) : (
+            <AlertCircle className="h-4 w-4 text-red-400" />
+          )}
+          <span className="font-medium">Estado del sistema</span>
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${sys.db && sys.auth && sys.mp ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
             {sys.db && sys.auth && sys.mp ? "Todo operativo" : "Revisar servicios"}
           </span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          <ChevronDown className="h-4 w-4 ml-auto transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
           {[
             { label: "Plataforma",       desc: "Rutas y páginas de la app",    ok: true      },
             { label: "Base de datos",    desc: "Almacenamiento de datos",       ok: sys.db    },
@@ -111,7 +111,7 @@ export default async function AdminPage() {
             </div>
           ))}
         </div>
-      </div>
+      </details>
     </div>
   );
 }

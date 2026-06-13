@@ -3,10 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { decryptIfNeeded } from "@/lib/crypto";
 
-export async function GET() {
+export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user || user.role !== "ADMIN") {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  if (searchParams.get("count") === "1") {
+    const count = await prisma.walletWithdrawal.count({ where: { status: "PENDING" } });
+    return NextResponse.json({ count });
   }
 
   const withdrawals = await prisma.walletWithdrawal.findMany({

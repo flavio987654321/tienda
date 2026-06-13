@@ -3,12 +3,12 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import ShareStoreButton from "@/components/ShareStoreButton";
 import PublishToggle from "@/components/PublishToggle";
-import LogoUploadCard from "@/components/LogoUploadCard";
 import { getCurrentUser } from "@/lib/auth-session";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   ShoppingBag, Package, Users, TrendingUp,
-  Plus, Store, ArrowRight, Share2, Star, BadgeCheck
+  Store, Share2, Star, BadgeCheck, CheckCircle2, Circle,
+  AlertTriangle,
 } from "lucide-react";
 import { getUserSubscription } from "@/lib/subscription";
 
@@ -30,8 +30,13 @@ export default async function DashboardPage() {
   if (user.role === "SELLER") redirect("/afiliados");
   if (!store) redirect("/login");
 
+  // Extra fields for onboarding checklist
+  const storeExtra = await prisma.store.findUnique({
+    where: { id: store.id },
+    select: { logo: true, isPublished: true, mpConnectedAt: true, storeConfig: true },
+  });
+
   const sub = await getUserSubscription(userId);
-  const isPremium = sub?.tier === "PREMIUM";
 
   const recentOrders = await prisma.order.findMany({
     where: { storeId: store.id },
@@ -44,32 +49,65 @@ export default async function DashboardPage() {
     where: { storeId: store.id, status: { in: ["CONFIRMED", "DELIVERED"] } },
     _sum: { total: true },
   });
-  const pendingAffiliateCount = store
-    ? await prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } })
-    : 0;
-  const initialLowStockCount = store
-    ? await prisma.product.count({
-        where: {
-          storeId: store.id,
-          deletedAt: null,
-          variants: {
-            every: { stock: 0 },
-          },
-        },
-      })
-    : 0;
+  const pendingAffiliateCount = await prisma.affiliate.count({
+    where: { storeId: store.id, status: "PENDING" },
+  });
+  const initialLowStockCount = await prisma.product.count({
+    where: { storeId: store.id, deletedAt: null, variants: { every: { stock: 0 } } },
+  });
 
-  const recentReviews = store
-    ? await prisma.review.findMany({
-        where: { product: { storeId: store.id } },
-        include: {
-          user: { select: { name: true } },
-          product: { select: { id: true, name: true } },
-        },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      })
-    : [];
+  const recentReviews = await prisma.review.findMany({
+    where: { product: { storeId: store.id } },
+    include: {
+      user: { select: { name: true } },
+      product: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+
+  // Onboarding checklist
+  let hasTemplate = false;
+  try {
+    const cfg = JSON.parse(storeExtra?.storeConfig || "{}");
+    hasTemplate = !!cfg.template;
+  } catch { /* noop */ }
+
+  const onboardingSteps = [
+    {
+      done: !!storeExtra?.logo,
+      label: "Subí el logo de tu tienda",
+      href: "/dashboard/ajustes",
+      tip: "Aparece en el encabezado y en los emails a tus clientes.",
+    },
+    {
+      done: hasTemplate,
+      label: "Elegí el diseño de tu tienda",
+      href: "/dashboard/configuracion",
+      tip: "Seleccioná una plantilla y personalizá los colores.",
+    },
+    {
+      done: store._count.products > 0,
+      label: "Agregá tus primeros productos",
+      href: "/dashboard/productos/nuevo",
+      tip: "Con al menos un producto ya podés compartir tu tienda.",
+    },
+    {
+      done: !!storeExtra?.mpConnectedAt,
+      label: "Conectá MercadoPago para cobrar",
+      href: "/dashboard/ajustes",
+      tip: "Necesario para recibir pagos de tus clientes.",
+    },
+    {
+      done: !!storeExtra?.isPublished,
+      label: "Publicá tu tienda",
+      href: "/dashboard",
+      tip: "Activá el switch de publicación para que sea visible.",
+    },
+  ];
+
+  const doneCount = onboardingSteps.filter((s) => s.done).length;
+  const allDone = doneCount === onboardingSteps.length;
 
   return (
     <DashboardLayout
@@ -80,7 +118,7 @@ export default async function DashboardPage() {
       initialLowStockCount={initialLowStockCount}
     >
       <div>
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">
             Bienvenido, {user.name?.split(" ")[0]} 👋
           </h1>
@@ -94,19 +132,78 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        {store && (
-          <LogoUploadCard storeName={store.name} initialLogo={store.logo} initialLogoColor={store.logoColor} primaryColor={store.primaryColor} isPremium={isPremium} />
+        {/* ── Onboarding checklist ── */}
+        {!allDone ? (
+          <div className="mb-6 bg-white rounded-2xl border border-indigo-100 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <h2 className="font-bold text-gray-900 text-sm">Completá la configuración de tu tienda</h2>
+              </div>
+              <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+                {doneCount}/{onboardingSteps.length} pasos
+              </span>
+            </div>
+            {/* Progress bar */}
+            <div className="h-1.5 bg-gray-100 rounded-full mb-4 overflow-hidden">
+              <div
+                className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                style={{ width: `${(doneCount / onboardingSteps.length) * 100}%` }}
+              />
+            </div>
+            <div className="space-y-2">
+              {onboardingSteps.map((step) => (
+                <Link
+                  key={step.label}
+                  href={step.href}
+                  className={`flex items-center gap-3 p-3 rounded-xl transition-all group ${
+                    step.done
+                      ? "opacity-60 cursor-default pointer-events-none"
+                      : "hover:bg-indigo-50 hover:border-indigo-100 border border-transparent"
+                  }`}
+                >
+                  {step.done ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+                  ) : (
+                    <Circle className="h-5 w-5 text-gray-300 shrink-0 group-hover:text-indigo-400 transition-colors" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium ${step.done ? "line-through text-gray-400" : "text-gray-800"}`}>
+                      {step.label}
+                    </p>
+                    {!step.done && (
+                      <p className="text-xs text-gray-400 mt-0.5">{step.tip}</p>
+                    )}
+                  </div>
+                  {!step.done && (
+                    <span className="text-xs text-indigo-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      Ir →
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-emerald-800">¡Tu tienda está lista! 🎉</p>
+              <p className="text-xs text-emerald-600 mt-0.5">Todos los pasos de configuración completados.</p>
+            </div>
+          </div>
         )}
 
+        {/* ── Store link & publish toggle ── */}
         {store && (
-          <div className="mb-8 rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm">
+          <div className="mb-6 rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-start gap-3">
                 <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600">
                   <Share2 className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900">Link publico de tu tienda</p>
+                  <p className="font-bold text-gray-900">Link público de tu tienda</p>
                   <p className="mt-1 break-all text-sm text-gray-500">/tienda/{store.slug}</p>
                   <p className="mt-1 text-xs text-gray-400">Este es el link que ve cualquier cliente. No necesita login.</p>
                 </div>
@@ -134,71 +231,53 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        {/* ── Stats ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[
             {
               label: "Ingresos totales",
               value: `$${(totalRevenue._sum.total ?? 0).toLocaleString("es-AR")}`,
               icon: TrendingUp,
               color: "text-green-600 bg-green-50",
+              href: "/dashboard/metricas",
             },
             {
               label: "Productos",
               value: store?._count.products ?? 0,
               icon: Package,
               color: "text-blue-600 bg-blue-50",
+              href: "/dashboard/productos",
             },
             {
               label: "Pedidos",
               value: store?._count.orders ?? 0,
               icon: ShoppingBag,
               color: "text-indigo-600 bg-indigo-50",
+              href: "/dashboard/pedidos",
             },
             {
               label: "Afiliados",
               value: store?._count.affiliates ?? 0,
               icon: Users,
               color: "text-purple-600 bg-purple-50",
+              href: "/dashboard/vendedoras",
             },
-          ].map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="bg-white rounded-xl border border-gray-100 p-5">
+          ].map(({ label, value, icon: Icon, color, href }) => (
+            <Link
+              key={label}
+              href={href}
+              className="bg-white rounded-xl border border-gray-100 p-5 hover:border-indigo-200 hover:shadow-sm transition-all group"
+            >
               <div className={`inline-flex p-2 rounded-lg ${color} mb-3`}>
                 <Icon className="h-5 w-5" />
               </div>
               <p className="text-2xl font-bold text-gray-900">{value}</p>
               <p className="text-sm text-gray-500 mt-0.5">{label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Quick actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          {[
-            { href: "/dashboard/productos/nuevo", label: "Agregar producto", icon: Plus, desc: "Sumá un nuevo producto a tu catálogo" },
-            { href: `/tienda/${store?.slug}`, label: "Ver mi tienda", icon: Store, desc: "Mirá cómo ven tu tienda los clientes" },
-            { href: "/dashboard/vendedoras", label: "Gestionar afiliados", icon: Users, desc: "Activa solicitudes y aproba a quienes pueden vender" },
-          ].map(({ href, label, icon: Icon, desc }) => (
-            <Link
-              key={href}
-              href={href}
-              className="bg-white rounded-xl border border-gray-100 p-5 hover:border-indigo-200 hover:shadow-sm transition-all group"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="bg-indigo-50 text-indigo-600 inline-flex p-2 rounded-lg mb-3">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <p className="font-semibold text-gray-900">{label}</p>
-                  <p className="text-sm text-gray-500 mt-0.5">{desc}</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-indigo-500 transition-colors mt-1" />
-              </div>
             </Link>
           ))}
         </div>
 
-        {/* Recent reviews */}
+        {/* ── Recent reviews ── */}
         {recentReviews.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
             <div className="flex items-center justify-between mb-5">
@@ -234,7 +313,7 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* Recent orders */}
+        {/* ── Recent orders ── */}
         <div className="bg-white rounded-xl border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-bold text-gray-900">Últimos pedidos</h2>
@@ -247,6 +326,9 @@ export default async function DashboardPage() {
             <div className="text-center py-10 text-gray-400">
               <ShoppingBag className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p>Todavía no tenés pedidos</p>
+              <Link href={`/tienda/${store?.slug}`} target="_blank" className="mt-3 inline-block text-sm text-indigo-500 hover:underline">
+                Compartí tu tienda para recibir el primero →
+              </Link>
             </div>
           ) : (
             <div className="space-y-3">
@@ -275,4 +357,3 @@ export default async function DashboardPage() {
     </DashboardLayout>
   );
 }
-

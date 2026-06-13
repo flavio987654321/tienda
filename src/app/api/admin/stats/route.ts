@@ -21,6 +21,7 @@ export async function GET() {
     totalTestimonials, pendingTestimonials,
     activeSubscriptions,
     totalBanned, totalDeleted,
+    pendingVerifications, pendingRetiros,
   ] = await Promise.all([
     prisma.user.count({ where: ACTIVE_USER }),
     prisma.user.count({ where: { role: "OWNER",  banned: false, NOT: DELETED } }),
@@ -35,6 +36,8 @@ export async function GET() {
     prisma.subscription.count({ where: { status: { in: ["ACTIVE", "TRIAL"] } } }),
     prisma.user.count({ where: { banned: true, NOT: DELETED } }),
     prisma.user.count({ where: DELETED }),
+    prisma.verificationRequest.count({ where: { status: "PENDING" } }),
+    prisma.walletWithdrawal.count({ where: { status: "PENDING" } }),
   ]);
 
   return NextResponse.json({
@@ -44,5 +47,6 @@ export async function GET() {
     totalTestimonials, pendingTestimonials,
     activeSubscriptions,
     totalBanned, totalDeleted,
+    pendingVerifications, pendingRetiros,
   });
 }

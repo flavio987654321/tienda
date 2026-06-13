@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BadgeCheck, Clock, ShieldAlert, X, Loader2, ExternalLink } from "lucide-react";
 import Image from "next/image";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type VerifRequest = {
   id: string;
@@ -175,7 +176,19 @@ export default function VerificacionesAdmin() {
     }
   }, [activeTab]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const supabase = createSupabaseBrowserClient();
+    const channel = supabase
+      .channel("admin-verificaciones-rt")
+      .on(
+        "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
+        { event: "*", schema: "public", table: "VerificationRequest" },
+        () => load()
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [load]);
 
   return (
     <div>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useCallback, useState } from "react";
 import Link from "next/link";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Report = {
   id: string;
@@ -25,7 +26,7 @@ export default function DenunciasAdmin() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
 
-  async function loadReports(status: string) {
+  const loadReports = useCallback(async (status: string) => {
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/denuncias?status=${status}`);
@@ -34,9 +35,21 @@ export default function DenunciasAdmin() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  useEffect(() => { loadReports(filter); }, [filter]);
+  useEffect(() => {
+    loadReports(filter);
+    const supabase = createSupabaseBrowserClient();
+    const channel = supabase
+      .channel("admin-denuncias-rt")
+      .on(
+        "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
+        { event: "*", schema: "public", table: "StoreReport" },
+        () => loadReports(filter)
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [filter, loadReports]);
 
   async function updateStatus(id: string, status: string) {
     setUpdating(id);
