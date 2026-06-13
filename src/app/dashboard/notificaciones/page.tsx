@@ -4,8 +4,9 @@ import { useEffect, useState, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   Bell, Send, Users, AlertTriangle, CheckCircle2, Loader2,
-  Clock, ChevronDown, ChevronUp, ShieldCheck,
+  Clock, ChevronDown, ChevronUp, ShieldCheck, Crown, ArrowRight,
 } from "lucide-react";
+import Link from "next/link";
 
 const TITLE_MAX = 50;
 const BODY_MAX = 150;
@@ -26,6 +27,8 @@ type Stats = {
   campaigns: Campaign[];
 };
 
+type LoadState = "loading" | "ok" | "not_premium" | "error";
+
 const PRESET_TYPES = [
   { label: "Producto nuevo", titleTemplate: "¡Nuevo producto disponible!", bodyTemplate: "" },
   { label: "Oferta especial", titleTemplate: "¡Oferta por tiempo limitado!", bodyTemplate: "" },
@@ -34,7 +37,8 @@ const PRESET_TYPES = [
 
 export default function NotificacionesPage() {
   const [stats, setStats] = useState<Stats | null>(null);
-  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadState, setLoadState] = useState<LoadState>("loading");
+  const loadingStats = loadState === "loading";
   const [presetIdx, setPresetIdx] = useState(0);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
@@ -47,10 +51,14 @@ export default function NotificacionesPage() {
 
   useEffect(() => {
     fetch("/api/push/send")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d) setStats(d); })
-      .catch(() => {})
-      .finally(() => setLoadingStats(false));
+      .then(async (r) => {
+        if (r.status === 403) { setLoadState("not_premium"); return; }
+        if (!r.ok) { setLoadState("error"); return; }
+        const d = await r.json();
+        setStats(d);
+        setLoadState("ok");
+      })
+      .catch(() => setLoadState("error"));
   }, []);
 
   function applyPreset(idx: number) {
@@ -117,8 +125,8 @@ export default function NotificacionesPage() {
           </p>
         </div>
 
-        {/* Stats cards */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Stats cards (solo Premium) */}
+        {loadState !== "not_premium" && <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl border border-gray-100 bg-white p-4">
             <div className="flex items-center gap-2 mb-1">
               <Users className="h-4 w-4 text-indigo-400" />
@@ -151,19 +159,41 @@ export default function NotificacionesPage() {
                 : "Límite semanal alcanzado"}
             </p>
           </div>
-        </div>
+        </div>}
 
         {/* Aviso de qué son las notificaciones */}
         <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
           <p className="text-xs text-blue-700 leading-relaxed">
-            <strong>¿Cómo funciona?</strong> Tus clientes que hayan aceptado recibir notificaciones desde tu tienda
-            recibirán un mensaje en su celular aunque tengan la app cerrada. Podés enviar hasta{" "}
-            <strong>2 notificaciones por semana</strong> para mantener la calidad y evitar que los clientes te bloqueen.
+            <strong>¿Cómo funciona?</strong> Cuando alguien entra a tu tienda desde el celular, aparece un banner
+            preguntando si quiere recibir alertas. Si acepta, queda suscripto y recibe tus notificaciones
+            directamente en la pantalla, aunque tenga la tienda cerrada o la haya instalado como app. Podés enviar
+            hasta <strong>2 notificaciones por semana</strong> para no saturar a tus suscriptores.
           </p>
         </div>
 
-        {/* Formulario */}
-        <div ref={formRef} className="rounded-2xl border border-gray-100 bg-white p-5 space-y-4">
+        {/* Gate: solo Premium */}
+        {loadState === "not_premium" && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-6 flex flex-col items-center text-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100">
+              <Crown className="h-6 w-6 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900">Función exclusiva de Plan Premium</p>
+              <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
+                Actualizate a Tienda Premium para enviar notificaciones push a los visitantes que instalaron tu tienda como app.
+              </p>
+            </div>
+            <Link
+              href="/precios"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors"
+            >
+              Ver planes <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        )}
+
+        {/* Formulario (solo Premium) */}
+        {loadState === "not_premium" ? null : <div ref={formRef} className="rounded-2xl border border-gray-100 bg-white p-5 space-y-4">
           <h2 className="text-sm font-semibold text-gray-800">Nueva notificación</h2>
 
           {/* Tipos predefinidos */}

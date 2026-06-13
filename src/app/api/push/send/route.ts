@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { sendPushToStore } from "@/lib/push";
 
 const TITLE_MAX = 50;
@@ -12,9 +13,20 @@ function sanitize(str: string): string {
   return str.replace(/[\x00-\x1F\x7F]/g, " ").trim();
 }
 
+async function assertPremium(userId: string) {
+  const sub = await getUserSubscription(userId);
+  if (!sub || sub.tier !== "PREMIUM" || !isSubscriptionActive(sub as Parameters<typeof isSubscriptionActive>[0])) {
+    return NextResponse.json({ error: "Requiere Plan Premium", code: "NOT_PREMIUM" }, { status: 403 });
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const premiumError = await assertPremium(user.id);
+  if (premiumError) return premiumError;
 
   let body: unknown;
   try {
@@ -93,6 +105,9 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const premiumError = await assertPremium(user.id);
+  if (premiumError) return premiumError;
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
