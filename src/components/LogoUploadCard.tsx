@@ -8,9 +8,10 @@ interface LogoUploadCardProps {
   initialLogo: string | null;
   initialLogoColor: string | null;
   primaryColor?: string | null;
+  isPremium?: boolean;
 }
 
-export default function LogoUploadCard({ storeName, initialLogo, initialLogoColor, primaryColor }: LogoUploadCardProps) {
+export default function LogoUploadCard({ storeName, initialLogo, initialLogoColor, primaryColor, isPremium = false }: LogoUploadCardProps) {
   const [logo, setLogo] = useState<string | null>(initialLogo);
   const [logoColor, setLogoColor] = useState<string | null>(initialLogoColor);
   const effectiveColor = (() => {
@@ -275,31 +276,43 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
               {/* Preview splash PWA */}
               <div>
                 <p className="text-xs text-gray-400 mb-1.5 text-center font-medium">Splash al abrir la app</p>
-                <div
-                  className="w-60 h-24 rounded-xl flex flex-col items-center justify-center gap-2 shadow-sm cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
-                  style={{ background: splashBg }}
-                  onClick={() => setShowSplashModal(true)}
-                >
-                  <img src={logo} alt={storeName} className="h-10 w-10 rounded-xl object-cover shadow-md" />
-                  <p className="text-xs font-bold text-white truncate px-4" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
-                    {storeName}
-                  </p>
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-black/40 rounded-full px-2 py-1">
-                      <Play className="h-3 w-3 text-white fill-white" />
-                      <span className="text-[9px] font-semibold text-white">Ver animación</span>
+                {isPremium ? (
+                  <>
+                    <div
+                      className="w-60 h-24 rounded-xl flex flex-col items-center justify-center gap-2 shadow-sm cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
+                      style={{ background: splashBg }}
+                      onClick={() => setShowSplashModal(true)}
+                    >
+                      <img src={logo} alt={storeName} className="h-10 w-10 rounded-xl object-cover shadow-md" />
+                      <p className="text-xs font-bold text-white truncate px-4" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
+                        {storeName}
+                      </p>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-black/40 rounded-full px-2 py-1">
+                          <Play className="h-3 w-3 text-white fill-white" />
+                          <span className="text-[9px] font-semibold text-white">Ver animación</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                {!logoColor && (
-                  <p className="text-[10px] text-gray-400 text-center mt-1">
-                    PNG sin fondo → usa color de tu tienda
-                  </p>
-                )}
-                {logoColor && (
-                  <div className="flex items-center justify-center gap-1.5 mt-1">
-                    <div className="h-3 w-3 rounded-full border border-gray-200" style={{ background: logoColor }} />
-                    <p className="text-[10px] text-gray-400">Color detectado: {logoColor}</p>
+                    {!logoColor && (
+                      <p className="text-[10px] text-gray-400 text-center mt-1">
+                        PNG sin fondo → usa color de tu tienda
+                      </p>
+                    )}
+                    {logoColor && (
+                      <div className="flex items-center justify-center gap-1.5 mt-1">
+                        <div className="h-3 w-3 rounded-full border border-gray-200" style={{ background: logoColor }} />
+                        <p className="text-[10px] text-gray-400">Color detectado: {logoColor}</p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="w-60 h-24 rounded-xl flex flex-col items-center justify-center gap-1.5 shadow-sm relative overflow-hidden border border-dashed border-violet-200 bg-violet-50/60">
+                    <div className="flex items-center gap-1.5">
+                      <svg className="h-4 w-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      <span className="text-xs font-bold text-violet-500">Solo Premium</span>
+                    </div>
+                    <p className="text-[10px] text-violet-400 text-center px-4 leading-tight">Instalá tu tienda como app en el celular de tus clientes</p>
                   </div>
                 )}
               </div>

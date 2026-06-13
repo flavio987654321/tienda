@@ -10,6 +10,7 @@ import {
   ShoppingBag, Package, Users, TrendingUp,
   Plus, Store, ArrowRight, Share2, Star, BadgeCheck
 } from "lucide-react";
+import { getUserSubscription } from "@/lib/subscription";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -28,6 +29,9 @@ export default async function DashboardPage() {
   if (user.role === "ADMIN") redirect("/admin");
   if (user.role === "SELLER") redirect("/afiliados");
   if (!store) redirect("/login");
+
+  const sub = await getUserSubscription(userId);
+  const isPremium = sub?.tier === "PREMIUM";
 
   const recentOrders = await prisma.order.findMany({
     where: { storeId: store.id },
@@ -91,7 +95,7 @@ export default async function DashboardPage() {
         </div>
 
         {store && (
-          <LogoUploadCard storeName={store.name} initialLogo={store.logo} initialLogoColor={store.logoColor} primaryColor={store.primaryColor} />
+          <LogoUploadCard storeName={store.name} initialLogo={store.logo} initialLogoColor={store.logoColor} primaryColor={store.primaryColor} isPremium={isPremium} />
         )}
 
         {store && (
