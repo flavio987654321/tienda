@@ -10,6 +10,7 @@ import OwnerPreviewBadge from "./OwnerPreviewBadge";
 import VisitorBackButton from "./VisitorBackButton";
 import PwaSplashScreen from "@/components/store/PwaSplashScreen";
 import PwaInstallBanner from "@/components/store/PwaInstallBanner";
+import PWAManager from "@/components/PWAManager";
 import { getCurrentUser } from "@/lib/auth-session";
 import { isSubscriptionActive } from "@/lib/subscription";
 
@@ -151,6 +152,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
 
   return (
     <>
+      <PWAManager />
       <PwaSplashScreen
         logo={store.logo ?? null}
         color={splashColor}
