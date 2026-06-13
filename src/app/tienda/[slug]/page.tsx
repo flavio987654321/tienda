@@ -8,7 +8,6 @@ import { DEFAULT_CONFIG } from "@/types/store-config";
 import ComingSoonPage from "./ComingSoonPage";
 import OwnerPreviewBadge from "./OwnerPreviewBadge";
 import VisitorBackButton from "./VisitorBackButton";
-import PwaSplashScreen from "@/components/store/PwaSplashScreen";
 import PwaInstallBanner from "@/components/store/PwaInstallBanner";
 import PWAManager from "@/components/PWAManager";
 import { STORE_VERSION } from "@/lib/app-versions";
@@ -154,11 +153,6 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
   return (
     <>
       <PWAManager appVersion={STORE_VERSION} versionKey="pwa_store_version" />
-      <PwaSplashScreen
-        logo={store.logo ?? null}
-        color={splashColor}
-        name={store.name ?? "Tienda"}
-      />
       {ownerIsPremium && !isOwner && (
         <PwaInstallBanner
           logo={store.logo ?? null}

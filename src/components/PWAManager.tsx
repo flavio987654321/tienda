@@ -186,7 +186,7 @@ export default function PWAManager({ appVersion, versionKey }: Props) {
     <>
       {/* ── Update Banner ──────────────────────────────────────────────── */}
       {updateAvailable && (
-        <div className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-gray-700 bg-gray-900 px-4 py-3 shadow-2xl w-[calc(100%-2rem)] max-w-sm">
+        <div className="fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-gray-700 bg-gray-900 px-4 py-3 shadow-2xl w-[calc(100%-2rem)] max-w-sm">
           <RefreshCw className={`h-4 w-4 shrink-0 text-indigo-400 ${updating ? "animate-spin" : ""}`} />
           <p className="flex-1 text-sm text-white">
             <span className="font-semibold">{updating ? "Actualizando..." : "Nueva versión disponible"}</span>
@@ -213,7 +213,7 @@ export default function PWAManager({ appVersion, versionKey }: Props) {
 
       {/* ── Updated Toast ───────────────────────────────────────────────── */}
       {showUpdatedToast && (
-        <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 flex items-center gap-2.5 rounded-2xl border border-emerald-500/30 bg-gray-900 px-4 py-3 shadow-2xl w-[calc(100%-2rem)] max-w-sm">
+        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 flex items-center gap-2.5 rounded-2xl border border-emerald-500/30 bg-gray-900 px-4 py-3 shadow-2xl w-[calc(100%-2rem)] max-w-sm">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
             <span className="text-xs text-emerald-400 font-bold">✓</span>
           </div>
@@ -223,7 +223,7 @@ export default function PWAManager({ appVersion, versionKey }: Props) {
 
       {/* ── Notification Permission Banner ─────────────────────────────── */}
       {showNotifBanner && (
-        <div className="fixed bottom-5 right-4 z-50 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-indigo-100 bg-white p-4 shadow-2xl">
+        <div className="fixed bottom-24 right-4 z-50 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-indigo-100 bg-white p-4 shadow-2xl">
           <div className="flex items-start gap-3">
             <div className="shrink-0 rounded-xl bg-indigo-100 p-2">
               <Bell className="h-4 w-4 text-indigo-600" />
