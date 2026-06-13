@@ -15,11 +15,13 @@ interface Props {
 }
 
 type State = "checking" | "hidden" | "prompt" | "loading" | "subscribed" | "error";
+type ActionState = "idle" | "busy";
 
 const DISMISSED_KEY = (id: string) => `push_banner_dismissed_${id}`;
 
 export default function StorePushBanner({ storeId, storeName }: Props) {
   const [state, setState] = useState<State>("checking");
+  const [action, setAction] = useState<ActionState>("idle");
 
   useEffect(() => {
     if (!isPushSupported()) {
@@ -46,14 +48,18 @@ export default function StorePushBanner({ storeId, storeName }: Props) {
       setState("error");
       return;
     }
+    setAction("busy");
     setState("loading");
     const ok = await subscribeToStore(storeId);
+    setAction("idle");
     setState(ok ? "subscribed" : "error");
   }
 
   async function handleUnsubscribe() {
+    setAction("busy");
     setState("loading");
     const ok = await unsubscribeFromStore(storeId);
+    setAction("idle");
     if (ok) {
       localStorage.setItem(DISMISSED_KEY(storeId), "1");
       setState("hidden");
@@ -122,7 +128,7 @@ export default function StorePushBanner({ storeId, storeName }: Props) {
           ) : state === "prompt" || state === "error" ? (
             <button
               onClick={handleSubscribe}
-              disabled={state === "loading"}
+              disabled={action === "busy"}
               className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors disabled:opacity-50"
             >
               Activar

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   Bell, Send, Users, AlertTriangle, CheckCircle2, Loader2,
-  Clock, ChevronDown, ChevronUp,
+  Clock, ChevronDown, ChevronUp, ShieldCheck,
 } from "lucide-react";
 
 const TITLE_MAX = 50;
@@ -42,6 +42,7 @@ export default function NotificacionesPage() {
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,11 +60,14 @@ export default function NotificacionesPage() {
     setResult(null);
   }
 
-  async function handleSend(e: React.FormEvent) {
+  function handleSubmitClick(e: React.FormEvent) {
     e.preventDefault();
-    if (!tosAccepted) return;
-    if (title.trim().length === 0 || message.trim().length === 0) return;
+    if (!tosAccepted || title.trim().length === 0 || message.trim().length === 0) return;
+    setShowConfirm(true);
+  }
 
+  async function handleSend() {
+    setShowConfirm(false);
     setSending(true);
     setResult(null);
 
@@ -183,7 +187,7 @@ export default function NotificacionesPage() {
             </div>
           </div>
 
-          <form onSubmit={handleSend} className="space-y-3">
+          <form onSubmit={handleSubmitClick} className="space-y-3">
             {/* Título */}
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -294,6 +298,50 @@ export default function NotificacionesPage() {
             </button>
           </form>
         </div>
+
+        {/* Modal de confirmación antes de enviar */}
+        {showConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]">
+            <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 shrink-0">
+                  <Send className="h-5 w-5 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">¿Confirmar envío?</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Se enviará a todos tus suscriptores y consumirá 1 notificación semanal.
+                  </p>
+                </div>
+              </div>
+
+              {/* Preview resumida */}
+              <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 space-y-1">
+                <p className="text-xs font-semibold text-gray-800">{title}</p>
+                <p className="text-[11px] text-gray-500">{message}</p>
+              </div>
+
+              <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                Esta acción no se puede deshacer. Una vez enviada, la notificación llega a todos los celulares.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirm(false)}
+                  className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSend}
+                  className="flex-1 rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+                >
+                  Sí, enviar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Historial */}
         {stats && stats.campaigns.length > 0 && (
