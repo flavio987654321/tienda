@@ -942,7 +942,7 @@ export default function UrbanPulse() {
         )}
         <div style={{ padding: isMobile ? "40px 20px 20px" : "60px 40px 28px", position:"relative", zIndex:1 }}>
         <div style={{ maxWidth:1200, margin:"0 auto" }}>
-          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "2fr 1fr 1fr 1fr", gap: isMobile ? 24 : 40, marginBottom:40 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr 1fr", gap: isMobile ? 28 : 40, marginBottom:40 }}>
             <div>
               <div style={{ fontWeight:900, fontSize:24, letterSpacing:4, textTransform:"uppercase", color:footerUpText, marginBottom:16 }}>
                 <EditableZone field="storeName" label="Nombre de la tienda">
@@ -971,7 +971,7 @@ export default function UrbanPulse() {
             ))}
           </div>
           <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22, display:"flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", justifyContent:"space-between", gap: isMobile ? 12 : "8px 24px" }}>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:"0 16px" }}>
+            <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", flexWrap: isMobile ? "nowrap" : "wrap", gap: isMobile ? 6 : "0 16px" }}>
               {[
                 { label: "Devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
                 { label: "Envíos",       tipo: "envios",       policyField: "policyShipping" },
