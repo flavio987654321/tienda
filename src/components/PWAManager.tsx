@@ -101,9 +101,6 @@ export default function PWAManager({ appVersion, versionKey }: Props) {
       })
       .catch(() => {});
 
-    const onControllerChange = () => window.location.reload();
-    navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
-
     const onMessage = (event: MessageEvent) => {
       if (event.data?.type === "PUSH_RECEIVED") playNotificationSound();
     };
@@ -112,7 +109,6 @@ export default function PWAManager({ appVersion, versionKey }: Props) {
     return () => {
       clearInterval(updateInterval);
       if (onVisibility) document.removeEventListener("visibilitychange", onVisibility);
-      navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
       navigator.serviceWorker.removeEventListener("message", onMessage);
     };
   }, []);
@@ -144,6 +140,8 @@ export default function PWAManager({ appVersion, versionKey }: Props) {
     setTimeout(() => {
       if (waitingWorker) {
         waitingWorker.postMessage({ type: "SKIP_WAITING" });
+        // Reload after new SW activates (~500ms is enough)
+        setTimeout(() => window.location.reload(), 800);
       } else {
         window.location.reload();
       }

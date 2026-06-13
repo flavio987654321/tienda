@@ -68,6 +68,11 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // Allow /sw.js to be registered with any sub-scope (needed for per-store scoped SW)
+      { source: "/sw.js", headers: [
+        { key: "Service-Worker-Allowed", value: "/" },
+        { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+      ]},
       { source: "/((?!preview\\/).*)", headers: securityHeaders },
       // Páginas donde carga el SDK de MercadoPago (checkout de tienda + suscripciones + dashboard)
       { source: "/(precios|dashboard.*)", headers: paymentHeaders },
