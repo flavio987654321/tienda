@@ -43,7 +43,7 @@ const storeConfigSchema = z.object({
   })),
   sectionColors: z.record(z.string(), z.string().max(30)),
   bannerInterval: z.number().optional(),
-  promoBanner: z.object({ enabled: z.boolean() }).optional(),
+  promoBanner: z.object({ enabled: z.boolean(), messages: z.array(z.string().max(120)).max(3).optional() }).optional(),
   previewFill: z.boolean().optional(),
   tipoTienda: z.string().max(30).optional(),
   tieneVentaMayorista: z.boolean().optional(),

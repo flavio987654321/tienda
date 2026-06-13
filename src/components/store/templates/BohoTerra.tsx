@@ -22,11 +22,10 @@ const MID = "#9a8070";
 type Product = StorefrontProduct;
 
 
-const ANNOUNCEMENT_MESSAGES = [
+const announcementMessages_DEFAULT = [
   "🌿 Envío gratis en compras mayores a $30.000",
   "🔄 Cambios sin cargo hasta 30 días",
   "🌱 6 cuotas sin interés",
-  "✨ Nueva colección artesanal disponible",
 ];
 
 const scrollTo = (id:string) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
@@ -225,6 +224,9 @@ export default function BohoTerra() {
 
   const ANNOUNCEMENT_BAR_H = 36;
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
+  const announcementMessages = (storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
+    ? storeConfig!.promoBanner!.messages!.filter(m => m.trim())
+    : announcementMessages_DEFAULT;
   const showAnnouncement = promoBannerEnabled && announcementVisible;
   const announcementBarHeight = showAnnouncement ? ANNOUNCEMENT_BAR_H : 0;
 
@@ -246,7 +248,7 @@ export default function BohoTerra() {
   useEffect(() => {
     if (!showAnnouncement) return;
     const interval = setInterval(() => {
-      setAnnouncementIdx(i => (i + 1) % ANNOUNCEMENT_MESSAGES.length);
+      setAnnouncementIdx(i => (i + 1) % announcementMessages.length);
     }, 3500);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -350,11 +352,11 @@ export default function BohoTerra() {
       {showAnnouncement && (
         <div style={{ position: isPreview ? "sticky" : "fixed", top:0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex:110, height:ANNOUNCEMENT_BAR_H, background:A, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <span style={{ fontSize:12, fontWeight:600, color:"#fff", letterSpacing:1 }}>
-            <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{ANNOUNCEMENT_MESSAGES[announcementIdx]}</EditableZone>
+            <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{announcementMessages[announcementIdx]}</EditableZone>
           </span>
           {/* Dots */}
           <div style={{ position:"absolute", bottom:5, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5 }}>
-            {ANNOUNCEMENT_MESSAGES.map((_, i) => (
+            {announcementMessages.map((_, i) => (
               <button key={i} onClick={() => setAnnouncementIdx(i)}
                 style={{ width: i === announcementIdx ? 16 : 6, height:4, border:"none", borderRadius:2, background: i === announcementIdx ? "#fff" : "rgba(255,255,255,0.35)", cursor:"pointer", padding:0, transition:"all 0.3s" }}/>
             ))}

@@ -67,7 +67,9 @@ export default function ChicParis() {
   const [mobileOpenCat,   setMobileOpenCat]   = useState<string | null>(null);
   const [heroSlide,       setHeroSlide]       = useState(0);
   const [heroPaused,      setHeroPaused]      = useState(false);
-  const [openPolicyField, setOpenPolicyField] = useState<string | null>(null);
+  const [openPolicyField,  setOpenPolicyField]  = useState<string | null>(null);
+  const [announcementIdx,  setAnnouncementIdx]  = useState(0);
+  const [announcementVisible, setAnnouncementVisible] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews,        setReviews]        = useState<PReview[]>([]);
@@ -116,6 +118,11 @@ export default function ChicParis() {
   const bannerMs = storeConfig?.bannerInterval ?? 4000;
   const PROMO_BAR_H = 36;
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
+  const CP_DEFAULTS = ["🚚 Envío gratis en compras mayores a $30.000", "🔄 Cambios sin cargo hasta 30 días", "💳 6 cuotas sin interés"];
+  const announcementMessages = (storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
+    ? storeConfig!.promoBanner!.messages!.filter(m => m.trim())
+    : CP_DEFAULTS;
+  const showAnnouncement = promoBannerEnabled && announcementVisible;
 
   const stripBg   = sc["bgStrip"]    ?? "#f5f5f3";
   const stripText = getContrastColor(stripBg) === "light" ? "#fff" : "#111";
@@ -132,6 +139,13 @@ export default function ChicParis() {
     window.addEventListener("scroll", fn);
     return () => window.removeEventListener("scroll", fn);
   }, []);
+
+  useEffect(() => {
+    if (!showAnnouncement || announcementMessages.length <= 1) return;
+    const id = setInterval(() => setAnnouncementIdx(i => (i + 1) % announcementMessages.length), 3500);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAnnouncement, announcementMessages.length]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -382,23 +396,31 @@ export default function ChicParis() {
       `}</style>
 
       {/* ── PROMO BAR ── */}
-      {promoBannerEnabled && (
+      {showAnnouncement && (
         <div style={{
           position: isPreview ? "sticky" : "fixed", top: 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: 1001,
           height: PROMO_BAR_H, background: "#111",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", letterSpacing: 1 }}>
-            <EditableZone field="announcementText" label="Barra de anuncios" noBadge>
-              🚚 Envío gratis · 🔄 Cambios sin cargo · 💳 6 cuotas sin interés
-            </EditableZone>
+            {announcementMessages[announcementIdx]}
           </span>
+          {announcementMessages.length > 1 && (
+            <div style={{ position: "absolute", bottom: 4, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
+              {announcementMessages.map((_, i) => (
+                <button key={i} onClick={() => setAnnouncementIdx(i)}
+                  style={{ width: i === announcementIdx ? 14 : 5, height: 3, border: "none", borderRadius: 2, background: i === announcementIdx ? "#fff" : "rgba(255,255,255,0.3)", cursor: "pointer", padding: 0, transition: "all 0.3s" }} />
+              ))}
+            </div>
+          )}
+          <button onClick={() => setAnnouncementVisible(false)}
+            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 16, lineHeight: 1, opacity: 0.7 }}>×</button>
         </div>
       )}
 
       {/* ── NAVBAR ── */}
       <header style={{
-        position: isPreview ? "sticky" : "fixed", top: promoBannerEnabled ? PROMO_BAR_H : 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: 1000,
+        position: isPreview ? "sticky" : "fixed", top: showAnnouncement ? PROMO_BAR_H : 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: 1000,
         background: (isPreview || scrolled) ? "rgba(255,255,255,0.97)" : "transparent",
         borderBottom: (isPreview || scrolled) ? "1px solid #e8e8e8" : "none",
         backdropFilter: (isPreview || scrolled) ? "blur(12px)" : "none",
@@ -501,7 +523,7 @@ export default function ChicParis() {
         </div>
       </header>
       {isMobile && mobileMenuOpen && (
-        <div style={{ position: isPreview ? "sticky" : "fixed", top: isPreview ? 0 : 68 + (promoBannerEnabled ? PROMO_BAR_H : 0), left: 0, right: 0, bottom: 0, background: "#fff", zIndex: 999, overflowY: "auto" }}>
+        <div style={{ position: isPreview ? "sticky" : "fixed", top: isPreview ? 0 : 68 + (showAnnouncement ? PROMO_BAR_H : 0), left: 0, right: 0, bottom: 0, background: "#fff", zIndex: 999, overflowY: "auto" }}>
           {/* Categorías — acordeón */}
           {categoryList.length > 0 && (
             <>

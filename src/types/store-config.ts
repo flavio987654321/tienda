@@ -60,6 +60,7 @@ export type StoreConfig = {
   bannerInterval?: number;
   promoBanner?: {
     enabled: boolean;
+    messages?: string[];
   };
   previewFill?: boolean;
   isOwner?: boolean;

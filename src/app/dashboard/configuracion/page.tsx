@@ -547,25 +547,28 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                   onChange={v => update("promoBanner", { enabled: v })} />
               </div>
               {config.promoBanner?.enabled !== false && (
-                <div>
-                  <label style={lbl}>Texto de la barra</label>
-                  <textarea style={{ ...inp, resize: "none", lineHeight: 1.5 }}
-                    rows={2}
-                    maxLength={120}
-                    value={config.textOverrides?.["announcementText"]?.text ?? ""}
-                    placeholder="🚚 Envío gratis · 🔄 Cambios sin cargo · 💳 6 cuotas sin interés"
-                    onChange={e => update("textOverrides", {
-                      ...config.textOverrides,
-                      announcementText: { ...(config.textOverrides?.["announcementText"] ?? {}), text: e.target.value }
-                    })}
-                    onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                    onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                    <p style={{ margin: 0, fontSize: 11, color: "#94a3b8" }}>También podés hacer clic en la barra del preview para editar el texto.</p>
-                    <span style={{ fontSize: 11, color: (config.textOverrides?.["announcementText"]?.text?.length ?? 0) > 100 ? "#f59e0b" : "#94a3b8", flexShrink: 0, marginLeft: 8 }}>
-                      {config.textOverrides?.["announcementText"]?.text?.length ?? 0}/120
-                    </span>
-                  </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {([
+                    ["🚚 Envío gratis en compras mayores a $30.000", "Mensaje 1"],
+                    ["🔄 Cambios sin cargo hasta 30 días",           "Mensaje 2"],
+                    ["💳 6 cuotas sin interés",                      "Mensaje 3"],
+                  ] as const).map(([ph, lbTxt], i) => (
+                    <div key={i}>
+                      <label style={lbl}>{lbTxt}</label>
+                      <input style={inp}
+                        maxLength={120}
+                        value={config.promoBanner?.messages?.[i] ?? ""}
+                        placeholder={ph}
+                        onChange={e => {
+                          const msgs = [...(config.promoBanner?.messages ?? ["", "", ""])];
+                          msgs[i] = e.target.value;
+                          update("promoBanner", { enabled: config.promoBanner?.enabled !== false, ...config.promoBanner, messages: msgs });
+                        }}
+                        onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                        onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                    </div>
+                  ))}
+                  <p style={{ margin: 0, fontSize: 11, color: "#94a3b8" }}>Los mensajes vacíos no se muestran. Se rotan automáticamente cada 3.5 seg.</p>
                 </div>
               )}
             </div>

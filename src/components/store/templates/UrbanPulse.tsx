@@ -154,9 +154,10 @@ export default function UrbanPulse() {
   const productosMidUp  = getContrastColor(productosBgUp) === "light" ? "rgba(255,255,255,0.5)" : MID;
 
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
-  const tickerContent = (storeConfig?.textOverrides?.["announcementText"]?.text
-    ? storeConfig.textOverrides["announcementText"].text + " · "
-    : TICKER);
+  const configMsgs = storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? [];
+  const tickerContent = configMsgs.length > 0
+    ? configMsgs.join(" · ") + " · "
+    : TICKER;
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 50);
