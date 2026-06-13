@@ -47,7 +47,7 @@ export default function PwaSplashScreen({ logo, color, name }: Props) {
           <motion.div
             initial={{ scale: 0.82, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 1.55, opacity: 0 }}
+            exit={{ scale: 1, opacity: 0 }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
             className="flex flex-col items-center gap-4"
           >

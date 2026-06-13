@@ -1,10 +1,11 @@
 ﻿"use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase/client";
+import { isPwa } from "@/lib/pwa";
 import {
   ShoppingBag, Loader2, Eye, EyeOff, ArrowRight,
   Users, CheckCircle, Store, Wallet,
@@ -15,6 +16,9 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();
   const registered = searchParams.get("registered");
+  const [inPwa, setInPwa] = useState(false);
+
+  useEffect(() => { setInPwa(isPwa()); }, []);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -99,12 +103,21 @@ function LoginForm() {
         <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-indigo-600/25 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-16 -right-12 w-56 h-56 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
 
-        <Link href="/" className="relative flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/10">
-            <ShoppingBag className="h-5 w-5 text-white" />
+        {inPwa ? (
+          <div className="relative flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/10">
+              <ShoppingBag className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-white">TiendaApps</span>
           </div>
-          <span className="text-xl font-bold text-white">TiendaApps</span>
-        </Link>
+        ) : (
+          <Link href="/" className="relative flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/10">
+              <ShoppingBag className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-white">TiendaApps</span>
+          </Link>
+        )}
 
         <div className="relative space-y-6">
           <div>
@@ -165,12 +178,21 @@ function LoginForm() {
           className="relative w-full max-w-md"
         >
           {/* Mobile logo */}
-          <Link href="/" className="flex items-center gap-2.5 mb-10 lg:hidden">
-            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <ShoppingBag className="h-5 w-5 text-white" />
+          {inPwa ? (
+            <div className="flex items-center gap-2.5 mb-10 lg:hidden">
+              <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
+                <ShoppingBag className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-xl font-bold text-white">TiendaApps</span>
             </div>
-            <span className="text-xl font-bold text-white">TiendaApps</span>
-          </Link>
+          ) : (
+            <Link href="/" className="flex items-center gap-2.5 mb-10 lg:hidden">
+              <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
+                <ShoppingBag className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-xl font-bold text-white">TiendaApps</span>
+            </Link>
+          )}
 
           {registered && (
             <motion.div
@@ -283,12 +305,14 @@ function LoginForm() {
             </div>
           </div>
 
-          <p className="text-center text-sm text-gray-600 mt-7">
-            ¿No tenés cuenta?{" "}
-            <Link href="/registro" className="text-indigo-400 font-bold hover:text-indigo-300 transition-colors">
-              Registrate gratis →
-            </Link>
-          </p>
+          {!inPwa && (
+            <p className="text-center text-sm text-gray-600 mt-7">
+              ¿No tenés cuenta?{" "}
+              <Link href="/registro" className="text-indigo-400 font-bold hover:text-indigo-300 transition-colors">
+                Registrate gratis →
+              </Link>
+            </p>
+          )}
         </motion.div>
       </div>
     </div>
