@@ -509,7 +509,7 @@ export default function UrbanPulse() {
         </div>
       </nav>
       {isMobile && mobileMenuOpen && (
-        <div style={{ position:"fixed", top:64, left:0, right:0, bottom:0, background:WHITE, zIndex:99, overflowY:"auto" }}>
+        <div style={{ position:"fixed", top: scrolled || !promoBannerEnabled ? 64 : 100, left:0, right:0, bottom:0, background:WHITE, zIndex:99, overflowY:"auto" }}>
           {/* Categorías — acordeón (siempre visible, igual que en desktop) */}
           <>
             <button onClick={() => setMobileCatsOpen(o => !o)}
