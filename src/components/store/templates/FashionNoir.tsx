@@ -965,8 +965,8 @@ export default function FashionNoir() {
         {footerBgImg?.url && footerBgImg.overlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: footerBgImg.overlayType === "light" ? `rgba(255,255,255,${footerBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${footerBgImg.overlayOpacity ?? 0.45})` }} />
         )}
-        <div style={{ padding:"60px 32px 32px", position:"relative", zIndex:1 }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "2fr 1fr 1fr 1.5fr", gap: isMobile ? 32 : 48, marginBottom:48 }}>
+        <div style={{ padding: isMobile ? "40px 20px 20px" : "60px 32px 32px", position:"relative", zIndex:1 }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "2fr 1fr 1fr 1.5fr", gap: isMobile ? 24 : 48, marginBottom:40 }}>
           <div>
             <span style={{ fontFamily:"Georgia, serif", fontSize:28, fontWeight:700, letterSpacing:6, color:G, display:"block", marginBottom:16 }}><EditableZone field="footerBrandName" label="Nombre en footer">NOIR</EditableZone></span>
             <p style={{ fontSize:13, opacity:0.45, lineHeight:1.8, maxWidth:260 }}>
@@ -1013,7 +1013,7 @@ export default function FashionNoir() {
             </div>
           </div>
         </div>
-        <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:24, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
+        <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:24, maxWidth:1280, margin:"0 auto", display:"flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", justifyContent:"space-between", gap: isMobile ? 12 : "8px 24px" }}>
           <div style={{ display:"flex", flexWrap:"wrap", gap:"0 20px" }}>
             {[
               { label: "Política de devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
@@ -1038,7 +1038,7 @@ export default function FashionNoir() {
               )
             ))}
           </div>
-          <div style={{ display:"flex", gap:24, alignItems:"center", flexWrap:"wrap" }}>
+          <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 6 : 24, alignItems: isMobile ? "flex-start" : "center" }}>
             <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
               <EditableZone field="footerCopyright" label="Copyright">© 2025 NOIR Fashion. Todos los derechos reservados.</EditableZone>
             </p>

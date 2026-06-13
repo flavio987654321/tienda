@@ -940,9 +940,9 @@ export default function UrbanPulse() {
         {footerBgImg?.url && footerBgImg.overlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: footerBgImg.overlayType === "light" ? `rgba(255,255,255,${footerBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${footerBgImg.overlayOpacity ?? 0.45})` }} />
         )}
-        <div style={{ padding:"60px 40px 28px", position:"relative", zIndex:1 }}>
+        <div style={{ padding: isMobile ? "40px 20px 20px" : "60px 40px 28px", position:"relative", zIndex:1 }}>
         <div style={{ maxWidth:1200, margin:"0 auto" }}>
-          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "2fr 1fr 1fr 1fr", gap: isMobile ? 32 : 40, marginBottom:48 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "2fr 1fr 1fr 1fr", gap: isMobile ? 24 : 40, marginBottom:40 }}>
             <div>
               <div style={{ fontWeight:900, fontSize:24, letterSpacing:4, textTransform:"uppercase", color:footerUpText, marginBottom:16 }}>
                 <EditableZone field="storeName" label="Nombre de la tienda">
@@ -970,7 +970,7 @@ export default function UrbanPulse() {
               </div>
             ))}
           </div>
-          <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
+          <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22, display:"flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", justifyContent:"space-between", gap: isMobile ? 12 : "8px 24px" }}>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"0 16px" }}>
               {[
                 { label: "Devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
@@ -995,7 +995,7 @@ export default function UrbanPulse() {
                 )
               ))}
             </div>
-            <div style={{ display:"flex", gap:24, alignItems:"center", flexWrap:"wrap" }}>
+            <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 6 : 24, alignItems: isMobile ? "flex-start" : "center" }}>
               <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerCopyright" label="Copyright">© 2025 UrbanPulse. Todos los derechos reservados.</EditableZone></p>
               <p style={{ color:footerUpMid, fontSize:12, margin:0 }}><EditableZone field="footerMadeIn" label="Hecho en">Hecho en Argentina</EditableZone></p>
               {!editMode && (
