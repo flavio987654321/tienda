@@ -20,13 +20,25 @@ export default function PwaSplashScreen({ logo, color, name }: Props) {
     sessionStorage.setItem("splash_shown", "1");
     setVisible(true);
 
-    const exitTimer = setTimeout(() => setExiting(true), 1400);
-    const hideTimer = setTimeout(() => setVisible(false), 2000);
+    const MIN_DISPLAY = 1400;
+    const start = Date.now();
 
-    return () => {
-      clearTimeout(exitTimer);
-      clearTimeout(hideTimer);
+    const beginExit = () => {
+      const elapsed = Date.now() - start;
+      const remaining = Math.max(0, MIN_DISPLAY - elapsed);
+      setTimeout(() => {
+        setExiting(true);
+        setTimeout(() => setVisible(false), 550);
+      }, remaining);
     };
+
+    // Esperar a que la página esté completamente cargada antes de salir
+    if (document.readyState === "complete") {
+      beginExit();
+    } else {
+      window.addEventListener("load", beginExit, { once: true });
+      return () => window.removeEventListener("load", beginExit);
+    }
   }, []);
 
   if (!visible) return null;
