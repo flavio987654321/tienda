@@ -17,6 +17,7 @@ interface Props {
 type State = "checking" | "hidden" | "prompt" | "loading" | "subscribed" | "error";
 type ActionState = "idle" | "busy";
 
+// Clave solo para "nunca suscripto y cerró el prompt"
 const DISMISSED_KEY = (id: string) => `push_banner_dismissed_${id}`;
 
 export default function StorePushBanner({ storeId, storeName }: Props) {
@@ -28,18 +29,28 @@ export default function StorePushBanner({ storeId, storeName }: Props) {
       setState("hidden");
       return;
     }
-    if (localStorage.getItem(DISMISSED_KEY(storeId))) {
-      setState("hidden");
-      return;
-    }
 
     isSubscribedToStore(storeId).then((subscribed) => {
-      setState(subscribed ? "subscribed" : "prompt");
+      if (subscribed) {
+        // Suscripto → siempre mostrar para que pueda desactivar
+        setState("subscribed");
+      } else if (localStorage.getItem(DISMISSED_KEY(storeId))) {
+        // Nunca suscripto y ya descartó el prompt → no molestar
+        setState("hidden");
+      } else {
+        setState("prompt");
+      }
     });
   }, [storeId]);
 
-  function dismiss() {
+  // X cuando está en prompt/error → descarta permanentemente (ya no suscripto, no quiere)
+  function dismissPrompt() {
     localStorage.setItem(DISMISSED_KEY(storeId), "1");
+    setState("hidden");
+  }
+
+  // X cuando está suscripto → oculta solo en esta sesión, vuelve a aparecer en la próxima visita
+  function hideForSession() {
     setState("hidden");
   }
 
@@ -61,14 +72,17 @@ export default function StorePushBanner({ storeId, storeName }: Props) {
     const ok = await unsubscribeFromStore(storeId);
     setAction("idle");
     if (ok) {
-      localStorage.setItem(DISMISSED_KEY(storeId), "1");
-      setState("hidden");
+      // Borra el dismissed key para que en la próxima visita aparezca el prompt de re-activar
+      localStorage.removeItem(DISMISSED_KEY(storeId));
+      setState("prompt");
     } else {
       setState("subscribed");
     }
   }
 
   if (state === "hidden" || state === "checking") return null;
+
+  const isSubscribed = state === "subscribed";
 
   return (
     <div
@@ -81,7 +95,7 @@ export default function StorePushBanner({ storeId, storeName }: Props) {
         <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
           {state === "loading" ? (
             <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
-          ) : state === "subscribed" ? (
+          ) : isSubscribed ? (
             <Bell className="h-4 w-4 fill-indigo-100 text-indigo-600" />
           ) : (
             <BellOff className="h-4 w-4 text-indigo-400" />
@@ -90,7 +104,7 @@ export default function StorePushBanner({ storeId, storeName }: Props) {
 
         {/* Texto */}
         <div className="flex-1 min-w-0">
-          {state === "subscribed" ? (
+          {isSubscribed ? (
             <>
               <p className="text-xs font-semibold text-gray-800 leading-tight">Notificaciones activas</p>
               <p className="text-[11px] text-gray-400 leading-tight">
@@ -118,10 +132,11 @@ export default function StorePushBanner({ storeId, storeName }: Props) {
 
         {/* Acciones */}
         <div className="flex items-center gap-2 shrink-0">
-          {state === "subscribed" ? (
+          {isSubscribed ? (
             <button
               onClick={handleUnsubscribe}
-              className="text-[11px] text-gray-400 hover:text-red-500 transition-colors"
+              disabled={action === "busy"}
+              className="text-[11px] text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
             >
               Desactivar
             </button>
@@ -137,7 +152,7 @@ export default function StorePushBanner({ storeId, storeName }: Props) {
           ) : null}
 
           <button
-            onClick={dismiss}
+            onClick={isSubscribed ? hideForSession : dismissPrompt}
             aria-label="Cerrar"
             className="flex items-center justify-center w-7 h-7 rounded-lg hover:bg-gray-100 transition-colors"
           >
