@@ -55,6 +55,9 @@ export function PushBellProvider({
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [hasNew, setHasNew] = useState(false);
   const supported = useRef(false);
+  const drawerOpenRef = useRef(false);
+
+  useEffect(() => { drawerOpenRef.current = drawerOpen; }, [drawerOpen]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -80,6 +83,26 @@ export function PushBellProvider({
       .catch(() => {})
       .finally(() => setLoadingCampaigns(false));
   }, [storeId, storeSlug, enabled]);
+
+  // Escucha mensajes del SW para actualizar badge y campañas en tiempo real
+  useEffect(() => {
+    if (!enabled || !("serviceWorker" in navigator)) return;
+
+    function onSWMessage(event: MessageEvent) {
+      if (event.data?.type !== "PUSH_RECEIVED") return;
+      fetch(`/api/push/campaigns/${storeSlug}`)
+        .then((r) => (r.ok ? r.json() : { campaigns: [] }))
+        .then((data) => {
+          const list: Campaign[] = data.campaigns ?? [];
+          setCampaigns(list);
+          if (!drawerOpenRef.current) setHasNew(true);
+        })
+        .catch(() => {});
+    }
+
+    navigator.serviceWorker.addEventListener("message", onSWMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", onSWMessage);
+  }, [storeSlug, enabled]);
 
   const openDrawer = useCallback(() => {
     localStorage.setItem(LAST_SEEN_KEY(storeId), String(Date.now()));

@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
     body: message,
     url: targetUrl,
     tag: `store-${store.id}`,
+    storeName: store.name ?? undefined,
   });
 
   // Guardar en historial

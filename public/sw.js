@@ -1,6 +1,6 @@
 // ─── TiendaApps Service Worker ─────────────────────────────────────────────
 // Bump SW_VERSION when deploying to force cache invalidation on all clients.
-const SW_VERSION = "v10";
+const SW_VERSION = "v11";
 const CACHE_NAME = `tiendaapps-${SW_VERSION}`;
 const OFFLINE_URL = "/offline.html";
 
@@ -64,12 +64,14 @@ self.addEventListener("push", (event) => {
     return;
   }
 
-  const { title, body, icon, url, tag } = data;
+  const { title, body, icon, url, tag, storeName } = data;
+
+  const notifBody = storeName ? `${body ?? ""}\n— ${storeName}` : (body ?? "");
 
   event.waitUntil(
     Promise.all([
       self.registration.showNotification(title, {
-        body: body ?? "",
+        body: notifBody,
         icon: icon || "/favicon.ico",
         badge: "/favicon.ico",
         data: { url: url || "/dashboard" },

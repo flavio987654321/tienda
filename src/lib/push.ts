@@ -14,6 +14,7 @@ export interface PushPayload {
   url?: string;
   icon?: string;
   tag?: string;
+  storeName?: string;
 }
 
 // Envía push a todos los suscriptores de usuario (dashboard)
