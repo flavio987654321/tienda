@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   CreditCard, Banknote, FileText, Shield, Truck, Check,
   ChevronDown, ChevronUp, Save, AlertCircle, ToggleLeft, ToggleRight,
-  Eye, EyeOff, Lock,
+  Eye, EyeOff, Lock, Mail,
 } from "lucide-react";
 import type { StorePaymentInfo } from "@/types/store-config";
 import { DEFAULT_PAYMENT_INFO } from "@/types/store-config";
@@ -37,9 +37,7 @@ export default function PagosClient({ initial }: Props) {
   const [openSection, setOpenSection] = useState<"transferencia" | "efectivo" | "policies" | null>("transferencia");
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
-  // Campos sensibles enmascarados — se ocultan al perder foco de la página
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
-
   const maskAll = useCallback(() => setRevealed({}), []);
 
   useEffect(() => {
@@ -99,11 +97,22 @@ export default function PagosClient({ initial }: Props) {
   return (
     <div className="space-y-4">
 
+      {/* How it works banner */}
+      <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5">
+        <Mail className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+        <div>
+          <p className="text-sm font-semibold text-blue-900">¿Para qué sirve esto?</p>
+          <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
+            Cada vez que un cliente confirma un pedido, le llega un email automático con los datos de pago que configurás acá. Así sabe exactamente a dónde transferir, o dónde y cómo retirar.
+          </p>
+        </div>
+      </div>
+
       {/* Security notice */}
-      <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+      <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
         <Lock className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
         <p className="text-xs text-amber-800 leading-relaxed">
-          Los datos sensibles (CBU, CVU, CUIL) se ocultan automáticamente si dejás la pantalla sin atención o cambiás de pestaña. Solo vos podés verlos.
+          Los datos sensibles (CBU, CVU, CUIL) se ocultan automáticamente si dejás la pantalla sin atención o cambiás de pestaña.
         </p>
       </div>
 
@@ -113,15 +122,14 @@ export default function PagosClient({ initial }: Props) {
         onToggle={() => setOpenSection(openSection === "transferencia" ? null : "transferencia")}
         icon={<CreditCard className="h-4 w-4 text-indigo-500" />}
         title="Transferencia bancaria"
-        subtitle="CBU, CVU o alias para que el cliente transfiera"
+        subtitle="El cliente recibe tu CBU, CVU o alias en el email para que pueda transferirte"
         badge={t.enabled ? "Activo" : undefined}
-        badgeColor="green"
       >
         <div className="space-y-4">
           <Toggle
             enabled={t.enabled}
             onChange={(v) => setTransferencia("enabled", v)}
-            label="Mostrar datos de transferencia en el email de compra"
+            label="Incluir datos de transferencia en el email de confirmación del pedido"
           />
 
           {t.enabled && (
@@ -194,8 +202,9 @@ export default function PagosClient({ initial }: Props) {
                   maxLength={500}
                 />
               </Row>
-              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-xs text-indigo-700 leading-relaxed">
-                Estos datos aparecen automáticamente en el email de confirmación que le llega al cliente al hacer su pedido.
+              <div className="flex items-start gap-2.5 bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-xs text-indigo-700 leading-relaxed">
+                <Mail className="h-3.5 w-3.5 shrink-0 mt-0.5 text-indigo-400" />
+                Estos datos van incluidos en el email que el cliente recibe al confirmar su pedido.
               </div>
             </div>
           )}
@@ -208,24 +217,23 @@ export default function PagosClient({ initial }: Props) {
         onToggle={() => setOpenSection(openSection === "efectivo" ? null : "efectivo")}
         icon={<Banknote className="h-4 w-4 text-emerald-500" />}
         title="Efectivo / Retiro en persona"
-        subtitle="Para clientes que pagan en el local o al retirar"
+        subtitle="Para clientes que pagan al retirar el pedido o en tu local"
         badge={e.enabled ? "Activo" : undefined}
-        badgeColor="green"
       >
         <div className="space-y-4">
           <Toggle
             enabled={e.enabled}
             onChange={(v) => setEfectivo("enabled", v)}
-            label="Mostrar opción de pago en efectivo en el email"
+            label="Incluir opción de pago en efectivo en el email de confirmación"
           />
 
           {e.enabled && (
             <div className="space-y-3 pt-1">
-              <Row label="Instrucciones">
+              <Row label="Instrucciones para el cliente">
                 <Textarea
                   value={e.instrucciones}
                   onChange={(v) => setEfectivo("instrucciones", v)}
-                  placeholder="Ej: Retiro en Av. Siempre Viva 742, de lunes a sábado de 10 a 18 hs."
+                  placeholder="Ej: Retiro en Av. Siempre Viva 742, de lunes a sábado de 10 a 18 hs. El pago se realiza al momento de retirar."
                   maxLength={500}
                 />
               </Row>
@@ -238,18 +246,17 @@ export default function PagosClient({ initial }: Props) {
       <Section
         open={openSection === "policies"}
         onToggle={() => setOpenSection(openSection === "policies" ? null : "policies")}
-        icon={<Shield className="h-4 w-4 text-gray-500" />}
+        icon={<Shield className="h-4 w-4 text-slate-400" />}
         title="Políticas y términos legales"
-        subtitle="Se muestran en el footer de tu tienda y en los emails"
+        subtitle="Se muestran en el footer de tu tienda y en los emails de confirmación"
         badge={policyTermsActive || policyReturnsActive || policyShippingActive ? "Activas" : undefined}
-        badgeColor="gray"
+        badgeVariant="neutral"
       >
         <div className="space-y-5">
-          <div className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3 border border-gray-100">
-            Tus políticas se incluyen como links en el footer de tu tienda. Los clientes también las ven en la página de detalle de la tienda.
+          <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-100">
+            Tus políticas aparecen como links en el footer de tu tienda. Los clientes las ven antes de comprar y también en los emails.
           </div>
 
-          {/* Devoluciones */}
           <PolicyBlock
             icon={<Truck className="h-3.5 w-3.5" />}
             label="Política de devoluciones y cambios"
@@ -260,7 +267,6 @@ export default function PagosClient({ initial }: Props) {
             placeholder={`Ej: Aceptamos cambios dentro de los 30 días de recibido el producto, con ticket de compra. El producto debe estar sin uso y con etiquetas. Para solicitar un cambio contactanos por WhatsApp o email.\n\nNo aceptamos devoluciones de dinero salvo defecto de fabricación.`}
           />
 
-          {/* Envío */}
           <PolicyBlock
             icon={<Truck className="h-3.5 w-3.5" />}
             label="Política de envíos"
@@ -271,7 +277,6 @@ export default function PagosClient({ initial }: Props) {
             placeholder={`Ej: Enviamos por correo y transporte a todo el país. Los tiempos de entrega son de 3 a 7 días hábiles. El costo de envío se calcula según destino.\n\nRetiro en local sin cargo, coordinar por WhatsApp.`}
           />
 
-          {/* Términos */}
           <PolicyBlock
             icon={<FileText className="h-3.5 w-3.5" />}
             label="Términos y condiciones"
@@ -285,19 +290,19 @@ export default function PagosClient({ initial }: Props) {
       </Section>
 
       {/* SAVE BUTTON */}
-      <div className="sticky bottom-4">
+      <div className="sticky bottom-4 pt-2">
         <button
           onClick={handleSave}
           disabled={saveState === "saving"}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm transition-all duration-200 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98]"
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99]"
           style={{
             background: saveState === "saved"
-              ? "linear-gradient(135deg,#16a34a,#15803d)"
+              ? "#16a34a"
               : saveState === "error"
-              ? "linear-gradient(135deg,#dc2626,#b91c1c)"
-              : "linear-gradient(135deg,#6366f1,#4f46e5)",
+              ? "#dc2626"
+              : "#0f172a",
             color: "#fff",
-            boxShadow: saveState === "saving" ? "none" : "0 8px 24px -4px rgba(99,102,241,0.45)",
+            boxShadow: saveState === "saving" ? "none" : "0 4px 16px -2px rgba(15,23,42,0.25)",
           }}
         >
           {saveState === "saving" ? (
@@ -319,7 +324,7 @@ export default function PagosClient({ initial }: Props) {
 /* ── Sub-components ── */
 
 function Section({
-  open, onToggle, icon, title, subtitle, badge, badgeColor, children,
+  open, onToggle, icon, title, subtitle, badge, badgeVariant = "green", children,
 }: {
   open: boolean;
   onToggle: () => void;
@@ -327,32 +332,32 @@ function Section({
   title: string;
   subtitle: string;
   badge?: string;
-  badgeColor?: "green" | "gray";
+  badgeVariant?: "green" | "neutral";
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50/60 transition-colors"
+        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
       >
         {icon}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold text-gray-800">{title}</span>
+            <span className="text-sm font-bold text-slate-800">{title}</span>
             {badge && (
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeColor === "green" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${badgeVariant === "green" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
                 {badge}
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
+          <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
         </div>
-        {open ? <ChevronUp className="h-4 w-4 text-gray-400 shrink-0" /> : <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />}
+        {open ? <ChevronUp className="h-4 w-4 text-slate-400 shrink-0" /> : <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />}
       </button>
 
       {open && (
-        <div className="px-5 pb-5 border-t border-gray-100">
+        <div className="px-5 pb-5 border-t border-slate-100">
           <div className="pt-4">{children}</div>
         </div>
       )}
@@ -368,8 +373,8 @@ function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: 
     >
       {enabled
         ? <ToggleRight className="h-6 w-6 text-indigo-600 shrink-0" />
-        : <ToggleLeft className="h-6 w-6 text-gray-300 shrink-0" />}
-      <span className="text-sm text-gray-700 text-left leading-snug">{label}</span>
+        : <ToggleLeft className="h-6 w-6 text-slate-300 shrink-0" />}
+      <span className="text-sm text-slate-700 text-left leading-snug">{label}</span>
     </button>
   );
 }
@@ -377,7 +382,7 @@ function Toggle({ enabled, onChange, label }: { enabled: boolean; onChange: (v: 
 function Row({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-gray-600">
+      <label className="text-xs font-semibold text-slate-600">
         {label}{required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       {children}
@@ -396,7 +401,7 @@ function Input({ value, onChange, placeholder, maxLength, inputMode }: {
       placeholder={placeholder}
       maxLength={maxLength}
       inputMode={inputMode}
-      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors"
+      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors"
     />
   );
 }
@@ -410,12 +415,6 @@ function SensitiveInput({ value, onChange, placeholder, maxLength, inputMode, re
   revealed: boolean;
   onToggleReveal: () => void;
 }) {
-  function mask(v: string): string {
-    if (!v) return "";
-    const visible = v.slice(-4);
-    return "•".repeat(Math.max(0, v.length - 4)) + visible;
-  }
-
   return (
     <div className="relative">
       <input
@@ -426,12 +425,12 @@ function SensitiveInput({ value, onChange, placeholder, maxLength, inputMode, re
         maxLength={maxLength}
         inputMode={inputMode}
         autoComplete="off"
-        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors font-mono tracking-wider"
+        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors font-mono tracking-wider"
       />
       <button
         type="button"
         onClick={onToggleReveal}
-        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
+        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
         aria-label={revealed ? "Ocultar" : "Mostrar"}
         tabIndex={-1}
       >
@@ -451,7 +450,7 @@ function Textarea({ value, onChange, placeholder, maxLength }: {
       placeholder={placeholder}
       maxLength={maxLength}
       rows={3}
-      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors resize-none"
+      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors resize-none"
     />
   );
 }
@@ -466,30 +465,30 @@ function PolicyBlock({ icon, label, active, onToggle, value, onChange, placehold
   placeholder: string;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden">
-      <div className="flex items-center gap-2.5 px-4 py-3 bg-gray-50 border-b border-gray-100">
-        <span className="text-gray-400">{icon}</span>
-        <span className="text-xs font-bold text-gray-700 flex-1">{label}</span>
+    <div className="rounded-lg border border-slate-200 overflow-hidden">
+      <div className="flex items-center gap-2.5 px-4 py-3 bg-slate-50 border-b border-slate-100">
+        <span className="text-slate-400">{icon}</span>
+        <span className="text-xs font-bold text-slate-700 flex-1">{label}</span>
         <button
           onClick={onToggle}
           className="flex items-center gap-1.5 text-xs font-semibold"
         >
           {active
             ? <><ToggleRight className="h-5 w-5 text-indigo-500" /><span className="text-indigo-600">Visible</span></>
-            : <><ToggleLeft className="h-5 w-5 text-gray-300" /><span className="text-gray-400">Oculta</span></>}
+            : <><ToggleLeft className="h-5 w-5 text-slate-300" /><span className="text-slate-400">Oculta</span></>}
         </button>
       </div>
-      <div className="px-4 py-3">
+      <div className="px-4 py-3 bg-white">
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           maxLength={2000}
           rows={4}
-          className="w-full bg-transparent text-sm text-gray-700 placeholder:text-gray-300 focus:outline-none resize-none leading-relaxed"
+          className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none resize-none leading-relaxed"
         />
         <div className="text-right mt-1">
-          <span className="text-[10px] text-gray-300">{value.length}/2000</span>
+          <span className="text-[10px] text-slate-300">{value.length}/2000</span>
         </div>
       </div>
     </div>
