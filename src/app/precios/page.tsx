@@ -36,6 +36,7 @@ function PreciosContent() {
   const [ownerTier, setOwnerTier] = useState<"BASIC" | "PREMIUM">("BASIC");
   const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL"; amount: number; prorated?: boolean } | null>(null);
   const [userSub, setUserSub] = useState<UserSub | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const isRegistered = searchParams.get("registered") === "true";
@@ -55,7 +56,14 @@ function PreciosContent() {
       .catch(() => {});
   }
 
-  useEffect(() => { fetchSub(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetchSub();
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getUser().then(({ data }) => {
+      const name = data.user?.user_metadata?.name ?? data.user?.user_metadata?.full_name ?? null;
+      setUserName(name);
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -126,12 +134,26 @@ function PreciosContent() {
             <span className="text-lg font-bold text-white">TiendaApps</span>
           </Link>
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="text-gray-300 hover:text-white text-sm font-medium px-5 py-2.5 rounded-xl border border-white/10 hover:border-white/25 transition-all">
-              Iniciar sesión
-            </Link>
-            <Link href="/registro" className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
-              Crear cuenta
-            </Link>
+            {userName || userSub ? (
+              <>
+                <span className="text-gray-300 text-sm">Hola, {userName?.split(" ")[0] ?? "usuario"}</span>
+                <Link
+                  href={userSub?.role === "AFFILIATE" ? "/afiliados" : "/dashboard"}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all"
+                >
+                  Mi panel
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="text-gray-300 hover:text-white text-sm font-medium px-5 py-2.5 rounded-xl border border-white/10 hover:border-white/25 transition-all">
+                  Iniciar sesión
+                </Link>
+                <Link href="/registro" className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
+                  Crear cuenta
+                </Link>
+              </>
+            )}
           </div>
 
           <button onClick={() => setMobileMenu(true)} className="md:hidden text-gray-400 hover:text-white">
