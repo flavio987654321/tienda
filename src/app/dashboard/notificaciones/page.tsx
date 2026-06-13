@@ -164,10 +164,12 @@ export default function NotificacionesPage() {
         {/* Aviso de qué son las notificaciones */}
         <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
           <p className="text-xs text-blue-700 leading-relaxed">
-            <strong>¿Cómo funciona?</strong> Cuando alguien entra a tu tienda desde el celular, aparece un banner
-            preguntando si quiere recibir alertas. Si acepta, queda suscripto y recibe tus notificaciones
-            directamente en la pantalla, aunque tenga la tienda cerrada o la haya instalado como app. Podés enviar
-            hasta <strong>2 notificaciones por semana</strong> para no saturar a tus suscriptores.
+            <strong>¿Cómo funciona?</strong> Cuando alguien visita tu tienda, aparece un banner preguntando si
+            quiere recibir alertas. Si acepta, recibe tus notificaciones en el celular o computadora aunque tenga
+            el navegador cerrado — sin necesidad de instalar ninguna app. En iPhone solo funciona si el visitante
+            instaló la tienda en su pantalla de inicio. Para desactivarlas, el visitante puede tocar el banner
+            en la tienda y elegir "Desactivar". Podés enviar hasta{" "}
+            <strong>2 notificaciones por semana</strong> para no saturar a tus suscriptores.
           </p>
         </div>
 
@@ -180,7 +182,7 @@ export default function NotificacionesPage() {
             <div>
               <p className="text-sm font-bold text-gray-900">Función exclusiva de Plan Premium</p>
               <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
-                Actualizate a Tienda Premium para enviar notificaciones push a los visitantes que instalaron tu tienda como app.
+                Actualizate a Tienda Premium para enviar notificaciones push directamente al celular o computadora de tus visitantes, aunque tengan el navegador cerrado.
               </p>
             </div>
             <Link

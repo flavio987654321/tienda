@@ -50,7 +50,7 @@ const CONTENT = {
         list: [
           "Qué almacenamos: endpoint URL de push del navegador del visitante y claves de cifrado técnicas (auth y p256dh). No almacenamos nombre, email ni ningún dato personal identificable del visitante.",
           "Finalidad exclusiva: enviar las campañas de notificaciones push que vos creás desde el panel.",
-          "Duración: los tokens se conservan mientras el visitante permanezca suscripto. Se eliminan automáticamente si el navegador invalida la suscripción (ej: al desinstalar la app).",
+          "Duración: los tokens se conservan mientras el visitante permanezca suscripto. Se eliminan automáticamente si el navegador invalida la suscripción (ej: al borrar datos del navegador o desinstalar la app en iPhone).",
           "El visitante puede cancelar la suscripción en cualquier momento desde el banner en tu tienda pública.",
           "Sos responsable de que el contenido de las notificaciones cumpla con los Términos y Condiciones y con la legislación vigente sobre comunicaciones no solicitadas.",
         ],
@@ -241,7 +241,7 @@ const CONTENT = {
           "Almacenamos un token técnico de suscripción de tu navegador (endpoint URL y claves de cifrado). Este token no contiene tu nombre, email ni datos personales identificables.",
           "El token se usa exclusivamente para enviarte notificaciones de esa tienda puntual. No lo compartimos con otros usuarios, otras tiendas ni terceros.",
           "Podés cancelar la suscripción en cualquier momento tocando el banner de notificaciones en la tienda y eligiendo 'Desactivar'. El token se elimina del servidor de inmediato.",
-          "Si desinstalás la app o borrás los datos del navegador, la suscripción queda inválida y se elimina automáticamente del servidor la próxima vez que intentamos enviarte una notificación.",
+          "Si borrás los datos del navegador o desinstalás la app (en iPhone), la suscripción queda inválida y se elimina automáticamente del servidor la próxima vez que intentamos enviarte una notificación.",
           "La suscripción a notificaciones es voluntaria y no afecta tu acceso a la tienda ni a tus compras.",
         ],
       },
