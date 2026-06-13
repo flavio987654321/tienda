@@ -702,6 +702,18 @@ export async function sendNewOrderToOwnerEmail({
           </div>` : ""}
         </div>
 
+        ${customer.phone ? (() => {
+          const digits = customer.phone.replace(/\D/g, "");
+          const waNumber = digits.startsWith("0") ? "549" + digits.slice(1) : digits.startsWith("549") ? digits : "549" + digits;
+          const waMsg = encodeURIComponent(`Hola ${customer.name}, te escribo por tu pedido #${shortId} en ${storeName}. ¿Podemos coordinar el pago?`);
+          return `<div style="text-align:center;margin-bottom:20px;">
+          <a href="https://wa.me/${waNumber}?text=${waMsg}"
+             style="display:inline-block;background:#25d366;color:#fff;padding:12px 28px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;">
+            Contactar por WhatsApp
+          </a>
+        </div>`;
+        })() : ""}
+
         <!-- Products table -->
         <p style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Productos</p>
         <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:20px;">
@@ -827,6 +839,81 @@ export async function sendAffiliateOrderNotificationEmail({
 
         <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
           La comisión se acredita automáticamente al confirmar el pago del pedido.
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendOrderShippedEmail({
+  buyerEmail,
+  buyerName,
+  orderId,
+  storeName,
+  storeSlug,
+  trackingCode,
+  shippingMethod,
+  items,
+}: {
+  buyerEmail: string;
+  buyerName: string;
+  orderId: string;
+  storeName: string;
+  storeSlug: string;
+  trackingCode?: string | null;
+  shippingMethod: string;
+  items: { name: string; variant?: string | null; quantity: number }[];
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const shortId = orderId.slice(-8).toUpperCase();
+
+  const productList = items
+    .map((i) => `<li style="margin-bottom:4px;font-size:14px;color:#374151;">
+      <strong>${escapeHtml(i.name)}</strong>${i.variant ? ` — ${escapeHtml(i.variant)}` : ""} × ${i.quantity}
+    </li>`)
+    .join("");
+
+  await transporter.sendMail({
+    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    to: buyerEmail,
+    subject: `Tu pedido #${shortId} fue enviado — ${storeName}`,
+    html: `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:32px 16px;color:#111827;background:#ffffff;">
+
+        <div style="background:#0ea5e9;border-radius:16px;padding:32px 28px;margin-bottom:28px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.8);font-size:12px;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px;font-weight:600;">${escapeHtml(storeName)}</p>
+          <div style="font-size:48px;margin-bottom:8px;">📦</div>
+          <h1 style="color:#ffffff;font-size:22px;margin:0 0 6px;font-weight:800;letter-spacing:-0.02em;">¡Tu pedido está en camino!</h1>
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0;">Pedido <strong>#${shortId}</strong></p>
+        </div>
+
+        <p style="font-size:15px;color:#374151;margin:0 0 6px;">Hola <strong>${escapeHtml(buyerName)}</strong>,</p>
+        <p style="font-size:15px;color:#6b7280;margin:0 0 24px;line-height:1.6;">
+          Tu pedido fue despachado y está en camino. Método de envío: <strong>${escapeHtml(shippingMethod)}</strong>.
+        </p>
+
+        ${trackingCode ? `
+        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:18px 20px;margin-bottom:24px;text-align:center;">
+          <p style="font-size:11px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Número de seguimiento</p>
+          <p style="font-size:22px;font-weight:800;color:#0ea5e9;margin:0;font-family:monospace;letter-spacing:0.05em;">${escapeHtml(trackingCode)}</p>
+        </div>` : ""}
+
+        <p style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Productos enviados</p>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin-bottom:28px;">
+          <ul style="margin:0;padding-left:16px;">${productList}</ul>
+        </div>
+
+        <div style="text-align:center;margin-bottom:28px;">
+          <a href="${appUrl}/mi-cuenta"
+             style="display:inline-block;background:#0ea5e9;color:#ffffff;padding:14px 36px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;">
+            Ver estado de mi pedido
+          </a>
+        </div>
+
+        <p style="color:#d1d5db;font-size:11px;text-align:center;margin:0;">
+          ${escapeHtml(storeName)} · Pedido <strong>#${shortId}</strong>
         </p>
       </div>
     `,

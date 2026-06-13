@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { sendLowStockEmail, sendReviewRequestEmail, sendCommissionEarnedEmail, sendAffiliateOrderNotificationEmail } from "@/lib/email";
+import { sendLowStockEmail, sendReviewRequestEmail, sendCommissionEarnedEmail, sendAffiliateOrderNotificationEmail, sendOrderShippedEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 
 type RouteContext = {
@@ -169,18 +169,33 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
 
       if (action === "markShipped") {
+        const resolvedTracking = trackingCode || order.trackingCode;
         await tx.shipping.updateMany({
           where: { orderId: order.id },
-          data: { status: "SHIPPED", trackingCode: trackingCode || order.trackingCode },
+          data: { status: "SHIPPED", trackingCode: resolvedTracking },
         });
         const shipped = await tx.order.update({
           where: { id: order.id },
-          data: { status: "SHIPPED", trackingCode: trackingCode || order.trackingCode },
+          data: { status: "SHIPPED", trackingCode: resolvedTracking },
           include: { payment: true, shipping: true, items: true, commission: true },
         });
         await tx.orderStatusLog.create({
           data: { orderId: order.id, fromStatus: order.status, toStatus: "SHIPPED", changedBy: ownerId },
         });
+        sendOrderShippedEmail({
+          buyerEmail: order.buyer.email,
+          buyerName: order.buyer.name || "",
+          orderId: order.id,
+          storeName: order.store.name,
+          storeSlug: order.store.slug,
+          trackingCode: resolvedTracking ?? null,
+          shippingMethod: order.shippingMethod ?? "Envío estándar",
+          items: order.items.map((i) => ({
+            name: i.product.name,
+            variant: i.variant ? `${i.variant.name}: ${i.variant.value}` : null,
+            quantity: i.quantity,
+          })),
+        }).catch((err) => console.error("[email] sendOrderShippedEmail failed:", err));
         return shipped;
       }
 
