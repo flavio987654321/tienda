@@ -51,7 +51,7 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className={`fixed bottom-0 left-0 right-0 z-[9992] bg-white rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out ${
+        className={`fixed bottom-0 left-0 right-0 z-[9992] w-full sm:w-[480px] sm:left-1/2 sm:right-auto sm:-translate-x-1/2 bg-white rounded-t-3xl shadow-2xl transition-[transform] duration-300 ease-out ${
           drawerOpen ? "translate-y-0" : "translate-y-full"
         }`}
         style={{ maxHeight: "72vh" }}

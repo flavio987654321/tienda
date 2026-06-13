@@ -50,7 +50,6 @@ export function PushBellProvider({
   enabled: boolean;
 }) {
   const [subState, setSubState] = useState<SubState>("checking");
-  const [action, setAction] = useState<"idle" | "busy">("idle");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
@@ -93,19 +92,15 @@ export function PushBellProvider({
   const handleSubscribe = useCallback(async () => {
     if (!supported.current) return;
     if (Notification.permission === "denied") { setSubState("error"); return; }
-    setAction("busy");
     setSubState("loading");
     const ok = await subscribeToStore(storeId);
-    setAction("idle");
     setSubState(ok ? "subscribed" : "error");
     if (ok) closeDrawer();
   }, [storeId, closeDrawer]);
 
   const handleUnsubscribe = useCallback(async () => {
-    setAction("busy");
     setSubState("loading");
     const ok = await unsubscribeFromStore(storeId);
-    setAction("idle");
     if (ok) {
       localStorage.removeItem(LAST_SEEN_KEY(storeId));
       setHasNew(false);
