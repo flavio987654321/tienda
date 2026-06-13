@@ -143,6 +143,16 @@ export default function AutoMotor() {
   const [showAll, setShowAll]         = useState(false);
   const [scrolled, setScrolled]       = useState(false);
   const [showReport, setShowReport]   = useState(false);
+  const [announcementIdx,      setAnnouncementIdx]      = useState(0);
+  const [announcementVisible,  setAnnouncementVisible]  = useState(true);
+
+  const AM_DEFAULTS = ["🚗 Financiación en 12 cuotas sin interés", "🔧 Servicio post-venta incluido", "🚚 Entrega en todo el país"];
+  const promoBannerEnabled = config?.promoBanner?.enabled !== false;
+  const announcementMessages = (config?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
+    ? config!.promoBanner!.messages!.filter(m => m.trim())
+    : AM_DEFAULTS;
+  const showAnnouncement = promoBannerEnabled && announcementVisible;
+  const PROMO_BAR_H = 36;
 
   useEffect(() => {
     const allowsPinch = (el: Element | null) => {
@@ -166,6 +176,13 @@ export default function AutoMotor() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    if (!showAnnouncement || announcementMessages.length <= 1) return;
+    const id = setInterval(() => setAnnouncementIdx(i => (i + 1) % announcementMessages.length), 3500);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAnnouncement, announcementMessages.length]);
 
   useEffect(() => {
     if (!products.length) return;
@@ -222,8 +239,29 @@ export default function AutoMotor() {
         @media(min-width:900px){ .am-svc { grid-template-columns: repeat(4,1fr) !important } }
       `}</style>
 
+      {/* ── Promo Bar ──────────────────────────────────────── */}
+      {showAnnouncement && (
+        <div style={{ position: isPreview ? "sticky" : "fixed", top: 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: 110,
+          height: PROMO_BAR_H, background: "#111111",
+          display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", letterSpacing: 1 }}>
+            {announcementMessages[announcementIdx]}
+          </span>
+          {announcementMessages.length > 1 && (
+            <div style={{ position: "absolute", bottom: 4, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
+              {announcementMessages.map((_, i) => (
+                <button key={i} onClick={() => setAnnouncementIdx(i)}
+                  style={{ width: i === announcementIdx ? 14 : 5, height: 3, border: "none", borderRadius: 2, background: i === announcementIdx ? accent : "rgba(255,255,255,0.3)", cursor: "pointer", padding: 0, transition: "all 0.3s" }} />
+              ))}
+            </div>
+          )}
+          <button onClick={() => setAnnouncementVisible(false)}
+            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 16, lineHeight: 1, opacity: 0.7 }}>×</button>
+        </div>
+      )}
+
       {/* ── Navbar ─────────────────────────────────────────── */}
-      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+      <nav style={{ position: isPreview ? "sticky" : "fixed", top: showAnnouncement ? PROMO_BAR_H : 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: 100,
         background: scrolled ? "rgba(255,255,255,0.97)" : "transparent",
         backdropFilter: scrolled ? "blur(20px)" : "none",
         borderBottom: scrolled ? "1px solid #ebebeb" : "none",
