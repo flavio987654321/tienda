@@ -29,8 +29,8 @@ function playNotificationSound() {
     };
 
     // Two-note ascending "ding" — E6 then B5
-    tone(1318.51, now, 0.25, 0.13);        // E6 — first hit
-    tone(987.77, now + 0.14, 0.3, 0.10);   // B5 — second hit
+    tone(1318.51, now, 0.25, 0.13);
+    tone(987.77, now + 0.14, 0.3, 0.10);
 
     setTimeout(() => ctx.close().catch(() => {}), 1200);
   } catch {}
@@ -40,13 +40,29 @@ const NOTIF_PROMPT_KEY = "pwa_notif_prompt_dismissed";
 
 type PromptState = "idle" | "loading" | "error";
 
-export default function PWAManager() {
+interface Props {
+  appVersion?: string;
+  versionKey?: string;
+}
+
+export default function PWAManager({ appVersion, versionKey }: Props) {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
   const [updating, setUpdating] = useState(false);
   const [showUpdatedToast, setShowUpdatedToast] = useState(false);
   const [showNotifBanner, setShowNotifBanner] = useState(false);
   const [promptState, setPromptState] = useState<PromptState>("idle");
+
+  // ── App version check (independiente del SW) ─────────────────────────────
+  useEffect(() => {
+    if (!appVersion || !versionKey) return;
+    const stored = localStorage.getItem(versionKey);
+    if (stored && stored !== appVersion) {
+      setUpdateAvailable(true);
+    } else {
+      localStorage.setItem(versionKey, appVersion);
+    }
+  }, [appVersion, versionKey]);
 
   // ── Service Worker registration + update detection ───────────────────────
   useEffect(() => {
@@ -64,7 +80,6 @@ export default function PWAManager() {
           setUpdateAvailable(true);
         };
 
-        // A waiting worker might already exist (e.g., page was refreshed).
         handleWaiting(reg.waiting);
 
         reg.addEventListener("updatefound", () => {
@@ -77,10 +92,8 @@ export default function PWAManager() {
           });
         });
 
-        // Silently poll for updates every hour.
         updateInterval = setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
 
-        // Check for updates when the app comes back to the foreground.
         onVisibility = () => {
           if (document.visibilityState === "visible") reg.update().catch(() => {});
         };
@@ -88,11 +101,9 @@ export default function PWAManager() {
       })
       .catch(() => {});
 
-    // Reload the page after the new SW takes control.
     const onControllerChange = () => window.location.reload();
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
-    // Play sound when a push arrives while the app is open.
     const onMessage = (event: MessageEvent) => {
       if (event.data?.type === "PUSH_RECEIVED") playNotificationSound();
     };
@@ -111,8 +122,6 @@ export default function PWAManager() {
     if (!isPushSupported()) return;
     if (Notification.permission !== "default") return;
     if (localStorage.getItem(NOTIF_PROMPT_KEY)) return;
-
-    // Show after 4 s so it doesn't feel like an ambush on first load.
     const t = setTimeout(() => setShowNotifBanner(true), 4000);
     return () => clearTimeout(t);
   }, []);
@@ -130,12 +139,22 @@ export default function PWAManager() {
   const applyUpdate = useCallback(() => {
     setUpdating(true);
     sessionStorage.setItem("pwa_just_updated", "1");
+    // Guardar la nueva versión antes de recargar
+    if (appVersion && versionKey) localStorage.setItem(versionKey, appVersion);
     setTimeout(() => {
-      waitingWorker?.postMessage({ type: "SKIP_WAITING" });
+      if (waitingWorker) {
+        waitingWorker.postMessage({ type: "SKIP_WAITING" });
+      } else {
+        window.location.reload();
+      }
     }, 600);
-  }, [waitingWorker]);
+  }, [waitingWorker, appVersion, versionKey]);
 
-  const dismissUpdate = useCallback(() => setUpdateAvailable(false), []);
+  const dismissUpdate = useCallback(() => {
+    setUpdateAvailable(false);
+    // Si descarta, guardamos la versión igual para no volver a mostrar
+    if (appVersion && versionKey) localStorage.setItem(versionKey, appVersion);
+  }, [appVersion, versionKey]);
 
   const dismissNotifBanner = useCallback(() => {
     setShowNotifBanner(false);
@@ -153,7 +172,6 @@ export default function PWAManager() {
       const ok = await subscribeToPush();
       if (ok) {
         dismissNotifBanner();
-        // Brief confirmation sound so the user knows it worked.
         playNotificationSound();
       } else {
         setPromptState("error");
@@ -210,7 +228,6 @@ export default function PWAManager() {
             <div className="shrink-0 rounded-xl bg-indigo-100 p-2">
               <Bell className="h-4 w-4 text-indigo-600" />
             </div>
-
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-gray-900">
                 Activá las notificaciones
@@ -218,13 +235,11 @@ export default function PWAManager() {
               <p className="mt-0.5 text-xs leading-relaxed text-gray-500">
                 Te avisamos cuando recibís un pedido nuevo, incluso con el navegador cerrado.
               </p>
-
               {promptState === "error" && (
                 <p className="mt-1.5 text-xs font-medium text-red-500">
                   No se pudo activar. Intentá desde Ajustes.
                 </p>
               )}
-
               <div className="mt-3 flex items-center gap-2">
                 <button
                   onClick={enableNotifications}
@@ -248,7 +263,6 @@ export default function PWAManager() {
                 </button>
               </div>
             </div>
-
             <button
               onClick={dismissNotifBanner}
               className="shrink-0 text-gray-300 transition-colors hover:text-gray-500"

@@ -6,6 +6,7 @@ import SubscriptionRealtimeRefresher from "@/components/subscription/Subscriptio
 import SubscriptionSuccessBanner from "@/components/subscription/SubscriptionSuccessBanner";
 import StoreTypeModal from "./productos/StoreTypeModal";
 import PWAManager from "@/components/PWAManager";
+import { DASHBOARD_VERSION } from "@/lib/app-versions";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 
@@ -53,7 +54,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <>
-      <PWAManager />
+      <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" />
       {user && <SubscriptionRealtimeRefresher userId={user.id} />}
       <Suspense><SubscriptionSuccessBanner /></Suspense>
       {gate && <div className="pt-14 lg:pt-0 lg:pl-14 bg-gray-50 [color-scheme:light]">{gate}</div>}

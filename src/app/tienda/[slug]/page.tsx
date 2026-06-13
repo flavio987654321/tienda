@@ -11,6 +11,7 @@ import VisitorBackButton from "./VisitorBackButton";
 import PwaSplashScreen from "@/components/store/PwaSplashScreen";
 import PwaInstallBanner from "@/components/store/PwaInstallBanner";
 import PWAManager from "@/components/PWAManager";
+import { STORE_VERSION } from "@/lib/app-versions";
 import { getCurrentUser } from "@/lib/auth-session";
 import { isSubscriptionActive } from "@/lib/subscription";
 
@@ -152,7 +153,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
 
   return (
     <>
-      <PWAManager />
+      <PWAManager appVersion={STORE_VERSION} versionKey="pwa_store_version" />
       <PwaSplashScreen
         logo={store.logo ?? null}
         color={splashColor}
