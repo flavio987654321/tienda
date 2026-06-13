@@ -16,11 +16,11 @@ export default function PwaSplashScreen({ logo, color, name }: Props) {
 
   useEffect(() => {
     if (!isPwa()) return;
+    if (sessionStorage.getItem("splash_shown")) return;
+    sessionStorage.setItem("splash_shown", "1");
     setVisible(true);
 
-    // Start exit animation after 1.4 s
     const exitTimer = setTimeout(() => setExiting(true), 1400);
-    // Remove from DOM after animation completes (~600 ms extra)
     const hideTimer = setTimeout(() => setVisible(false), 2000);
 
     return () => {

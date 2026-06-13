@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { isPwa } from "@/lib/pwa";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -134,6 +135,10 @@ function validate(form: { name: string; email: string; password: string; storeNa
 function RegistroContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (isPwa()) router.replace("/login");
+  }, [router]);
 
   // Pre-select from URL: /registro?plan=owner&billing=annual
   // Map "affiliate" → "seller" (used by /precios legacy param)

@@ -195,7 +195,7 @@ export default function DashboardLayout({
             <span className="whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">Configuración</span>
           </Link>
           <button
-            onClick={async () => { setSigningOut(true); await signOut("/"); }}
+            onClick={async () => { setSigningOut(true); await signOut("/login"); }}
             disabled={signingOut}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60"
           >
@@ -311,7 +311,7 @@ export default function DashboardLayout({
                 <span>Configuración</span>
               </Link>
               <button
-                onClick={async () => { setSigningOut(true); await signOut("/"); }}
+                onClick={async () => { setSigningOut(true); await signOut("/login"); }}
                 disabled={signingOut}
                 className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-60"
               >

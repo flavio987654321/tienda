@@ -11,6 +11,8 @@ export default function DashboardSplashScreen() {
 
   useEffect(() => {
     if (!isPwa()) return;
+    if (sessionStorage.getItem("splash_shown")) return;
+    sessionStorage.setItem("splash_shown", "1");
     setVisible(true);
     const exitTimer = setTimeout(() => setExiting(true), 1400);
     const hideTimer = setTimeout(() => setVisible(false), 2000);

@@ -6,7 +6,7 @@ export async function GET() {
     short_name: "Panel",
     description: "Administrá tu tienda online desde cualquier lugar",
     start_url: "/dashboard?source=pwa",
-    scope: "/dashboard",
+    scope: "/",
     display: "standalone",
     orientation: "portrait-primary",
     background_color: "#4f46e5",
