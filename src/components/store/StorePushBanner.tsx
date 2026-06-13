@@ -1,0 +1,143 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Bell, BellOff, X, Loader2 } from "lucide-react";
+import {
+  isPushSupported,
+  isSubscribedToStore,
+  subscribeToStore,
+  unsubscribeFromStore,
+} from "@/lib/push-client";
+
+interface Props {
+  storeId: string;
+  storeName: string;
+}
+
+type State = "checking" | "hidden" | "prompt" | "loading" | "subscribed" | "error";
+
+const DISMISSED_KEY = (id: string) => `push_banner_dismissed_${id}`;
+
+export default function StorePushBanner({ storeId, storeName }: Props) {
+  const [state, setState] = useState<State>("checking");
+
+  useEffect(() => {
+    if (!isPushSupported()) {
+      setState("hidden");
+      return;
+    }
+    if (localStorage.getItem(DISMISSED_KEY(storeId))) {
+      setState("hidden");
+      return;
+    }
+
+    isSubscribedToStore(storeId).then((subscribed) => {
+      setState(subscribed ? "subscribed" : "prompt");
+    });
+  }, [storeId]);
+
+  function dismiss() {
+    localStorage.setItem(DISMISSED_KEY(storeId), "1");
+    setState("hidden");
+  }
+
+  async function handleSubscribe() {
+    if (Notification.permission === "denied") {
+      setState("error");
+      return;
+    }
+    setState("loading");
+    const ok = await subscribeToStore(storeId);
+    setState(ok ? "subscribed" : "error");
+  }
+
+  async function handleUnsubscribe() {
+    setState("loading");
+    const ok = await unsubscribeFromStore(storeId);
+    if (ok) {
+      localStorage.setItem(DISMISSED_KEY(storeId), "1");
+      setState("hidden");
+    } else {
+      setState("subscribed");
+    }
+  }
+
+  if (state === "hidden" || state === "checking") return null;
+
+  return (
+    <div
+      role="region"
+      aria-label="Notificaciones de la tienda"
+      className="fixed bottom-[72px] left-1/2 -translate-x-1/2 z-[9990] w-[calc(100%-2rem)] max-w-sm"
+    >
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-lg px-4 py-3 flex items-center gap-3">
+        {/* Icono */}
+        <div className="shrink-0 flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50">
+          {state === "loading" ? (
+            <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
+          ) : state === "subscribed" ? (
+            <Bell className="h-4 w-4 fill-indigo-100 text-indigo-600" />
+          ) : (
+            <BellOff className="h-4 w-4 text-indigo-400" />
+          )}
+        </div>
+
+        {/* Texto */}
+        <div className="flex-1 min-w-0">
+          {state === "subscribed" ? (
+            <>
+              <p className="text-xs font-semibold text-gray-800 leading-tight">Notificaciones activas</p>
+              <p className="text-[11px] text-gray-400 leading-tight">
+                Te avisamos cuando haya novedades en {storeName}.
+              </p>
+            </>
+          ) : state === "error" ? (
+            <>
+              <p className="text-xs font-semibold text-red-600 leading-tight">No se pudo activar</p>
+              <p className="text-[11px] text-gray-400 leading-tight">
+                Revisá los permisos de notificaciones en tu navegador.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-semibold text-gray-800 leading-tight">
+                Novedades de {storeName}
+              </p>
+              <p className="text-[11px] text-gray-400 leading-tight">
+                Activá para recibir alertas de productos y ofertas.
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* Acciones */}
+        <div className="flex items-center gap-2 shrink-0">
+          {state === "subscribed" ? (
+            <button
+              onClick={handleUnsubscribe}
+              className="text-[11px] text-gray-400 hover:text-red-500 transition-colors"
+            >
+              Desactivar
+            </button>
+          ) : state === "prompt" || state === "error" ? (
+            <button
+              onClick={handleSubscribe}
+              disabled={state === "loading"}
+              className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors disabled:opacity-50"
+            >
+              Activar
+            </button>
+          ) : null}
+
+          <button
+            onClick={dismiss}
+            aria-label="Cerrar"
+            className="flex items-center justify-center w-6 h-6 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <X className="h-3.5 w-3.5 text-gray-400" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

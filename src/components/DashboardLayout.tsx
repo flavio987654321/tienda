@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut,
   BarChart2, Tag, UserCircle, Loader2, MessageCircle, BadgeCheck,
-  CreditCard, Menu, X, Wallet, AlertTriangle,
+  CreditCard, Menu, X, Wallet, AlertTriangle, Bell,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
@@ -44,8 +44,9 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/dashboard/pedidos",    label: "Pedidos",    icon: ShoppingBag,   tourId: "pedidos" },
       { href: "/dashboard/consultas",  label: "Consultas",  icon: MessageCircle, onlyFor: LEADS_STORE_TYPES },
       { href: "/dashboard/productos",  label: "Productos",  icon: Package,       tourId: "productos" },
-      { href: "/dashboard/cupones",    label: "Cupones",    icon: Tag,           tourId: "cupones" },
-      { href: "/dashboard/vendedoras", label: "Afiliados",  icon: Users,         tourId: "afiliados" },
+      { href: "/dashboard/cupones",        label: "Cupones",        icon: Tag,           tourId: "cupones" },
+      { href: "/dashboard/vendedoras",     label: "Afiliados",      icon: Users,         tourId: "afiliados" },
+      { href: "/dashboard/notificaciones", label: "Notificaciones", icon: Bell },
     ],
   },
   {

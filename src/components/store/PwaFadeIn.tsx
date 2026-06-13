@@ -3,31 +3,34 @@
 import { useLayoutEffect, useState } from "react";
 import { isPwa } from "@/lib/pwa";
 
+type Phase = "cover" | "exiting" | "done";
+
 // Cubre el contenido durante la hidratación en modo PWA para evitar el flash
-// de layout deformado. No muestra ningún splash visual — el OS ya lo hace.
+// de layout deformado. Al revelar, hace un zoom-out (escala + fade) como la app de Galicia.
 export default function PwaFadeIn() {
-  const [covering, setCovering] = useState(true);
+  const [phase, setPhase] = useState<Phase>("cover");
 
   useLayoutEffect(() => {
     if (!isPwa()) {
-      setCovering(false);
+      setPhase("done");
       return;
     }
 
     const reveal = () => {
-      // Pequeño delay extra para que React termine de pintar el layout
-      setTimeout(() => setCovering(false), 150);
+      setPhase("exiting");
+      setTimeout(() => setPhase("done"), 420);
     };
 
     if (document.readyState === "complete") {
-      reveal();
+      setTimeout(reveal, 150);
     } else {
-      window.addEventListener("load", reveal, { once: true });
-      return () => window.removeEventListener("load", reveal);
+      const onLoad = () => setTimeout(reveal, 150);
+      window.addEventListener("load", onLoad, { once: true });
+      return () => window.removeEventListener("load", onLoad);
     }
   }, []);
 
-  if (!covering) return null;
+  if (phase === "done") return null;
 
   return (
     <div
@@ -37,6 +40,10 @@ export default function PwaFadeIn() {
         zIndex: 9998,
         background: "#ffffff",
         pointerEvents: "none",
+        willChange: "transform, opacity",
+        transition: "transform 420ms cubic-bezier(0.4, 0, 0.2, 1), opacity 380ms cubic-bezier(0.4, 0, 0.2, 1)",
+        transform: phase === "exiting" ? "scale(1.14)" : "scale(1)",
+        opacity: phase === "exiting" ? 0 : 1,
       }}
     />
   );

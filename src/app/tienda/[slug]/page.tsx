@@ -9,6 +9,7 @@ import ComingSoonPage from "./ComingSoonPage";
 import OwnerPreviewBadge from "./OwnerPreviewBadge";
 import VisitorBackButton from "./VisitorBackButton";
 import PwaInstallBanner from "@/components/store/PwaInstallBanner";
+import StorePushBanner from "@/components/store/StorePushBanner";
 import PwaFadeIn from "@/components/store/PwaFadeIn";
 import PWAManager from "@/components/PWAManager";
 import { STORE_VERSION } from "@/lib/app-versions";
@@ -162,6 +163,9 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
           color={splashColor}
           slug={slug}
         />
+      )}
+      {ownerIsPremium && !isOwner && (
+        <StorePushBanner storeId={store.id} storeName={store.name ?? "la tienda"} />
       )}
       <StorefrontTemplateRenderer config={config} />
       {!isOwner && <VisitorBackButton />}

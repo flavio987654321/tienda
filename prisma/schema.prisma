@@ -191,6 +191,37 @@ model Store {
   publicReviews       PublicReview[]
   verificationRequest VerificationRequest?
   storeReports        StoreReport[]
+  storeSubscriptions  StoreSubscription[]
+  pushCampaigns       PushCampaign[]
+}
+
+// Suscripciones push de visitantes anónimos a tiendas específicas.
+// Separado de PushSubscription (que es para usuarios autenticados del dashboard).
+model StoreSubscription {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  auth      String
+  p256dh    String
+  createdAt DateTime @default(now())
+
+  @@index([storeId])
+}
+
+// Historial de notificaciones push enviadas por una tienda.
+// Usado también para rate limiting (max 2 por semana).
+model PushCampaign {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  url       String?
+  sentCount Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([storeId, createdAt(sort: Desc)])
 }
 
 model VerificationRequest {

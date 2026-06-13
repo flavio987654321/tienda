@@ -1,0 +1,123 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth-session";
+import { sendPushToStore } from "@/lib/push";
+
+const TITLE_MAX = 50;
+const BODY_MAX = 150;
+const CAMPAIGNS_PER_WEEK = 2;
+
+// Elimina caracteres de control y recorta espacios
+function sanitize(str: string): string {
+  return str.replace(/[\x00-\x1F\x7F]/g, " ").trim();
+}
+
+export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+  }
+
+  const { title: rawTitle, message: rawMessage, url: rawUrl } = body as Record<string, unknown>;
+
+  if (typeof rawTitle !== "string" || rawTitle.trim().length === 0) {
+    return NextResponse.json({ error: "El título es requerido" }, { status: 400 });
+  }
+  if (typeof rawMessage !== "string" || rawMessage.trim().length === 0) {
+    return NextResponse.json({ error: "El mensaje es requerido" }, { status: 400 });
+  }
+
+  const title = sanitize(rawTitle).slice(0, TITLE_MAX);
+  const message = sanitize(rawMessage).slice(0, BODY_MAX);
+
+  if (title.length === 0 || message.length === 0) {
+    return NextResponse.json({ error: "Título o mensaje vacío después de sanitizar" }, { status: 400 });
+  }
+
+  // Validar URL opcional
+  let url: string | undefined;
+  if (typeof rawUrl === "string" && rawUrl.trim().length > 0) {
+    try {
+      const parsed = new URL(rawUrl.trim());
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error();
+      url = parsed.href.slice(0, 512);
+    } catch {
+      return NextResponse.json({ error: "URL inválida" }, { status: 400 });
+    }
+  }
+
+  // Obtener tienda del owner autenticado
+  const store = await prisma.store.findUnique({
+    where: { ownerId: user.id },
+    select: { id: true, slug: true, name: true },
+  });
+  if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+
+  // Rate limit: máximo CAMPAIGNS_PER_WEEK por semana
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const recentCount = await prisma.pushCampaign.count({
+    where: { storeId: store.id, createdAt: { gte: weekAgo } },
+  });
+  if (recentCount >= CAMPAIGNS_PER_WEEK) {
+    return NextResponse.json(
+      { error: `Límite alcanzado: podés enviar ${CAMPAIGNS_PER_WEEK} notificaciones por semana.` },
+      { status: 429 }
+    );
+  }
+
+  // URL de destino: si no viene una, apuntar a la tienda
+  const targetUrl = url ?? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/tienda/${store.slug}`;
+
+  // Enviar push a todos los suscriptores de la tienda
+  const sentCount = await sendPushToStore(store.id, {
+    title,
+    body: message,
+    url: targetUrl,
+    tag: `store-${store.id}`,
+  });
+
+  // Guardar en historial
+  await prisma.pushCampaign.create({
+    data: { storeId: store.id, title, body: message, url: targetUrl, sentCount },
+  });
+
+  return NextResponse.json({ ok: true, sentCount });
+}
+
+// GET — devuelve info para el panel: suscriptores, campañas recientes, cuántas quedan esta semana
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const store = await prisma.store.findUnique({
+    where: { ownerId: user.id },
+    select: { id: true },
+  });
+  if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const [subscriberCount, recentUsed, campaigns] = await Promise.all([
+    prisma.storeSubscription.count({ where: { storeId: store.id } }),
+    prisma.pushCampaign.count({ where: { storeId: store.id, createdAt: { gte: weekAgo } } }),
+    prisma.pushCampaign.findMany({
+      where: { storeId: store.id },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: { id: true, title: true, body: true, sentCount: true, createdAt: true },
+    }),
+  ]);
+
+  return NextResponse.json({
+    subscriberCount,
+    weeklyLimit: CAMPAIGNS_PER_WEEK,
+    weeklyUsed: recentUsed,
+    weeklyRemaining: Math.max(0, CAMPAIGNS_PER_WEEK - recentUsed),
+    campaigns,
+  });
+}
