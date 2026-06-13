@@ -173,8 +173,29 @@ export default function UrbanPulse() {
   }, []);
 
   useEffect(() => {
-    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    if (mobileMenuOpen) {
+      const y = window.scrollY;
+      document.body.dataset.scrollY = String(y);
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${y}px`;
+      document.body.style.width = "100%";
+    } else {
+      const y = parseInt(document.body.dataset.scrollY || "0");
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      window.scrollTo(0, y);
+    }
+    return () => {
+      const y = parseInt(document.body.dataset.scrollY || "0");
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      if (y) window.scrollTo(0, y);
+    };
   }, [mobileMenuOpen]);
 
   const {
@@ -514,7 +535,7 @@ export default function UrbanPulse() {
         </div>
       </nav>
       {isMobile && mobileMenuOpen && (
-        <div style={{ position:"fixed", top: scrolled || !promoBannerEnabled ? 64 : 100, left:0, right:0, bottom:0, background:WHITE, zIndex:99, overflowY:"auto" }}>
+        <div style={{ position:"fixed", top: scrolled || !promoBannerEnabled ? 64 : 100, left:0, right:0, bottom:0, background:WHITE, zIndex:99, overflowY:"auto", overscrollBehavior:"contain" }}>
           {/* Categorías — acordeón (siempre visible, igual que en desktop) */}
           <>
             <button onClick={() => setMobileCatsOpen(o => !o)}
