@@ -114,6 +114,7 @@ export type StoreConfig = {
   ocultarPreciosPublico?: boolean;
   featuredCategories?: string[];
   flyerConfig?: FlyerConfig;
+  showPushBell?: boolean;
   paymentInfo?: StorePaymentInfo;
   policies?: {
     returns?: string;

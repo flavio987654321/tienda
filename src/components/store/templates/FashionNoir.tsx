@@ -1,6 +1,7 @@
 ﻿"use client";
 import { useState, useEffect, useMemo, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import { usePushBell } from "@/contexts/PushBellContext";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -115,6 +116,7 @@ export default function FashionNoir() {
   }, []);
 
   const storeConfig = useStoreConfig();
+  const pushBell = usePushBell();
   const isPreview   = !!storeConfig?.previewFill;
   const isOwner     = !!storeConfig?.isOwner;
   const blockBuy    = isPreview || isOwner;
@@ -589,6 +591,13 @@ export default function FashionNoir() {
             <button onClick={() => setSearchOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
+            {/* Bell de novedades */}
+            {pushBell && storeConfig?.showPushBell && !isPreview && (
+              <button onClick={pushBell.openDrawer} style={{ position:"relative", background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+                <svg width={20} height={20} viewBox="0 0 24 24" fill={pushBell.subState === "subscribed" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                {pushBell.hasNew && <span style={{ position:"absolute", top:2, right:2, width:7, height:7, background:"#ef4444", borderRadius:"50%", border:"2px solid #0a0a0a" }} />}
+              </button>
+            )}
             {/* Favorites icon */}
             {!isMobile && <button onClick={() => setFavoritesOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? G : "none"} stroke={favorites.length > 0 ? G : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>

@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import { usePushBell } from "@/contexts/PushBellContext";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
@@ -72,6 +73,7 @@ function CategoryTile({ cat, count, accent, active, dark, onClick }: {
 /* ── Main ─────────────────────────────────────────────────── */
 export default function AutoDrive() {
   const config = useStoreConfig();
+  const pushBell = usePushBell();
   const { products, loadingProducts } = useStorefront();
   const { editMode } = useEditContext();
   const isPreview = !!config?.previewFill;
@@ -300,6 +302,12 @@ export default function AutoDrive() {
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none"; (e.currentTarget as HTMLElement).style.color = "#555"; (e.currentTarget as HTMLElement).style.borderColor = "#e0e0e0"; }}>
               Ver todos
             </Link>
+            {pushBell && config?.showPushBell && !isPreview && (
+              <button onClick={pushBell.openDrawer} style={{ position:"relative", background:"none", border:"none", color:"#444", cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+                <svg width={20} height={20} viewBox="0 0 24 24" fill={pushBell.subState === "subscribed" ? accent : "none"} stroke={pushBell.subState === "subscribed" ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                {pushBell.hasNew && <span style={{ position:"absolute", top:2, right:2, width:7, height:7, background:"#ef4444", borderRadius:"50%", border:"2px solid white" }} />}
+              </button>
+            )}
             {whatsapp.enabled && whatsapp.number && (
               <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}`}
                 target="_blank" rel="noopener noreferrer"

@@ -1,31 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Bell, Loader2, X, BellOff } from "lucide-react";
-import {
-  isPushSupported,
-  isSubscribedToStore,
-  subscribeToStore,
-  unsubscribeFromStore,
-} from "@/lib/push-client";
-
-interface Props {
-  storeId: string;
-  storeName: string;
-  storeSlug: string;
-}
-
-type SubState = "checking" | "prompt" | "subscribed" | "loading" | "error";
-
-type Campaign = {
-  id: string;
-  title: string;
-  body: string;
-  createdAt: string;
-};
-
-// Guarda cuándo fue la última vez que el usuario abrió el panel de novedades
-const LAST_SEEN_KEY = (id: string) => `push_last_seen_${id}`;
+import { useEffect, useRef } from "react";
+import { Bell, BellOff, Loader2, X } from "lucide-react";
+import { usePushBell } from "@/contexts/PushBellContext";
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -39,106 +16,43 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "short" });
 }
 
-export default function StorePushBanner({ storeId, storeName, storeSlug }: Props) {
-  const [subState, setSubState] = useState<SubState>("checking");
-  const [action, setAction] = useState<"idle" | "busy">("idle");
-  const [open, setOpen] = useState(false);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
-  const [hasNew, setHasNew] = useState(false);
+export default function StorePushBanner({ storeName }: { storeName: string }) {
+  const bell = usePushBell();
   const drawerRef = useRef<HTMLDivElement>(null);
-  const pushSupported = useRef(false);
 
-  // Inicializa estado de suscripción
   useEffect(() => {
-    pushSupported.current = isPushSupported();
-    if (!pushSupported.current) {
-      setSubState("prompt"); // Puede ver novedades igual, solo sin push
-      return;
-    }
-    isSubscribedToStore(storeId).then((subscribed) => {
-      setSubState(subscribed ? "subscribed" : "prompt");
-    });
-  }, [storeId]);
-
-  // Carga campañas y calcula si hay novedades nuevas
-  useEffect(() => {
-    setLoadingCampaigns(true);
-    fetch(`/api/push/campaigns/${storeSlug}`)
-      .then((r) => (r.ok ? r.json() : { campaigns: [] }))
-      .then((data) => {
-        const list: Campaign[] = data.campaigns ?? [];
-        setCampaigns(list);
-        if (list.length > 0) {
-          const lastSeen = Number(localStorage.getItem(LAST_SEEN_KEY(storeId)) ?? 0);
-          const latestCampaign = new Date(list[0].createdAt).getTime();
-          setHasNew(latestCampaign > lastSeen);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoadingCampaigns(false));
-  }, [storeId, storeSlug]);
-
-  // Cierra drawer al click fuera
-  useEffect(() => {
-    if (!open) return;
+    if (!bell?.drawerOpen) return;
     function onClickOutside(e: MouseEvent) {
       if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
-        setOpen(false);
+        bell?.closeDrawer();
       }
     }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [open]);
+  }, [bell?.drawerOpen, bell]);
 
-  function openDrawer() {
-    localStorage.setItem(LAST_SEEN_KEY(storeId), String(Date.now()));
-    setHasNew(false);
-    setOpen(true);
-  }
+  if (!bell || bell.subState === "checking") return null;
 
-  async function handleSubscribe() {
-    if (!pushSupported.current) return;
-    if (Notification.permission === "denied") {
-      setSubState("error");
-      return;
-    }
-    setAction("busy");
-    setSubState("loading");
-    const ok = await subscribeToStore(storeId);
-    setAction("idle");
-    setSubState(ok ? "subscribed" : "error");
-  }
-
-  async function handleUnsubscribe() {
-    setAction("busy");
-    setSubState("loading");
-    const ok = await unsubscribeFromStore(storeId);
-    setAction("idle");
-    setSubState(ok ? "prompt" : "subscribed");
-  }
-
-  if (subState === "checking") return null;
-
+  const { subState, campaigns, loadingCampaigns, drawerOpen, closeDrawer,
+          pushSupported, handleSubscribe, handleUnsubscribe } = bell;
   const isSubscribed = subState === "subscribed";
   const isLoading = subState === "loading";
-  const noCampaigns = campaigns.length === 0 && !loadingCampaigns;
 
   return (
     <>
       {/* Backdrop */}
-      {open && (
+      {drawerOpen && (
         <div
           className="fixed inset-0 bg-black/30 z-[9991] backdrop-blur-[1px]"
-          onClick={() => setOpen(false)}
+          onClick={closeDrawer}
         />
       )}
 
-      {/* Drawer de novedades */}
+      {/* Drawer */}
       <div
         ref={drawerRef}
         className={`fixed bottom-0 left-0 right-0 z-[9992] bg-white rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out ${
-          open ? "translate-y-0" : "translate-y-full"
+          drawerOpen ? "translate-y-0" : "translate-y-full"
         }`}
         style={{ maxHeight: "72vh" }}
       >
@@ -154,23 +68,21 @@ export default function StorePushBanner({ storeId, storeName, storeSlug }: Props
             <h2 className="text-sm font-bold text-gray-900">Novedades de {storeName}</h2>
           </div>
           <button
-            onClick={() => setOpen(false)}
+            onClick={closeDrawer}
             className="flex items-center justify-center w-7 h-7 rounded-xl hover:bg-gray-100 transition-colors"
           >
             <X className="h-4 w-4 text-gray-400" />
           </button>
         </div>
 
-        {/* Bloque de suscripción */}
+        {/* Suscripción */}
         <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3">
           <div className={`shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${isSubscribed ? "bg-indigo-50" : "bg-gray-50"}`}>
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
-            ) : isSubscribed ? (
-              <Bell className="h-4 w-4 text-indigo-600 fill-indigo-100" />
-            ) : (
-              <BellOff className="h-4 w-4 text-gray-400" />
-            )}
+            {isLoading
+              ? <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
+              : isSubscribed
+                ? <Bell className="h-4 w-4 text-indigo-600 fill-indigo-100" />
+                : <BellOff className="h-4 w-4 text-gray-400" />}
           </div>
           <div className="flex-1 min-w-0">
             {isSubscribed ? (
@@ -190,11 +102,11 @@ export default function StorePushBanner({ storeId, storeName, storeSlug }: Props
               </>
             )}
           </div>
-          {pushSupported.current && (
+          {pushSupported && (
             isSubscribed ? (
               <button
                 onClick={handleUnsubscribe}
-                disabled={action === "busy" || isLoading}
+                disabled={isLoading}
                 className="shrink-0 text-[11px] text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
               >
                 Desactivar
@@ -202,7 +114,7 @@ export default function StorePushBanner({ storeId, storeName, storeSlug }: Props
             ) : (
               <button
                 onClick={handleSubscribe}
-                disabled={action === "busy" || isLoading}
+                disabled={isLoading}
                 className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold transition-colors disabled:opacity-50"
               >
                 <Bell className="h-3 w-3" />
@@ -212,13 +124,13 @@ export default function StorePushBanner({ storeId, storeName, storeSlug }: Props
           )}
         </div>
 
-        {/* Lista de campañas */}
-        <div className="overflow-y-auto" style={{ maxHeight: "calc(72vh - 160px)" }}>
+        {/* Campañas */}
+        <div className="overflow-y-auto" style={{ maxHeight: "calc(72vh - 164px)" }}>
           {loadingCampaigns ? (
             <div className="flex justify-center py-10">
               <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
             </div>
-          ) : noCampaigns ? (
+          ) : campaigns.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
               <Bell className="h-8 w-8 text-gray-200 mb-3" />
               <p className="text-sm font-medium text-gray-400">Todavía no hay novedades</p>
@@ -243,24 +155,6 @@ export default function StorePushBanner({ storeId, storeName, storeSlug }: Props
           )}
         </div>
       </div>
-
-      {/* Bell FAB */}
-      <button
-        onClick={openDrawer}
-        aria-label="Ver novedades de la tienda"
-        className={`fixed bottom-[88px] right-4 z-[9990] w-11 h-11 rounded-full shadow-lg border flex items-center justify-center transition-all duration-150 hover:scale-105 active:scale-95 ${
-          isSubscribed
-            ? "bg-indigo-600 border-indigo-700"
-            : "bg-white border-gray-200 hover:border-indigo-200"
-        }`}
-      >
-        <Bell className={`h-5 w-5 ${isSubscribed ? "text-white fill-white/20" : "text-gray-400"}`} />
-
-        {/* Badge rojo: hay novedades nuevas */}
-        {hasNew && (
-          <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white" />
-        )}
-      </button>
     </>
   );
 }

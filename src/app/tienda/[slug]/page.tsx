@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import StorefrontTemplateRenderer from "@/components/store/StorefrontTemplateRenderer";
+import StoreShell from "@/components/store/StoreShell";
 import { notFound } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import type { Metadata } from "next";
@@ -9,7 +9,6 @@ import ComingSoonPage from "./ComingSoonPage";
 import OwnerPreviewBadge from "./OwnerPreviewBadge";
 import VisitorBackButton from "./VisitorBackButton";
 import PwaInstallBanner from "@/components/store/PwaInstallBanner";
-import StorePushBanner from "@/components/store/StorePushBanner";
 import PwaFadeIn from "@/components/store/PwaFadeIn";
 import PWAManager from "@/components/PWAManager";
 import { STORE_VERSION } from "@/lib/app-versions";
@@ -164,10 +163,13 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
           slug={slug}
         />
       )}
-      {ownerIsPremium && !isOwner && (
-        <StorePushBanner storeId={store.id} storeName={store.name ?? "la tienda"} storeSlug={slug} />
-      )}
-      <StorefrontTemplateRenderer config={config} />
+      <StoreShell
+        config={{ ...config, showPushBell: ownerIsPremium && !isOwner }}
+        storeId={store.id}
+        storeName={store.name ?? "la tienda"}
+        storeSlug={slug}
+        showPushBell={ownerIsPremium && !isOwner}
+      />
       {!isOwner && <VisitorBackButton />}
       {!store.isPublished && isOwner && (
         <OwnerPreviewBadge
