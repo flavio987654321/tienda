@@ -102,8 +102,10 @@ export default function MiPlanClient({ sub, userRole }: Props) {
   const planBilling = sub.plan as "MONTHLY" | "ANNUAL";
   const planPrice = getPriceForRole(planRole, planTier, planBilling);
 
-  const tierKey = planRole === "AFFILIATE" ? "BASIC" : planTier;
-  const planCfg = PLAN_CONFIG[planRole]?.[tierKey as "BASIC" | "PREMIUM"] ?? PLAN_CONFIG.OWNER.BASIC;
+  const planCfg =
+    planRole === "AFFILIATE"
+      ? PLAN_CONFIG.AFFILIATE.BASIC
+      : (PLAN_CONFIG.OWNER[planTier] ?? PLAN_CONFIG.OWNER.BASIC);
   const PlanIcon = planCfg.icon;
 
   const relevantDate =
