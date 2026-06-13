@@ -6,7 +6,6 @@ import SubscriptionRealtimeRefresher from "@/components/subscription/Subscriptio
 import SubscriptionSuccessBanner from "@/components/subscription/SubscriptionSuccessBanner";
 import StoreTypeModal from "./productos/StoreTypeModal";
 import PWAManager from "@/components/PWAManager";
-import DashboardSplashScreen from "@/components/DashboardSplashScreen";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 
@@ -54,7 +53,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <>
-      <DashboardSplashScreen />
       <PWAManager />
       {user && <SubscriptionRealtimeRefresher userId={user.id} />}
       <Suspense><SubscriptionSuccessBanner /></Suspense>
