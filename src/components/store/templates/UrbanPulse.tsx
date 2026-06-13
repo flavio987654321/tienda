@@ -172,6 +172,11 @@ export default function UrbanPulse() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileMenuOpen]);
+
   const {
     cartItems, cartOpen, setCartOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
