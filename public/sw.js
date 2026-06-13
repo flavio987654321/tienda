@@ -1,6 +1,6 @@
 // ─── TiendaApps Service Worker ─────────────────────────────────────────────
 // Bump SW_VERSION when deploying to force cache invalidation on all clients.
-const SW_VERSION = "v8";
+const SW_VERSION = "v9";
 const CACHE_NAME = `tiendaapps-${SW_VERSION}`;
 const OFFLINE_URL = "/offline.html";
 

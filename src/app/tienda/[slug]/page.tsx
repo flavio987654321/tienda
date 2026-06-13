@@ -165,7 +165,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
         />
       )}
       {ownerIsPremium && !isOwner && (
-        <StorePushBanner storeId={store.id} storeName={store.name ?? "la tienda"} />
+        <StorePushBanner storeId={store.id} storeName={store.name ?? "la tienda"} storeSlug={slug} />
       )}
       <StorefrontTemplateRenderer config={config} />
       {!isOwner && <VisitorBackButton />}
