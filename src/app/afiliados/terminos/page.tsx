@@ -19,7 +19,7 @@ export default function TerminosAfiliados() {
           Términos y Condiciones del Programa de Afiliados
         </h1>
         <p className="text-gray-500 text-sm mb-12">
-          Versión 1.3 — Vigente desde el 25 de mayo de 2025
+          Versión 1.4 — Vigente desde junio de 2026
         </p>
 
         <div className="space-y-10 text-sm leading-relaxed">
@@ -259,7 +259,7 @@ export default function TerminosAfiliados() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/5 text-xs text-gray-600 text-center">
-          <p>TiendaApps — Programa de Afiliados · Versión 1.3</p>
+          <p>TiendaApps — Programa de Afiliados · Versión 1.4</p>
           <p className="mt-1">Para consultas escribí a soporte desde tu panel de afiliado/a.</p>
         </div>
       </div>

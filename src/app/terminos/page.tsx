@@ -67,6 +67,19 @@ const CONTENT = {
         ],
       },
       {
+        title: "6 ter. Notificaciones push a visitantes (Plan Premium)",
+        body: null,
+        list: [
+          "Los dueños de tiendas con Plan Tienda Premium pueden enviar notificaciones push a visitantes que hayan activado voluntariamente esta función en la tienda.",
+          "Límite: máximo 2 campañas de notificaciones por semana por tienda. El límite se renueva cada 7 días.",
+          "Contenido permitido: novedades de productos, ofertas, actualizaciones relevantes a tu tienda.",
+          "Contenido prohibido: publicidad engañosa o falsa, spam, lenguaje ofensivo, inapropiado o discriminatorio, promoción de productos o servicios externos no relacionados con tu tienda.",
+          "Cada suscriptor puede cancelar la suscripción en cualquier momento desde el banner en la tienda. Debés respetar esa decisión y no intentar re-suscribirlos sin su consentimiento.",
+          "TiendaApps puede suspender o limitar permanentemente el acceso a esta función ante uso abusivo, spam o incumplimiento de estas reglas, sin derecho a reembolso.",
+          "No podés usar notificaciones para redirigir a sitios externos, terceros o realizar actividades de phishing.",
+        ],
+      },
+      {
         title: "7. Cancelación y acceso",
         body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tu tienda permanecerá visible hasta el fin del período abonado. Tras el vencimiento y período de gracia, la tienda se ocultará pero tus datos no se borran — podés reactivarla en cualquier momento. La cancelación no extingue las obligaciones de pago de comisiones ya acreditadas en billeteras de afiliados activos.",
       },

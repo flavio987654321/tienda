@@ -46,7 +46,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/dashboard/productos",  label: "Productos",  icon: Package,       tourId: "productos" },
       { href: "/dashboard/cupones",        label: "Cupones",        icon: Tag,           tourId: "cupones" },
       { href: "/dashboard/vendedoras",     label: "Afiliados",      icon: Users,         tourId: "afiliados" },
-      { href: "/dashboard/notificaciones", label: "Notificaciones", icon: Bell },
+      { href: "/dashboard/notificaciones", label: "Notificaciones", icon: Bell, tourId: "notificaciones" },
     ],
   },
   {

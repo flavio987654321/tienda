@@ -36,6 +36,11 @@ const STEPS: Step[] = [
     body: "Invitá vendedores que promocionen tu tienda. Vos definís el porcentaje de comisión.",
   },
   {
+    tourId: "notificaciones",
+    title: "Notificaciones push",
+    body: "Enviá mensajes directos a visitantes que activaron notificaciones en tu tienda. Disponible en plan Premium.",
+  },
+  {
     tourId: "diseno",
     title: "Diseño de tu tienda",
     body: "Elegí una plantilla y personalizá colores, imágenes y textos para que tu tienda sea única.",
@@ -52,10 +57,16 @@ export const TOUR_STORAGE_KEY = "tiendaapps_tour_done";
 export default function TourGuide({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const frameRef = useRef<number | null>(null);
 
-  // Track element position via rAF so tooltip follows sidebar animations
   useEffect(() => {
+    setIsMobile(window.innerWidth < 1024);
+  }, []);
+
+  // Track element position via rAF so tooltip follows sidebar animations (desktop only)
+  useEffect(() => {
+    if (isMobile) return;
     function track() {
       const el = document.querySelector(`[data-tour="${STEPS[step].tourId}"]`);
       if (el) setRect(el.getBoundingClientRect());
@@ -63,7 +74,7 @@ export default function TourGuide({ onDone }: { onDone: () => void }) {
     }
     frameRef.current = requestAnimationFrame(track);
     return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); };
-  }, [step]);
+  }, [step, isMobile]);
 
   function next() {
     if (step < STEPS.length - 1) setStep(step + 1);
@@ -79,12 +90,74 @@ export default function TourGuide({ onDone }: { onDone: () => void }) {
     onDone();
   }
 
+  const current = STEPS[step];
+
+  // Shared step controls rendered inline (not a nested component to avoid hooks rule)
+  const controls = (
+    <>
+      <div className="flex items-center justify-between mb-2.5">
+        <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+          {step + 1} / {STEPS.length}
+        </span>
+        <button onClick={finish} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <h3 className="font-bold text-gray-900 text-sm mb-1">{current.title}</h3>
+      <p className="text-xs text-gray-500 leading-relaxed">{current.body}</p>
+      <div className="flex items-center gap-1 mt-3 mb-3">
+        {STEPS.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setStep(i)}
+            className={`h-1.5 rounded-full transition-all duration-200 ${
+              i === step ? "bg-indigo-500 w-4" : "bg-gray-200 w-1.5 hover:bg-gray-300"
+            }`}
+          />
+        ))}
+      </div>
+      <div className="flex items-center justify-between">
+        <button
+          onClick={prev}
+          disabled={step === 0}
+          className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 disabled:opacity-0 transition-all"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+          Anterior
+        </button>
+        <button
+          onClick={next}
+          className="flex items-center gap-1 text-xs font-semibold text-white bg-indigo-500 hover:bg-indigo-600 px-3 py-1.5 rounded-lg transition-colors"
+        >
+          {step === STEPS.length - 1 ? "Finalizar" : "Siguiente"}
+          {step < STEPS.length - 1 && <ChevronRight className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+    </>
+  );
+
+  // Mobile: centered bottom sheet (sidebar elements are hidden on mobile)
+  if (isMobile) {
+    return (
+      <>
+        <div className="fixed inset-0 bg-black/50 z-[9998]" onClick={finish} />
+        <div className="fixed bottom-0 left-0 right-0 z-[9999] p-4 pb-6">
+          <div
+            className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 w-full max-w-sm mx-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {controls}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Desktop: anchored tooltip next to the highlighted sidebar element
   if (!rect) return null;
 
-  const current = STEPS[step];
   const TOOLTIP_W = 272;
   const OFFSET = 14;
-
   const tooltipLeft = rect.right + OFFSET;
   const tooltipTopRaw = rect.top + rect.height / 2;
   const tooltipTop = Math.max(12, Math.min(tooltipTopRaw, window.innerHeight - 220));
@@ -140,49 +213,7 @@ export default function TourGuide({ onDone }: { onDone: () => void }) {
             zIndex: -1,
           }}
         />
-
-        <div className="flex items-center justify-between mb-2.5">
-          <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-            {step + 1} / {STEPS.length}
-          </span>
-          <button onClick={finish} className="text-gray-400 hover:text-gray-600 transition-colors">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <h3 className="font-bold text-gray-900 text-sm mb-1">{current.title}</h3>
-        <p className="text-xs text-gray-500 leading-relaxed">{current.body}</p>
-
-        {/* Progress dots */}
-        <div className="flex items-center gap-1 mt-3 mb-3">
-          {STEPS.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setStep(i)}
-              className={`h-1.5 rounded-full transition-all duration-200 ${
-                i === step ? "bg-indigo-500 w-4" : "bg-gray-200 w-1.5 hover:bg-gray-300"
-              }`}
-            />
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between">
-          <button
-            onClick={prev}
-            disabled={step === 0}
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 disabled:opacity-0 transition-all"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-            Anterior
-          </button>
-          <button
-            onClick={next}
-            className="flex items-center gap-1 text-xs font-semibold text-white bg-indigo-500 hover:bg-indigo-600 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            {step === STEPS.length - 1 ? "Finalizar" : "Siguiente"}
-            {step < STEPS.length - 1 && <ChevronRight className="h-3.5 w-3.5" />}
-          </button>
-        </div>
+        {controls}
       </div>
     </>
   );

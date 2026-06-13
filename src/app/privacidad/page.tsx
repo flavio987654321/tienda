@@ -45,6 +45,17 @@ const CONTENT = {
         ],
       },
       {
+        title: "2 bis. Datos de suscriptores push (Plan Premium)",
+        body: "Si usás la función de notificaciones push, almacenamos en tu nombre los tokens técnicos de los visitantes que se suscriben a tu tienda:",
+        list: [
+          "Qué almacenamos: endpoint URL de push del navegador del visitante y claves de cifrado técnicas (auth y p256dh). No almacenamos nombre, email ni ningún dato personal identificable del visitante.",
+          "Finalidad exclusiva: enviar las campañas de notificaciones push que vos creás desde el panel.",
+          "Duración: los tokens se conservan mientras el visitante permanezca suscripto. Se eliminan automáticamente si el navegador invalida la suscripción (ej: al desinstalar la app).",
+          "El visitante puede cancelar la suscripción en cualquier momento desde el banner en tu tienda pública.",
+          "Sos responsable de que el contenido de las notificaciones cumpla con los Términos y Condiciones y con la legislación vigente sobre comunicaciones no solicitadas.",
+        ],
+      },
+      {
         title: "3. Datos de tus clientes y potenciales compradores",
         body: "Como Dueño de tienda, tenés acceso a los datos de envío y contacto de tus compradores. Adicionalmente, cuando un potencial comprador hace una consulta por WhatsApp a través del link de un afiliado, la Plataforma registra el nombre, teléfono y mensaje del consultante y te lo muestra en el panel de Consultas para que puedas confirmar o rechazar la venta y gestionar la comisión correspondiente. Sos responsable de tratar esos datos de acuerdo con la legislación vigente (Ley 25.326 de Protección de Datos Personales) y no podés usarlos para fines distintos a la gestión del pedido o la consulta.",
       },
@@ -222,6 +233,17 @@ const CONTENT = {
       {
         title: "6. Cookies",
         body: "Usamos cookies de sesión para mantenerte autenticado. No usamos cookies de tracking de terceros ni publicidad comportamental.",
+      },
+      {
+        title: "6 bis. Notificaciones push de tiendas",
+        body: "Si elegís activar notificaciones en una tienda de la plataforma:",
+        list: [
+          "Almacenamos un token técnico de suscripción de tu navegador (endpoint URL y claves de cifrado). Este token no contiene tu nombre, email ni datos personales identificables.",
+          "El token se usa exclusivamente para enviarte notificaciones de esa tienda puntual. No lo compartimos con otros usuarios, otras tiendas ni terceros.",
+          "Podés cancelar la suscripción en cualquier momento tocando el banner de notificaciones en la tienda y eligiendo 'Desactivar'. El token se elimina del servidor de inmediato.",
+          "Si desinstalás la app o borrás los datos del navegador, la suscripción queda inválida y se elimina automáticamente del servidor la próxima vez que intentamos enviarte una notificación.",
+          "La suscripción a notificaciones es voluntaria y no afecta tu acceso a la tienda ni a tus compras.",
+        ],
       },
       {
         title: "7. Seguridad",
