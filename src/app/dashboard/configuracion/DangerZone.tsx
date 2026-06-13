@@ -66,31 +66,31 @@ export default function DangerZone() {
 
   return (
     <>
-      <div className="rounded-xl border border-red-900/30 bg-red-950/15 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-red-900/30">
+      <div className="rounded-xl border border-red-200 bg-red-50/60 overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-red-200">
           <ShieldAlert className="h-4 w-4 text-red-500 shrink-0" />
-          <p className="text-sm font-bold text-red-400">Zona de peligro</p>
+          <p className="text-sm font-bold text-red-700">Zona de peligro</p>
         </div>
         <div className="p-4 space-y-2.5">
           {/* Resetear diseño solo visible para owners */}
           <button
             onClick={() => handleOpen("store")}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-red-900/30 bg-red-950/20 hover:bg-red-950/40 text-sm text-red-400 font-medium transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-sm text-red-700 font-medium transition-colors text-left"
           >
             <Store className="h-4 w-4 shrink-0" />
             <div>
               <p className="font-semibold">Resetear diseño de la tienda</p>
-              <p className="text-xs text-red-600 font-normal mt-0.5">Borra los bloques de la página. Productos y afiliados quedan.</p>
+              <p className="text-xs text-red-500 font-normal mt-0.5">Borra los bloques de la página. Productos y afiliados quedan.</p>
             </div>
           </button>
           <button
             onClick={() => handleOpen("account")}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-red-900/50 bg-red-950/30 hover:bg-red-950/50 text-sm text-red-300 font-semibold transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-red-300 bg-red-100 hover:bg-red-200 text-sm text-red-800 font-semibold transition-colors text-left"
           >
             <UserX className="h-4 w-4 shrink-0" />
             <div>
               <p className="font-semibold">Eliminar cuenta completa</p>
-              <p className="text-xs text-red-600 font-normal mt-0.5">Anonimiza tus datos. Podés volver a registrarte.</p>
+              <p className="text-xs text-red-500 font-normal mt-0.5">Anonimiza tus datos. Podés volver a registrarte.</p>
             </div>
           </button>
         </div>

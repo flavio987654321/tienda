@@ -131,7 +131,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
 
   return (
     <>
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           {/* Preview */}
           <div className="relative shrink-0">
@@ -139,10 +139,10 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
               <img
                 src={logo}
                 alt={storeName}
-                className="h-20 w-20 rounded-xl object-cover ring-2 ring-zinc-700 shadow-md"
+                className="h-20 w-20 rounded-xl object-cover ring-2 ring-slate-200 shadow-md"
               />
             ) : (
-              <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-md ring-2 ring-zinc-700">
+              <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-md ring-2 ring-slate-200">
                 <span className="text-2xl font-black text-white tracking-tight">{initials}</span>
               </div>
             )}
@@ -156,22 +156,22 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
           {/* Info + actions */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <p className="font-bold text-white">Logo de tu tienda</p>
+              <p className="font-bold text-slate-900">Logo de tu tienda</p>
               {saved && (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-900/50 px-2 py-0.5 rounded-full">
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
                   <Check className="h-3 w-3" /> Guardado
                 </span>
               )}
             </div>
-            <p className="text-sm text-zinc-400 mb-3">
+            <p className="text-sm text-slate-500 mb-3">
               Aparece cuando compartís tu tienda en WhatsApp, Instagram, Facebook y cuando se instala como app en el celular.
             </p>
-            <p className="text-xs text-zinc-600 mb-3">
+            <p className="text-xs text-slate-400 mb-3">
               Recomendado: imagen cuadrada, mínimo 512×512 px. JPG, PNG o WEBP, máx. 4 MB.
             </p>
 
             {error && (
-              <p className="text-xs text-red-400 bg-red-950/30 border border-red-900/40 rounded-lg px-3 py-2 mb-3">
+              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">
                 {error}
               </p>
             )}
@@ -201,7 +201,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
               {logo && !editing && !uploading && (
                 <button
                   onClick={() => setEditing(true)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-zinc-800 transition-colors"
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
                 >
                   <Upload className="h-4 w-4" />
                   Editar
@@ -222,7 +222,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
                   <button
                     onClick={handleRemove}
                     disabled={uploading}
-                    className="inline-flex items-center gap-2 rounded-lg border border-red-900/40 px-4 py-2 text-sm font-semibold text-red-400 hover:bg-red-950/30 disabled:opacity-50 transition-colors"
+                    className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                     Quitar
@@ -230,7 +230,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
                   <button
                     onClick={() => { setEditing(false); setError(null); }}
                     disabled={uploading}
-                    className="inline-flex items-center justify-center rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-500 hover:bg-zinc-800 disabled:opacity-50 transition-colors"
+                    className="inline-flex items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-400 hover:bg-slate-50 disabled:opacity-50 transition-colors"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -239,7 +239,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
 
               {/* Spinner standalone cuando hay logo y está subiendo */}
               {logo && uploading && (
-                <div className="inline-flex items-center gap-2 px-4 py-2 text-sm text-zinc-500">
+                <div className="inline-flex items-center gap-2 px-4 py-2 text-sm text-slate-400">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Guardando...
                 </div>
@@ -252,9 +252,9 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
             <div className="shrink-0 hidden lg:flex flex-col gap-3">
               {/* Preview OG / compartir */}
               <div>
-                <p className="text-xs text-zinc-600 mb-1.5 text-center font-medium">Al compartir el link</p>
+                <p className="text-xs text-slate-400 mb-1.5 text-center font-medium">Al compartir el link</p>
                 <div
-                  className="w-60 rounded-xl border border-zinc-700 overflow-hidden shadow-sm cursor-pointer hover:shadow-md hover:border-zinc-500 transition-all group relative"
+                  className="w-60 rounded-xl border border-slate-200 overflow-hidden shadow-sm cursor-pointer hover:shadow-md hover:border-slate-300 transition-all group relative"
                   onClick={() => setShowShareModal(true)}
                 >
                   <div className="h-14 bg-gradient-to-r from-purple-50 to-indigo-50 flex items-center gap-3 px-3">
@@ -266,7 +266,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
                   </div>
                   <div className="bg-gray-50 px-3 py-2 flex items-center justify-between">
                     <p className="text-[10px] text-gray-500">Comprá en {storeName} — Envíos a todo el país</p>
-                    <span className="text-[9px] font-semibold text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap ml-1">
+                    <span className="text-[9px] font-semibold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap ml-1">
                       Ver →
                     </span>
                   </div>
@@ -275,7 +275,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
 
               {/* Preview splash PWA */}
               <div>
-                <p className="text-xs text-zinc-600 mb-1.5 text-center font-medium">Splash al abrir la app</p>
+                <p className="text-xs text-slate-400 mb-1.5 text-center font-medium">Splash al abrir la app</p>
                 {isPremium ? (
                   <>
                     <div
@@ -295,14 +295,14 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
                       </div>
                     </div>
                     {!logoColor && (
-                      <p className="text-[10px] text-zinc-600 text-center mt-1">
+                      <p className="text-[10px] text-slate-400 text-center mt-1">
                         PNG sin fondo → usa color de tu tienda
                       </p>
                     )}
                     {logoColor && (
                       <div className="flex items-center justify-center gap-1.5 mt-1">
-                        <div className="h-3 w-3 rounded-full border border-zinc-700" style={{ background: logoColor }} />
-                        <p className="text-[10px] text-zinc-600">Color detectado: {logoColor}</p>
+                        <div className="h-3 w-3 rounded-full border border-slate-200" style={{ background: logoColor }} />
+                        <p className="text-[10px] text-slate-400">Color detectado: {logoColor}</p>
                       </div>
                     )}
                   </>

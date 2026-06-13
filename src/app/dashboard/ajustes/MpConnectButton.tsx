@@ -20,7 +20,7 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId }: 
   }
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
       <div className="flex items-center gap-3 mb-4">
         <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect width="32" height="32" rx="8" fill="#009EE3"/>
@@ -28,32 +28,32 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId }: 
           <circle cx="16" cy="16.5" r="3.5" fill="#009EE3"/>
         </svg>
         <div>
-          <h2 className="text-sm font-semibold text-white">MercadoPago</h2>
-          <p className="text-xs text-zinc-500">Pagos automáticos con split para afiliadas</p>
+          <h2 className="text-sm font-semibold text-slate-900">MercadoPago</h2>
+          <p className="text-xs text-slate-400">Pagos automáticos con split para afiliadas</p>
         </div>
       </div>
 
       {connected ? (
         <div>
-          <div className="flex items-center gap-2.5 bg-emerald-950/40 border border-emerald-900/50 rounded-lg px-4 py-3 mb-4">
-            <CheckCircle className="h-4 w-4 text-emerald-400 shrink-0" />
+          <div className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 mb-4">
+            <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-emerald-300">Cuenta conectada</p>
+              <p className="text-sm font-semibold text-emerald-800">Cuenta conectada</p>
               {connectedAt && (
-                <p className="text-xs text-emerald-700">
+                <p className="text-xs text-emerald-600">
                   Desde el {new Date(connectedAt).toLocaleDateString("es-AR")}
                   {mpSellerId && ` · ID MP: ${mpSellerId}`}
                 </p>
               )}
             </div>
           </div>
-          <p className="text-sm text-zinc-500 mb-4">
+          <p className="text-sm text-slate-500 mb-4">
             Los compradores podrán pagar con tarjeta o MP. Las comisiones de tus afiliadas se acreditan y transfieren automáticamente.
           </p>
           <button
             onClick={handleDisconnect}
             disabled={disconnecting}
-            className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-400 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
           >
             {disconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
             Desconectar cuenta
@@ -61,7 +61,7 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId }: 
         </div>
       ) : (
         <div>
-          <p className="text-sm text-zinc-400 mb-4">
+          <p className="text-sm text-slate-500 mb-4">
             Conectá tu cuenta de MercadoPago para que los compradores paguen con tarjeta o MP y las comisiones de tus afiliadas se transfieran solas.
           </p>
           <a

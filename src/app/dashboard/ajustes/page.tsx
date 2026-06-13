@@ -42,17 +42,17 @@ export default async function AjustesPage() {
       initialPendingAffiliateCount={pendingAffiliateCount}
       initialLowStockCount={lowStockCount}
     >
-      <div className="-m-4 -mt-2 bg-zinc-950">
+      <div className="-m-4 -mt-2 bg-slate-50 min-h-screen">
 
         {/* Page header */}
-        <div className="border-b border-zinc-800/70 px-6 py-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-600 mb-2">Mi tienda</p>
-          <h1 className="text-3xl font-black text-white tracking-tight">Configuración</h1>
-          <p className="text-zinc-500 text-sm mt-1.5">Logo, dominio, pagos y opciones de cuenta.</p>
+        <div className="border-b border-slate-200 bg-white px-6 py-8">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 mb-2">Mi tienda</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Configuración</h1>
+          <p className="text-slate-500 text-sm mt-1.5">Logo, dominio, pagos y opciones de cuenta.</p>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-10 space-y-12 max-w-4xl">
+        <div className="px-6 py-10 space-y-12">
 
           {store && (
             <section>
@@ -99,8 +99,8 @@ export default async function AjustesPage() {
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-4 mb-6">
-      <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-600 whitespace-nowrap">{children}</p>
-      <div className="h-px bg-zinc-800 flex-1" />
+      <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 whitespace-nowrap">{children}</p>
+      <div className="h-px bg-slate-200 flex-1" />
     </div>
   );
 }
