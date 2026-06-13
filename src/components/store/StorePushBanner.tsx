@@ -248,7 +248,7 @@ export default function StorePushBanner({ storeId, storeName, storeSlug }: Props
       <button
         onClick={openDrawer}
         aria-label="Ver novedades de la tienda"
-        className={`fixed bottom-5 right-4 z-[9990] w-11 h-11 rounded-full shadow-lg border flex items-center justify-center transition-all duration-150 hover:scale-105 active:scale-95 ${
+        className={`fixed bottom-[88px] right-4 z-[9990] w-11 h-11 rounded-full shadow-lg border flex items-center justify-center transition-all duration-150 hover:scale-105 active:scale-95 ${
           isSubscribed
             ? "bg-indigo-600 border-indigo-700"
             : "bg-white border-gray-200 hover:border-indigo-200"
