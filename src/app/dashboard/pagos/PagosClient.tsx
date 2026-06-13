@@ -109,7 +109,6 @@ export default function PagosClient({ initial }: Props) {
 
       {/* TRANSFERENCIA */}
       <Section
-        id="transferencia"
         open={openSection === "transferencia"}
         onToggle={() => setOpenSection(openSection === "transferencia" ? null : "transferencia")}
         icon={<CreditCard className="h-4 w-4 text-indigo-500" />}
@@ -205,7 +204,6 @@ export default function PagosClient({ initial }: Props) {
 
       {/* EFECTIVO */}
       <Section
-        id="efectivo"
         open={openSection === "efectivo"}
         onToggle={() => setOpenSection(openSection === "efectivo" ? null : "efectivo")}
         icon={<Banknote className="h-4 w-4 text-emerald-500" />}
@@ -238,7 +236,6 @@ export default function PagosClient({ initial }: Props) {
 
       {/* POLÍTICAS LEGALES */}
       <Section
-        id="policies"
         open={openSection === "policies"}
         onToggle={() => setOpenSection(openSection === "policies" ? null : "policies")}
         icon={<Shield className="h-4 w-4 text-gray-500" />}
