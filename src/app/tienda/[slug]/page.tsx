@@ -9,7 +9,7 @@ import ComingSoonPage from "./ComingSoonPage";
 import OwnerPreviewBadge from "./OwnerPreviewBadge";
 import VisitorBackButton from "./VisitorBackButton";
 import PwaInstallBanner from "@/components/store/PwaInstallBanner";
-import PwaSplashScreen from "@/components/store/PwaSplashScreen";
+import PwaFadeIn from "@/components/store/PwaFadeIn";
 import PWAManager from "@/components/PWAManager";
 import { STORE_VERSION } from "@/lib/app-versions";
 import { getCurrentUser } from "@/lib/auth-session";
@@ -154,11 +154,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
   return (
     <>
       <PWAManager appVersion={STORE_VERSION} versionKey="pwa_store_version" />
-      <PwaSplashScreen
-        logo={store.logo ?? null}
-        color={splashColor}
-        name={store.name ?? "Tienda"}
-      />
+      <PwaFadeIn />
       {ownerIsPremium && !isOwner && (
         <PwaInstallBanner
           logo={store.logo ?? null}
