@@ -327,7 +327,7 @@ export default function NotificacionesPage() {
               )}
             </button>
           </form>
-        </div>
+        </div>}
 
         {/* Modal de confirmación antes de enviar */}
         {showConfirm && (
