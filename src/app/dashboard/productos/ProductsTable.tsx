@@ -573,8 +573,8 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
         </div>
       ) : (
         /* ── VISTA TABLA ──────────────────────────────── */
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <table className="w-full">
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden overflow-x-auto">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-gray-50">
                 <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Producto</th>

@@ -34,12 +34,12 @@ export default async function ProductosPage() {
 
   return (
     <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Productos</h1>
           <p className="text-gray-500 mt-1">{products.length} producto{products.length !== 1 ? "s" : ""} en tu tienda</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {store?.tipoTiendaConfigurado && (() => {
             const typeConfig = STORE_TYPES.find((t) => t.id === (store.tipoTienda || "ROPA"));
             return typeConfig ? (
@@ -53,7 +53,7 @@ export default async function ProductosPage() {
           <CsvImportButton />
           <Link
             href="/dashboard/productos/nuevo"
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 whitespace-nowrap"
           >
             <Plus className="h-4 w-4" />
             Agregar producto

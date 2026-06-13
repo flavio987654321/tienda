@@ -101,14 +101,14 @@ export default function CuponesPage() {
   return (
     <DashboardLayout>
       <div className="mx-auto w-full max-w-5xl">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Cupones de descuento</h1>
             <p className="mt-1 text-sm text-gray-500">Creá códigos que tus clientes ingresan al comprar</p>
           </div>
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700"
+            className="self-start sm:self-auto flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700"
           >
             <Plus className="h-4 w-4" />
             Nuevo cupón

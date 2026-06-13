@@ -73,7 +73,7 @@ export default async function PedidosPage() {
 
   return (
     <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pedidos</h1>
           <p className="mt-1 text-gray-500">Gestiona pagos, stock, comisiones y envios de {store?.name ?? "tu tienda"}</p>
@@ -82,7 +82,7 @@ export default async function PedidosPage() {
           <a
             href="/api/pedidos/export"
             download
-            className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            className="self-start sm:self-auto flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
           >
             <Download className="h-4 w-4" />
             Exportar CSV
@@ -90,7 +90,7 @@ export default async function PedidosPage() {
         )}
       </div>
 
-      <div className="mb-8 grid grid-cols-3 gap-4">
+      <div className="mb-8 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
         {[
           { label: "Pendientes", value: totalPending, icon: ShoppingBag, color: "bg-yellow-50 text-yellow-700" },
           { label: "Confirmados", value: totalConfirmed, icon: Package, color: "bg-green-50 text-green-700" },
@@ -135,7 +135,7 @@ export default async function PedidosPage() {
 
             return (
               <div key={order.id} className="rounded-2xl border border-gray-100 bg-white p-5">
-                <div className="flex items-start justify-between gap-4 border-b border-gray-50 pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-gray-50 pb-4">
                   <div>
                     <div className="mb-2 flex items-center gap-2">
                       <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(order.status)}`}>{order.status}</span>
