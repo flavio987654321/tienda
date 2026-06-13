@@ -7,10 +7,12 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut,
   BarChart2, Tag, UserCircle, Loader2, MessageCircle, BadgeCheck,
-  CreditCard, Menu, X, Wallet,
+  CreditCard, Menu, X, Wallet, AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
+import HelpButton from "@/components/HelpButton";
+import TourGuide, { TOUR_STORAGE_KEY } from "@/components/TourGuide";
 
 const LEADS_STORE_TYPES = ["VEHICULOS", "INMOBILIARIA"];
 
@@ -20,6 +22,13 @@ type NavItem = {
   icon: React.ElementType;
   exact?: boolean;
   onlyFor?: string[];
+  tourId?: string;
+};
+
+type Warnings = {
+  noLogo: boolean;
+  noMercadoPago: boolean;
+  notVerified: boolean;
 };
 
 type NavGroup = {
@@ -31,20 +40,20 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: null,
     items: [
-      { href: "/dashboard",            label: "Inicio",     icon: TrendingUp,    exact: true },
-      { href: "/dashboard/pedidos",    label: "Pedidos",    icon: ShoppingBag },
+      { href: "/dashboard",            label: "Inicio",     icon: TrendingUp,    exact: true, tourId: "inicio" },
+      { href: "/dashboard/pedidos",    label: "Pedidos",    icon: ShoppingBag,   tourId: "pedidos" },
       { href: "/dashboard/consultas",  label: "Consultas",  icon: MessageCircle, onlyFor: LEADS_STORE_TYPES },
-      { href: "/dashboard/productos",  label: "Productos",  icon: Package },
-      { href: "/dashboard/cupones",    label: "Cupones",    icon: Tag },
-      { href: "/dashboard/vendedoras", label: "Afiliados",  icon: Users },
+      { href: "/dashboard/productos",  label: "Productos",  icon: Package,       tourId: "productos" },
+      { href: "/dashboard/cupones",    label: "Cupones",    icon: Tag,           tourId: "cupones" },
+      { href: "/dashboard/vendedoras", label: "Afiliados",  icon: Users,         tourId: "afiliados" },
     ],
   },
   {
     label: "Mi tienda",
     items: [
-      { href: "/dashboard/configuracion", label: "Diseño",         icon: Store },
-      { href: "/dashboard/ajustes",       label: "Configuración",  icon: Settings },
-      { href: "/dashboard/pagos",         label: "Pagos",          icon: Wallet },
+      { href: "/dashboard/configuracion", label: "Diseño",         icon: Store,     tourId: "diseno" },
+      { href: "/dashboard/ajustes",       label: "Configuración",  icon: Settings,  tourId: "configuracion" },
+      { href: "/dashboard/pagos",         label: "Pagos",          icon: Wallet,    tourId: "pagos" },
     ],
   },
   {
@@ -88,6 +97,8 @@ export default function DashboardLayout({
   const [pendingLeadsCount, setPendingLeadsCount] = useState(0);
   const [storeType, setStoreType] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
+  const [showTour, setShowTour] = useState(false);
+  const [warnings, setWarnings] = useState<Warnings | null>(null);
 
   useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
   useEffect(() => { setMobileOpen(false); }, [pathname]);
@@ -99,6 +110,21 @@ export default function DashboardLayout({
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d?.store?.isVerified) setIsVerified(true); })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/dashboard/warnings")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setWarnings(d); })
+      .catch(() => {});
+  }, []);
+
+  // Auto-start tour for first-time users on desktop
+  useEffect(() => {
+    if (window.innerWidth >= 1024 && !localStorage.getItem(TOUR_STORAGE_KEY)) {
+      const t = setTimeout(() => setShowTour(true), 1200);
+      return () => clearTimeout(t);
+    }
   }, []);
 
   useEffect(() => {
@@ -152,6 +178,13 @@ export default function DashboardLayout({
     return exact ? pathname === href : pathname.startsWith(href);
   }
 
+  function getWarning(href: string): boolean {
+    if (!warnings) return false;
+    if (href === "/dashboard/pagos") return warnings.noMercadoPago;
+    if (href === "/dashboard/ajustes") return warnings.noLogo;
+    return false;
+  }
+
   function getBadge(href: string) {
     const isAffil = href === "/dashboard/vendedoras" && pendingAffiliateCount > 0;
     const isStock = href === "/dashboard/productos"  && lowStockCount > 0;
@@ -179,13 +212,15 @@ export default function DashboardLayout({
   }
 
   function renderDesktopLink(item: NavItem) {
-    const { href, label, icon: Icon, exact } = item;
+    const { href, label, icon: Icon, exact, tourId } = item;
     const active = isActive(href, exact);
     const { has, count, color } = getBadge(href);
+    const hasWarning = getWarning(href);
     return (
       <Link
         key={href}
         href={href}
+        {...(tourId ? { "data-tour": tourId } : {})}
         className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
           active ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
         }`}
@@ -194,12 +229,19 @@ export default function DashboardLayout({
         <span className="flex-1 whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
           {label}
         </span>
-        {has && (
+        {/* Warning icon — visible only in expanded state */}
+        {hasWarning && !has && (
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400 hidden group-hover:block" />
+        )}
+        {/* Numeric badge or warning dot */}
+        {(has || hasWarning) && (
           <>
-            <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${color} group-hover:hidden`} />
-            <span className={`hidden group-hover:inline-flex shrink-0 min-w-5 rounded-full ${color} px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white`}>
-              {count > 9 ? "9+" : count}
-            </span>
+            <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${has ? color : "bg-amber-400"} group-hover:hidden`} />
+            {has && (
+              <span className={`hidden group-hover:inline-flex shrink-0 min-w-5 rounded-full ${color} px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white`}>
+                {count > 9 ? "9+" : count}
+              </span>
+            )}
           </>
         )}
       </Link>
@@ -210,6 +252,7 @@ export default function DashboardLayout({
     const { href, label, icon: Icon, exact } = item;
     const active = isActive(href, exact);
     const { has, count, color } = getBadge(href);
+    const hasWarning = getWarning(href);
     return (
       <Link
         key={href}
@@ -221,6 +264,9 @@ export default function DashboardLayout({
       >
         <Icon className="h-5 w-5 shrink-0" />
         <span className="flex-1">{label}</span>
+        {hasWarning && !has && (
+          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+        )}
         {has && (
           <span className={`shrink-0 min-w-5 rounded-full ${color} px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white`}>
             {count > 9 ? "9+" : count}
@@ -234,7 +280,7 @@ export default function DashboardLayout({
     <div className="h-screen bg-gray-50 flex overflow-hidden text-gray-900 [color-scheme:light]">
 
       {/* ── DESKTOP Sidebar (lg+) ─────────────────────────────────────────── */}
-      <aside className="group hidden lg:flex fixed left-0 top-0 h-full w-14 hover:w-60 bg-white border-r border-gray-100 flex-col z-[60] transition-[width] duration-200 overflow-hidden hover:shadow-xl">
+      <aside className={`group hidden lg:flex fixed left-0 top-0 h-full bg-white border-r border-gray-100 flex-col z-[60] transition-[width] duration-200 overflow-hidden ${showTour ? "w-60 shadow-xl" : "w-14 hover:w-60 hover:shadow-xl"}`}>
         <Link href="/" className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 shrink-0 hover:bg-gray-50 transition-colors">
           <ShoppingBag className="h-6 w-6 text-indigo-600 shrink-0" />
           <span className="font-bold text-gray-900 whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
@@ -278,7 +324,7 @@ export default function DashboardLayout({
               {signingOut ? "Cerrando..." : "Cerrar sesión"}
             </span>
           </button>
-          <Link href="/dashboard/perfil" title={isVerified ? "Perfil — Verificado" : "Perfil"} className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors">
+          <Link href="/dashboard/perfil" title={isVerified ? "Perfil — Verificado" : "Perfil — Sin verificar"} className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors">
             <div className="relative shrink-0">
               <UserCircle className="h-4 w-4" />
               <BadgeCheck className={`absolute -bottom-1 -right-1 h-3 w-3 bg-white rounded-full ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
@@ -287,6 +333,11 @@ export default function DashboardLayout({
               <div className="flex items-center gap-1">
                 <p className="text-xs font-medium text-gray-700 truncate whitespace-nowrap">{userName}</p>
                 <BadgeCheck className={`h-3 w-3 shrink-0 ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
+                {warnings?.notVerified && (
+                  <span title="Cuenta sin verificar">
+                    <AlertTriangle className="h-3 w-3 shrink-0 text-amber-400" />
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-400 truncate whitespace-nowrap">{userEmail}</p>
             </div>
@@ -318,7 +369,10 @@ export default function DashboardLayout({
           <span className="font-bold text-gray-900 text-sm">TiendaApps</span>
         </Link>
 
-        {userId && <NotificationBell userId={userId} />}
+        <div className="flex items-center gap-1">
+          <HelpButton onStartTour={() => setShowTour(true)} />
+          {userId && <NotificationBell userId={userId} />}
+        </div>
       </header>
 
       {/* ── MOBILE Drawer (< lg) ─────────────────────────────────────────── */}
@@ -407,9 +461,13 @@ export default function DashboardLayout({
         </div>
       )}
 
+      {/* ── Guided Tour ──────────────────────────────────────────────────── */}
+      {showTour && <TourGuide onDone={() => setShowTour(false)} />}
+
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <main className={`lg:ml-14 flex-1 flex flex-col bg-gray-50 pt-14 lg:pt-0 overflow-x-hidden ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
-        <div className="hidden lg:flex justify-end items-center px-4 pt-3 pb-0 shrink-0">
+        <div className="hidden lg:flex justify-end items-center gap-1 px-4 pt-3 pb-0 shrink-0">
+          <HelpButton onStartTour={() => setShowTour(true)} />
           {userId && <NotificationBell userId={userId} />}
         </div>
         <div className={`flex-1 ${fullHeight ? "overflow-hidden min-h-0" : "p-4 pt-2"}`}>

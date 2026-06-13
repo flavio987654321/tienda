@@ -1,0 +1,189 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { X, ChevronRight, ChevronLeft } from "lucide-react";
+
+type Step = {
+  tourId: string;
+  title: string;
+  body: string;
+};
+
+const STEPS: Step[] = [
+  {
+    tourId: "inicio",
+    title: "Panel principal",
+    body: "Acá ves el resumen de tu tienda: ventas, pedidos, afiliados y la guía de configuración inicial.",
+  },
+  {
+    tourId: "productos",
+    title: "Tus productos",
+    body: "Agregá, editá o importá productos desde un CSV. Con al menos uno ya podés compartir tu tienda.",
+  },
+  {
+    tourId: "pedidos",
+    title: "Pedidos",
+    body: "Cuando un cliente compre, el pedido aparece acá. Confirmá, marcá como enviado y entregado.",
+  },
+  {
+    tourId: "pagos",
+    title: "Pagos y cobros",
+    body: "Conectá MercadoPago para cobrar automáticamente. También configurá envíos y políticas de devolución.",
+  },
+  {
+    tourId: "afiliados",
+    title: "Afiliados",
+    body: "Invitá vendedores que promocionen tu tienda. Vos definís el porcentaje de comisión.",
+  },
+  {
+    tourId: "diseno",
+    title: "Diseño de tu tienda",
+    body: "Elegí una plantilla y personalizá colores, imágenes y textos para que tu tienda sea única.",
+  },
+  {
+    tourId: "configuracion",
+    title: "Configuración",
+    body: "Subí tu logo, configurá el subdominio y conectá tu dominio propio si tenés plan Premium.",
+  },
+];
+
+export const TOUR_STORAGE_KEY = "tiendaapps_tour_done";
+
+export default function TourGuide({ onDone }: { onDone: () => void }) {
+  const [step, setStep] = useState(0);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const frameRef = useRef<number | null>(null);
+
+  // Track element position via rAF so tooltip follows sidebar animations
+  useEffect(() => {
+    function track() {
+      const el = document.querySelector(`[data-tour="${STEPS[step].tourId}"]`);
+      if (el) setRect(el.getBoundingClientRect());
+      frameRef.current = requestAnimationFrame(track);
+    }
+    frameRef.current = requestAnimationFrame(track);
+    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); };
+  }, [step]);
+
+  function next() {
+    if (step < STEPS.length - 1) setStep(step + 1);
+    else finish();
+  }
+
+  function prev() {
+    if (step > 0) setStep(step - 1);
+  }
+
+  function finish() {
+    localStorage.setItem(TOUR_STORAGE_KEY, "1");
+    onDone();
+  }
+
+  if (!rect) return null;
+
+  const current = STEPS[step];
+  const TOOLTIP_W = 272;
+  const OFFSET = 14;
+
+  const tooltipLeft = rect.right + OFFSET;
+  const tooltipTopRaw = rect.top + rect.height / 2;
+  const tooltipTop = Math.max(12, Math.min(tooltipTopRaw, window.innerHeight - 220));
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 bg-black/50 z-[9998]" onClick={finish} />
+
+      {/* Highlight ring */}
+      <div
+        className="fixed z-[9999] rounded-lg pointer-events-none transition-all duration-150"
+        style={{
+          top: rect.top - 3,
+          left: rect.left - 3,
+          width: rect.width + 6,
+          height: rect.height + 6,
+          boxShadow: "0 0 0 3px #6366f1, 0 0 0 6px rgba(99,102,241,0.25)",
+        }}
+      />
+
+      {/* Tooltip bubble */}
+      <div
+        className="fixed z-[9999] bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 transition-all duration-150"
+        style={{ width: TOOLTIP_W, left: tooltipLeft, top: tooltipTop, transform: "translateY(-50%)" }}
+      >
+        {/* Arrow */}
+        <div
+          className="absolute"
+          style={{
+            left: -8,
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: 0,
+            height: 0,
+            borderTop: "8px solid transparent",
+            borderBottom: "8px solid transparent",
+            borderRight: "8px solid white",
+          }}
+        />
+        {/* Arrow shadow layer */}
+        <div
+          className="absolute"
+          style={{
+            left: -10,
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: 0,
+            height: 0,
+            borderTop: "9px solid transparent",
+            borderBottom: "9px solid transparent",
+            borderRight: "9px solid #f3f4f6",
+            zIndex: -1,
+          }}
+        />
+
+        <div className="flex items-center justify-between mb-2.5">
+          <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+            {step + 1} / {STEPS.length}
+          </span>
+          <button onClick={finish} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <h3 className="font-bold text-gray-900 text-sm mb-1">{current.title}</h3>
+        <p className="text-xs text-gray-500 leading-relaxed">{current.body}</p>
+
+        {/* Progress dots */}
+        <div className="flex items-center gap-1 mt-3 mb-3">
+          {STEPS.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setStep(i)}
+              className={`h-1.5 rounded-full transition-all duration-200 ${
+                i === step ? "bg-indigo-500 w-4" : "bg-gray-200 w-1.5 hover:bg-gray-300"
+              }`}
+            />
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between">
+          <button
+            onClick={prev}
+            disabled={step === 0}
+            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 disabled:opacity-0 transition-all"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Anterior
+          </button>
+          <button
+            onClick={next}
+            className="flex items-center gap-1 text-xs font-semibold text-white bg-indigo-500 hover:bg-indigo-600 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            {step === STEPS.length - 1 ? "Finalizar" : "Siguiente"}
+            {step < STEPS.length - 1 && <ChevronRight className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
