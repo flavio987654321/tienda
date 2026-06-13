@@ -53,6 +53,7 @@ export async function PATCH(
   const updated = await prisma.subscription.update({ where: { userId }, data });
 
   revalidatePath("/dashboard", "layout");
+  revalidatePath("/dashboard/mi-plan");
 
   const actions: string[] = [];
   if (data.status) actions.push(`CHANGE_STATUS:${data.status}`);

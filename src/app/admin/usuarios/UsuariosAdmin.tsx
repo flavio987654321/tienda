@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Store, Zap, ShoppingCart, Shield, Calendar, X, RefreshCw, Ban, CheckCircle, Search, Trash2, AlertTriangle } from "lucide-react";
 
@@ -81,6 +81,14 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<{ tier?: string; plan?: string } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showToast(msg: string, ok = true) {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ msg, ok });
+    toastTimer.current = setTimeout(() => setToast(null), 3500);
+  }
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -103,7 +111,12 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
       });
       if (res.ok) {
         setUsers(prev => prev.map(u => u.id === user.id ? { ...u, banned: !user.banned } : u));
+        showToast(user.banned ? "Usuario desbaneado" : "Usuario baneado");
+      } else {
+        showToast("Error al cambiar estado del usuario", false);
       }
+    } catch {
+      showToast("Error de conexión", false);
     } finally {
       setLoadingId(null);
     }
@@ -125,7 +138,13 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
             : u
         ));
         setSubModal(prev => prev?.id === userId ? { ...prev, subscription: prev.subscription ? { ...prev.subscription, ...data } : null } : prev);
+        showToast("Cambio guardado correctamente");
+      } else {
+        const err = await res.json().catch(() => ({})) as { error?: string };
+        showToast(err.error ?? "Error al guardar el cambio", false);
       }
+    } catch {
+      showToast("Error de conexión", false);
     } finally {
       setLoadingId(null);
     }
@@ -139,7 +158,12 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
         setUsers(prev => prev.filter(u => u.id !== user.id));
         setDeleteModal(null);
         setDeleteConfirm("");
+        showToast("Cuenta eliminada correctamente");
+      } else {
+        showToast("Error al eliminar la cuenta", false);
       }
+    } catch {
+      showToast("Error de conexión", false);
     } finally {
       setDeleteLoading(false);
     }
@@ -417,6 +441,21 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
         </div>
       )}
 
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[60] flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-2xl border text-sm font-semibold pointer-events-none ${
+          toast.ok
+            ? "bg-emerald-950 border-emerald-500/30 text-emerald-300"
+            : "bg-red-950 border-red-500/30 text-red-300"
+        }`}>
+          {toast.ok
+            ? <CheckCircle className="h-4 w-4 flex-shrink-0" />
+            : <X className="h-4 w-4 flex-shrink-0" />
+          }
+          {toast.msg}
+        </div>
+      )}
+
       {/* Modal suscripción */}
       {subModal && subModal.subscription && (() => {
         const s = subModal.subscription;
@@ -424,6 +463,7 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
         const isAffiliate = s.role === "AFFILIATE";
         const trialStillActive = s.status === "TRIAL" && new Date(s.trialEndsAt) > new Date();
 
+        const willActivate = s.status === "TRIAL" && pendingPlan !== null;
         const pendingLabel = pendingPlan?.tier
           ? (pendingPlan.tier === "PREMIUM" ? "Tienda Premium" : "Tienda Pro")
           : pendingPlan?.plan === "ANNUAL" ? "facturación Anual" : pendingPlan?.plan === "MONTHLY" ? "facturación Mensual" : "";
@@ -563,6 +603,11 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                 <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
                   <p className="text-amber-300 text-xs font-semibold mb-2.5">
                     ¿Confirmar cambio a {pendingLabel}?
+                    {willActivate && (
+                      <span className="block text-emerald-400 font-normal mt-1">
+                        También activa la suscripción (sale del trial)
+                      </span>
+                    )}
                   </p>
                   <div className="flex gap-2">
                     <button
@@ -572,7 +617,11 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                       Cancelar
                     </button>
                     <button
-                      onClick={() => { changeSub(subModal.id, pendingPlan); setPendingPlan(null); }}
+                      onClick={() => {
+                        const body = willActivate ? { ...pendingPlan, status: "ACTIVE" } : pendingPlan;
+                        changeSub(subModal.id, body!);
+                        setPendingPlan(null);
+                      }}
                       disabled={isLoading}
                       className="flex-1 text-xs font-semibold py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black transition-all disabled:opacity-50"
                     >
