@@ -315,7 +315,7 @@ export default function BohoTerra() {
   }, [selectedSize, modalProduct?.id]);
 
   const CARDS_PER_VIEW = isMobile ? 1 : 3;
-  const CAROUSEL_LIMIT = CARDS_PER_VIEW * 2;
+  const CAROUSEL_LIMIT = 8;
   const subcategoriesFor = useMemo(() => {
     const map: Record<string, string[]> = {};
     products.forEach(p => {
@@ -609,10 +609,10 @@ export default function BohoTerra() {
         <div style={{ position:"relative" }} {...carouselSwipe}>
           {/* área deslizante */}
           <div ref={carouselRef} style={{ overflow:"hidden", padding: isMobile ? "0 16px" : "0 40px" }}>
-            <div style={{ display:"flex", gap:20, transition:"transform 0.45s cubic-bezier(.4,0,.2,1)", transform:`translateX(calc(-${carouselIdx} * (100% / ${CARDS_PER_VIEW} + 20px / ${CARDS_PER_VIEW})))` }}>
+            <div style={{ display:"flex", gap:20, transition:"transform 0.45s cubic-bezier(.4,0,.2,1)", transform: isMobile ? `translateX(calc(-${carouselIdx} * (85% + 20px)))` : `translateX(calc(-${carouselIdx} * (100% / ${CARDS_PER_VIEW} + 20px / ${CARDS_PER_VIEW})))` }}>
               {carouselProducts.map(product=>(
                 <div key={product.id}
-                  style={{ flexShrink:0, width:`calc((100% - ${(CARDS_PER_VIEW-1)*20}px) / ${CARDS_PER_VIEW})`, cursor:"pointer", position:"relative" }}
+                  style={{ flexShrink:0, width: isMobile ? "85%" : `calc((100% - ${(CARDS_PER_VIEW-1)*20}px) / ${CARDS_PER_VIEW})`, cursor:"pointer", position:"relative" }}
                   onClick={()=>openModal(product)}>
                   {/* foto */}
                   <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:16 }}
