@@ -429,7 +429,7 @@ export default function UrbanPulse() {
                     <div key={cat} style={{ position:"relative" }}
                       onMouseEnter={() => setHoveredNavCat(cat)}
                       onMouseLeave={() => setHoveredNavCat("__open__")}>
-                      <button onClick={() => { changeCategory(cat); scrollTo("productos"); setHoveredNavCat(null); }}
+                      <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
                         style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background: hoveredNavCat===cat ? "#f5f5f5" : "none", border:"none", color:DARK, padding:"9px 16px", fontSize:11, fontWeight:700, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
                         {cat}
                         {subs.length > 0 && <span style={{ opacity:0.5, fontSize:10 }}>›</span>}
@@ -437,7 +437,7 @@ export default function UrbanPulse() {
                       {subs.length > 0 && hoveredNavCat === cat && (
                         <div style={{ position:"absolute", top:0, left:"100%", background:WHITE, border:`2px solid ${DARK}`, minWidth:160, padding:"6px 0", boxShadow:`4px 4px 0 ${DARK}`, zIndex:501 }}>
                           {subs.map(sub => (
-                            <button key={sub} onClick={() => { changeCategory(cat); scrollTo("productos"); setHoveredNavCat(null); }}
+                            <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
                               style={{ display:"block", width:"100%", background:"none", border:"none", color:DARK, padding:"8px 16px", fontSize:11, fontWeight:700, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase" }}
                               onMouseEnter={e => (e.currentTarget.style.background = "#f5f5f5")}
                               onMouseLeave={e => (e.currentTarget.style.background = "none")}>
@@ -641,7 +641,7 @@ export default function UrbanPulse() {
             { label:"Hombre",     cat:"Hombre",     img: storeConfig?.imageOverrides?.["catHombre"]?.url ?? "https://picsum.photos/seed/up_cat2/600/700",     field:"catHombre" },
             { label:"Accesorios", cat:"Accesorios", img: storeConfig?.imageOverrides?.["catAccesorios"]?.url ?? "https://picsum.photos/seed/up_cat3/600/700", field:"catAccesorios" },
           ].map(c => (
-            <div key={c.label} className="up-cat" onClick={() => { changeCategory(c.cat); scrollTo("productos"); }}
+            <div key={c.label} className="up-cat" onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(c.cat)}`; }}
               style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", cursor:"pointer" }}>
               <img src={c.img} alt={c.label} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.[c.field]?.posX ?? 50}% ${storeConfig?.imageOverrides?.[c.field]?.posY ?? 50}%`, display:"block" }} />
               <BgDragHandle imgKey={c.field} />

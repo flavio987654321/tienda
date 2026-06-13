@@ -433,7 +433,7 @@ export default function BohoTerra() {
                   <div style={{ position:"absolute", top:"100%", left:0, right:0, height:10, zIndex:499 }} />
                   <div style={{ position:"absolute", top:"calc(100% + 10px)", left:0, background:"#faf7f2", border:`1px solid rgba(44,34,24,0.12)`, minWidth:180, zIndex:500, padding:"6px 0", boxShadow:"0 12px 40px rgba(44,34,24,0.12)" }}>
                     {categoryList.map(cat => (
-                      <button key={cat} onClick={() => { changeCategory(cat); scrollTo("coleccion"); setHoveredNavCat(null); }}
+                      <button key={cat} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
                         style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"9px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
                         {cat}
                       </button>

@@ -509,7 +509,7 @@ export default function FashionNoir() {
                       <div key={cat} style={{ position:"relative" }}
                         onMouseEnter={() => setHoveredNavCat(cat)}
                         onMouseLeave={() => setHoveredNavCat("__open__")}>
-                        <button onClick={() => { changeCategory(cat); scrollTo("productos"); setHoveredNavCat(null); }}
+                        <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
                           style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background: hoveredNavCat===cat ? "rgba(201,168,76,0.08)" : "none", border:"none", color:T, padding:"9px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase", transition:"background 0.15s" }}>
                           {cat}
                           {subs.length > 0 && <span style={{ opacity:0.5, fontSize:10 }}>›</span>}
@@ -517,7 +517,7 @@ export default function FashionNoir() {
                         {subs.length > 0 && hoveredNavCat === cat && (
                           <div style={{ position:"absolute", top:0, left:"100%", background:"#1a1a1a", border:`1px solid rgba(201,168,76,0.15)`, minWidth:160, padding:"6px 0", boxShadow:"8px 8px 32px rgba(0,0,0,0.5)", zIndex:501 }}>
                             {subs.map(sub => (
-                              <button key={sub} onClick={() => { changeCategory(cat, sub); scrollTo("productos"); setHoveredNavCat(null); }}
+                              <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
                                 style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"8px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"background 0.15s" }}
                                 onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
                                 onMouseLeave={e => (e.currentTarget.style.background="none")}>
@@ -747,7 +747,7 @@ export default function FashionNoir() {
               { label:"Hombre",     img: catHombreUrl,     field:"catHombre" },
               { label:"Accesorios", img: catAccesoriosUrl, field:"catAccesorios" },
             ].map(cat => (
-              <button key={cat.label} onClick={() => { changeCategory(cat.label); scrollTo("productos"); }}
+              <button key={cat.label} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat.label)}`; }}
                 style={{ position:"relative", aspectRatio:"2/3", overflow:"hidden", background:S, cursor:"pointer", border:"none", display:"block" }}>
                 <img src={cat.img} alt={cat.label} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", transition:"transform 0.6s ease" }}
                   onMouseEnter={e => (e.currentTarget.style.transform="scale(1.06)")}

@@ -424,7 +424,7 @@ export default function ChicParis() {
                       <div key={cat} style={{ position: "relative" }}
                         onMouseEnter={() => setHoveredNavCat(cat)}
                         onMouseLeave={() => setHoveredNavCat("__open__")}>
-                        <button onClick={() => { changeCategory(cat); scrollTo("productos"); setHoveredNavCat(null); }}
+                        <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
                           style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: hoveredNavCat === cat ? "#f9f9f9" : "none", border: "none", color: "#111", padding: "9px 16px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 2, textTransform: "uppercase" }}>
                           {cat}
                           {subs.length > 0 && <span style={{ opacity: 0.4, fontSize: 10 }}>›</span>}
@@ -432,7 +432,7 @@ export default function ChicParis() {
                         {subs.length > 0 && hoveredNavCat === cat && (
                           <div style={{ position: "absolute", top: 0, left: "100%", background: "#fff", border: "1px solid #e8e8e8", minWidth: 160, padding: "6px 0", boxShadow: "8px 8px 32px rgba(0,0,0,0.08)", zIndex: 501 }}>
                             {subs.map(sub => (
-                              <button key={sub} onClick={() => { changeCategory(cat); scrollTo("productos"); setHoveredNavCat(null); }}
+                              <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
                                 style={{ display: "block", width: "100%", background: "none", border: "none", color: "#111", padding: "8px 16px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 1, textTransform: "uppercase" }}
                                 onMouseEnter={e => (e.currentTarget.style.background = "#f9f9f9")}
                                 onMouseLeave={e => (e.currentTarget.style.background = "none")}>
@@ -919,7 +919,7 @@ export default function ChicParis() {
             <div>
               <p style={{ margin: "0 0 16px", fontSize: 10, fontWeight: 800, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>Colecciones</p>
               {["Mujer", "Hombre", "Accesorios", "Sale"].map(l => (
-                <button key={l} onClick={() => { changeCategory(l === "Sale" ? "Todos" : l); scrollTo("productos"); }}
+                <button key={l} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}${l !== "Sale" ? `&categoria=${encodeURIComponent(l)}` : ""}`; }}
                   style={{ display: "block", background: "none", border: "none", color: footerText, opacity: 0.55, fontSize: 13, cursor: "pointer", padding: "4px 0", textAlign: "left" }}>{l}</button>
               ))}
             </div>
