@@ -78,7 +78,7 @@ export default function StorePushBanner({ storeId, storeName }: Props) {
     >
       <div className="rounded-2xl border border-gray-200 bg-white shadow-lg px-4 py-3 flex items-center gap-3">
         {/* Icono */}
-        <div className="shrink-0 flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50">
+        <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
           {state === "loading" ? (
             <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
           ) : state === "subscribed" ? (
@@ -129,8 +129,9 @@ export default function StorePushBanner({ storeId, storeName }: Props) {
             <button
               onClick={handleSubscribe}
               disabled={action === "busy"}
-              className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold transition-colors disabled:opacity-50 min-w-[72px] justify-center"
             >
+              <Bell className="h-3.5 w-3.5 shrink-0" />
               Activar
             </button>
           ) : null}
@@ -138,9 +139,9 @@ export default function StorePushBanner({ storeId, storeName }: Props) {
           <button
             onClick={dismiss}
             aria-label="Cerrar"
-            className="flex items-center justify-center w-6 h-6 rounded-lg hover:bg-gray-100 transition-colors"
+            className="flex items-center justify-center w-7 h-7 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <X className="h-3.5 w-3.5 text-gray-400" />
+            <X className="h-4 w-4 text-gray-400" />
           </button>
         </div>
       </div>
