@@ -1013,10 +1013,54 @@ export default function FashionNoir() {
             </div>
           </div>
         </div>
-        <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:24, paddingBottom: isMobile ? 80 : 0, maxWidth:1280, margin:"0 auto", display:"flex", flexDirection:"column", gap:8 }}>
-          {/* Fila 1: políticas + reportar */}
-          <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:"4px 20px", justifyContent: isMobile ? "flex-start" : "space-between" }}>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 20px" }}>
+        {isMobile ? (
+          /* ── MOBILE: 2 filas centradas ── */
+          <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:20, paddingBottom:80, maxWidth:1280, margin:"0 auto", display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px", justifyContent:"center" }}>
+              {[
+                { label: "Política de devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
+                { label: "Política de envíos",       tipo: "envios",       policyField: "policyShipping" },
+                { label: "Términos y condiciones",   tipo: "terminos",     policyField: "policyTerms" },
+              ].map(({ label, tipo, policyField }) => (
+                editMode ? (
+                  <button key={tipo} type="button" onClick={() => setOpenPolicyField(policyField)}
+                    style={{ fontSize:11, color:"inherit", opacity:0.3, background:"none", border:"none", cursor:"pointer", padding:0, letterSpacing:1, display:"inline-flex", alignItems:"center", gap:5 }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.3"; }}>
+                    {label}
+                    <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                ) : (
+                  <a key={tipo} href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=${tipo}`}
+                    style={{ fontSize:11, color:"inherit", opacity:0.3, textDecoration:"none", letterSpacing:1 }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.3"; }}>
+                    {label}
+                  </a>
+                )
+              ))}
+              {!editMode && (
+                <button onClick={() => setShowReport(true)}
+                  style={{ fontSize:11, opacity:0.25, background:"none", border:"none", cursor:"pointer", color:"inherit", padding:0, letterSpacing:1 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.25"; }}>
+                  Reportar tienda
+                </button>
+              )}
+            </div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:"2px 12px", justifyContent:"center", textAlign:"center" }}>
+              <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
+                <EditableZone field="footerCopyright" label="Copyright">© 2025 NOIR Fashion. Todos los derechos reservados.</EditableZone>
+              </p>
+              <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
+                <EditableZone field="footerMadeIn" label="Hecho en">Hecho con ♥ en Argentina</EditableZone>
+              </p>
+            </div>
+          </div>
+        ) : (
+          /* ── DESKTOP: fila izq/der original ── */
+          <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:24, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:"0 20px" }}>
               {[
                 { label: "Política de devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
                 { label: "Política de envíos",       tipo: "envios",       policyField: "policyShipping" },
@@ -1040,25 +1084,24 @@ export default function FashionNoir() {
                 )
               ))}
             </div>
-            {!editMode && (
-              <button onClick={() => setShowReport(true)}
-                style={{ fontSize:11, opacity:0.25, background:"none", border:"none", cursor:"pointer", color:"inherit", padding:0, letterSpacing:1 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.25"; }}>
-                Reportar tienda
-              </button>
-            )}
+            <div style={{ display:"flex", gap:24, alignItems:"center", flexWrap:"wrap" }}>
+              <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
+                <EditableZone field="footerCopyright" label="Copyright">© 2025 NOIR Fashion. Todos los derechos reservados.</EditableZone>
+              </p>
+              <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
+                <EditableZone field="footerMadeIn" label="Hecho en">Hecho con ♥ en Argentina</EditableZone>
+              </p>
+              {!editMode && (
+                <button onClick={() => setShowReport(true)}
+                  style={{ fontSize:11, opacity:0.25, background:"none", border:"none", cursor:"pointer", color:"inherit", padding:0, letterSpacing:1 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.7"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.25"; }}>
+                  Reportar tienda
+                </button>
+              )}
+            </div>
           </div>
-          {/* Fila 2: copyright + hecho en */}
-          <div style={{ display:"flex", flexWrap:"wrap", gap:"2px 16px" }}>
-            <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
-              <EditableZone field="footerCopyright" label="Copyright">© 2025 NOIR Fashion. Todos los derechos reservados.</EditableZone>
-            </p>
-            <p style={{ fontSize:11, opacity:0.25, margin:0 }}>
-              <EditableZone field="footerMadeIn" label="Hecho en">Hecho con ♥ en Argentina</EditableZone>
-            </p>
-          </div>
-        </div>
+        )}
         </div>
       </footer>
 
