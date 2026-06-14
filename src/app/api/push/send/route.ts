@@ -6,7 +6,6 @@ import { sendPushToStore } from "@/lib/push";
 
 const TITLE_MAX = 50;
 const BODY_MAX = 150;
-const CAMPAIGNS_PER_WEEK = 2;
 
 // Elimina caracteres de control y recorta espacios
 function sanitize(str: string): string {
@@ -70,18 +69,6 @@ export async function POST(req: NextRequest) {
   });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
-  // Rate limit: máximo CAMPAIGNS_PER_WEEK por semana
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const recentCount = await prisma.pushCampaign.count({
-    where: { storeId: store.id, createdAt: { gte: weekAgo } },
-  });
-  if (recentCount >= CAMPAIGNS_PER_WEEK) {
-    return NextResponse.json(
-      { error: `Límite alcanzado: podés enviar ${CAMPAIGNS_PER_WEEK} notificaciones por semana.` },
-      { status: 429 }
-    );
-  }
-
   // URL de destino: si no viene una, apuntar a la tienda
   const targetUrl = url ?? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/tienda/${store.slug}`;
 
@@ -125,11 +112,8 @@ export async function GET() {
   });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-  const [subscriberCount, recentUsed, campaigns] = await Promise.all([
+  const [subscriberCount, campaigns] = await Promise.all([
     prisma.storeSubscription.count({ where: { storeId: store.id } }),
-    prisma.pushCampaign.count({ where: { storeId: store.id, createdAt: { gte: weekAgo } } }),
     prisma.pushCampaign.findMany({
       where: { storeId: store.id },
       orderBy: { createdAt: "desc" },
@@ -140,15 +124,14 @@ export async function GET() {
 
   return NextResponse.json({
     subscriberCount,
-    weeklyLimit: CAMPAIGNS_PER_WEEK,
-    weeklyUsed: recentUsed,
-    weeklyRemaining: Math.max(0, CAMPAIGNS_PER_WEEK - recentUsed),
     campaigns,
   });
 }
 
-// DELETE — borra una o todas las campañas del store del owner autenticado
-// ?id=<campaignId> para borrar una sola; sin parámetros borra todas
+// DELETE — borra campañas y/o suscriptores del store del owner autenticado
+// ?id=<campaignId>    → borra esa campaña
+// ?subscriptions=1   → borra todos los suscriptores
+// sin params         → borra todas las campañas
 export async function DELETE(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -168,6 +151,11 @@ export async function DELETE(req: NextRequest) {
   if (id) {
     await prisma.pushCampaign.deleteMany({ where: { id, storeId: store.id } });
     return NextResponse.json({ ok: true, deleted: 1 });
+  }
+
+  if (searchParams.get("subscriptions") === "1") {
+    const { count } = await prisma.storeSubscription.deleteMany({ where: { storeId: store.id } });
+    return NextResponse.json({ ok: true, deletedSubscriptions: count });
   }
 
   const { count } = await prisma.pushCampaign.deleteMany({ where: { storeId: store.id } });
