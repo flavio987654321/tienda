@@ -146,10 +146,8 @@ export async function GET() {
   });
 }
 
-// DELETE — borra campañas y/o suscriptores del store del owner autenticado
-// ?id=<campaignId>    → borra esa campaña
-// ?subscriptions=1   → borra todos los suscriptores
-// sin params         → borra todas las campañas
+// DELETE — borra campañas del store del owner autenticado
+// ?id=<campaignId> → borra esa campaña; sin params borra todas
 export async function DELETE(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -169,11 +167,6 @@ export async function DELETE(req: NextRequest) {
   if (id) {
     await prisma.pushCampaign.deleteMany({ where: { id, storeId: store.id } });
     return NextResponse.json({ ok: true, deleted: 1 });
-  }
-
-  if (searchParams.get("subscriptions") === "1") {
-    const { count } = await prisma.storeSubscription.deleteMany({ where: { storeId: store.id } });
-    return NextResponse.json({ ok: true, deletedSubscriptions: count });
   }
 
   const { count } = await prisma.pushCampaign.deleteMany({ where: { storeId: store.id } });
