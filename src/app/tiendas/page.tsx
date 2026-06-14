@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   BadgeCheck, Eye, Search, ChevronLeft, ChevronRight,
@@ -42,44 +42,87 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
 };
 
 const ALL_TAB = { id: "TODAS", label: "Todas" };
+const tabs = [ALL_TAB, ...STORE_TYPES.map((t) => ({ id: t.id, label: t.label }))];
+
+type ArrowState = Record<string, { left: boolean; right: boolean }>;
 
 export default function TiendasPage() {
   const [allStores, setAllStores] = useState<StoreItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [tipo, setTipo] = useState("TODAS");
   const [search, setSearch] = useState("");
+  const [arrows, setArrows] = useState<ArrowState>({});
 
   const tabsScrollRef = useRef<HTMLDivElement>(null);
   const carouselRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
-    setLoading(true);
     fetch("/api/stores?limit=100")
       .then((r) => r.json())
       .then((data) => setAllStores(data.stores ?? []))
       .finally(() => setLoading(false));
   }, []);
 
-  function scrollTabs(dir: "left" | "right") {
-    tabsScrollRef.current?.scrollBy({ left: dir === "right" ? 240 : -240, behavior: "smooth" });
-  }
+  const checkArrows = useCallback((id: string) => {
+    const el = carouselRefs.current[id];
+    if (!el) return;
+    setArrows((prev) => ({
+      ...prev,
+      [id]: {
+        left: el.scrollLeft > 2,
+        right: Math.ceil(el.scrollLeft) < el.scrollWidth - el.clientWidth - 2,
+      },
+    }));
+  }, []);
 
-  function scrollCarousel(typeId: string, dir: "left" | "right") {
-    carouselRefs.current[typeId]?.scrollBy({ left: dir === "right" ? 312 : -312, behavior: "smooth" });
-  }
-
+  // Re-init listeners whenever visible groups change
   const searchFiltered = search.trim()
     ? allStores.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
     : allStores;
 
-  // Grupos: solo tipos que tienen al menos 1 tienda
   const groups = STORE_TYPES
     .map((t) => ({ ...t, stores: searchFiltered.filter((s) => s.tipoTienda === t.id) }))
     .filter((g) => g.stores.length > 0);
 
   const visibleGroups = tipo === "TODAS" ? groups : groups.filter((g) => g.id === tipo);
+  const visibleGroupIds = visibleGroups.map((g) => g.id).join(",");
 
-  const tabs = [ALL_TAB, ...STORE_TYPES.map((t) => ({ id: t.id, label: t.label }))];
+  useEffect(() => {
+    if (loading) return;
+    const cleanups: Array<() => void> = [];
+
+    const raf = requestAnimationFrame(() => {
+      visibleGroupIds.split(",").filter(Boolean).forEach((id) => {
+        const el = carouselRefs.current[id];
+        if (!el) return;
+
+        const onScroll = () => checkArrows(id);
+        checkArrows(id);
+        el.addEventListener("scroll", onScroll, { passive: true });
+
+        const ro = new ResizeObserver(() => checkArrows(id));
+        ro.observe(el);
+
+        cleanups.push(() => {
+          el.removeEventListener("scroll", onScroll);
+          ro.disconnect();
+        });
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      cleanups.forEach((c) => c());
+    };
+  }, [loading, visibleGroupIds, checkArrows]);
+
+  function scrollTabs(dir: "left" | "right") {
+    tabsScrollRef.current?.scrollBy({ left: dir === "right" ? 240 : -240, behavior: "smooth" });
+  }
+
+  function scrollCarousel(id: string, dir: "left" | "right") {
+    carouselRefs.current[id]?.scrollBy({ left: dir === "right" ? 312 : -312, behavior: "smooth" });
+  }
 
   return (
     <div className="min-h-screen bg-[#f8f7f5]">
@@ -92,12 +135,9 @@ export default function TiendasPage() {
 
       {/* ── HEADER ── */}
       <header className="sticky top-0 z-30 bg-[#f8f7f5]/95 backdrop-blur-md border-b border-black/5">
-        {/* Top row: back + search */}
+        {/* Top row */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-gray-400 hover:text-gray-700 transition-colors group shrink-0"
-          >
+          <Link href="/" className="flex items-center gap-1.5 text-gray-400 hover:text-gray-700 transition-colors group shrink-0">
             <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
             <span className="text-xs font-semibold tracking-widest uppercase hidden sm:block">TiendaApps</span>
           </Link>
@@ -112,8 +152,8 @@ export default function TiendasPage() {
           </div>
         </div>
 
-        {/* Tabs row con flechas en la misma línea */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3 flex items-center gap-1">
+        {/* Tabs row — flechas en la misma línea */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3 flex items-center gap-2">
           <button
             onClick={() => scrollTabs("left")}
             className="shrink-0 w-7 h-7 rounded-full bg-white border border-black/10 shadow-sm flex items-center justify-center text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all"
@@ -155,13 +195,12 @@ export default function TiendasPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-12">
 
         {loading ? (
-          // Skeleton
           <div className="space-y-10">
             {[1, 2].map((s) => (
               <div key={s}>
                 <div className="h-6 w-40 bg-gray-200 rounded-full animate-pulse mb-5" />
                 <div className="flex gap-4">
-                  {[1, 2, 3, 4].map((c) => (
+                  {[1, 2, 3].map((c) => (
                     <div key={c} className="shrink-0 w-72 bg-white rounded-2xl overflow-hidden animate-pulse border border-black/5">
                       <div className="h-44 bg-gray-100" />
                       <div className="p-4 space-y-2.5">
@@ -185,125 +224,123 @@ export default function TiendasPage() {
             <p className="text-gray-400 text-sm mb-7">
               {search ? "Probá con otro nombre." : "¡Sé el primero en abrir una!"}
             </p>
-            <Link
-              href="/registro"
-              className="inline-flex items-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-gray-700 transition-colors"
-            >
+            <Link href="/registro" className="inline-flex items-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-gray-700 transition-colors">
               Crear mi tienda
             </Link>
           </div>
         ) : (
           visibleGroups.map((group) => {
             const Icon = TYPE_ICONS[group.id];
+            const canLeft = arrows[group.id]?.left ?? false;
+            const canRight = arrows[group.id]?.right ?? false;
+
             return (
               <section key={group.id}>
-                {/* Título de sección */}
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-2.5">
-                    {Icon && (
-                      <div className="w-8 h-8 rounded-lg bg-white border border-black/8 flex items-center justify-center shadow-sm">
-                        <Icon className="h-4 w-4 text-gray-700" />
-                      </div>
-                    )}
-                    <h2 className="text-lg font-black text-gray-900 tracking-tight">{group.label}</h2>
-                    <span className="text-xs text-gray-400 font-medium">
-                      {group.stores.length} tienda{group.stores.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
+                {/* Título */}
+                <div className="flex items-center gap-2.5 mb-5">
+                  {Icon && (
+                    <div className="w-8 h-8 rounded-lg bg-white border border-black/8 flex items-center justify-center shadow-sm shrink-0">
+                      <Icon className="h-4 w-4 text-gray-700" />
+                    </div>
+                  )}
+                  <h2 className="text-lg font-black text-gray-900 tracking-tight">{group.label}</h2>
+                  <span className="text-xs text-gray-400 font-medium">
+                    {group.stores.length} tienda{group.stores.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
 
-                  {/* Flechas del carrusel */}
-                  <div className="flex items-center gap-1.5">
+                {/* Carrusel con flechas en los bordes */}
+                <div className="relative">
+                  {/* Flecha izquierda */}
+                  {canLeft && (
                     <button
                       onClick={() => scrollCarousel(group.id, "left")}
-                      className="w-8 h-8 rounded-full bg-white border border-black/10 shadow-sm flex items-center justify-center text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all"
+                      className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white border border-black/10 shadow-md flex items-center justify-center text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-all"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
+                  )}
+
+                  {/* Cards */}
+                  <div
+                    ref={(el) => { carouselRefs.current[group.id] = el; }}
+                    className="no-scrollbar flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory"
+                  >
+                    {group.stores.map((store) => {
+                      const StoreIcon = TYPE_ICONS[store.tipoTienda];
+                      return (
+                        <Link
+                          key={store.id}
+                          href={`/tienda/${store.slug}`}
+                          className="store-card snap-start shrink-0 w-[280px] sm:w-72 bg-white rounded-2xl overflow-hidden border border-black/[0.06] group block"
+                        >
+                          <div className="relative overflow-hidden h-44 bg-gray-50">
+                            <iframe
+                              src={`/tienda/${store.slug}`}
+                              className="absolute border-0 pointer-events-none"
+                              style={{
+                                top: "-20px",
+                                left: "calc(50% - 160px)",
+                                width: "1280px",
+                                height: "800px",
+                                transform: "scale(0.25)",
+                                transformOrigin: "top left",
+                              }}
+                              loading="lazy"
+                              tabIndex={-1}
+                              aria-hidden="true"
+                              title=""
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+                            {store.isVerified && (
+                              <div className="absolute top-2.5 right-2.5">
+                                <div className="flex items-center gap-1 bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow">
+                                  <BadgeCheck className="h-3 w-3" />
+                                  Verificado
+                                </div>
+                              </div>
+                            )}
+                            {StoreIcon && (
+                              <div className="absolute top-2.5 left-2.5 w-7 h-7 rounded-lg bg-white/90 backdrop-blur-sm border border-black/5 shadow-sm flex items-center justify-center">
+                                <StoreIcon className="h-3.5 w-3.5 text-gray-600" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="h-0.5" style={{ backgroundColor: store.primaryColor + "80" }} />
+                          <div className="p-4">
+                            <div className="flex items-start justify-between gap-2 mb-1.5">
+                              <h3 className="font-bold text-gray-900 text-sm leading-snug truncate group-hover:text-indigo-600 transition-colors">
+                                {store.name}
+                              </h3>
+                              <div className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: store.primaryColor }} />
+                            </div>
+                            {store.description && (
+                              <p className="text-xs text-gray-400 line-clamp-1 mb-3">{store.description}</p>
+                            )}
+                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                              <span className="text-[11px] text-gray-400 font-medium">
+                                {store.totalProducts} producto{store.totalProducts !== 1 ? "s" : ""}
+                              </span>
+                              <span className="flex items-center gap-1 text-[11px] font-bold text-gray-400 group-hover:text-indigo-600 transition-colors">
+                                <Eye className="h-3.5 w-3.5" />
+                                Ver tienda
+                              </span>
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+
+                  {/* Flecha derecha */}
+                  {canRight && (
                     <button
                       onClick={() => scrollCarousel(group.id, "right")}
-                      className="w-8 h-8 rounded-full bg-white border border-black/10 shadow-sm flex items-center justify-center text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all"
+                      className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white border border-black/10 shadow-md flex items-center justify-center text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-all"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>
-                  </div>
-                </div>
-
-                {/* Carrusel */}
-                <div
-                  ref={(el) => { carouselRefs.current[group.id] = el; }}
-                  className="no-scrollbar flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory"
-                >
-                  {group.stores.map((store) => {
-                    const StoreIcon = TYPE_ICONS[store.tipoTienda];
-                    return (
-                      <Link
-                        key={store.id}
-                        href={`/tienda/${store.slug}`}
-                        className="store-card snap-start shrink-0 w-[280px] sm:w-72 bg-white rounded-2xl overflow-hidden border border-black/[0.06] group block"
-                      >
-                        {/* Preview */}
-                        <div className="relative overflow-hidden h-44 bg-gray-50">
-                          <iframe
-                            src={`/tienda/${store.slug}`}
-                            className="absolute border-0 pointer-events-none"
-                            style={{
-                              top: "-20px",
-                              left: "calc(50% - 160px)",
-                              width: "1280px",
-                              height: "800px",
-                              transform: "scale(0.25)",
-                              transformOrigin: "top left",
-                            }}
-                            loading="lazy"
-                            tabIndex={-1}
-                            aria-hidden="true"
-                            title=""
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
-
-                          {store.isVerified && (
-                            <div className="absolute top-2.5 right-2.5">
-                              <div className="flex items-center gap-1 bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow">
-                                <BadgeCheck className="h-3 w-3" />
-                                Verificado
-                              </div>
-                            </div>
-                          )}
-
-                          {StoreIcon && (
-                            <div className="absolute top-2.5 left-2.5 w-7 h-7 rounded-lg bg-white/90 backdrop-blur-sm border border-black/5 shadow-sm flex items-center justify-center">
-                              <StoreIcon className="h-3.5 w-3.5 text-gray-600" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Accent bar */}
-                        <div className="h-0.5" style={{ backgroundColor: store.primaryColor + "80" }} />
-
-                        {/* Info */}
-                        <div className="p-4">
-                          <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <h3 className="font-bold text-gray-900 text-sm leading-snug truncate group-hover:text-indigo-600 transition-colors">
-                              {store.name}
-                            </h3>
-                            <div className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: store.primaryColor }} />
-                          </div>
-                          {store.description && (
-                            <p className="text-xs text-gray-400 line-clamp-1 mb-3">{store.description}</p>
-                          )}
-                          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                            <span className="text-[11px] text-gray-400 font-medium">
-                              {store.totalProducts} producto{store.totalProducts !== 1 ? "s" : ""}
-                            </span>
-                            <span className="flex items-center gap-1 text-[11px] font-bold text-gray-400 group-hover:text-indigo-600 transition-colors">
-                              <Eye className="h-3.5 w-3.5" />
-                              Ver tienda
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
+                  )}
                 </div>
               </section>
             );
