@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
   // Obtener tienda del owner autenticado
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, slug: true, name: true },
+    select: { id: true, slug: true, name: true, logo: true },
   });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
     title,
     body: message,
     url: targetUrl,
+    icon: store.logo ?? undefined,
     tag: `store-${store.id}`,
     storeName: store.name ?? undefined,
   });
@@ -136,4 +137,31 @@ export async function GET() {
     weeklyRemaining: Math.max(0, CAMPAIGNS_PER_WEEK - recentUsed),
     campaigns,
   });
+}
+
+// DELETE — borra una o todas las campañas del store del owner autenticado
+// ?id=<campaignId> para borrar una sola; sin parámetros borra todas
+export async function DELETE(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const premiumError = await assertPremium(user.id);
+  if (premiumError) return premiumError;
+
+  const store = await prisma.store.findUnique({
+    where: { ownerId: user.id },
+    select: { id: true },
+  });
+  if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+
+  if (id) {
+    await prisma.pushCampaign.deleteMany({ where: { id, storeId: store.id } });
+    return NextResponse.json({ ok: true, deleted: 1 });
+  }
+
+  const { count } = await prisma.pushCampaign.deleteMany({ where: { storeId: store.id } });
+  return NextResponse.json({ ok: true, deleted: count });
 }

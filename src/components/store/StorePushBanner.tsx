@@ -51,18 +51,18 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className={`fixed bottom-0 left-0 right-0 z-[9992] w-full sm:w-[480px] sm:left-1/2 sm:right-auto sm:-translate-x-1/2 bg-white rounded-t-3xl shadow-2xl transition-[transform] duration-300 ease-out ${
+        className={`fixed bottom-0 left-0 right-0 z-[9992] w-full sm:w-[480px] sm:left-1/2 sm:right-auto sm:-translate-x-1/2 bg-white rounded-t-3xl shadow-2xl transition-[transform] duration-300 ease-out flex flex-col ${
           drawerOpen ? "translate-y-0" : "translate-y-full"
         }`}
         style={{ maxHeight: "72vh" }}
       >
         {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1">
+        <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-10 h-1 rounded-full bg-gray-200" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2.5">
             <Bell className="h-4 w-4 text-indigo-500" />
             <h2 className="text-sm font-bold text-gray-900">Novedades de {storeName}</h2>
@@ -76,7 +76,7 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
         </div>
 
         {/* Suscripción */}
-        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3">
+        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3 shrink-0">
           <div className={`shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${isSubscribed ? "bg-indigo-50" : "bg-gray-50"}`}>
             {isLoading
               ? <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
@@ -87,18 +87,18 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
           <div className="flex-1 min-w-0">
             {isSubscribed ? (
               <>
-                <p className="text-xs font-semibold text-gray-800 leading-tight">Notificaciones activas</p>
-                <p className="text-[11px] text-gray-400">Te avisamos cuando haya novedades.</p>
+                <p className="text-sm font-semibold text-gray-800 leading-tight">Notificaciones activas</p>
+                <p className="text-xs text-gray-400">Te avisamos cuando haya novedades.</p>
               </>
             ) : subState === "error" ? (
               <>
-                <p className="text-xs font-semibold text-red-600 leading-tight">No se pudo activar</p>
-                <p className="text-[11px] text-gray-400">Revisá los permisos en tu navegador.</p>
+                <p className="text-sm font-semibold text-red-600 leading-tight">No se pudo activar</p>
+                <p className="text-xs text-gray-400">Revisá los permisos en tu navegador.</p>
               </>
             ) : (
               <>
-                <p className="text-xs font-semibold text-gray-800 leading-tight">Recibí alertas en tu dispositivo</p>
-                <p className="text-[11px] text-gray-400">Activá para que te avisemos cuando haya novedades.</p>
+                <p className="text-sm font-semibold text-gray-800 leading-tight">Recibí alertas en tu dispositivo</p>
+                <p className="text-xs text-gray-400">Activá para que te avisemos cuando haya novedades.</p>
               </>
             )}
           </div>
@@ -107,17 +107,25 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
               <button
                 onClick={handleUnsubscribe}
                 disabled={isLoading}
-                className="shrink-0 text-[11px] text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                className="shrink-0 text-xs text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
               >
                 Desactivar
+              </button>
+            ) : subState === "error" ? (
+              <button
+                onClick={handleSubscribe}
+                disabled={isLoading}
+                className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold transition-colors disabled:opacity-50"
+              >
+                Reintentar
               </button>
             ) : (
               <button
                 onClick={handleSubscribe}
                 disabled={isLoading}
-                className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold transition-colors disabled:opacity-50"
+                className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
               >
-                <Bell className="h-3 w-3" />
+                <Bell className="h-3.5 w-3.5" />
                 Activar
               </button>
             )
@@ -125,7 +133,7 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
         </div>
 
         {/* Campañas */}
-        <div className="overflow-y-auto" style={{ maxHeight: "calc(72vh - 164px)" }}>
+        <div className="overflow-y-auto flex-1 min-h-0">
           {loadingCampaigns ? (
             <div className="flex justify-center py-10">
               <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
@@ -142,10 +150,10 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
                 <li key={c.id} className="px-5 py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-900 leading-snug">{c.title}</p>
-                      <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{c.body}</p>
+                      <p className="text-sm font-semibold text-gray-900 leading-snug">{c.title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{c.body}</p>
                     </div>
-                    <span className="shrink-0 text-[10px] text-gray-300 mt-0.5 whitespace-nowrap">
+                    <span className="shrink-0 text-xs text-gray-300 mt-0.5 whitespace-nowrap">
                       {timeAgo(c.createdAt)}
                     </span>
                   </div>
