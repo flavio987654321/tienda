@@ -170,7 +170,7 @@ export default async function MetricasPage() {
   const lastMonthStr = `${prevY}-${String(prevM + 1).padStart(2, "0")}-01`;
   const endOfLastMonthStr = new Date(Date.UTC(utcY, utcM, 0)).toISOString().slice(0, 10);
 
-  // ── Todas las queries en paralelo ──
+  // ── Queries que no dependen de StoreView ──
   const [
     orders30,
     ordersThisMonth,
@@ -179,9 +179,6 @@ export default async function MetricasPage() {
     reviewStats,
     affiliateCount,
     ordersByStatus,
-    viewsThisMonth,
-    viewsLastMonth,
-    views30raw,
     pushSubscribers,
     pushCampaigns7d,
     pushCampaignsTotal,
@@ -246,22 +243,6 @@ export default async function MetricasPage() {
       where: { storeId: store.id },
       _count: true,
     }),
-    // Visitas este mes
-    prisma.storeView.aggregate({
-      where: { storeId: store.id, date: { gte: startOfMonthStr } },
-      _sum: { count: true },
-    }),
-    // Visitas mes anterior
-    prisma.storeView.aggregate({
-      where: { storeId: store.id, date: { gte: lastMonthStr, lte: endOfLastMonthStr } },
-      _sum: { count: true },
-    }),
-    // Visitas últimos 30 días (para gráfico)
-    prisma.storeView.findMany({
-      where: { storeId: store.id, date: { gte: startOf30Str } },
-      select: { date: true, count: true },
-      orderBy: { date: "asc" },
-    }),
     // Push: suscriptores activos
     prisma.storeSubscription.count({ where: { storeId: store.id } }),
     // Push: campañas enviadas esta semana
@@ -275,6 +256,30 @@ export default async function MetricasPage() {
     // Leads confirmados (venta concretada)
     prisma.lead.count({ where: { storeId: store.id, status: "CONFIRMED" } }),
   ]);
+
+  // ── Queries de StoreView (requieren migración SQL — fallan silenciosamente si la tabla no existe) ──
+  let viewsThisMonth: { _sum: { count: number | null } } = { _sum: { count: null } };
+  let viewsLastMonth: { _sum: { count: number | null } } = { _sum: { count: null } };
+  let views30raw: { date: string; count: number }[] = [];
+  try {
+    [viewsThisMonth, viewsLastMonth, views30raw] = await Promise.all([
+      prisma.storeView.aggregate({
+        where: { storeId: store.id, date: { gte: startOfMonthStr } },
+        _sum: { count: true },
+      }),
+      prisma.storeView.aggregate({
+        where: { storeId: store.id, date: { gte: lastMonthStr, lte: endOfLastMonthStr } },
+        _sum: { count: true },
+      }),
+      prisma.storeView.findMany({
+        where: { storeId: store.id, date: { gte: startOf30Str } },
+        select: { date: true, count: true },
+        orderBy: { date: "asc" },
+      }),
+    ]);
+  } catch {
+    // Tabla StoreView pendiente de migración — visitas aparecerán una vez creada
+  }
 
   // ── Nombres de productos para el top ──
   const productIds = topProducts.map((p) => p.productId);
