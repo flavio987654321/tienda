@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase/client";
 import { Bell, X, Trash2 } from "lucide-react";
 import Link from "next/link";
 
@@ -60,11 +60,9 @@ export default function NotificationBell({ userId }: { userId: string }) {
   }, []);
 
   useEffect(() => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-    if (!supabaseUrl || !supabaseKey) return;
+    if (!hasSupabaseBrowserConfig()) return;
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createSupabaseBrowserClient();
 
     const channel = supabase
       .channel(`notifications:${userId}`)
