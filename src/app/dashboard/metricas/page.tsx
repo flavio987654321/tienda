@@ -4,7 +4,20 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import DashboardLayout from "@/components/DashboardLayout";
-import { TrendingUp, ShoppingBag, Package, Star, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  TrendingUp,
+  ShoppingBag,
+  Package,
+  Star,
+  Users,
+  Eye,
+  MousePointerClick,
+  Bell,
+  MessageSquare,
+} from "lucide-react";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function money(value: number) {
   return `$${Math.round(value).toLocaleString("es-AR")}`;
@@ -32,7 +45,17 @@ function statusColor(status: string) {
   return map[status] ?? "bg-gray-400";
 }
 
-function BarChart({ data }: { data: { label: string; value: number }[] }) {
+// ─── UI Components ────────────────────────────────────────────────────────────
+
+function BarChart({
+  data,
+  color = "#6366f1",
+  lightColor = "#c7d2fe",
+}: {
+  data: { label: string; value: number }[];
+  color?: string;
+  lightColor?: string;
+}) {
   const max = Math.max(...data.map((d) => d.value), 1);
   const W = 600;
   const H = 140;
@@ -49,11 +72,22 @@ function BarChart({ data }: { data: { label: string; value: number }[] }) {
           const isLast7 = i >= data.length - 7;
           return (
             <g key={i}>
-              <rect x={x + 1} y={y} width={barW} height={barH} rx={3}
-                fill={isLast7 ? "#6366f1" : "#c7d2fe"} />
+              <rect
+                x={x + 1}
+                y={y}
+                width={barW}
+                height={barH}
+                rx={3}
+                fill={isLast7 ? color : lightColor}
+              />
               {i % 5 === 0 && (
-                <text x={x + barW / 2} y={H + 16} textAnchor="middle"
-                  fontSize={9} fill="#9ca3af">
+                <text
+                  x={x + barW / 2}
+                  y={H + 16}
+                  textAnchor="middle"
+                  fontSize={9}
+                  fill="#9ca3af"
+                >
                   {d.label}
                 </text>
               )}
@@ -64,6 +98,43 @@ function BarChart({ data }: { data: { label: string; value: number }[] }) {
     </div>
   );
 }
+
+interface KPICardProps {
+  label: string;
+  value: string | number;
+  sub?: string;
+  trend?: number | null;
+  icon: LucideIcon;
+  iconBg: string;
+}
+
+function KPICard({ label, value, sub, trend, icon: Icon, iconBg }: KPICardProps) {
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-white p-6">
+      <div className="flex items-start justify-between mb-4">
+        <div className={`p-2.5 rounded-xl ${iconBg}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        {trend !== null && trend !== undefined && (
+          <span
+            className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+              trend >= 0
+                ? "bg-green-50 text-green-600"
+                : "bg-red-50 text-red-500"
+            }`}
+          >
+            {trend >= 0 ? "↑" : "↓"} {Math.abs(trend)}%
+          </span>
+        )}
+      </div>
+      <p className="text-3xl font-black text-gray-900">{value}</p>
+      <p className="text-sm text-gray-500 mt-1">{label}</p>
+      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function MetricasPage() {
   const user = await getCurrentUser();
@@ -76,6 +147,9 @@ export default async function MetricasPage() {
   if (!store) redirect("/dashboard");
 
   const now = new Date();
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  // ── Boundaries para queries de Order (DateTime, Prisma convierte a UTC) ──
   const startOf30 = new Date(now);
   startOf30.setDate(now.getDate() - 29);
   startOf30.setHours(0, 0, 0, 0);
@@ -84,6 +158,19 @@ export default async function MetricasPage() {
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
+  // ── Boundaries para queries de StoreView (String "YYYY-MM-DD" UTC) ──
+  const startOf30Str = startOf30.toISOString().slice(0, 10);
+
+  const utcY = now.getUTCFullYear();
+  const utcM = now.getUTCMonth(); // 0-indexed
+  const startOfMonthStr = `${utcY}-${String(utcM + 1).padStart(2, "0")}-01`;
+
+  const prevY = utcM === 0 ? utcY - 1 : utcY;
+  const prevM = utcM === 0 ? 11 : utcM - 1;
+  const lastMonthStr = `${prevY}-${String(prevM + 1).padStart(2, "0")}-01`;
+  const endOfLastMonthStr = new Date(Date.UTC(utcY, utcM, 0)).toISOString().slice(0, 10);
+
+  // ── Todas las queries en paralelo ──
   const [
     orders30,
     ordersThisMonth,
@@ -92,181 +179,295 @@ export default async function MetricasPage() {
     reviewStats,
     affiliateCount,
     ordersByStatus,
+    viewsThisMonth,
+    viewsLastMonth,
+    views30raw,
+    pushSubscribers,
+    pushCampaigns7d,
+    pushCampaignsTotal,
+    leadsThisMonth,
+    leadsTotal,
+    leadsConfirmed,
   ] = await Promise.all([
+    // Pedidos últimos 30 días (para gráfico)
     prisma.order.findMany({
-      where: { storeId: store.id, createdAt: { gte: startOf30 }, status: { not: "CANCELLED" } },
+      where: {
+        storeId: store.id,
+        createdAt: { gte: startOf30 },
+        status: { not: "CANCELLED" },
+      },
       select: { total: true, createdAt: true },
       orderBy: { createdAt: "asc" },
     }),
+    // Ingresos este mes
     prisma.order.aggregate({
-      where: { storeId: store.id, createdAt: { gte: startOfMonth }, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+      where: {
+        storeId: store.id,
+        createdAt: { gte: startOfMonth },
+        status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] },
+      },
       _sum: { total: true },
       _count: true,
     }),
+    // Ingresos mes anterior
     prisma.order.aggregate({
-      where: { storeId: store.id, createdAt: { gte: startOfLastMonth, lte: endOfLastMonth }, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+      where: {
+        storeId: store.id,
+        createdAt: { gte: startOfLastMonth, lte: endOfLastMonth },
+        status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] },
+      },
       _sum: { total: true },
       _count: true,
     }),
+    // Top productos vendidos
     prisma.orderItem.groupBy({
       by: ["productId"],
-      where: { order: { storeId: store.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } } },
+      where: {
+        order: {
+          storeId: store.id,
+          status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] },
+        },
+      },
       _sum: { quantity: true },
-      _count: true,
       orderBy: { _sum: { quantity: "desc" } },
       take: 5,
     }),
+    // Reseñas
     prisma.review.aggregate({
       where: { product: { storeId: store.id } },
       _avg: { rating: true },
       _count: true,
     }),
+    // Afiliados activos
     prisma.affiliate.count({ where: { storeId: store.id, isActive: true } }),
+    // Pedidos agrupados por estado
     prisma.order.groupBy({
       by: ["status"],
       where: { storeId: store.id },
       _count: true,
     }),
+    // Visitas este mes
+    prisma.storeView.aggregate({
+      where: { storeId: store.id, date: { gte: startOfMonthStr } },
+      _sum: { count: true },
+    }),
+    // Visitas mes anterior
+    prisma.storeView.aggregate({
+      where: { storeId: store.id, date: { gte: lastMonthStr, lte: endOfLastMonthStr } },
+      _sum: { count: true },
+    }),
+    // Visitas últimos 30 días (para gráfico)
+    prisma.storeView.findMany({
+      where: { storeId: store.id, date: { gte: startOf30Str } },
+      select: { date: true, count: true },
+      orderBy: { date: "asc" },
+    }),
+    // Push: suscriptores activos
+    prisma.storeSubscription.count({ where: { storeId: store.id } }),
+    // Push: campañas enviadas esta semana
+    prisma.pushCampaign.count({ where: { storeId: store.id, createdAt: { gte: weekAgo } } }),
+    // Push: total historial
+    prisma.pushCampaign.count({ where: { storeId: store.id } }),
+    // Leads este mes
+    prisma.lead.count({ where: { storeId: store.id, createdAt: { gte: startOfMonth } } }),
+    // Leads total
+    prisma.lead.count({ where: { storeId: store.id } }),
+    // Leads confirmados (venta concretada)
+    prisma.lead.count({ where: { storeId: store.id, status: "CONFIRMED" } }),
   ]);
 
-  // Build product names for top products
+  // ── Nombres de productos para el top ──
   const productIds = topProducts.map((p) => p.productId);
   const productNames = productIds.length
-    ? await prisma.product.findMany({ where: { id: { in: productIds } }, select: { id: true, name: true } })
+    ? await prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, name: true },
+      })
     : [];
   const nameMap = Object.fromEntries(productNames.map((p) => [p.id, p.name]));
 
-  // Build 30-day chart data
+  // ── Datos para gráfico de ingresos (30 días) ──
   const dayMap = new Map<string, number>();
   for (let i = 0; i < 30; i++) {
     const d = new Date(startOf30);
     d.setDate(startOf30.getDate() + i);
-    const key = `${d.getDate()}/${d.getMonth() + 1}`;
-    dayMap.set(key, 0);
+    dayMap.set(`${d.getDate()}/${d.getMonth() + 1}`, 0);
   }
   for (const order of orders30) {
     const d = new Date(order.createdAt);
     const key = `${d.getDate()}/${d.getMonth() + 1}`;
     dayMap.set(key, (dayMap.get(key) ?? 0) + order.total);
   }
-  const chartData = [...dayMap.entries()].map(([label, value]) => ({ label, value }));
+  const revenueChartData = [...dayMap.entries()].map(([label, value]) => ({ label, value }));
 
+  // ── Datos para gráfico de visitas (30 días, alineado con el de ingresos) ──
+  const visitMap = new Map<string, { label: string; count: number }>();
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(startOf30);
+    d.setDate(startOf30.getDate() + i);
+    visitMap.set(d.toISOString().slice(0, 10), {
+      label: `${d.getDate()}/${d.getMonth() + 1}`,
+      count: 0,
+    });
+  }
+  for (const v of views30raw) {
+    const entry = visitMap.get(v.date);
+    if (entry) entry.count = v.count;
+  }
+  const visitsChartData = [...visitMap.values()].map(({ label, count }) => ({
+    label,
+    value: count,
+  }));
+
+  // ── Métricas calculadas ──
   const thisMonthRevenue = ordersThisMonth._sum.total ?? 0;
   const lastMonthRevenue = ordersLastMonth._sum.total ?? 0;
-  const revDiff = lastMonthRevenue > 0
-    ? Math.round(((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
-    : null;
+  const revDiff =
+    lastMonthRevenue > 0
+      ? Math.round(((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
+      : null;
 
   const totalOrders30 = orders30.length;
   const totalRevenue30 = orders30.reduce((s, o) => s + o.total, 0);
   const avgTicket = totalOrders30 > 0 ? totalRevenue30 / totalOrders30 : 0;
 
+  const totalViews30 = visitsChartData.reduce((s, v) => s + v.value, 0);
+  const totalViewsThisMonth = viewsThisMonth._sum.count ?? 0;
+  const totalViewsLastMonth = viewsLastMonth._sum.count ?? 0;
+  const viewsDiff =
+    totalViewsLastMonth > 0
+      ? Math.round(((totalViewsThisMonth - totalViewsLastMonth) / totalViewsLastMonth) * 100)
+      : null;
+
+  const conversionRate =
+    totalViews30 > 0 ? ((totalOrders30 / totalViews30) * 100).toFixed(1) : null;
+
   const totalOrdersAllStatuses = ordersByStatus.reduce((s, o) => s + o._count, 0);
 
+  const leadsConversionRate =
+    leadsTotal > 0 ? Math.round((leadsConfirmed / leadsTotal) * 100) : null;
+
+  // ── Render ──
   return (
     <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id}>
-      <div className="mx-auto w-full max-w-6xl">
-        <div className="mb-8">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
+
+        {/* Header */}
+        <div>
           <h1 className="text-2xl font-bold text-gray-900">Métricas</h1>
-          <p className="mt-1 text-sm text-gray-500">Resumen de rendimiento de <strong>{store.name}</strong></p>
+          <p className="mt-1 text-sm text-gray-500">
+            Rendimiento de <strong>{store.name}</strong> — últimos 30 días
+          </p>
         </div>
 
-        {/* KPIs */}
-        <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {[
-            {
-              label: "Ingresos este mes",
-              value: money(thisMonthRevenue),
-              sub: revDiff !== null
-                ? `${revDiff >= 0 ? "+" : ""}${revDiff}% vs mes anterior`
-                : "Primer mes",
-              subColor: revDiff !== null && revDiff >= 0 ? "text-green-600" : "text-red-500",
-              icon: TrendingUp,
-              iconBg: "bg-green-50 text-green-600",
-            },
-            {
-              label: "Pedidos (30 días)",
-              value: totalOrders30,
-              sub: `${money(totalRevenue30)} total`,
-              subColor: "text-gray-400",
-              icon: ShoppingBag,
-              iconBg: "bg-indigo-50 text-indigo-600",
-            },
-            {
-              label: "Ticket promedio",
-              value: money(avgTicket),
-              sub: "últimos 30 días",
-              subColor: "text-gray-400",
-              icon: Package,
-              iconBg: "bg-blue-50 text-blue-600",
-            },
-            {
-              label: "Reseñas",
-              value: reviewStats._count > 0
-                ? `${(reviewStats._avg.rating ?? 0).toFixed(1)} ⭐`
-                : "Sin reseñas",
-              sub: reviewStats._count > 0
-                ? `${reviewStats._count} opinión${reviewStats._count !== 1 ? "es" : ""}`
-                : "",
-              subColor: "text-gray-400",
-              icon: Star,
-              iconBg: "bg-yellow-50 text-yellow-500",
-            },
-          ].map(({ label, value, sub, subColor, icon: Icon, iconBg }) => (
-            <div key={label} className="rounded-xl border border-gray-100 bg-white p-5">
-              <div className={`mb-3 inline-flex rounded-lg p-2 ${iconBg}`}>
-                <Icon className="h-4 w-4" />
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{value}</p>
-              <p className="mt-0.5 text-xs text-gray-500">{label}</p>
-              {sub && <p className={`mt-1 text-xs font-semibold ${subColor}`}>{sub}</p>}
-            </div>
-          ))}
+        {/* ── KPIs ── */}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <KPICard
+            label="Ingresos este mes"
+            value={money(thisMonthRevenue)}
+            sub={revDiff === null ? "Primer mes registrado" : undefined}
+            trend={revDiff}
+            icon={TrendingUp}
+            iconBg="bg-green-50 text-green-600"
+          />
+          <KPICard
+            label="Pedidos (30 días)"
+            value={totalOrders30}
+            sub={`Ticket prom. ${money(avgTicket)}`}
+            icon={ShoppingBag}
+            iconBg="bg-indigo-50 text-indigo-600"
+          />
+          <KPICard
+            label="Visitas (30 días)"
+            value={totalViews30.toLocaleString("es-AR")}
+            sub={viewsDiff === null ? "Sin datos del mes anterior" : undefined}
+            trend={viewsDiff}
+            icon={Eye}
+            iconBg="bg-blue-50 text-blue-600"
+          />
+          <KPICard
+            label="Conversión"
+            value={conversionRate !== null ? `${conversionRate}%` : "—"}
+            sub="visitas → pedidos"
+            icon={MousePointerClick}
+            iconBg="bg-emerald-50 text-emerald-600"
+          />
         </div>
 
-        {/* Bar chart */}
-        <div className="mb-6 rounded-xl border border-gray-100 bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="font-bold text-gray-900">Ingresos diarios</h2>
-              <p className="text-xs text-gray-400">Últimos 30 días · azul oscuro = última semana</p>
-            </div>
-            <p className="text-lg font-black text-indigo-600">{money(totalRevenue30)}</p>
-          </div>
-          {totalRevenue30 > 0 ? (
-            <BarChart data={chartData} />
-          ) : (
-            <div className="flex h-32 items-center justify-center text-sm text-gray-400">
-              Sin ventas en los últimos 30 días
-            </div>
-          )}
-        </div>
-
+        {/* ── Gráficos ── */}
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Top productos */}
-          <div className="rounded-xl border border-gray-100 bg-white p-6">
-            <h2 className="mb-4 font-bold text-gray-900">Productos más vendidos</h2>
-            {topProducts.length === 0 ? (
-              <p className="text-sm text-gray-400 py-4 text-center">Sin ventas confirmadas aún</p>
+          <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-bold text-gray-900">Ingresos diarios</h2>
+              <p className="text-lg font-black text-green-600">{money(totalRevenue30)}</p>
+            </div>
+            <p className="text-xs text-gray-400 mb-5">
+              Últimos 30 días · verde oscuro = última semana
+            </p>
+            {totalRevenue30 > 0 ? (
+              <BarChart data={revenueChartData} color="#16a34a" lightColor="#bbf7d0" />
             ) : (
-              <div className="space-y-3">
+              <div className="flex h-32 items-center justify-center text-sm text-gray-400">
+                Sin ventas en los últimos 30 días
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-bold text-gray-900">Visitas diarias</h2>
+              <p className="text-lg font-black text-blue-600">
+                {totalViews30.toLocaleString("es-AR")}
+              </p>
+            </div>
+            <p className="text-xs text-gray-400 mb-5">
+              Últimos 30 días · azul oscuro = última semana
+            </p>
+            {totalViews30 > 0 ? (
+              <BarChart data={visitsChartData} color="#2563eb" lightColor="#bfdbfe" />
+            ) : (
+              <div className="flex h-32 flex-col items-center justify-center gap-2 text-gray-400">
+                <Eye className="h-8 w-8 opacity-20" />
+                <p className="text-sm">El registro de visitas acaba de activarse</p>
+                <p className="text-xs text-gray-300">Los datos aparecerán en las próximas horas</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Productos + Pedidos por estado ── */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <h2 className="mb-5 font-bold text-gray-900">Productos más vendidos</h2>
+            {topProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                <Package className="h-8 w-8 opacity-20 mb-2" />
+                <p className="text-sm">Sin ventas confirmadas aún</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
                 {topProducts.map((p, i) => {
                   const maxQty = topProducts[0]._sum.quantity ?? 1;
                   const qty = p._sum.quantity ?? 0;
                   const pct = Math.round((qty / maxQty) * 100);
                   return (
                     <div key={p.productId}>
-                      <div className="mb-1 flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 text-xs font-bold text-gray-400">#{i + 1}</span>
-                          <span className="font-medium text-gray-800 truncate max-w-[180px]">
+                      <div className="mb-1.5 flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-5 shrink-0 text-xs font-bold text-gray-400">
+                            #{i + 1}
+                          </span>
+                          <span className="font-medium text-gray-800 truncate">
                             {nameMap[p.productId] ?? "Producto"}
                           </span>
                         </div>
-                        <span className="font-bold text-gray-700 shrink-0">{qty} u.</span>
+                        <span className="ml-2 shrink-0 font-bold text-gray-700">{qty} u.</span>
                       </div>
                       <div className="h-2 rounded-full bg-gray-100">
-                        <div className="h-2 rounded-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
+                        <div
+                          className="h-2 rounded-full bg-indigo-500 transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
                       </div>
                     </div>
                   );
@@ -275,52 +476,173 @@ export default async function MetricasPage() {
             )}
           </div>
 
-          {/* Pedidos por estado */}
-          <div className="rounded-xl border border-gray-100 bg-white p-6">
-            <div className="mb-4 flex items-center justify-between">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="flex items-center justify-between mb-5">
               <h2 className="font-bold text-gray-900">Pedidos por estado</h2>
-              <span className="text-sm text-gray-400">{totalOrdersAllStatuses} total</span>
+              <span className="text-sm font-semibold text-gray-400">
+                {totalOrdersAllStatuses} total
+              </span>
             </div>
             {ordersByStatus.length === 0 ? (
-              <p className="text-sm text-gray-400 py-4 text-center">Sin pedidos aún</p>
+              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                <ShoppingBag className="h-8 w-8 opacity-20 mb-2" />
+                <p className="text-sm">Sin pedidos aún</p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {ordersByStatus
                   .sort((a, b) => b._count - a._count)
                   .map((s) => {
-                    const pct = totalOrdersAllStatuses > 0
-                      ? Math.round((s._count / totalOrdersAllStatuses) * 100)
-                      : 0;
+                    const pct =
+                      totalOrdersAllStatuses > 0
+                        ? Math.round((s._count / totalOrdersAllStatuses) * 100)
+                        : 0;
                     return (
                       <div key={s.status}>
                         <div className="mb-1 flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2">
-                            <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${statusColor(s.status)}`} />
+                            <span
+                              className={`h-2.5 w-2.5 rounded-full shrink-0 ${statusColor(
+                                s.status
+                              )}`}
+                            />
                             <span className="text-gray-700">{statusLabel(s.status)}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-gray-900">{s._count}</span>
-                            <span className="text-xs text-gray-400">{pct}%</span>
+                            <span className="w-8 text-right text-xs text-gray-400">{pct}%</span>
                           </div>
                         </div>
-                        <div className="h-2 rounded-full bg-gray-100">
-                          <div className={`h-2 rounded-full transition-all ${statusColor(s.status)}`} style={{ width: `${pct}%` }} />
+                        <div className="h-1.5 rounded-full bg-gray-100">
+                          <div
+                            className={`h-1.5 rounded-full transition-all ${statusColor(s.status)}`}
+                            style={{ width: `${pct}%` }}
+                          />
                         </div>
                       </div>
                     );
                   })}
               </div>
             )}
+          </div>
+        </div>
 
-            <div className="mt-6 flex items-center gap-2 rounded-xl bg-purple-50 p-3">
-              <Users className="h-4 w-4 text-purple-600 shrink-0" />
+        {/* ── Push · Reseñas · Afiliados ── */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Push Notifications */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <Bell className="h-4 w-4 text-indigo-500" />
+              <h2 className="font-bold text-gray-900">Push Notifications</h2>
+            </div>
+            <div className="mb-4">
+              <p className="text-3xl font-black text-gray-900">{pushSubscribers}</p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {pushSubscribers === 1 ? "suscriptor activo" : "suscriptores activos"}
+              </p>
+            </div>
+            <div className="space-y-3 border-t border-gray-50 pt-4">
               <div>
-                <p className="text-sm font-bold text-purple-800">{affiliateCount} afiliado{affiliateCount !== 1 ? "s" : ""} activo{affiliateCount !== 1 ? "s" : ""}</p>
-                <p className="text-xs text-purple-500">vendiendo en tu tienda</p>
+                <div className="flex items-center justify-between text-sm mb-1.5">
+                  <span className="text-gray-500">Esta semana</span>
+                  <span className="font-bold text-gray-900">{pushCampaigns7d} / 3</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-gray-100">
+                  <div
+                    className={`h-1.5 rounded-full transition-all ${
+                      pushCampaigns7d >= 3 ? "bg-red-400" : "bg-indigo-500"
+                    }`}
+                    style={{ width: `${Math.min(100, (pushCampaigns7d / 3) * 100)}%` }}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Historial total</span>
+                <span className="font-bold text-gray-900">
+                  {pushCampaignsTotal} campaña{pushCampaignsTotal !== 1 ? "s" : ""}
+                </span>
               </div>
             </div>
           </div>
+
+          {/* Reseñas */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <Star className="h-4 w-4 text-yellow-500" />
+              <h2 className="font-bold text-gray-900">Reseñas</h2>
+            </div>
+            {reviewStats._count > 0 ? (
+              <div>
+                <div className="flex items-end gap-2 mb-1">
+                  <p className="text-3xl font-black text-gray-900">
+                    {(reviewStats._avg.rating ?? 0).toFixed(1)}
+                  </p>
+                  <div className="flex gap-0.5 mb-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        className={`h-4 w-4 ${
+                          s <= Math.round(reviewStats._avg.rating ?? 0)
+                            ? "fill-yellow-400 text-yellow-400"
+                            : "text-gray-200"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500">
+                  {reviewStats._count} opinión{reviewStats._count !== 1 ? "es" : ""}
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-6 text-gray-400">
+                <Star className="h-8 w-8 opacity-20 mb-2" />
+                <p className="text-sm">Sin reseñas aún</p>
+              </div>
+            )}
+          </div>
+
+          {/* Afiliados + Leads */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <Users className="h-4 w-4 text-purple-500" />
+              <h2 className="font-bold text-gray-900">Afiliados</h2>
+            </div>
+            <div className="mb-4">
+              <p className="text-3xl font-black text-gray-900">{affiliateCount}</p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                afiliado{affiliateCount !== 1 ? "s" : ""} activo{affiliateCount !== 1 ? "s" : ""}
+              </p>
+            </div>
+
+            {leadsTotal > 0 && (
+              <div className="border-t border-gray-50 pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <MessageSquare className="h-3.5 w-3.5 text-orange-500" />
+                  <p className="text-sm font-semibold text-gray-700">Consultas</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500">Este mes</span>
+                    <span className="font-bold text-gray-900">{leadsThisMonth}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500">Confirmadas</span>
+                    <span className="font-bold text-green-600">
+                      {leadsConfirmed}
+                      {leadsConversionRate !== null && (
+                        <span className="ml-1 text-xs font-normal text-gray-400">
+                          ({leadsConversionRate}%)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
       </div>
     </DashboardLayout>
   );

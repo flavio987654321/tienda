@@ -193,6 +193,7 @@ model Store {
   storeReports        StoreReport[]
   storeSubscriptions  StoreSubscription[]
   pushCampaigns       PushCampaign[]
+  storeViews          StoreView[]
 }
 
 // Suscripciones push de visitantes anónimos a tiendas específicas.
@@ -679,6 +680,20 @@ model Lead {
 
   @@index([storeId, createdAt(sort: Desc)])
   @@index([affiliateId])
+}
+
+// Visitas diarias a la tienda — un registro por día por tienda.
+// "date" es la fecha UTC en formato "YYYY-MM-DD".
+// Se hace upsert (increment) desde el endpoint /api/store-views/[slug].
+model StoreView {
+  id      String @id @default(cuid())
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  date    String // "2026-06-13" UTC
+  count   Int    @default(0)
+
+  @@unique([storeId, date])
+  @@index([storeId, date(sort: Desc)])
 }
 
 model StoreReport {
