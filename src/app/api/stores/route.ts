@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, isNaN(rawPage) ? 1 : rawPage);
   const limit = Math.min(48, Math.max(1, isNaN(rawLimit) ? 12 : rawLimit));
   const category = searchParams.get("category") ?? "";
+  const tipoTienda = searchParams.get("tipoTienda") ?? "";
   const featured = searchParams.get("featured") === "true";
   const slugFilter = searchParams.get("slug") ?? "";
 
@@ -16,6 +17,7 @@ export async function GET(req: NextRequest) {
     isPublished: true,
     ...(slugFilter ? { slug: slugFilter } : {}),
     ...(category ? { products: { some: { category, isActive: true } } } : {}),
+    ...(tipoTienda ? { tipoTienda } : {}),
   };
 
   const [stores, total] = await Promise.all([
@@ -79,6 +81,7 @@ export async function GET(req: NextRequest) {
       coverImg,
       heroImg,
       isVerified: s.isVerified,
+      tipoTienda: s.tipoTienda,
       updatedAt: s.updatedAt.getTime(),
     };
   });
