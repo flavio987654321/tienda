@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useId } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -91,6 +91,7 @@ export default function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const touchStartX = useRef<number | null>(null);
+  const instanceId = useId();
 
   const [pendingAffiliateCount, setPendingAffiliateCount] = useState(initialPendingAffiliateCount);
   const [lowStockCount, setLowStockCount] = useState(initialLowStockCount);
@@ -151,7 +152,7 @@ export default function DashboardLayout({
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
-    const ch = supabase.channel("dashboard-layout-affiliates");
+    const ch = supabase.channel(`dashboard-affiliates:${instanceId}`);
     ch.on("postgres_changes" as Parameters<typeof ch.on>[0], { event: "*", schema: "public", table: "Affiliate" }, () => fetchAffiliateCount());
     ch.subscribe();
     return () => { supabase.removeChannel(ch); };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase/client";
 import { Bell, X, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -49,6 +49,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const instanceId = useId();
 
   useEffect(() => {
     fetch("/api/notifications")
@@ -65,7 +66,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
     const supabase = createSupabaseBrowserClient();
 
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(`notifications:${userId}:${instanceId}`)
       .on(
         "postgres_changes",
         {
