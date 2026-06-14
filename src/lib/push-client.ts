@@ -127,6 +127,22 @@ export async function subscribeToStore(storeId: string, storeSlug: string): Prom
     if (!res.ok) return false;
 
     localStorage.setItem(STORE_SUB_KEY(storeId), "1");
+
+    // Remove any old root-scope subscription from the server to prevent duplicate pushes.
+    // This happens during migration: root SW had endpoint A, scoped SW now has endpoint B.
+    // Fire-and-forget — failure is non-fatal, worst case is one extra notification.
+    const rootReg = await navigator.serviceWorker.ready;
+    if (rootReg !== reg) {
+      const rootSub = await rootReg.pushManager.getSubscription();
+      if (rootSub && rootSub.endpoint !== json.endpoint) {
+        fetch("/api/push/store-subscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ storeId, endpoint: rootSub.endpoint }),
+        }).catch(() => {});
+      }
+    }
+
     return true;
   } catch {
     return false;
@@ -137,20 +153,37 @@ export async function unsubscribeFromStore(storeId: string, storeSlug: string): 
   try {
     const reg = await getStoreReg(storeSlug);
     const sub = await reg.pushManager.getSubscription();
-    if (!sub) {
+
+    // Also check root SW for old subscriptions (migration scenario)
+    const rootReg = await navigator.serviceWorker.ready;
+    const rootSub = rootReg !== reg ? await rootReg.pushManager.getSubscription() : null;
+
+    if (!sub && !rootSub) {
       localStorage.removeItem(STORE_SUB_KEY(storeId));
       return true;
     }
 
-    const res = await fetch("/api/push/store-subscribe", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ storeId, endpoint: sub.endpoint }),
-    });
-    // Only clear local state if server confirmed deletion; otherwise the UI stays
-    // "subscribed" and the user can retry — prevents orphaned server subscriptions
-    // that keep delivering pushes after the user thinks they unsubscribed (iOS bug).
-    if (!res.ok) return false;
+    // Delete scoped endpoint from server
+    if (sub) {
+      const res = await fetch("/api/push/store-subscribe", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeId, endpoint: sub.endpoint }),
+      });
+      // Only clear local state if server confirmed deletion; otherwise the UI stays
+      // "subscribed" and the user can retry — prevents orphaned server subscriptions
+      // that keep delivering pushes after the user thinks they unsubscribed (iOS bug).
+      if (!res.ok) return false;
+    }
+
+    // Also delete old root-scope endpoint if it's a different endpoint
+    if (rootSub && rootSub.endpoint !== sub?.endpoint) {
+      fetch("/api/push/store-subscribe", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeId, endpoint: rootSub.endpoint }),
+      }).catch(() => {});
+    }
 
     localStorage.removeItem(STORE_SUB_KEY(storeId));
     return true;
