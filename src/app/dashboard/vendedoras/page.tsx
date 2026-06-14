@@ -191,7 +191,7 @@ export default async function VendedorasPage() {
         </section>
       )}
 
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {[
           { label: "Pendientes", value: pending.length, icon: Clock, color: "text-yellow-600 bg-yellow-50" },
           { label: "Activos", value: active.length, icon: UserCheck, color: "text-indigo-600 bg-indigo-50" },

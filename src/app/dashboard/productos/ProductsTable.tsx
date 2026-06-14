@@ -398,61 +398,64 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
       )}
 
       {/* Filters + view toggle */}
-      <div className="flex gap-2 items-center flex-wrap">
-        <div className="relative flex-1 min-w-44">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-          <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Buscar por nombre o categoría..."
-            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
-          {search && <button onClick={() => { setSearch(""); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><X className="h-3.5 w-3.5" /></button>}
+      <div className="space-y-2">
+        {/* Fila 1: búsqueda + limpiar + vista */}
+        <div className="flex gap-2 items-center">
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Buscar por nombre o categoría..."
+              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+            {search && <button onClick={() => { setSearch(""); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><X className="h-3.5 w-3.5" /></button>}
+          </div>
+          {hasFilters && (
+            <button onClick={clearFilters} className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 px-2 shrink-0">
+              <X className="h-3.5 w-3.5" /> Limpiar
+            </button>
+          )}
+          <div className="shrink-0 flex border border-gray-200 rounded-xl overflow-hidden">
+            <button onClick={() => setViewMode("table")} className={`p-2.5 transition-colors ${viewMode === "table" ? "bg-indigo-50 text-indigo-600" : "bg-white text-gray-400 hover:text-gray-600"}`}>
+              <List className="h-4 w-4" />
+            </button>
+            <button onClick={() => setViewMode("grid")} className={`p-2.5 transition-colors ${viewMode === "grid" ? "bg-indigo-50 text-indigo-600" : "bg-white text-gray-400 hover:text-gray-600"}`}>
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1); }}
-          className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
-          <option value="all">Todas las categorías</option>
-          {categories.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-        </select>
-
-        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-          className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
-          <option value="all">Todos los estados</option>
-          <option value="active">Activos</option>
-          <option value="hidden">Ocultos</option>
-        </select>
-
-        {showStock && (
-          <select value={stockFilter} onChange={e => { setStockFilter(e.target.value); setPage(1); }}
-            className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
-            <option value="all">Todo el stock</option>
-            <option value="out">Sin stock (0 u.)</option>
-            <option value="low">Stock bajo (1–4 u.)</option>
-            <option value="critical">Stock crítico (0–4 u.)</option>
+        {/* Fila 2: selects — 2 columnas en mobile, flex en desktop */}
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+          <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1); }}
+            className="w-full sm:w-auto border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
+            <option value="all">Todas las categorías</option>
+            {categories.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
           </select>
-        )}
 
-        <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
-          className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
-          <option value="newest">Más recientes</option>
-          <option value="price_asc">Precio ↑</option>
-          <option value="price_desc">Precio ↓</option>
-          <option value="name_az">Nombre A→Z</option>
-          <option value="stock_asc">Stock ↑</option>
-        </select>
+          <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+            className="w-full sm:w-auto border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
+            <option value="all">Todos los estados</option>
+            <option value="active">Activos</option>
+            <option value="hidden">Ocultos</option>
+          </select>
 
-        {hasFilters && (
-          <button onClick={clearFilters} className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 px-2">
-            <X className="h-3.5 w-3.5" /> Limpiar
-          </button>
-        )}
+          {showStock && (
+            <select value={stockFilter} onChange={e => { setStockFilter(e.target.value); setPage(1); }}
+              className="w-full sm:w-auto border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
+              <option value="all">Todo el stock</option>
+              <option value="out">Sin stock (0 u.)</option>
+              <option value="low">Stock bajo (1–4 u.)</option>
+              <option value="critical">Stock crítico (0–4 u.)</option>
+            </select>
+          )}
 
-        {/* View toggle */}
-        <div className="ml-auto flex border border-gray-200 rounded-xl overflow-hidden">
-          <button onClick={() => setViewMode("table")} className={`p-2.5 transition-colors ${viewMode === "table" ? "bg-indigo-50 text-indigo-600" : "bg-white text-gray-400 hover:text-gray-600"}`}>
-            <List className="h-4 w-4" />
-          </button>
-          <button onClick={() => setViewMode("grid")} className={`p-2.5 transition-colors ${viewMode === "grid" ? "bg-indigo-50 text-indigo-600" : "bg-white text-gray-400 hover:text-gray-600"}`}>
-            <LayoutGrid className="h-4 w-4" />
-          </button>
+          <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
+            className="w-full sm:w-auto border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
+            <option value="newest">Más recientes</option>
+            <option value="price_asc">Precio ↑</option>
+            <option value="price_desc">Precio ↓</option>
+            <option value="name_az">Nombre A→Z</option>
+            <option value="stock_asc">Stock ↑</option>
+          </select>
         </div>
       </div>
 
