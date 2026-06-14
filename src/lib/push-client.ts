@@ -71,13 +71,31 @@ export function isPushSupported(): boolean {
 const STORE_SUB_KEY = (storeId: string) => `push_store_${storeId}`;
 const STORE_MIGRATED_KEY = (storeSlug: string) => `push_sw_migrated_${storeSlug}`;
 
-// Returns the store-scoped SW registration if active, otherwise the root one.
+// Returns the store-scoped SW registration, waiting up to 3s for it to activate.
+// Falls back to the root SW only if the scoped one never activates.
 // Using the store-scoped registration is important on Android: Chrome attributes
 // push notifications to the PWA (not "Chrome • domain") only when the subscription
-// was created under the same scope as the installed manifest.
+// was created under the SW matching the installed manifest scope.
 async function getStoreReg(storeSlug: string): Promise<ServiceWorkerRegistration> {
   const scopedReg = await navigator.serviceWorker.getRegistration(`/tienda/${storeSlug}`);
-  return (scopedReg?.active ? scopedReg : null) ?? (await navigator.serviceWorker.ready);
+  if (!scopedReg) return navigator.serviceWorker.ready;
+  if (scopedReg.active) return scopedReg;
+
+  // SW registered but not yet active — wait for it (covers first-visit race condition)
+  await new Promise<void>((resolve) => {
+    const timeout = setTimeout(resolve, 3000);
+    const sw = scopedReg.installing ?? scopedReg.waiting;
+    if (!sw) { clearTimeout(timeout); resolve(); return; }
+    sw.addEventListener("statechange", function handler() {
+      if (sw.state === "activated") {
+        clearTimeout(timeout);
+        sw.removeEventListener("statechange", handler);
+        resolve();
+      }
+    });
+  });
+
+  return scopedReg.active ? scopedReg : navigator.serviceWorker.ready;
 }
 
 export async function subscribeToStore(storeId: string, storeSlug: string): Promise<boolean> {

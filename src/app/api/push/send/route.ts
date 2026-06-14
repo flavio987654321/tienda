@@ -85,7 +85,12 @@ export async function POST(req: NextRequest) {
   // URL de destino: si no viene una, apuntar a la tienda
   const targetUrl = url ?? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/tienda/${store.slug}`;
 
-  // Enviar push a todos los suscriptores de la tienda
+  // Guardar en historial ANTES de enviar el push: así cuando el dispositivo
+  // recibe la notificación y fetchea las campañas, el registro ya existe en la DB.
+  const campaign = await prisma.pushCampaign.create({
+    data: { storeId: store.id, title, body: message, url: targetUrl, sentCount: 0 },
+  });
+
   const sentCount = await sendPushToStore(store.id, {
     title,
     body: message,
@@ -95,10 +100,13 @@ export async function POST(req: NextRequest) {
     storeName: store.name ?? undefined,
   });
 
-  // Guardar en historial
-  await prisma.pushCampaign.create({
-    data: { storeId: store.id, title, body: message, url: targetUrl, sentCount },
-  });
+  // Actualizar el conteo real de entregas
+  if (sentCount > 0) {
+    await prisma.pushCampaign.update({
+      where: { id: campaign.id },
+      data: { sentCount },
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ ok: true, sentCount });
 }
