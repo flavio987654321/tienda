@@ -213,6 +213,47 @@ export async function sendStoreReportAdminEmail({
   });
 }
 
+export async function sendPasswordResetEmail({
+  to,
+  resetLink,
+}: {
+  to: string;
+  resetLink: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Recuperá tu contraseña — TiendaApps",
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#6366f1;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#c7d2fe;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Recuperá tu contraseña</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">
+          Recibimos una solicitud para restablecer la contraseña de tu cuenta.
+          Hacé click en el botón de abajo para crear una nueva contraseña.
+        </p>
+        <div style="text-align:center;margin-bottom:28px;">
+          <a href="${resetLink}"
+             style="display:inline-block;background:#6366f1;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            Restablecer contraseña
+          </a>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:24px;">
+          <p style="font-size:13px;color:#6b7280;margin:0;">
+            Este link es válido por <strong>24 horas</strong>. Si no solicitaste este cambio, podés ignorar este email — tu contraseña no se modificará.
+          </p>
+        </div>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">
+          TiendaApps · soporte@tiendaapps.com
+        </p>
+      </div>
+    `,
+  });
+}
+
 export async function sendSubscriptionConfirmationEmail({
   to,
   userName,

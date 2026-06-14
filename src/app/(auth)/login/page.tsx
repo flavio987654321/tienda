@@ -63,21 +63,13 @@ function LoginForm() {
       return;
     }
 
-    if (!hasSupabaseBrowserConfig()) {
-      setError("Falta configurar Supabase en las variables de entorno.");
-      return;
-    }
-
     setResetting(true);
-    const redirectTo = `${window.location.origin}/actualizar-contrasena`;
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
-
-    if (resetError) {
-      setError("No se pudo enviar el mail de recuperacion.");
-    } else {
-      setInfo("Te enviamos un link para recuperar tu contrasena. Revisa tu email.");
-    }
-
+    await fetch("/api/auth/reset-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim() }),
+    });
+    setInfo("Te enviamos un link para recuperar tu contraseña. Revisa tu email.");
     setResetting(false);
   }
 
