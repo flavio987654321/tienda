@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { BadgeCheck, Eye, Search, ChevronLeft, ChevronRight, Package, ArrowLeft } from "lucide-react";
+import {
+  BadgeCheck, Eye, Search, ChevronLeft, ChevronRight,
+  Package, ArrowLeft, LayoutGrid, Shirt, Car, Monitor,
+  Home, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, Store,
+} from "lucide-react";
 import { STORE_TYPES } from "@/lib/storeTypes";
+import type { LucideIcon } from "lucide-react";
 
 type StoreItem = {
   id: string;
@@ -22,7 +27,21 @@ type StoreItem = {
   updatedAt: number;
 };
 
-const ALL_TAB = { id: "TODAS", label: "Todas", emoji: "✦" };
+const TYPE_ICONS: Record<string, LucideIcon> = {
+  TODAS:     LayoutGrid,
+  ROPA:      Shirt,
+  AUTOS:     Car,
+  TECH:      Monitor,
+  HOGAR:     Home,
+  ALIMENTOS: Utensils,
+  BELLEZA:   Sparkles,
+  DEPORTE:   Dumbbell,
+  MASCOTAS:  PawPrint,
+  LIBROS:    BookOpen,
+  GENERAL:   Store,
+};
+
+const ALL_TAB = { id: "TODAS", label: "Todas" };
 
 export default function TiendasPage() {
   const [stores, setStores] = useState<StoreItem[]>([]);
@@ -32,6 +51,7 @@ export default function TiendasPage() {
   const [tipo, setTipo] = useState("TODAS");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const fetchStores = useCallback(async (p: number, t: string) => {
     setLoading(true);
@@ -57,26 +77,35 @@ export default function TiendasPage() {
     setPage(1);
   }
 
+  function scrollTabs(dir: "left" | "right") {
+    scrollRef.current?.scrollBy({ left: dir === "right" ? 220 : -220, behavior: "smooth" });
+  }
+
   const filtered = search.trim()
     ? stores.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
     : stores;
 
-  const tabs = [ALL_TAB, ...STORE_TYPES.map((t) => ({ id: t.id, label: t.label, emoji: t.emoji }))];
+  const tabs = [ALL_TAB, ...STORE_TYPES.map((t) => ({ id: t.id, label: t.label }))];
   const activeConfig = STORE_TYPES.find((t) => t.id === tipo);
 
   return (
     <div className="min-h-screen bg-[#f8f7f5]">
       <style>{`
-        .tab-pill { transition: background .18s, color .18s, box-shadow .18s; }
         .store-card { transition: transform .25s cubic-bezier(.4,0,.2,1), box-shadow .25s cubic-bezier(.4,0,.2,1); }
         .store-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,.10); }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .tabs-scroll::-webkit-scrollbar { display: none; }
+        .tabs-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        .arrow-fade { background: linear-gradient(to right, #f8f7f5 60%, transparent); }
+        .arrow-fade-r { background: linear-gradient(to left, #f8f7f5 60%, transparent); }
       `}</style>
 
       {/* ── HEADER ── */}
       <header className="sticky top-0 z-30 bg-[#f8f7f5]/95 backdrop-blur-md border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-1.5 text-gray-400 hover:text-gray-700 transition-colors group shrink-0">
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 text-gray-400 hover:text-gray-700 transition-colors group shrink-0"
+          >
             <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
             <span className="text-xs font-semibold tracking-widest uppercase hidden sm:block">TiendaApps</span>
           </Link>
@@ -92,25 +121,52 @@ export default function TiendasPage() {
           </div>
         </div>
 
-        {/* Tabs por tipo de negocio */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3 mt-1 flex gap-2 overflow-x-auto scrollbar-hide">
-          {tabs.map((tab) => {
-            const active = tipo === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleTipo(tab.id)}
-                className={`tab-pill shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap border ${
-                  active
-                    ? "bg-gray-900 text-white border-gray-900 shadow-sm"
-                    : "bg-white text-gray-500 border-black/8 hover:border-gray-300 hover:text-gray-800"
-                }`}
-              >
-                <span className="text-base leading-none">{tab.emoji}</span>
-                {tab.label}
-              </button>
-            );
-          })}
+        {/* ── TABS CON FLECHAS ── */}
+        <div className="relative max-w-7xl mx-auto">
+          {/* Flecha izquierda */}
+          <div className="arrow-fade absolute left-0 top-0 bottom-0 w-12 z-10 flex items-center pointer-events-none">
+            <button
+              onClick={() => scrollTabs("left")}
+              className="pointer-events-auto ml-1 w-7 h-7 rounded-full bg-white border border-black/10 shadow-sm flex items-center justify-center text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Scroll container */}
+          <div
+            ref={scrollRef}
+            className="tabs-scroll flex gap-2 overflow-x-auto px-10 pb-3 pt-1"
+          >
+            {tabs.map((tab) => {
+              const active = tipo === tab.id;
+              const Icon = TYPE_ICONS[tab.id];
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTipo(tab.id)}
+                  className={`shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap border transition-all duration-150 ${
+                    active
+                      ? "bg-gray-900 text-white border-gray-900 shadow-sm"
+                      : "bg-white text-gray-500 border-black/8 hover:border-gray-300 hover:text-gray-800"
+                  }`}
+                >
+                  {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Flecha derecha */}
+          <div className="arrow-fade-r absolute right-0 top-0 bottom-0 w-12 z-10 flex items-center justify-end pointer-events-none">
+            <button
+              onClick={() => scrollTabs("right")}
+              className="pointer-events-auto mr-1 w-7 h-7 rounded-full bg-white border border-black/10 shadow-sm flex items-center justify-center text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -127,7 +183,14 @@ export default function TiendasPage() {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <span className="text-3xl">{activeConfig?.emoji}</span>
+              {activeConfig && (() => {
+                const Icon = TYPE_ICONS[activeConfig.id];
+                return Icon ? (
+                  <div className="w-10 h-10 rounded-xl bg-white border border-black/8 flex items-center justify-center shadow-sm">
+                    <Icon className="h-5 w-5 text-gray-700" />
+                  </div>
+                ) : null;
+              })()}
               <div>
                 <h1 className="text-2xl font-black text-gray-900 tracking-tight">{activeConfig?.label}</h1>
                 <p className="text-gray-400 text-sm mt-0.5">
@@ -153,7 +216,12 @@ export default function TiendasPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-28">
-            <div className="text-5xl mb-4">{activeConfig?.emoji ?? "🏪"}</div>
+            <div className="w-14 h-14 rounded-2xl bg-white border border-black/8 flex items-center justify-center mx-auto mb-4 shadow-sm">
+              {activeConfig && TYPE_ICONS[activeConfig.id]
+                ? (() => { const Icon = TYPE_ICONS[activeConfig.id]; return <Icon className="h-6 w-6 text-gray-400" />; })()
+                : <Package className="h-6 w-6 text-gray-400" />
+              }
+            </div>
             <h2 className="text-xl font-bold text-gray-600 mb-2">
               {search ? "Sin resultados para esa búsqueda" : "Todavía no hay tiendas en esta categoría"}
             </h2>
@@ -170,7 +238,7 @@ export default function TiendasPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((store) => {
-              const storeType = STORE_TYPES.find((t) => t.id === store.tipoTienda);
+              const storeTypeIcon = TYPE_ICONS[store.tipoTienda];
               return (
                 <Link
                   key={store.id}
@@ -195,7 +263,7 @@ export default function TiendasPage() {
                       aria-hidden="true"
                       title=""
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
 
                     {store.isVerified && (
                       <div className="absolute top-2.5 right-2.5">
@@ -206,17 +274,18 @@ export default function TiendasPage() {
                       </div>
                     )}
 
-                    {storeType && (
-                      <div className="absolute top-2.5 left-2.5">
-                        <span className="text-sm bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full shadow-sm border border-black/5">
-                          {storeType.emoji}
-                        </span>
-                      </div>
-                    )}
+                    {storeTypeIcon && (() => {
+                      const Icon = storeTypeIcon;
+                      return (
+                        <div className="absolute top-2.5 left-2.5 w-7 h-7 rounded-lg bg-white/90 backdrop-blur-sm border border-black/5 shadow-sm flex items-center justify-center">
+                          <Icon className="h-3.5 w-3.5 text-gray-600" />
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Accent bar */}
-                  <div className="h-0.5 w-full" style={{ backgroundColor: store.primaryColor + "60" }} />
+                  <div className="h-0.5" style={{ backgroundColor: store.primaryColor + "80" }} />
 
                   {/* Info */}
                   <div className="p-4">
@@ -257,9 +326,7 @@ export default function TiendasPage() {
             >
               <ChevronLeft className="h-4 w-4" /> Anterior
             </button>
-            <span className="text-sm text-gray-400 tabular-nums font-medium">
-              {page} / {pages}
-            </span>
+            <span className="text-sm text-gray-400 tabular-nums font-medium">{page} / {pages}</span>
             <button
               onClick={() => setPage((p) => Math.min(pages, p + 1))}
               disabled={page === pages}
