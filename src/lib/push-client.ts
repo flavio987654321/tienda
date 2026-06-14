@@ -69,14 +69,24 @@ export function isPushSupported(): boolean {
 // ─── Tienda (visitantes anónimos) ──────────────────────────────────────────
 
 const STORE_SUB_KEY = (storeId: string) => `push_store_${storeId}`;
+const STORE_MIGRATED_KEY = (storeSlug: string) => `push_sw_migrated_${storeSlug}`;
 
-export async function subscribeToStore(storeId: string): Promise<boolean> {
+// Returns the store-scoped SW registration if active, otherwise the root one.
+// Using the store-scoped registration is important on Android: Chrome attributes
+// push notifications to the PWA (not "Chrome • domain") only when the subscription
+// was created under the same scope as the installed manifest.
+async function getStoreReg(storeSlug: string): Promise<ServiceWorkerRegistration> {
+  const scopedReg = await navigator.serviceWorker.getRegistration(`/tienda/${storeSlug}`);
+  return (scopedReg?.active ? scopedReg : null) ?? (await navigator.serviceWorker.ready);
+}
+
+export async function subscribeToStore(storeId: string, storeSlug: string): Promise<boolean> {
   try {
     const keyRes = await fetch("/api/push/vapid-key");
     if (!keyRes.ok) return false;
     const { publicKey } = await keyRes.json();
 
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await getStoreReg(storeSlug);
     let sub = await reg.pushManager.getSubscription();
     if (!sub) {
       sub = await reg.pushManager.subscribe({
@@ -100,20 +110,24 @@ export async function subscribeToStore(storeId: string): Promise<boolean> {
   }
 }
 
-export async function unsubscribeFromStore(storeId: string): Promise<boolean> {
+export async function unsubscribeFromStore(storeId: string, storeSlug: string): Promise<boolean> {
   try {
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await getStoreReg(storeSlug);
     const sub = await reg.pushManager.getSubscription();
     if (!sub) {
       localStorage.removeItem(STORE_SUB_KEY(storeId));
       return true;
     }
 
-    await fetch("/api/push/store-subscribe", {
+    const res = await fetch("/api/push/store-subscribe", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ storeId, endpoint: sub.endpoint }),
     });
+    // Only clear local state if server confirmed deletion; otherwise the UI stays
+    // "subscribed" and the user can retry — prevents orphaned server subscriptions
+    // that keep delivering pushes after the user thinks they unsubscribed (iOS bug).
+    if (!res.ok) return false;
 
     localStorage.removeItem(STORE_SUB_KEY(storeId));
     return true;
@@ -123,13 +137,13 @@ export async function unsubscribeFromStore(storeId: string): Promise<boolean> {
 }
 
 // Devuelve true si localStorage dice suscripto Y el browser tiene suscripción activa.
-export async function isSubscribedToStore(storeId: string): Promise<boolean> {
+export async function isSubscribedToStore(storeId: string, storeSlug: string): Promise<boolean> {
   try {
     if (!localStorage.getItem(STORE_SUB_KEY(storeId))) return false;
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await getStoreReg(storeSlug);
     const sub = await reg.pushManager.getSubscription();
     if (!sub) {
-      // El browser ya no tiene suscripción (permiso revocado), limpiar localStorage
+      // El browser ya no tiene suscripción (permiso revocado o scope cambiado), limpiar localStorage
       localStorage.removeItem(STORE_SUB_KEY(storeId));
       return false;
     }
@@ -137,4 +151,45 @@ export async function isSubscribedToStore(storeId: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// Migrates an existing push subscription to the store-scoped SW.
+// Called on page load: if the user was subscribed under the root SW (before per-store
+// scoped SWs were introduced), silently re-subscribes under the store-scoped SW so
+// Android attributes notifications to the installed PWA instead of "Chrome • domain".
+export async function migrateStoreSubscription(storeId: string, storeSlug: string): Promise<void> {
+  try {
+    if (localStorage.getItem(STORE_MIGRATED_KEY(storeSlug))) return;
+    if (!localStorage.getItem(STORE_SUB_KEY(storeId))) return;
+
+    const scopedReg = await navigator.serviceWorker.getRegistration(`/tienda/${storeSlug}`);
+    if (!scopedReg?.active) return;
+
+    // If store-scoped reg already has a subscription, nothing to migrate
+    const scopedSub = await scopedReg.pushManager.getSubscription();
+    if (scopedSub) {
+      localStorage.setItem(STORE_MIGRATED_KEY(storeSlug), "1");
+      return;
+    }
+
+    // Re-subscribe under the store-scoped SW (no permission dialog — already granted)
+    const keyRes = await fetch("/api/push/vapid-key");
+    if (!keyRes.ok) return;
+    const { publicKey } = await keyRes.json();
+
+    const sub = await scopedReg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+
+    const json = sub.toJSON();
+    const res = await fetch("/api/push/store-subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storeId, endpoint: json.endpoint, keys: json.keys }),
+    });
+    if (res.ok) {
+      localStorage.setItem(STORE_MIGRATED_KEY(storeSlug), "1");
+    }
+  } catch {}
 }

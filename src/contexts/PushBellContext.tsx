@@ -62,10 +62,10 @@ export function PushBellProvider({
   useEffect(() => {
     if (!enabled) return;
     supported.current = isPushSupported();
-    isSubscribedToStore(storeId).then((subscribed) => {
+    isSubscribedToStore(storeId, storeSlug).then((subscribed) => {
       setSubState(subscribed ? "subscribed" : "prompt");
     });
-  }, [storeId, enabled]);
+  }, [storeId, storeSlug, enabled]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -108,7 +108,14 @@ export function PushBellProvider({
     localStorage.setItem(LAST_SEEN_KEY(storeId), String(Date.now()));
     setHasNew(false);
     setDrawerOpen(true);
-  }, [storeId]);
+    // Refetch campaigns every time the drawer opens so the list is always fresh,
+    // even when the push arrived while the app was in background/closed (SW can't
+    // deliver PUSH_RECEIVED to inactive clients).
+    fetch(`/api/push/campaigns/${storeSlug}`)
+      .then((r) => (r.ok ? r.json() : { campaigns: [] }))
+      .then((data) => setCampaigns(data.campaigns ?? []))
+      .catch(() => {});
+  }, [storeId, storeSlug]);
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
@@ -116,14 +123,14 @@ export function PushBellProvider({
     if (!supported.current) return;
     if (Notification.permission === "denied") { setSubState("error"); return; }
     setSubState("loading");
-    const ok = await subscribeToStore(storeId);
+    const ok = await subscribeToStore(storeId, storeSlug);
     setSubState(ok ? "subscribed" : "error");
     if (ok) closeDrawer();
-  }, [storeId, closeDrawer]);
+  }, [storeId, storeSlug, closeDrawer]);
 
   const handleUnsubscribe = useCallback(async () => {
     setSubState("loading");
-    const ok = await unsubscribeFromStore(storeId);
+    const ok = await unsubscribeFromStore(storeId, storeSlug);
     if (ok) {
       localStorage.removeItem(LAST_SEEN_KEY(storeId));
       setHasNew(false);
@@ -132,7 +139,7 @@ export function PushBellProvider({
     } else {
       setSubState("subscribed");
     }
-  }, [storeId, closeDrawer]);
+  }, [storeId, storeSlug, closeDrawer]);
 
   return (
     <PushBellContext.Provider value={{
