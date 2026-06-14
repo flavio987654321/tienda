@@ -25,7 +25,10 @@ export default function StoreShell({ config, storeId, storeName, storeSlug, show
     navigator.serviceWorker.register("/sw.js", {
       scope: `/tienda/${storeSlug}`,
       updateViaCache: "none",
-    }).then(() => {
+    }).then((reg) => {
+      // If the scoped SW is waiting (blocked by root SW clients), force activate now.
+      // This is safe: the scoped SW only serves push attribution, not any user-visible content.
+      if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
       if (showPushBell) migrateStoreSubscription(storeId, storeSlug);
     }).catch(() => {});
   }, [storeId, storeSlug, showPushBell]);

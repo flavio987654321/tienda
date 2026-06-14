@@ -81,12 +81,17 @@ async function getStoreReg(storeSlug: string): Promise<ServiceWorkerRegistration
   if (!scopedReg) return navigator.serviceWorker.ready;
   if (scopedReg.active) return scopedReg;
 
-  // SW registered but not yet active — wait for it (covers first-visit race condition)
+  // SW registered but stuck in waiting — force it to skip waiting and activate.
+  // The scoped SW is used solely for push attribution; no user-visible update to protect,
+  // so bypassing the normal wait is safe.
   await new Promise<void>((resolve) => {
     const timeout = setTimeout(resolve, 3000);
     const sw = scopedReg.installing ?? scopedReg.waiting;
     if (!sw) { clearTimeout(timeout); resolve(); return; }
+    // If already installed (waiting), force activate immediately
+    if (sw.state === "installed") sw.postMessage({ type: "SKIP_WAITING" });
     sw.addEventListener("statechange", function handler() {
+      if (sw.state === "installed") sw.postMessage({ type: "SKIP_WAITING" });
       if (sw.state === "activated") {
         clearTimeout(timeout);
         sw.removeEventListener("statechange", handler);
