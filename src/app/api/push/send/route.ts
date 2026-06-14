@@ -6,6 +6,7 @@ import { sendPushToStore } from "@/lib/push";
 
 const TITLE_MAX = 50;
 const BODY_MAX = 150;
+const CAMPAIGNS_PER_WEEK = 3;
 
 // Elimina caracteres de control y recorta espacios
 function sanitize(str: string): string {
@@ -69,6 +70,17 @@ export async function POST(req: NextRequest) {
   });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const recentCount = await prisma.pushCampaign.count({
+    where: { storeId: store.id, createdAt: { gte: weekAgo } },
+  });
+  if (recentCount >= CAMPAIGNS_PER_WEEK) {
+    return NextResponse.json(
+      { error: `Límite alcanzado: podés enviar ${CAMPAIGNS_PER_WEEK} notificaciones por semana.` },
+      { status: 429 }
+    );
+  }
+
   // URL de destino: si no viene una, apuntar a la tienda
   const targetUrl = url ?? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/tienda/${store.slug}`;
 
@@ -112,8 +124,11 @@ export async function GET() {
   });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
-  const [subscriberCount, campaigns] = await Promise.all([
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const [subscriberCount, recentUsed, campaigns] = await Promise.all([
     prisma.storeSubscription.count({ where: { storeId: store.id } }),
+    prisma.pushCampaign.count({ where: { storeId: store.id, createdAt: { gte: weekAgo } } }),
     prisma.pushCampaign.findMany({
       where: { storeId: store.id },
       orderBy: { createdAt: "desc" },
@@ -124,6 +139,9 @@ export async function GET() {
 
   return NextResponse.json({
     subscriberCount,
+    weeklyLimit: CAMPAIGNS_PER_WEEK,
+    weeklyUsed: recentUsed,
+    weeklyRemaining: Math.max(0, CAMPAIGNS_PER_WEEK - recentUsed),
     campaigns,
   });
 }

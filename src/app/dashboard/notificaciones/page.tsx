@@ -21,6 +21,9 @@ type Campaign = {
 
 type Stats = {
   subscriberCount: number;
+  weeklyLimit: number;
+  weeklyUsed: number;
+  weeklyRemaining: number;
   campaigns: Campaign[];
 };
 
@@ -103,7 +106,7 @@ export default function NotificacionesPage() {
     }
   }
 
-  const canSend = loadState === "ok";
+  const canSend = stats ? stats.weeklyRemaining > 0 : false;
   const titleLen = title.length;
   const bodyLen = message.length;
 
@@ -140,16 +143,21 @@ export default function NotificacionesPage() {
           <div className="rounded-2xl border border-gray-100 bg-white p-4">
             <div className="flex items-center gap-2 mb-1">
               <Clock className="h-4 w-4 text-amber-400" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Enviadas</span>
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Esta semana</span>
             </div>
             {loadingStats ? (
               <div className="h-7 w-16 rounded bg-gray-100 animate-pulse" />
             ) : (
               <p className="text-2xl font-bold text-gray-900">
-                {stats?.campaigns.length ?? 0}
+                {stats?.weeklyUsed ?? 0}
+                <span className="text-base font-normal text-gray-400">/{stats?.weeklyLimit ?? 3}</span>
               </p>
             )}
-            <p className="text-[11px] text-gray-400 mt-0.5">Total de campañas enviadas</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              {stats && stats.weeklyRemaining > 0
+                ? `Te ${stats.weeklyRemaining === 1 ? "queda" : "quedan"} ${stats.weeklyRemaining} disponible${stats.weeklyRemaining !== 1 ? "s" : ""}`
+                : "Límite semanal alcanzado"}
+            </p>
           </div>
         </div>}
 
@@ -160,7 +168,8 @@ export default function NotificacionesPage() {
             quiere recibir alertas. Si acepta, recibe tus notificaciones en el celular o computadora aunque tenga
             el navegador cerrado — sin necesidad de instalar ninguna app. En iPhone solo funciona si el visitante
             instaló la tienda en su pantalla de inicio. Para desactivarlas, el visitante puede tocar el banner
-            en la tienda y elegir "Desactivar". Usá las notificaciones con moderación para no saturar a tus suscriptores.
+            en la tienda y elegir "Desactivar". Podés enviar hasta{" "}
+            <strong>3 notificaciones por semana</strong> para no saturar a tus suscriptores.
           </p>
         </div>
 
@@ -300,6 +309,14 @@ export default function NotificacionesPage() {
               </div>
             )}
 
+            {/* Límite semanal */}
+            {!loadingStats && !canSend && (
+              <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-xs text-amber-700">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                Alcanzaste el límite de {stats?.weeklyLimit} notificaciones por semana. Podés enviar más el próximo lunes.
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={sending || !tosAccepted || !canSend || titleLen === 0 || bodyLen === 0}
@@ -325,7 +342,7 @@ export default function NotificacionesPage() {
                 <div>
                   <p className="text-sm font-semibold text-gray-900">¿Confirmar envío?</p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Se enviará a todos tus suscriptores activos.
+                    Se enviará a todos tus suscriptores y consumirá 1 notificación semanal.
                   </p>
                 </div>
               </div>
