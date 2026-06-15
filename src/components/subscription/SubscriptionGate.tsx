@@ -18,14 +18,14 @@ export default function SubscriptionGate({ status, daysLeft, role, tier, plan }:
   const planKey = role === "OWNER" ? (tier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC") : "AFFILIATE";
   const [payModal, setPayModal] = useState(false);
   const pathname = usePathname();
-  const isEditor = pathname === "/dashboard/configuracion";
+  const showBanner = pathname === "/dashboard" || pathname === "/dashboard/mi-plan";
 
   // Suscripción activa — no mostrar nada
   if (status === "ACTIVE" && daysLeft > 3) return null;
 
   // Suscripción activa próxima a vencer — banner suave
   if (status === "ACTIVE" && daysLeft <= 3) {
-    if (isEditor) return null;
+    if (!showBanner) return null;
     return (
       <>
         <div className="mx-4 mt-4 rounded-2xl border border-yellow-300 bg-yellow-50 text-yellow-800 px-4 py-3 flex items-center gap-3 text-sm">
@@ -55,7 +55,7 @@ export default function SubscriptionGate({ status, daysLeft, role, tier, plan }:
 
   // Trial o gracia con días restantes — mostrar banner
   if ((status === "TRIAL" || status === "GRACE") && daysLeft > 0) {
-    if (isEditor) return null;
+    if (!showBanner) return null;
     const isGrace = status === "GRACE";
     return (
       <>

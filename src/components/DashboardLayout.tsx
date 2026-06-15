@@ -470,7 +470,7 @@ export default function DashboardLayout({
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <main className={`lg:ml-14 flex-1 flex flex-col bg-gray-50 pt-14 lg:pt-0 overflow-x-hidden ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
-        {!hideHelp && (
+        {!hideHelp && !pathname.startsWith("/dashboard/configuracion") && (
           <div className="hidden lg:flex justify-end items-center gap-1 px-4 pt-3 pb-0 shrink-0">
             <HelpButton onStartTour={() => setShowTour(true)} />
             {userId && <NotificationBell userId={userId} />}
