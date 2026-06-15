@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { STORE_TYPES } from "@/lib/storeTypes";
-import { Loader2, X, Check, AlertTriangle, Trash2 } from "lucide-react";
+import { Loader2, X, Check, AlertTriangle, Trash2, Download } from "lucide-react";
 
 export default function StoreTypeModal({
   isEditing = false,
@@ -21,6 +21,8 @@ export default function StoreTypeModal({
   const [saved, setSaved] = useState(false);
   // confirm step: solo cuando isEditing y cambia de tipo
   const [confirmStep, setConfirmStep] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
 
   const selectedConfig = STORE_TYPES.find((t) => t.id === selected);
   const isChangingType = isEditing && selected !== null && selected !== currentType;
@@ -28,6 +30,21 @@ export default function StoreTypeModal({
   function handleClose() {
     if (isEditing) onClose?.();
     else router.back();
+  }
+
+  async function downloadCsv() {
+    if (downloading) return;
+    setDownloading(true);
+    const res = await fetch("/api/store/export-csv");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = res.headers.get("Content-Disposition")?.match(/filename="(.+)"/)?.[1] ?? "productos.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    setDownloading(false);
+    setDownloaded(true);
   }
 
   async function handleConfirmButton() {
@@ -130,6 +147,21 @@ export default function StoreTypeModal({
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 font-medium">
               Esta acción no se puede deshacer. Tu configuración, plantilla, logo y afiliados se conservan.
             </div>
+
+            {/* Exportar antes de borrar */}
+            <button
+              onClick={downloadCsv}
+              disabled={downloading}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              {downloading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Descargando...</>
+              ) : downloaded ? (
+                <><Check className="h-4 w-4 text-green-500" /> CSV descargado</>
+              ) : (
+                <><Download className="h-4 w-4" /> Guardar copia de mis productos (CSV)</>
+              )}
+            </button>
           </div>
 
           <div className="px-7 pb-6 flex gap-3">
