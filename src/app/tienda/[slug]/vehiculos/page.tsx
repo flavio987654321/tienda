@@ -155,12 +155,13 @@ function VehiculosPageInner() {
   const slug         = params?.slug as string;
   const fromEditor   = searchParams?.get("from") === "editor";
 
-  const [products,  setProducts]  = useState<StorefrontProduct[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [storeName, setStoreName] = useState("Tienda");
-  const [accent,    setAccent]    = useState("#c9a227");
-  const [currency,  setCurrency]  = useState("ARS");
-  const [whatsapp,  setWhatsapp]  = useState<{ enabled: boolean; number: string; message?: string }>({ enabled: false, number: "" });
+  const [products,    setProducts]    = useState<StorefrontProduct[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [storeName,   setStoreName]   = useState("Tienda");
+  const [accent,      setAccent]      = useState("#c9a227");
+  const [currency,    setCurrency]    = useState("ARS");
+  const [templateId,  setTemplateId]  = useState("");
+  const [whatsapp,    setWhatsapp]    = useState<{ enabled: boolean; number: string; message?: string }>({ enabled: false, number: "" });
   const [selected,  setSelected]  = useState<StorefrontProduct | null>(null);
   const [imgErrors,    setImgErrors]    = useState<Record<string, boolean>>({});
   const [hoveredMarca, setHoveredMarca] = useState<string | null>(null);
@@ -183,6 +184,7 @@ function VehiculosPageInner() {
           if (cfg.colors?.accent) setAccent(cfg.colors.accent);
           if (cfg.currency)       setCurrency(cfg.currency);
           if (cfg.whatsapp)       setWhatsapp(cfg.whatsapp);
+          if (cfg.templateId)     setTemplateId(cfg.templateId);
         } catch {}
         setProducts((data.store.products ?? []).map(mapVehicle));
       })
@@ -244,12 +246,23 @@ function VehiculosPageInner() {
 
   const hasActiveFilter = activeCategory !== "Todos" || activeMarca !== "Todas" || activeCiudad !== "Todas" || !!search;
 
+  const isAD = templateId === "auto-drive";
+
   const S   = "#ffffff";
-  const T   = "#1a2744";
-  const MID = "#7a8fa6";
+  const T   = isAD ? "#111827" : "#1a2744";
+  const MID = isAD ? "#6b7280" : "#7a8fa6";
   const BG  = "#ffffff";
-  const borderFaint = "rgba(27,63,110,0.07)";
-  const border      = "rgba(27,63,110,0.15)";
+  const borderFaint = isAD ? "rgba(0,0,0,0.04)" : "rgba(27,63,110,0.07)";
+  const border      = isAD ? "#e5e7eb" : "rgba(27,63,110,0.15)";
+
+  const headerBg          = isAD ? "#ffffff" : NAVY;
+  const headerLinkColor   = isAD ? "#9ca3af" : "rgba(255,255,255,0.55)";
+  const headerLinkHover   = isAD ? "#374151" : "#ffffff";
+  const headerCountColor  = isAD ? "#6b7280" : "rgba(255,255,255,0.4)";
+  const headerBorderLine  = isAD ? "1px solid #e5e7eb" : "none";
+  const headerBoxShadow   = isAD ? "0 1px 12px rgba(0,0,0,0.07)" : "0 2px 16px rgba(0,0,0,0.25)";
+  const activeTabBg       = isAD ? accent : NAVY;
+  const activeTabBorder   = isAD ? accent : NAVY;
 
   return (
     <div style={{ background: BG, color: T, minHeight: "100vh", fontFamily: "'Inter','Segoe UI',system-ui,sans-serif" }}>
@@ -262,22 +275,23 @@ function VehiculosPageInner() {
         .brand-chip { }
       `}</style>
 
-      {/* ── HEADER — navy ── */}
-      <div style={{ background: NAVY, boxShadow:"0 2px 16px rgba(0,0,0,0.25)", position:"sticky", top:0, zIndex:100 }}>
+      {/* ── HEADER ── */}
+      <div style={{ background: headerBg, boxShadow: headerBoxShadow,
+        borderBottom: headerBorderLine, position:"sticky", top:0, zIndex:100 }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 clamp(16px,4vw,32px)", height:64,
           display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <Link href={fromEditor ? "/dashboard/configuracion" : `/tienda/${slug}`}
-            style={{ color:"rgba(255,255,255,0.55)", textDecoration:"none", fontSize:11, letterSpacing:3,
+            style={{ color: headerLinkColor, textDecoration:"none", fontSize:11, letterSpacing:3,
               textTransform:"uppercase", display:"flex", alignItems:"center", gap:8, transition:"color 0.2s" }}
-            onMouseEnter={e => (e.currentTarget.style.color="#ffffff")}
-            onMouseLeave={e => (e.currentTarget.style.color="rgba(255,255,255,0.55)")}>
+            onMouseEnter={e => (e.currentTarget.style.color=headerLinkHover)}
+            onMouseLeave={e => (e.currentTarget.style.color=headerLinkColor)}>
             ← {fromEditor ? "Volver al editor" : "Volver a la tienda"}
           </Link>
-          <span style={{ fontSize:17, fontWeight:900, letterSpacing:3,
-            textTransform:"uppercase", color: accent }}>
+          <span style={{ fontSize:17, fontWeight:900, letterSpacing: isAD ? -0.5 : 3,
+            textTransform: isAD ? "none" : "uppercase", color: accent }}>
             {storeName}
           </span>
-          <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)", letterSpacing:1 }}>
+          <span style={{ fontSize:12, color: headerCountColor, letterSpacing:1 }}>
             {filtered.length} vehículo{filtered.length !== 1 ? "s" : ""}
           </span>
         </div>
@@ -443,9 +457,9 @@ function VehiculosPageInner() {
                   const isActive = activeCategory === cat;
                   return (
                     <button key={cat} onClick={() => setActiveCat(cat)}
-                      style={{ background: isActive ? NAVY : S,
+                      style={{ background: isActive ? activeTabBg : S,
                         color: isActive ? "#fff" : T,
-                        border:`1px solid ${isActive ? NAVY : border}`,
+                        border:`1px solid ${isActive ? activeTabBorder : border}`,
                         padding:"9px 20px", fontSize:11, letterSpacing:1.5, cursor:"pointer",
                         fontWeight:600, textTransform:"uppercase", transition:"all 0.2s",
                         borderRadius:4, flexShrink:0, whiteSpace:"nowrap" }}>

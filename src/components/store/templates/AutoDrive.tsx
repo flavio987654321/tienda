@@ -41,12 +41,24 @@ const SERVICE_CATS = [
   { fv:"cat3Label", fi:"cat3Icon", lbl:"Financiación",         icon:"💳" },
   { fv:"cat4Label", fi:"cat4Icon", lbl:"Más servicios",        icon:"🔧" },
 ];
+const CAT_ICON_SETS = [
+  ["🛡️","✅","🏆","🔒","💯","⭐","🎖️","🔐"],
+  ["✨","🚗","🆕","💎","🌟","🏁","🚀","🎯"],
+  ["💳","💰","🏦","📊","💵","💸","🏧","📈"],
+  ["🔧","🛠️","⚙️","🔩","🪛","🏗️","🔨","🛞"],
+];
+const SVC_ICON_SETS = [
+  ["✅","🔍","🧪","📋","🏅","🔬","🛡️","🏆"],
+  ["📄","📋","📑","🗂️","📝","🖊️","🗃️","📌"],
+  ["💳","💰","🏦","📊","💵","🏧","💸","📈"],
+  ["🤝","👨‍💼","🎯","📞","💬","🌟","🧑‍💼","🎓"],
+];
 
 export default function AutoDrive() {
   const config       = useStoreConfig();
   const pushBell     = usePushBell();
   const { products, loadingProducts } = useStorefront();
-  const { editMode } = useEditContext();
+  const { editMode, overrides, setOverride } = useEditContext();
   const isPreview    = !!config?.previewFill;
   const isOwner      = !!config?.isOwner;
   const accent       = config?.colors.accent ?? "#2563eb";
@@ -407,8 +419,24 @@ export default function AutoDrive() {
                   border:`1.5px solid ${catsText==="#ffffff" ? "rgba(255,255,255,0.2)" : "#e5e7eb"}`,
                   background: catsText==="#ffffff" ? "rgba(255,255,255,0.07)" : "#fff",
                   cursor:"pointer", transition:"all 0.2s" }}>
-                <span style={{ fontSize:16 }}>
-                  <EditableZone field={cat.fi} label={`Ícono categoría ${i+1}`}>{cat.icon}</EditableZone>
+                <span style={{ position:"relative", fontSize:16, lineHeight:1 }}>
+                  {overrides[cat.fi]?.text ?? cat.icon}
+                  {editMode && (
+                    <button type="button" title="Cambiar ícono"
+                      onClick={e => {
+                        e.stopPropagation();
+                        const curr = overrides[cat.fi]?.text ?? cat.icon;
+                        const set  = CAT_ICON_SETS[i];
+                        const idx  = set.indexOf(curr);
+                        setOverride(cat.fi, { text: set[(idx + 1) % set.length] });
+                      }}
+                      style={{ position:"absolute", inset:-3, background:"rgba(99,102,241,0.9)",
+                        border:"none", borderRadius:4, cursor:"pointer",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        color:"#fff", fontSize:11, opacity:0, transition:"opacity 0.15s" }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity="1")}
+                      onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
+                  )}
                 </span>
                 <span style={{ fontSize:13, fontWeight:600, color:catsText }}>
                   <EditableZone field={cat.fv} label={`Categoría ${i+1} — Nombre`}>{cat.lbl}</EditableZone>
@@ -421,42 +449,55 @@ export default function AutoDrive() {
 
       {/* ── CATÁLOGO CARRUSEL ── */}
       <section id="catálogo" style={{ padding:"72px 0 72px", position:"relative",
-        ...secBg(catalogoImg, catalogoBg) }}>
+        overflow:"hidden", ...secBg(catalogoImg, catalogoBg) }}>
         <BgDragHandle imgKey="sectionbg_bgCatalogo" />
         <SectionOverlay ov={catalogoImg} />
         <EditableSectionBg field="bgCatalogo" label="Fondo catálogo" />
         <div style={{ position:"relative", zIndex:1, maxWidth:1200, margin:"0 auto", padding:"0 28px" }}>
-          <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between",
-            flexWrap:"wrap", gap:16, marginBottom:32 }}>
-            <div>
-              <p style={{ margin:"0 0 6px", fontSize:11, color:accent,
-                textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>
-                <EditableZone field="catalogKicker" label="Kicker catálogo">Nuestros vehículos</EditableZone>
-              </p>
-              <h2 style={{ margin:0, fontSize:"clamp(24px,4vw,42px)", fontWeight:900,
-                color:catText, letterSpacing:-1 }}>
-                <EditableZone field="catalogHeading" label="Título catálogo">Catálogo disponible</EditableZone>
-              </h2>
-            </div>
-            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-              {(["prev","next"] as const).map((dir) => (
-                <button key={dir} onClick={() => scrollCarousel(dir)}
-                  style={{ width:44, height:44, borderRadius:12,
-                    border:`1.5px solid ${catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"}`,
-                    background: catText==="#ffffff" ? "rgba(255,255,255,0.07)" : "#fff",
-                    color:catText, cursor:"pointer", fontSize:22,
-                    display:"flex", alignItems:"center", justifyContent:"center",
-                    transition:"all 0.15s" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor=accent; (e.currentTarget as HTMLElement).style.color=accent; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor=catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"; (e.currentTarget as HTMLElement).style.color=catText; }}>
-                  {dir==="prev" ? "‹" : "›"}
-                </button>
-              ))}
-            </div>
+          <div style={{ marginBottom:32 }}>
+            <p style={{ margin:"0 0 6px", fontSize:11, color:accent,
+              textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>
+              <EditableZone field="catalogKicker" label="Kicker catálogo">Nuestros vehículos</EditableZone>
+            </p>
+            <h2 style={{ margin:0, fontSize:"clamp(24px,4vw,42px)", fontWeight:900,
+              color:catText, letterSpacing:-1 }}>
+              <EditableZone field="catalogHeading" label="Título catálogo">Catálogo disponible</EditableZone>
+            </h2>
           </div>
         </div>
 
         <div style={{ position:"relative", zIndex:1 }}>
+          {/* Flechas flanqueando el carrusel */}
+          {!loadingProducts && showcased.length > 1 && (
+            <>
+              <button onClick={() => scrollCarousel("prev")}
+                style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)",
+                  zIndex:3, width:40, height:40, borderRadius:10,
+                  border:`1.5px solid ${catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"}`,
+                  background: catText==="#ffffff" ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.9)",
+                  backdropFilter:"blur(8px)",
+                  color:catText==="#ffffff" ? "#fff" : "#374151",
+                  cursor:"pointer", fontSize:20, display:"flex", alignItems:"center",
+                  justifyContent:"center", transition:"all 0.15s", boxShadow:"0 2px 10px rgba(0,0,0,0.12)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor=accent; (e.currentTarget as HTMLElement).style.color=accent; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor=catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"; (e.currentTarget as HTMLElement).style.color=catText==="#ffffff"?"#fff":"#374151"; }}>
+                ‹
+              </button>
+              <button onClick={() => scrollCarousel("next")}
+                style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)",
+                  zIndex:3, width:40, height:40, borderRadius:10,
+                  border:`1.5px solid ${catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"}`,
+                  background: catText==="#ffffff" ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.9)",
+                  backdropFilter:"blur(8px)",
+                  color:catText==="#ffffff" ? "#fff" : "#374151",
+                  cursor:"pointer", fontSize:20, display:"flex", alignItems:"center",
+                  justifyContent:"center", transition:"all 0.15s", boxShadow:"0 2px 10px rgba(0,0,0,0.12)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor=accent; (e.currentTarget as HTMLElement).style.color=accent; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor=catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"; (e.currentTarget as HTMLElement).style.color=catText==="#ffffff"?"#fff":"#374151"; }}>
+                ›
+              </button>
+            </>
+          )}
           {loadingProducts ? (
             <div style={{ textAlign:"center", padding:"60px 0" }}>
               <div style={{ width:40, height:40, border:`3px solid ${accent}`,
@@ -466,8 +507,8 @@ export default function AutoDrive() {
           ) : showcased.length > 0 ? (
             <div ref={carouselRef} className="ad-carousel"
               style={{ display:"flex", gap:16, overflowX:"auto", overflowY:"hidden",
-                scrollSnapType:"x mandatory", padding:"4px 28px 16px",
-                WebkitOverflowScrolling:"touch" as any }}>
+                scrollSnapType:"x mandatory", padding:"4px 56px 16px",
+                WebkitOverflowScrolling:"touch" as any, overscrollBehaviorX:"contain" }}>
               {showcased.map(p => (
                 <div key={p.id} className="ad-carousel-item" style={{ scrollSnapAlign:"start", flexShrink:0 }}>
                   <VehicleCard product={p} accent={accent} currency={currency}
@@ -494,7 +535,7 @@ export default function AutoDrive() {
                 fontWeight:700, fontSize:13, borderRadius:10 }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity="0.85"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity="1"; }}>
-              Ver los {products.length} vehículos →
+              Ver todo
             </Link>
           </div>
         )}
@@ -587,11 +628,11 @@ export default function AutoDrive() {
             {/* checklist */}
             <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:32 }}>
               {[
-                "Garantía de satisfacción post-venta",
-                "Financiación propia sin intermediarios",
-                "Entrega y trámites incluidos sin cargo",
-              ].map((f, i) => (
-                <div key={i} style={{ display:"flex", alignItems:"center", gap:12 }}>
+                { field:"nosCheck1", def:"Garantía de satisfacción post-venta" },
+                { field:"nosCheck2", def:"Financiación propia sin intermediarios" },
+                { field:"nosCheck3", def:"Entrega y trámites incluidos sin cargo" },
+              ].map(({ field, def }) => (
+                <div key={field} style={{ display:"flex", alignItems:"center", gap:12 }}>
                   <div style={{ width:24, height:24, borderRadius:"50%", background:`${accent}15`,
                     display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                     <svg width={13} height={13} viewBox="0 0 13 13" fill="none">
@@ -599,7 +640,9 @@ export default function AutoDrive() {
                         strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </div>
-                  <span style={{ fontSize:14, color:nosMid, fontWeight:500 }}>{f}</span>
+                  <span style={{ fontSize:14, color:nosMid, fontWeight:500 }}>
+                    <EditableZone field={field} label="Beneficio">{def}</EditableZone>
+                  </span>
                 </div>
               ))}
             </div>
@@ -646,8 +689,24 @@ export default function AutoDrive() {
                   background: svcText==="#ffffff" ? "rgba(255,255,255,0.05)" : "#fff" }}>
                 <div style={{ width:54, height:54, borderRadius:14, background:`${accent}12`,
                   display:"flex", alignItems:"center", justifyContent:"center",
-                  fontSize:26, flexShrink:0 }}>
-                  <EditableZone field={s.fi} label={`Ícono servicio ${i+1}`}>{s.icon}</EditableZone>
+                  fontSize:26, flexShrink:0, position:"relative" }}>
+                  {overrides[s.fi]?.text ?? s.icon}
+                  {editMode && (
+                    <button type="button" title="Cambiar ícono"
+                      onClick={e => {
+                        e.stopPropagation();
+                        const curr = overrides[s.fi]?.text ?? s.icon;
+                        const set  = SVC_ICON_SETS[i];
+                        const idx  = set.indexOf(curr);
+                        setOverride(s.fi, { text: set[(idx + 1) % set.length] });
+                      }}
+                      style={{ position:"absolute", inset:0, background:"rgba(99,102,241,0.9)",
+                        border:"none", borderRadius:14, cursor:"pointer",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        color:"#fff", fontSize:14, opacity:0, transition:"opacity 0.15s" }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity="1")}
+                      onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
+                  )}
                 </div>
                 <div style={{ paddingTop:2 }}>
                   <p style={{ margin:"0 0 6px", fontSize:15, fontWeight:700, color:svcText }}>
@@ -706,18 +765,19 @@ export default function AutoDrive() {
           )}
           {/* chips informativos */}
           <div style={{ marginTop:32, display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
-            <div style={{ display:"inline-flex", alignItems:"center", gap:8,
-              background: conText==="#ffffff" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
-              borderRadius:100, padding:"9px 18px" }}>
-              <span style={{ fontSize:15 }}>⏱️</span>
-              <span style={{ fontSize:12, color:conMid, fontWeight:500 }}>Respuesta en menos de 1 hora</span>
-            </div>
-            <div style={{ display:"inline-flex", alignItems:"center", gap:8,
-              background: conText==="#ffffff" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
-              borderRadius:100, padding:"9px 18px" }}>
-              <span style={{ fontSize:15 }}>✅</span>
-              <span style={{ fontSize:12, color:conMid, fontWeight:500 }}>Sin compromiso</span>
-            </div>
+            {[
+              { field:"contactChip1", def:"Respuesta en menos de 1 hora", icon:"⏱️" },
+              { field:"contactChip2", def:"Sin compromiso",                icon:"✅" },
+            ].map(({ field, def, icon }) => (
+              <div key={field} style={{ display:"inline-flex", alignItems:"center", gap:8,
+                background: conText==="#ffffff" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
+                borderRadius:100, padding:"9px 18px" }}>
+                <span style={{ fontSize:15 }}>{icon}</span>
+                <span style={{ fontSize:12, color:conMid, fontWeight:500 }}>
+                  <EditableZone field={field} label="Chip contacto">{def}</EditableZone>
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
