@@ -31,6 +31,25 @@ export const AUTO_SERVICES = [
   { key: "caja",         label: "Caja de cambios" },
 ];
 
+function SpecIcon({ label, accent }: { label: string; accent: string }) {
+  const p = { width: 15, height: 15, viewBox: "0 0 24 24", fill: "none",
+    stroke: accent, strokeWidth: 2.2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  const k = label.toLowerCase();
+  if (k === "año")         return <svg {...p}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+  if (k === "kilómetros")  return <svg {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+  if (k === "motor")       return <svg {...p}><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>;
+  if (k === "transmisión") return <svg {...p}><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>;
+  if (k === "combustible") return <svg {...p}><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="22" x2="6" y2="2"/><path d="M10 22V8h4v14"/><path d="M10 12h4"/><path d="M20 11V8l-2-2"/><path d="M18 8h2v3"/></svg>;
+  if (k === "tracción")    return <svg {...p}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>;
+  if (k === "carrocería")  return <svg {...p}><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
+  if (k === "color")       return <svg {...p}><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>;
+  if (k === "puertas")     return <svg {...p}><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0 0h18"/></svg>;
+  if (k === "marca")       return <svg {...p}><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>;
+  if (k === "modelo")      return <svg {...p}><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
+  if (k === "versión")     return <svg {...p}><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>;
+  return <svg {...p}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
+}
+
 export const AM_MODAL_CSS = `
   .am-modal-body { grid-template-columns: 1fr !important }
   @media(min-width:700px){ .am-modal-body { grid-template-columns: 3fr 2fr !important } }
@@ -159,7 +178,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
               <div className="am-img-wrap" style={{ display: "flex" }}>
                 {imgs.length > 1 && (
                   <div className="am-img-thumbs" style={{ display: "flex", gap: 4,
-                    background: "#f0f0f0", flexShrink: 0 }}>
+                    background: "#ffffff", flexShrink: 0, borderRight: "1px solid #f0f0f0" }}>
                     {imgs.map((src, i) => (
                       <button key={i} onClick={() => { setImgIdx(i); setMousePos(null); }}
                         style={{ flexShrink: 0, width: 68, height: 52, padding: 0, border: "none",
@@ -248,13 +267,30 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                 </div>
               ) : (
                 <>
-                  {headerLine && <p style={{ margin: 0, fontSize: 13, color: "#888" }}>{headerLine}</p>}
-                  <h2 style={{ margin: 0, fontSize: "clamp(18px,2.5vw,24px)", fontWeight: 600,
-                    color: "#333", lineHeight: 1.2 }}>{product.name}</h2>
-                  {ubicacion && <p style={{ margin: 0, fontSize: 12, color: "#aaa" }}>📍 {ubicacion}</p>}
-                  <div>
-                    <p style={{ margin: 0, fontSize: "clamp(26px,3.5vw,34px)", fontWeight: 700,
-                      color: "#333", letterSpacing: -1, lineHeight: 1 }}>
+                  <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
+                    {año && <span style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20,
+                      background:"#eef2ff", color:"#4466bb", letterSpacing:0.3 }}>{año}</span>}
+                    {km && <span style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20,
+                      background:"#eef2ff", color:"#4466bb", letterSpacing:0.3 }}>{Number(km).toLocaleString("es-AR")} km</span>}
+                    {condicion && <span style={{ fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20,
+                      background:accent, color:"#fff", letterSpacing:0.3 }}>{condicion}</span>}
+                  </div>
+                  <h2 style={{ margin: 0, fontSize: "clamp(18px,2.5vw,26px)", fontWeight: 800,
+                    color: "#1a2744", lineHeight: 1.15 }}>{product.name}</h2>
+                  {ubicacion && (
+                    <div style={{ display:"flex", alignItems:"center", gap:5, color:"#888", fontSize:12 }}>
+                      <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                      </svg>
+                      {ubicacion}
+                    </div>
+                  )}
+                  <div style={{ borderLeft:`3px solid ${accent}`, paddingLeft:12 }}>
+                    <p style={{ margin:"0 0 2px", fontSize:10, color:"#aaa", letterSpacing:1.5,
+                      textTransform:"uppercase", fontWeight:600 }}>Precio</p>
+                    <p style={{ margin: 0, fontSize: "clamp(26px,3.5vw,36px)", fontWeight: 800,
+                      color: "#1a2744", letterSpacing: -1, lineHeight: 1 }}>
                       {fmtPrice(product.price, currency)}
                     </p>
                     {product.comparePrice && (
@@ -275,8 +311,14 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                   )}
                   {hasServices && (
                     <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 14, marginTop: 4 }}>
-                      <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: "#555",
-                        textTransform: "uppercase", letterSpacing: 0.5 }}>Historial de servicios</p>
+                      <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:10 }}>
+                        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3-3a1 1 0 000-1.4l-1.6-1.6a1 1 0 00-1.4 0z"/>
+                          <path d="M5 20L2 17 14 5l3 3L5 20z"/>
+                        </svg>
+                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#444",
+                          textTransform: "uppercase", letterSpacing: 1 }}>Historial de servicios</p>
+                      </div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 10px" }}>
                         {AUTO_SERVICES.map(svc => (
                           <div key={svc.key} style={{ display: "flex", alignItems: "center", gap: 7 }}>
@@ -303,21 +345,28 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
 
           {specs.length > 0 && (
             <div style={{ padding: "24px 28px", borderTop: "1px solid #f0f0f0" }}>
-              <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600, color: "#333" }}>
-                Características del vehículo
-              </h3>
+              <div style={{ display:"flex", alignItems:"center", gap:10, margin:"0 0 16px" }}>
+                <div style={{ width:4, height:18, borderRadius:2, background:accent, flexShrink:0 }}/>
+                <h3 style={{ margin:0, fontSize:13, fontWeight:700, color:"#1a2744",
+                  textTransform:"uppercase", letterSpacing:1 }}>
+                  Características del vehículo
+                </h3>
+              </div>
               <div className="am-specs-grid" style={{ display: "grid", gap: "0 32px" }}>
                 {specs.map(s => (
                   <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 12,
-                    padding: "10px 0", borderBottom: "1px solid #f5f5f5" }}>
-                    <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#f0f0f0",
+                    padding: "10px 0", borderBottom: "1px solid #f8f8f8" }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8,
+                      background: `${accent}18`,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0, fontSize: 12, color: "#666", fontWeight: 700 }}>
-                      {s.label.charAt(0)}
+                      flexShrink: 0 }}>
+                      <SpecIcon label={s.label} accent={accent} />
                     </div>
-                    <span style={{ fontSize: 13, color: "#555" }}>
-                      {s.label}: <strong style={{ color: "#333" }}>{s.value}</strong>
-                    </span>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <span style={{ fontSize:10, color:"#aaa", display:"block",
+                        letterSpacing:0.5, textTransform:"uppercase" }}>{s.label}</span>
+                      <strong style={{ fontSize:13, color:"#222", fontWeight:600 }}>{s.value}</strong>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -325,8 +374,20 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
           )}
 
           {product.description && (
-            <div style={{ padding: "0 28px 28px", borderTop: "1px solid #f0f0f0" }}>
-              <p style={{ margin: 0, fontSize: 14, color: "#666", lineHeight: 1.75 }}>
+            <div style={{ padding: "20px 28px 28px", borderTop: "1px solid #f0f0f0" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <line x1="10" y1="9" x2="8" y2="9"/>
+                </svg>
+                <span style={{ fontSize:11, fontWeight:700, color:"#444",
+                  textTransform:"uppercase", letterSpacing:1.2 }}>Descripción</span>
+                <div style={{ flex:1, height:1, background:"#f0f0f0" }}/>
+              </div>
+              <p style={{ margin: 0, fontSize: 14, color: "#555", lineHeight: 1.85 }}>
                 {product.description}
               </p>
             </div>
