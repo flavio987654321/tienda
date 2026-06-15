@@ -9,7 +9,7 @@ type Step = {
   body: string;
 };
 
-const STEPS: Step[] = [
+const STEPS_DEFAULT: Step[] = [
   {
     tourId: "inicio",
     title: "Panel principal",
@@ -52,9 +52,57 @@ const STEPS: Step[] = [
   },
 ];
 
+const STEPS_AUTOS: Step[] = [
+  {
+    tourId: "inicio",
+    title: "Panel principal",
+    body: "Acá ves el resumen de tu concesionaria: consultas recibidas, vehículos disponibles y la guía de configuración inicial.",
+  },
+  {
+    tourId: "productos",
+    title: "Tus vehículos",
+    body: "Cargá autos, motos o camionetas con fotos, precio, ficha técnica y estado (Disponible / Reservado / Vendido).",
+  },
+  {
+    tourId: "consultas",
+    title: "Consultas de clientes",
+    body: "Cuando alguien complete el formulario de contacto, la consulta aparece acá. Podés responder por WhatsApp desde el panel.",
+  },
+  {
+    tourId: "pagos",
+    title: "Pagos y señas",
+    body: "Conectá MercadoPago si querés aceptar señas online. También podés usar solo el modo contacto sin cobro.",
+  },
+  {
+    tourId: "afiliados",
+    title: "Afiliados",
+    body: "Invitá vendedores externos que traigan clientes. Vos definís la comisión por venta concretada.",
+  },
+  {
+    tourId: "notificaciones",
+    title: "Notificaciones push",
+    body: "Enviá novedades o alertas de nuevos vehículos a personas que activaron notificaciones en tu sitio. Disponible en plan Premium.",
+  },
+  {
+    tourId: "diseno",
+    title: "Diseño de tu sitio",
+    body: "Elegí plantilla y personalizá colores, banners y textos para mostrar tu flota de manera profesional.",
+  },
+  {
+    tourId: "configuracion",
+    title: "Configuración",
+    body: "Subí tu logo, configurá el subdominio y conectá tu dominio propio si tenés plan Premium.",
+  },
+];
+
+function getSteps(storeType?: string | null): Step[] {
+  return storeType === "AUTOS" ? STEPS_AUTOS : STEPS_DEFAULT;
+}
+
 export const TOUR_STORAGE_KEY = "tiendaapps_tour_done";
 
-export default function TourGuide({ onDone }: { onDone: () => void }) {
+export default function TourGuide({ onDone, storeType }: { onDone: () => void; storeType?: string | null }) {
+  const STEPS = getSteps(storeType);
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [isMobile, setIsMobile] = useState(false);

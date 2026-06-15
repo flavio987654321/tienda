@@ -34,6 +34,14 @@ export async function POST(req: Request) {
     await tx.pushCampaign.deleteMany({ where: { storeId: store.id } });
     await tx.storeView.deleteMany({ where: { storeId: store.id } });
 
+    // ── Notificaciones del owner relacionadas al contenido anterior ──
+    await tx.notification.deleteMany({
+      where: {
+        userId: user.id,
+        type: { in: ["NEW_ORDER", "ORDER_CONFIRMED", "ORDER_SHIPPED", "ORDER_DELIVERED", "ORDER_CANCELLED", "OUT_OF_STOCK"] },
+      },
+    });
+
     // ── Afiliados: goals, clicks y comisiones ──
     await tx.affiliateGoal.deleteMany({ where: { storeId: store.id } });
     await tx.affiliateClick.deleteMany({ where: { storeId: store.id } });

@@ -479,7 +479,7 @@ export default function DashboardLayout({
       )}
 
       {/* ── Guided Tour ──────────────────────────────────────────────────── */}
-      {showTour && <TourGuide onDone={() => setShowTour(false)} />}
+      {showTour && <TourGuide onDone={() => setShowTour(false)} storeType={storeType} />}
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <main className={`lg:ml-14 flex-1 flex flex-col bg-gray-50 pt-14 lg:pt-0 overflow-x-hidden ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>

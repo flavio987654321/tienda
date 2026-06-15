@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { BadgeCheck, Camera, Clock, Loader2, Save, ShieldAlert, Upload, X } from "lucide-react";
+import { BadgeCheck, Camera, Check, Clock, Loader2, Save, ShieldAlert, Upload, X } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -520,12 +520,38 @@ export default function PerfilPage() {
               {verifLoading ? (
                 <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-gray-300" /></div>
               ) : isVerified ? (
-                <div className="px-6 py-5">
+                <div className="px-6 py-5 space-y-4">
                   <div className="flex items-center gap-2.5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
                     <BadgeCheck className="h-5 w-5 text-blue-600 shrink-0" />
                     <div>
                       <p className="text-sm font-semibold text-blue-800">Identidad verificada</p>
                       <p className="text-xs text-blue-600">Tu tienda tiene el badge azul. Activá los toggles en "Datos personales" para elegir qué se muestra al público.</p>
+                    </div>
+                  </div>
+
+                  {/* Certificado de identidad */}
+                  <div className="relative border border-blue-100 rounded-2xl overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-5">
+                    {/* Marca de agua */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none select-none">
+                      <BadgeCheck className="h-48 w-48 text-blue-600" />
+                    </div>
+                    <div className="relative space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-blue-400">TiendaApps · Certificado de identidad</span>
+                        <BadgeCheck className="h-4 w-4 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-base font-bold text-gray-900">{profile?.name || "—"}</p>
+                        {profile?.city && (
+                          <p className="text-xs text-gray-500 mt-0.5">{profile.city}</p>
+                        )}
+                      </div>
+                      <div className="pt-3 border-t border-blue-100 flex items-center justify-between">
+                        <span className="text-[11px] text-gray-400">Verificado por TiendaApps</span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-100 px-2.5 py-1 rounded-full">
+                          <Check className="h-3 w-3" /> Verificado
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
