@@ -8,6 +8,7 @@ export default function PublishToggle({ initialPublished }: { initialPublished: 
   const [loading, setLoading] = useState(false);
 
   async function toggle() {
+    if (loading) return;
     setLoading(true);
     try {
       const res = await fetch("/api/configuracion", {
@@ -22,36 +23,52 @@ export default function PublishToggle({ initialPublished }: { initialPublished: 
   }
 
   return (
-    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${
-      published
-        ? "border-green-200 bg-green-50"
-        : "border-amber-200 bg-amber-50"
-    }`}>
-      <div className={`rounded-lg p-1.5 ${published ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"}`}>
+    <button
+      onClick={toggle}
+      disabled={loading}
+      className={`w-full flex items-center gap-3 rounded-xl border px-4 py-3.5 text-left transition-all disabled:opacity-70 ${
+        published
+          ? "border-emerald-200 bg-emerald-50 hover:bg-emerald-100/70"
+          : "border-gray-200 bg-gray-50 hover:bg-gray-100/70"
+      }`}
+    >
+      {/* Icon */}
+      <div className={`rounded-lg p-1.5 shrink-0 ${published ? "bg-emerald-100 text-emerald-600" : "bg-gray-100 text-gray-400"}`}>
         {published ? <Globe className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
       </div>
+
+      {/* Text */}
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-semibold ${published ? "text-green-800" : "text-amber-800"}`}>
+        <p className={`text-sm font-semibold ${published ? "text-emerald-800" : "text-gray-700"}`}>
           {published ? "Tienda publicada" : "Tienda no publicada"}
         </p>
-        <p className={`text-xs ${published ? "text-green-600" : "text-amber-600"}`}>
+        <p className={`text-xs mt-0.5 ${published ? "text-emerald-600" : "text-gray-500"}`}>
           {published
-            ? "Visible en la página de tiendas"
-            : "Solo vos podés ver tu tienda con el link directo"}
+            ? "Visible en la página de tiendas · tocá para despublicar"
+            : "Solo vos la ves · tocá para publicarla"}
         </p>
       </div>
-      <button
-        onClick={toggle}
-        disabled={loading}
-        className={`shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all disabled:opacity-60 ${
-          published
-            ? "bg-green-600 text-white hover:bg-green-700"
-            : "bg-amber-500 text-white hover:bg-amber-600"
-        }`}
-      >
-        {loading && <Loader2 className="h-3 w-3 animate-spin" />}
-        {published ? "Despublicar" : "Publicar"}
-      </button>
-    </div>
+
+      {/* Toggle switch */}
+      <div className="shrink-0">
+        {loading ? (
+          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+        ) : (
+          <div
+            role="switch"
+            aria-checked={published}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              published ? "bg-emerald-500" : "bg-gray-300"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                published ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </div>
+        )}
+      </div>
+    </button>
   );
 }

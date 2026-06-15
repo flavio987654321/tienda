@@ -7,8 +7,8 @@ import { getCurrentUser } from "@/lib/auth-session";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   ShoppingBag, Package, Users, TrendingUp,
-  Store, Share2, Star, BadgeCheck, CheckCircle2, Circle,
-  AlertTriangle,
+  Store, Star, BadgeCheck, CheckCircle2, Circle,
+  AlertTriangle, Eye,
 } from "lucide-react";
 import { getUserSubscription } from "@/lib/subscription";
 
@@ -196,19 +196,17 @@ export default async function DashboardPage() {
 
         {/* ── Store link & publish toggle ── */}
         {store && (
-          <div className="mb-6 rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600">
-                  <Share2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="font-bold text-gray-900">Link público de tu tienda</p>
-                  <p className="mt-1 break-all text-sm text-gray-500">/tienda/{store.slug}</p>
-                  <p className="mt-1 text-xs text-gray-400">Este es el link que ve cualquier cliente. No necesita login.</p>
-                </div>
+          <div className="mb-6 rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+            {/* Link row */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+              <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600 shrink-0">
+                <Store className="h-4 w-4" />
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-0.5">Tu tienda</p>
+                <p className="text-sm font-semibold text-gray-800 truncate">tiendaapps.com/tienda/{store.slug}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
                 <ShareStoreButton
                   storeName={store.name}
                   storeSlug={store.slug}
@@ -219,13 +217,15 @@ export default async function DashboardPage() {
                   href={`/tienda/${store.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
                 >
-                  Ver tienda
+                  <Eye className="h-4 w-4" />
+                  Ver
                 </Link>
               </div>
             </div>
-            <div className="mt-3">
+            {/* Publish toggle */}
+            <div className="px-3 py-3">
               <PublishToggle initialPublished={store.isPublished} />
             </div>
           </div>

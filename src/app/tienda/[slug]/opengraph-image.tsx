@@ -5,12 +5,6 @@ export const alt = "Vista previa de la tienda";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-function safeColor(value: string | null | undefined, fallback: string) {
-  return typeof value === "string" && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value)
-    ? value
-    : fallback;
-}
-
 function hexToRgb(hex: string) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -18,9 +12,36 @@ function hexToRgb(hex: string) {
   return { r, g, b };
 }
 
+function safeColor(value: string | null | undefined, fallback: string) {
+  return typeof value === "string" && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value)
+    ? value
+    : fallback;
+}
+
 function darken(hex: string, amount = 0.25) {
   const { r, g, b } = hexToRgb(hex);
-  return `rgb(${Math.round(r * (1 - amount))}, ${Math.round(g * (1 - amount))}, ${Math.round(b * (1 - amount))})`;
+  return `#${[r, g, b]
+    .map((c) => Math.round(c * (1 - amount)).toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
+function getLuminance(hex: string): number {
+  const { r, g, b } = hexToRgb(hex);
+  const toLinear = (c: number) => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+// Darkens iteratively until the color is safe for white text (lum ≤ 0.12)
+function ensureDark(hex: string): string {
+  let color = hex;
+  for (let i = 0; i < 12; i++) {
+    if (getLuminance(color) <= 0.12) break;
+    color = darken(color, 0.3);
+  }
+  return color;
 }
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
@@ -31,16 +52,21 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     select: {
       name: true,
       logo: true,
-      logoColor: true,
       primaryColor: true,
+      logoColor: true,
       tagline: true,
       description: true,
     },
   });
 
   const storeName = store?.name ?? "Tienda";
-  const bg = safeColor(store?.logoColor ?? store?.primaryColor, "#6366f1");
-  const bgDark = darken(bg);
+
+  // Prefer primaryColor (chosen by owner) over logoColor (auto-extracted from logo)
+  // Always ensure it's dark enough for white text
+  const rawColor = safeColor(store?.primaryColor ?? store?.logoColor, "#6366f1");
+  const bg = ensureDark(rawColor);
+  const bgDark = darken(bg, 0.35);
+
   const subtitle =
     store?.tagline ||
     store?.description ||
@@ -67,7 +93,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
           position: "relative",
         }}
       >
-        {/* Subtle circle decoration */}
+        {/* Decorative circles */}
         <div
           style={{
             position: "absolute",
@@ -100,12 +126,12 @@ export default async function Image({ params }: { params: Promise<{ slug: string
             height: 200,
             borderRadius: 40,
             overflow: "hidden",
-            background: "rgba(255,255,255,0.18)",
+            background: "rgba(255,255,255,0.15)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
-            boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
+            boxShadow: "0 24px 64px rgba(0,0,0,0.4)",
             border: "3px solid rgba(255,255,255,0.25)",
           }}
         >
@@ -119,13 +145,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               style={{ objectFit: "cover" }}
             />
           ) : (
-            <span
-              style={{
-                fontSize: 80,
-                fontWeight: 900,
-                color: "#ffffff",
-              }}
-            >
+            <span style={{ fontSize: 80, fontWeight: 900, color: "#ffffff" }}>
               {initials}
             </span>
           )}
@@ -141,7 +161,6 @@ export default async function Image({ params }: { params: Promise<{ slug: string
             minWidth: 0,
           }}
         >
-          {/* Store name */}
           <div
             style={{
               fontSize: storeName.length > 18 ? 52 : 68,
@@ -149,13 +168,12 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               color: "#ffffff",
               lineHeight: 1.05,
               letterSpacing: "-0.02em",
-              textShadow: "0 2px 12px rgba(0,0,0,0.2)",
+              textShadow: "0 2px 16px rgba(0,0,0,0.4)",
             }}
           >
             {storeName}
           </div>
 
-          {/* Divider */}
           <div
             style={{
               width: 64,
@@ -168,19 +186,18 @@ export default async function Image({ params }: { params: Promise<{ slug: string
             }}
           />
 
-          {/* Subtitle */}
           <div
             style={{
               fontSize: 28,
-              color: "rgba(255,255,255,0.85)",
+              color: "rgba(255,255,255,0.88)",
               lineHeight: 1.4,
               maxWidth: 640,
+              textShadow: "0 1px 8px rgba(0,0,0,0.3)",
             }}
           >
             {subtitle.length > 80 ? subtitle.slice(0, 80) + "…" : subtitle}
           </div>
 
-          {/* URL badge */}
           <div
             style={{
               display: "flex",
