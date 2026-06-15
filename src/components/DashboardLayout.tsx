@@ -44,7 +44,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/dashboard",            label: "Inicio",     icon: TrendingUp,    exact: true, tourId: "inicio" },
       { href: "/dashboard/pedidos",    label: "Pedidos",    icon: ShoppingBag,   tourId: "pedidos",   hiddenFor: LEADS_STORE_TYPES },
-      { href: "/dashboard/consultas",  label: "Consultas",  icon: MessageCircle, onlyFor: LEADS_STORE_TYPES },
+      { href: "/dashboard/consultas",  label: "Consultas",  icon: MessageCircle, onlyFor: LEADS_STORE_TYPES, tourId: "consultas" },
       { href: "/dashboard/productos",  label: "Productos",  icon: Package,       tourId: "productos", labelFor: { AUTOS: "Vehículos" } },
       { href: "/dashboard/cupones",        label: "Cupones",        icon: Tag,   tourId: "cupones",   hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/vendedoras",     label: "Afiliados",      icon: Users,         tourId: "afiliados" },
