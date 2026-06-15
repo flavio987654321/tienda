@@ -155,16 +155,16 @@ const TEXT_FIELD_LABELS: Record<string, string> = {
 };
 
 /* ── Thumbnail (real template scaled) ─────────────────────── */
-const THUMB_W = 200;
+const THUMB_W = 230;
 const VIRTUAL_W = 1080;
 const SCALE = THUMB_W / VIRTUAL_W;
-const THUMB_H = 140;
+const THUMB_H = 162;
 const VIRTUAL_H = THUMB_H / SCALE;
 
 function TemplateThumbnail({ component: Component }: { component: React.ComponentType }) {
   return (
     <div style={{ width: THUMB_W, height: THUMB_H, overflow: "hidden", position: "relative",
-      borderRadius: "8px 8px 0 0", background: "#f8fafc" }}>
+      borderRadius: "10px 10px 0 0", background: "#f8fafc" }}>
       <div style={{
         position: "absolute", top: 0, left: 0,
         width: VIRTUAL_W, height: VIRTUAL_H,
@@ -191,64 +191,93 @@ function TemplateCard({ t, isSaved, disabled, onSelect, onGoToEditing }: {
     if (isSaved && onGoToEditing) return onGoToEditing();
     onSelect();
   };
+  const tags = t.desc.split(" · ");
   return (
     <div
       onMouseEnter={() => !disabled && setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={handleClick}
       style={{
-        flexShrink: 0, width: THUMB_W, borderRadius: 12, overflow: "hidden",
+        flexShrink: 0, width: THUMB_W, borderRadius: 14, overflow: "hidden",
         cursor: disabled ? "not-allowed" : "pointer",
         border: "2px solid",
         borderColor: disabled ? "#e2e8f0" : isSaved ? "#059669" : hovered ? "#6366f1" : "#e2e8f0",
-        background: "white", transition: "all 0.2s",
+        background: "white", transition: "all 0.22s ease",
         opacity: disabled ? 0.45 : 1,
         boxShadow: disabled ? "none"
-          : isSaved ? "0 4px 16px rgba(5,150,105,0.2)"
-          : hovered ? "0 8px 24px rgba(99,102,241,0.18)" : "0 2px 8px rgba(0,0,0,0.07)",
-        transform: !disabled && hovered ? "translateY(-3px)" : "none",
+          : isSaved ? "0 6px 20px rgba(5,150,105,0.22)"
+          : hovered ? "0 10px 30px rgba(99,102,241,0.2)" : "0 2px 10px rgba(0,0,0,0.08)",
+        transform: !disabled && hovered ? "translateY(-4px)" : "none",
         position: "relative",
         filter: disabled ? "grayscale(1)" : "none",
       }}>
       {isSaved && !disabled && (
         <div style={{
-          position: "absolute", top: 8, right: 8, zIndex: 2,
+          position: "absolute", top: 10, right: 10, zIndex: 2,
           background: "#059669", color: "white", borderRadius: 20,
-          fontSize: 9, fontWeight: 800, padding: "3px 7px", letterSpacing: 0.3,
-          boxShadow: "0 2px 6px rgba(5,150,105,0.4)",
+          fontSize: 9, fontWeight: 800, padding: "3px 8px", letterSpacing: 0.5,
+          boxShadow: "0 2px 8px rgba(5,150,105,0.5)",
         }}>
           ✓ Tu diseño
         </div>
       )}
       {disabled && (
         <div style={{
-          position: "absolute", top: 8, left: 8, right: 8, zIndex: 2,
-          background: "rgba(0,0,0,0.75)", color: "white", borderRadius: 6,
-          fontSize: 9, fontWeight: 700, padding: "4px 8px", textAlign: "center",
-          letterSpacing: 0.3,
+          position: "absolute", top: 10, left: 10, right: 10, zIndex: 2,
+          background: "rgba(0,0,0,0.72)", color: "white", borderRadius: 8,
+          fontSize: 9, fontWeight: 700, padding: "5px 8px", textAlign: "center",
+          letterSpacing: 0.4, backdropFilter: "blur(4px)",
         }}>
           No disponible para tu rubro
         </div>
       )}
+      {/* hover overlay on thumbnail */}
+      {!disabled && hovered && (
+        <div style={{
+          position: "absolute", top: 0, left: 0, right: 0, height: THUMB_H, zIndex: 1,
+          background: isSaved ? "rgba(5,150,105,0.12)" : "rgba(99,102,241,0.1)",
+          transition: "all 0.2s",
+        }} />
+      )}
       <TemplateThumbnail component={t.component} />
-      <div style={{ padding: "10px 12px 12px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-          {t.palette.map((c, i) => (
-            <div key={i} style={{ width: 14, height: 14, borderRadius: "50%", background: c,
-              border: "1.5px solid rgba(0,0,0,0.1)" }} />
+      <div style={{ padding: "12px 14px 14px" }}>
+        {/* palette + name row */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#0f172a", letterSpacing: -0.3 }}>{t.name}</p>
+          <div style={{ display: "flex", gap: 3 }}>
+            {t.palette.map((c, i) => (
+              <div key={i} style={{ width: 12, height: 12, borderRadius: "50%", background: c,
+                border: "1.5px solid rgba(0,0,0,0.1)", boxShadow: "0 1px 3px rgba(0,0,0,0.12)" }} />
+            ))}
+          </div>
+        </div>
+        {/* tags */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10 }}>
+          {tags.map((tag, i) => (
+            <span key={i} style={{
+              fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 20,
+              background: i === 0 ? "#f1f5f9" : "#f8fafc",
+              color: i === 0 ? "#475569" : "#94a3b8",
+              border: "1px solid #e2e8f0", letterSpacing: 0.3, textTransform: "uppercase",
+            }}>{tag}</span>
           ))}
         </div>
-        <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#1e293b" }}>{t.name}</p>
-        <p style={{ margin: "3px 0 8px", fontSize: 10, color: "#94a3b8", lineHeight: 1.3 }}>{t.desc}</p>
         {!disabled && (
           <div style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "6px", borderRadius: 7, fontSize: 11, fontWeight: 700,
-            background: isSaved ? (hovered ? "#059669" : "#dcfce7") : hovered ? "#6366f1" : "#f1f5f9",
-            color: isSaved ? (hovered ? "white" : "#059669") : hovered ? "white" : "#64748b",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            padding: "7px", borderRadius: 8, fontSize: 11, fontWeight: 700,
+            background: isSaved
+              ? (hovered ? "#059669" : "#dcfce7")
+              : hovered ? "#6366f1" : "#f8fafc",
+            color: isSaved
+              ? (hovered ? "white" : "#059669")
+              : hovered ? "white" : "#64748b",
+            border: `1px solid ${isSaved ? (hovered ? "#059669" : "#bbf7d0") : hovered ? "#6366f1" : "#e2e8f0"}`,
             transition: "all 0.2s",
           }}>
-            {isSaved ? (hovered ? "Editar →" : "Editar diseño") : hovered ? "Ver diseño →" : "Ver diseño"}
+            {isSaved
+              ? (hovered ? "Editar diseño →" : "✓ Editar diseño")
+              : (hovered ? "Ver diseño →" : "Ver diseño")}
           </div>
         )}
       </div>
@@ -257,6 +286,33 @@ function TemplateCard({ t, isSaved, disabled, onSelect, onGoToEditing }: {
 }
 
 /* ── Carousel row ───────────────────────────────────────────── */
+function CarouselArrow({ dir, onClick }: { dir: "l" | "r"; onClick: () => void }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        position: "absolute", [dir === "l" ? "left" : "right"]: -20,
+        top: "50%", transform: "translateY(-50%)",
+        width: 38, height: 38, borderRadius: "50%",
+        border: hov ? "1.5px solid #6366f1" : "1.5px solid #e2e8f0",
+        background: hov ? "#6366f1" : "white",
+        cursor: "pointer", zIndex: 2,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        boxShadow: hov ? "0 4px 16px rgba(99,102,241,0.3)" : "0 2px 10px rgba(0,0,0,0.1)",
+        transition: "all 0.18s ease",
+      }}>
+      <svg width={14} height={14} viewBox="0 0 14 14" fill="none">
+        {dir === "l"
+          ? <polyline points="9,2 4,7 9,12" stroke={hov ? "white" : "#64748b"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+          : <polyline points="5,2 10,7 5,12" stroke={hov ? "white" : "#64748b"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>}
+      </svg>
+    </button>
+  );
+}
+
 function CarouselRow({ templates, savedTemplateId, storeTipoTienda, onSelect, onGoToEditing }: {
   templates: TemplateInfo[];
   savedTemplateId?: string | null;
@@ -266,16 +322,11 @@ function CarouselRow({ templates, savedTemplateId, storeTipoTienda, onSelect, on
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const scroll = (dir: "l" | "r") =>
-    scrollRef.current?.scrollBy({ left: dir === "l" ? -240 : 240, behavior: "smooth" });
+    scrollRef.current?.scrollBy({ left: dir === "l" ? -(THUMB_W + 16) : (THUMB_W + 16), behavior: "smooth" });
 
   return (
-    <div style={{ position: "relative" }}>
-      <button onClick={() => scroll("l")} style={{
-        position: "absolute", left: -18, top: "50%", transform: "translateY(-50%)",
-        width: 34, height: 34, borderRadius: "50%", border: "1px solid #e2e8f0",
-        background: "white", cursor: "pointer", zIndex: 2, fontSize: 16, color: "#64748b",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
-      }}>‹</button>
+    <div style={{ position: "relative", paddingBottom: 6 }}>
+      {templates.length > 1 && <CarouselArrow dir="l" onClick={() => scroll("l")} />}
       <div ref={scrollRef} style={{
         display: "flex", gap: 16, overflowX: "auto", paddingBottom: 8,
         scrollSnapType: "x mandatory", scrollbarWidth: "none",
@@ -295,12 +346,7 @@ function CarouselRow({ templates, savedTemplateId, storeTipoTienda, onSelect, on
           );
         })}
       </div>
-      <button onClick={() => scroll("r")} style={{
-        position: "absolute", right: -18, top: "50%", transform: "translateY(-50%)",
-        width: 34, height: 34, borderRadius: "50%", border: "1px solid #e2e8f0",
-        background: "white", cursor: "pointer", zIndex: 2, fontSize: 16, color: "#64748b",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
-      }}>›</button>
+      {templates.length > 1 && <CarouselArrow dir="r" onClick={() => scroll("r")} />}
     </div>
   );
 }
@@ -1636,12 +1682,16 @@ export default function ConfiguracionPage() {
                 </p>
 
                 {CATEGORIES.map(cat => (
-                  <div key={cat.id} style={{ marginBottom: 40 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: "#0f172a",
-                        textTransform: "uppercase", letterSpacing: 0.5 }}>{cat.name}</span>
-                      <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
-                      <span style={{ fontSize: 11, color: "#94a3b8" }}>{cat.templates.length} diseños</span>
+                  <div key={cat.id} style={{ marginBottom: 44 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: "#0f172a",
+                        textTransform: "uppercase", letterSpacing: 1.2 }}>{cat.name}</span>
+                      <div style={{ flex: 1, height: 1, background: "linear-gradient(to right, #e2e8f0, transparent)" }} />
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
+                        background: "#f1f5f9", color: "#94a3b8", border: "1px solid #e2e8f0",
+                        textTransform: "uppercase", letterSpacing: 0.5,
+                      }}>{cat.templates.length} diseños</span>
                     </div>
                     <CarouselRow
                       templates={cat.templates}
@@ -1655,19 +1705,30 @@ export default function ConfiguracionPage() {
 
                 <div style={{ marginBottom: 32 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: "#cbd5e1",
-                      textTransform: "uppercase", letterSpacing: 0.5 }}>Más rubros próximamente</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#cbd5e1",
+                      textTransform: "uppercase", letterSpacing: 1 }}>Más rubros próximamente</span>
                     <div style={{ flex: 1, height: 1, background: "#f1f5f9" }} />
                   </div>
-                  <div style={{ display: "flex", gap: 16 }}>
-                    {["Gastronomía", "Belleza", "Tecnología", "Hogar"].map(label => (
+                  <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                    {[
+                      { label: "Gastronomía", icon: "🍽️" },
+                      { label: "Belleza", icon: "💅" },
+                      { label: "Tecnología", icon: "💻" },
+                      { label: "Hogar", icon: "🏠" },
+                    ].map(({ label, icon }) => (
                       <div key={label} style={{
-                        width: 180, height: 160, borderRadius: 12, border: "2px dashed #e2e8f0",
+                        width: THUMB_W, height: THUMB_H + 70, borderRadius: 14,
+                        border: "2px dashed #e2e8f0", background: "#fafbfc",
                         display: "flex", flexDirection: "column", alignItems: "center",
                         justifyContent: "center", color: "#cbd5e1", gap: 8,
                       }}>
-                        <span style={{ fontSize: 28 }}>+</span>
-                        <span style={{ fontSize: 11, fontWeight: 600 }}>{label}</span>
+                        <span style={{ fontSize: 30, filter: "grayscale(1)", opacity: 0.5 }}>{icon}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#cbd5e1", letterSpacing: 0.3 }}>{label}</span>
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
+                          background: "#f1f5f9", color: "#cbd5e1", border: "1px solid #e2e8f0",
+                          textTransform: "uppercase", letterSpacing: 0.5,
+                        }}>Próximamente</span>
                       </div>
                     ))}
                   </div>
