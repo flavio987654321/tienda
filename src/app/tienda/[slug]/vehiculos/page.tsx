@@ -20,6 +20,11 @@ function mapVehicle(raw: any): StorefrontProduct {
     const parsed = JSON.parse(raw.attributes || "[]");
     attributes = Array.isArray(parsed) ? parsed.filter((a: any) => a?.key) : [];
   } catch {}
+  let reelUrls: string[] = [];
+  try {
+    const parsed = JSON.parse(raw.reelUrls || "[]");
+    reelUrls = Array.isArray(parsed) ? parsed.filter((u: unknown) => typeof u === "string") : [];
+  } catch {}
   return {
     id: raw.id, name: raw.name, price: raw.price,
     comparePrice: raw.comparePrice ?? null,
@@ -28,7 +33,7 @@ function mapVehicle(raw: any): StorefrontProduct {
     gender: "unisex",
     description: raw.description ?? null,
     images, imageItems,
-    reelUrls: [], sizes: [], colors: [],
+    reelUrls, sizes: [], colors: [],
     variants: raw.variants ?? [],
     attributes,
     badge: raw.badge ?? undefined,
@@ -199,8 +204,13 @@ function VehiculosPageInner() {
     if (!loading) document.title = `${storeName} — Catálogo de vehículos`;
   }, [loading, storeName]);
 
-  const getAttr = (p: StorefrontProduct, key: string) =>
-    p.attributes?.find(a => a.key.toLowerCase() === key.toLowerCase())?.value ?? "";
+  const getAttr = (p: StorefrontProduct, ...keys: string[]) =>
+    keys.reduce<string>((acc, key) =>
+      acc || (p.attributes?.find(a => a.key.toLowerCase() === key.toLowerCase())?.value ?? "")
+    , "");
+
+  const getCiudad = (p: StorefrontProduct) => getAttr(p, "Ciudad / Zona", "Ciudad", "Ubicación");
+  const getKm     = (p: StorefrontProduct) => getAttr(p, "Kilómetros", "Km");
 
   const categories = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
@@ -208,20 +218,20 @@ function VehiculosPageInner() {
   }, [products]);
 
   const marcas = useMemo(() => {
-    const vals = [...new Set(products.map(p => getAttr(p, "marca")).filter(Boolean))].sort();
+    const vals = [...new Set(products.map(p => getAttr(p, "Marca")).filter(Boolean))].sort();
     return vals;
   }, [products]);
 
   const ciudades = useMemo(() => {
-    const vals = [...new Set(products.map(p => getAttr(p, "ciudad")).filter(Boolean))].sort();
+    const vals = [...new Set(products.map(getCiudad).filter(Boolean))].sort();
     return vals.length > 1 ? vals : [];
   }, [products]);
 
   const filtered = useMemo(() => {
     let r = products.filter(p => {
       if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
-      if (activeMarca !== "Todas" && getAttr(p, "marca") !== activeMarca) return false;
-      if (activeCiudad !== "Todas" && getAttr(p, "ciudad") !== activeCiudad) return false;
+      if (activeMarca !== "Todas" && getAttr(p, "Marca") !== activeMarca) return false;
+      if (activeCiudad !== "Todas" && getCiudad(p) !== activeCiudad) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
         const inName = p.name.toLowerCase().includes(q);
@@ -235,8 +245,8 @@ function VehiculosPageInner() {
     if (sortBy === "price_desc") r = [...r].sort((a, b) => b.price - a.price);
     if (sortBy === "name_az")    r = [...r].sort((a, b) => a.name.localeCompare(b.name));
     if (sortBy === "km_asc")     r = [...r].sort((a, b) => {
-      const kA = parseInt((a.attributes?.find(x => x.key === "Km")?.value ?? "").replace(/\D/g,"") || "0");
-      const kB = parseInt((b.attributes?.find(x => x.key === "Km")?.value ?? "").replace(/\D/g,"") || "0");
+      const kA = parseInt(getKm(a).replace(/\D/g,"") || "0");
+      const kB = parseInt(getKm(b).replace(/\D/g,"") || "0");
       return kA - kB;
     });
     if (sortBy === "year_desc")  r = [...r].sort((a, b) => {
