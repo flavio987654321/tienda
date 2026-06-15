@@ -160,7 +160,8 @@ function VehiculosPageInner() {
   const [currency,  setCurrency]  = useState("ARS");
   const [whatsapp,  setWhatsapp]  = useState<{ enabled: boolean; number: string; message?: string }>({ enabled: false, number: "" });
   const [selected,  setSelected]  = useState<StorefrontProduct | null>(null);
-  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const [imgErrors,    setImgErrors]    = useState<Record<string, boolean>>({});
+  const [hoveredMarca, setHoveredMarca] = useState<string | null>(null);
 
   const [search,         setSearch]      = useState("");
   const [activeCategory, setActiveCat]   = useState("Todos");
@@ -256,8 +257,7 @@ function VehiculosPageInner() {
         @media(min-width:560px){ .av-grid { grid-template-columns:repeat(2,1fr) } }
         @media(min-width:900px){ .av-grid { grid-template-columns:repeat(3,1fr) } }
         @media(min-width:1200px){ .av-grid { grid-template-columns:repeat(4,1fr) } }
-        .brand-chip { transition: transform 0.18s, box-shadow 0.18s }
-        .brand-chip:hover { transform: translateY(-2px) }
+        .brand-chip { }
       `}</style>
 
       {/* ── HEADER — navy ── */}
@@ -337,63 +337,79 @@ function VehiculosPageInner() {
 
         {/* ── LOGOS DE MARCAS ── */}
         {marcas.length > 0 && (
-          <div style={{ marginBottom:32, background:"#f7f9fc", borderRadius:8,
-            padding:"20px 24px", boxShadow:"0 1px 8px rgba(27,63,110,0.08)", border:`1px solid ${border}` }}>
+          <div style={{ marginBottom:32, background:"#f7f9fc", borderRadius:12,
+            padding:"20px 24px 24px", boxShadow:"0 2px 12px rgba(27,63,110,0.07)" }}>
             <p style={{ fontSize:10, letterSpacing:3, color:MID, textTransform:"uppercase",
-              margin:"0 0 16px", fontWeight:600 }}>
+              margin:"0 0 18px", fontWeight:600 }}>
               Filtrar por marca
             </p>
-            <div className="st-scroll" style={{ display:"flex", gap:14, overflowX:"auto",
-              paddingBottom:4, WebkitOverflowScrolling:"touch" as any }}>
+            <div className="st-scroll" style={{ display:"flex", gap:18, overflowX:"auto",
+              paddingBottom:8, paddingTop:8, WebkitOverflowScrolling:"touch" as any }}>
               {/* Chip "Todas" */}
-              <button className="brand-chip" onClick={() => setActiveMarca("Todas")}
-                style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:7,
-                  background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0 }}>
-                <div style={{ width:58, height:58, borderRadius:"50%",
-                  background: activeMarca === "Todas" ? accent : "#e8eef7",
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  border: activeMarca === "Todas" ? `3px solid ${accent}` : "3px solid transparent",
-                  boxShadow: activeMarca === "Todas" ? `0 0 0 2px ${accent}44` : "0 2px 8px rgba(0,0,0,0.08)",
-                  transition:"all 0.2s" }}>
-                  <svg width={22} height={22} viewBox="0 0 24 24" fill="none"
-                    stroke={activeMarca === "Todas" ? "#fff" : "#7a8fa6"} strokeWidth={2}
-                    strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-                  </svg>
-                </div>
-                <span style={{ fontSize:10, fontWeight: activeMarca === "Todas" ? 700 : 400,
-                  color: activeMarca === "Todas" ? accent : MID, letterSpacing:0.5 }}>
-                  Todas
-                </span>
-              </button>
+              {(() => {
+                const isTodas = activeMarca === "Todas";
+                const isHov   = hoveredMarca === "__todas__";
+                return (
+                  <button className="brand-chip" onClick={() => setActiveMarca("Todas")}
+                    onMouseEnter={() => setHoveredMarca("__todas__")}
+                    onMouseLeave={() => setHoveredMarca(null)}
+                    style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8,
+                      background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0 }}>
+                    <div style={{ width:62, height:62, borderRadius:16,
+                      background: isTodas ? accent : "#e8eef7",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      boxShadow: isTodas
+                        ? `0 0 0 2.5px ${accent}, 0 10px 28px ${accent}50`
+                        : isHov
+                          ? "0 10px 28px rgba(0,0,0,0.18), 0 3px 8px rgba(0,0,0,0.10)"
+                          : "0 4px 16px rgba(0,0,0,0.11), 0 1px 4px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.6)",
+                      transform: isTodas ? "scale(1.1) translateY(-4px)"
+                        : isHov ? "translateY(-4px)" : "translateY(0)",
+                      transition:"all 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}>
+                      <svg width={24} height={24} viewBox="0 0 24 24" fill="none"
+                        stroke={isTodas ? "#fff" : "#7a8fa6"} strokeWidth={2}
+                        strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                      </svg>
+                    </div>
+                    <span style={{ fontSize:10, fontWeight: isTodas ? 700 : 400,
+                      color: isTodas ? accent : MID, letterSpacing:0.5 }}>
+                      Todas
+                    </span>
+                  </button>
+                );
+              })()}
 
               {marcas.map(marca => {
-                const bc = getBrandStyle(marca, accent);
+                const bc     = getBrandStyle(marca, accent);
                 const isActive = activeMarca === marca;
-                const abbr = brandAbbr(marca);
+                const abbr   = brandAbbr(marca);
+                const isHov  = hoveredMarca === marca;
                 return (
                   <button key={marca} className="brand-chip"
                     onClick={() => setActiveMarca(isActive ? "Todas" : marca)}
-                    style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:7,
+                    onMouseEnter={() => setHoveredMarca(marca)}
+                    onMouseLeave={() => setHoveredMarca(null)}
+                    style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8,
                       background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0 }}>
-                    <div style={{ width:58, height:58, borderRadius:"50%",
+                    <div style={{ width:62, height:62, borderRadius:16,
                       background: imgErrors[marca] ? bc.bg : "#ffffff",
                       display:"flex", alignItems:"center", justifyContent:"center",
-                      border: isActive ? `3px solid ${accent}` : imgErrors[marca] ? "3px solid transparent" : `2px solid ${bc.bg}66`,
                       boxShadow: isActive
-                        ? `0 0 0 2px ${accent}66, 0 4px 12px rgba(0,0,0,0.18)`
-                        : "0 2px 10px rgba(0,0,0,0.10)",
-                      transition:"all 0.2s",
-                      transform: isActive ? "scale(1.08)" : "scale(1)" }}>
+                        ? `0 0 0 2.5px ${accent}, 0 10px 28px ${accent}50`
+                        : isHov
+                          ? "0 10px 28px rgba(0,0,0,0.18), 0 3px 8px rgba(0,0,0,0.10)"
+                          : "0 4px 16px rgba(0,0,0,0.11), 0 1px 4px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.8)",
+                      transform: isActive ? "scale(1.1) translateY(-4px)"
+                        : isHov ? "translateY(-4px)" : "translateY(0)",
+                      transition:"all 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}>
                       {imgErrors[marca] ? (
-                        <span style={{ fontSize:13, fontWeight:900, color: bc.text,
+                        <span style={{ fontSize:13, fontWeight:900, color:bc.text,
                           letterSpacing:0.5, lineHeight:1 }}>{abbr}</span>
                       ) : (
-                        <img
-                          src={getBrandLogoUrl(marca)}
-                          alt={marca}
-                          width={34} height={34}
+                        <img src={getBrandLogoUrl(marca)} alt={marca}
+                          width={38} height={38}
                           style={{ objectFit:"contain", display:"block" }}
                           onError={() => setImgErrors(prev => ({...prev, [marca]: true}))}
                         />
@@ -401,7 +417,7 @@ function VehiculosPageInner() {
                     </div>
                     <span style={{ fontSize:10, fontWeight: isActive ? 700 : 400,
                       color: isActive ? accent : MID, letterSpacing:0.3,
-                      maxWidth:64, overflow:"hidden", textOverflow:"ellipsis",
+                      maxWidth:68, overflow:"hidden", textOverflow:"ellipsis",
                       whiteSpace:"nowrap", textAlign:"center" }}>
                       {marca}
                     </span>

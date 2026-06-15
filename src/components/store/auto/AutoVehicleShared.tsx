@@ -184,7 +184,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                   onMouseLeave={() => setMousePos(null)}
                   {...imgSwipe}>
                   <img src={imgs[imgIdx]} alt={product.name}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", cursor: isTouch ? "zoom-in" : undefined }}
+                    style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", cursor: isTouch ? "zoom-in" : undefined, background: "#f0f0f0" }}
                     onClick={() => { if (isTouch) setLightboxSrc(imgs[imgIdx]); }} />
                   {mousePos && (
                     <div style={{
@@ -198,20 +198,30 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                       pointerEvents: "none", boxSizing: "border-box", zIndex: 2,
                     }} />
                   )}
-                  {imgs.length > 1 && (!mousePos || isTouch) && (
+                  {imgs.length > 1 && (
                     <>
-                      <button onClick={() => setImgIdx(i => (i - 1 + imgs.length) % imgs.length)}
-                        style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-                          background: "rgba(255,255,255,0.9)", border: "none", width: 34, height: 34,
-                          borderRadius: "50%", cursor: "pointer", fontSize: 20,
+                      <button onClick={() => { setImgIdx(i => (i - 1 + imgs.length) % imgs.length); setMousePos(null); }}
+                        style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
+                          background: "rgba(0,0,0,0.52)", backdropFilter: "blur(6px)",
+                          border: "1px solid rgba(255,255,255,0.18)", color: "#fff",
+                          width: 40, height: 40, borderRadius: 10, cursor: "pointer",
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>‹</button>
-                      <button onClick={() => setImgIdx(i => (i + 1) % imgs.length)}
-                        style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-                          background: "rgba(255,255,255,0.9)", border: "none", width: 34, height: 34,
-                          borderRadius: "50%", cursor: "pointer", fontSize: 20,
+                          zIndex: 3, transition: "background 0.15s" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "rgba(0,0,0,0.80)")}
+                        onMouseLeave={e => (e.currentTarget.style.background = "rgba(0,0,0,0.52)")}>
+                        <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                      </button>
+                      <button onClick={() => { setImgIdx(i => (i + 1) % imgs.length); setMousePos(null); }}
+                        style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+                          background: "rgba(0,0,0,0.52)", backdropFilter: "blur(6px)",
+                          border: "1px solid rgba(255,255,255,0.18)", color: "#fff",
+                          width: 40, height: 40, borderRadius: 10, cursor: "pointer",
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>›</button>
+                          zIndex: 3, transition: "background 0.15s" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "rgba(0,0,0,0.80)")}
+                        onMouseLeave={e => (e.currentTarget.style.background = "rgba(0,0,0,0.52)")}>
+                        <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                      </button>
                     </>
                   )}
                   <div style={{ position: "absolute", bottom: 8, right: 8,
@@ -403,7 +413,7 @@ export function VehicleCard({ product, accent, currency, theme = "light", onClic
       <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden",
         background: D ? "#111" : "#f5f5f5" }}>
         <img src={img} alt={product.name}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: D ? "#111" : "#f5f5f5" }}
           onError={e => { (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=75"; }} />
         {product.badge && (
           <div style={{ position: "absolute", top: 10, left: 10,
