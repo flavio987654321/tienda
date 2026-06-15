@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 import { VehicleCard, VehicleModal, AM_MODAL_CSS } from "@/components/store/auto/AutoVehicleShared";
+import { getContrastColor } from "@/contexts/EditContext";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 
 function mapVehicle(raw: any): StorefrontProduct {
@@ -161,6 +162,7 @@ function VehiculosPageInner() {
   const [accent,      setAccent]      = useState("#c9a227");
   const [currency,    setCurrency]    = useState("ARS");
   const [templateId,  setTemplateId]  = useState("");
+  const [navBgColor,  setNavBgColor]  = useState<string | null>(null);
   const [whatsapp,    setWhatsapp]    = useState<{ enabled: boolean; number: string; message?: string }>({ enabled: false, number: "" });
   const [selected,  setSelected]  = useState<StorefrontProduct | null>(null);
   const [imgErrors,    setImgErrors]    = useState<Record<string, boolean>>({});
@@ -181,10 +183,11 @@ function VehiculosPageInner() {
         setStoreName(data.store.name ?? "Tienda");
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
-          if (cfg.colors?.accent) setAccent(cfg.colors.accent);
-          if (cfg.currency)       setCurrency(cfg.currency);
-          if (cfg.whatsapp)       setWhatsapp(cfg.whatsapp);
-          if (cfg.templateId)     setTemplateId(cfg.templateId);
+          if (cfg.colors?.accent)          setAccent(cfg.colors.accent);
+          if (cfg.currency)                setCurrency(cfg.currency);
+          if (cfg.whatsapp)                setWhatsapp(cfg.whatsapp);
+          if (cfg.templateId ?? cfg.template) setTemplateId(cfg.templateId ?? cfg.template);
+          if (cfg.sectionColors?.navBg)    setNavBgColor(cfg.sectionColors.navBg);
         } catch {}
         setProducts((data.store.products ?? []).map(mapVehicle));
       })
@@ -255,14 +258,16 @@ function VehiculosPageInner() {
   const borderFaint = isAD ? "rgba(0,0,0,0.04)" : "rgba(27,63,110,0.07)";
   const border      = isAD ? "#e5e7eb" : "rgba(27,63,110,0.15)";
 
-  const headerBg          = isAD ? "#ffffff" : NAVY;
-  const headerLinkColor   = isAD ? "#9ca3af" : "rgba(255,255,255,0.55)";
-  const headerLinkHover   = isAD ? "#374151" : "#ffffff";
-  const headerCountColor  = isAD ? "#6b7280" : "rgba(255,255,255,0.4)";
-  const headerBorderLine  = isAD ? "1px solid #e5e7eb" : "none";
-  const headerBoxShadow   = isAD ? "0 1px 12px rgba(0,0,0,0.07)" : "0 2px 16px rgba(0,0,0,0.25)";
-  const activeTabBg       = isAD ? accent : NAVY;
-  const activeTabBorder   = isAD ? accent : NAVY;
+  // Header: si el usuario configuró un navBg, se usa ese; si no, según el template
+  const headerBg       = navBgColor ?? (isAD ? "#ffffff" : NAVY);
+  const headerIsDark   = getContrastColor(headerBg) === "light";
+  const headerLinkColor  = headerIsDark ? "rgba(255,255,255,0.55)" : "#9ca3af";
+  const headerLinkHover  = headerIsDark ? "#ffffff"                : "#374151";
+  const headerCountColor = headerIsDark ? "rgba(255,255,255,0.4)"  : "#6b7280";
+  const headerBorderLine = headerIsDark ? "none"                   : "1px solid #e5e7eb";
+  const headerBoxShadow  = headerIsDark ? "0 2px 16px rgba(0,0,0,0.25)" : "0 1px 12px rgba(0,0,0,0.07)";
+  const activeTabBg      = isAD ? accent : NAVY;
+  const activeTabBorder  = isAD ? accent : NAVY;
 
   return (
     <div style={{ background: BG, color: T, minHeight: "100vh", fontFamily: "'Inter','Segoe UI',system-ui,sans-serif" }}>
@@ -287,8 +292,8 @@ function VehiculosPageInner() {
             onMouseLeave={e => (e.currentTarget.style.color=headerLinkColor)}>
             ← {fromEditor ? "Volver al editor" : "Volver a la tienda"}
           </Link>
-          <span style={{ fontSize:17, fontWeight:900, letterSpacing: isAD ? -0.5 : 3,
-            textTransform: isAD ? "none" : "uppercase", color: accent }}>
+          <span style={{ fontSize:17, fontWeight:900, letterSpacing: headerIsDark ? 3 : -0.5,
+            textTransform: headerIsDark ? "uppercase" : "none", color: accent }}>
             {storeName}
           </span>
           <span style={{ fontSize:12, color: headerCountColor, letterSpacing:1 }}>

@@ -203,21 +203,29 @@ export default function AutoDrive() {
           left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
           zIndex: isPreview ? 10001 : 110, height:PROMO_H, background:accent,
           display:"flex", alignItems:"center", justifyContent:"center" }}>
-          <span style={{ fontSize:11, fontWeight:600, color:"#fff", letterSpacing:1 }}>
-            {annMessages[annIdx]}
-          </span>
-          {annMessages.length > 1 && (
-            <div style={{ position:"absolute", bottom:4, left:"50%", transform:"translateX(-50%)", display:"flex", gap:4 }}>
-              {annMessages.map((_,i) => (
-                <button key={i} onClick={() => setAnnIdx(i)}
-                  style={{ width: i===annIdx ? 14 : 5, height:3, border:"none", borderRadius:2,
-                    background: i===annIdx ? "#fff" : "rgba(255,255,255,0.4)", cursor:"pointer", padding:0, transition:"all 0.3s" }} />
-              ))}
-            </div>
-          )}
-          <button onClick={() => setAnnVisible(false)}
-            style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
-              background:"none", border:"none", color:"#fff", cursor:"pointer", fontSize:16, opacity:0.7 }}>×</button>
+          {(() => {
+            const bannerText = getContrastColor(accent) === "light" ? "#ffffff" : "#111111";
+            const bannerFade = getContrastColor(accent) === "light" ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.3)";
+            return (
+              <>
+                <span style={{ fontSize:11, fontWeight:600, color:bannerText, letterSpacing:1 }}>
+                  {annMessages[annIdx]}
+                </span>
+                {annMessages.length > 1 && (
+                  <div style={{ position:"absolute", bottom:4, left:"50%", transform:"translateX(-50%)", display:"flex", gap:4 }}>
+                    {annMessages.map((_,i) => (
+                      <button key={i} onClick={() => setAnnIdx(i)}
+                        style={{ width: i===annIdx ? 14 : 5, height:3, border:"none", borderRadius:2,
+                          background: i===annIdx ? bannerText : bannerFade, cursor:"pointer", padding:0, transition:"all 0.3s" }} />
+                    ))}
+                  </div>
+                )}
+                <button onClick={() => setAnnVisible(false)}
+                  style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
+                    background:"none", border:"none", color:bannerText, cursor:"pointer", fontSize:16, opacity:0.7 }}>×</button>
+              </>
+            );
+          })()}
         </div>
       )}
 
@@ -401,8 +409,7 @@ export default function AutoDrive() {
         <SectionOverlay ov={catsImg} />
         <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
         <div style={{ position:"relative", zIndex:1, maxWidth:1200, margin:"0 auto" }}>
-          <div className="ad-carousel"
-            style={{ display:"flex", gap:10, overflowX:"auto", paddingBottom:2 }}>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap", justifyContent:"center", paddingBottom:2 }}>
             {SERVICE_CATS.map((cat, i) => (
               <button key={i}
                 onClick={() => smoothScrollTo("catálogo")}
