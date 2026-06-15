@@ -73,54 +73,56 @@ const BRAND_COLORS: Record<string, { bg: string; text: string }> = {
   lifan:           { bg: "#0055a4", text: "#fff" },
 };
 
+// Simple Icons CDN — SVGs con fondo transparente, shadow sigue el contorno real del logo
+const SIMPLE_ICONS: Record<string, { slug: string; hex: string }> = {
+  toyota:            { slug: "toyota",         hex: "EB0A1E" },
+  ford:              { slug: "ford",           hex: "003478" },
+  chevrolet:         { slug: "chevrolet",      hex: "C9A84C" },
+  honda:             { slug: "honda",          hex: "CC0000" },
+  volkswagen:        { slug: "volkswagen",     hex: "001E50" },
+  vw:                { slug: "volkswagen",     hex: "001E50" },
+  renault:           { slug: "renault",        hex: "EFDF00" },
+  fiat:              { slug: "fiat",           hex: "CC0000" },
+  peugeot:           { slug: "peugeot",        hex: "0055A4" },
+  citroen:           { slug: "citroen",        hex: "EF0000" },
+  "citroën":         { slug: "citroen",        hex: "EF0000" },
+  nissan:            { slug: "nissan",         hex: "C3002F" },
+  hyundai:           { slug: "hyundai",        hex: "002C5F" },
+  kia:               { slug: "kia",            hex: "05141F" },
+  jeep:              { slug: "jeep",           hex: "006241" },
+  "mercedes-benz":   { slug: "mercedesbenz",   hex: "222222" },
+  mercedes:          { slug: "mercedesbenz",   hex: "222222" },
+  bmw:               { slug: "bmw",            hex: "1C69D4" },
+  audi:              { slug: "audi",           hex: "BB0A14" },
+  yamaha:            { slug: "yamaha",         hex: "003087" },
+  kawasaki:          { slug: "kawasaki",       hex: "4F9F1F" },
+  suzuki:            { slug: "suzuki",         hex: "204399" },
+  "harley-davidson": { slug: "harleydavidson", hex: "FF6600" },
+  harley:            { slug: "harleydavidson", hex: "FF6600" },
+  mitsubishi:        { slug: "mitsubishi",     hex: "CC0000" },
+  subaru:            { slug: "subaru",         hex: "003087" },
+  mazda:             { slug: "mazda",          hex: "910A0C" },
+  volvo:             { slug: "volvo",          hex: "003057" },
+  byd:               { slug: "byd",            hex: "1565C0" },
+  dodge:             { slug: "dodge",          hex: "CC0000" },
+};
+
 const BRAND_DOMAINS: Record<string, string> = {
-  toyota:            "toyota.com",
-  ford:              "ford.com",
-  chevrolet:         "chevrolet.com",
-  honda:             "honda.com",
-  volkswagen:        "volkswagen.com",
-  vw:                "volkswagen.com",
-  renault:           "renault.com",
-  fiat:              "fiat.com",
-  peugeot:           "peugeot.com",
-  citroen:           "citroen.com",
-  "citroën":         "citroen.com",
-  nissan:            "nissan.com",
-  hyundai:           "hyundai.com",
-  kia:               "kia.com",
-  jeep:              "jeep.com",
-  "mercedes-benz":   "mercedes-benz.com",
-  mercedes:          "mercedes-benz.com",
-  bmw:               "bmw.com",
-  audi:              "audi.com",
-  yamaha:            "yamaha-motor.com",
-  kawasaki:          "kawasaki.com",
-  suzuki:            "suzuki.com",
-  "harley-davidson": "harley-davidson.com",
-  harley:            "harley-davidson.com",
-  ram:               "ramtrucks.com",
-  dodge:             "dodge.com",
-  mitsubishi:        "mitsubishi-motors.com",
-  subaru:            "subaru.com",
-  mazda:             "mazda.com",
-  volvo:             "volvocars.com",
-  chery:             "chery.com",
-  geely:             "geely.com",
-  byd:               "byd.com",
-  mg:                "mgmotor.com",
-  lifan:             "lifan.com",
+  ram:    "ramtrucks.com",
+  chery:  "chery.com",
+  geely:  "geely.com",
+  mg:     "mgmotor.com",
+  lifan:  "lifan.com",
 };
 
 function getBrandLogoUrl(brand: string): string {
   const key = brand.toLowerCase().trim();
-  let domain = BRAND_DOMAINS[key];
-  if (!domain) {
-    for (const [k, d] of Object.entries(BRAND_DOMAINS)) {
-      if (key.includes(k) || k.includes(key)) { domain = d; break; }
-    }
-  }
-  const d = domain ?? `${key.replace(/\s+/g, "")}.com`;
-  return `https://www.google.com/s2/favicons?domain=${d}&sz=128`;
+  const si = SIMPLE_ICONS[key] ??
+    Object.entries(SIMPLE_ICONS).find(([k]) => key.includes(k) || k.includes(key))?.[1];
+  if (si) return `https://cdn.simpleicons.org/${si.slug}/${si.hex}`;
+  // fallback: Google S2 favicon
+  const domain = BRAND_DOMAINS[key] ?? `${key.replace(/\s+/g, "")}.com`;
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
 }
 
 function getBrandStyle(brand: string, accent: string): { bg: string; text: string } {
@@ -337,14 +339,14 @@ function VehiculosPageInner() {
 
         {/* ── LOGOS DE MARCAS ── */}
         {marcas.length > 0 && (
-          <div style={{ marginBottom:32, background:"#f7f9fc", borderRadius:12,
-            padding:"20px 24px 24px", boxShadow:"0 2px 12px rgba(27,63,110,0.07)" }}>
+          <div style={{ marginBottom:32 }}>
             <p style={{ fontSize:10, letterSpacing:3, color:MID, textTransform:"uppercase",
               margin:"0 0 18px", fontWeight:600 }}>
               Filtrar por marca
             </p>
-            <div className="st-scroll" style={{ display:"flex", gap:18, overflowX:"auto",
-              paddingBottom:8, paddingTop:8, WebkitOverflowScrolling:"touch" as any }}>
+            <div className="st-scroll" style={{ display:"flex", gap:20, overflowX:"auto",
+              paddingBottom:12, paddingTop:12, paddingLeft:4, paddingRight:4,
+              WebkitOverflowScrolling:"touch" as any, scrollSnapType:"x mandatory" }}>
               {/* Chip "Todas" */}
               {/* Chip "Todas" — círculo de color con drop-shadow flotante */}
               {(() => {
@@ -361,7 +363,8 @@ function VehiculosPageInner() {
                     onMouseEnter={() => setHoveredMarca("__todas__")}
                     onMouseLeave={() => setHoveredMarca(null)}
                     style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8,
-                      background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0 }}>
+                      background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0,
+                      scrollSnapAlign:"start" }}>
                     <div style={{ width:56, height:56, borderRadius:"50%",
                       background: isTodas ? accent : "#dde5f0",
                       display:"flex", alignItems:"center", justifyContent:"center",
@@ -399,7 +402,8 @@ function VehiculosPageInner() {
                     onMouseEnter={() => setHoveredMarca(marca)}
                     onMouseLeave={() => setHoveredMarca(null)}
                     style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8,
-                      background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0 }}>
+                      background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0,
+                      scrollSnapAlign:"start" }}>
                     {imgErrors[marca] ? (
                       /* Fallback: círculo de color flotante */
                       <div style={{ width:56, height:56, borderRadius:"50%", background:bc.bg,
