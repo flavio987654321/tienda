@@ -316,7 +316,7 @@ export default function AutoMotor() {
               )
             )}
             {whatsapp.enabled && whatsapp.number && (
-              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}`}
+              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ background: accent, color: getContrastColor(accent),
                   textDecoration: "none", padding: "9px 22px",
@@ -391,7 +391,7 @@ export default function AutoMotor() {
               <EditableZone field="heroCta" label="Botón principal">Ver catálogo</EditableZone>
             </button>
             {whatsapp.enabled && whatsapp.number && (
-              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}`}
+              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ display: "inline-flex", alignItems: "center", gap: 8,
                   background: "transparent", color: heroMidColor,
@@ -680,7 +680,7 @@ export default function AutoMotor() {
               <EditableZone field="aboutParagraph2" label="Párrafo 2">Contamos con asesores especializados y taller propio para garantizar la calidad de cada vehículo en nuestro stock.</EditableZone>
             </p>
             {whatsapp.enabled && whatsapp.number && (
-              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}`}
+              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ display: "inline-flex", alignItems: "center", gap: 8,
                   background: accent, color: getContrastColor(accent), textDecoration: "none",
@@ -717,7 +717,7 @@ export default function AutoMotor() {
             <EditableZone field="contactSubtext" label="Subtítulo">Contactanos y un asesor te responde en minutos para coordinar una visita sin compromiso.</EditableZone>
           </p>
           {whatsapp.enabled && whatsapp.number && (
-            <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}`}
+            <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
               target="_blank" rel="noopener noreferrer"
               style={{ display: "inline-flex", alignItems: "center", gap: 12,
                 background: "#25d366", color: "white", textDecoration: "none",
@@ -783,7 +783,7 @@ export default function AutoMotor() {
       )}
 
       {!editMode && whatsapp.enabled && whatsapp.number && (
-        <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}`}
+        <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
           target="_blank" rel="noopener noreferrer"
           style={{ position: "fixed", bottom: 24, right: 24, zIndex: 200,
             background: "#25d366", color: "white", width: 56, height: 56,

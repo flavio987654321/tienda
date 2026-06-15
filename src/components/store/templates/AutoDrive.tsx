@@ -321,7 +321,7 @@ export default function AutoDrive() {
               )
             )}
             {whatsapp.enabled && whatsapp.number && (
-              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}`}
+              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ display: "flex", alignItems: "center", gap: 6,
                   background: "#25d366", color: "white", textDecoration: "none",
@@ -663,7 +663,7 @@ export default function AutoDrive() {
               <EditableZone field="aboutParagraph2" label="Párrafo 2">Nuestro equipo de asesores y taller propio garantizan la calidad de cada vehículo antes de llegar a tus manos.</EditableZone>
             </p>
             {whatsapp.enabled && whatsapp.number && (
-              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}`}
+              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ display: "inline-flex", alignItems: "center", gap: 8,
                   background: "#25d366", color: "white", textDecoration: "none",
@@ -693,7 +693,7 @@ export default function AutoDrive() {
             <EditableZone field="contactSubtext" label="Subtítulo">Escribinos y coordinamos una visita sin costo. Respondemos en minutos.</EditableZone>
           </p>
           {whatsapp.enabled && whatsapp.number && (
-            <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}`}
+            <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
               target="_blank" rel="noopener noreferrer"
               style={{ display: "inline-flex", alignItems: "center", gap: 10,
                 background: "#25d366", color: "white", textDecoration: "none",
@@ -757,7 +757,7 @@ export default function AutoDrive() {
       )}
 
       {!editMode && whatsapp.enabled && whatsapp.number && (
-        <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}`}
+        <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
           target="_blank" rel="noopener noreferrer"
           style={{ position: "fixed", bottom: 24, right: 24, zIndex: 200,
             background: "#25d366", color: "white", width: 56, height: 56,

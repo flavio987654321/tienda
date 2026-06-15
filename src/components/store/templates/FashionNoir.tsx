@@ -1578,7 +1578,7 @@ export default function FashionNoir() {
               </button>
               {storeConfig?.whatsapp?.enabled && storeConfig.whatsapp.number && (
                 <a
-                  href={`https://wa.me/${storeConfig.whatsapp.number.replace(/\D/g,"")}`}
+                  href={`https://wa.me/${storeConfig.whatsapp.number.replace(/\D/g,"")}${storeConfig.whatsapp.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`}
                   target="_blank" rel="noreferrer"
                   style={{ display:"flex", alignItems:"center", gap:10, marginTop:14, padding:"11px 14px", background:"rgba(37,211,102,0.08)", borderRadius:6, textDecoration:"none", transition:"background 0.2s" }}
                   onMouseEnter={e => (e.currentTarget.style.background="rgba(37,211,102,0.15)")}
@@ -1658,7 +1658,7 @@ export default function FashionNoir() {
       {(!storeConfig || storeConfig.whatsapp.enabled) && (
         <EditableFixed field="whatsapp" label="WhatsApp" bottom={24} right={24}>
           <button
-            onClick={() => window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}`, "_blank")}
+            onClick={() => window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`, "_blank")}
             style={{ position:"fixed", bottom:24, right:24, zIndex:500, width:52, height:52, borderRadius:"50%", background:"#25D366", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(37,211,102,0.4)", transition:"transform 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
             onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>

@@ -520,14 +520,25 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                   onChange={v => update("whatsapp", { ...config.whatsapp, enabled: v })} />
               </div>
               {config.whatsapp.enabled && (
-                <div>
-                  <label style={lbl}>Número</label>
-                  <input style={inp} value={config.whatsapp.number}
-                    placeholder="+54 9 11 0000-0000"
-                    onChange={e => update("whatsapp", { ...config.whatsapp, number: e.target.value })}
-                    onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                    onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-                </div>
+                <>
+                  <div>
+                    <label style={lbl}>Número</label>
+                    <input style={inp} value={config.whatsapp.number}
+                      placeholder="+54 9 11 0000-0000"
+                      onChange={e => update("whatsapp", { ...config.whatsapp, number: e.target.value })}
+                      onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                      onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                  </div>
+                  <div>
+                    <label style={lbl}>Mensaje de bienvenida</label>
+                    <input style={inp} value={config.whatsapp.message ?? ""}
+                      placeholder="Hola! Me gustaría consultar sobre sus productos 😊"
+                      onChange={e => update("whatsapp", { ...config.whatsapp, message: e.target.value })}
+                      onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                      onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>Texto que se pre-carga cuando el cliente hace click en el botón</p>
+                  </div>
+                </>
               )}
             </div>
           </div>

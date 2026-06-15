@@ -77,6 +77,7 @@ export type StoreConfig = {
   whatsapp: {
     enabled: boolean;
     number: string;
+    message: string;
   };
   socialLinks: {
     instagram: string;
@@ -147,7 +148,7 @@ export const DEFAULT_CONFIG: StoreConfig = {
   storeName:     "Mi Tienda",
   storeTagline:  "Tu tienda online",
   colors:        { accent: "#c9a84c" },
-  whatsapp:      { enabled: true, number: "+54 9 11 0000-0000" },
+  whatsapp:      { enabled: true, number: "+54 9 11 0000-0000", message: "Hola! Me gustaría consultar sobre sus productos 😊" },
   socialLinks:   { instagram: "", facebook: "", tiktok: "", youtube: "", pinterest: "" },
   currency:      "ARS",
   language:      "ES",

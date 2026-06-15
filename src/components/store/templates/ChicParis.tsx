@@ -1360,7 +1360,7 @@ export default function ChicParis() {
                 </button>
                 {storeConfig?.whatsapp?.enabled && storeConfig.whatsapp.number && (
                   <a
-                    href={`https://wa.me/${storeConfig.whatsapp.number.replace(/\D/g,"")}`}
+                    href={`https://wa.me/${storeConfig.whatsapp.number.replace(/\D/g,"")}${storeConfig.whatsapp.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`}
                     target="_blank" rel="noreferrer"
                     style={{ display:"flex", alignItems:"center", gap:10, marginTop:12, padding:"10px 14px", background:"#f0fdf4", borderRadius:4, textDecoration:"none", border:"1px solid #bbf7d0" }}
                   >

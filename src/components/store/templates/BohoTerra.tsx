@@ -1169,7 +1169,7 @@ export default function BohoTerra() {
               <button onClick={()=>setCartOpen(false)} style={{ width:"100%", background:"transparent", color:T, border:`1px solid rgba(44,34,24,0.2)`, padding:"12px", fontSize:10, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>Seguir Comprando</button>
               {storeConfig?.whatsapp?.enabled && storeConfig.whatsapp.number && (
                 <a
-                  href={`https://wa.me/${storeConfig.whatsapp.number.replace(/\D/g,"")}`}
+                  href={`https://wa.me/${storeConfig.whatsapp.number.replace(/\D/g,"")}${storeConfig.whatsapp.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`}
                   target="_blank" rel="noreferrer"
                   style={{ display:"flex", alignItems:"center", gap:10, marginTop:12, padding:"10px 14px", background:"rgba(37,211,102,0.07)", borderRadius:6, textDecoration:"none", border:"1px solid rgba(37,211,102,0.2)" }}
                 >
@@ -1373,7 +1373,7 @@ export default function BohoTerra() {
       {(!storeConfig || storeConfig.whatsapp.enabled) && (
         <EditableFixed field="whatsapp" label="WhatsApp" bottom={24} right={24}>
           <button
-            onClick={() => window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}`, "_blank")}
+            onClick={() => window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`, "_blank")}
             style={{ position:"fixed", bottom:24, right:24, zIndex:500, width:52, height:52, borderRadius:"50%", background:"#25D366", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(37,211,102,0.4)", transition:"transform 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
             onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
