@@ -132,9 +132,11 @@ export default async function MetricasPage() {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, name: true, slug: true },
+    select: { id: true, name: true, slug: true, tipoTienda: true },
   });
   if (!store) redirect("/dashboard");
+
+  const isAutos = store.tipoTienda === "AUTOS";
 
   const now = new Date();
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -160,92 +162,69 @@ export default async function MetricasPage() {
   const lastMonthStr = `${prevY}-${String(prevM + 1).padStart(2, "0")}-01`;
   const endOfLastMonthStr = new Date(Date.UTC(utcY, utcM, 0)).toISOString().slice(0, 10);
 
-  // ── Queries que no dependen de StoreView ──
-  const [
-    orders30,
-    ordersThisMonth,
-    ordersLastMonth,
-    topProducts,
-    reviewStats,
-    affiliateCount,
-    ordersByStatus,
-    pushSubscribers,
-    pushCampaigns7d,
-    pushCampaignsTotal,
-    leadsThisMonth,
-    leadsTotal,
-    leadsConfirmed,
-  ] = await Promise.all([
-    // Pedidos últimos 30 días (para gráfico)
-    prisma.order.findMany({
-      where: {
-        storeId: store.id,
-        createdAt: { gte: startOf30 },
-        status: { not: "CANCELLED" },
-      },
-      select: { total: true, createdAt: true },
-      orderBy: { createdAt: "asc" },
-    }),
-    // Ingresos este mes
-    prisma.order.aggregate({
-      where: {
-        storeId: store.id,
-        createdAt: { gte: startOfMonth },
-        status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] },
-      },
-      _sum: { total: true },
-      _count: true,
-    }),
-    // Ingresos mes anterior
-    prisma.order.aggregate({
-      where: {
-        storeId: store.id,
-        createdAt: { gte: startOfLastMonth, lte: endOfLastMonth },
-        status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] },
-      },
-      _sum: { total: true },
-      _count: true,
-    }),
-    // Top productos vendidos
-    prisma.orderItem.groupBy({
-      by: ["productId"],
-      where: {
-        order: {
-          storeId: store.id,
-          status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] },
-        },
-      },
-      _sum: { quantity: true },
-      orderBy: { _sum: { quantity: "desc" } },
-      take: 5,
-    }),
-    // Reseñas
-    prisma.review.aggregate({
-      where: { product: { storeId: store.id } },
-      _avg: { rating: true },
-      _count: true,
-    }),
-    // Afiliados activos
+  // ── Queries compartidas ──
+  const [affiliateCount, pushSubscribers, pushCampaigns7d, pushCampaignsTotal] = await Promise.all([
     prisma.affiliate.count({ where: { storeId: store.id, isActive: true } }),
-    // Pedidos agrupados por estado
-    prisma.order.groupBy({
-      by: ["status"],
-      where: { storeId: store.id },
-      _count: true,
-    }),
-    // Push: suscriptores activos
     prisma.storeSubscription.count({ where: { storeId: store.id } }),
-    // Push: campañas enviadas esta semana
     prisma.pushCampaign.count({ where: { storeId: store.id, createdAt: { gte: weekAgo } } }),
-    // Push: total historial
     prisma.pushCampaign.count({ where: { storeId: store.id } }),
-    // Leads este mes
-    prisma.lead.count({ where: { storeId: store.id, createdAt: { gte: startOfMonth } } }),
-    // Leads total
-    prisma.lead.count({ where: { storeId: store.id } }),
-    // Leads confirmados (venta concretada)
-    prisma.lead.count({ where: { storeId: store.id, status: "CONFIRMED" } }),
   ]);
+
+  // ── Queries AUTOS ──
+  let leadsThisMonth = 0, leadsTotal = 0, leadsConfirmed = 0;
+  let vehiculosDisponibles = 0, vehiculosVendidos = 0, vehiculosReservados = 0;
+  let soldPriceAvg: { _avg: { soldPrice: number | null } } = { _avg: { soldPrice: null } };
+  let leads30raw: { createdAt: Date }[] = [];
+
+  if (isAutos) {
+    [leadsThisMonth, leadsTotal, leadsConfirmed, vehiculosDisponibles, vehiculosVendidos, vehiculosReservados, soldPriceAvg, leads30raw] = await Promise.all([
+      prisma.lead.count({ where: { storeId: store.id, createdAt: { gte: startOfMonth } } }),
+      prisma.lead.count({ where: { storeId: store.id } }),
+      prisma.lead.count({ where: { storeId: store.id, status: "CONFIRMED" } }),
+      prisma.product.count({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "AVAILABLE" } }),
+      prisma.product.count({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD" } }),
+      prisma.product.count({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "RESERVED" } }),
+      prisma.product.aggregate({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD" }, _avg: { soldPrice: true } }),
+      prisma.lead.findMany({ where: { storeId: store.id, createdAt: { gte: startOf30 } }, select: { createdAt: true }, orderBy: { createdAt: "asc" } }),
+    ]);
+  }
+
+  // ── Queries tienda normal (no AUTOS) ──
+  let orders30: { total: number; createdAt: Date }[] = [];
+  let ordersThisMonth: { _sum: { total: number | null }; _count: number } = { _sum: { total: null }, _count: 0 };
+  let ordersLastMonth: { _sum: { total: number | null }; _count: number } = { _sum: { total: null }, _count: 0 };
+  let topProducts: { productId: string; _sum: { quantity: number | null } }[] = [];
+  let reviewStats: { _avg: { rating: number | null }; _count: number } = { _avg: { rating: null }, _count: 0 };
+  let ordersByStatus: { status: string; _count: number }[] = [];
+
+  if (!isAutos) {
+    [orders30, ordersThisMonth, ordersLastMonth, topProducts, reviewStats, ordersByStatus] = await Promise.all([
+      prisma.order.findMany({
+        where: { storeId: store.id, createdAt: { gte: startOf30 }, status: { not: "CANCELLED" } },
+        select: { total: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.order.aggregate({
+        where: { storeId: store.id, createdAt: { gte: startOfMonth }, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+        _sum: { total: true },
+        _count: true,
+      }),
+      prisma.order.aggregate({
+        where: { storeId: store.id, createdAt: { gte: startOfLastMonth, lte: endOfLastMonth }, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+        _sum: { total: true },
+        _count: true,
+      }),
+      prisma.orderItem.groupBy({
+        by: ["productId"],
+        where: { order: { storeId: store.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } } },
+        _sum: { quantity: true },
+        orderBy: { _sum: { quantity: "desc" } },
+        take: 5,
+      }),
+      prisma.review.aggregate({ where: { product: { storeId: store.id } }, _avg: { rating: true }, _count: true }),
+      prisma.order.groupBy({ by: ["status"], where: { storeId: store.id }, _count: true }),
+    ]);
+  }
 
   // ── Queries de StoreView (requieren migración SQL — fallan silenciosamente si la tabla no existe) ──
   let viewsThisMonth: { _sum: { count: number | null } } = { _sum: { count: null } };
@@ -314,7 +293,7 @@ export default async function MetricasPage() {
     value: count,
   }));
 
-  // ── Métricas calculadas ──
+  // ── Métricas calculadas — tienda normal ──
   const thisMonthRevenue = ordersThisMonth._sum.total ?? 0;
   const lastMonthRevenue = ordersLastMonth._sum.total ?? 0;
   const revDiff =
@@ -339,8 +318,25 @@ export default async function MetricasPage() {
 
   const totalOrdersAllStatuses = ordersByStatus.reduce((s, o) => s + o._count, 0);
 
+  // ── Métricas calculadas — AUTOS ──
   const leadsConversionRate =
     leadsTotal > 0 ? Math.round((leadsConfirmed / leadsTotal) * 100) : null;
+  const avgSoldPrice = soldPriceAvg._avg.soldPrice ?? 0;
+
+  // Gráfico de consultas diarias (30 días)
+  const leadsDayMap = new Map<string, number>();
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(startOf30);
+    d.setDate(startOf30.getDate() + i);
+    leadsDayMap.set(`${d.getDate()}/${d.getMonth() + 1}`, 0);
+  }
+  for (const lead of leads30raw) {
+    const d = new Date(lead.createdAt);
+    const key = `${d.getDate()}/${d.getMonth() + 1}`;
+    leadsDayMap.set(key, (leadsDayMap.get(key) ?? 0) + 1);
+  }
+  const leadsChartData = [...leadsDayMap.entries()].map(([label, value]) => ({ label, value }));
+  const totalLeads30 = leads30raw.length;
 
   // ── Render ──
   return (
@@ -356,68 +352,114 @@ export default async function MetricasPage() {
         </div>
 
         {/* ── KPIs ── */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <KPICard
-            label="Ingresos este mes"
-            value={money(thisMonthRevenue)}
-            sub={revDiff === null ? "Primer mes registrado" : undefined}
-            trend={revDiff}
-            icon={TrendingUp}
-            iconBg="bg-green-50 text-green-600"
-          />
-          <KPICard
-            label="Pedidos (30 días)"
-            value={totalOrders30}
-            sub={`Ticket prom. ${money(avgTicket)}`}
-            icon={ShoppingBag}
-            iconBg="bg-indigo-50 text-indigo-600"
-          />
-          <KPICard
-            label="Visitas (30 días)"
-            value={totalViews30.toLocaleString("es-AR")}
-            sub={viewsDiff === null ? "Sin datos del mes anterior" : undefined}
-            trend={viewsDiff}
-            icon={Eye}
-            iconBg="bg-blue-50 text-blue-600"
-          />
-          <KPICard
-            label="Conversión"
-            value={conversionRate !== null ? `${conversionRate}%` : "—"}
-            sub="visitas → pedidos"
-            icon={MousePointerClick}
-            iconBg="bg-emerald-50 text-emerald-600"
-          />
-        </div>
+        {isAutos ? (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <KPICard
+              label="Consultas este mes"
+              value={leadsThisMonth}
+              sub={`${leadsTotal} en total`}
+              icon={MessageSquare}
+              iconBg="bg-indigo-50 text-indigo-600"
+            />
+            <KPICard
+              label="Ventas confirmadas"
+              value={leadsConfirmed}
+              sub={leadsConversionRate !== null ? `${leadsConversionRate}% de conversión` : "Sin datos"}
+              trend={leadsConversionRate}
+              icon={TrendingUp}
+              iconBg="bg-green-50 text-green-600"
+            />
+            <KPICard
+              label="Precio prom. de venta"
+              value={avgSoldPrice > 0 ? money(avgSoldPrice) : "—"}
+              sub={vehiculosVendidos > 0 ? `${vehiculosVendidos} vehículo${vehiculosVendidos !== 1 ? "s" : ""} vendido${vehiculosVendidos !== 1 ? "s" : ""}` : "Sin ventas aún"}
+              icon={ShoppingBag}
+              iconBg="bg-amber-50 text-amber-600"
+            />
+            <KPICard
+              label="Visitas (30 días)"
+              value={totalViews30.toLocaleString("es-AR")}
+              sub={viewsDiff === null ? "Sin datos del mes anterior" : undefined}
+              trend={viewsDiff}
+              icon={Eye}
+              iconBg="bg-blue-50 text-blue-600"
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <KPICard
+              label="Ingresos este mes"
+              value={money(thisMonthRevenue)}
+              sub={revDiff === null ? "Primer mes registrado" : undefined}
+              trend={revDiff}
+              icon={TrendingUp}
+              iconBg="bg-green-50 text-green-600"
+            />
+            <KPICard
+              label="Pedidos (30 días)"
+              value={totalOrders30}
+              sub={`Ticket prom. ${money(avgTicket)}`}
+              icon={ShoppingBag}
+              iconBg="bg-indigo-50 text-indigo-600"
+            />
+            <KPICard
+              label="Visitas (30 días)"
+              value={totalViews30.toLocaleString("es-AR")}
+              sub={viewsDiff === null ? "Sin datos del mes anterior" : undefined}
+              trend={viewsDiff}
+              icon={Eye}
+              iconBg="bg-blue-50 text-blue-600"
+            />
+            <KPICard
+              label="Conversión"
+              value={conversionRate !== null ? `${conversionRate}%` : "—"}
+              sub="visitas → pedidos"
+              icon={MousePointerClick}
+              iconBg="bg-emerald-50 text-emerald-600"
+            />
+          </div>
+        )}
 
         {/* ── Gráficos ── */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl border border-gray-100 bg-white p-6">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="font-bold text-gray-900">Ingresos diarios</h2>
-              <p className="text-lg font-black text-green-600">{money(totalRevenue30)}</p>
-            </div>
-            <p className="text-xs text-gray-400 mb-5">
-              Últimos 30 días · verde oscuro = última semana
-            </p>
-            {totalRevenue30 > 0 ? (
-              <BarChart data={revenueChartData} color="#16a34a" lightColor="#bbf7d0" />
-            ) : (
-              <div className="flex h-32 items-center justify-center text-sm text-gray-400">
-                Sin ventas en los últimos 30 días
+          {isAutos ? (
+            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="font-bold text-gray-900">Consultas diarias</h2>
+                <p className="text-lg font-black text-indigo-600">{totalLeads30}</p>
               </div>
-            )}
-          </div>
+              <p className="text-xs text-gray-400 mb-5">Últimos 30 días · morado oscuro = última semana</p>
+              {totalLeads30 > 0 ? (
+                <BarChart data={leadsChartData} color="#6366f1" lightColor="#c7d2fe" />
+              ) : (
+                <div className="flex h-32 items-center justify-center text-sm text-gray-400">
+                  Sin consultas en los últimos 30 días
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="font-bold text-gray-900">Ingresos diarios</h2>
+                <p className="text-lg font-black text-green-600">{money(totalRevenue30)}</p>
+              </div>
+              <p className="text-xs text-gray-400 mb-5">Últimos 30 días · verde oscuro = última semana</p>
+              {totalRevenue30 > 0 ? (
+                <BarChart data={revenueChartData} color="#16a34a" lightColor="#bbf7d0" />
+              ) : (
+                <div className="flex h-32 items-center justify-center text-sm text-gray-400">
+                  Sin ventas en los últimos 30 días
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="rounded-2xl border border-gray-100 bg-white p-6">
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-bold text-gray-900">Visitas diarias</h2>
-              <p className="text-lg font-black text-blue-600">
-                {totalViews30.toLocaleString("es-AR")}
-              </p>
+              <p className="text-lg font-black text-blue-600">{totalViews30.toLocaleString("es-AR")}</p>
             </div>
-            <p className="text-xs text-gray-400 mb-5">
-              Últimos 30 días · azul oscuro = última semana
-            </p>
+            <p className="text-xs text-gray-400 mb-5">Últimos 30 días · azul oscuro = última semana</p>
             {totalViews30 > 0 ? (
               <BarChart data={visitsChartData} color="#2563eb" lightColor="#bfdbfe" />
             ) : (
@@ -430,77 +472,78 @@ export default async function MetricasPage() {
           </div>
         </div>
 
-        {/* ── Productos + Pedidos por estado ── */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl border border-gray-100 bg-white p-6">
-            <h2 className="mb-5 font-bold text-gray-900">Productos más vendidos</h2>
-            {topProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                <Package className="h-8 w-8 opacity-20 mb-2" />
-                <p className="text-sm">Sin ventas confirmadas aún</p>
+        {/* ── Sección central: AUTOS = estado de flota | resto = productos + pedidos ── */}
+        {isAutos ? (
+          <div className="grid gap-6 lg:grid-cols-3">
+            {[
+              { label: "Disponibles", count: vehiculosDisponibles, color: "bg-emerald-500", dot: "bg-emerald-100 text-emerald-700" },
+              { label: "Reservados",  count: vehiculosReservados,  color: "bg-amber-500",   dot: "bg-amber-100 text-amber-700"   },
+              { label: "Vendidos",    count: vehiculosVendidos,    color: "bg-gray-400",    dot: "bg-gray-100 text-gray-600"     },
+            ].map(({ label, count, color, dot }) => (
+              <div key={label} className="rounded-2xl border border-gray-100 bg-white p-6 flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center shrink-0`}>
+                  <Package className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-3xl font-black text-gray-900">{count}</p>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${dot}`}>{label}</span>
+                </div>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {topProducts.map((p, i) => {
-                  const maxQty = topProducts[0]._sum.quantity ?? 1;
-                  const qty = p._sum.quantity ?? 0;
-                  const pct = Math.round((qty / maxQty) * 100);
-                  return (
-                    <div key={p.productId}>
-                      <div className="mb-1.5 flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-5 shrink-0 text-xs font-bold text-gray-400">
-                            #{i + 1}
-                          </span>
-                          <span className="font-medium text-gray-800 truncate">
-                            {nameMap[p.productId] ?? "Producto"}
-                          </span>
-                        </div>
-                        <span className="ml-2 shrink-0 font-bold text-gray-700">{qty} u.</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-gray-100">
-                        <div
-                          className="h-2 rounded-full bg-indigo-500 transition-all"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            ))}
           </div>
-
-          <div className="rounded-2xl border border-gray-100 bg-white p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-bold text-gray-900">Pedidos por estado</h2>
-              <span className="text-sm font-semibold text-gray-400">
-                {totalOrdersAllStatuses} total
-              </span>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <h2 className="mb-5 font-bold text-gray-900">Productos más vendidos</h2>
+              {topProducts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                  <Package className="h-8 w-8 opacity-20 mb-2" />
+                  <p className="text-sm">Sin ventas confirmadas aún</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {topProducts.map((p, i) => {
+                    const maxQty = topProducts[0]._sum.quantity ?? 1;
+                    const qty = p._sum.quantity ?? 0;
+                    const pct = Math.round((qty / maxQty) * 100);
+                    return (
+                      <div key={p.productId}>
+                        <div className="mb-1.5 flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-5 shrink-0 text-xs font-bold text-gray-400">#{i + 1}</span>
+                            <span className="font-medium text-gray-800 truncate">{nameMap[p.productId] ?? "Producto"}</span>
+                          </div>
+                          <span className="ml-2 shrink-0 font-bold text-gray-700">{qty} u.</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-gray-100">
+                          <div className="h-2 rounded-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            {ordersByStatus.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                <ShoppingBag className="h-8 w-8 opacity-20 mb-2" />
-                <p className="text-sm">Sin pedidos aún</p>
+
+            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="font-bold text-gray-900">Pedidos por estado</h2>
+                <span className="text-sm font-semibold text-gray-400">{totalOrdersAllStatuses} total</span>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {ordersByStatus
-                  .sort((a, b) => b._count - a._count)
-                  .map((s) => {
-                    const pct =
-                      totalOrdersAllStatuses > 0
-                        ? Math.round((s._count / totalOrdersAllStatuses) * 100)
-                        : 0;
+              {ordersByStatus.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                  <ShoppingBag className="h-8 w-8 opacity-20 mb-2" />
+                  <p className="text-sm">Sin pedidos aún</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {ordersByStatus.sort((a, b) => b._count - a._count).map((s) => {
+                    const pct = totalOrdersAllStatuses > 0 ? Math.round((s._count / totalOrdersAllStatuses) * 100) : 0;
                     return (
                       <div key={s.status}>
                         <div className="mb-1 flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2">
-                            <span
-                              className={`h-2.5 w-2.5 rounded-full shrink-0 ${statusColor(
-                                s.status
-                              )}`}
-                            />
+                            <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${statusColor(s.status)}`} />
                             <span className="text-gray-700">{statusLabel(s.status)}</span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -509,21 +552,19 @@ export default async function MetricasPage() {
                           </div>
                         </div>
                         <div className="h-1.5 rounded-full bg-gray-100">
-                          <div
-                            className={`h-1.5 rounded-full transition-all ${statusColor(s.status)}`}
-                            style={{ width: `${pct}%` }}
-                          />
+                          <div className={`h-1.5 rounded-full transition-all ${statusColor(s.status)}`} style={{ width: `${pct}%` }} />
                         </div>
                       </div>
                     );
                   })}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── Push · Reseñas · Afiliados ── */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className={`grid gap-6 ${isAutos ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
           {/* Push Notifications */}
           <div className="rounded-2xl border border-gray-100 bg-white p-6">
             <div className="flex items-center gap-2 mb-5">
@@ -560,42 +601,35 @@ export default async function MetricasPage() {
             </div>
           </div>
 
-          {/* Reseñas */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <Star className="h-4 w-4 text-yellow-500" />
-              <h2 className="font-bold text-gray-900">Reseñas</h2>
-            </div>
-            {reviewStats._count > 0 ? (
-              <div>
-                <div className="flex items-end gap-2 mb-1">
-                  <p className="text-3xl font-black text-gray-900">
-                    {(reviewStats._avg.rating ?? 0).toFixed(1)}
-                  </p>
-                  <div className="flex gap-0.5 mb-1">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Star
-                        key={s}
-                        className={`h-4 w-4 ${
-                          s <= Math.round(reviewStats._avg.rating ?? 0)
-                            ? "fill-yellow-400 text-yellow-400"
-                            : "text-gray-200"
-                        }`}
-                      />
-                    ))}
+          {/* Reseñas — solo para tiendas con carrito */}
+          {!isAutos && (
+            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <div className="flex items-center gap-2 mb-5">
+                <Star className="h-4 w-4 text-yellow-500" />
+                <h2 className="font-bold text-gray-900">Reseñas</h2>
+              </div>
+              {reviewStats._count > 0 ? (
+                <div>
+                  <div className="flex items-end gap-2 mb-1">
+                    <p className="text-3xl font-black text-gray-900">
+                      {(reviewStats._avg.rating ?? 0).toFixed(1)}
+                    </p>
+                    <div className="flex gap-0.5 mb-1">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} className={`h-4 w-4 ${s <= Math.round(reviewStats._avg.rating ?? 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
+                      ))}
+                    </div>
                   </div>
+                  <p className="text-sm text-gray-500">{reviewStats._count} opinión{reviewStats._count !== 1 ? "es" : ""}</p>
                 </div>
-                <p className="text-sm text-gray-500">
-                  {reviewStats._count} opinión{reviewStats._count !== 1 ? "es" : ""}
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-6 text-gray-400">
-                <Star className="h-8 w-8 opacity-20 mb-2" />
-                <p className="text-sm">Sin reseñas aún</p>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 text-gray-400">
+                  <Star className="h-8 w-8 opacity-20 mb-2" />
+                  <p className="text-sm">Sin reseñas aún</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Afiliados + Leads */}
           <div className="rounded-2xl border border-gray-100 bg-white p-6">

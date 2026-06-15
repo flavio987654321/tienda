@@ -89,11 +89,11 @@ export default function VehicleStatusModal({ productId, productName, currentStat
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-slide"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] animate-fade-slide"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        {/* Header — fijo arriba */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
           <div>
             <h2 className="font-bold text-gray-900">Estado del vehículo</h2>
             <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{productName}</p>
@@ -103,7 +103,8 @@ export default function VehicleStatusModal({ productId, productName, currentStat
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        {/* Body scrollable */}
+        <div className="overflow-y-auto flex-1 p-6 space-y-4">
           {/* Estado selector */}
           <div className="grid grid-cols-3 gap-2">
             {(["AVAILABLE", "RESERVED", "SOLD"] as VehicleStatus[]).map(s => {
@@ -195,29 +196,30 @@ export default function VehicleStatusModal({ productId, productName, currentStat
             </div>
           )}
 
-          {/* Botones */}
-          <div className="flex gap-3 pt-1">
-            <button
-              onClick={onClose}
-              disabled={saving}
-              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving || saved}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-300 flex items-center justify-center gap-2 disabled:cursor-not-allowed ${
-                saved
-                  ? "bg-emerald-500 scale-[1.02]"
-                  : "bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-              }`}
-            >
-              {saved    ? <><Check className="h-4 w-4" /> Guardado</> :
-               saving   ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</> :
-               "Guardar estado"}
-            </button>
-          </div>
+        </div>
+
+        {/* Footer fijo — siempre visible */}
+        <div className="shrink-0 flex gap-3 px-6 py-4 border-t border-gray-100 bg-white rounded-b-2xl">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || saved}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-300 flex items-center justify-center gap-2 disabled:cursor-not-allowed ${
+              saved
+                ? "bg-emerald-500 scale-[1.02]"
+                : "bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+            }`}
+          >
+            {saved    ? <><Check className="h-4 w-4" /> Guardado</> :
+             saving   ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</> :
+             "Guardar estado"}
+          </button>
         </div>
       </div>
     </div>
