@@ -286,28 +286,34 @@ function TemplateCard({ t, isSaved, disabled, onSelect, onGoToEditing }: {
 }
 
 /* ── Carousel row ───────────────────────────────────────────── */
-function CarouselArrow({ dir, onClick }: { dir: "l" | "r"; onClick: () => void }) {
+const CARD_GAP = 16;
+const VISIBLE_CARDS = 3;
+const CLIP_WIDTH = VISIBLE_CARDS * THUMB_W + (VISIBLE_CARDS - 1) * CARD_GAP;
+
+function CarouselArrow({ dir, onClick, disabled }: { dir: "l" | "r"; onClick: () => void; disabled?: boolean }) {
   const [hov, setHov] = useState(false);
+  const active = !disabled && hov;
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
-        position: "absolute", [dir === "l" ? "left" : "right"]: -20,
-        top: "50%", transform: "translateY(-50%)",
-        width: 38, height: 38, borderRadius: "50%",
-        border: hov ? "1.5px solid #6366f1" : "1.5px solid #e2e8f0",
-        background: hov ? "#6366f1" : "white",
-        cursor: "pointer", zIndex: 2,
+        flexShrink: 0,
+        width: 44, height: 44, borderRadius: "50%",
+        border: active ? "2px solid #6366f1" : "2px solid #e2e8f0",
+        background: active ? "#6366f1" : disabled ? "#f8fafc" : "white",
+        cursor: disabled ? "default" : "pointer",
         display: "flex", alignItems: "center", justifyContent: "center",
-        boxShadow: hov ? "0 4px 16px rgba(99,102,241,0.3)" : "0 2px 10px rgba(0,0,0,0.1)",
+        boxShadow: active ? "0 4px 18px rgba(99,102,241,0.35)" : "0 2px 8px rgba(0,0,0,0.08)",
         transition: "all 0.18s ease",
+        opacity: disabled ? 0.35 : 1,
       }}>
-      <svg width={14} height={14} viewBox="0 0 14 14" fill="none">
+      <svg width={16} height={16} viewBox="0 0 16 16" fill="none">
         {dir === "l"
-          ? <polyline points="9,2 4,7 9,12" stroke={hov ? "white" : "#64748b"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
-          : <polyline points="5,2 10,7 5,12" stroke={hov ? "white" : "#64748b"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>}
+          ? <polyline points="10,3 5,8 10,13" stroke={active ? "white" : "#64748b"} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"/>
+          : <polyline points="6,3 11,8 6,13" stroke={active ? "white" : "#64748b"} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"/>}
       </svg>
     </button>
   );
@@ -321,32 +327,60 @@ function CarouselRow({ templates, savedTemplateId, storeTipoTienda, onSelect, on
   onGoToEditing?: (t: TemplateInfo) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const scroll = (dir: "l" | "r") =>
-    scrollRef.current?.scrollBy({ left: dir === "l" ? -(THUMB_W + 16) : (THUMB_W + 16), behavior: "smooth" });
+  const [scrollPos, setScrollPos] = useState(0);
+  const step = THUMB_W + CARD_GAP;
+
+  const scroll = (dir: "l" | "r") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === "l" ? -step : step, behavior: "smooth" });
+  };
+
+  const handleScroll = () => {
+    if (scrollRef.current) setScrollPos(scrollRef.current.scrollLeft);
+  };
+
+  const totalWidth = templates.length * THUMB_W + (templates.length - 1) * CARD_GAP;
+  const atStart = scrollPos <= 4;
+  const atEnd = scrollPos >= totalWidth - CLIP_WIDTH - 4;
+  const showArrows = templates.length > VISIBLE_CARDS;
 
   return (
-    <div style={{ position: "relative", paddingBottom: 6 }}>
-      {templates.length > 1 && <CarouselArrow dir="l" onClick={() => scroll("l")} />}
-      <div ref={scrollRef} style={{
-        display: "flex", gap: 16, overflowX: "auto", paddingBottom: 8,
-        scrollSnapType: "x mandatory", scrollbarWidth: "none",
-      }}>
-        {templates.map(t => {
-          const isDisabled = !!storeTipoTienda && !t.tipoTiendas.includes(storeTipoTienda);
-          return (
-            <div key={t.id} style={{ scrollSnapAlign: "start" }}>
-              <TemplateCard
-                t={t}
-                isSaved={savedTemplateId === t.id}
-                disabled={isDisabled}
-                onSelect={() => onSelect(t)}
-                onGoToEditing={onGoToEditing ? () => onGoToEditing(t) : undefined}
-              />
-            </div>
-          );
-        })}
+    <div style={{ display: "flex", alignItems: "center", gap: 14, paddingBottom: 6 }}>
+      {showArrows
+        ? <CarouselArrow dir="l" onClick={() => scroll("l")} disabled={atStart} />
+        : <div style={{ width: 44 }} />}
+
+      {/* clip wrapper — hides partial cards */}
+      <div style={{ width: CLIP_WIDTH, overflow: "hidden", flexShrink: 0 }}>
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          style={{
+            display: "flex", gap: CARD_GAP,
+            overflowX: "auto", scrollbarWidth: "none",
+            scrollSnapType: "x mandatory",
+          }}>
+          {templates.map(t => {
+            const isDisabled = !!storeTipoTienda && !t.tipoTiendas.includes(storeTipoTienda);
+            return (
+              <div key={t.id} style={{ scrollSnapAlign: "start", flexShrink: 0 }}>
+                <TemplateCard
+                  t={t}
+                  isSaved={savedTemplateId === t.id}
+                  disabled={isDisabled}
+                  onSelect={() => onSelect(t)}
+                  onGoToEditing={onGoToEditing ? () => onGoToEditing(t) : undefined}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
-      {templates.length > 1 && <CarouselArrow dir="r" onClick={() => scroll("r")} />}
+
+      {showArrows
+        ? <CarouselArrow dir="r" onClick={() => scroll("r")} disabled={atEnd} />
+        : <div style={{ width: 44 }} />}
     </div>
   );
 }
