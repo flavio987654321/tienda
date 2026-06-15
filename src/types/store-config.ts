@@ -115,6 +115,7 @@ export type StoreConfig = {
   featuredCategories?: string[];
   flyerConfig?: FlyerConfig;
   showPushBell?: boolean;
+  onPreviewBellClick?: () => void;
   paymentInfo?: StorePaymentInfo;
   policies?: {
     returns?: string;

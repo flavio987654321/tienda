@@ -531,14 +531,14 @@ export default function ChicParis() {
             )}
             {isPreview && (
               storeConfig?.showPushBell ? (
-                <div title="Campanita de novedades — activa en tu tienda" style={{ position:"relative", background:"none", padding:6, display:"flex", color:"#555", opacity:0.85, cursor:"default" }}>
+                <button onClick={storeConfig.onPreviewBellClick} title="Campanita de novedades — clic para configurar" style={{ position:"relative", background:"none", border:"none", padding:6, display:"flex", color:"#555", opacity:0.85, cursor:"pointer" }}>
                   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                </div>
+                </button>
               ) : (
-                <a href="/dashboard/mi-plan" title="🔒 Solo Plan Plus — tocá para activar" style={{ position:"relative", background:"none", padding:6, display:"flex", color:"#555", opacity:0.38, textDecoration:"none" }}>
+                <button onClick={storeConfig?.onPreviewBellClick} title="🔒 Solo Plan Plus — tocá para activar" style={{ position:"relative", background:"none", border:"none", padding:6, display:"flex", color:"#555", opacity:0.38, cursor:"pointer" }}>
                   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                   <span style={{ position:"absolute", top:2, right:2, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
-                </a>
+                </button>
               )
             )}
             <button onClick={() => setFavoritesOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, position: "relative", display: "flex", transition: "color 0.3s" }}>

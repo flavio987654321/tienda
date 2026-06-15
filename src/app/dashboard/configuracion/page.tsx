@@ -1290,6 +1290,8 @@ export default function ConfiguracionPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [pendingNavUrl, setPendingNavUrl] = useState<string | null>(null);
+  const [barExpanded, setBarExpanded] = useState(true);
   const [imageLoadingFields, setImageLoadingFields] = useState<Record<string, boolean>>({});
   const [storeTipoTienda, setStoreTipoTienda] = useState<string>("GENERAL");
   const [isMobile, setIsMobile] = useState(false);
@@ -1423,6 +1425,16 @@ export default function ConfiguracionPage() {
 
   /* Step 3 → 2 */
   const handleBackToPreview = () => { setMode("preview"); setActiveField(null); };
+
+  const handlePreviewBellClick = () => {
+    const dest = isPremium ? "/dashboard/notificaciones" : "/dashboard/mi-plan";
+    if (isDirty) {
+      setPendingNavUrl(dest);
+      setConfirmLeave(true);
+    } else {
+      window.location.href = dest;
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -1689,7 +1701,7 @@ export default function ConfiguracionPage() {
                 border: "none", borderRadius: 8, background: "#6366f1", color: "white",
                 fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
                 boxShadow: "0 2px 8px rgba(99,102,241,0.35)" }}>
-              Personalizar diseño
+              {savedTemplateId === selected?.id ? "Seguir editando" : "Usar este diseño"}
               <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
@@ -1700,7 +1712,7 @@ export default function ConfiguracionPage() {
             <div style={{ flex: 1, borderRadius: 10, overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column",
               transform: "translateZ(0)" }}>
-              <StoreConfigContext.Provider value={{ ...config, previewFill: true, showPushBell: isPremium }}>
+              <StoreConfigContext.Provider value={{ ...config, previewFill: true, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>
@@ -1714,16 +1726,31 @@ export default function ConfiguracionPage() {
 
   /* ── STEP 3: Editing ── */
   return (
-    <DashboardLayout fullHeight>
+    <DashboardLayout fullHeight hideHelp>
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "#f1f5f9" }}>
 
         {/* Barra paso 3 */}
-        <div style={{
-          background: "white", borderBottom: "1px solid #e2e8f0",
-          padding: "10px 20px", display: "flex", alignItems: "center",
-          gap: 12, flexShrink: 0, position: "relative", zIndex: 50,
-          boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
-        }}>
+        <div
+          style={{
+            background: "white", borderBottom: "1px solid #e2e8f0",
+            display: "flex", alignItems: "center",
+            gap: 12, flexShrink: 0, position: "relative", zIndex: 50,
+            boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
+            overflow: "hidden",
+            maxHeight: barExpanded ? 200 : 8,
+            padding: barExpanded ? "10px 20px" : "0 20px",
+            transition: "max-height 0.22s ease, padding 0.22s ease",
+            cursor: barExpanded ? "default" : "pointer",
+          }}
+          onMouseEnter={() => setBarExpanded(true)}
+          onMouseLeave={() => setBarExpanded(false)}
+        >
+          {/* Indicador colapso */}
+          <div style={{
+            position: "absolute", bottom: 1, left: "50%", transform: "translateX(-50%)",
+            width: 28, height: 3, borderRadius: 2, background: "#cbd5e1",
+            opacity: barExpanded ? 0 : 0.7, transition: "opacity 0.15s", pointerEvents: "none",
+          }} />
           {/* Izquierda: volver */}
           <button onClick={handleBackToGallery}
             style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
@@ -1732,7 +1759,7 @@ export default function ConfiguracionPage() {
               whiteSpace: "nowrap", flexShrink: 0, transition: "all 0.15s" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.color = "#374151"; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#64748b"; }}>
-            ← Diseños
+            ← Cambiar diseño
           </button>
 
           {/* Info template */}
@@ -1837,7 +1864,7 @@ export default function ConfiguracionPage() {
             <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
               transform: "translateZ(0)" }}>
-              <StoreConfigContext.Provider value={{ ...config, previewFill: true, showPushBell: isPremium }}>
+              <StoreConfigContext.Provider value={{ ...config, previewFill: true, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>
@@ -1873,7 +1900,16 @@ export default function ConfiguracionPage() {
                 style={{ flex:1, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"white", borderRadius:10, padding:"10px 0", fontSize:13, fontWeight:600, cursor:"pointer" }}>
                 Quedarme
               </button>
-              <button onClick={() => { setConfirmLeave(false); setIsDirty(false); setMode("gallery"); }}
+              <button onClick={() => {
+                setConfirmLeave(false);
+                setIsDirty(false);
+                if (pendingNavUrl) {
+                  setPendingNavUrl(null);
+                  window.location.href = pendingNavUrl;
+                } else {
+                  setMode("gallery");
+                }
+              }}
                 style={{ flex:1, background:"rgba(239,68,68,0.15)", border:"1px solid rgba(239,68,68,0.3)", color:"#f87171", borderRadius:10, padding:"10px 0", fontSize:13, fontWeight:600, cursor:"pointer" }}>
                 Salir sin guardar
               </button>
