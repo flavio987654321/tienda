@@ -107,6 +107,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
       { key: "carroceria", label: "Carrocería",  options: ["Sedán", "SUV", "Pickup", "Hatchback", "Coupé", "Convertible", "Van / Minivan", "Naked", "Scooter", "Trail / Enduro", "Cuatriciclo"] },
       { key: "color",      label: "Color",       placeholder: "Blanco, Negro, Gris, Rojo..." },
       { key: "puertas",    label: "Puertas",     options: ["2", "3", "4", "5"] },
+      { key: "ciudad",     label: "Ciudad / Zona", placeholder: "Ej: Capital Federal, GBA Norte, Rosario..." },
     ],
   },
   {

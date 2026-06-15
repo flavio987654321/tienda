@@ -53,6 +53,8 @@ function VehiculosPageInner() {
 
   const [search,         setSearch]         = useState("");
   const [activeCategory, setActiveCat]      = useState("Todos");
+  const [activeMarca,    setActiveMarca]    = useState("Todas");
+  const [activeCiudad,   setActiveCiudad]   = useState("Todas");
   const [sortBy,         setSortBy]         = useState("newest");
 
   useEffect(() => {
@@ -78,14 +80,29 @@ function VehiculosPageInner() {
     if (!loading) document.title = `${storeName} — Catálogo de vehículos`;
   }, [loading, storeName]);
 
+  const getAttr = (p: StorefrontProduct, key: string) =>
+    p.attributes?.find(a => a.key.toLowerCase() === key.toLowerCase())?.value ?? "";
+
   const categories = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
     return ["Todos", ...cats];
   }, [products]);
 
+  const marcas = useMemo(() => {
+    const vals = [...new Set(products.map(p => getAttr(p, "marca")).filter(Boolean))].sort();
+    return vals.length > 1 ? ["Todas", ...vals] : [];
+  }, [products]);
+
+  const ciudades = useMemo(() => {
+    const vals = [...new Set(products.map(p => getAttr(p, "ciudad")).filter(Boolean))].sort();
+    return vals.length > 1 ? ["Todas", ...vals] : [];
+  }, [products]);
+
   const filtered = useMemo(() => {
     let r = products.filter(p => {
       if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
+      if (activeMarca !== "Todas" && getAttr(p, "marca") !== activeMarca) return false;
+      if (activeCiudad !== "Todas" && getAttr(p, "ciudad") !== activeCiudad) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
         const inName = p.name.toLowerCase().includes(q);
@@ -226,27 +243,63 @@ function VehiculosPageInner() {
         </div>
 
         {/* ── FILTROS ────────────────────────────────────────────────────── */}
-        {categories.length > 1 && (
-          <div className="st-tabs" style={{ display:"flex", gap:8, flexWrap:"nowrap", overflowX:"auto", marginBottom:40,
-            borderBottom:`1px solid ${borderFaint}`, paddingBottom:24, WebkitOverflowScrolling:"touch" as any }}>
-            {categories.map(cat => {
-              const isActive = activeCategory === cat;
-              return (
-                <button key={cat} onClick={() => setActiveCat(cat)}
-                  style={{ background: isActive ? accent : "transparent",
-                    color: isActive ? "#fff" : T,
-                    border:`1px solid ${isActive ? accent : border}`,
-                    padding:"9px 20px", fontSize:11, letterSpacing:2, cursor:"pointer",
-                    fontWeight:600, textTransform:"uppercase", transition:"all 0.2s",
-                    borderRadius:3 }}>
-                  {cat}
-                </button>
-              );
-            })}
-            {(activeCategory !== "Todos" || search) && (
+        {(categories.length > 1 || marcas.length > 0 || ciudades.length > 0) && (
+          <div style={{ marginBottom: 40 }}>
+            {categories.length > 1 && (
+              <div className="st-tabs" style={{ display:"flex", gap:8, flexWrap:"nowrap", overflowX:"auto",
+                paddingBottom:16, marginBottom: marcas.length > 0 || ciudades.length > 0 ? 12 : 0,
+                WebkitOverflowScrolling:"touch" as any }}>
+                {categories.map(cat => {
+                  const isActive = activeCategory === cat;
+                  return (
+                    <button key={cat} onClick={() => setActiveCat(cat)}
+                      style={{ background: isActive ? accent : "transparent",
+                        color: isActive ? "#fff" : T,
+                        border:`1px solid ${isActive ? accent : border}`,
+                        padding:"9px 20px", fontSize:11, letterSpacing:2, cursor:"pointer",
+                        fontWeight:600, textTransform:"uppercase", transition:"all 0.2s",
+                        borderRadius:3, flexShrink:0 }}>
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {(marcas.length > 0 || ciudades.length > 0) && (
+              <div style={{ display:"flex", gap:10, flexWrap:"wrap", paddingTop:4,
+                borderTop: categories.length > 1 ? `1px solid ${borderFaint}` : "none", paddingBottom:16,
+                borderBottom:`1px solid ${borderFaint}` }}>
+                {marcas.length > 0 && (
+                  <select value={activeMarca} onChange={e => setActiveMarca(e.target.value)}
+                    style={{ background:S, border:`1px solid ${border}`, color:T,
+                      padding:"9px 14px", fontSize:12, outline:"none", cursor:"pointer", borderRadius:3 }}
+                    onFocus={e => (e.target.style.borderColor=accent)}
+                    onBlur={e => (e.target.style.borderColor=border)}>
+                    {marcas.map(m => <option key={m} value={m}>{m === "Todas" ? "Todas las marcas" : m}</option>)}
+                  </select>
+                )}
+                {ciudades.length > 0 && (
+                  <select value={activeCiudad} onChange={e => setActiveCiudad(e.target.value)}
+                    style={{ background:S, border:`1px solid ${border}`, color:T,
+                      padding:"9px 14px", fontSize:12, outline:"none", cursor:"pointer", borderRadius:3 }}
+                    onFocus={e => (e.target.style.borderColor=accent)}
+                    onBlur={e => (e.target.style.borderColor=border)}>
+                    {ciudades.map(c => <option key={c} value={c}>{c === "Todas" ? "Todas las zonas" : c}</option>)}
+                  </select>
+                )}
+                {(activeCategory !== "Todos" || activeMarca !== "Todas" || activeCiudad !== "Todas" || search) && (
+                  <button onClick={() => { setActiveCat("Todos"); setActiveMarca("Todas"); setActiveCiudad("Todas"); setSearch(""); }}
+                    style={{ background:"none", border:`1px solid ${border}`, color:MID, fontSize:11,
+                      letterSpacing:1, cursor:"pointer", padding:"9px 14px", borderRadius:3 }}>
+                    Limpiar filtros
+                  </button>
+                )}
+              </div>
+            )}
+            {(marcas.length === 0 && ciudades.length === 0) && (activeCategory !== "Todos" || search) && (
               <button onClick={() => { setActiveCat("Todos"); setSearch(""); }}
                 style={{ background:"none", border:"none", color:MID, fontSize:11,
-                  letterSpacing:1, cursor:"pointer", padding:"9px 8px",
+                  letterSpacing:1, cursor:"pointer", padding:"4px 0",
                   textDecoration:"underline" }}>
                 Limpiar filtros
               </button>

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
@@ -8,19 +8,11 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
-import { fmtPrice, attr, WaIcon, AUTO_SERVICES, VehicleCard, VehicleModal } from "@/components/store/auto/AutoVehicleShared";
+import { fmtPrice, attr, WaIcon, VehicleCard, VehicleModal, AM_MODAL_CSS } from "@/components/store/auto/AutoVehicleShared";
+
 function smoothScrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
-
-const PRICE_RANGES = [
-  { label: "Todos los precios", min: 0, max: Infinity },
-  { label: "Hasta $15M",        min: 0, max: 15_000_000 },
-  { label: "$15M – $35M",       min: 15_000_000, max: 35_000_000 },
-  { label: "Más de $35M",       min: 35_000_000, max: Infinity },
-];
-
-/* ── Section bg helpers ──────────────────────────────────── */
 function secBg(ov: ImageOverride | undefined, fallback: string): React.CSSProperties {
   if (ov?.url) return { backgroundImage: `url(${ov.url})`, backgroundSize: "cover", backgroundPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` };
   return { background: fallback };
@@ -30,326 +22,265 @@ function secText(ov: ImageOverride | undefined, bg: string): string {
   return getContrastColor(bg) === "light" ? "#ffffff" : "#111111";
 }
 function secMid(ov: ImageOverride | undefined, bg: string): string {
-  if (ov?.url) return ov.overlayType === "light" ? "#666666" : "rgba(255,255,255,0.55)";
+  if (ov?.url) return ov.overlayType === "light" ? "#555555" : "rgba(255,255,255,0.55)";
   return getContrastColor(bg) === "light" ? "rgba(255,255,255,0.55)" : "#888888";
 }
 function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
   if (!ov?.url || ov.overlayType === "none") return null;
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
-      background: ov.overlayType === "light"
+    <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none",
+      background: ov.overlayType==="light"
         ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})`
         : `rgba(0,0,0,${ov.overlayOpacity ?? 0.55})` }} />
   );
 }
 
-/* ── Category Tile ─────────────────────────────────────────── */
-function CategoryTile({ cat, count, accent, active, dark, onClick }: {
-  cat: string; count: number; accent: string; active: boolean; dark: boolean; onClick: () => void;
-}) {
-  const [hov, setHov] = useState(false);
-  const on = active || hov;
-  return (
-    <button onClick={onClick}
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ background: on ? accent : (dark ? "#1a1a1a" : "#fff"),
-        border: `1px solid ${on ? accent : (dark ? "#2a2a2a" : "#e8e8e8")}`,
-        borderRadius: 10, padding: "20px 18px", cursor: "pointer", textAlign: "left",
-        transition: "all 0.2s", display: "flex", flexDirection: "column", gap: 6,
-        boxShadow: on ? `0 8px 24px ${accent}33` : "none" }}>
-      <span style={{ fontSize: 13, fontWeight: 800,
-        color: on ? getContrastColor(accent) : (dark ? "#fff" : "#111"),
-        textTransform: "uppercase", letterSpacing: 0.8 }}>
-        {cat}
-      </span>
-      <span style={{ fontSize: 11, color: on ? getContrastColor(accent) + "99" : (dark ? "#666" : "#aaa"),
-        fontWeight: 500 }}>
-        {count} unidad{count !== 1 ? "es" : ""}
-      </span>
-    </button>
-  );
-}
+const SERVICE_CATS = [
+  { fv:"cat1Label", fi:"cat1Icon", lbl:"Usados garantizados", icon:"🛡️", desc:"Revisados y certificados" },
+  { fv:"cat2Label", fi:"cat2Icon", lbl:"Autos 0 km",          icon:"✨", desc:"Directo del concesionario" },
+  { fv:"cat3Label", fi:"cat3Icon", lbl:"Financiación",         icon:"💳", desc:"Planes en cuotas fijas" },
+  { fv:"cat4Label", fi:"cat4Icon", lbl:"Más servicios",        icon:"🔧", desc:"Taller y posventa" },
+];
 
-/* ── Main ─────────────────────────────────────────────────── */
 export default function AutoDrive() {
-  const config = useStoreConfig();
-  const pushBell = usePushBell();
+  const config       = useStoreConfig();
+  const pushBell     = usePushBell();
   const { products, loadingProducts } = useStorefront();
   const { editMode } = useEditContext();
-  const isPreview = !!config?.previewFill;
-  const accent = config?.colors.accent ?? "#2563eb";
-  const currency = config?.currency ?? "ARS";
-  const storeName = config?.storeName ?? "AUTO DRIVE";
-  const whatsapp = config?.whatsapp ?? { enabled: false, number: "" };
+  const isPreview    = !!config?.previewFill;
+  const accent       = config?.colors.accent ?? "#2563eb";
+  const currency     = config?.currency ?? "ARS";
+  const storeName    = config?.storeName ?? "AUTO DRIVE";
+  const whatsapp     = config?.whatsapp ?? { enabled:false, number:"", message:"" };
 
-  const heroImgUrl = config?.imageOverrides?.["heroImage"]?.url
-    ?? "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1000&q=80";
-  const nosotrosUrl = config?.imageOverrides?.["nosotrosImage"]?.url
+  const iovr = config?.imageOverrides ?? {};
+  const sc   = config?.sectionColors  ?? {};
+
+  const heroImgUrl  = iovr["heroImage"]?.url
+    ?? "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80";
+  const nosotrosUrl = iovr["nosotrosImage"]?.url
     ?? "https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?auto=format&fit=crop&w=900&q=80";
 
-  const sc   = config?.sectionColors ?? {};
-  const iovr = config?.imageOverrides ?? {};
+  const heroBg      = sc["bgHero"]      ?? "#f0f4ff";
+  const heroImg     = iovr["sectionbg_bgHero"];
+  const heroText    = secText(heroImg, heroBg);
+  const heroMid     = secMid(heroImg, heroBg);
 
-  const heroBg   = sc["bgHero"]     ?? "#f7f8fa";
-  const heroImg  = iovr["sectionbg_bgHero"];
-  const heroText = secText(heroImg, heroBg);
-  const heroMid  = secMid(heroImg, heroBg);
+  const catsBg      = sc["bgCategorias"] ?? "#ffffff";
+  const catsImg     = iovr["sectionbg_bgCategorias"];
+  const catsText    = secText(catsImg, catsBg);
+  const catsMid     = secMid(catsImg, catsBg);
 
-  const statsBg   = sc["bgStats"]   ?? accent;
-  const statsImg  = iovr["sectionbg_bgStats"];
-  const statsText = secText(statsImg, statsBg);
-
-  const catsSectionBg  = sc["bgCategorias"] ?? "#ffffff";
-  const catsSectionImg = iovr["sectionbg_bgCategorias"];
-  const catsText       = secText(catsSectionImg, catsSectionBg);
-  const catsMid        = secMid(catsSectionImg, catsSectionBg);
-  const catsDark       = catsText === "#ffffff";
-
-  const catalogoBg  = sc["bgCatalogo"]  ?? "#f7f8fa";
+  const catalogoBg  = sc["bgCatalogo"]   ?? "#f7f8fa";
   const catalogoImg = iovr["sectionbg_bgCatalogo"];
   const catText     = secText(catalogoImg, catalogoBg);
   const catMid      = secMid(catalogoImg, catalogoBg);
-  const catTheme    = catText === "#ffffff" ? "dark" as const : "light" as const;
+  const catTheme    = catText==="#ffffff" ? "dark" as const : "light" as const;
 
-  const serviciosBg  = sc["bgServicios"] ?? "#ffffff";
-  const serviciosImg = iovr["sectionbg_bgServicios"];
-  const svcText      = secText(serviciosImg, serviciosBg);
-  const svcMid       = secMid(serviciosImg, serviciosBg);
-  const svcIsLight   = svcText === "#111111";
-  const svcCardBg    = svcIsLight ? "#f7f8fa" : "rgba(255,255,255,0.06)";
-  const svcCardBor   = svcIsLight ? "#ebebeb" : "rgba(255,255,255,0.1)";
+  const statsBg     = sc["bgStats"]      ?? accent;
+  const statsImg    = iovr["sectionbg_bgStats"];
+  const statsText   = secText(statsImg, statsBg);
 
-  const nosotrosBg  = sc["bgNosotros"]  ?? "#f7f8fa";
+  const serviciosBg = sc["bgServicios"]  ?? "#ffffff";
+  const serviciosImg= iovr["sectionbg_bgServicios"];
+  const svcText     = secText(serviciosImg, serviciosBg);
+  const svcMid      = secMid(serviciosImg, serviciosBg);
+
+  const nosotrosBg  = sc["bgNosotros"]   ?? "#f7f8fa";
   const nosotrosImg2= iovr["sectionbg_bgNosotros"];
   const nosText     = secText(nosotrosImg2, nosotrosBg);
   const nosMid      = secMid(nosotrosImg2, nosotrosBg);
 
-  const contactoBg  = sc["bgContacto"]  ?? "#111111";
+  const contactoBg  = sc["bgContacto"]   ?? "#111827";
   const contactoImg = iovr["sectionbg_bgContacto"];
   const conText     = secText(contactoImg, contactoBg);
   const conMid      = secMid(contactoImg, contactoBg);
 
-  const footerBg   = sc["bgFooter"]    ?? "#0a0a0a";
-  const footerImg  = iovr["sectionbg_bgFooter"];
-  const ftMid      = secMid(footerImg, footerBg);
+  const footerBg    = sc["bgFooter"]     ?? "#0a0a0a";
+  const footerImg   = iovr["sectionbg_bgFooter"];
+  const ftMid       = secMid(footerImg, footerBg);
 
-  const [menuOpen, setMenuOpen]         = useState(false);
-  const [selected, setSelected]         = useState<StorefrontProduct | null>(null);
-  const [activeCategory, setActiveCategory] = useState("Todos");
-  const [showAll,  setShowAll]          = useState(false);
-  const [activePriceRange, setActivePriceRange] = useState(0);
-  const [search, setSearch]             = useState("");
-  const [scrolled, setScrolled]         = useState(false);
-  const [showReport, setShowReport]     = useState(false);
-  const [announcementIdx,     setAnnouncementIdx]     = useState(0);
-  const [announcementVisible, setAnnouncementVisible] = useState(true);
+  const [menuOpen,   setMenuOpen]   = useState(false);
+  const [selected,   setSelected]   = useState<StorefrontProduct | null>(null);
+  const [scrolled,   setScrolled]   = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [annIdx,     setAnnIdx]     = useState(0);
+  const [annVisible, setAnnVisible] = useState(true);
 
-  const AD_DEFAULTS = ["🚗 Financiación en 12 cuotas sin interés", "🔧 Servicio post-venta incluido", "🚚 Entrega en todo el país"];
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  const DEFAULTS = ["🚗 Financiación en cuotas", "🔧 Vehículos certificados", "🚚 Entrega a domicilio"];
   const promoBannerEnabled = config?.promoBanner?.enabled !== false;
-  const announcementMessages = (config?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
+  const annMessages        = (config?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? config!.promoBanner!.messages!.filter(m => m.trim())
-    : AD_DEFAULTS;
-  const showAnnouncement = promoBannerEnabled && announcementVisible;
-  const PROMO_BAR_H = 36;
+    : DEFAULTS;
+  const showAnn  = promoBannerEnabled && annVisible;
+  const PROMO_H  = 36;
+  const NAV_H    = 62;
 
   useEffect(() => {
-    const allowsPinch = (el: Element | null) => {
-      while (el) { if ((el as HTMLElement).style?.touchAction?.includes("pinch-zoom")) return true; el = el.parentElement; }
-      return false;
-    };
-    const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1 && !allowsPinch(e.target as Element)) e.preventDefault(); };
-    const preventGesture = (e: Event) => { if (!allowsPinch((e as any).target as Element)) e.preventDefault(); };
-    document.addEventListener("touchmove", preventPinch, { passive: false });
-    document.addEventListener("gesturestart", preventGesture as EventListener);
-    document.addEventListener("gesturechange", preventGesture as EventListener);
-    return () => {
-      document.removeEventListener("touchmove", preventPinch);
-      document.removeEventListener("gesturestart", preventGesture as EventListener);
-      document.removeEventListener("gesturechange", preventGesture as EventListener);
-    };
-  }, []);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 50);
+    const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
-    if (!showAnnouncement || announcementMessages.length <= 1) return;
-    const id = setInterval(() => setAnnouncementIdx(i => (i + 1) % announcementMessages.length), 3500);
+    if (!showAnn || annMessages.length <= 1) return;
+    const id = setInterval(() => setAnnIdx(i => (i + 1) % annMessages.length), 3500);
     return () => clearInterval(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAnnouncement, announcementMessages.length]);
+  }, [showAnn, annMessages.length]);
 
   useEffect(() => {
     if (!products.length) return;
     const id = new URLSearchParams(window.location.search).get("producto");
-    if (id) {
-      const p = products.find(pr => pr.id === id);
-      if (p) setSelected(p);
-    }
+    if (id) { const p = products.find(pr => pr.id === id); if (p) setSelected(p); }
   }, [products]);
 
-  const categoryList = useMemo(() =>
-    Array.from(new Set(products.map(p => p.category))).filter(Boolean), [products]);
-  const categories = useMemo(() => ["Todos", ...categoryList], [categoryList]);
-  const categoryCount = useMemo(() => {
-    const map: Record<string, number> = {};
-    products.forEach(p => { if (p.category) map[p.category] = (map[p.category] ?? 0) + 1; });
-    return map;
-  }, [products]);
+  const showcased = products.slice(0, 8);
+  const hasMore   = products.length > 8;
 
-  const pr = PRICE_RANGES[activePriceRange];
-  const filtered = useMemo(() => products.filter(p => {
-    const matchCat = activeCategory === "Todos" || p.category === activeCategory;
-    const matchPrice = p.price >= pr.min && p.price <= pr.max;
-    const q = search.toLowerCase().trim();
-    const matchSearch = !q || p.name.toLowerCase().includes(q)
-      || p.attributes.some(a => a.value.toLowerCase().includes(q));
-    return matchCat && matchPrice && matchSearch;
-  }), [products, activeCategory, pr, search]);
+  function scrollCarousel(dir: "prev" | "next") {
+    const el = carouselRef.current;
+    if (!el) return;
+    const item = el.querySelector<HTMLElement>(".ad-carousel-item");
+    const w = item ? item.offsetWidth + 16 : 300;
+    el.scrollBy({ left: dir === "next" ? w : -w, behavior: "smooth" });
+  }
 
   return (
-    <div style={{ background: "#ffffff", color: "#111111",
-      fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", minHeight: "100vh" }}>
+    <div style={{ background:"#ffffff", color:"#111111",
+      fontFamily:"'Inter','Segoe UI',system-ui,sans-serif", minHeight:"100vh" }}>
       <style>{`
-        .ad-grid { grid-template-columns: 1fr !important }
-        @media(min-width:560px){ .ad-grid { grid-template-columns: repeat(2,1fr) !important } }
-        @media(min-width:900px){ .ad-grid { grid-template-columns: repeat(3,1fr) !important } }
-        .ad-cats { grid-template-columns: repeat(2,1fr) !important }
-        @media(min-width:480px){ .ad-cats { grid-template-columns: repeat(3,1fr) !important } }
-        @media(min-width:768px){ .ad-cats { grid-template-columns: repeat(4,1fr) !important } }
-        @media(min-width:1024px){ .ad-cats { grid-template-columns: repeat(6,1fr) !important } }
-        .ad-nav-links { display: none !important }
-        @media(min-width:768px){ .ad-nav-links { display: flex !important } .ad-burger { display: none !important } }
-        .ad-hero { flex-direction: column !important }
-        .ad-hero-left { width: 100% !important; padding: 60px 28px 40px !important }
+        ${AM_MODAL_CSS}
+        .ad-nav-links { display:none }
+        @media(min-width:768px){ .ad-nav-links { display:flex } .ad-burger { display:none } }
+        .ad-hero { flex-direction:column }
+        .ad-hero-left { padding:72px 28px 52px; width:100% }
         @media(min-width:768px){
-          .ad-hero { flex-direction: row !important; min-height: 100svh !important }
-          .ad-hero-left { width: 50% !important; padding: 80px 48px 80px 40px !important }
+          .ad-hero { flex-direction:row; min-height:calc(100svh - 98px) }
+          .ad-hero-left { padding:80px 52px; width:50% }
         }
-        .ad-about { grid-template-columns: 1fr !important }
-        @media(min-width:768px){ .ad-about { grid-template-columns: 1fr 1fr !important } }
-        .ad-stats { grid-template-columns: repeat(2,1fr) }
-        @media(min-width:640px){ .ad-stats { grid-template-columns: repeat(4,1fr) !important } }
-        .ad-svc { grid-template-columns: 1fr !important }
-        @media(min-width:560px){ .ad-svc { grid-template-columns: repeat(2,1fr) !important } }
-        @media(min-width:900px){ .ad-svc { grid-template-columns: repeat(4,1fr) !important } }
-        .ad-modal-body { grid-template-columns: 1fr !important }
-        @media(min-width:700px){ .ad-modal-body { grid-template-columns: 3fr 2fr !important } }
-        .ad-specs-grid { grid-template-columns: 1fr !important }
-        @media(min-width:560px){ .ad-specs-grid { grid-template-columns: 1fr 1fr !important } }
-        .ad-similar-grid { grid-template-columns: repeat(2,1fr) !important }
-        @media(min-width:560px){ .ad-similar-grid { grid-template-columns: repeat(4,1fr) !important } }
-        .ad-img-wrap { flex-direction: column !important }
-        .ad-img-thumbs { flex-direction: row !important; overflow-x: auto !important; overflow-y: hidden !important; width: 100% !important; max-height: 64px !important; padding: 6px 8px !important }
-        @media(min-width:700px){
-          .ad-img-wrap { flex-direction: row !important }
-          .ad-img-thumbs { flex-direction: column !important; overflow-x: hidden !important; overflow-y: auto !important; width: 80px !important; max-height: none !important; padding: 8px 6px !important }
-        }
+        .ad-carousel-item { flex:0 0 calc(100% - 16px) }
+        @media(min-width:480px){ .ad-carousel-item { flex:0 0 calc(50% - 12px) } }
+        @media(min-width:768px){ .ad-carousel-item { flex:0 0 calc(33.333% - 12px) } }
+        @media(min-width:1100px){ .ad-carousel-item { flex:0 0 calc(25% - 12px) } }
+        .ad-carousel::-webkit-scrollbar { display:none }
+        .ad-carousel { scrollbar-width:none; -ms-overflow-style:none }
+        .ad-cats { grid-template-columns:repeat(2,1fr) }
+        @media(min-width:640px){ .ad-cats { grid-template-columns:repeat(4,1fr) } }
+        .ad-about { grid-template-columns:1fr }
+        @media(min-width:768px){ .ad-about { grid-template-columns:1fr 1fr } }
+        .ad-svc { grid-template-columns:1fr }
+        @media(min-width:560px){ .ad-svc { grid-template-columns:repeat(2,1fr) } }
+        @media(min-width:900px){ .ad-svc { grid-template-columns:repeat(4,1fr) } }
+        @keyframes ad-spin { to { transform:rotate(360deg) } }
       `}</style>
 
-      {/* ── Promo Bar ──────────────────────────────────────── */}
-      {showAnnouncement && (
-        <div style={{ position: isPreview ? "sticky" : "fixed", top: 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10001 : 110,
-          height: PROMO_BAR_H, background: accent,
-          display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", letterSpacing: 1 }}>
-            {announcementMessages[announcementIdx]}
+      {/* ── PROMO BAR ──────────────────────────────────────────── */}
+      {showAnn && (
+        <div style={{ position: isPreview ? "sticky" : "fixed", top:0,
+          left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
+          zIndex: isPreview ? 10001 : 110, height:PROMO_H, background:accent,
+          display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <span style={{ fontSize:11, fontWeight:600, color:"#fff", letterSpacing:1 }}>
+            {annMessages[annIdx]}
           </span>
-          {announcementMessages.length > 1 && (
-            <div style={{ position: "absolute", bottom: 4, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
-              {announcementMessages.map((_, i) => (
-                <button key={i} onClick={() => setAnnouncementIdx(i)}
-                  style={{ width: i === announcementIdx ? 14 : 5, height: 3, border: "none", borderRadius: 2, background: i === announcementIdx ? "#fff" : "rgba(255,255,255,0.4)", cursor: "pointer", padding: 0, transition: "all 0.3s" }} />
+          {annMessages.length > 1 && (
+            <div style={{ position:"absolute", bottom:4, left:"50%", transform:"translateX(-50%)", display:"flex", gap:4 }}>
+              {annMessages.map((_,i) => (
+                <button key={i} onClick={() => setAnnIdx(i)}
+                  style={{ width: i===annIdx ? 14 : 5, height:3, border:"none", borderRadius:2,
+                    background: i===annIdx ? "#fff" : "rgba(255,255,255,0.4)", cursor:"pointer", padding:0, transition:"all 0.3s" }} />
               ))}
             </div>
           )}
-          <button onClick={() => setAnnouncementVisible(false)}
-            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 16, lineHeight: 1, opacity: 0.7 }}>×</button>
+          <button onClick={() => setAnnVisible(false)}
+            style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
+              background:"none", border:"none", color:"#fff", cursor:"pointer", fontSize:16, opacity:0.7 }}>×</button>
         </div>
       )}
 
-      {/* ── Navbar ─────────────────────────────────────────── */}
-      <nav style={{ position: isPreview ? "sticky" : "fixed", top: showAnnouncement ? PROMO_BAR_H : 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10000 : 100,
-        background: scrolled ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.97)",
-        borderBottom: "1px solid #ebebeb",
+      {/* ── NAV ────────────────────────────────────────────────── */}
+      <nav style={{ position: isPreview ? "sticky" : "fixed",
+        top: showAnn ? PROMO_H : 0,
+        left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
+        zIndex: isPreview ? 10000 : 100,
+        background: "rgba(255,255,255,0.97)",
+        borderBottom: scrolled ? "1px solid #e5e7eb" : "1px solid transparent",
         backdropFilter: "blur(20px)",
-        boxShadow: scrolled ? "0 4px 24px rgba(0,0,0,0.06)" : "none",
-        transition: "box-shadow 0.3s", padding: "0 28px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", height: 62,
-          display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 900, fontSize: 17, color: accent, letterSpacing: -0.3 }}>
+        boxShadow: scrolled ? "0 2px 16px rgba(0,0,0,0.06)" : "none",
+        transition: "all 0.3s", padding:"0 28px" }}>
+        <div style={{ maxWidth:1200, margin:"0 auto", height:NAV_H,
+          display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6,
+            fontWeight:900, fontSize:18, color:accent, letterSpacing:-0.5 }}>
             <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
             <VerifiedIconButton isVerified={config?.isVerified} info={config?.verifiedInfo} />
           </div>
-          <div className="ad-nav-links" style={{ display: "flex", gap: 32, alignItems: "center" }}>
-            {[["Catálogo", "catálogo"], ["Servicios", "servicios"], ["Nosotros", "nosotros"], ["Contacto", "contacto"]].map(([label, id]) => (
+          <div className="ad-nav-links" style={{ display:"flex", gap:32, alignItems:"center" }}>
+            {[["Catálogo","catálogo"],["Servicios","servicios"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([lbl,id]) => (
               <button key={id} onClick={() => smoothScrollTo(id)}
-                style={{ background: "none", border: "none", color: "#888", cursor: "pointer",
-                  fontSize: 13, fontWeight: 500, transition: "color 0.15s" }}
-                onMouseEnter={e => (e.currentTarget.style.color = accent)}
-                onMouseLeave={e => (e.currentTarget.style.color = "#888")}>
-                {label}
+                style={{ background:"none", border:"none", color:"#6b7280", cursor:"pointer",
+                  fontSize:13, fontWeight:500, transition:"color 0.15s" }}
+                onMouseEnter={e => (e.currentTarget.style.color=accent)}
+                onMouseLeave={e => (e.currentTarget.style.color="#6b7280")}>
+                {lbl}
               </button>
             ))}
             <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
-              style={{ border: `1px solid #e0e0e0`, color: "#555", padding: "6px 16px",
-                fontSize: 12, fontWeight: 600, letterSpacing: 0.5, textDecoration: "none",
-                borderRadius: 6, transition: "all 0.15s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = accent; (e.currentTarget as HTMLElement).style.color = "#fff"; (e.currentTarget as HTMLElement).style.borderColor = accent; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none"; (e.currentTarget as HTMLElement).style.color = "#555"; (e.currentTarget as HTMLElement).style.borderColor = "#e0e0e0"; }}>
+              style={{ border:`1.5px solid ${accent}`, color:accent, padding:"7px 18px",
+                fontSize:12, fontWeight:700, letterSpacing:0.3, textDecoration:"none",
+                transition:"all 0.2s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background=accent; (e.currentTarget as HTMLElement).style.color="#fff"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="transparent"; (e.currentTarget as HTMLElement).style.color=accent; }}>
               Ver todos
             </Link>
             {pushBell && config?.showPushBell && !isPreview && (
-              <button onClick={pushBell.openDrawer} style={{ position:"relative", background:"none", border:"none", color:"#444", cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
-                <svg width={20} height={20} viewBox="0 0 24 24" fill={pushBell.subState === "subscribed" ? accent : "none"} stroke={pushBell.subState === "subscribed" ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                {pushBell.hasNew && <span style={{ position:"absolute", top:2, right:2, width:10, height:10, background:"#ef4444", borderRadius:"50%", border:"2px solid white" }} />}
+              <button onClick={pushBell.openDrawer}
+                style={{ position:"relative", background:"none", border:"none", color:"#6b7280",
+                  cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+                <svg width={20} height={20} viewBox="0 0 24 24"
+                  fill={pushBell.subState==="subscribed"?"currentColor":"none"}
+                  stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                {pushBell.hasNew && <span style={{ position:"absolute", top:2, right:2, width:10, height:10,
+                  background:"#ef4444", borderRadius:"50%", border:"2px solid white" }} />}
               </button>
             )}
-            {isPreview && (
-              config?.showPushBell ? (
-                <button onClick={config.onPreviewBellClick} title="Campanita de novedades — clic para configurar" style={{ position:"relative", padding:4, display:"flex", alignItems:"center", color:"#444", opacity:0.85, background:"none", border:"none", cursor:"pointer" }}>
-                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                </button>
-              ) : (
-                <button onClick={config?.onPreviewBellClick} title="🔒 Solo Plan Plus — tocá para activar" style={{ position:"relative", padding:4, display:"flex", alignItems:"center", color:"#444", opacity:0.38, background:"none", border:"none", cursor:"pointer" }}>
-                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                  <span style={{ position:"absolute", top:0, right:0, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
-                </button>
-              )
-            )}
-            {whatsapp.enabled && whatsapp.number && (
-              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
-                target="_blank" rel="noopener noreferrer"
-                style={{ display: "flex", alignItems: "center", gap: 6,
-                  background: "#25d366", color: "white", textDecoration: "none",
-                  padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
-                <WaIcon size={14} /> WhatsApp
-              </a>
-            )}
+            {isPreview && (config?.showPushBell ? (
+              <button onClick={config.onPreviewBellClick}
+                style={{ padding:4, display:"flex", alignItems:"center", color:"#6b7280", background:"none", border:"none", cursor:"pointer" }}>
+                <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              </button>
+            ) : (
+              <button onClick={config?.onPreviewBellClick} title="🔒 Solo Plan Plus"
+                style={{ position:"relative", padding:4, display:"flex", alignItems:"center", color:"#9ca3af", opacity:0.5, background:"none", border:"none", cursor:"pointer" }}>
+                <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <span style={{ position:"absolute", top:0, right:0, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
+              </button>
+            ))}
           </div>
           <button className="ad-burger" onClick={() => setMenuOpen(m => !m)}
-            style={{ background: "none", border: "1px solid #e8e8e8", color: "#444",
-              padding: "6px 11px", borderRadius: 8, cursor: "pointer", fontSize: 18 }}>
+            style={{ background:"none", border:`1px solid #e5e7eb`,
+              color:"#374151", padding:"7px 11px", cursor:"pointer", fontSize:18 }}>
             {menuOpen ? "×" : "☰"}
           </button>
         </div>
         {menuOpen && (
-          <div style={{ background: "white", borderTop: "1px solid #f0f0f0",
-            padding: "8px 28px 18px" }}>
-            {[["Catálogo", "catálogo"], ["Servicios", "servicios"], ["Nosotros", "nosotros"], ["Contacto", "contacto"]].map(([label, id]) => (
+          <div style={{ background:"#fff", borderTop:"1px solid #f3f4f6", padding:"8px 28px 20px" }}>
+            {[["Catálogo","catálogo"],["Servicios","servicios"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([lbl,id]) => (
               <button key={id} onClick={() => { smoothScrollTo(id); setMenuOpen(false); }}
-                style={{ display: "block", width: "100%", background: "none", border: "none",
-                  color: "#555", cursor: "pointer", textAlign: "left",
-                  padding: "12px 0", fontSize: 14, borderBottom: "1px solid #f5f5f5" }}>
-                {label}
+                style={{ display:"block", width:"100%", background:"none", border:"none",
+                  color:"#6b7280", cursor:"pointer", textAlign:"left",
+                  padding:"12px 0", fontSize:13, fontWeight:500, borderBottom:"1px solid #f3f4f6" }}>
+                {lbl}
               </button>
             ))}
             <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
-              style={{ display: "block", color: accent, padding: "12px 0", fontSize: 14,
-                fontWeight: 600, textDecoration: "none" }}
+              style={{ display:"block", color:accent, padding:"14px 0",
+                fontSize:13, fontWeight:700, textDecoration:"none" }}
               onClick={() => setMenuOpen(false)}>
               Ver todos los vehículos →
             </Link>
@@ -357,116 +288,225 @@ export default function AutoDrive() {
         )}
       </nav>
 
-      {/* ── Hero ───────────────────────────────────────────── */}
-      <section style={{ paddingTop: 62, position: "relative", ...secBg(heroImg, heroBg) }}>
+      {/* ── HERO ───────────────────────────────────────────────── */}
+      <section style={{ paddingTop: isPreview ? 0 : (showAnn ? PROMO_H + NAV_H : NAV_H),
+        position:"relative", ...secBg(heroImg, heroBg) }}>
         <BgDragHandle imgKey="sectionbg_bgHero" />
         <SectionOverlay ov={heroImg} />
         <EditableSectionBg field="bgHero" label="Fondo hero" />
-        <div className="ad-hero" style={{ position: "relative", zIndex: 1, maxWidth: 1400, margin: "0 auto",
-          display: "flex", alignItems: "stretch" }}>
-
-          {/* left */}
-          <div className="ad-hero-left"
-            style={{ flex: "0 0 auto", display: "flex", flexDirection: "column",
-              justifyContent: "center", padding: "80px 48px 80px 40px" }}>
-            <p style={{ margin: "0 0 12px", fontSize: 10, color: accent,
-              textTransform: "uppercase", letterSpacing: 4, fontWeight: 700 }}>
-              <EditableZone field="heroBadge" label="Badge hero">Concesionaria Oficial</EditableZone>
+        <div className="ad-hero" style={{ display:"flex", position:"relative", zIndex:1 }}>
+          {/* left text */}
+          <div className="ad-hero-left" style={{ display:"flex", flexDirection:"column",
+            justifyContent:"center", boxSizing:"border-box" }}>
+            <p style={{ margin:"0 0 14px", fontSize:11, color:accent,
+              textTransform:"uppercase", letterSpacing:4, fontWeight:700 }}>
+              <EditableZone field="heroKicker" label="Etiqueta hero">Tu próximo auto</EditableZone>
             </p>
-            <h1 style={{ margin: "0 0 14px", fontSize: "clamp(28px,4.5vw,56px)",
-              fontWeight: 900, lineHeight: 1.0, color: heroText, letterSpacing: -1.5 }}>
-              <EditableZone field="heroHeading" label="Título principal">{"Encontrá el\nvehículo ideal"}</EditableZone>
+            <h1 style={{ margin:"0 0 8px", fontSize:"clamp(36px,5.5vw,72px)",
+              fontWeight:900, color:heroText, letterSpacing:-2, lineHeight:1.0 }}>
+              <EditableZone field="heroHeading" label="Título hero">está acá</EditableZone>
             </h1>
-            <p style={{ margin: "0 0 28px", fontSize: "clamp(13px,1.6vw,16px)",
-              color: heroMid, lineHeight: 1.85, fontWeight: 300, maxWidth: 380 }}>
-              <EditableZone field="heroSubtext" label="Subtítulo">El mayor catálogo en autos y motos. Financiación disponible, entrega rápida.</EditableZone>
+            <div style={{ width:56, height:4, background:accent, marginBottom:24 }} />
+            <p style={{ margin:"0 0 36px", fontSize:"clamp(14px,1.5vw,16px)",
+              color:heroMid, fontWeight:300, lineHeight:1.85, maxWidth:420 }}>
+              <EditableZone field="heroSubtext" label="Subtítulo hero">La mejor selección de vehículos usados y 0 km. Todos inspeccionados, con financiación disponible y entrega en todo el país.</EditableZone>
             </p>
-
-            {/* search */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 18, maxWidth: 440 }}>
-              <div style={{ position: "relative", flex: 1 }}>
-                <svg width={15} height={15} viewBox="0 0 24 24" fill="none"
-                  stroke="#aaa" strokeWidth={2} strokeLinecap="round"
-                  style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }}>
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                </svg>
-                <input value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder="Buscar marca, modelo, año..."
-                  style={{ width: "100%", boxSizing: "border-box",
-                    paddingLeft: 40, paddingRight: 14, paddingTop: 12, paddingBottom: 12,
-                    border: "2px solid #e8e8e8", borderRadius: 10, fontSize: 13,
-                    outline: "none", background: "#fff", color: "#111",
-                    fontFamily: "inherit" }}
-                  onFocus={e => (e.currentTarget.style.borderColor = accent)}
-                  onBlur={e => (e.currentTarget.style.borderColor = "#e8e8e8")} />
-              </div>
+            <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
               <button onClick={() => smoothScrollTo("catálogo")}
-                style={{ background: accent, color: getContrastColor(accent), border: "none",
-                  padding: "0 20px", borderRadius: 10, fontWeight: 700,
-                  fontSize: 13, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-                Buscar
+                style={{ background:accent, color:"#fff", border:"none",
+                  padding:"14px 32px", fontWeight:700, fontSize:13,
+                  cursor:"pointer", transition:"opacity 0.2s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity="0.85"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity="1"; }}>
+                Ver catálogo
               </button>
+              {whatsapp.enabled && whatsapp.number && (
+                <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ display:"flex", alignItems:"center", gap:8,
+                    background:"none", border:"1.5px solid #d1d5db",
+                    color:"#374151", textDecoration:"none",
+                    padding:"14px 24px", fontWeight:600, fontSize:13 }}>
+                  <WaIcon size={15} /> Contactar
+                </a>
+              )}
             </div>
-
-            {/* quick category pills */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {categoryList.slice(0, 6).map(cat => (
-                <button key={cat}
-                  onClick={() => { setActiveCategory(cat); smoothScrollTo("catálogo"); }}
-                  style={{ background: "#f5f5f5", color: "#555", border: "1px solid #e8e8e8",
-                    padding: "6px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600,
-                    cursor: "pointer", transition: "all 0.15s" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = `${accent}15`; e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "#f5f5f5"; e.currentTarget.style.borderColor = "#e8e8e8"; e.currentTarget.style.color = "#555"; }}>
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* right image */}
-          <div style={{ flex: 1, position: "relative", overflow: "hidden",
-            minHeight: 300, background: "#111" }}>
-            <img src={heroImgUrl} alt="Vehículo"
-              style={{ width: "100%", height: "100%", objectFit: "cover",
-                display: "block", opacity: 0.92 }} />
-            <div style={{ position: "absolute", inset: 0,
-              background: "linear-gradient(to right, rgba(247,248,250,0.9) 0%, rgba(247,248,250,0) 25%)" }} />
-            {(() => { const ov = config?.imageOverrides?.["heroImage"]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
-            <EditableImageButton field="heroImage" label="Imagen del hero" />
             {!loadingProducts && (
-              <div style={{ position: "absolute", bottom: 20, left: 20,
-                background: "rgba(255,255,255,0.9)", padding: "8px 16px",
-                borderRadius: 8, backdropFilter: "blur(8px)" }}>
-                <span style={{ fontSize: 12, color: "#111", fontWeight: 700 }}>
-                  <span style={{ color: accent, fontSize: 18 }}>{products.length}</span> vehículos en stock
-                </span>
-              </div>
+              <p style={{ margin:"24px 0 0", fontSize:12, color:heroMid, letterSpacing:0.5 }}>
+                <span style={{ color:accent, fontWeight:700 }}>{products.length}</span> vehículos disponibles
+              </p>
             )}
+          </div>
+          {/* right image */}
+          <div style={{ flex:1, position:"relative", overflow:"hidden",
+            minHeight:320, background:"#e5e7eb" }}>
+            <img src={heroImgUrl} alt="Vehículo"
+              style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+            {(() => {
+              const ov = iovr["heroImage"];
+              if (!ov?.overlayType || ov.overlayType==="none") return null;
+              return <div style={{ position:"absolute", inset:0, pointerEvents:"none",
+                background: ov.overlayType==="light"
+                  ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})`
+                  : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />;
+            })()}
+            <EditableImageButton field="heroImage" label="Imagen del hero" />
           </div>
         </div>
       </section>
 
-      {/* ── Stats ──────────────────────────────────────────── */}
-      <section style={{ position: "relative", ...secBg(statsImg, statsBg) }}>
+      {/* ── CATEGORÍAS DE SERVICIO ─────────────────────────────── */}
+      <section style={{ padding:"52px 28px", position:"relative",
+        ...secBg(catsImg, catsBg), borderBottom:"1px solid #f3f4f6" }}>
+        <BgDragHandle imgKey="sectionbg_bgCategorias" />
+        <SectionOverlay ov={catsImg} />
+        <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
+        <div className="ad-cats" style={{ position:"relative", zIndex:1,
+          maxWidth:1200, margin:"0 auto", display:"grid", gap:16 }}>
+          {SERVICE_CATS.map((cat, i) => (
+            <div key={i}
+              style={{ background: catsText==="#ffffff" ? "#1a1a1a" : "#fff",
+                border:`1px solid ${catsText==="#ffffff" ? "#2a2a2a" : "#e5e7eb"}`,
+                borderRadius:12, padding:"28px 24px", cursor:"pointer",
+                transition:"all 0.2s", boxShadow:"none" }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLDivElement).style.borderColor=accent;
+                (e.currentTarget as HTMLDivElement).style.boxShadow=`0 8px 24px ${accent}22`;
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLDivElement).style.borderColor=catsText==="#ffffff"?"#2a2a2a":"#e5e7eb";
+                (e.currentTarget as HTMLDivElement).style.boxShadow="none";
+              }}
+              onClick={() => smoothScrollTo("catálogo")}>
+              <div style={{ width:44, height:44, background:`${accent}15`, borderRadius:10,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:22, marginBottom:14 }}>
+                <EditableZone field={cat.fi} label={`Ícono categoría ${i+1}`}>{cat.icon}</EditableZone>
+              </div>
+              <p style={{ margin:"0 0 4px", fontSize:14, fontWeight:700, color:catsText }}>
+                <EditableZone field={cat.fv} label={`Categoría ${i+1} — Nombre`}>{cat.lbl}</EditableZone>
+              </p>
+              <p style={{ margin:0, fontSize:12, color:catsMid }}>
+                <EditableZone field={`cat${i+1}Desc`} label={`Categoría ${i+1} — Descripción`}>{cat.desc}</EditableZone>
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── CATÁLOGO CARRUSEL ──────────────────────────────────── */}
+      <section id="catálogo" style={{ padding:"72px 0 72px", position:"relative",
+        ...secBg(catalogoImg, catalogoBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgCatalogo" />
+        <SectionOverlay ov={catalogoImg} />
+        <EditableSectionBg field="bgCatalogo" label="Fondo catálogo" />
+        <div style={{ position:"relative", zIndex:1, maxWidth:1200, margin:"0 auto", padding:"0 28px" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+            flexWrap:"wrap", gap:16, marginBottom:32 }}>
+            <div>
+              <p style={{ margin:"0 0 6px", fontSize:11, color:accent,
+                textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>
+                <EditableZone field="catalogKicker" label="Kicker catálogo">Nuestros vehículos</EditableZone>
+              </p>
+              <h2 style={{ margin:0, fontSize:"clamp(22px,4vw,36px)", fontWeight:900,
+                color:catText, letterSpacing:-0.5 }}>
+                <EditableZone field="catalogHeading" label="Título catálogo">Catálogo disponible</EditableZone>
+              </h2>
+            </div>
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              <button onClick={() => scrollCarousel("prev")}
+                style={{ width:40, height:40, border:`1px solid ${catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"}`,
+                  background: catText==="#ffffff" ? "rgba(255,255,255,0.07)" : "#fff",
+                  color:catText, cursor:"pointer", borderRadius:8, fontSize:18,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  transition:"all 0.15s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor=accent; (e.currentTarget as HTMLElement).style.color=accent; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor=catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"; (e.currentTarget as HTMLElement).style.color=catText; }}>
+                ‹
+              </button>
+              <button onClick={() => scrollCarousel("next")}
+                style={{ width:40, height:40, border:`1px solid ${catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"}`,
+                  background: catText==="#ffffff" ? "rgba(255,255,255,0.07)" : "#fff",
+                  color:catText, cursor:"pointer", borderRadius:8, fontSize:18,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  transition:"all 0.15s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor=accent; (e.currentTarget as HTMLElement).style.color=accent; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor=catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"; (e.currentTarget as HTMLElement).style.color=catText; }}>
+                ›
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Carousel track — full width with padding for peek */}
+        <div style={{ position:"relative", zIndex:1 }}>
+          {loadingProducts ? (
+            <div style={{ textAlign:"center", padding:"60px 0" }}>
+              <div style={{ width:40, height:40, border:`3px solid ${accent}`,
+                borderTopColor:"transparent", borderRadius:"50%",
+                animation:"ad-spin 0.8s linear infinite", margin:"0 auto" }} />
+            </div>
+          ) : showcased.length > 0 ? (
+            <div ref={carouselRef} className="ad-carousel"
+              style={{ display:"flex", gap:16, overflowX:"auto", overflowY:"hidden",
+                scrollSnapType:"x mandatory", padding:"4px 28px 16px",
+                WebkitOverflowScrolling:"touch" as any }}>
+              {showcased.map(p => (
+                <div key={p.id} className="ad-carousel-item" style={{ scrollSnapAlign:"start", flexShrink:0 }}>
+                  <VehicleCard product={p} accent={accent} currency={currency}
+                    theme={catTheme} onClick={() => setSelected(p)} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign:"center", padding:"60px 28px",
+              border:`1px dashed ${catText==="#ffffff"?"#333":"#e5e7eb"}`,
+              margin:"0 28px" }}>
+              <p style={{ margin:0, color:catMid, fontSize:14 }}>
+                Aún no hay vehículos publicados.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {hasMore && (
+          <div style={{ textAlign:"center", marginTop:32, padding:"0 28px",
+            position:"relative", zIndex:1 }}>
+            <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
+              style={{ display:"inline-flex", alignItems:"center", gap:10,
+                background:"none", border:`1.5px solid ${accent}`, color:accent,
+                textDecoration:"none", padding:"13px 36px",
+                fontWeight:700, fontSize:12, letterSpacing:0.5, borderRadius:4 }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background=accent; (e.currentTarget as HTMLElement).style.color="#fff"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="none"; (e.currentTarget as HTMLElement).style.color=accent; }}>
+              Ver los {products.length} vehículos →
+            </Link>
+          </div>
+        )}
+      </section>
+
+      {/* ── STATS ──────────────────────────────────────────────── */}
+      <section style={{ position:"relative", ...secBg(statsImg, statsBg) }}>
         <BgDragHandle imgKey="sectionbg_bgStats" />
         <SectionOverlay ov={statsImg} />
         <EditableSectionBg field="bgStats" label="Fondo estadísticas" />
-        <div className="ad-stats" style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", display: "grid" }}>
+        <div style={{ position:"relative", zIndex:1, maxWidth:1200, margin:"0 auto",
+          display:"grid", gridTemplateColumns:"repeat(2,1fr)" }}>
           {[
-            { fv: "stat1", fl: "statLabel1", n: "500+", l: "Vehículos" },
-            { fv: "stat2", fl: "statLabel2", n: "15",   l: "Años en el mercado" },
-            { fv: "stat3", fl: "statLabel3", n: "98%",  l: "Satisfacción" },
-            { fv: "stat4", fl: "statLabel4", n: "12",   l: "Marcas" },
-          ].map((s, i) => (
-            <div key={i} style={{ textAlign: "center", padding: "28px 10px",
-              borderRight: i % 2 === 0 ? "1px solid rgba(255,255,255,0.12)" : "none",
-              borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.12)" : "none" }}>
-              <p style={{ margin: 0, fontSize: "clamp(24px,4vw,36px)", fontWeight: 900, color: statsText, letterSpacing: -1 }}>
-                <EditableZone field={s.fv} label={`Stat ${i+1}`}>{s.n}</EditableZone>
+            { fv:"stat1", fl:"statLabel1", n:"500+", l:"Vehículos vendidos" },
+            { fv:"stat2", fl:"statLabel2", n:"15",   l:"Años en el mercado" },
+            { fv:"stat3", fl:"statLabel3", n:"98%",  l:"Satisfacción" },
+            { fv:"stat4", fl:"statLabel4", n:"12",   l:"Marcas disponibles" },
+          ].map((s,i) => (
+            <div key={i} style={{ textAlign:"center", padding:"32px 16px",
+              borderRight: i%2===0 ? "1px solid rgba(255,255,255,0.15)" : "none",
+              borderBottom: i<2 ? "1px solid rgba(255,255,255,0.15)" : "none" }}>
+              <p style={{ margin:0, fontSize:"clamp(26px,4vw,38px)", fontWeight:900,
+                color:statsText, letterSpacing:-1 }}>
+                <EditableZone field={s.fv} label={`Número stat ${i+1}`}>{s.n}</EditableZone>
               </p>
-              <p style={{ margin: "4px 0 0", fontSize: 10, color: statsText,
-                opacity: 0.5, textTransform: "uppercase", letterSpacing: 2 }}>
+              <p style={{ margin:"4px 0 0", fontSize:10, color:statsText,
+                opacity:0.6, textTransform:"uppercase", letterSpacing:2 }}>
                 <EditableZone field={s.fl} label={`Etiqueta stat ${i+1}`}>{s.l}</EditableZone>
               </p>
             </div>
@@ -474,158 +514,45 @@ export default function AutoDrive() {
         </div>
       </section>
 
-      {/* ── Categorías ─────────────────────────────────────── */}
-      {categoryList.length > 0 && (
-        <section style={{ padding: "64px 28px", position: "relative", ...secBg(catsSectionImg, catsSectionBg) }}>
-          <BgDragHandle imgKey="sectionbg_bgCategorias" />
-          <SectionOverlay ov={catsSectionImg} />
-          <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
-          <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto" }}>
-            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between",
-              flexWrap: "wrap", gap: 16, marginBottom: 28 }}>
-              <div>
-                <p style={{ margin: "0 0 6px", fontSize: 10, color: accent,
-                  textTransform: "uppercase", letterSpacing: 3, fontWeight: 700 }}>
-                  <EditableZone field="catsKicker" label="Kicker categorías">Explorá por tipo</EditableZone>
-                </p>
-                <h2 style={{ margin: 0, fontSize: "clamp(20px,3.5vw,30px)",
-                  fontWeight: 900, color: catsText, letterSpacing: -0.3 }}>
-                  <EditableZone field="catsHeading" label="Título categorías">Categorías disponibles</EditableZone>
-                </h2>
-              </div>
-              {activeCategory !== "Todos" && (
-                <button onClick={() => { setActiveCategory("Todos"); smoothScrollTo("catálogo"); }}
-                  style={{ background: "none", border: `1px solid ${catsMid}44`, color: catsMid,
-                    padding: "8px 16px", cursor: "pointer", borderRadius: 8,
-                    fontSize: 11, fontWeight: 600 }}>
-                  Ver todos →
-                </button>
-              )}
-            </div>
-            <div className="ad-cats" style={{ display: "grid", gap: 10 }}>
-              {categoryList.map(cat => (
-                <CategoryTile key={cat} cat={cat} count={categoryCount[cat] ?? 0}
-                  accent={accent} active={activeCategory === cat} dark={catsDark}
-                  onClick={() => { setActiveCategory(cat); smoothScrollTo("catálogo"); }} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ── Catálogo ───────────────────────────────────────── */}
-      <section id="catálogo" style={{ padding: "56px 28px", position: "relative",
-        ...secBg(catalogoImg, catalogoBg) }}>
-        <BgDragHandle imgKey="sectionbg_bgCatalogo" />
-        <SectionOverlay ov={catalogoImg} />
-        <EditableSectionBg field="bgCatalogo" label="Fondo catálogo" />
-        <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between",
-            alignItems: "flex-end", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
-            <div>
-              <p style={{ margin: "0 0 4px", fontSize: 10, color: accent,
-                textTransform: "uppercase", letterSpacing: 3, fontWeight: 700 }}>
-                <EditableZone field="featuredLabel" label="Etiqueta catálogo">Nuestro stock</EditableZone>
-              </p>
-              <h2 style={{ margin: 0, fontSize: "clamp(20px,4vw,30px)",
-                fontWeight: 900, color: catText, letterSpacing: -0.3 }}>
-                <EditableZone field="categoriesHeading" label="Título catálogo">Catálogo completo</EditableZone>
-              </h2>
-            </div>
-            <span style={{ fontSize: 13, color: catMid }}>
-              {filtered.length} vehículo{filtered.length !== 1 ? "s" : ""}
-            </span>
-          </div>
-
-          {/* filters */}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-            {categories.map(cat => (
-              <button key={cat} onClick={() => setActiveCategory(cat)}
-                style={{ background: activeCategory === cat ? accent : "transparent",
-                  color: activeCategory === cat ? getContrastColor(accent) : catMid,
-                  border: `1px solid ${activeCategory === cat ? accent : catMid + "44"}`,
-                  padding: "6px 16px", borderRadius: 20, cursor: "pointer",
-                  fontSize: 11, fontWeight: 600, transition: "all 0.15s" }}>
-                {cat}
-              </button>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 28 }}>
-            {PRICE_RANGES.map((range, i) => (
-              <button key={i} onClick={() => setActivePriceRange(i)}
-                style={{ background: activePriceRange === i ? `${accent}12` : "transparent",
-                  color: activePriceRange === i ? accent : catMid,
-                  border: `1px solid ${activePriceRange === i ? accent + "66" : catMid + "33"}`,
-                  padding: "5px 12px", borderRadius: 6, cursor: "pointer",
-                  fontSize: 10, fontWeight: 600, transition: "all 0.15s" }}>
-                {range.label}
-              </button>
-            ))}
-          </div>
-
-          {loadingProducts ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: catMid }}>Cargando vehículos…</div>
-          ) : filtered.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: catMid }}>
-              No se encontraron vehículos con esos filtros.
-            </div>
-          ) : (
-            <>
-              <div className="ad-grid" style={{ display: "grid", gap: 20 }}>
-                {(showAll ? filtered : filtered.slice(0, 8)).map(p => (
-                  <VehicleCard key={p.id} product={p} accent={accent}
-                    currency={currency} theme={catTheme} onClick={() => setSelected(p)} />
-                ))}
-              </div>
-              {filtered.length > 8 && (
-                <div style={{ textAlign: "center", marginTop: 48 }}>
-                  <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
-                    style={{ display: "inline-block", background: accent, color: "#fff",
-                      textDecoration: "none", padding: "14px 40px", borderRadius: 8,
-                      fontSize: 13, fontWeight: 700, transition: "opacity 0.2s" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.85"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}>
-                    Ver todos los vehículos ({filtered.length})
-                  </Link>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* ── Servicios ──────────────────────────────────────── */}
-      <section id="servicios" style={{ padding: "72px 28px", position: "relative",
-        ...secBg(serviciosImg, serviciosBg), borderTop: "1px solid #ebebeb" }}>
+      {/* ── SERVICIOS ──────────────────────────────────────────── */}
+      <section id="servicios" style={{ padding:"80px 28px", position:"relative",
+        ...secBg(serviciosImg, serviciosBg) }}>
         <BgDragHandle imgKey="sectionbg_bgServicios" />
         <SectionOverlay ov={serviciosImg} />
         <EditableSectionBg field="bgServicios" label="Fondo servicios" />
-        <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <p style={{ margin: "0 0 8px", fontSize: 10, color: accent,
-              textTransform: "uppercase", letterSpacing: 3, fontWeight: 700 }}>
-              <EditableZone field="aboutKicker" label="Kicker servicios">Por qué elegirnos</EditableZone>
+        <div style={{ position:"relative", zIndex:1, maxWidth:1200, margin:"0 auto" }}>
+          <div style={{ textAlign:"center", marginBottom:52 }}>
+            <p style={{ margin:"0 0 8px", fontSize:11, color:accent,
+              textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>
+              <EditableZone field="serviciosKicker" label="Kicker servicios">Por qué elegirnos</EditableZone>
             </p>
-            <h2 style={{ margin: 0, fontSize: "clamp(22px,4vw,34px)",
-              fontWeight: 900, color: svcText, letterSpacing: -0.3 }}>
-              <EditableZone field="aboutHeading" label="Título servicios">Comprá con confianza</EditableZone>
+            <h2 style={{ margin:0, fontSize:"clamp(22px,4vw,34px)", fontWeight:900,
+              color:svcText, letterSpacing:-0.3 }}>
+              <EditableZone field="serviciosHeading" label="Título servicios">Comprá con confianza</EditableZone>
             </h2>
           </div>
-          <div className="ad-svc" style={{ display: "grid", gap: 16 }}>
+          <div className="ad-svc" style={{ display:"grid", gap:20 }}>
             {[
-              { fv: "garantia1Title", fl: "garantia1Desc", t: "Inspección 150 puntos", d: "Cada vehículo pasa revisión técnica completa antes de publicarse." },
-              { fv: "garantia2Title", fl: "garantia2Desc", t: "Documentación en regla", d: "Transferencia y trámites gestionados por nosotros." },
-              { fv: "garantia3Title", fl: "garantia3Desc", t: "Financiación", d: "Planes de cuotas disponibles según perfil crediticio." },
-              { fv: "garantia4Title", fl: "garantia4Desc", t: "Asesor exclusivo", d: "Un asesor te acompaña en todo el proceso sin costo." },
-            ].map((s, i) => (
-              <div key={i} style={{ padding: "28px 24px", borderRadius: 12,
-                border: `1px solid ${svcCardBor}`, background: svcCardBg,
-                borderTop: `3px solid ${accent}` }}>
-                <p style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 800, color: svcText, letterSpacing: -0.2 }}>
+              { fv:"svc1Title", fl:"svc1Desc", icon:"✅", t:"Inspección completa",   d:"Cada vehículo pasa por 150 puntos de revisión técnica antes de publicarse." },
+              { fv:"svc2Title", fl:"svc2Desc", icon:"📄", t:"Trámites incluidos",    d:"Documentación, transferencia y patentes gestionadas por nuestro equipo." },
+              { fv:"svc3Title", fl:"svc3Desc", icon:"💳", t:"Financiación",          d:"Planes de pago en cuotas fijas disponibles para cualquier perfil crediticio." },
+              { fv:"svc4Title", fl:"svc4Desc", icon:"🤝", t:"Asesor exclusivo",      d:"Un asesor te acompaña en todo el proceso, sin cargo y sin compromiso." },
+            ].map((s,i) => (
+              <div key={i}
+                style={{ padding:"28px 24px", borderRadius:12,
+                  border:`1px solid ${svcText==="#ffffff"?"rgba(255,255,255,0.1)":"#e5e7eb"}`,
+                  background: svcText==="#ffffff" ? "rgba(255,255,255,0.05)" : "#fff",
+                  borderTop:`3px solid ${accent}`, transition:"box-shadow 0.2s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow=`0 8px 24px ${accent}18`; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow="none"; }}>
+                <div style={{ fontSize:28, marginBottom:14 }}>
+                  <EditableZone field={`svc${i+1}Icon`} label={`Ícono servicio ${i+1}`}>{s.icon}</EditableZone>
+                </div>
+                <p style={{ margin:"0 0 8px", fontSize:15, fontWeight:700, color:svcText }}>
                   <EditableZone field={s.fv} label={`Servicio ${i+1} — Título`}>{s.t}</EditableZone>
                 </p>
-                <p style={{ margin: 0, fontSize: 13, color: svcMid, lineHeight: 1.7 }}>
-                  <EditableZone field={s.fl} label={`Servicio ${i+1} — Desc`}>{s.d}</EditableZone>
+                <p style={{ margin:0, fontSize:13, color:svcMid, lineHeight:1.75 }}>
+                  <EditableZone field={s.fl} label={`Servicio ${i+1} — Descripción`}>{s.d}</EditableZone>
                 </p>
               </div>
             ))}
@@ -633,41 +560,49 @@ export default function AutoDrive() {
         </div>
       </section>
 
-      {/* ── Nosotros ───────────────────────────────────────── */}
-      <section id="nosotros" style={{ padding: "72px 28px", position: "relative",
+      {/* ── NOSOTROS ───────────────────────────────────────────── */}
+      <section id="nosotros" style={{ padding:"80px 28px", position:"relative",
         ...secBg(nosotrosImg2, nosotrosBg) }}>
         <BgDragHandle imgKey="sectionbg_bgNosotros" />
         <SectionOverlay ov={nosotrosImg2} />
         <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
-        <div className="ad-about" style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto",
-          display: "grid", gap: 52, alignItems: "center" }}>
-          <div style={{ borderRadius: 16, overflow: "hidden", aspectRatio: "4/3", position: "relative" }}>
+        <div className="ad-about" style={{ position:"relative", zIndex:1, maxWidth:1200,
+          margin:"0 auto", display:"grid", gap:56, alignItems:"center" }}>
+          <div style={{ borderRadius:16, overflow:"hidden", aspectRatio:"4/3", position:"relative" }}>
             <img src={nosotrosUrl} alt="Nosotros"
-              style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            {(() => { const ov = config?.imageOverrides?.["nosotrosImage"]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
+              style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+            {(() => {
+              const ov = iovr["nosotrosImage"];
+              if (!ov?.overlayType || ov.overlayType==="none") return null;
+              return <div style={{ position:"absolute", inset:0, pointerEvents:"none",
+                background: ov.overlayType==="light"
+                  ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})`
+                  : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />;
+            })()}
             <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
           </div>
           <div>
-            <p style={{ margin: "0 0 8px", fontSize: 10, color: accent,
-              textTransform: "uppercase", letterSpacing: 3, fontWeight: 700 }}>
-              <EditableZone field="contactKicker" label="Etiqueta nosotros">Nuestra empresa</EditableZone>
+            <div style={{ width:48, height:4, background:accent, marginBottom:20, borderRadius:2 }} />
+            <p style={{ margin:"0 0 10px", fontSize:11, color:accent,
+              textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>
+              <EditableZone field="nosotrosKicker" label="Kicker nosotros">Nuestra empresa</EditableZone>
             </p>
-            <h2 style={{ margin: "0 0 18px", fontSize: "clamp(22px,4vw,32px)",
-              fontWeight: 900, color: nosText, letterSpacing: -0.3 }}>
-              <EditableZone field="aboutHeading2" label="Título nosotros">Pasión por los vehículos desde 2010</EditableZone>
+            <h2 style={{ margin:"0 0 20px", fontSize:"clamp(22px,4vw,34px)",
+              fontWeight:900, color:nosText, letterSpacing:-0.3 }}>
+              <EditableZone field="nosotrosHeading" label="Título nosotros">Pasión por los vehículos desde 2010</EditableZone>
             </h2>
-            <p style={{ margin: "0 0 14px", fontSize: 15, color: nosMid, lineHeight: 1.9, fontWeight: 300 }}>
-              <EditableZone field="aboutParagraph1" label="Párrafo 1">Somos una empresa familiar con más de 15 años en el mercado automotor, especializados en brindar la mejor experiencia de compra con total transparencia.</EditableZone>
+            <p style={{ margin:"0 0 14px", fontSize:15, color:nosMid, lineHeight:1.9, fontWeight:300 }}>
+              <EditableZone field="nosotrosP1" label="Párrafo 1">Somos una empresa familiar con más de 15 años en el mercado automotor, especializados en brindar la mejor experiencia de compra con total transparencia.</EditableZone>
             </p>
-            <p style={{ margin: "0 0 28px", fontSize: 15, color: nosMid, lineHeight: 1.9, fontWeight: 300 }}>
-              <EditableZone field="aboutParagraph2" label="Párrafo 2">Nuestro equipo de asesores y taller propio garantizan la calidad de cada vehículo antes de llegar a tus manos.</EditableZone>
+            <p style={{ margin:"0 0 32px", fontSize:15, color:nosMid, lineHeight:1.9, fontWeight:300 }}>
+              <EditableZone field="nosotrosP2" label="Párrafo 2">Nuestro equipo de asesores y taller propio garantizan la calidad de cada vehículo antes de llegar a tus manos. La documentación la gestionamos nosotros.</EditableZone>
             </p>
             {whatsapp.enabled && whatsapp.number && (
-              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
+              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
                 target="_blank" rel="noopener noreferrer"
-                style={{ display: "inline-flex", alignItems: "center", gap: 8,
-                  background: "#25d366", color: "white", textDecoration: "none",
-                  padding: "13px 24px", borderRadius: 10, fontWeight: 800, fontSize: 14 }}>
+                style={{ display:"inline-flex", alignItems:"center", gap:8,
+                  background:"#25d366", color:"white", textDecoration:"none",
+                  padding:"13px 28px", borderRadius:8, fontWeight:700, fontSize:14 }}>
                 <WaIcon /> Contactanos
               </a>
             )}
@@ -675,70 +610,69 @@ export default function AutoDrive() {
         </div>
       </section>
 
-      {/* ── Contacto ───────────────────────────────────────── */}
-      <section id="contacto" style={{ padding: "88px 28px", position: "relative",
+      {/* ── CONTACTO ───────────────────────────────────────────── */}
+      <section id="contacto" style={{ padding:"88px 28px", position:"relative",
         ...secBg(contactoImg, contactoBg) }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
         <SectionOverlay ov={contactoImg} />
         <EditableSectionBg field="bgContacto" label="Fondo contacto" />
-        <div style={{ position: "relative", zIndex: 1, maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
-          <p style={{ margin: "0 0 8px", fontSize: 10, color: accent,
-            textTransform: "uppercase", letterSpacing: 3, fontWeight: 700 }}>Contacto</p>
-          <h2 style={{ margin: "0 0 14px", fontSize: "clamp(24px,4vw,40px)",
-            fontWeight: 900, color: conText, letterSpacing: -0.5, lineHeight: 1.1 }}>
-            <EditableZone field="contactHeading" label="Título contacto">¿Te interesa algún vehículo?</EditableZone>
+        <div style={{ position:"relative", zIndex:1, maxWidth:600, margin:"0 auto", textAlign:"center" }}>
+          <p style={{ margin:"0 0 10px", fontSize:11, color:accent,
+            textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>Contacto</p>
+          <h2 style={{ margin:"0 0 18px", fontSize:"clamp(26px,4vw,44px)",
+            fontWeight:900, color:conText, letterSpacing:-0.5 }}>
+            <EditableZone field="contactHeading" label="Título contacto">¿Te interesó algún vehículo?</EditableZone>
           </h2>
-          <p style={{ margin: "0 0 32px", fontSize: 15, color: conMid,
-            lineHeight: 1.8, fontWeight: 300 }}>
-            <EditableZone field="contactSubtext" label="Subtítulo">Escribinos y coordinamos una visita sin costo. Respondemos en minutos.</EditableZone>
+          <p style={{ margin:"0 0 40px", fontSize:15, color:conMid, lineHeight:1.9, fontWeight:300 }}>
+            <EditableZone field="contactSubtext" label="Subtítulo contacto">Escribinos y un asesor te responde en menos de una hora para coordinar una visita o consulta.</EditableZone>
           </p>
           {whatsapp.enabled && whatsapp.number && (
-            <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
+            <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
               target="_blank" rel="noopener noreferrer"
-              style={{ display: "inline-flex", alignItems: "center", gap: 10,
-                background: "#25d366", color: "white", textDecoration: "none",
-                padding: "16px 32px", borderRadius: 12, fontWeight: 800, fontSize: 15,
-                boxShadow: "0 8px 28px rgba(37,211,102,0.3)" }}>
+              style={{ display:"inline-flex", alignItems:"center", gap:12,
+                background:"#25d366", color:"white", textDecoration:"none",
+                padding:"16px 44px", borderRadius:8, fontWeight:800, fontSize:15,
+                boxShadow:"0 8px 32px rgba(37,211,102,0.3)" }}>
               <WaIcon size={20} />
-              <EditableZone field="contactWhatsApp" label="WhatsApp de contacto">Escribinos por WhatsApp</EditableZone>
+              <EditableZone field="contactWhatsApp" label="Texto botón WhatsApp">Escribinos por WhatsApp</EditableZone>
             </a>
           )}
         </div>
       </section>
 
-      {/* ── Footer ─────────────────────────────────────────── */}
-      <footer style={{ position: "relative", padding: "28px",
-        ...secBg(footerImg, footerBg), textAlign: "center" }}>
+      {/* ── FOOTER ─────────────────────────────────────────────── */}
+      <footer style={{ position:"relative", padding:"32px 28px", textAlign:"center",
+        ...secBg(footerImg, footerBg), borderTop:"1px solid rgba(255,255,255,0.06)" }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <SectionOverlay ov={footerImg} />
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <p style={{ margin: "0 0 6px", fontWeight: 900, fontSize: 15, color: accent }}>
-            {storeName}
-          </p>
-          <p style={{ margin: "0 0 12px", fontSize: 11, color: ftMid, letterSpacing: 0.3 }}>
+        <div style={{ position:"relative", zIndex:1 }}>
+          <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:14,
+            color:accent, letterSpacing:-0.3 }}>{storeName}</p>
+          <p style={{ margin:"0 0 14px", fontSize:11, color:ftMid, letterSpacing:0.3 }}>
             <EditableZone field="footerCopyright" label="Copyright">
               {`© ${new Date().getFullYear()} ${storeName}. Todos los derechos reservados.`}
             </EditableZone>
           </p>
-          <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px", marginBottom: 8 }}>
+          <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
             {[
-              { label: "Política de devoluciones", tipo: "devoluciones" },
-              { label: "Política de envíos",       tipo: "envios" },
-              { label: "Términos y condiciones",   tipo: "terminos" },
+              { label:"Política de devoluciones", tipo:"devoluciones" },
+              { label:"Política de envíos",       tipo:"envios" },
+              { label:"Términos y condiciones",   tipo:"terminos" },
             ].map(({ label, tipo }) => (
               <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`}
-                style={{ fontSize:10, color:ftMid, opacity:0.5, textDecoration:"none", letterSpacing:0.5 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.5"; }}>
+                style={{ fontSize:10, color:ftMid, opacity:0.45, textDecoration:"none", letterSpacing:0.3 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity="1"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity="0.45"; }}>
                 {label}
               </a>
             ))}
             {!editMode && (
               <button onClick={() => setShowReport(true)}
-                style={{ fontSize:10, color:ftMid, opacity:0.5, background:"none", border:"none", cursor:"pointer", padding:0, letterSpacing:0.5 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.5"; }}>
+                style={{ fontSize:10, color:ftMid, opacity:0.45, background:"none", border:"none",
+                  cursor:"pointer", padding:0, letterSpacing:0.3 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity="1"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity="0.45"; }}>
                 Reportar tienda
               </button>
             )}
@@ -746,9 +680,7 @@ export default function AutoDrive() {
         </div>
       </footer>
 
-      {showReport && (
-        <ReportStoreModal slug={config?.slug ?? ""} onClose={() => setShowReport(false)} />
-      )}
+      {showReport && <ReportStoreModal slug={config?.slug ?? ""} onClose={() => setShowReport(false)} />}
 
       {selected && (
         <VehicleModal product={selected} accent={accent} currency={currency}
@@ -757,13 +689,13 @@ export default function AutoDrive() {
       )}
 
       {!editMode && whatsapp.enabled && whatsapp.number && (
-        <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}
+        <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
           target="_blank" rel="noopener noreferrer"
-          style={{ position: "fixed", bottom: 24, right: 24, zIndex: 200,
-            background: "#25d366", color: "white", width: 56, height: 56,
-            borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 4px 24px rgba(37,211,102,0.45)", textDecoration: "none" }}>
-          <WaIcon size={22} />
+          style={{ position:"fixed", bottom:24, right:24, zIndex:500,
+            background:"#25d366", color:"white", width:56, height:56,
+            borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center",
+            boxShadow:"0 4px 24px rgba(37,211,102,0.45)", textDecoration:"none" }}>
+          <WaIcon size={24} />
         </a>
       )}
     </div>
