@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { STORE_TYPES } from "@/lib/storeTypes";
-import { Loader2, X, ArrowLeft, Check } from "lucide-react";
+import { Loader2, X, Check, AlertTriangle, Trash2 } from "lucide-react";
 
 export default function StoreTypeModal({
   isEditing = false,
@@ -19,32 +19,54 @@ export default function StoreTypeModal({
   const [wholesale, setWholesale] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  // confirm step: solo cuando isEditing y cambia de tipo
+  const [confirmStep, setConfirmStep] = useState(false);
 
   const selectedConfig = STORE_TYPES.find((t) => t.id === selected);
+  const isChangingType = isEditing && selected !== null && selected !== currentType;
 
   function handleClose() {
     if (isEditing) onClose?.();
     else router.back();
   }
 
-  async function confirm() {
+  async function handleConfirmButton() {
+    if (!selected) return;
+    // Si es edición y cambia de tipo → mostrar advertencia primero
+    if (isChangingType) {
+      setConfirmStep(true);
+      return;
+    }
+    await save();
+  }
+
+  async function save() {
     if (!selected) return;
     setSaving(true);
 
-    const configRes = await fetch("/api/configuracion");
-    const { store: current } = await configRes.json();
-
-    await fetch("/api/configuracion", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...current,
-        name: current.name || "Mi Tienda",
-        tipoTienda: selected,
-        tipoTiendaConfigurado: true,
-        tieneVentaMayorista: isEditing ? (current.tieneVentaMayorista ?? false) : wholesale,
-      }),
-    });
+    if (isChangingType) {
+      // Reset completo + cambio de tipo
+      await fetch("/api/store/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newType: selected }),
+      });
+    } else {
+      // Primera configuración o mismo tipo
+      const configRes = await fetch("/api/configuracion");
+      const { store: current } = await configRes.json();
+      await fetch("/api/configuracion", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...current,
+          name: current.name || "Mi Tienda",
+          tipoTienda: selected,
+          tipoTiendaConfigurado: true,
+          tieneVentaMayorista: isEditing ? (current.tieneVentaMayorista ?? false) : wholesale,
+        }),
+      });
+    }
 
     setSaving(false);
     setSaved(true);
@@ -53,6 +75,89 @@ export default function StoreTypeModal({
     if (isEditing) onClose?.();
   }
 
+  // ── Overlay de carga mientras borra ──
+  if (saving) {
+    const toConfig = STORE_TYPES.find((t) => t.id === selected);
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70 backdrop-blur-md gap-6 animate-fade-slide">
+        <div className="relative flex items-center justify-center">
+          <div className="w-24 h-24 rounded-full border-4 border-white/10 border-t-white animate-spin" />
+          <span className="absolute text-4xl">{toConfig?.emoji}</span>
+        </div>
+        <div className="text-center">
+          <p className="text-white text-xl font-bold">Cambiando a {toConfig?.label}...</p>
+          <p className="text-white/60 text-sm mt-1">Limpiando datos anteriores</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Pantalla de confirmación de reset ──
+  if (confirmStep) {
+    const fromConfig = STORE_TYPES.find((t) => t.id === currentType);
+    const toConfig   = STORE_TYPES.find((t) => t.id === selected);
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md animate-fade-slide">
+          <div className="bg-red-50 rounded-t-3xl px-7 py-6 border-b border-red-100">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="p-2 bg-red-100 rounded-xl">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
+              <h2 className="text-lg font-bold text-red-700">¿Estás seguro?</h2>
+            </div>
+            <p className="text-sm text-red-600 mt-1">
+              Estás por cambiar de <strong>{fromConfig?.emoji} {fromConfig?.label}</strong> a <strong>{toConfig?.emoji} {toConfig?.label}</strong>
+            </p>
+          </div>
+
+          <div className="px-7 py-5 space-y-4">
+            <p className="text-sm text-gray-700 font-medium">Esto va a eliminar permanentemente:</p>
+            <ul className="space-y-2">
+              {[
+                "Todos tus productos publicados",
+                "Todos los pedidos recibidos",
+                "Todas las consultas (leads)",
+                "Todos los cupones de descuento",
+                "Las reseñas de productos",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-sm text-gray-600">
+                  <Trash2 className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 font-medium">
+              Esta acción no se puede deshacer. Tu configuración, plantilla, logo y afiliados se conservan.
+            </div>
+          </div>
+
+          <div className="px-7 pb-6 flex gap-3">
+            <button
+              onClick={() => setConfirmStep(false)}
+              disabled={saving}
+              className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={save}
+              disabled={saving || saved}
+              className={`flex-1 py-3 rounded-2xl text-sm font-bold text-white transition-all duration-300 flex items-center justify-center gap-2 ${
+                saved ? "bg-green-500" : "bg-red-600 hover:bg-red-700 disabled:opacity-50"
+              }`}
+            >
+              {saved   ? <><Check className="h-4 w-4" /> ¡Listo!</> :
+               saving  ? <><Loader2 className="h-4 w-4 animate-spin" /> Borrando...</> :
+               "Sí, cambiar y borrar todo"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Pantalla principal de selección ──
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
@@ -73,8 +178,8 @@ export default function StoreTypeModal({
           </h2>
           <p className="text-indigo-200 text-sm">
             {isEditing
-              ? "Cambiá el tipo de tienda. Tus productos existentes no se modifican."
-              : "Esto define los campos de tus productos, las categorías, el diseño sugerido y la experiencia de compra de tus clientes. Solo se elige una vez."}
+              ? "Cambiar el tipo de tienda va a reiniciar todos tus datos. Solo tu configuración y plantilla se conservan."
+              : "Esto define los campos de tus productos, las categorías, el diseño sugerido y la experiencia de compra de tus clientes."}
           </p>
         </div>
 
@@ -84,6 +189,7 @@ export default function StoreTypeModal({
           <div className="grid grid-cols-2 gap-2.5">
             {STORE_TYPES.map((t) => {
               const active = selected === t.id;
+              const isCurrent = t.id === currentType;
               return (
                 <button
                   key={t.id}
@@ -97,9 +203,14 @@ export default function StoreTypeModal({
                   }`}
                 >
                   <span className="text-2xl leading-none">{t.emoji}</span>
-                  <p className={`text-sm font-semibold leading-tight ${active ? "text-indigo-700" : "text-gray-800"}`}>
-                    {t.label}
-                  </p>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-semibold leading-tight ${active ? "text-indigo-700" : "text-gray-800"}`}>
+                      {t.label}
+                    </p>
+                    {isCurrent && isEditing && (
+                      <p className="text-xs text-gray-400 mt-0.5">actual</p>
+                    )}
+                  </div>
                   {active && (
                     <span key={t.id} className="absolute top-2 right-2 animate-pop-in">
                       <Check className="h-3.5 w-3.5 text-white bg-indigo-500 rounded-full p-0.5" />
@@ -117,7 +228,15 @@ export default function StoreTypeModal({
             </div>
           )}
 
-          {/* Toggle mayorista — solo si el tipo lo soporta y es la primera vez */}
+          {/* Aviso de reset cuando cambia de tipo */}
+          {isChangingType && (
+            <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm text-amber-700 animate-fade-slide">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>Al confirmar se van a eliminar todos tus productos, pedidos y consultas actuales.</span>
+            </div>
+          )}
+
+          {/* Toggle mayorista — solo primera vez */}
           {!isEditing && selectedConfig?.supportsWholesale && (
             <div className="flex items-center justify-between bg-gray-50 rounded-2xl px-4 py-3.5 border border-gray-100">
               <div>
@@ -139,11 +258,13 @@ export default function StoreTypeModal({
 
           {/* Confirmar */}
           <button
-            onClick={confirm}
-            disabled={!selected || saving || saved}
+            onClick={handleConfirmButton}
+            disabled={!selected || saving || saved || selected === currentType}
             className={`w-full py-3.5 rounded-2xl font-semibold disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2 ${
               saved
                 ? "bg-green-500 text-white scale-[1.02] shadow-lg"
+                : isChangingType
+                ? "bg-red-600 text-white hover:bg-red-700 disabled:opacity-40"
                 : "bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40"
             }`}
           >
@@ -151,6 +272,8 @@ export default function StoreTypeModal({
               <><Check className="h-4 w-4" /> ¡Guardado!</>
             ) : saving ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
+            ) : isChangingType ? (
+              "Cambiar tipo de tienda →"
             ) : (
               "Confirmar y continuar →"
             )}
