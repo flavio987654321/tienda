@@ -242,7 +242,7 @@ export default function DashboardLayout({
         }`}
       >
         <Icon className="h-4 w-4 shrink-0" />
-        <span className="flex-1 whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
+        <span className={`flex-1 whitespace-nowrap overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
           {label}
         </span>
         {/* Warning icon — visible only in expanded state */}
@@ -300,7 +300,7 @@ export default function DashboardLayout({
       <aside className={`group hidden lg:flex fixed left-0 top-0 h-full bg-white border-r border-gray-100 flex-col z-[60] transition-[width] duration-200 overflow-hidden ${showTour ? "w-60 shadow-xl" : "w-14 hover:w-60 hover:shadow-xl"}`}>
         <Link href="/" className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 shrink-0 hover:bg-gray-50 transition-colors">
           <ShoppingBag className="h-6 w-6 text-indigo-600 shrink-0" />
-          <span className="font-bold text-gray-900 whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
+          <span className={`font-bold text-gray-900 whitespace-nowrap overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
             TiendaApps
           </span>
         </Link>
@@ -315,7 +315,7 @@ export default function DashboardLayout({
                   <div className="flex items-center gap-2 pt-3 pb-1 px-1">
                     <div className="h-px bg-gray-100 flex-1" />
                     {group.label && (
-                      <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200 text-[10px] font-semibold uppercase tracking-widest text-gray-400 whitespace-nowrap">
+                      <span className={`overflow-hidden transition-[max-width] duration-200 text-[10px] font-semibold uppercase tracking-widest text-gray-400 whitespace-nowrap ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
                         {group.label}
                       </span>
                     )}
@@ -337,7 +337,7 @@ export default function DashboardLayout({
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60"
           >
             {signingOut ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <LogOut className="h-4 w-4 shrink-0" />}
-            <span className="whitespace-nowrap max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
+            <span className={`whitespace-nowrap overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
               {signingOut ? "Cerrando..." : "Cerrar sesión"}
             </span>
           </button>
@@ -346,7 +346,7 @@ export default function DashboardLayout({
               <UserCircle className="h-4 w-4" />
               <BadgeCheck className={`absolute -bottom-1 -right-1 h-3 w-3 bg-white rounded-full ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
             </div>
-            <div className="flex-1 max-w-0 overflow-hidden group-hover:max-w-xs transition-[max-width] duration-200">
+            <div className={`flex-1 overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
               <div className="flex items-center gap-1">
                 <p className="text-xs font-medium text-gray-700 truncate whitespace-nowrap">{userName}</p>
                 <BadgeCheck className={`h-3 w-3 shrink-0 ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
