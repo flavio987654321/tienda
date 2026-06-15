@@ -1700,7 +1700,7 @@ export default function ConfiguracionPage() {
             <div style={{ flex: 1, borderRadius: 10, overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column",
               transform: "translateZ(0)" }}>
-              <StoreConfigContext.Provider value={{ ...config, previewFill: true }}>
+              <StoreConfigContext.Provider value={{ ...config, previewFill: true, showPushBell: isPremium }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>
@@ -1837,7 +1837,7 @@ export default function ConfiguracionPage() {
             <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
               transform: "translateZ(0)" }}>
-              <StoreConfigContext.Provider value={{ ...config, previewFill: true }}>
+              <StoreConfigContext.Provider value={{ ...config, previewFill: true, showPushBell: isPremium }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>
