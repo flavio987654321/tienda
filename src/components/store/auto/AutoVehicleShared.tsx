@@ -115,7 +115,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
 
   return (
     <div onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000,
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 99999,
         display: "flex", alignItems: "flex-start", justifyContent: "center",
         padding: "20px 16px", backdropFilter: "blur(4px)", overflow: "hidden" }}>
       <div onClick={e => e.stopPropagation()}
@@ -359,7 +359,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
 
       {/* ── LIGHTBOX ───────────────────────────────────────── */}
       {lightboxSrc && (
-        <div style={{ position:"fixed", inset:0, zIndex:1100, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+        <div style={{ position:"fixed", inset:0, zIndex:100000, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
@@ -403,7 +403,8 @@ export function VehicleCard({ product, accent, currency, theme = "light", onClic
       <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden",
         background: D ? "#111" : "#f5f5f5" }}>
         <img src={img} alt={product.name}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          onError={e => { (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=75"; }} />
         {product.badge && (
           <div style={{ position: "absolute", top: 10, left: 10,
             background: accent, color: getContrastColor(accent) === "light" ? "#fff" : "#111",

@@ -64,7 +64,7 @@ export default function AutoMotor() {
   const nosotrosUrl  = iovr["nosotrosImage"]?.url
     ?? "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=900&q=80";
 
-  const catalogoBg  = sc["bgCatalogo"]  ?? "#f0f4f9";
+  const catalogoBg  = sc["bgCatalogo"]  ?? "#ffffff";
   const catalogoImg = iovr["sectionbg_bgCatalogo"];
   const catText     = secText(catalogoImg, catalogoBg);
   const catMid      = secMid(catalogoImg, catalogoBg);
@@ -121,7 +121,7 @@ export default function AutoMotor() {
   const hasMore = products.length > 8;
 
   return (
-    <div style={{ background: "#f0f4f9", color: "#1a2744",
+    <div style={{ background: "#ffffff", color: "#1a2744",
       fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", minHeight: "100vh" }}>
       <style>{`
         ${AM_MODAL_CSS}
@@ -246,7 +246,7 @@ export default function AutoMotor() {
               style={{ display:"block", color:accent, padding:"14px 0",
                 fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:2, textDecoration:"none" }}
               onClick={() => setMenuOpen(false)}>
-              Ver todos los vehículos →
+              Ver todos los vehículos
             </Link>
           </div>
         )}
@@ -378,7 +378,7 @@ export default function AutoMotor() {
                   background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111",
                   textDecoration:"none", padding:"16px 52px",
                   fontWeight:800, fontSize:12, letterSpacing:2, textTransform:"uppercase" }}>
-                Ver todo →
+                Ver todo
               </Link>
             </div>
           )}

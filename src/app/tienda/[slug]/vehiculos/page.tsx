@@ -73,6 +73,53 @@ const BRAND_COLORS: Record<string, { bg: string; text: string }> = {
   lifan:           { bg: "#0055a4", text: "#fff" },
 };
 
+const BRAND_DOMAINS: Record<string, string> = {
+  toyota:            "toyota.com",
+  ford:              "ford.com",
+  chevrolet:         "chevrolet.com",
+  honda:             "honda.com",
+  volkswagen:        "volkswagen.com",
+  vw:                "volkswagen.com",
+  renault:           "renault.com",
+  fiat:              "fiat.com",
+  peugeot:           "peugeot.com",
+  citroen:           "citroen.com",
+  "citroën":         "citroen.com",
+  nissan:            "nissan.com",
+  hyundai:           "hyundai.com",
+  kia:               "kia.com",
+  jeep:              "jeep.com",
+  "mercedes-benz":   "mercedes-benz.com",
+  mercedes:          "mercedes-benz.com",
+  bmw:               "bmw.com",
+  audi:              "audi.com",
+  yamaha:            "yamaha-motor.com",
+  kawasaki:          "kawasaki.com",
+  suzuki:            "suzuki.com",
+  "harley-davidson": "harley-davidson.com",
+  harley:            "harley-davidson.com",
+  ram:               "ramtrucks.com",
+  dodge:             "dodge.com",
+  mitsubishi:        "mitsubishi-motors.com",
+  subaru:            "subaru.com",
+  mazda:             "mazda.com",
+  volvo:             "volvocars.com",
+  chery:             "chery.com",
+  geely:             "geely.com",
+  byd:               "byd.com",
+  mg:                "mgmotor.com",
+  lifan:             "lifan.com",
+};
+
+function getBrandLogoUrl(brand: string): string {
+  const key = brand.toLowerCase().trim();
+  if (BRAND_DOMAINS[key]) return `https://logo.clearbit.com/${BRAND_DOMAINS[key]}`;
+  for (const [k, d] of Object.entries(BRAND_DOMAINS)) {
+    if (key.includes(k) || k.includes(key)) return `https://logo.clearbit.com/${d}`;
+  }
+  return `https://logo.clearbit.com/${key.replace(/\s+/g, "")}.com`;
+}
+
 function getBrandStyle(brand: string, accent: string): { bg: string; text: string } {
   const key = brand.toLowerCase().trim();
   if (BRAND_COLORS[key]) return BRAND_COLORS[key];
@@ -110,6 +157,7 @@ function VehiculosPageInner() {
   const [currency,  setCurrency]  = useState("ARS");
   const [whatsapp,  setWhatsapp]  = useState<{ enabled: boolean; number: string; message?: string }>({ enabled: false, number: "" });
   const [selected,  setSelected]  = useState<StorefrontProduct | null>(null);
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   const [search,         setSearch]      = useState("");
   const [activeCategory, setActiveCat]   = useState("Todos");
@@ -193,7 +241,7 @@ function VehiculosPageInner() {
   const S   = "#ffffff";
   const T   = "#1a2744";
   const MID = "#7a8fa6";
-  const BG  = "#f0f4f9";
+  const BG  = "#ffffff";
   const borderFaint = "rgba(27,63,110,0.07)";
   const border      = "rgba(27,63,110,0.15)";
 
@@ -286,8 +334,8 @@ function VehiculosPageInner() {
 
         {/* ── LOGOS DE MARCAS ── */}
         {marcas.length > 0 && (
-          <div style={{ marginBottom:32, background:S, borderRadius:8,
-            padding:"20px 24px", boxShadow:"0 1px 8px rgba(27,63,110,0.08)", border:`1px solid ${borderFaint}` }}>
+          <div style={{ marginBottom:32, background:"#f7f9fc", borderRadius:8,
+            padding:"20px 24px", boxShadow:"0 1px 8px rgba(27,63,110,0.08)", border:`1px solid ${border}` }}>
             <p style={{ fontSize:10, letterSpacing:3, color:MID, textTransform:"uppercase",
               margin:"0 0 16px", fontWeight:600 }}>
               Filtrar por marca
@@ -327,16 +375,26 @@ function VehiculosPageInner() {
                     style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:7,
                       background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0 }}>
                     <div style={{ width:58, height:58, borderRadius:"50%",
-                      background: bc.bg,
+                      background: imgErrors[marca] ? bc.bg : "#ffffff",
                       display:"flex", alignItems:"center", justifyContent:"center",
-                      border: isActive ? `3px solid ${accent}` : "3px solid transparent",
+                      border: isActive ? `3px solid ${accent}` : imgErrors[marca] ? "3px solid transparent" : `2px solid ${bc.bg}66`,
                       boxShadow: isActive
                         ? `0 0 0 2px ${accent}66, 0 4px 12px rgba(0,0,0,0.18)`
-                        : "0 2px 8px rgba(0,0,0,0.14)",
+                        : "0 2px 10px rgba(0,0,0,0.10)",
                       transition:"all 0.2s",
                       transform: isActive ? "scale(1.08)" : "scale(1)" }}>
-                      <span style={{ fontSize:13, fontWeight:900, color: bc.text,
-                        letterSpacing:0.5, lineHeight:1 }}>{abbr}</span>
+                      {imgErrors[marca] ? (
+                        <span style={{ fontSize:13, fontWeight:900, color: bc.text,
+                          letterSpacing:0.5, lineHeight:1 }}>{abbr}</span>
+                      ) : (
+                        <img
+                          src={getBrandLogoUrl(marca)}
+                          alt={marca}
+                          width={34} height={34}
+                          style={{ objectFit:"contain", display:"block" }}
+                          onError={() => setImgErrors(prev => ({...prev, [marca]: true}))}
+                        />
+                      )}
                     </div>
                     <span style={{ fontSize:10, fontWeight: isActive ? 700 : 400,
                       color: isActive ? accent : MID, letterSpacing:0.3,
