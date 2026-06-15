@@ -837,7 +837,7 @@ export default function Home() {
                           })()}
                         </div>
                         <div className="h-0.5" style={{ backgroundColor: store.primaryColor + "80" }} />
-                        <div className="p-4">
+                        <div className="p-4 min-h-[124px] flex flex-col">
                           {STORE_TYPE_LABELS[store.tipoTienda] && (
                             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
                               {STORE_TYPE_LABELS[store.tipoTienda]}
@@ -846,10 +846,10 @@ export default function Home() {
                           <h3 className="font-bold text-gray-900 text-sm leading-snug truncate group-hover:text-indigo-600 transition-colors mt-0.5 mb-1">
                             {store.name}
                           </h3>
-                          {store.description && (
-                            <p className="text-xs text-gray-400 line-clamp-1 mb-3">{store.description}</p>
-                          )}
-                          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                          <p className="text-xs text-gray-400 line-clamp-1 mb-3 min-h-[16px]">
+                            {store.description ?? ""}
+                          </p>
+                          <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
                             <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-medium">
                               <span>{store.totalProducts} producto{store.totalProducts !== 1 ? "s" : ""}</span>
                               {store.totalOrders > 0 && (
@@ -864,8 +864,8 @@ export default function Home() {
                         </div>
                       </Link>
                     ) : (
-                      <div className="bg-white border border-dashed border-gray-200 rounded-3xl overflow-hidden h-full">
-                        <div className="h-48 flex items-center justify-center" style={{ backgroundColor: color + "11" }}>
+                      <div className="bg-white border border-dashed border-gray-200 rounded-2xl overflow-hidden">
+                        <div className="h-44 flex items-center justify-center" style={{ backgroundColor: color + "11" }}>
                           <div className="text-center">
                             <div className="w-12 h-12 rounded-2xl mx-auto mb-2 flex items-center justify-center" style={{ backgroundColor: color + "22" }}>
                               <Store className="h-6 w-6" style={{ color }} />
@@ -873,9 +873,14 @@ export default function Home() {
                             <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Próximamente</span>
                           </div>
                         </div>
-                        <div className="p-5">
-                          <div className="h-4 bg-gray-100 rounded-full w-3/4 mb-3" />
-                          <div className="h-3 bg-gray-100 rounded-full w-1/2" />
+                        <div className="h-0.5" style={{ backgroundColor: color + "40" }} />
+                        <div className="p-4 min-h-[124px] flex flex-col justify-between">
+                          <div>
+                            <div className="h-2.5 bg-gray-100 rounded-full w-1/3 mb-2" />
+                            <div className="h-4 bg-gray-100 rounded-full w-3/4 mb-2" />
+                            <div className="h-3 bg-gray-100 rounded-full w-1/2" />
+                          </div>
+                          <div className="h-3 bg-gray-100 rounded-full w-2/3 mt-3 pt-3 border-t border-gray-100" />
                         </div>
                       </div>
                     )}
