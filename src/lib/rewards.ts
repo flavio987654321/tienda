@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { nanoid } from "nanoid";
+import { createNotification } from "@/lib/notifications";
 
 export type RewardLevel    = "BRONZE" | "SILVER" | "GOLD" | "DIAMOND";
 export type StoreCategoria = "RETAIL" | "MAYORISTA" | "ALTO_VALOR";
@@ -264,6 +265,15 @@ export async function generarCuponesMensuales(
   }
 
   await prisma.affiliateRewardCoupon.createMany({ data: cupones });
+
+  const mesLabel = new Date(year, month - 1).toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+  await createNotification({
+    userId: affiliate.userId,
+    type: "REWARD_COUPON_EARNED",
+    title: `¡Ganaste ${cupones.length === 1 ? "un cupón" : `${cupones.length} cupones`} de premio!`,
+    body: `Tu rendimiento de ${mesLabel} generó ${cupones.length === 1 ? "un cupón" : `${cupones.length} cupones`}. Usálos en tus próximas compras.`,
+    link: "/vendedoras/premios",
+  });
 }
 
 // ─── Expirar cupones vencidos ─────────────────────────────────────────────────

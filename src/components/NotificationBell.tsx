@@ -16,15 +16,34 @@ type Notification = {
 };
 
 const ICONS: Record<string, string> = {
+  // Pedidos (dueño)
   NEW_ORDER: "🛍️",
   ORDER_CONFIRMED: "✅",
   ORDER_SHIPPED: "📦",
   ORDER_DELIVERED: "🎉",
   ORDER_CANCELLED: "❌",
+  // Afiliados — estado en programa
+  AFFILIATE_APPROVED: "🤝",
+  AFFILIATE_REJECTED: "🚫",
+  AFFILIATE_PAUSED: "⏸️",
+  AFFILIATE_REMOVED: "👋",
+  // Afiliados — comisiones y retiros
   COMMISSION_EARNED: "💰",
   COMMISSION_RATE_CHANGED: "📊",
-  LOW_STOCK: "⚠️",
+  WITHDRAWAL_REQUESTED: "💸",
+  WITHDRAWAL_COMPLETED: "💳",
+  REWARD_COUPON_EARNED: "🎁",
+  // Afiliados — productos de la tienda
+  NEW_PRODUCT: "✨",
   PRICE_CHANGED: "🏷️",
+  OUT_OF_STOCK: "⚠️",
+  RESTOCK: "🟢",
+  // Afiliados — programa / tienda
+  STORE_PROGRAM_PAUSED: "⏸️",
+  STORE_COUPONS_DISABLED: "🎟️",
+  STORE_RESET: "🔄",
+  store_offline: "🔕",
+  STORE_CLOSED: "🚪",
 };
 
 function timeAgo(dateStr: string) {

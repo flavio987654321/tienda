@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { createNotificationMany } from "@/lib/notifications";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -11,6 +12,11 @@ export async function POST(req: Request) {
 
   const { newType } = await req.json();
   if (!newType) return NextResponse.json({ error: "Falta el nuevo tipo de tienda" }, { status: 400 });
+
+  const activeAffiliates = await prisma.affiliate.findMany({
+    where: { storeId: store.id, status: "APPROVED" },
+    select: { userId: true },
+  });
 
   await prisma.$transaction(async (tx) => {
     // ── Pedidos y sus dependientes ──
@@ -72,6 +78,18 @@ export async function POST(req: Request) {
       },
     });
   });
+
+  if (activeAffiliates.length > 0) {
+    await createNotificationMany(
+      activeAffiliates.map(({ userId }) => ({
+        userId,
+        type: "STORE_RESET",
+        title: "La tienda cambió de rubro",
+        body: "El catálogo fue reiniciado completamente. Tu link de afiliado sigue activo pero los productos son nuevos.",
+        link: "/vendedoras",
+      }))
+    );
+  }
 
   return NextResponse.json({ ok: true });
 }
