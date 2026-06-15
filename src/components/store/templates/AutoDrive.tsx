@@ -252,7 +252,7 @@ export default function AutoDrive() {
 
       {/* ── Promo Bar ──────────────────────────────────────── */}
       {showAnnouncement && (
-        <div style={{ position: isPreview ? "sticky" : "fixed", top: 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: 110,
+        <div style={{ position: isPreview ? "sticky" : "fixed", top: 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10001 : 110,
           height: PROMO_BAR_H, background: accent,
           display: "flex", alignItems: "center", justifyContent: "center" }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", letterSpacing: 1 }}>
@@ -272,7 +272,7 @@ export default function AutoDrive() {
       )}
 
       {/* ── Navbar ─────────────────────────────────────────── */}
-      <nav style={{ position: isPreview ? "sticky" : "fixed", top: showAnnouncement ? PROMO_BAR_H : 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: 100,
+      <nav style={{ position: isPreview ? "sticky" : "fixed", top: showAnnouncement ? PROMO_BAR_H : 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10000 : 100,
         background: scrolled ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.97)",
         borderBottom: "1px solid #ebebeb",
         backdropFilter: "blur(20px)",

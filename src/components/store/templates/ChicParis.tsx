@@ -426,7 +426,7 @@ export default function ChicParis() {
       {/* ── PROMO BAR ── */}
       {showAnnouncement && (
         <div style={{
-          position: isPreview ? "sticky" : "fixed", top: 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: 1001,
+          position: isPreview ? "sticky" : "fixed", top: 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10001 : 1001,
           height: PROMO_BAR_H, background: "#111",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
@@ -448,7 +448,7 @@ export default function ChicParis() {
 
       {/* ── NAVBAR ── */}
       <header style={{
-        position: isPreview ? "sticky" : "fixed", top: showAnnouncement ? PROMO_BAR_H : 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: 1000,
+        position: isPreview ? "sticky" : "fixed", top: showAnnouncement ? PROMO_BAR_H : 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10000 : 1000,
         background: (isPreview || scrolled) ? "rgba(255,255,255,0.97)" : "transparent",
         borderBottom: (isPreview || scrolled) ? "1px solid #e8e8e8" : "none",
         backdropFilter: (isPreview || scrolled) ? "blur(12px)" : "none",
