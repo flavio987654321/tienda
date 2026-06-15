@@ -802,10 +802,10 @@ export default function Home() {
                             className="absolute border-0 pointer-events-none"
                             style={{
                               top: "-20px",
-                              left: "calc(50% - 160px)",
+                              left: "calc(50% - 211px)",
                               width: "1280px",
                               height: "800px",
-                              transform: "scale(0.25)",
+                              transform: "scale(0.33)",
                               transformOrigin: "top left",
                             }}
                             loading="lazy"
