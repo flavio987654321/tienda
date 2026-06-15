@@ -113,11 +113,14 @@ const BRAND_DOMAINS: Record<string, string> = {
 
 function getBrandLogoUrl(brand: string): string {
   const key = brand.toLowerCase().trim();
-  if (BRAND_DOMAINS[key]) return `https://logo.clearbit.com/${BRAND_DOMAINS[key]}`;
-  for (const [k, d] of Object.entries(BRAND_DOMAINS)) {
-    if (key.includes(k) || k.includes(key)) return `https://logo.clearbit.com/${d}`;
+  let domain = BRAND_DOMAINS[key];
+  if (!domain) {
+    for (const [k, d] of Object.entries(BRAND_DOMAINS)) {
+      if (key.includes(k) || k.includes(key)) { domain = d; break; }
+    }
   }
-  return `https://logo.clearbit.com/${key.replace(/\s+/g, "")}.com`;
+  const d = domain ?? `${key.replace(/\s+/g, "")}.com`;
+  return `https://www.google.com/s2/favicons?domain=${d}&sz=128`;
 }
 
 function getBrandStyle(brand: string, accent: string): { bg: string; text: string } {
