@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
+import { STORE_TYPES } from "@/lib/storeTypes";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent } from "framer-motion";
 import {
   ArrowRight, X, Store, Users, TrendingUp, Wallet, Truck, CheckCircle,
@@ -316,6 +317,10 @@ const TESTIMONIALS = [
 ];
 
 const SLOTS = 6;
+
+const STORE_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  STORE_TYPES.map((t) => [t.id, t.label])
+);
 
 const TYPE_ICONS: Record<string, LucideIcon> = {
   TODAS:     LayoutGrid,
@@ -833,19 +838,24 @@ export default function Home() {
                         </div>
                         <div className="h-0.5" style={{ backgroundColor: store.primaryColor + "80" }} />
                         <div className="p-4">
-                          <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <h3 className="font-bold text-gray-900 text-sm leading-snug truncate group-hover:text-indigo-600 transition-colors">
-                              {store.name}
-                            </h3>
-                            <div className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: store.primaryColor }} />
-                          </div>
+                          {STORE_TYPE_LABELS[store.tipoTienda] && (
+                            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+                              {STORE_TYPE_LABELS[store.tipoTienda]}
+                            </span>
+                          )}
+                          <h3 className="font-bold text-gray-900 text-sm leading-snug truncate group-hover:text-indigo-600 transition-colors mt-0.5 mb-1">
+                            {store.name}
+                          </h3>
                           {store.description && (
                             <p className="text-xs text-gray-400 line-clamp-1 mb-3">{store.description}</p>
                           )}
                           <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                            <span className="text-[11px] text-gray-400 font-medium">
-                              {store.totalProducts} producto{store.totalProducts !== 1 ? "s" : ""}
-                            </span>
+                            <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-medium">
+                              <span>{store.totalProducts} producto{store.totalProducts !== 1 ? "s" : ""}</span>
+                              {store.totalOrders > 0 && (
+                                <span className="text-emerald-600 font-semibold">· {store.totalOrders} pedido{store.totalOrders !== 1 ? "s" : ""}</span>
+                              )}
+                            </div>
                             <span className="flex items-center gap-1 text-[11px] font-bold text-gray-400 group-hover:text-indigo-600 transition-colors">
                               <Eye className="h-3.5 w-3.5" />
                               Ver tienda
