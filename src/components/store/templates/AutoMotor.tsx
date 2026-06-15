@@ -89,6 +89,12 @@ export default function AutoMotor() {
   const footerImg   = iovr["sectionbg_bgFooter"];
   const ftMid       = secMid(footerImg, footerBg);
 
+  const navBg          = sc["navBg"] ?? NAVY;
+  const navDark        = getContrastColor(navBg) === "light";
+  const navText        = navDark ? "#ffffff" : "#111111";
+  const navTextMid     = navDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.45)";
+  const navBorderColor = navDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.12)";
+
   const [menuOpen,   setMenuOpen]   = useState(false);
   const [selected,   setSelected]   = useState<StorefrontProduct | null>(null);
   const [showReport, setShowReport] = useState(false);
@@ -165,13 +171,13 @@ export default function AutoMotor() {
         </div>
       )}
 
-      {/* ── NAV — always navy solid ── */}
+      {/* ── NAV ── */}
       <nav style={{ position: isPreview ? "sticky" : "fixed",
         top: showAnn ? PROMO_H : 0,
         left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
         zIndex: isPreview ? 10000 : 100,
-        background: NAVY,
-        boxShadow: "0 2px 16px rgba(13,31,60,0.35)",
+        background: navBg,
+        boxShadow: navDark ? "0 2px 16px rgba(13,31,60,0.35)" : "0 2px 12px rgba(0,0,0,0.08)",
         padding: "0 28px" }}>
         <div style={{ maxWidth:1200, margin:"0 auto", height:NAV_H,
           display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -185,9 +191,9 @@ export default function AutoMotor() {
               <button key={id} onClick={() => smoothScrollTo(id)}
                 style={{ background:"none", border:"none", cursor:"pointer", fontSize:11,
                   fontWeight:600, letterSpacing:2, textTransform:"uppercase", transition:"color 0.15s",
-                  color: "rgba(255,255,255,0.6)" }}
-                onMouseEnter={e => (e.currentTarget.style.color="#ffffff")}
-                onMouseLeave={e => (e.currentTarget.style.color="rgba(255,255,255,0.6)")}>
+                  color: navTextMid }}
+                onMouseEnter={e => (e.currentTarget.style.color=navText)}
+                onMouseLeave={e => (e.currentTarget.style.color=navTextMid)}>
                 {lbl}
               </button>
             ))}
@@ -202,43 +208,43 @@ export default function AutoMotor() {
             {pushBell && config?.showPushBell && !isPreview && (
               <button onClick={pushBell.openDrawer}
                 style={{ position:"relative", background:"none", border:"none", cursor:"pointer", padding:4,
-                  display:"flex", alignItems:"center", color:"rgba(255,255,255,0.6)" }}>
+                  display:"flex", alignItems:"center", color:navTextMid }}>
                 <svg width={20} height={20} viewBox="0 0 24 24"
                   fill={pushBell.subState==="subscribed"?"currentColor":"none"}
                   stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                 </svg>
                 {pushBell.hasNew && <span style={{ position:"absolute", top:2, right:2, width:10, height:10,
-                  background:"#ef4444", borderRadius:"50%", border:`2px solid ${NAVY}` }} />}
+                  background:"#ef4444", borderRadius:"50%", border:`2px solid ${navBg}` }} />}
               </button>
             )}
             {isPreview && (config?.showPushBell ? (
               <button onClick={config.onPreviewBellClick}
-                style={{ padding:4, display:"flex", alignItems:"center", color:"rgba(255,255,255,0.5)", background:"none", border:"none", cursor:"pointer" }}>
+                style={{ padding:4, display:"flex", alignItems:"center", color:navTextMid, background:"none", border:"none", cursor:"pointer" }}>
                 <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               </button>
             ) : (
               <button onClick={config?.onPreviewBellClick} title="🔒 Solo Plan Plus"
-                style={{ position:"relative", padding:4, display:"flex", alignItems:"center", color:"rgba(255,255,255,0.3)", opacity:0.5, background:"none", border:"none", cursor:"pointer" }}>
+                style={{ position:"relative", padding:4, display:"flex", alignItems:"center", color:navTextMid, opacity:0.5, background:"none", border:"none", cursor:"pointer" }}>
                 <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 <span style={{ position:"absolute", top:0, right:0, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
               </button>
             ))}
           </div>
           <button className="am-burger" onClick={() => setMenuOpen(m => !m)}
-            style={{ background:"none", border:"1px solid rgba(255,255,255,0.3)",
-              color:"#fff", padding:"7px 11px", cursor:"pointer", fontSize:18 }}>
+            style={{ background:"none", border:`1px solid ${navBorderColor}`,
+              color:navText, padding:"7px 11px", cursor:"pointer", fontSize:18 }}>
             {menuOpen ? "×" : "☰"}
           </button>
         </div>
         {menuOpen && (
-          <div style={{ background:"#142d50", borderTop:"1px solid rgba(255,255,255,0.08)", padding:"8px 28px 20px" }}>
+          <div style={{ background:navBg, borderTop:`1px solid ${navBorderColor}`, padding:"8px 28px 20px" }}>
             {[["Catálogo","catálogo"],["Servicios","servicios"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([lbl,id]) => (
               <button key={id} onClick={() => { smoothScrollTo(id); setMenuOpen(false); }}
                 style={{ display:"block", width:"100%", background:"none", border:"none",
-                  color:"rgba(255,255,255,0.65)", cursor:"pointer", textAlign:"left",
+                  color:navTextMid, cursor:"pointer", textAlign:"left",
                   padding:"12px 0", fontSize:11, fontWeight:700, textTransform:"uppercase",
-                  letterSpacing:2, borderBottom:"1px solid rgba(255,255,255,0.07)" }}>
+                  letterSpacing:2, borderBottom:`1px solid ${navBorderColor}` }}>
                 {lbl}
               </button>
             ))}

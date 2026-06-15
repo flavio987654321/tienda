@@ -505,6 +505,33 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
             <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>Afecta botones, precios y elementos destacados.</p>
           </div>
 
+          {/* Color nav — solo templates auto */}
+          {(config.template === "auto-motor" || config.template === "auto-drive") && (
+            <div style={sec}>
+              <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+                🧭 Color de la barra de navegación
+              </p>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <input type="color"
+                  value={config.sectionColors?.["navBg"] ?? (config.template === "auto-motor" ? "#1b3f6e" : "#ffffff")}
+                  onChange={e => update("sectionColors", { ...config.sectionColors, navBg: e.target.value })}
+                  style={{ width: 40, height: 38, padding: 2, border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", flexShrink: 0 }} />
+                <input style={{ ...inp, fontFamily: "monospace" }}
+                  value={config.sectionColors?.["navBg"] ?? (config.template === "auto-motor" ? "#1b3f6e" : "#ffffff")}
+                  onChange={e => update("sectionColors", { ...config.sectionColors, navBg: e.target.value })}
+                  onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                  onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                {config.sectionColors?.["navBg"] && (
+                  <button onClick={() => { const next = { ...config.sectionColors }; delete next["navBg"]; update("sectionColors", next); }}
+                    style={{ padding: "7px 12px", border: "1px solid #e2e8f0", borderRadius: 8, background: "white", cursor: "pointer", fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+                    ↺ Reset
+                  </button>
+                )}
+              </div>
+              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>El texto y los íconos del nav se adaptan automáticamente al color elegido.</p>
+            </div>
+          )}
+
           {/* WhatsApp */}
           <div style={sec}>
             <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
