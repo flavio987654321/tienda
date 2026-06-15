@@ -854,11 +854,12 @@ function ProductoFormPage() {
                   Sin videos. Subí un MP4 propio o pegá un link de Instagram, TikTok o YouTube.
                 </p>
               )}
+              <div className="flex flex-wrap gap-3">
               {reelUrls.map((url, i) => {
                 const isDirect = isDirectVideoUrl(url);
                 return isDirect ? (
-                  <div key={i} className="relative rounded-xl overflow-hidden bg-black">
-                    <video src={url} controls className="w-full max-h-48 object-contain" />
+                  <div key={i} className="relative rounded-xl overflow-hidden bg-black flex-shrink-0" style={{ width: 140, aspectRatio: "9/16" }}>
+                    <video src={url} controls className="w-full h-full object-contain" />
                     <button
                       type="button"
                       onClick={() => { setReelUrls(p => p.filter((_, j) => j !== i)); markDirty(); }}
@@ -886,6 +887,7 @@ function ProductoFormPage() {
                   </div>
                 );
               })}
+              </div>
             </div>
 
             {/* Basic info */}
