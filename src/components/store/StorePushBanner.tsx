@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Bell, BellOff, Loader2, X } from "lucide-react";
+import { Bell, BellOff, Loader2, X, CheckCircle2 } from "lucide-react";
 import { usePushBell } from "@/contexts/PushBellContext";
 
 function timeAgo(iso: string): string {
@@ -38,6 +38,8 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
   const isSubscribed = subState === "subscribed";
   const isLoading = subState === "loading";
 
+  const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
   return (
     <>
       {/* Backdrop */}
@@ -51,109 +53,150 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className={`fixed bottom-0 left-0 right-0 z-[9992] w-full sm:w-[480px] sm:left-1/2 sm:right-auto sm:-translate-x-1/2 bg-white rounded-t-3xl shadow-2xl transition-[transform] duration-300 ease-out flex flex-col ${
-          drawerOpen ? "translate-y-0" : "translate-y-full"
+        className={`fixed bottom-0 left-0 right-0 z-[9992] w-full max-h-[80vh] bg-white rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out flex flex-col
+          sm:top-0 sm:bottom-0 sm:left-auto sm:right-0 sm:w-[420px] sm:max-h-none sm:rounded-none sm:rounded-l-2xl ${
+          drawerOpen
+            ? "translate-y-0 sm:translate-y-0 sm:translate-x-0"
+            : "translate-y-full sm:translate-y-0 sm:translate-x-full"
         }`}
-        style={{ maxHeight: "72vh" }}
       >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-gray-200" />
+        {/* Handle — solo mobile */}
+        <div className="flex justify-center pt-3 pb-1 shrink-0 sm:hidden">
+          <div className="w-10 h-1.5 rounded-full bg-gray-200" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <Bell className="h-4 w-4 text-indigo-500" />
-            <h2 className="text-sm font-bold text-gray-900">Novedades de {storeName}</h2>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 shrink-0">
+              <Bell className="h-4 w-4 text-indigo-500" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-gray-900 leading-tight">Novedades</h2>
+              <p className="text-[11px] text-gray-400 leading-tight truncate max-w-[180px]">{storeName}</p>
+            </div>
           </div>
           <button
             onClick={closeDrawer}
-            className="flex items-center justify-center w-7 h-7 rounded-xl hover:bg-gray-100 transition-colors"
+            aria-label="Cerrar"
+            className="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors shrink-0"
           >
-            <X className="h-4 w-4 text-gray-400" />
+            <X className="h-5 w-5 text-gray-400" />
           </button>
         </div>
 
-        {/* Suscripción */}
-        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3 shrink-0">
-          <div className={`shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${isSubscribed ? "bg-indigo-50" : "bg-gray-50"}`}>
-            {isLoading
-              ? <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
-              : isSubscribed
-                ? <Bell className="h-4 w-4 text-indigo-600 fill-indigo-100" />
-                : <BellOff className="h-4 w-4 text-gray-400" />}
-          </div>
-          <div className="flex-1 min-w-0">
-            {isSubscribed ? (
-              <>
+        {/* Bloque de suscripción */}
+        <div className="px-5 py-4 border-b border-gray-100 shrink-0">
+          {isSubscribed ? (
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 shrink-0">
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              </div>
+              <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-800 leading-tight">Notificaciones activas</p>
-                <p className="text-xs text-gray-400">Te avisamos cuando haya novedades.</p>
-              </>
-            ) : subState === "error" ? (
-              <>
-                <p className="text-sm font-semibold text-red-600 leading-tight">No se pudo activar</p>
-                <p className="text-xs text-gray-400">Revisá los permisos en tu navegador.</p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm font-semibold text-gray-800 leading-tight">Recibí alertas en tu dispositivo</p>
-                <p className="text-xs text-gray-400">Activá para que te avisemos cuando haya novedades.</p>
-              </>
-            )}
-          </div>
-          {pushSupported && (
-            isSubscribed ? (
+                <p className="text-xs text-gray-400 mt-0.5">Te avisamos cuando haya novedades.</p>
+              </div>
               <button
                 onClick={handleUnsubscribe}
                 disabled={isLoading}
-                className="shrink-0 text-xs text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                className="shrink-0 px-3 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-50 min-h-[36px]"
               >
-                Desactivar
+                {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Desactivar"}
               </button>
-            ) : subState === "error" ? (
+            </div>
+          ) : subState === "error" ? (
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 shrink-0 mt-0.5">
+                  <BellOff className="h-5 w-5 text-red-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-red-600 leading-tight">No se pudo activar</p>
+                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                    {isIOS
+                      ? "En iPhone, primero agregá esta tienda a tu pantalla de inicio y volvé a intentarlo."
+                      : "Tu navegador bloqueó los permisos. Tocá el ícono del candado en la barra de dirección, activá las notificaciones para este sitio y recargá la página."}
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={handleSubscribe}
                 disabled={isLoading}
-                className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold transition-colors disabled:opacity-50"
               >
-                Reintentar
+                {isLoading
+                  ? <><Loader2 className="h-4 w-4 animate-spin" /> Activando...</>
+                  : <><Bell className="h-4 w-4" /> Reintentar</>}
               </button>
-            ) : (
-              <button
-                onClick={handleSubscribe}
-                disabled={isLoading}
-                className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
-              >
-                <Bell className="h-3.5 w-3.5" />
-                Activar
-              </button>
-            )
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 shrink-0 mt-0.5">
+                  {isLoading
+                    ? <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
+                    : <BellOff className="h-5 w-5 text-gray-400" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 leading-tight">
+                    {isIOS && !pushSupported ? "Instalá la tienda para recibir alertas" : "Activá las novedades"}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                    {!pushSupported
+                      ? isIOS
+                        ? "Tocá el botón Compartir en Safari y elegí \"Agregar a pantalla de inicio\" para activar las notificaciones."
+                        : "Tu navegador no soporta notificaciones push."
+                      : "Recibí alertas cuando la tienda publique ofertas o novedades, aunque tengas el navegador cerrado."}
+                  </p>
+                </div>
+              </div>
+              {pushSupported && (
+                <button
+                  onClick={handleSubscribe}
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+                >
+                  {isLoading
+                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Activando...</>
+                    : <><Bell className="h-4 w-4" /> Activar notificaciones</>}
+                </button>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Campañas */}
+        {/* Lista de campañas */}
         <div className="overflow-y-auto flex-1 min-h-0">
           {loadingCampaigns ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
+            <div className="divide-y divide-gray-50">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="px-5 py-4 animate-pulse">
+                  <div className="h-3.5 bg-gray-100 rounded-full w-3/4 mb-2.5" />
+                  <div className="h-3 bg-gray-100 rounded-full w-full mb-1.5" />
+                  <div className="h-3 bg-gray-100 rounded-full w-1/2" />
+                </div>
+              ))}
             </div>
           ) : campaigns.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-              <Bell className="h-8 w-8 text-gray-200 mb-3" />
-              <p className="text-sm font-medium text-gray-400">Todavía no hay novedades</p>
-              <p className="text-[11px] text-gray-300 mt-1">Cuando la tienda publique algo, aparecerá acá.</p>
+            <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 mb-4">
+                <Bell className="h-7 w-7 text-gray-200" />
+              </div>
+              <p className="text-sm font-semibold text-gray-500">Todavía no hay novedades</p>
+              <p className="text-xs text-gray-400 mt-1 leading-relaxed max-w-[200px]">
+                Cuando la tienda publique algo, aparecerá acá.
+              </p>
             </div>
           ) : (
             <ul className="divide-y divide-gray-50">
               {campaigns.map((c) => (
-                <li key={c.id} className="px-5 py-4">
+                <li key={c.id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-900 leading-snug">{c.title}</p>
-                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{c.body}</p>
+                      <p className="text-xs text-gray-500 mt-1 leading-relaxed">{c.body}</p>
                     </div>
-                    <span className="shrink-0 text-xs text-gray-300 mt-0.5 whitespace-nowrap">
+                    <span className="shrink-0 text-[11px] text-gray-300 mt-0.5 whitespace-nowrap">
                       {timeAgo(c.createdAt)}
                     </span>
                   </div>

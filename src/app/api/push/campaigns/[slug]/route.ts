@@ -43,7 +43,7 @@ export async function GET(
   const campaigns = await prisma.pushCampaign.findMany({
     where: { storeId: store.id },
     orderBy: { createdAt: "desc" },
-    take: 15,
+    take: 10,
     select: { id: true, title: true, body: true, createdAt: true },
   });
 

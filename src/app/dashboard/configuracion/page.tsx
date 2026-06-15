@@ -3,7 +3,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TemplateId, TextOverride, ImageOverride } from "@/types/store-config";
-import { TEMPLATE_DEFAULTS, DEFAULT_CONFIG, TEMPLATES_WITH_CAROUSEL } from "@/types/store-config";
+import { DEFAULT_CONFIG, TEMPLATES_WITH_CAROUSEL } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
 import FashionNoir from "@/components/store/templates/FashionNoir";
@@ -1394,19 +1394,12 @@ export default function ConfiguracionPage() {
 
   /* Step 1 → 2 */
   const handlePreview = (t: TemplateInfo) => {
-    const defaults = TEMPLATE_DEFAULTS[t.id];
     setSelected(t);
     setConfig(c => ({
-      // Mantener datos globales de la tienda, resetear overrides del template anterior
       ...c,
       template: t.id,
-      colors: { accent: defaults.accent },
-      storeName: defaults.storeName,
-      textOverrides: {},
-      imageOverrides: {},
-      sectionColors: {},
       bannerInterval: undefined,
-      promoBanner: { enabled: true },
+      promoBanner: c.promoBanner ?? { enabled: true },
     }));
     setMode("preview");
   };

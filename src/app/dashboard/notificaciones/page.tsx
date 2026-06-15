@@ -4,12 +4,13 @@ import { useEffect, useState, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   Bell, Send, Users, AlertTriangle, CheckCircle2, Loader2,
-  Clock, ChevronDown, ChevronUp, Crown, ArrowRight,
+  Clock, ChevronDown, ChevronUp, Crown, ArrowRight, Trash2, Link2,
 } from "lucide-react";
 import Link from "next/link";
 
 const TITLE_MAX = 50;
 const BODY_MAX = 150;
+const URL_MAX = 512;
 
 type Campaign = {
   id: string;
@@ -42,14 +43,17 @@ export default function NotificacionesPage() {
   const [presetIdx, setPresetIdx] = useState(0);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
+  const [url, setUrl] = useState("");
+  const [showUrlField, setShowUrlField] = useState(false);
   const [tosAccepted, setTosAccepted] = useState(false);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  function loadStats() {
     fetch("/api/push/send")
       .then(async (r) => {
         if (r.status === 403) { setLoadState("not_premium"); return; }
@@ -59,7 +63,9 @@ export default function NotificacionesPage() {
         setLoadState("ok");
       })
       .catch(() => setLoadState("error"));
-  }, []);
+  }
+
+  useEffect(() => { loadStats(); }, []);
 
   function applyPreset(idx: number) {
     setPresetIdx(idx);
@@ -80,22 +86,23 @@ export default function NotificacionesPage() {
     setResult(null);
 
     try {
+      const body: Record<string, string> = { title: title.trim(), message: message.trim() };
+      if (url.trim().length > 0) body.url = url.trim();
+
       const res = await fetch("/api/push/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title.trim(), message: message.trim() }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (res.ok) {
         setResult({ ok: true, msg: `Enviada a ${data.sentCount} suscriptor${data.sentCount !== 1 ? "es" : ""}.` });
         setTitle("");
         setMessage("");
+        setUrl("");
+        setShowUrlField(false);
         setTosAccepted(false);
-        // Recargar estadísticas
-        fetch("/api/push/send")
-          .then((r) => (r.ok ? r.json() : null))
-          .then((d) => { if (d) setStats(d); })
-          .catch(() => {});
+        loadStats();
       } else {
         setResult({ ok: false, msg: data.error ?? "Error al enviar" });
       }
@@ -103,6 +110,18 @@ export default function NotificacionesPage() {
       setResult({ ok: false, msg: "Error de red. Intentá de nuevo." });
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/push/send?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setStats((prev) => prev ? { ...prev, campaigns: prev.campaigns.filter((c) => c.id !== id) } : prev);
+      }
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -161,14 +180,13 @@ export default function NotificacionesPage() {
           </div>
         </div>}
 
-        {/* Aviso de qué son las notificaciones */}
+        {/* Aviso de cómo funcionan */}
         <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
           <p className="text-xs text-blue-700 leading-relaxed">
             <strong>¿Cómo funciona?</strong> Cuando alguien visita tu tienda, aparece un banner preguntando si
             quiere recibir alertas. Si acepta, recibe tus notificaciones en el celular o computadora aunque tenga
             el navegador cerrado — sin necesidad de instalar ninguna app. En iPhone solo funciona si el visitante
-            instaló la tienda en su pantalla de inicio. Para desactivarlas, el visitante puede tocar el banner
-            en la tienda y elegir "Desactivar". Podés enviar hasta{" "}
+            instaló la tienda en su pantalla de inicio. Podés enviar hasta{" "}
             <strong>3 notificaciones por semana</strong> para no saturar a tus suscriptores.
           </p>
         </div>
@@ -195,141 +213,176 @@ export default function NotificacionesPage() {
         )}
 
         {/* Formulario (solo Premium) */}
-        {loadState === "not_premium" ? null : <div ref={formRef} className="rounded-2xl border border-gray-100 bg-white p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-800">Nueva notificación</h2>
+        {loadState !== "not_premium" && (
+          <div ref={formRef} className="rounded-2xl border border-gray-100 bg-white p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-gray-800">Nueva notificación</h2>
 
-          {/* Tipos predefinidos */}
-          <div>
-            <p className="text-xs text-gray-500 mb-2">Tipo de anuncio</p>
-            <div className="flex flex-wrap gap-2">
-              {PRESET_TYPES.map((p, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => applyPreset(i)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                    presetIdx === i
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmitClick} className="space-y-3">
-            {/* Título */}
+            {/* Tipos predefinidos */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-gray-700">Título</label>
-                <span className={`text-[11px] ${titleLen > TITLE_MAX ? "text-red-500" : "text-gray-400"}`}>
-                  {titleLen}/{TITLE_MAX}
-                </span>
+              <p className="text-xs text-gray-500 mb-2">Tipo de anuncio</p>
+              <div className="flex flex-wrap gap-2">
+                {PRESET_TYPES.map((p, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => applyPreset(i)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      presetIdx === i
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
               </div>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => { setTitle(e.target.value.slice(0, TITLE_MAX)); setResult(null); }}
-                placeholder="ej: ¡Nuevo producto disponible!"
-                maxLength={TITLE_MAX}
-                required
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent"
-              />
             </div>
 
-            {/* Mensaje */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-gray-700">Mensaje</label>
-                <span className={`text-[11px] ${bodyLen > BODY_MAX ? "text-red-500" : "text-gray-400"}`}>
-                  {bodyLen}/{BODY_MAX}
-                </span>
+            <form onSubmit={handleSubmitClick} className="space-y-3">
+              {/* Título */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-gray-700">Título</label>
+                  <span className={`text-[11px] ${titleLen > TITLE_MAX ? "text-red-500" : "text-gray-400"}`}>
+                    {titleLen}/{TITLE_MAX}
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => { setTitle(e.target.value.slice(0, TITLE_MAX)); setResult(null); }}
+                  placeholder="ej: ¡Nuevo producto disponible!"
+                  maxLength={TITLE_MAX}
+                  required
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent"
+                />
               </div>
-              <textarea
-                value={message}
-                onChange={(e) => { setMessage(e.target.value.slice(0, BODY_MAX)); setResult(null); }}
-                placeholder="ej: Entrá a la tienda y mirá los nuevos productos que llegaron esta semana."
-                maxLength={BODY_MAX}
-                required
-                rows={3}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent resize-none"
-              />
-            </div>
 
-            {/* Preview */}
-            {(title || message) && (
-              <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                  Vista previa
-                </p>
-                <div className="flex items-start gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Bell className="h-4 w-4 text-white" />
+              {/* Mensaje */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-gray-700">Mensaje</label>
+                  <span className={`text-[11px] ${bodyLen > BODY_MAX ? "text-red-500" : "text-gray-400"}`}>
+                    {bodyLen}/{BODY_MAX}
+                  </span>
+                </div>
+                <textarea
+                  value={message}
+                  onChange={(e) => { setMessage(e.target.value.slice(0, BODY_MAX)); setResult(null); }}
+                  placeholder="ej: Entrá a la tienda y mirá los nuevos productos que llegaron esta semana."
+                  maxLength={BODY_MAX}
+                  required
+                  rows={3}
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent resize-none"
+                />
+              </div>
+
+              {/* URL opcional */}
+              {showUrlField ? (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-gray-700 flex items-center gap-1.5">
+                      <Link2 className="h-3.5 w-3.5 text-gray-400" />
+                      Link de destino <span className="text-gray-400 font-normal">(opcional)</span>
+                    </label>
+                    <button type="button" onClick={() => { setUrl(""); setShowUrlField(false); }} className="text-[11px] text-gray-400 hover:text-red-400 transition-colors">
+                      Quitar
+                    </button>
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-800 leading-tight">{title || "Título"}</p>
-                    <p className="text-[11px] text-gray-500 leading-tight mt-0.5">{message || "Mensaje..."}</p>
+                  <input
+                    type="url"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value.slice(0, URL_MAX))}
+                    placeholder="https://tiendaapps.com/tienda/mi-tienda"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1">Al tocar la notificación, el cliente irá a esta URL. Si no ponés ninguna, va a tu tienda.</p>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowUrlField(true)}
+                  className="flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-700 transition-colors"
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                  Agregar link de destino
+                </button>
+              )}
+
+              {/* Preview */}
+              {(title || message) && (
+                <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                    Vista previa
+                  </p>
+                  <div className="flex items-start gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+                      <Bell className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-800 leading-tight">{title || "Título"}</p>
+                      <p className="text-[11px] text-gray-500 leading-tight mt-0.5">{message || "Mensaje..."}</p>
+                      {url && <p className="text-[10px] text-indigo-400 mt-0.5 truncate max-w-[260px]">{url}</p>}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* ToS */}
-            <label className="flex items-start gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={tosAccepted}
-                onChange={(e) => setTosAccepted(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
-              />
-              <span className="text-[11px] text-gray-500 leading-relaxed">
-                Acepto usar las notificaciones solo para contenido relacionado con mi tienda
-                (productos, ofertas, novedades). El uso indebido puede resultar en la suspensión
-                del servicio según los{" "}
-                <a href="/terminos" target="_blank" className="text-indigo-600 underline">
-                  términos de uso
-                </a>
-                .
-              </span>
-            </label>
-
-            {/* Resultado del envío */}
-            {result && (
-              <div className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-medium ${
-                result.ok
-                  ? "bg-green-50 border border-green-100 text-green-700"
-                  : "bg-red-50 border border-red-100 text-red-700"
-              }`}>
-                {result.ok
-                  ? <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  : <AlertTriangle className="h-4 w-4 shrink-0" />}
-                {result.msg}
-              </div>
-            )}
-
-            {/* Límite semanal */}
-            {!loadingStats && !canSend && (
-              <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-xs text-amber-700">
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                Alcanzaste el límite de {stats?.weeklyLimit} notificaciones por semana. Podés enviar más el próximo lunes.
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={sending || !tosAccepted || !canSend || titleLen === 0 || bodyLen === 0}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {sending ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</>
-              ) : (
-                <><Send className="h-4 w-4" /> Enviar notificación</>
               )}
-            </button>
-          </form>
-        </div>}
+
+              {/* ToS */}
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={tosAccepted}
+                  onChange={(e) => setTosAccepted(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                />
+                <span className="text-[11px] text-gray-500 leading-relaxed">
+                  Acepto usar las notificaciones solo para contenido relacionado con mi tienda
+                  (productos, ofertas, novedades). El uso indebido puede resultar en la suspensión
+                  del servicio según los{" "}
+                  <a href="/terminos" target="_blank" className="text-indigo-600 underline">
+                    términos de uso
+                  </a>
+                  .
+                </span>
+              </label>
+
+              {/* Resultado del envío */}
+              {result && (
+                <div className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-medium ${
+                  result.ok
+                    ? "bg-green-50 border border-green-100 text-green-700"
+                    : "bg-red-50 border border-red-100 text-red-700"
+                }`}>
+                  {result.ok
+                    ? <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    : <AlertTriangle className="h-4 w-4 shrink-0" />}
+                  {result.msg}
+                </div>
+              )}
+
+              {/* Límite semanal */}
+              {!loadingStats && !canSend && (
+                <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-xs text-amber-700">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  Alcanzaste el límite de {stats?.weeklyLimit} notificaciones por semana. Podés enviar más el próximo lunes.
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={sending || !tosAccepted || !canSend || titleLen === 0 || bodyLen === 0}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {sending ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</>
+                ) : (
+                  <><Send className="h-4 w-4" /> Enviar notificación</>
+                )}
+              </button>
+            </form>
+          </div>
+        )}
 
         {/* Modal de confirmación antes de enviar */}
         {showConfirm && (
@@ -347,10 +400,10 @@ export default function NotificacionesPage() {
                 </div>
               </div>
 
-              {/* Preview resumida */}
               <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 space-y-1">
                 <p className="text-xs font-semibold text-gray-800">{title}</p>
                 <p className="text-[11px] text-gray-500">{message}</p>
+                {url && <p className="text-[10px] text-indigo-400 truncate">{url}</p>}
               </div>
 
               <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
@@ -388,21 +441,33 @@ export default function NotificacionesPage() {
             {showHistory && (
               <div className="divide-y divide-gray-50">
                 {stats.campaigns.map((c) => (
-                  <div key={c.id} className="px-5 py-3">
+                  <div key={c.id} className="px-5 py-3 group">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold text-gray-800 truncate">{c.title}</p>
                         <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{c.body}</p>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <span className="text-[11px] font-medium text-indigo-600">
-                          {c.sentCount} enviado{c.sentCount !== 1 ? "s" : ""}
-                        </span>
-                        <p className="text-[10px] text-gray-400 mt-0.5">
-                          {new Date(c.createdAt).toLocaleDateString("es-AR", {
-                            day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-                          })}
-                        </p>
+                      <div className="shrink-0 text-right flex items-start gap-2">
+                        <div>
+                          <span className="text-[11px] font-medium text-indigo-600">
+                            {c.sentCount} enviado{c.sentCount !== 1 ? "s" : ""}
+                          </span>
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            {new Date(c.createdAt).toLocaleDateString("es-AR", {
+                              day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleDelete(c.id)}
+                          disabled={deletingId === c.id}
+                          className="mt-0.5 p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100"
+                          title="Eliminar del historial"
+                        >
+                          {deletingId === c.id
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            : <Trash2 className="h-3.5 w-3.5" />}
+                        </button>
                       </div>
                     </div>
                   </div>

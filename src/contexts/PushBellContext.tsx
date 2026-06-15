@@ -125,8 +125,8 @@ export function PushBellProvider({
     setSubState("loading");
     const ok = await subscribeToStore(storeId, storeSlug);
     setSubState(ok ? "subscribed" : "error");
-    if (ok) closeDrawer();
-  }, [storeId, storeSlug, closeDrawer]);
+    // No cerramos el panel: el usuario ve el estado "activo" como confirmación
+  }, [storeId, storeSlug]);
 
   const handleUnsubscribe = useCallback(async () => {
     setSubState("loading");

@@ -84,27 +84,43 @@ export async function POST(req: NextRequest) {
   // URL de destino: si no viene una, apuntar a la tienda
   const targetUrl = url ?? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/tienda/${store.slug}`;
 
+  // Verificar que haya suscriptores antes de crear la campaña
+  const subscriberCount = await prisma.storeSubscription.count({ where: { storeId: store.id } });
+  if (subscriberCount === 0) {
+    return NextResponse.json(
+      { error: "No tenés suscriptores todavía. La notificación no fue enviada." },
+      { status: 400 }
+    );
+  }
+
   // Guardar en historial ANTES de enviar el push: así cuando el dispositivo
   // recibe la notificación y fetchea las campañas, el registro ya existe en la DB.
   const campaign = await prisma.pushCampaign.create({
     data: { storeId: store.id, title, body: message, url: targetUrl, sentCount: 0 },
   });
 
-  const sentCount = await sendPushToStore(store.id, {
-    title,
-    body: message,
-    url: targetUrl,
-    icon: store.logo ?? undefined,
-    tag: `store-${store.id}`,
-    storeName: store.name ?? undefined,
-  });
+  let sentCount = 0;
+  try {
+    sentCount = await sendPushToStore(store.id, {
+      title,
+      body: message,
+      url: targetUrl,
+      icon: store.logo ?? undefined,
+      tag: `store-${store.id}`,
+      storeName: store.name ?? undefined,
+    });
+  } catch (err) {
+    console.error("[push] sendPushToStore failed:", err);
+    await prisma.pushCampaign.delete({ where: { id: campaign.id } }).catch(() => {});
+    return NextResponse.json({ error: "Error al enviar las notificaciones. Intentá de nuevo." }, { status: 500 });
+  }
 
   // Actualizar el conteo real de entregas
   if (sentCount > 0) {
     await prisma.pushCampaign.update({
       where: { id: campaign.id },
       data: { sentCount },
-    }).catch(() => {});
+    }).catch((err) => console.error("[push] failed to update sentCount:", err));
   }
 
   return NextResponse.json({ ok: true, sentCount });
