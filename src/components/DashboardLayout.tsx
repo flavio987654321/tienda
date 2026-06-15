@@ -173,6 +173,15 @@ export default function DashboardLayout({
   }, []);
 
   useEffect(() => {
+    function onStoreTypeChanged(e: Event) {
+      const newType = (e as CustomEvent<{ newType: string }>).detail?.newType;
+      if (newType) setStoreType(newType);
+    }
+    window.addEventListener("store-type-changed", onStoreTypeChanged);
+    return () => window.removeEventListener("store-type-changed", onStoreTypeChanged);
+  }, []);
+
+  useEffect(() => {
     if (!storeType || !LEADS_STORE_TYPES.includes(storeType)) return;
     fetch("/api/leads?status=PENDING&count=1")
       .then((res) => (res.ok ? res.json() : null))

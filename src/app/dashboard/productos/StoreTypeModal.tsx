@@ -90,6 +90,7 @@ export default function StoreTypeModal({
 
     setSaving(false);
     setSaved(true);
+    window.dispatchEvent(new CustomEvent("store-type-changed", { detail: { newType: selected } }));
     await new Promise((r) => setTimeout(r, 700));
     router.refresh();
     if (isEditing) onClose?.();
