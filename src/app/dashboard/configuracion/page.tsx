@@ -1291,7 +1291,6 @@ export default function ConfiguracionPage() {
   const [isDirty, setIsDirty] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [pendingNavUrl, setPendingNavUrl] = useState<string | null>(null);
-  const [barExpanded, setBarExpanded] = useState(true);
   const [imageLoadingFields, setImageLoadingFields] = useState<Record<string, boolean>>({});
   const [storeTipoTienda, setStoreTipoTienda] = useState<string>("GENERAL");
   const [isMobile, setIsMobile] = useState(false);
@@ -1730,112 +1729,91 @@ export default function ConfiguracionPage() {
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "#f1f5f9" }}>
 
         {/* Barra paso 3 */}
-        <div
-          style={{
-            background: "white", borderBottom: "1px solid #e2e8f0",
-            display: "flex", alignItems: "center",
-            gap: 12, flexShrink: 0, position: "relative", zIndex: 50,
-            boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
-            overflow: "hidden",
-            maxHeight: barExpanded ? 200 : 8,
-            padding: barExpanded ? "10px 20px" : "0 20px",
-            transition: "max-height 0.22s ease, padding 0.22s ease",
-            cursor: barExpanded ? "default" : "pointer",
-          }}
-          onMouseEnter={() => setBarExpanded(true)}
-          onMouseLeave={() => setBarExpanded(false)}
-        >
-          {/* Indicador colapso */}
-          <div style={{
-            position: "absolute", bottom: 1, left: "50%", transform: "translateX(-50%)",
-            width: 28, height: 3, borderRadius: 2, background: "#cbd5e1",
-            opacity: barExpanded ? 0 : 0.7, transition: "opacity 0.15s", pointerEvents: "none",
-          }} />
-          {/* Izquierda: volver */}
+        <div style={{
+          background: "#fff", borderBottom: "1px solid #e8ecf0",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          height: 44, padding: "0 16px", flexShrink: 0, position: "relative", zIndex: 50,
+        }}>
+          {/* Izquierda */}
           <button onClick={handleBackToGallery}
-            style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
-              border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
-              color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer",
-              whiteSpace: "nowrap", flexShrink: 0, transition: "all 0.15s" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.color = "#374151"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#64748b"; }}>
-            ← Cambiar diseño
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px",
+              borderRadius: 6, background: "none", border: "none",
+              color: "#64748b", fontSize: 12, fontWeight: 500, cursor: "pointer",
+              whiteSpace: "nowrap", flexShrink: 0, transition: "background 0.12s, color 0.12s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#1e293b"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#64748b"; }}>
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Cambiar diseño
           </button>
 
-          {/* Info template */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1, overflow: "hidden" }}>
-            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+          {/* Centro: info template */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
+            <div style={{ display: "flex", gap: 3 }}>
               {selected!.palette.map((c, i) => (
-                <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c,
-                  border: "1.5px solid rgba(0,0,0,0.08)" }} />
+                <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: c,
+                  border: "1px solid rgba(0,0,0,0.1)" }} />
               ))}
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", letterSpacing: "-0.01em" }}>
               {selected!.name}
             </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 8px",
-              background: "#ede9fe", borderRadius: 20, fontSize: 10, fontWeight: 700,
-              color: "#7c3aed", letterSpacing: 0.3, whiteSpace: "nowrap", flexShrink: 0 }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#8b5cf6",
-                display: "inline-block" }} />
+            <span style={{ width: 1, height: 12, background: "#e2e8f0" }} />
+            <span style={{ fontSize: 11, color: "#8b5cf6", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>
               Editando
             </span>
           </div>
 
           {/* Derecha: acciones */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            {/* Ver tienda */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
             {savedTemplateId && (
-              <a
-                href={`/tienda/${storeSlug ?? config.storeName.toLowerCase().replace(/\s+/g, "-")}`}
+              <a href={`/tienda/${storeSlug ?? config.storeName.toLowerCase().replace(/\s+/g, "-")}`}
                 target="_blank" rel="noopener noreferrer"
-                style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px",
-                  border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
-                  color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  whiteSpace: "nowrap", textDecoration: "none", transition: "all 0.15s" }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.color = "#374151"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#64748b"; }}>
+                title="Ver tienda en una pestaña nueva"
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px",
+                  borderRadius: 6, background: "none", border: "none",
+                  color: "#64748b", fontSize: 12, fontWeight: 500, cursor: "pointer",
+                  whiteSpace: "nowrap", textDecoration: "none", transition: "background 0.12s, color 0.12s" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#1e293b"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#64748b"; }}>
                 Ver tienda
-                <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
                 </svg>
               </a>
             )}
 
-            {/* Config avanzada */}
-            <button onClick={() => setConfigModalOpen(true)}
-              title="Configuración avanzada"
+            <button onClick={() => setConfigModalOpen(true)} title="Configuración avanzada"
               style={{ display: "flex", alignItems: "center", justifyContent: "center",
-                width: 36, height: 36,
-                border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
-                color: "#64748b", cursor: "pointer", transition: "all 0.15s" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.color = "#374151"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#64748b"; }}>
-              <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                width: 32, height: 32, borderRadius: 6, background: "none", border: "none",
+                color: "#94a3b8", cursor: "pointer", transition: "background 0.12s, color 0.12s" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#475569"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#94a3b8"; }}>
+              <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
             </button>
 
-            {/* Guardar */}
+            <div style={{ width: 1, height: 20, background: "#e8ecf0", margin: "0 4px" }} />
+
             {saveError ? (
               <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 600, whiteSpace: "nowrap",
-                background: "#fef2f2", border: "1px solid #fecaca", padding: "7px 12px", borderRadius: 8 }}>
+                background: "#fef2f2", border: "1px solid #fecaca", padding: "5px 10px", borderRadius: 6 }}>
                 ✕ {saveError}
               </span>
             ) : (
               <button onClick={handleSave} disabled={saving}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 20px",
-                  border: "none", borderRadius: 8,
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 16px",
+                  border: "none", borderRadius: 6,
                   background: saved ? "#059669" : "#6366f1",
-                  color: "white", fontSize: 13, fontWeight: 700,
+                  color: "white", fontSize: 12, fontWeight: 600,
                   cursor: saving ? "not-allowed" : "pointer",
-                  transition: "background 0.25s", whiteSpace: "nowrap",
-                  opacity: saving ? 0.7 : 1,
-                  boxShadow: saved ? "0 2px 8px rgba(5,150,105,0.35)" : "0 2px 8px rgba(99,102,241,0.3)" }}>
+                  transition: "background 0.2s", whiteSpace: "nowrap",
+                  opacity: saving ? 0.75 : 1,
+                  letterSpacing: "-0.01em" }}>
                 {saving ? (
                   <>
-                    <span style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)",
+                    <span style={{ width: 11, height: 11, border: "2px solid rgba(255,255,255,0.3)",
                       borderTopColor: "white", borderRadius: "50%", animation: "spin 0.7s linear infinite",
                       display: "inline-block" }} />
                     Guardando
