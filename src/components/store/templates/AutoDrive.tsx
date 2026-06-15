@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
@@ -8,7 +8,7 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
-import { fmtPrice, attr, WaIcon, VehicleCard, VehicleModal, AM_MODAL_CSS } from "@/components/store/auto/AutoVehicleShared";
+import { WaIcon, VehicleCard, VehicleModal, AM_MODAL_CSS } from "@/components/store/auto/AutoVehicleShared";
 
 function smoothScrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -36,10 +36,10 @@ function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
 }
 
 const SERVICE_CATS = [
-  { fv:"cat1Label", fi:"cat1Icon", lbl:"Usados garantizados", icon:"🛡️", desc:"Revisados y certificados" },
-  { fv:"cat2Label", fi:"cat2Icon", lbl:"Autos 0 km",          icon:"✨", desc:"Directo del concesionario" },
-  { fv:"cat3Label", fi:"cat3Icon", lbl:"Financiación",         icon:"💳", desc:"Planes en cuotas fijas" },
-  { fv:"cat4Label", fi:"cat4Icon", lbl:"Más servicios",        icon:"🔧", desc:"Taller y posventa" },
+  { fv:"cat1Label", fi:"cat1Icon", lbl:"Usados garantizados", icon:"🛡️" },
+  { fv:"cat2Label", fi:"cat2Icon", lbl:"Autos 0 km",          icon:"✨" },
+  { fv:"cat3Label", fi:"cat3Icon", lbl:"Financiación",         icon:"💳" },
+  { fv:"cat4Label", fi:"cat4Icon", lbl:"Más servicios",        icon:"🔧" },
 ];
 
 export default function AutoDrive() {
@@ -70,7 +70,6 @@ export default function AutoDrive() {
   const catsBg      = sc["bgCategorias"] ?? "#ffffff";
   const catsImg     = iovr["sectionbg_bgCategorias"];
   const catsText    = secText(catsImg, catsBg);
-  const catsMid     = secMid(catsImg, catsBg);
 
   const catalogoBg  = sc["bgCatalogo"]   ?? "#f7f8fa";
   const catalogoImg = iovr["sectionbg_bgCatalogo"];
@@ -78,9 +77,10 @@ export default function AutoDrive() {
   const catMid      = secMid(catalogoImg, catalogoBg);
   const catTheme    = catText==="#ffffff" ? "dark" as const : "light" as const;
 
-  const statsBg     = sc["bgStats"]      ?? accent;
+  const statsBg     = sc["bgStats"]      ?? "#ffffff";
   const statsImg    = iovr["sectionbg_bgStats"];
   const statsText   = secText(statsImg, statsBg);
+  const statsMid    = secMid(statsImg, statsBg);
 
   const serviciosBg = sc["bgServicios"]  ?? "#ffffff";
   const serviciosImg= iovr["sectionbg_bgServicios"];
@@ -166,7 +166,7 @@ export default function AutoDrive() {
         .ad-hero-left { padding:72px 28px 52px; width:100% }
         @media(min-width:768px){
           .ad-hero { flex-direction:row; min-height:calc(100svh - 98px) }
-          .ad-hero-left { padding:80px 52px; width:50% }
+          .ad-hero-left { padding:80px 64px; width:50% }
         }
         .ad-carousel-item { flex:0 0 calc(100% - 16px) }
         @media(min-width:480px){ .ad-carousel-item { flex:0 0 calc(50% - 12px) } }
@@ -174,17 +174,18 @@ export default function AutoDrive() {
         @media(min-width:1100px){ .ad-carousel-item { flex:0 0 calc(25% - 12px) } }
         .ad-carousel::-webkit-scrollbar { display:none }
         .ad-carousel { scrollbar-width:none; -ms-overflow-style:none }
-        .ad-cats { grid-template-columns:repeat(2,1fr) }
-        @media(min-width:640px){ .ad-cats { grid-template-columns:repeat(4,1fr) } }
         .ad-about { grid-template-columns:1fr }
         @media(min-width:768px){ .ad-about { grid-template-columns:1fr 1fr } }
         .ad-svc { grid-template-columns:1fr }
-        @media(min-width:560px){ .ad-svc { grid-template-columns:repeat(2,1fr) } }
-        @media(min-width:900px){ .ad-svc { grid-template-columns:repeat(4,1fr) } }
+        @media(min-width:600px){ .ad-svc { grid-template-columns:repeat(2,1fr) } }
+        .ad-stats { grid-template-columns:repeat(2,1fr) }
+        @media(min-width:640px){ .ad-stats { grid-template-columns:repeat(4,1fr) } }
         @keyframes ad-spin { to { transform:rotate(360deg) } }
+        .ad-svc-card { transition:box-shadow 0.2s, transform 0.2s }
+        .ad-svc-card:hover { box-shadow:0 8px 28px rgba(0,0,0,0.09) !important; transform:translateY(-2px) }
       `}</style>
 
-      {/* ── PROMO BAR ──────────────────────────────────────────── */}
+      {/* ── PROMO BAR ── */}
       {showAnn && (
         <div style={{ position: isPreview ? "sticky" : "fixed", top:0,
           left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
@@ -208,7 +209,7 @@ export default function AutoDrive() {
         </div>
       )}
 
-      {/* ── NAV ────────────────────────────────────────────────── */}
+      {/* ── NAV ── */}
       <nav style={{ position: isPreview ? "sticky" : "fixed",
         top: showAnn ? PROMO_H : 0,
         left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
@@ -226,7 +227,7 @@ export default function AutoDrive() {
             <VerifiedIconButton isVerified={config?.isVerified} info={config?.verifiedInfo} color={navText} />
           </div>
           <div className="ad-nav-links" style={{ display:"flex", gap:32, alignItems:"center" }}>
-            {[["Catálogo","catálogo"],["Servicios","servicios"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([lbl,id]) => (
+            {[["Catálogo","catálogo"],["Nosotros","nosotros"],["Servicios","servicios"],["Contacto","contacto"]].map(([lbl,id]) => (
               <button key={id} onClick={() => smoothScrollTo(id)}
                 style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer",
                   fontSize:13, fontWeight:500, transition:"color 0.15s" }}
@@ -236,11 +237,11 @@ export default function AutoDrive() {
               </button>
             ))}
             <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
-              style={{ border:`1.5px solid ${accent}`, color:accent, padding:"7px 18px",
-                fontSize:12, fontWeight:700, letterSpacing:0.3, textDecoration:"none",
-                transition:"all 0.2s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background=accent; (e.currentTarget as HTMLElement).style.color="#fff"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="transparent"; (e.currentTarget as HTMLElement).style.color=accent; }}>
+              style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111",
+                padding:"8px 20px", fontSize:12, fontWeight:700,
+                textDecoration:"none", borderRadius:6, transition:"opacity 0.2s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity="0.85"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity="1"; }}>
               Ver todos
             </Link>
             {pushBell && config?.showPushBell && !isPreview && (
@@ -277,7 +278,7 @@ export default function AutoDrive() {
         </div>
         {menuOpen && (
           <div style={{ background:navBg, borderTop:`1px solid ${navBorderColor}`, padding:"8px 28px 20px" }}>
-            {[["Catálogo","catálogo"],["Servicios","servicios"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([lbl,id]) => (
+            {[["Catálogo","catálogo"],["Nosotros","nosotros"],["Servicios","servicios"],["Contacto","contacto"]].map(([lbl,id]) => (
               <button key={id} onClick={() => { smoothScrollTo(id); setMenuOpen(false); }}
                 style={{ display:"block", width:"100%", background:"none", border:"none",
                   color:navTextMid, cursor:"pointer", textAlign:"left",
@@ -295,34 +296,37 @@ export default function AutoDrive() {
         )}
       </nav>
 
-      {/* ── HERO ───────────────────────────────────────────────── */}
+      {/* ── HERO — split: texto izquierda, imagen derecha ── */}
       <section style={{ paddingTop: isPreview ? 0 : (showAnn ? PROMO_H + NAV_H : NAV_H),
         position:"relative", ...secBg(heroImg, heroBg) }}>
         <BgDragHandle imgKey="sectionbg_bgHero" />
         <SectionOverlay ov={heroImg} />
         <EditableSectionBg field="bgHero" label="Fondo hero" />
         <div className="ad-hero" style={{ display:"flex", position:"relative", zIndex:1 }}>
-          {/* left text */}
+
+          {/* panel izquierdo — texto */}
           <div className="ad-hero-left" style={{ display:"flex", flexDirection:"column",
-            justifyContent:"center", boxSizing:"border-box" }}>
-            <p style={{ margin:"0 0 14px", fontSize:11, color:accent,
-              textTransform:"uppercase", letterSpacing:4, fontWeight:700 }}>
+            justifyContent:"center", boxSizing:"border-box", position:"relative" }}>
+            {/* franja de acento */}
+            <div style={{ position:"absolute", left:0, top:"15%", bottom:"15%", width:4,
+              background:accent, borderRadius:"0 4px 4px 0" }} />
+            <p style={{ margin:"0 0 18px", fontSize:11, color:accent,
+              textTransform:"uppercase", letterSpacing:5, fontWeight:700 }}>
               <EditableZone field="heroKicker" label="Etiqueta hero">Tu próximo auto</EditableZone>
             </p>
-            <h1 style={{ margin:"0 0 8px", fontSize:"clamp(36px,5.5vw,72px)",
-              fontWeight:900, color:heroText, letterSpacing:-2, lineHeight:1.0 }}>
+            <h1 style={{ margin:"0 0 24px", fontSize:"clamp(42px,5.5vw,80px)",
+              fontWeight:900, color:heroText, letterSpacing:-3, lineHeight:0.92 }}>
               <EditableZone field="heroHeading" label="Título hero">está acá</EditableZone>
             </h1>
-            <div style={{ width:56, height:4, background:accent, marginBottom:24 }} />
-            <p style={{ margin:"0 0 36px", fontSize:"clamp(14px,1.5vw,16px)",
-              color:heroMid, fontWeight:300, lineHeight:1.85, maxWidth:420 }}>
+            <p style={{ margin:"0 0 38px", fontSize:"clamp(14px,1.5vw,16px)",
+              color:heroMid, fontWeight:300, lineHeight:1.9, maxWidth:400 }}>
               <EditableZone field="heroSubtext" label="Subtítulo hero">La mejor selección de vehículos usados y 0 km. Todos inspeccionados, con financiación disponible y entrega en todo el país.</EditableZone>
             </p>
             <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
               <button onClick={() => smoothScrollTo("catálogo")}
-                style={{ background:accent, color:"#fff", border:"none",
-                  padding:"14px 32px", fontWeight:700, fontSize:13,
-                  cursor:"pointer", transition:"opacity 0.2s" }}
+                style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111",
+                  border:"none", padding:"15px 34px", fontWeight:700, fontSize:13,
+                  borderRadius:10, cursor:"pointer", transition:"opacity 0.2s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity="0.85"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity="1"; }}>
                 Ver catálogo
@@ -331,22 +335,29 @@ export default function AutoDrive() {
                 <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
                   target="_blank" rel="noopener noreferrer"
                   style={{ display:"flex", alignItems:"center", gap:8,
-                    background:"none", border:"1.5px solid #d1d5db",
-                    color:"#374151", textDecoration:"none",
-                    padding:"14px 24px", fontWeight:600, fontSize:13 }}>
+                    background:"none",
+                    border:`1.5px solid ${heroText==="#ffffff" ? "rgba(255,255,255,0.35)" : "#d1d5db"}`,
+                    color:heroText, textDecoration:"none",
+                    padding:"15px 24px", fontWeight:600, fontSize:13, borderRadius:10 }}>
                   <WaIcon size={15} /> Contactar
                 </a>
               )}
             </div>
             {!loadingProducts && (
-              <p style={{ margin:"24px 0 0", fontSize:12, color:heroMid, letterSpacing:0.5 }}>
-                <span style={{ color:accent, fontWeight:700 }}>{products.length}</span> vehículos disponibles
-              </p>
+              <div style={{ marginTop:32, display:"inline-flex", alignItems:"center", gap:8,
+                background: heroText==="#ffffff" ? "rgba(255,255,255,0.1)" : `${accent}0f`,
+                border:`1px solid ${heroText==="#ffffff" ? "rgba(255,255,255,0.2)" : `${accent}28`}`,
+                borderRadius:100, padding:"8px 16px", width:"fit-content" }}>
+                <span style={{ width:8, height:8, borderRadius:"50%", background:"#22c55e", flexShrink:0 }} />
+                <span style={{ fontSize:12, color:heroText, fontWeight:500 }}>
+                  <span style={{ fontWeight:800, color:accent }}>{products.length}</span> vehículos disponibles
+                </span>
+              </div>
             )}
           </div>
-          {/* right image */}
-          <div style={{ flex:1, position:"relative", overflow:"hidden",
-            minHeight:320, background:"#e5e7eb" }}>
+
+          {/* panel derecho — imagen */}
+          <div style={{ flex:1, position:"relative", overflow:"hidden", minHeight:380 }}>
             <img src={heroImgUrl} alt="Vehículo"
               style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
             {(() => {
@@ -357,95 +368,94 @@ export default function AutoDrive() {
                   ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})`
                   : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />;
             })()}
+            {/* badge flotante */}
+            <div style={{ position:"absolute", bottom:24, left:24, zIndex:2,
+              background:"rgba(0,0,0,0.72)", backdropFilter:"blur(14px)",
+              borderRadius:14, padding:"14px 20px",
+              border:`1px solid ${accent}40` }}>
+              <p style={{ margin:0, fontSize:24, fontWeight:900, color:accent, lineHeight:1 }}>100%</p>
+              <p style={{ margin:"4px 0 0", fontSize:11, color:"rgba(255,255,255,0.7)", letterSpacing:0.5 }}>Verificados</p>
+            </div>
             <EditableImageButton field="heroImage" label="Imagen del hero" />
           </div>
         </div>
       </section>
 
-      {/* ── CATEGORÍAS DE SERVICIO ─────────────────────────────── */}
-      <section style={{ padding:"52px 28px", position:"relative",
-        ...secBg(catsImg, catsBg), borderBottom:"1px solid #f3f4f6" }}>
+      {/* ── FILTROS RÁPIDOS — pills horizontales ── */}
+      <section style={{ padding:"16px 28px", position:"relative",
+        ...secBg(catsImg, catsBg),
+        borderBottom:`1px solid ${catsText==="#ffffff" ? "rgba(255,255,255,0.1)" : "#f0f0f0"}` }}>
         <BgDragHandle imgKey="sectionbg_bgCategorias" />
         <SectionOverlay ov={catsImg} />
         <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
-        <div className="ad-cats" style={{ position:"relative", zIndex:1,
-          maxWidth:1200, margin:"0 auto", display:"grid", gap:16 }}>
-          {SERVICE_CATS.map((cat, i) => (
-            <div key={i}
-              style={{ background: catsText==="#ffffff" ? "#1a1a1a" : "#fff",
-                border:`1px solid ${catsText==="#ffffff" ? "#2a2a2a" : "#e5e7eb"}`,
-                borderRadius:12, padding:"28px 24px", cursor:"pointer",
-                transition:"all 0.2s", boxShadow:"none" }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLDivElement).style.borderColor=accent;
-                (e.currentTarget as HTMLDivElement).style.boxShadow=`0 8px 24px ${accent}22`;
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLDivElement).style.borderColor=catsText==="#ffffff"?"#2a2a2a":"#e5e7eb";
-                (e.currentTarget as HTMLDivElement).style.boxShadow="none";
-              }}
-              onClick={() => smoothScrollTo("catálogo")}>
-              <div style={{ width:44, height:44, background:`${accent}15`, borderRadius:10,
-                display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:22, marginBottom:14 }}>
-                <EditableZone field={cat.fi} label={`Ícono categoría ${i+1}`}>{cat.icon}</EditableZone>
-              </div>
-              <p style={{ margin:"0 0 4px", fontSize:14, fontWeight:700, color:catsText }}>
-                <EditableZone field={cat.fv} label={`Categoría ${i+1} — Nombre`}>{cat.lbl}</EditableZone>
-              </p>
-              <p style={{ margin:0, fontSize:12, color:catsMid }}>
-                <EditableZone field={`cat${i+1}Desc`} label={`Categoría ${i+1} — Descripción`}>{cat.desc}</EditableZone>
-              </p>
-            </div>
-          ))}
+        <div style={{ position:"relative", zIndex:1, maxWidth:1200, margin:"0 auto" }}>
+          <div className="ad-carousel"
+            style={{ display:"flex", gap:10, overflowX:"auto", paddingBottom:2 }}>
+            {SERVICE_CATS.map((cat, i) => (
+              <button key={i}
+                onClick={() => smoothScrollTo("catálogo")}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = accent;
+                  (e.currentTarget as HTMLElement).style.background = `${accent}0f`;
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = catsText==="#ffffff" ? "rgba(255,255,255,0.2)" : "#e5e7eb";
+                  (e.currentTarget as HTMLElement).style.background = catsText==="#ffffff" ? "rgba(255,255,255,0.07)" : "#fff";
+                }}
+                style={{ display:"inline-flex", alignItems:"center", gap:8,
+                  padding:"9px 20px", borderRadius:100, whiteSpace:"nowrap", flexShrink:0,
+                  border:`1.5px solid ${catsText==="#ffffff" ? "rgba(255,255,255,0.2)" : "#e5e7eb"}`,
+                  background: catsText==="#ffffff" ? "rgba(255,255,255,0.07)" : "#fff",
+                  cursor:"pointer", transition:"all 0.2s" }}>
+                <span style={{ fontSize:16 }}>
+                  <EditableZone field={cat.fi} label={`Ícono categoría ${i+1}`}>{cat.icon}</EditableZone>
+                </span>
+                <span style={{ fontSize:13, fontWeight:600, color:catsText }}>
+                  <EditableZone field={cat.fv} label={`Categoría ${i+1} — Nombre`}>{cat.lbl}</EditableZone>
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── CATÁLOGO CARRUSEL ──────────────────────────────────── */}
+      {/* ── CATÁLOGO CARRUSEL ── */}
       <section id="catálogo" style={{ padding:"72px 0 72px", position:"relative",
         ...secBg(catalogoImg, catalogoBg) }}>
         <BgDragHandle imgKey="sectionbg_bgCatalogo" />
         <SectionOverlay ov={catalogoImg} />
         <EditableSectionBg field="bgCatalogo" label="Fondo catálogo" />
         <div style={{ position:"relative", zIndex:1, maxWidth:1200, margin:"0 auto", padding:"0 28px" }}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+          <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between",
             flexWrap:"wrap", gap:16, marginBottom:32 }}>
             <div>
               <p style={{ margin:"0 0 6px", fontSize:11, color:accent,
                 textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>
                 <EditableZone field="catalogKicker" label="Kicker catálogo">Nuestros vehículos</EditableZone>
               </p>
-              <h2 style={{ margin:0, fontSize:"clamp(22px,4vw,36px)", fontWeight:900,
-                color:catText, letterSpacing:-0.5 }}>
+              <h2 style={{ margin:0, fontSize:"clamp(24px,4vw,42px)", fontWeight:900,
+                color:catText, letterSpacing:-1 }}>
                 <EditableZone field="catalogHeading" label="Título catálogo">Catálogo disponible</EditableZone>
               </h2>
             </div>
             <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-              <button onClick={() => scrollCarousel("prev")}
-                style={{ width:40, height:40, border:`1px solid ${catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"}`,
-                  background: catText==="#ffffff" ? "rgba(255,255,255,0.07)" : "#fff",
-                  color:catText, cursor:"pointer", borderRadius:8, fontSize:18,
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  transition:"all 0.15s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor=accent; (e.currentTarget as HTMLElement).style.color=accent; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor=catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"; (e.currentTarget as HTMLElement).style.color=catText; }}>
-                ‹
-              </button>
-              <button onClick={() => scrollCarousel("next")}
-                style={{ width:40, height:40, border:`1px solid ${catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"}`,
-                  background: catText==="#ffffff" ? "rgba(255,255,255,0.07)" : "#fff",
-                  color:catText, cursor:"pointer", borderRadius:8, fontSize:18,
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  transition:"all 0.15s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor=accent; (e.currentTarget as HTMLElement).style.color=accent; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor=catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"; (e.currentTarget as HTMLElement).style.color=catText; }}>
-                ›
-              </button>
+              {(["prev","next"] as const).map((dir) => (
+                <button key={dir} onClick={() => scrollCarousel(dir)}
+                  style={{ width:44, height:44, borderRadius:12,
+                    border:`1.5px solid ${catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"}`,
+                    background: catText==="#ffffff" ? "rgba(255,255,255,0.07)" : "#fff",
+                    color:catText, cursor:"pointer", fontSize:22,
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    transition:"all 0.15s" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor=accent; (e.currentTarget as HTMLElement).style.color=accent; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor=catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"; (e.currentTarget as HTMLElement).style.color=catText; }}>
+                  {dir==="prev" ? "‹" : "›"}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Carousel track — full width with padding for peek */}
         <div style={{ position:"relative", zIndex:1 }}>
           {loadingProducts ? (
             <div style={{ textAlign:"center", padding:"60px 0" }}>
@@ -468,10 +478,8 @@ export default function AutoDrive() {
           ) : (
             <div style={{ textAlign:"center", padding:"60px 28px",
               border:`1px dashed ${catText==="#ffffff"?"#333":"#e5e7eb"}`,
-              margin:"0 28px" }}>
-              <p style={{ margin:0, color:catMid, fontSize:14 }}>
-                Aún no hay vehículos publicados.
-              </p>
+              margin:"0 28px", borderRadius:12 }}>
+              <p style={{ margin:0, color:catMid, fontSize:14 }}>Aún no hay vehículos publicados.</p>
             </div>
           )}
         </div>
@@ -481,39 +489,43 @@ export default function AutoDrive() {
             position:"relative", zIndex:1 }}>
             <Link href={`/tienda/${config?.slug ?? ""}/vehiculos${isPreview ? "?from=editor" : ""}`}
               style={{ display:"inline-flex", alignItems:"center", gap:10,
-                background:"none", border:`1.5px solid ${accent}`, color:accent,
-                textDecoration:"none", padding:"13px 36px",
-                fontWeight:700, fontSize:12, letterSpacing:0.5, borderRadius:4 }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background=accent; (e.currentTarget as HTMLElement).style.color="#fff"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="none"; (e.currentTarget as HTMLElement).style.color=accent; }}>
+                background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111",
+                textDecoration:"none", padding:"14px 44px",
+                fontWeight:700, fontSize:13, borderRadius:10 }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity="0.85"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity="1"; }}>
               Ver los {products.length} vehículos →
             </Link>
           </div>
         )}
       </section>
 
-      {/* ── STATS ──────────────────────────────────────────────── */}
-      <section style={{ position:"relative", ...secBg(statsImg, statsBg) }}>
+      {/* ── STATS — 4 columnas, números en color accent ── */}
+      <section style={{ position:"relative", ...secBg(statsImg, statsBg),
+        borderTop:`1px solid ${statsText==="#ffffff"?"rgba(255,255,255,0.1)":"#f0f0f0"}`,
+        borderBottom:`1px solid ${statsText==="#ffffff"?"rgba(255,255,255,0.1)":"#f0f0f0"}` }}>
         <BgDragHandle imgKey="sectionbg_bgStats" />
         <SectionOverlay ov={statsImg} />
         <EditableSectionBg field="bgStats" label="Fondo estadísticas" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:1200, margin:"0 auto",
-          display:"grid", gridTemplateColumns:"repeat(2,1fr)" }}>
+        <div className="ad-stats" style={{ position:"relative", zIndex:1,
+          maxWidth:1200, margin:"0 auto", display:"grid" }}>
           {[
             { fv:"stat1", fl:"statLabel1", n:"500+", l:"Vehículos vendidos" },
             { fv:"stat2", fl:"statLabel2", n:"15",   l:"Años en el mercado" },
             { fv:"stat3", fl:"statLabel3", n:"98%",  l:"Satisfacción" },
             { fv:"stat4", fl:"statLabel4", n:"12",   l:"Marcas disponibles" },
           ].map((s,i) => (
-            <div key={i} style={{ textAlign:"center", padding:"32px 16px",
-              borderRight: i%2===0 ? "1px solid rgba(255,255,255,0.15)" : "none",
-              borderBottom: i<2 ? "1px solid rgba(255,255,255,0.15)" : "none" }}>
-              <p style={{ margin:0, fontSize:"clamp(26px,4vw,38px)", fontWeight:900,
-                color:statsText, letterSpacing:-1 }}>
+            <div key={i} style={{ textAlign:"center", padding:"40px 20px", position:"relative" }}>
+              {i > 0 && (
+                <div style={{ position:"absolute", left:0, top:"20%", bottom:"20%", width:1,
+                  background: statsText==="#ffffff" ? "rgba(255,255,255,0.15)" : "#f0f0f0" }} />
+              )}
+              <p style={{ margin:0, fontSize:"clamp(30px,4vw,54px)", fontWeight:900,
+                color:accent, letterSpacing:-2, lineHeight:1 }}>
                 <EditableZone field={s.fv} label={`Número stat ${i+1}`}>{s.n}</EditableZone>
               </p>
-              <p style={{ margin:"4px 0 0", fontSize:10, color:statsText,
-                opacity:0.6, textTransform:"uppercase", letterSpacing:2 }}>
+              <p style={{ margin:"8px 0 0", fontSize:11, color:statsMid,
+                textTransform:"uppercase", letterSpacing:2 }}>
                 <EditableZone field={s.fl} label={`Etiqueta stat ${i+1}`}>{s.l}</EditableZone>
               </p>
             </div>
@@ -521,7 +533,90 @@ export default function AutoDrive() {
         </div>
       </section>
 
-      {/* ── SERVICIOS ──────────────────────────────────────────── */}
+      {/* ── NOSOTROS — imagen izquierda con badge flotante, texto derecha con checklist ── */}
+      <section id="nosotros" style={{ padding:"88px 28px", position:"relative",
+        ...secBg(nosotrosImg2, nosotrosBg) }}>
+        <BgDragHandle imgKey="sectionbg_bgNosotros" />
+        <SectionOverlay ov={nosotrosImg2} />
+        <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
+        <div className="ad-about" style={{ position:"relative", zIndex:1, maxWidth:1200,
+          margin:"0 auto", display:"grid", gap:64, alignItems:"center" }}>
+
+          {/* imagen izquierda con badge flotante */}
+          <div style={{ position:"relative" }}>
+            <div style={{ borderRadius:20, overflow:"hidden", aspectRatio:"4/3", position:"relative" }}>
+              <img src={nosotrosUrl} alt="Nosotros"
+                style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              {(() => {
+                const ov = iovr["nosotrosImage"];
+                if (!ov?.overlayType || ov.overlayType==="none") return null;
+                return <div style={{ position:"absolute", inset:0, pointerEvents:"none",
+                  background: ov.overlayType==="light"
+                    ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})`
+                    : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />;
+              })()}
+              <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
+            </div>
+            {/* badge flotante de años */}
+            <div style={{ position:"absolute", bottom:-20, right:-16, zIndex:2,
+              background:"#fff", borderRadius:16, padding:"16px 22px",
+              boxShadow:"0 8px 36px rgba(0,0,0,0.13)", textAlign:"center",
+              border:`2px solid ${accent}` }}>
+              <p style={{ margin:0, fontSize:30, fontWeight:900, color:accent, lineHeight:1 }}>15+</p>
+              <p style={{ margin:"4px 0 0", fontSize:11, color:"#6b7280", whiteSpace:"nowrap" }}>años de experiencia</p>
+            </div>
+          </div>
+
+          {/* texto derecha */}
+          <div>
+            <div style={{ width:4, height:52, background:accent, borderRadius:4, marginBottom:24 }} />
+            <p style={{ margin:"0 0 10px", fontSize:11, color:accent,
+              textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>
+              <EditableZone field="nosotrosKicker" label="Kicker nosotros">Nuestra empresa</EditableZone>
+            </p>
+            <h2 style={{ margin:"0 0 20px", fontSize:"clamp(22px,4vw,38px)",
+              fontWeight:900, color:nosText, letterSpacing:-0.5, lineHeight:1.1 }}>
+              <EditableZone field="nosotrosHeading" label="Título nosotros">Pasión por los vehículos desde 2010</EditableZone>
+            </h2>
+            <p style={{ margin:"0 0 14px", fontSize:15, color:nosMid, lineHeight:1.9, fontWeight:300 }}>
+              <EditableZone field="nosotrosP1" label="Párrafo 1">Somos una empresa familiar con más de 15 años en el mercado automotor, especializados en brindar la mejor experiencia de compra con total transparencia.</EditableZone>
+            </p>
+            <p style={{ margin:"0 0 28px", fontSize:15, color:nosMid, lineHeight:1.9, fontWeight:300 }}>
+              <EditableZone field="nosotrosP2" label="Párrafo 2">Nuestro equipo de asesores y taller propio garantizan la calidad de cada vehículo antes de llegar a tus manos. La documentación la gestionamos nosotros.</EditableZone>
+            </p>
+            {/* checklist */}
+            <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:32 }}>
+              {[
+                "Garantía de satisfacción post-venta",
+                "Financiación propia sin intermediarios",
+                "Entrega y trámites incluidos sin cargo",
+              ].map((f, i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ width:24, height:24, borderRadius:"50%", background:`${accent}15`,
+                    display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                    <svg width={13} height={13} viewBox="0 0 13 13" fill="none">
+                      <path d="M2.5 6.5l3 3 5-5" stroke={accent} strokeWidth={2}
+                        strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <span style={{ fontSize:14, color:nosMid, fontWeight:500 }}>{f}</span>
+                </div>
+              ))}
+            </div>
+            {whatsapp.enabled && whatsapp.number && (
+              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
+                target="_blank" rel="noopener noreferrer"
+                style={{ display:"inline-flex", alignItems:"center", gap:8,
+                  background:"#25d366", color:"white", textDecoration:"none",
+                  padding:"13px 28px", borderRadius:10, fontWeight:700, fontSize:14 }}>
+                <WaIcon /> Contactanos
+              </a>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── SERVICIOS — tarjetas horizontales ícono+texto ── */}
       <section id="servicios" style={{ padding:"80px 28px", position:"relative",
         ...secBg(serviciosImg, serviciosBg) }}>
         <BgDragHandle imgKey="sectionbg_bgServicios" />
@@ -533,101 +628,66 @@ export default function AutoDrive() {
               textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>
               <EditableZone field="serviciosKicker" label="Kicker servicios">Por qué elegirnos</EditableZone>
             </p>
-            <h2 style={{ margin:0, fontSize:"clamp(22px,4vw,34px)", fontWeight:900,
-              color:svcText, letterSpacing:-0.3 }}>
+            <h2 style={{ margin:0, fontSize:"clamp(22px,4vw,36px)", fontWeight:900,
+              color:svcText, letterSpacing:-0.5 }}>
               <EditableZone field="serviciosHeading" label="Título servicios">Comprá con confianza</EditableZone>
             </h2>
           </div>
-          <div className="ad-svc" style={{ display:"grid", gap:20 }}>
+          <div className="ad-svc" style={{ display:"grid", gap:16 }}>
             {[
-              { fv:"svc1Title", fl:"svc1Desc", icon:"✅", t:"Inspección completa",   d:"Cada vehículo pasa por 150 puntos de revisión técnica antes de publicarse." },
-              { fv:"svc2Title", fl:"svc2Desc", icon:"📄", t:"Trámites incluidos",    d:"Documentación, transferencia y patentes gestionadas por nuestro equipo." },
-              { fv:"svc3Title", fl:"svc3Desc", icon:"💳", t:"Financiación",          d:"Planes de pago en cuotas fijas disponibles para cualquier perfil crediticio." },
-              { fv:"svc4Title", fl:"svc4Desc", icon:"🤝", t:"Asesor exclusivo",      d:"Un asesor te acompaña en todo el proceso, sin cargo y sin compromiso." },
+              { fv:"svc1Title", fl:"svc1Desc", fi:"svc1Icon", icon:"✅", t:"Inspección completa",   d:"Cada vehículo pasa por 150 puntos de revisión técnica antes de publicarse." },
+              { fv:"svc2Title", fl:"svc2Desc", fi:"svc2Icon", icon:"📄", t:"Trámites incluidos",    d:"Documentación, transferencia y patentes gestionadas por nuestro equipo." },
+              { fv:"svc3Title", fl:"svc3Desc", fi:"svc3Icon", icon:"💳", t:"Financiación",          d:"Planes de pago en cuotas fijas disponibles para cualquier perfil crediticio." },
+              { fv:"svc4Title", fl:"svc4Desc", fi:"svc4Icon", icon:"🤝", t:"Asesor exclusivo",      d:"Un asesor te acompaña en todo el proceso, sin cargo y sin compromiso." },
             ].map((s,i) => (
-              <div key={i}
-                style={{ padding:"28px 24px", borderRadius:12,
-                  border:`1px solid ${svcText==="#ffffff"?"rgba(255,255,255,0.1)":"#e5e7eb"}`,
-                  background: svcText==="#ffffff" ? "rgba(255,255,255,0.05)" : "#fff",
-                  borderTop:`3px solid ${accent}`, transition:"box-shadow 0.2s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow=`0 8px 24px ${accent}18`; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow="none"; }}>
-                <div style={{ fontSize:28, marginBottom:14 }}>
-                  <EditableZone field={`svc${i+1}Icon`} label={`Ícono servicio ${i+1}`}>{s.icon}</EditableZone>
+              <div key={i} className="ad-svc-card"
+                style={{ display:"flex", gap:20, padding:"24px 28px", borderRadius:16,
+                  border:`1px solid ${svcText==="#ffffff"?"rgba(255,255,255,0.1)":"#f0f0f0"}`,
+                  background: svcText==="#ffffff" ? "rgba(255,255,255,0.05)" : "#fff" }}>
+                <div style={{ width:54, height:54, borderRadius:14, background:`${accent}12`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:26, flexShrink:0 }}>
+                  <EditableZone field={s.fi} label={`Ícono servicio ${i+1}`}>{s.icon}</EditableZone>
                 </div>
-                <p style={{ margin:"0 0 8px", fontSize:15, fontWeight:700, color:svcText }}>
-                  <EditableZone field={s.fv} label={`Servicio ${i+1} — Título`}>{s.t}</EditableZone>
-                </p>
-                <p style={{ margin:0, fontSize:13, color:svcMid, lineHeight:1.75 }}>
-                  <EditableZone field={s.fl} label={`Servicio ${i+1} — Descripción`}>{s.d}</EditableZone>
-                </p>
+                <div style={{ paddingTop:2 }}>
+                  <p style={{ margin:"0 0 6px", fontSize:15, fontWeight:700, color:svcText }}>
+                    <EditableZone field={s.fv} label={`Servicio ${i+1} — Título`}>{s.t}</EditableZone>
+                  </p>
+                  <p style={{ margin:0, fontSize:13, color:svcMid, lineHeight:1.75 }}>
+                    <EditableZone field={s.fl} label={`Servicio ${i+1} — Descripción`}>{s.d}</EditableZone>
+                  </p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── NOSOTROS ───────────────────────────────────────────── */}
-      <section id="nosotros" style={{ padding:"80px 28px", position:"relative",
-        ...secBg(nosotrosImg2, nosotrosBg) }}>
-        <BgDragHandle imgKey="sectionbg_bgNosotros" />
-        <SectionOverlay ov={nosotrosImg2} />
-        <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
-        <div className="ad-about" style={{ position:"relative", zIndex:1, maxWidth:1200,
-          margin:"0 auto", display:"grid", gap:56, alignItems:"center" }}>
-          <div style={{ borderRadius:16, overflow:"hidden", aspectRatio:"4/3", position:"relative" }}>
-            <img src={nosotrosUrl} alt="Nosotros"
-              style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
-            {(() => {
-              const ov = iovr["nosotrosImage"];
-              if (!ov?.overlayType || ov.overlayType==="none") return null;
-              return <div style={{ position:"absolute", inset:0, pointerEvents:"none",
-                background: ov.overlayType==="light"
-                  ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})`
-                  : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />;
-            })()}
-            <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
-          </div>
-          <div>
-            <div style={{ width:48, height:4, background:accent, marginBottom:20, borderRadius:2 }} />
-            <p style={{ margin:"0 0 10px", fontSize:11, color:accent,
-              textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>
-              <EditableZone field="nosotrosKicker" label="Kicker nosotros">Nuestra empresa</EditableZone>
-            </p>
-            <h2 style={{ margin:"0 0 20px", fontSize:"clamp(22px,4vw,34px)",
-              fontWeight:900, color:nosText, letterSpacing:-0.3 }}>
-              <EditableZone field="nosotrosHeading" label="Título nosotros">Pasión por los vehículos desde 2010</EditableZone>
-            </h2>
-            <p style={{ margin:"0 0 14px", fontSize:15, color:nosMid, lineHeight:1.9, fontWeight:300 }}>
-              <EditableZone field="nosotrosP1" label="Párrafo 1">Somos una empresa familiar con más de 15 años en el mercado automotor, especializados en brindar la mejor experiencia de compra con total transparencia.</EditableZone>
-            </p>
-            <p style={{ margin:"0 0 32px", fontSize:15, color:nosMid, lineHeight:1.9, fontWeight:300 }}>
-              <EditableZone field="nosotrosP2" label="Párrafo 2">Nuestro equipo de asesores y taller propio garantizan la calidad de cada vehículo antes de llegar a tus manos. La documentación la gestionamos nosotros.</EditableZone>
-            </p>
-            {whatsapp.enabled && whatsapp.number && (
-              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
-                target="_blank" rel="noopener noreferrer"
-                style={{ display:"inline-flex", alignItems:"center", gap:8,
-                  background:"#25d366", color:"white", textDecoration:"none",
-                  padding:"13px 28px", borderRadius:8, fontWeight:700, fontSize:14 }}>
-                <WaIcon /> Contactanos
-              </a>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CONTACTO ───────────────────────────────────────────── */}
+      {/* ── CONTACTO ── */}
       <section id="contacto" style={{ padding:"88px 28px", position:"relative",
-        ...secBg(contactoImg, contactoBg) }}>
+        ...secBg(contactoImg, contactoBg), overflow:"hidden" }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
         <SectionOverlay ov={contactoImg} />
         <EditableSectionBg field="bgContacto" label="Fondo contacto" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:600, margin:"0 auto", textAlign:"center" }}>
+        {/* círculo decorativo */}
+        <div style={{ position:"absolute", top:"-100px", right:"-100px", width:400, height:400,
+          borderRadius:"50%", background:`${accent}0a`, pointerEvents:"none", zIndex:0 }} />
+        <div style={{ position:"absolute", bottom:"-60px", left:"-60px", width:280, height:280,
+          borderRadius:"50%", background:`${accent}06`, pointerEvents:"none", zIndex:0 }} />
+
+        <div style={{ position:"relative", zIndex:1, maxWidth:580, margin:"0 auto", textAlign:"center" }}>
+          {/* ícono */}
+          <div style={{ display:"inline-flex", alignItems:"center", justifyContent:"center",
+            width:64, height:64, borderRadius:18, background:`${accent}20`, marginBottom:28 }}>
+            <svg width={28} height={28} viewBox="0 0 24 24" fill="none"
+              stroke={accent} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+          </div>
           <p style={{ margin:"0 0 10px", fontSize:11, color:accent,
             textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>Contacto</p>
-          <h2 style={{ margin:"0 0 18px", fontSize:"clamp(26px,4vw,44px)",
-            fontWeight:900, color:conText, letterSpacing:-0.5 }}>
+          <h2 style={{ margin:"0 0 18px", fontSize:"clamp(26px,4vw,46px)",
+            fontWeight:900, color:conText, letterSpacing:-0.5, lineHeight:1.1 }}>
             <EditableZone field="contactHeading" label="Título contacto">¿Te interesó algún vehículo?</EditableZone>
           </h2>
           <p style={{ margin:"0 0 40px", fontSize:15, color:conMid, lineHeight:1.9, fontWeight:300 }}>
@@ -638,16 +698,31 @@ export default function AutoDrive() {
               target="_blank" rel="noopener noreferrer"
               style={{ display:"inline-flex", alignItems:"center", gap:12,
                 background:"#25d366", color:"white", textDecoration:"none",
-                padding:"16px 44px", borderRadius:8, fontWeight:800, fontSize:15,
+                padding:"16px 48px", borderRadius:12, fontWeight:800, fontSize:15,
                 boxShadow:"0 8px 32px rgba(37,211,102,0.3)" }}>
               <WaIcon size={20} />
               <EditableZone field="contactWhatsApp" label="Texto botón WhatsApp">Escribinos por WhatsApp</EditableZone>
             </a>
           )}
+          {/* chips informativos */}
+          <div style={{ marginTop:32, display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:8,
+              background: conText==="#ffffff" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
+              borderRadius:100, padding:"9px 18px" }}>
+              <span style={{ fontSize:15 }}>⏱️</span>
+              <span style={{ fontSize:12, color:conMid, fontWeight:500 }}>Respuesta en menos de 1 hora</span>
+            </div>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:8,
+              background: conText==="#ffffff" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
+              borderRadius:100, padding:"9px 18px" }}>
+              <span style={{ fontSize:15 }}>✅</span>
+              <span style={{ fontSize:12, color:conMid, fontWeight:500 }}>Sin compromiso</span>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── FOOTER ─────────────────────────────────────────────── */}
+      {/* ── FOOTER ── */}
       <footer style={{ position:"relative", padding:"32px 28px", textAlign:"center",
         ...secBg(footerImg, footerBg), borderTop:"1px solid rgba(255,255,255,0.06)" }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
