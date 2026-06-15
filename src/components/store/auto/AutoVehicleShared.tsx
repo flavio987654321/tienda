@@ -105,9 +105,12 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
     { label: "Puertas",     value: attr(product, "Puertas") ? `${attr(product, "Puertas")} puertas` : "" },
   ].filter(s => s.value);
 
-  const similar = products
-    .filter(p => p.id !== product.id && p.category === product.category)
-    .slice(0, 4);
+  const marca = attr(product, "Marca").toLowerCase();
+  const others = products.filter(p => p.id !== product.id);
+  const sameBrand = marca ? others.filter(p => attr(p, "Marca").toLowerCase() === marca) : [];
+  const sameCat   = others.filter(p => p.category === product.category && !sameBrand.includes(p));
+  const rest      = others.filter(p => !sameBrand.includes(p) && !sameCat.includes(p));
+  const similar   = [...sameBrand, ...sameCat, ...rest].slice(0, 4);
 
   const headerLine = [año, km ? `${Number(km).toLocaleString("es-AR")} km` : null, condicion]
     .filter(Boolean).join(" · ");
