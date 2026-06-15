@@ -19,7 +19,7 @@ export default async function AjustesPage() {
       where: { ownerId: user.id },
       select: {
         id: true, slug: true, customDomain: true, mpConnectedAt: true, mpSellerId: true,
-        name: true, logo: true, logoColor: true, primaryColor: true,
+        name: true, logo: true, logoColor: true, primaryColor: true, description: true,
       },
     }),
   ]);
@@ -73,6 +73,7 @@ export default async function AjustesPage() {
               slug={store?.slug ?? ""}
               customDomain={store?.customDomain ?? null}
               isPremium={isPremium}
+              description={store?.description ?? ""}
             />
           </section>
 

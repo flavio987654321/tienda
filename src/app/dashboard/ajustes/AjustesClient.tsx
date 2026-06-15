@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Globe, Smartphone, Crown, Copy, Check, ExternalLink, Info, Lock, Clock, Trash2, Bell, Sparkles } from "lucide-react";
+import { Globe, Smartphone, Crown, Copy, Check, ExternalLink, Info, Lock, Clock, Trash2, Bell, Sparkles, AlignLeft, Save, Loader2 } from "lucide-react";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
 import Link from "next/link";
 
@@ -9,10 +9,36 @@ type Props = {
   slug: string;
   customDomain: string | null;
   isPremium: boolean;
+  description: string;
 };
 
-export default function AjustesClient({ slug, customDomain, isPremium }: Props) {
+export default function AjustesClient({ slug, customDomain, isPremium, description }: Props) {
   const [copied, setCopied] = useState(false);
+  const [desc, setDesc] = useState(description);
+  const [savedDesc, setSavedDesc] = useState(description);
+  const [descSaving, setDescSaving] = useState(false);
+  const [descSaved, setDescSaved] = useState(false);
+  const [descError, setDescError] = useState("");
+
+  async function saveDescription() {
+    setDescSaving(true);
+    setDescError("");
+    try {
+      const res = await fetch("/api/store/description", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: desc }),
+      });
+      if (!res.ok) throw new Error();
+      setSavedDesc(desc);
+      setDescSaved(true);
+      setTimeout(() => setDescSaved(false), 2500);
+    } catch {
+      setDescError("No se pudo guardar. Intentá de nuevo.");
+    } finally {
+      setDescSaving(false);
+    }
+  }
   const subdomain = `${slug}.tiendaapps.com`;
 
   function copySubdomain() {
@@ -23,6 +49,41 @@ export default function AjustesClient({ slug, customDomain, isPremium }: Props) 
 
   return (
     <div className="space-y-3">
+
+      {/* Descripción breve */}
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+          <AlignLeft className="h-4 w-4 text-slate-400 shrink-0" />
+          <h2 className="text-sm font-semibold text-slate-900">Descripción breve</h2>
+          <span className="ml-auto text-xs text-slate-400">Se muestra en el listado de tiendas</span>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          <textarea
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            maxLength={150}
+            rows={2}
+            placeholder="Ej: Ropa femenina para todas las tallas, con envíos a todo el país."
+            className="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 resize-none"
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-400">{desc.length}/150 caracteres</span>
+            <button
+              onClick={saveDescription}
+              disabled={descSaving || desc === savedDesc}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition-colors disabled:opacity-40"
+            >
+              {descSaving
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : descSaved
+                ? <Check className="h-3.5 w-3.5" />
+                : <Save className="h-3.5 w-3.5" />}
+              {descSaving ? "Guardando..." : descSaved ? "¡Guardado!" : "Guardar"}
+            </button>
+          </div>
+          {descError && <p className="text-xs text-red-500">{descError}</p>}
+        </div>
+      </div>
 
       {/* Subdominio */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
