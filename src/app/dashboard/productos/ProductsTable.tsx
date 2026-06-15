@@ -5,8 +5,9 @@ import Link from "next/link";
 import { QRCodeCanvas } from "qrcode.react";
 import {
   Edit, Eye, EyeOff, Package, Search, X, Percent, ChevronDown,
-  Trash2, Copy, LayoutGrid, List, ChevronLeft, ChevronRight, QrCode,
+  Trash2, Copy, LayoutGrid, List, ChevronLeft, ChevronRight, QrCode, Car,
 } from "lucide-react";
+import VehicleStatusModal, { VehicleStatusBadge, type VehicleStatus, type VehicleStatusData } from "./VehicleStatusModal";
 
 interface Variant { id: string; stock: number }
 
@@ -20,6 +21,10 @@ interface Product {
   images: string;
   isActive: boolean;
   variants: Variant[];
+  vehicleStatus?: string | null;
+  soldAt?: Date | string | null;
+  soldPrice?: number | null;
+  soldBuyerName?: string | null;
 }
 
 interface Props { products: Product[]; storeSlug?: string; storeName?: string; storeType?: string }
@@ -57,6 +62,8 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [qrProduct,     setQrProduct]     = useState<{ id: string; name: string; price: number; year?: string; km?: string } | null>(null);
   const [qrLoading,     setQrLoading]     = useState(false);
+  const [vehicleModal,  setVehicleModal]  = useState<{ id: string; name: string; status: VehicleStatus } | null>(null);
+  const [toast,         setToast]         = useState<string | null>(null);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://tiendaapps.com";
 
@@ -229,8 +236,13 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
       const stock = p.variants.reduce((s, v) => s + v.stock, 0);
       if (q && !p.name.toLowerCase().includes(q) && !p.category.toLowerCase().includes(q) && !(p.subcategory || "").toLowerCase().includes(q)) return false;
       if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
-      if (statusFilter === "active" && !p.isActive) return false;
-      if (statusFilter === "hidden" && p.isActive) return false;
+      if (showStock) {
+        if (statusFilter === "active" && !p.isActive) return false;
+        if (statusFilter === "hidden" && p.isActive) return false;
+      } else {
+        const vs = p.vehicleStatus ?? "AVAILABLE";
+        if (statusFilter !== "all" && vs !== statusFilter) return false;
+      }
       if (stockFilter === "out" && stock !== 0) return false;
       if (stockFilter === "low" && (stock === 0 || stock > 4)) return false;
       if (stockFilter === "critical" && stock >= 5) return false;
@@ -292,6 +304,18 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
     setPage(1);
   }
 
+  function handleVehicleStatusSaved(data: VehicleStatusData) {
+    setProducts(prev => prev.map(p =>
+      p.id === vehicleModal?.id
+        ? { ...p, vehicleStatus: data.vehicleStatus, isActive: data.isActive ?? p.isActive, soldAt: data.soldAt ?? null, soldPrice: data.soldPrice ?? null, soldBuyerName: data.soldBuyerName ?? null }
+        : p
+    ));
+    const labels: Record<VehicleStatus, string> = { AVAILABLE: "Disponible", RESERVED: "Reservado", SOLD: "Vendido" };
+    setToast(`Estado cambiado a "${labels[data.vehicleStatus]}"`);
+    setTimeout(() => setToast(null), 3500);
+    setVehicleModal(null);
+  }
+
   async function applyBulkPrice() {
     const pct = parseFloat(bulkPct);
     if (isNaN(pct) || pct === 0) { setBulkError("Ingresá un porcentaje válido distinto de 0"); return; }
@@ -326,6 +350,27 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
 
   return (
     <div className="space-y-4">
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] animate-fade-slide">
+          <div className="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-2xl">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            {toast}
+          </div>
+        </div>
+      )}
+
+      {/* Vehicle status modal */}
+      {vehicleModal && (
+        <VehicleStatusModal
+          productId={vehicleModal.id}
+          productName={vehicleModal.name}
+          currentStatus={vehicleModal.status}
+          onSave={handleVehicleStatusSaved}
+          onClose={() => setVehicleModal(null)}
+        />
+      )}
+
       {/* Confirm delete modal */}
       {pendingDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -434,8 +479,18 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
           <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
             className="w-full sm:w-auto border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
             <option value="all">Todos los estados</option>
-            <option value="active">Activos</option>
-            <option value="hidden">Ocultos</option>
+            {showStock ? (
+              <>
+                <option value="active">Activos</option>
+                <option value="hidden">Ocultos</option>
+              </>
+            ) : (
+              <>
+                <option value="AVAILABLE">Disponibles</option>
+                <option value="RESERVED">Reservados</option>
+                <option value="SOLD">Vendidos</option>
+              </>
+            )}
           </select>
 
           {showStock && (
@@ -538,7 +593,12 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                     </div>
                   )}
                   {showStock && <div className={`absolute top-2 right-2 h-2.5 w-2.5 rounded-full border-2 border-white ${stockDot(stock)}`} />}
-                  {!product.isActive && (
+                  {!showStock && (
+                    <div className="absolute top-2 left-2">
+                      <VehicleStatusBadge status={(product.vehicleStatus ?? "AVAILABLE") as VehicleStatus} />
+                    </div>
+                  )}
+                  {product.isActive === false && showStock && (
                     <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
                       <span className="text-xs font-semibold text-gray-400 bg-white/80 px-2 py-1 rounded-lg">Oculto</span>
                     </div>
@@ -549,6 +609,14 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                   <p className="text-sm font-semibold text-gray-900 mt-0.5 line-clamp-2 leading-tight">{product.name}</p>
                   <p className="text-sm font-bold text-indigo-600 mt-1">${product.price.toLocaleString("es-AR")}</p>
                   <div className="mt-3 flex gap-1.5">
+                    {!showStock && (
+                      <button
+                        onClick={() => setVehicleModal({ id: product.id, name: product.name, status: (product.vehicleStatus ?? "AVAILABLE") as VehicleStatus })}
+                        className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium text-indigo-500 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                      >
+                        <Car className="h-3 w-3" /> Estado
+                      </button>
+                    )}
                     <Link href={`/dashboard/productos/nuevo?edit=${product.id}`}
                       className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
                       <Edit className="h-3 w-3" /> Editar
@@ -621,13 +689,26 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                     </td>
                     {showStock && <td className="px-6 py-4">{stockLabel(stock)}</td>}
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${product.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                        {product.isActive ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                        {product.isActive ? "Activo" : "Oculto"}
-                      </span>
+                      {!showStock ? (
+                        <VehicleStatusBadge status={(product.vehicleStatus ?? "AVAILABLE") as VehicleStatus} />
+                      ) : (
+                        <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${product.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                          {product.isActive ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                          {product.isActive ? "Activo" : "Oculto"}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
+                        {!showStock && (
+                          <button
+                            onClick={() => setVehicleModal({ id: product.id, name: product.name, status: (product.vehicleStatus ?? "AVAILABLE") as VehicleStatus })}
+                            className="flex items-center gap-1.5 text-sm text-indigo-500 hover:text-indigo-700 font-medium"
+                            title="Cambiar estado"
+                          >
+                            <Car className="h-3.5 w-3.5" /> Estado
+                          </button>
+                        )}
                         <Link href={`/dashboard/productos/nuevo?edit=${product.id}`}
                           className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
                           <Edit className="h-3.5 w-3.5" /> Editar

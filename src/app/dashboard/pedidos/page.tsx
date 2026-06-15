@@ -6,10 +6,7 @@ import OrderActions from "@/components/orders/OrderActions";
 import { prisma } from "@/lib/prisma";
 import { ArrowUpRight, Clock, Download, Package, ShoppingBag, Truck, UserRound } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
-
-function money(value: number) {
-  return `$${value.toLocaleString("es-AR")}`;
-}
+import { money } from "@/lib/utils";
 
 function statusClass(status: string) {
   if (status === "CONFIRMED") return "bg-green-100 text-green-700";

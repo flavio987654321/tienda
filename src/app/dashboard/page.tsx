@@ -38,25 +38,28 @@ export default async function DashboardPage() {
 
   const sub = await getUserSubscription(userId);
 
-  const recentOrders = await prisma.order.findMany({
+  const isAutos = store.tipoTienda === "AUTOS";
+
+  const recentOrders = !isAutos ? await prisma.order.findMany({
     where: { storeId: store.id },
     include: { buyer: { select: { name: true, email: true } }, items: true },
     orderBy: { createdAt: "desc" },
     take: 5,
-  });
+  }) : [];
 
-  const totalRevenue = await prisma.order.aggregate({
+  const totalRevenue = !isAutos ? await prisma.order.aggregate({
     where: { storeId: store.id, status: { in: ["CONFIRMED", "DELIVERED"] } },
     _sum: { total: true },
-  });
+  }) : { _sum: { total: null } };
+
   const pendingAffiliateCount = await prisma.affiliate.count({
     where: { storeId: store.id, status: "PENDING" },
   });
-  const initialLowStockCount = await prisma.product.count({
+  const initialLowStockCount = !isAutos ? await prisma.product.count({
     where: { storeId: store.id, deletedAt: null, variants: { every: { stock: 0 } } },
-  });
+  }) : 0;
 
-  const recentReviews = await prisma.review.findMany({
+  const recentReviews = !isAutos ? await prisma.review.findMany({
     where: { product: { storeId: store.id } },
     include: {
       user: { select: { name: true } },
@@ -64,7 +67,21 @@ export default async function DashboardPage() {
     },
     orderBy: { createdAt: "desc" },
     take: 5,
-  });
+  }) : [];
+
+  // AUTOS: consultas y vehículos vendidos
+  const recentLeads = isAutos ? await prisma.lead.findMany({
+    where: { storeId: store.id },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+    select: { id: true, customerName: true, customerPhone: true, customerMessage: true, createdAt: true, status: true, productName: true },
+  }) : [];
+  const pendingLeadsCount = isAutos ? await prisma.lead.count({
+    where: { storeId: store.id, status: "PENDING" },
+  }) : 0;
+  const soldVehiclesCount = isAutos ? await prisma.product.count({
+    where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD" },
+  }) : 0;
 
   // Onboarding checklist
   let hasTemplate = false;
@@ -233,7 +250,36 @@ export default async function DashboardPage() {
 
         {/* ── Stats ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {[
+          {(isAutos ? [
+            {
+              label: "Consultas nuevas",
+              value: pendingLeadsCount,
+              icon: ShoppingBag,
+              color: "text-indigo-600 bg-indigo-50",
+              href: "/dashboard/consultas",
+            },
+            {
+              label: "Vehículos publicados",
+              value: store?._count.products ?? 0,
+              icon: Package,
+              color: "text-blue-600 bg-blue-50",
+              href: "/dashboard/productos",
+            },
+            {
+              label: "Vendidos",
+              value: soldVehiclesCount,
+              icon: TrendingUp,
+              color: "text-green-600 bg-green-50",
+              href: "/dashboard/metricas",
+            },
+            {
+              label: "Afiliados",
+              value: store?._count.affiliates ?? 0,
+              icon: Users,
+              color: "text-purple-600 bg-purple-50",
+              href: "/dashboard/vendedoras",
+            },
+          ] : [
             {
               label: "Ingresos totales",
               value: `$${(totalRevenue._sum.total ?? 0).toLocaleString("es-AR")}`,
@@ -262,7 +308,7 @@ export default async function DashboardPage() {
               color: "text-purple-600 bg-purple-50",
               href: "/dashboard/vendedoras",
             },
-          ].map(({ label, value, icon: Icon, color, href }) => (
+          ]).map(({ label, value, icon: Icon, color, href }) => (
             <Link
               key={label}
               href={href}
@@ -313,46 +359,85 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* ── Recent orders ── */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="font-bold text-gray-900">Últimos pedidos</h2>
-            <Link href="/dashboard/pedidos" className="text-sm text-indigo-600 hover:underline">
-              Ver todos →
-            </Link>
-          </div>
-
-          {recentOrders.length === 0 ? (
-            <div className="text-center py-10 text-gray-400">
-              <ShoppingBag className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>Todavía no tenés pedidos</p>
-              <Link href={`/tienda/${store?.slug}`} target="_blank" className="mt-3 inline-block text-sm text-indigo-500 hover:underline">
-                Compartí tu tienda para recibir el primero →
+        {/* ── Recent orders / leads ── */}
+        {isAutos ? (
+          <div className="bg-white rounded-xl border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-bold text-gray-900">Últimas consultas</h2>
+              <Link href="/dashboard/consultas" className="text-sm text-indigo-600 hover:underline">
+                Ver todas →
               </Link>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {recentOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
-                  <div>
-                    <p className="font-medium text-gray-900 text-sm">{order.buyer.name || order.buyer.email}</p>
-                    <p className="text-xs text-gray-400">{order.items.length} producto(s)</p>
+            {recentLeads.length === 0 ? (
+              <div className="text-center py-10 text-gray-400">
+                <ShoppingBag className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p>Todavía no recibiste consultas</p>
+                <Link href={`/tienda/${store?.slug}`} target="_blank" className="mt-3 inline-block text-sm text-indigo-500 hover:underline">
+                  Compartí tu tienda para recibir la primera →
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentLeads.map((lead) => (
+                  <div key={lead.id} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-900 text-sm truncate">{lead.customerName || "Sin nombre"}</p>
+                      {lead.productName && <p className="text-xs text-gray-400 truncate">{lead.productName}</p>}
+                    </div>
+                    <div className="text-right shrink-0 ml-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        lead.status === "CONFIRMED" ? "bg-green-100 text-green-700" :
+                        lead.status === "PENDING"   ? "bg-yellow-100 text-yellow-700" :
+                        "bg-gray-100 text-gray-500"
+                      }`}>
+                        {lead.status === "PENDING" ? "Pendiente" : lead.status === "CONFIRMED" ? "Confirmado" : lead.status}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900 text-sm">${order.total.toLocaleString("es-AR")}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      order.status === "DELIVERED" ? "bg-green-100 text-green-700" :
-                      order.status === "PENDING" ? "bg-yellow-100 text-yellow-700" :
-                      "bg-blue-100 text-blue-700"
-                    }`}>
-                      {order.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-bold text-gray-900">Últimos pedidos</h2>
+              <Link href="/dashboard/pedidos" className="text-sm text-indigo-600 hover:underline">
+                Ver todos →
+              </Link>
             </div>
-          )}
-        </div>
+            {recentOrders.length === 0 ? (
+              <div className="text-center py-10 text-gray-400">
+                <ShoppingBag className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p>Todavía no tenés pedidos</p>
+                <Link href={`/tienda/${store?.slug}`} target="_blank" className="mt-3 inline-block text-sm text-indigo-500 hover:underline">
+                  Compartí tu tienda para recibir el primero →
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentOrders.map((order) => (
+                  <div key={order.id} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{order.buyer.name || order.buyer.email}</p>
+                      <p className="text-xs text-gray-400">{order.items.length} producto(s)</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900 text-sm">${order.total.toLocaleString("es-AR")}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        order.status === "DELIVERED" ? "bg-green-100 text-green-700" :
+                        order.status === "PENDING" ? "bg-yellow-100 text-yellow-700" :
+                        "bg-blue-100 text-blue-700"
+                      }`}>
+                        {order.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

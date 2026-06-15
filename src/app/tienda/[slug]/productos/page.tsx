@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useCartLogic } from "@/hooks/useCartLogic";
@@ -107,6 +107,7 @@ const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 function ProductosPageInner() {
   const params       = useParams();
   const searchParams = useSearchParams();
+  const router       = useRouter();
   const slug         = params?.slug as string;
   const tParam       = searchParams?.get("t") ?? null;
   const fromEditor   = searchParams?.get("from") === "editor";
@@ -197,6 +198,11 @@ function ProductosPageInner() {
         dbNameRef.current  = data.store.name ?? "Tienda";
         setIsOwner(data.isOwner ?? false);
         setStoreName(data.store.name ?? "Tienda");
+        if (data.store.tipoTienda === "AUTOS") {
+          const qs = fromEditor ? "?from=editor" : "";
+          router.replace(`/tienda/${slug}/vehiculos${qs}`);
+          return;
+        }
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.template && !tParam) setTemplate(cfg.template);

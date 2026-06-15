@@ -23,7 +23,12 @@ export default async function ProductosPage() {
   const products = store
     ? await prisma.product.findMany({
         where: { storeId: store.id, deletedAt: null },
-        include: { variants: true },
+        select: {
+          id: true, name: true, category: true, subcategory: true,
+          price: true, comparePrice: true, images: true, isActive: true,
+          vehicleStatus: true, soldAt: true, soldPrice: true, soldBuyerName: true,
+          variants: { select: { id: true, stock: true } },
+        },
         orderBy: { createdAt: "desc" },
         take: 200,
       })
@@ -36,8 +41,12 @@ export default async function ProductosPage() {
     <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Productos</h1>
-          <p className="text-gray-500 mt-1">{products.length} producto{products.length !== 1 ? "s" : ""} en tu tienda</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {store?.tipoTienda === "AUTOS" ? "Vehículos" : "Productos"}
+          </h1>
+          <p className="text-gray-500 mt-1">
+            {products.length} {store?.tipoTienda === "AUTOS" ? "vehículo" : "producto"}{products.length !== 1 ? "s" : ""} en tu tienda
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {store?.tipoTiendaConfigurado && (() => {
@@ -56,7 +65,7 @@ export default async function ProductosPage() {
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 whitespace-nowrap"
           >
             <Plus className="h-4 w-4" />
-            Agregar producto
+            {store?.tipoTienda === "AUTOS" ? "Publicar vehículo" : "Agregar producto"}
           </Link>
         </div>
       </div>

@@ -29,6 +29,8 @@ export default function CuponesPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [toggleError, setToggleError] = useState("");
+  const [deletingId,  setDeletingId]  = useState<string | null>(null);
+  const [toast,       setToast]       = useState<string | null>(null);
   const [form, setForm] = useState({
     code: "",
     discountType: "percentage",
@@ -40,6 +42,11 @@ export default function CuponesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  }
+
   useEffect(() => {
     fetch("/api/cupones")
       .then((r) => r.json())
@@ -49,6 +56,15 @@ export default function CuponesPage() {
 
   async function createCoupon(e: React.FormEvent) {
     e.preventDefault();
+    // Validaciones
+    const pct = form.discountType === "percentage";
+    const val = parseFloat(form.discountValue);
+    if (isNaN(val) || val <= 0) { setError("El descuento debe ser mayor a 0"); return; }
+    if (pct && val > 100) { setError("El porcentaje no puede superar 100%"); return; }
+    if (form.minOrderAmount && parseFloat(form.minOrderAmount) < 0) { setError("La compra mínima no puede ser negativa"); return; }
+    if (form.maxUses && parseInt(form.maxUses) < 1) { setError("Los usos máximos deben ser al menos 1"); return; }
+    if (form.expiresAt && new Date(form.expiresAt) <= new Date()) { setError("La fecha de vencimiento debe ser futura"); return; }
+
     setSaving(true);
     setError("");
     const res = await fetch("/api/cupones", {
@@ -62,6 +78,7 @@ export default function CuponesPage() {
     setCoupons((prev) => [data.coupon, ...prev]);
     setShowForm(false);
     setForm({ code: "", discountType: "percentage", discountValue: "", minOrderAmount: "", maxUses: "", expiresAt: "" });
+    showToast("Cupón creado correctamente");
   }
 
   async function toggleCoupon(id: string, isActive: boolean) {
@@ -77,6 +94,7 @@ export default function CuponesPage() {
     if (res.ok) {
       const data = await res.json();
       setCoupons((prev) => prev.map((c) => (c.id === id ? data.coupon : c)));
+      showToast(isActive ? "Cupón desactivado" : "Cupón activado");
     } else {
       // Rollback si falla
       setCoupons((prev) => prev.map((c) => (c.id === id ? { ...c, isActive } : c)));
@@ -87,9 +105,14 @@ export default function CuponesPage() {
   }
 
   async function deleteCoupon(id: string) {
-    if (!confirm("¿Eliminar este cupón?")) return;
+    if (deletingId) return;
+    setDeletingId(id);
     const res = await fetch(`/api/cupones/${id}`, { method: "DELETE" });
-    if (res.ok) setCoupons((prev) => prev.filter((c) => c.id !== id));
+    setDeletingId(null);
+    if (res.ok) {
+      setCoupons((prev) => prev.filter((c) => c.id !== id));
+      showToast("Cupón eliminado");
+    }
   }
 
   function copyCode(code: string, id: string) {
@@ -100,6 +123,15 @@ export default function CuponesPage() {
 
   return (
     <DashboardLayout>
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] animate-fade-slide pointer-events-none">
+          <div className="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-2xl">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            {toast}
+          </div>
+        </div>
+      )}
       <div className="mx-auto w-full max-w-5xl">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -270,8 +302,9 @@ export default function CuponesPage() {
                       </button>
                       <button
                         onClick={() => deleteCoupon(c.id)}
+                        disabled={deletingId === c.id}
                         aria-label="Eliminar cupón"
-                        className="text-red-400 hover:text-red-600"
+                        className="text-red-400 hover:text-red-600 disabled:opacity-40"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

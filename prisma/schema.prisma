@@ -262,6 +262,13 @@ model Product {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  vehicleStatus String?
+  soldAt        DateTime?
+  soldPrice     Float?
+  soldBuyerName String?
+  soldBuyerPhone String?
+  soldNotes     String?
+
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, X, Phone, User, MessageCircle, ChevronDown, Tag, TrendingUp, Copy, ExternalLink } from "lucide-react";
+import { money } from "@/lib/utils";
 
 const TEMPLATES = [
   {
@@ -40,10 +41,6 @@ type Lead = {
   createdAt: string;
   affiliate: { id: string; userName: string | null; userEmail: string | null } | null;
 };
-
-function money(v: number) {
-  return `$${v.toLocaleString("es-AR")}`;
-}
 
 function statusLabel(s: string) {
   if (s === "CONFIRMED") return { label: "Confirmada", cls: "bg-green-100 text-green-700" };

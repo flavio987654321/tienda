@@ -14,14 +14,16 @@ import NotificationBell from "@/components/NotificationBell";
 import HelpButton from "@/components/HelpButton";
 import TourGuide, { TOUR_STORAGE_KEY } from "@/components/TourGuide";
 
-const LEADS_STORE_TYPES = ["VEHICULOS", "INMOBILIARIA"];
+const LEADS_STORE_TYPES = ["AUTOS"];
 
 type NavItem = {
   href: string;
   label: string;
+  labelFor?: Record<string, string>;
   icon: React.ElementType;
   exact?: boolean;
   onlyFor?: string[];
+  hiddenFor?: string[];
   tourId?: string;
 };
 
@@ -41,10 +43,10 @@ const NAV_GROUPS: NavGroup[] = [
     label: null,
     items: [
       { href: "/dashboard",            label: "Inicio",     icon: TrendingUp,    exact: true, tourId: "inicio" },
-      { href: "/dashboard/pedidos",    label: "Pedidos",    icon: ShoppingBag,   tourId: "pedidos" },
+      { href: "/dashboard/pedidos",    label: "Pedidos",    icon: ShoppingBag,   tourId: "pedidos",   hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/consultas",  label: "Consultas",  icon: MessageCircle, onlyFor: LEADS_STORE_TYPES },
-      { href: "/dashboard/productos",  label: "Productos",  icon: Package,       tourId: "productos" },
-      { href: "/dashboard/cupones",        label: "Cupones",        icon: Tag,           tourId: "cupones" },
+      { href: "/dashboard/productos",  label: "Productos",  icon: Package,       tourId: "productos", labelFor: { AUTOS: "Vehículos" } },
+      { href: "/dashboard/cupones",        label: "Cupones",        icon: Tag,   tourId: "cupones",   hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/vendedoras",     label: "Afiliados",      icon: Users,         tourId: "afiliados" },
       { href: "/dashboard/notificaciones", label: "Notificaciones", icon: Bell, tourId: "notificaciones" },
     ],
@@ -212,11 +214,21 @@ export default function DashboardLayout({
   }
 
   function filterItems(items: NavItem[]) {
-    return items.filter(({ onlyFor }) => !onlyFor || (storeType && onlyFor.includes(storeType)));
+    return items.filter(({ onlyFor, hiddenFor }) => {
+      if (onlyFor && !(storeType && onlyFor.includes(storeType))) return false;
+      if (hiddenFor && storeType && hiddenFor.includes(storeType)) return false;
+      return true;
+    });
+  }
+
+  function resolveLabel(item: NavItem): string {
+    if (item.labelFor && storeType && item.labelFor[storeType]) return item.labelFor[storeType];
+    return item.label;
   }
 
   function renderDesktopLink(item: NavItem) {
-    const { href, label, icon: Icon, exact, tourId } = item;
+    const { href, icon: Icon, exact, tourId } = item;
+    const label = resolveLabel(item);
     const active = isActive(href, exact);
     const { has, count, color } = getBadge(href);
     const hasWarning = getWarning(href);
@@ -253,7 +265,8 @@ export default function DashboardLayout({
   }
 
   function renderMobileLink(item: NavItem, onNavigate: () => void) {
-    const { href, label, icon: Icon, exact } = item;
+    const { href, icon: Icon, exact } = item;
+    const label = resolveLabel(item);
     const active = isActive(href, exact);
     const { has, count, color } = getBadge(href);
     const hasWarning = getWarning(href);

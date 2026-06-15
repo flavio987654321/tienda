@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { LucideIcon } from "lucide-react";
+import { statusLabel } from "@/lib/utils";
 import {
   TrendingUp,
   ShoppingBag,
@@ -21,17 +22,6 @@ import {
 
 function money(value: number) {
   return `$${Math.round(value).toLocaleString("es-AR")}`;
-}
-
-function statusLabel(status: string) {
-  const map: Record<string, string> = {
-    PENDING: "Pendiente",
-    CONFIRMED: "Confirmado",
-    SHIPPED: "Enviado",
-    DELIVERED: "Entregado",
-    CANCELLED: "Cancelado",
-  };
-  return map[status] ?? status;
 }
 
 function statusColor(status: string) {
