@@ -365,18 +365,14 @@ function VehiculosPageInner() {
                     style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8,
                       background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0,
                       scrollSnapAlign:"start" }}>
-                    <div style={{ width:56, height:56, borderRadius:"50%",
-                      background: isTodas ? accent : "#dde5f0",
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                      filter: shadow, transform: tf,
-                      transition:"all 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}>
-                      <svg width={24} height={24} viewBox="0 0 24 24" fill="none"
-                        stroke={isTodas ? "#fff" : "#7a8fa6"} strokeWidth={2}
-                        strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-                      </svg>
-                    </div>
+                    <svg width={52} height={52} viewBox="0 0 52 52" fill="none"
+                      style={{ display:"block", filter: shadow, transform: tf,
+                        transition:"all 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}>
+                      <rect x="6"  y="6"  width="16" height="16" rx="3" fill={isTodas ? accent : "#a0b4cc"}/>
+                      <rect x="30" y="6"  width="16" height="16" rx="3" fill={isTodas ? accent : "#a0b4cc"}/>
+                      <rect x="6"  y="30" width="16" height="16" rx="3" fill={isTodas ? accent : "#a0b4cc"}/>
+                      <rect x="30" y="30" width="16" height="16" rx="3" fill={isTodas ? accent : "#a0b4cc"}/>
+                    </svg>
                     <span style={{ fontSize:10, fontWeight: isTodas ? 700 : 400,
                       color: isTodas ? accent : MID, letterSpacing:0.5 }}>
                       Todas
