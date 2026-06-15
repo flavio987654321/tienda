@@ -44,6 +44,7 @@ export default function AutoMotor() {
   const { products, loadingProducts } = useStorefront();
   const { editMode }  = useEditContext();
   const isPreview     = !!config?.previewFill;
+  const isOwner       = !!config?.isOwner;
   const accent        = config?.colors.accent ?? "#e8a020";
   const currency      = config?.currency ?? "ARS";
   const storeName     = config?.storeName ?? "AUTO MOTOR";
@@ -182,9 +183,9 @@ export default function AutoMotor() {
         <div style={{ maxWidth:1200, margin:"0 auto", height:NAV_H,
           display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:6,
-            fontWeight:900, fontSize:15, letterSpacing:4, textTransform:"uppercase", color: accent }}>
+            fontWeight:900, fontSize:15, letterSpacing:4, textTransform:"uppercase", color: navText }}>
             <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
-            <VerifiedIconButton isVerified={config?.isVerified} info={config?.verifiedInfo} />
+            <VerifiedIconButton isVerified={config?.isVerified} info={config?.verifiedInfo} color={navText} />
           </div>
           <div className="am-nav-links" style={{ display:"flex", gap:32, alignItems:"center" }}>
             {[["Catálogo","catálogo"],["Servicios","servicios"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([lbl,id]) => (
@@ -538,7 +539,7 @@ export default function AutoMotor() {
                 {label}
               </a>
             ))}
-            {!editMode && (
+            {!isOwner && (
               <button onClick={() => setShowReport(true)}
                 style={{ fontSize:10, color:ftMid, opacity:0.45, background:"none", border:"none",
                   cursor:"pointer", padding:0, letterSpacing:0.5 }}

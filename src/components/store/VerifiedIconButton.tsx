@@ -16,9 +16,11 @@ export type VerifiedInfo = {
 export default function VerifiedIconButton({
   isVerified,
   info,
+  color,
 }: {
   isVerified?: boolean;
   info?: VerifiedInfo;
+  color?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -66,7 +68,7 @@ export default function VerifiedIconButton({
           height="16"
           viewBox="0 0 24 24"
           fill="none"
-          stroke={isVerified ? "#2563eb" : "#d1d5db"}
+          stroke={isVerified ? (color ?? "#2563eb") : (color ? `${color}55` : "#d1d5db")}
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
