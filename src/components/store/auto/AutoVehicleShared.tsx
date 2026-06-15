@@ -155,11 +155,11 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
 
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           <div className="am-modal-body" style={{ display: "grid" }}>
-            <div style={{ background: "#f0f0f0" }}>
+            <div style={{ background: "#ffffff" }}>
               <div className="am-img-wrap" style={{ display: "flex" }}>
                 {imgs.length > 1 && (
                   <div className="am-img-thumbs" style={{ display: "flex", gap: 4,
-                    background: "#e4e4e4", flexShrink: 0 }}>
+                    background: "#f0f0f0", flexShrink: 0 }}>
                     {imgs.map((src, i) => (
                       <button key={i} onClick={() => { setImgIdx(i); setMousePos(null); }}
                         style={{ flexShrink: 0, width: 68, height: 52, padding: 0, border: "none",
@@ -184,7 +184,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                   onMouseLeave={() => setMousePos(null)}
                   {...imgSwipe}>
                   <img src={imgs[imgIdx]} alt={product.name}
-                    style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", cursor: isTouch ? "zoom-in" : undefined, background: "#f0f0f0" }}
+                    style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", cursor: isTouch ? "zoom-in" : undefined, background: "#ffffff" }}
                     onClick={() => { if (isTouch) setLightboxSrc(imgs[imgIdx]); }} />
                   {mousePos && (
                     <div style={{
@@ -413,7 +413,7 @@ export function VehicleCard({ product, accent, currency, theme = "light", onClic
       <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden",
         background: D ? "#111" : "#f5f5f5" }}>
         <img src={img} alt={product.name}
-          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: D ? "#111" : "#f5f5f5" }}
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: D ? "#111" : "#ffffff" }}
           onError={e => { (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=75"; }} />
         {product.badge && (
           <div style={{ position: "absolute", top: 10, left: 10,

@@ -346,25 +346,26 @@ function VehiculosPageInner() {
             <div className="st-scroll" style={{ display:"flex", gap:18, overflowX:"auto",
               paddingBottom:8, paddingTop:8, WebkitOverflowScrolling:"touch" as any }}>
               {/* Chip "Todas" */}
+              {/* Chip "Todas" — círculo de color con drop-shadow flotante */}
               {(() => {
                 const isTodas = activeMarca === "Todas";
                 const isHov   = hoveredMarca === "__todas__";
+                const shadow  = isTodas
+                  ? `drop-shadow(0 8px 20px ${accent}80) drop-shadow(0 2px 6px rgba(0,0,0,0.18))`
+                  : isHov
+                    ? "drop-shadow(0 10px 22px rgba(0,0,0,0.22)) drop-shadow(0 3px 8px rgba(0,0,0,0.12))"
+                    : "drop-shadow(0 5px 14px rgba(0,0,0,0.16)) drop-shadow(0 1px 3px rgba(0,0,0,0.08))";
+                const tf = isTodas ? "scale(1.15) translateY(-5px)" : isHov ? "translateY(-4px)" : "translateY(0)";
                 return (
                   <button className="brand-chip" onClick={() => setActiveMarca("Todas")}
                     onMouseEnter={() => setHoveredMarca("__todas__")}
                     onMouseLeave={() => setHoveredMarca(null)}
                     style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8,
                       background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0 }}>
-                    <div style={{ width:62, height:62, borderRadius:16,
-                      background: isTodas ? accent : "#e8eef7",
+                    <div style={{ width:56, height:56, borderRadius:"50%",
+                      background: isTodas ? accent : "#dde5f0",
                       display:"flex", alignItems:"center", justifyContent:"center",
-                      boxShadow: isTodas
-                        ? `0 0 0 2.5px ${accent}, 0 10px 28px ${accent}50`
-                        : isHov
-                          ? "0 10px 28px rgba(0,0,0,0.18), 0 3px 8px rgba(0,0,0,0.10)"
-                          : "0 4px 16px rgba(0,0,0,0.11), 0 1px 4px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.6)",
-                      transform: isTodas ? "scale(1.1) translateY(-4px)"
-                        : isHov ? "translateY(-4px)" : "translateY(0)",
+                      filter: shadow, transform: tf,
                       transition:"all 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}>
                       <svg width={24} height={24} viewBox="0 0 24 24" fill="none"
                         stroke={isTodas ? "#fff" : "#7a8fa6"} strokeWidth={2}
@@ -382,10 +383,16 @@ function VehiculosPageInner() {
               })()}
 
               {marcas.map(marca => {
-                const bc     = getBrandStyle(marca, accent);
+                const bc      = getBrandStyle(marca, accent);
                 const isActive = activeMarca === marca;
-                const abbr   = brandAbbr(marca);
-                const isHov  = hoveredMarca === marca;
+                const abbr    = brandAbbr(marca);
+                const isHov   = hoveredMarca === marca;
+                const shadow  = isActive
+                  ? `drop-shadow(0 8px 22px ${accent}90) drop-shadow(0 2px 6px rgba(0,0,0,0.18))`
+                  : isHov
+                    ? "drop-shadow(0 10px 22px rgba(0,0,0,0.22)) drop-shadow(0 3px 8px rgba(0,0,0,0.12))"
+                    : "drop-shadow(0 5px 14px rgba(0,0,0,0.16)) drop-shadow(0 1px 3px rgba(0,0,0,0.08))";
+                const tf = isActive ? "scale(1.15) translateY(-5px)" : isHov ? "translateY(-4px)" : "translateY(0)";
                 return (
                   <button key={marca} className="brand-chip"
                     onClick={() => setActiveMarca(isActive ? "Todas" : marca)}
@@ -393,28 +400,25 @@ function VehiculosPageInner() {
                     onMouseLeave={() => setHoveredMarca(null)}
                     style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8,
                       background:"none", border:"none", cursor:"pointer", flexShrink:0, padding:0 }}>
-                    <div style={{ width:62, height:62, borderRadius:16,
-                      background: imgErrors[marca] ? bc.bg : "#ffffff",
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                      boxShadow: isActive
-                        ? `0 0 0 2.5px ${accent}, 0 10px 28px ${accent}50`
-                        : isHov
-                          ? "0 10px 28px rgba(0,0,0,0.18), 0 3px 8px rgba(0,0,0,0.10)"
-                          : "0 4px 16px rgba(0,0,0,0.11), 0 1px 4px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.8)",
-                      transform: isActive ? "scale(1.1) translateY(-4px)"
-                        : isHov ? "translateY(-4px)" : "translateY(0)",
-                      transition:"all 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}>
-                      {imgErrors[marca] ? (
+                    {imgErrors[marca] ? (
+                      /* Fallback: círculo de color flotante */
+                      <div style={{ width:56, height:56, borderRadius:"50%", background:bc.bg,
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        filter: shadow, transform: tf,
+                        transition:"all 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}>
                         <span style={{ fontSize:13, fontWeight:900, color:bc.text,
                           letterSpacing:0.5, lineHeight:1 }}>{abbr}</span>
-                      ) : (
-                        <img src={getBrandLogoUrl(marca)} alt={marca}
-                          width={38} height={38}
-                          style={{ objectFit:"contain", display:"block" }}
-                          onError={() => setImgErrors(prev => ({...prev, [marca]: true}))}
-                        />
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      /* Logo flotando sin fondo — drop-shadow sigue el contorno */
+                      <img src={getBrandLogoUrl(marca)} alt={marca}
+                        width={56} height={56}
+                        style={{ objectFit:"contain", display:"block", borderRadius:10,
+                          filter: shadow, transform: tf,
+                          transition:"all 0.22s cubic-bezier(0.34,1.56,0.64,1)" }}
+                        onError={() => setImgErrors(prev => ({...prev, [marca]: true}))}
+                      />
+                    )}
                     <span style={{ fontSize:10, fontWeight: isActive ? 700 : 400,
                       color: isActive ? accent : MID, letterSpacing:0.3,
                       maxWidth:68, overflow:"hidden", textOverflow:"ellipsis",
