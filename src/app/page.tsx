@@ -8,7 +8,9 @@ import {
   ArrowRight, X, Store, Users, TrendingUp, Wallet, Truck, CheckCircle,
   ShoppingBag, Star, Zap, Shield, Send, MessageCircle, Phone, Mail,
   Package, Heart, ShoppingCart, Globe, Eye, ChevronRight, Menu, MapPin,
+  BadgeCheck, Shirt, Car, Monitor, Home, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, LayoutGrid,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 /* ─── 3D Tilt Card ─── */
 function Card3D({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -157,6 +159,8 @@ type RealStore = {
   categories: string[];
   coverImg: string | null;
   heroImg: string | null;
+  isVerified: boolean;
+  tipoTienda: string;
   updatedAt: number;
 };
 
@@ -312,6 +316,20 @@ const TESTIMONIALS = [
 ];
 
 const SLOTS = 6;
+
+const TYPE_ICONS: Record<string, LucideIcon> = {
+  TODAS:     LayoutGrid,
+  ROPA:      Shirt,
+  AUTOS:     Car,
+  TECH:      Monitor,
+  HOGAR:     Home,
+  ALIMENTOS: Utensils,
+  BELLEZA:   Sparkles,
+  DEPORTE:   Dumbbell,
+  MASCOTAS:  PawPrint,
+  LIBROS:    BookOpen,
+  GENERAL:   Store,
+};
 
 export default function Home() {
   const [contact, setContact] = useState(false);
@@ -777,11 +795,8 @@ export default function Home() {
                 <motion.div key={i} variants={fadeUp}>
                   <Card3D>
                     {store ? (
-                      <Link href={`/tienda/${store.slug}`} className="block bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
-                        <div className="relative overflow-hidden h-48" style={{ backgroundColor: store.primaryColor + "18" }}>
-                          {/* Iframe mostrando la tienda real escalada al 25%.
-                              left: calc(50% - 160px) = center del contenedor menos la mitad del ancho visual (1280*0.25/2).
-                              top: -20px skips ~80px of page (navbar) en coords del iframe. */}
+                      <Link href={`/tienda/${store.slug}`} className="block bg-white rounded-2xl overflow-hidden border border-black/[0.06] shadow-sm hover:shadow-xl transition-all duration-300 group">
+                        <div className="relative overflow-hidden h-44 bg-gray-50">
                           <iframe
                             src={`/tienda/${store.slug}`}
                             className="absolute border-0 pointer-events-none"
@@ -798,25 +813,42 @@ export default function Home() {
                             aria-hidden="true"
                             title=""
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                          <div className="absolute bottom-3 left-3">
-                            <span className="bg-white/20 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full border border-white/20">
-                              {store.categories[0] ?? "General"}
-                            </span>
-                          </div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+                          {store.isVerified && (
+                            <div className="absolute top-2.5 right-2.5">
+                              <div className="flex items-center gap-1 bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow">
+                                <BadgeCheck className="h-3 w-3" />
+                                Verificado
+                              </div>
+                            </div>
+                          )}
+                          {(() => {
+                            const StoreIcon = TYPE_ICONS[store.tipoTienda];
+                            return StoreIcon ? (
+                              <div className="absolute top-2.5 left-2.5 w-7 h-7 rounded-lg bg-white/90 backdrop-blur-sm border border-black/5 shadow-sm flex items-center justify-center">
+                                <StoreIcon className="h-3.5 w-3.5 text-gray-600" />
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
-                        <div className="p-5">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-bold text-gray-900">{store.name}</h3>
-                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: store.primaryColor }} />
+                        <div className="h-0.5" style={{ backgroundColor: store.primaryColor + "80" }} />
+                        <div className="p-4">
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <h3 className="font-bold text-gray-900 text-sm leading-snug truncate group-hover:text-indigo-600 transition-colors">
+                              {store.name}
+                            </h3>
+                            <div className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: store.primaryColor }} />
                           </div>
                           {store.description && (
-                            <p className="text-sm text-gray-500 mb-3 line-clamp-2 leading-snug">{store.description}</p>
+                            <p className="text-xs text-gray-400 line-clamp-1 mb-3">{store.description}</p>
                           )}
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500">{store.totalProducts} productos</span>
-                            <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: store.primaryColor }}>
-                              <Eye className="h-4 w-4" /> Ver tienda
+                          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                            <span className="text-[11px] text-gray-400 font-medium">
+                              {store.totalProducts} producto{store.totalProducts !== 1 ? "s" : ""}
+                            </span>
+                            <span className="flex items-center gap-1 text-[11px] font-bold text-gray-400 group-hover:text-indigo-600 transition-colors">
+                              <Eye className="h-3.5 w-3.5" />
+                              Ver tienda
                             </span>
                           </div>
                         </div>
