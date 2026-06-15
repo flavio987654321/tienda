@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { STORE_TYPES } from "@/lib/storeTypes";
 import { Loader2, X, Check, AlertTriangle, Trash2, Download } from "lucide-react";
+import { TOUR_STORAGE_KEY } from "@/components/TourGuide";
 
 export default function StoreTypeModal({
   isEditing = false,
@@ -68,6 +69,8 @@ export default function StoreTypeModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newType: selected }),
       });
+      // Resetear tour para que aparezca de nuevo con el nuevo tipo
+      localStorage.removeItem(TOUR_STORAGE_KEY);
     } else {
       // Primera configuración o mismo tipo
       const configRes = await fetch("/api/configuracion");
