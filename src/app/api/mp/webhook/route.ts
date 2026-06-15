@@ -129,6 +129,7 @@ export async function POST(req: NextRequest) {
       });
     });
 
+    console.log(`[mp/webhook] pago confirmado — paymentId=${paymentId} orderId=${orderId}`);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("MP webhook error:", err);

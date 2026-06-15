@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { PushBellProvider } from "@/contexts/PushBellContext";
 import StorePushBanner from "./StorePushBanner";
 import StorefrontTemplateRenderer from "./StorefrontTemplateRenderer";
+import StorefrontPaymentSuccess from "./StorefrontPaymentSuccess";
 import { migrateStoreSubscription } from "@/lib/push-client";
 import type { StoreConfig } from "@/types/store-config";
 
@@ -46,6 +47,7 @@ export default function StoreShell({ config, storeId, storeName, storeSlug, show
     <PushBellProvider storeId={storeId} storeSlug={storeSlug} enabled={showPushBell}>
       {showPushBell && <StorePushBanner storeName={storeName} />}
       <StorefrontTemplateRenderer config={config} />
+      <StorefrontPaymentSuccess />
     </PushBellProvider>
   );
 }

@@ -46,18 +46,33 @@ export async function POST(req: NextRequest) {
     quantity: item.quantity,
   }));
 
-  const pref = await createCheckoutPreference({
-    sellerAccessToken: sellerToken,
-    items,
-    marketplaceFee,
-    externalReference: order.id,
-    backUrls: {
-      success: `${APP_URL}/tienda/${order.store.slug}?pago=ok&orden=${order.id}`,
-      failure: `${APP_URL}/tienda/${order.store.slug}?pago=error&orden=${order.id}`,
-      pending: `${APP_URL}/tienda/${order.store.slug}?pago=pendiente&orden=${order.id}`,
-    },
-    notificationUrl: `${APP_URL}/api/mp/webhook`,
-  });
+  const MP_TIMEOUT_MS = 10_000;
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error("MercadoPago no respondió (timeout 10s)")), MP_TIMEOUT_MS)
+  );
+
+  let pref: Awaited<ReturnType<typeof createCheckoutPreference>>;
+  try {
+    pref = await Promise.race([
+      createCheckoutPreference({
+        sellerAccessToken: sellerToken,
+        items,
+        marketplaceFee,
+        externalReference: order.id,
+        backUrls: {
+          success: `${APP_URL}/tienda/${order.store.slug}?pago=ok&orden=${order.id}`,
+          failure: `${APP_URL}/tienda/${order.store.slug}?pago=error&orden=${order.id}`,
+          pending: `${APP_URL}/tienda/${order.store.slug}?pago=pendiente&orden=${order.id}`,
+        },
+        notificationUrl: `${APP_URL}/api/mp/webhook`,
+      }),
+      timeout,
+    ]);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error al crear preferencia de pago";
+    console.error("[mp/checkout] error:", msg);
+    return NextResponse.json({ error: msg }, { status: 502 });
+  }
 
   return NextResponse.json({
     preferenceId: pref.id,
