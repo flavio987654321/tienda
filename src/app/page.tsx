@@ -8,7 +8,7 @@ import {
   ArrowRight, X, Store, Users, TrendingUp, Wallet, Truck, CheckCircle,
   ShoppingBag, Star, Zap, Shield, Send, MessageCircle, Phone, Mail,
   Package, Heart, ShoppingCart, Globe, Eye, ChevronRight, Menu, MapPin,
-  BadgeCheck, Shirt, Car, Monitor, Home, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, LayoutGrid,
+  BadgeCheck, Shirt, Car, Monitor, Home as HomeIcon, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, LayoutGrid,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -322,7 +322,7 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
   ROPA:      Shirt,
   AUTOS:     Car,
   TECH:      Monitor,
-  HOGAR:     Home,
+  HOGAR:     HomeIcon,
   ALIMENTOS: Utensils,
   BELLEZA:   Sparkles,
   DEPORTE:   Dumbbell,
