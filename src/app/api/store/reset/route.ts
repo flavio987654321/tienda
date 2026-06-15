@@ -40,10 +40,28 @@ export async function POST(req: Request) {
     await tx.commission.deleteMany({ where: { affiliate: { storeId: store.id } } });
     await tx.walletWithdrawal.deleteMany({ where: { wallet: { affiliate: { storeId: store.id } } } });
     await tx.wallet.deleteMany({ where: { affiliate: { storeId: store.id } } });
-    // ── Actualizar tipo de tienda ──
+    // ── Actualizar tipo + resetear template y contenido visual ──
+    // Se conservan: logo, colores, fuente, redes sociales, MercadoPago, verificación
     await tx.store.update({
       where: { id: store.id },
-      data: { tipoTienda: newType, tipoTiendaConfigurado: true },
+      data: {
+        tipoTienda: newType,
+        tipoTiendaConfigurado: true,
+        // Template y config del editor → arrancar de cero (los templates son tipo-específicos)
+        templateId: "default",
+        storeConfig: "{}",
+        previewImage: null,
+        // Bloques de página y nav → limpiar (estaban pensados para el tipo anterior)
+        pageBlocks: "[]",
+        navLinks: "[]",
+        // Anuncio → limpiar
+        announcementBar: null,
+        // Layout de productos → volver al default
+        productLayout: "grid3",
+        heroStyle: "full",
+        // No publicar hasta que el nuevo tipo esté configurado
+        isPublished: false,
+      },
     });
   });
 

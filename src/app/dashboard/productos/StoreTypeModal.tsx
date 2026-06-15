@@ -137,6 +137,7 @@ export default function StoreTypeModal({
                 "Todas las consultas (leads)",
                 "Todos los cupones de descuento",
                 "Las reseñas de productos",
+                "La plantilla y configuración del diseño",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2.5 text-sm text-gray-600">
                   <Trash2 className="h-3.5 w-3.5 text-red-400 shrink-0" />
@@ -145,7 +146,7 @@ export default function StoreTypeModal({
               ))}
             </ul>
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 font-medium">
-              Esta acción no se puede deshacer. Tu configuración, plantilla, logo y afiliados se conservan.
+              Esta acción no se puede deshacer. Se conservan: logo, colores, redes sociales, conexión MercadoPago y afiliados.
             </div>
 
             {/* Exportar antes de borrar */}
