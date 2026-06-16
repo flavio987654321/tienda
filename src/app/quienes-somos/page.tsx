@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import {
   ShoppingBag, Users, Wallet, TrendingUp, Heart, Briefcase,
   ArrowRight, CheckCircle, Globe, Shield, MessageCircle,
-  Home, Share2, DollarSign, Zap, Store, ShoppingCart, Menu, X,
+  Home, Share2, DollarSign, Zap, Store, ShoppingCart, Menu, X, Package,
 } from "lucide-react";
 
 const fadeUp = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, transition: { duration: 0.55 } } };
@@ -43,10 +43,10 @@ export default function QuienesSomosPage() {
           <div className="hidden md:flex items-center gap-6">
             <Link href="/#tiendas" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Tiendas</Link>
             <Link href="/#como-funciona" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Cómo funciona</Link>
-            <Link href="/quienes-somos" className="text-white text-sm font-semibold transition-colors">Quiénes somos</Link>
+            <Link href="/quienes-somos" className="text-white text-sm font-medium transition-colors">Quiénes somos</Link>
             <Link href="/precios" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Precios</Link>
-            <Link href="/seguimiento" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Seguimiento</Link>
-            <Link href="/#contacto" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Contacto</Link>
+            <Link href="/seguimiento" className="text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5"><Package className="h-4 w-4" />Seguimiento</Link>
+            <Link href="/#contacto" className="text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5"><MessageCircle className="h-4 w-4" />Contacto</Link>
             <div className="flex items-center gap-3 ml-2">
               <Link href="/login" className="text-gray-300 hover:text-white text-sm font-medium px-5 py-2.5 rounded-xl border border-white/10 hover:border-white/25 transition-all">
                 Iniciar sesión

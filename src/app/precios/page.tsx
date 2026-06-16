@@ -4,7 +4,7 @@ import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Mail, X, BadgeCheck, Menu } from "lucide-react";
+import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Mail, X, BadgeCheck, Menu, Package, MessageCircle } from "lucide-react";
 import PaymentModal from "@/components/subscription/PaymentModal";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -137,9 +137,9 @@ function PreciosContent() {
             <Link href="/#tiendas" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Tiendas</Link>
             <Link href="/#como-funciona" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Cómo funciona</Link>
             <Link href="/quienes-somos" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Quiénes somos</Link>
-            <Link href="/precios" className="text-white text-sm font-semibold transition-colors">Precios</Link>
-            <Link href="/seguimiento" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Seguimiento</Link>
-            <Link href="/#contacto" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Contacto</Link>
+            <Link href="/precios" className="text-white text-sm font-medium transition-colors">Precios</Link>
+            <Link href="/seguimiento" className="text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5"><Package className="h-4 w-4" />Seguimiento</Link>
+            <Link href="/#contacto" className="text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5"><MessageCircle className="h-4 w-4" />Contacto</Link>
             <div className="flex items-center gap-3 ml-2">
               {userName || userSub ? (
                 <>

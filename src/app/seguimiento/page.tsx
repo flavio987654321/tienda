@@ -74,7 +74,7 @@ export default function SeguimientoPage() {
             <Link href="/#como-funciona" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Cómo funciona</Link>
             <Link href="/#quienes-somos" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Quiénes somos</Link>
             <Link href="/precios" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Precios</Link>
-            <Link href="/seguimiento" className="text-white text-sm font-semibold transition-colors">Seguimiento</Link>
+            <Link href="/seguimiento" className="text-white text-sm font-medium transition-colors">Seguimiento</Link>
             <Link href="/#contacto" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Contacto</Link>
           </div>
           <div className="flex items-center gap-3">
