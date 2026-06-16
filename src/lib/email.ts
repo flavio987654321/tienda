@@ -1041,6 +1041,45 @@ export async function sendWithdrawalApprovedEmail({
   });
 }
 
+export async function sendAfiliadoSoporteEmail({
+  userName,
+  userEmail,
+  categoria,
+  asunto,
+  mensaje,
+}: {
+  userName: string;
+  userEmail: string;
+  categoria: string;
+  asunto: string;
+  mensaje: string;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  const adminEmail = process.env.ADMIN_EMAIL ?? process.env.SMTP_USER;
+
+  await transporter.sendMail({
+    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    to: adminEmail,
+    replyTo: userEmail,
+    subject: `🆘 Soporte afiliado: ${asunto}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#4f46e5;border-radius:12px;padding:24px;margin-bottom:24px;">
+          <p style="color:rgba(255,255,255,0.7);font-size:13px;margin:0 0 4px;">Consulta de soporte</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">${escapeHtml(asunto)}</h1>
+        </div>
+        <table style="width:100%;margin-bottom:20px;font-size:14px;">
+          <tr><td style="color:#6b7280;padding:4px 0;width:100px;">Afiliado</td><td style="font-weight:600;">${escapeHtml(userName)}</td></tr>
+          <tr><td style="color:#6b7280;padding:4px 0;">Email</td><td><a href="mailto:${escapeHtml(userEmail)}" style="color:#4f46e5;">${escapeHtml(userEmail)}</a></td></tr>
+          <tr><td style="color:#6b7280;padding:4px 0;">Categoría</td><td style="font-weight:600;">${escapeHtml(categoria)}</td></tr>
+        </table>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;font-size:14px;line-height:1.6;color:#374151;white-space:pre-wrap;">${escapeHtml(mensaje)}</div>
+        <p style="color:#9ca3af;font-size:12px;margin-top:16px;">Respondé directamente a este email para contestarle al afiliado.</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendStoreOfflineEmail({
   affiliateEmail,
   affiliateName,

@@ -12,7 +12,7 @@ import {
   XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
   Star, Package, ArrowRight, ArrowLeft, ChevronLeft, ChevronRight, Eye, Edit3, MapPin, Phone, Save,
   DollarSign, ShoppingCart, Award, FileText, UploadCloud, Trash2, Download, Search,
-  Moon, Sun, Menu, X, BarChart3, MessageSquare, Target, Trophy, LayoutGrid, List,
+  Moon, Sun, Menu, X, BarChart3, MessageSquare, Target, Trophy, LayoutGrid, List, LifeBuoy,
 } from "lucide-react";
 
 const IgIconLg = () => <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>;
@@ -1207,6 +1207,9 @@ export default function VendedorasClient() {
             <Link href="/afiliados/ranking" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
               <Trophy className="h-4 w-4" /> Ranking
             </Link>
+            <Link href="/afiliados/soporte" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
+              <LifeBuoy className="h-4 w-4" /> Soporte
+            </Link>
             <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl">
               <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-xs font-bold text-white">
                 {userInitial}
@@ -1315,6 +1318,10 @@ export default function VendedorasClient() {
                     <Link href="/afiliados/ranking" onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <Trophy className="h-4 w-4 text-amber-500" /> Ranking
+                    </Link>
+                    <Link href="/afiliados/soporte" onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                      <LifeBuoy className="h-4 w-4 text-indigo-500" /> Soporte
                     </Link>
                     {mounted && (
                       <button
