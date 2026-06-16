@@ -591,57 +591,60 @@ function RegistroContent() {
                 }
               </div>
 
+              <div className="space-y-3 pt-1">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={ageConfirmed}
+                    onChange={(e) => { setAgeConfirmed(e.target.checked); setError(""); }}
+                    className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 accent-indigo-500 cursor-pointer flex-shrink-0"
+                  />
+                  <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-400 transition-colors">
+                    Confirmo que tengo <span className="text-gray-300 font-semibold">18 años o más</span>. Entiendo que el uso de esta plataforma está reservado para mayores de edad.
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => { setTermsAccepted(e.target.checked); setError(""); }}
+                    className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 accent-indigo-500 cursor-pointer flex-shrink-0"
+                  />
+                  <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-400 transition-colors">
+                    Leí y acepto los{" "}
+                    <Link
+                      href={`/terminos?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`}
+                      className="text-gray-400 underline hover:text-white transition-colors"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      términos y condiciones
+                    </Link>
+                    {" "}y la{" "}
+                    <Link
+                      href={`/privacidad?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`}
+                      className="text-gray-400 underline hover:text-white transition-colors"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      política de privacidad
+                    </Link>
+                    . Entiendo que mis datos serán tratados conforme a la Ley 25.326.
+                  </span>
+                </label>
+              </div>
+
               <button
-                type="submit" disabled={loading}
-                className={`w-full text-white py-4 rounded-2xl font-bold text-base transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] ${colors.btn}`}
+                type="submit"
+                disabled={loading || !ageConfirmed || !termsAccepted}
+                className={`w-full text-white py-4 rounded-2xl font-bold text-base transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] disabled:hover:scale-100 ${colors.btn}`}
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                 {loading ? "Creando cuenta..." : selected.cta}
               </button>
-
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={ageConfirmed}
-                  onChange={(e) => { setAgeConfirmed(e.target.checked); setError(""); }}
-                  className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 accent-indigo-500 cursor-pointer flex-shrink-0"
-                />
-                <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-400 transition-colors">
-                  Confirmo que tengo <span className="text-gray-300 font-semibold">18 años o más</span>. Entiendo que el uso de esta plataforma está reservado para mayores de edad.
-                </span>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={(e) => { setTermsAccepted(e.target.checked); setError(""); }}
-                  className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 accent-indigo-500 cursor-pointer flex-shrink-0"
-                />
-                <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-400 transition-colors">
-                  Leí y acepto los{" "}
-                  <Link
-                    href={`/terminos?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`}
-                    className="text-gray-400 underline hover:text-white transition-colors"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    términos y condiciones
-                  </Link>
-                  {" "}y la{" "}
-                  <Link
-                    href={`/privacidad?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`}
-                    className="text-gray-400 underline hover:text-white transition-colors"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    política de privacidad
-                  </Link>
-                  . Entiendo que mis datos serán tratados conforme a la Ley 25.326.
-                </span>
-              </label>
             </form>
 
             <p className="text-center text-sm text-gray-600 mt-7">

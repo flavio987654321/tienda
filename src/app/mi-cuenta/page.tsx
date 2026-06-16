@@ -23,9 +23,9 @@ import {
   XCircle,
   LogOut,
   Camera,
-  ThumbsUp,
-  ThumbsDown,
   Store,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -53,13 +53,7 @@ type FollowedStore = {
   id: string;
   storeId: string;
   createdAt: string;
-  store: {
-    id: string;
-    name: string;
-    slug: string;
-    logo: string | null;
-    primaryColor: string;
-  };
+  store: { id: string; name: string; slug: string; logo: string | null; primaryColor: string };
 };
 
 type Favorite = {
@@ -108,11 +102,11 @@ type Profile = {
 
 function statusInfo(status: string) {
   switch (status) {
-    case "CONFIRMED": return { label: "Confirmado", icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" };
-    case "SHIPPED": return { label: "En camino", icon: Truck, color: "text-blue-600", bg: "bg-blue-50" };
-    case "DELIVERED": return { label: "Entregado", icon: CheckCircle, color: "text-indigo-600", bg: "bg-indigo-50" };
-    case "CANCELLED": return { label: "Cancelado", icon: XCircle, color: "text-red-600", bg: "bg-red-50" };
-    default: return { label: "Pendiente", icon: Clock, color: "text-yellow-600", bg: "bg-yellow-50" };
+    case "CONFIRMED": return { label: "Confirmado", icon: CheckCircle, color: "text-emerald-700", bg: "bg-emerald-50", accent: "#10b981" };
+    case "SHIPPED":   return { label: "En camino",  icon: Truck,       color: "text-blue-700",   bg: "bg-blue-50",   accent: "#3b82f6" };
+    case "DELIVERED": return { label: "Entregado",  icon: CheckCircle, color: "text-violet-700", bg: "bg-violet-50", accent: "#7c3aed" };
+    case "CANCELLED": return { label: "Cancelado",  icon: XCircle,     color: "text-red-700",    bg: "bg-red-50",    accent: "#ef4444" };
+    default:          return { label: "Pendiente",  icon: Clock,       color: "text-amber-700",  bg: "bg-amber-50",  accent: "#f59e0b" };
   }
 }
 
@@ -120,23 +114,122 @@ function money(n: number) {
   return `$${n.toLocaleString("es-AR")}`;
 }
 
-function Stars({ rating, interactive = false, onRate }: { rating: number; interactive?: boolean; onRate?: (r: number) => void }) {
+function parseImages(raw: string): string[] {
+  try { return JSON.parse(raw); } catch { return []; }
+}
+
+function Stars({
+  rating,
+  interactive = false,
+  onRate,
+  size = "md",
+}: {
+  rating: number;
+  interactive?: boolean;
+  onRate?: (r: number) => void;
+  size?: "sm" | "md" | "lg";
+}) {
   const [hover, setHover] = useState(0);
+  const sz = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-6 w-6" : "h-5 w-5";
   return (
     <div className="flex gap-0.5">
       {[1, 2, 3, 4, 5].map((s) => (
         <Star
           key={s}
-          className={`h-4 w-4 transition-colors ${
+          className={`${sz} transition-all duration-100 ${
             s <= (interactive ? hover || rating : rating)
-              ? "fill-yellow-400 text-yellow-400"
-              : "text-gray-300"
-          } ${interactive ? "cursor-pointer" : ""}`}
+              ? "fill-amber-400 text-amber-400"
+              : "text-gray-200"
+          } ${interactive ? "cursor-pointer hover:scale-125" : ""}`}
           onMouseEnter={() => interactive && setHover(s)}
           onMouseLeave={() => interactive && setHover(0)}
           onClick={() => interactive && onRate?.(s)}
         />
       ))}
+    </div>
+  );
+}
+
+function Skeleton({ className }: { className?: string }) {
+  return <div className={`animate-pulse bg-gray-100 rounded-xl ${className}`} />;
+}
+
+function TabSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+          <div className="flex gap-3 items-center">
+            <Skeleton className="h-12 w-12 shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-4/5" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({
+  icon: Icon,
+  title,
+  desc,
+  href,
+  cta,
+  color = "indigo",
+}: {
+  icon: React.ElementType;
+  title: string;
+  desc: string;
+  href?: string;
+  cta?: string;
+  color?: "indigo" | "rose" | "amber" | "violet" | "emerald";
+}) {
+  const styles = {
+    indigo: "bg-indigo-50 text-indigo-400",
+    rose:   "bg-rose-50 text-rose-400",
+    amber:  "bg-amber-50 text-amber-400",
+    violet: "bg-violet-50 text-violet-400",
+    emerald:"bg-emerald-50 text-emerald-400",
+  };
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
+      <div className={`inline-flex items-center justify-center h-16 w-16 rounded-2xl ${styles[color]} mb-4`}>
+        <Icon className="h-8 w-8" />
+      </div>
+      <h3 className="font-bold text-gray-900 mb-1">{title}</h3>
+      <p className="text-sm text-gray-400 mb-5 max-w-xs mx-auto">{desc}</p>
+      {href && cta && (
+        <Link
+          href={href}
+          className="inline-flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-500 transition-colors shadow-sm shadow-indigo-200"
+        >
+          {cta} <ChevronRight className="h-4 w-4" />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="bg-white rounded-2xl border border-red-100 p-14 text-center">
+      <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-red-50 text-red-400 mb-4">
+        <AlertCircle className="h-7 w-7" />
+      </div>
+      <h3 className="font-bold text-gray-900 mb-1">No pudimos cargar esta sección</h3>
+      <p className="text-sm text-gray-400 mb-4">Revisá tu conexión e intentá de nuevo.</p>
+      <button
+        onClick={onRetry}
+        className="inline-flex items-center gap-2 border border-gray-200 text-gray-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors"
+      >
+        <RefreshCw className="h-4 w-4" /> Reintentar
+      </button>
     </div>
   );
 }
@@ -154,24 +247,28 @@ export default function MiCuentaPage() {
   const [submittedReviews, setSubmittedReviews] = useState<SubmittedReview[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: number; comment: string }>>({});
   const [submittingReview, setSubmittingReview] = useState<string | null>(null);
-  const [resenasFetched, setResenasFetched] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const fetchedTabs = useRef<Set<Tab>>(new Set());
+  const [tabLoading, setTabLoading] = useState<Partial<Record<Tab, boolean>>>({});
+  const [tabError, setTabError] = useState<Partial<Record<Tab, boolean>>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", bio: "", city: "", phone: "", instagramHandle: "" });
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/mi-cuenta/perfil")
       .then((r) => {
         if (r.status === 401) { window.location.href = "/login"; return null; }
+        if (!r.ok) throw new Error();
         return r.json();
       })
       .then((data) => {
         if (!data) return;
-        if (data.role === "ADMIN") { window.location.href = "/admin"; return; }
         setProfile(data);
         setEditForm({
           name: data.name || "",
@@ -181,94 +278,125 @@ export default function MiCuentaPage() {
           instagramHandle: data.instagramHandle || "",
         });
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    if (tab === "pedidos" && orders.length === 0) {
-      fetch("/api/mi-cuenta/pedidos").then((r) => r.json()).then(setOrders);
+  async function fetchTabData(t: Tab) {
+    if (fetchedTabs.current.has(t)) return;
+    fetchedTabs.current.add(t);
+    setTabLoading((prev) => ({ ...prev, [t]: true }));
+    setTabError((prev) => ({ ...prev, [t]: false }));
+    try {
+      if (t === "pedidos") {
+        const r = await fetch("/api/mi-cuenta/pedidos");
+        if (!r.ok) throw new Error();
+        setOrders(await r.json());
+      } else if (t === "favoritos") {
+        const r = await fetch("/api/favoritos");
+        if (!r.ok) throw new Error();
+        setFavorites(await r.json());
+      } else if (t === "tiendas") {
+        const r = await fetch("/api/mi-cuenta/tiendas-seguidas");
+        if (!r.ok) throw new Error();
+        setFollowedStores(await r.json());
+      } else if (t === "resenas") {
+        const r = await fetch("/api/mi-cuenta/resenas");
+        if (!r.ok) throw new Error();
+        const data = await r.json();
+        setPendingReviews(data.pending || []);
+        setSubmittedReviews(data.submitted || []);
+      }
+    } catch {
+      fetchedTabs.current.delete(t);
+      setTabError((prev) => ({ ...prev, [t]: true }));
+    } finally {
+      setTabLoading((prev) => ({ ...prev, [t]: false }));
     }
-    if (tab === "favoritos" && favorites.length === 0) {
-      fetch("/api/favoritos").then((r) => r.json()).then(setFavorites);
-    }
-    if (tab === "tiendas" && followedStores.length === 0) {
-      fetch("/api/mi-cuenta/tiendas-seguidas").then((r) => r.json()).then(setFollowedStores);
-    }
-    if (tab === "resenas" && !resenasFetched) {
-      setResenasFetched(true);
-      fetch("/api/mi-cuenta/resenas")
-        .then((r) => r.json())
-        .then((data) => {
-          setPendingReviews(data.pending || []);
-          setSubmittedReviews(data.submitted || []);
-        });
-    }
-  }, [tab]);
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!loading) fetchTabData(tab); }, [tab, loading]);
 
   async function saveProfile() {
     setSaving(true);
     setSaveError("");
     setSaveSuccess(false);
-    const res = await fetch("/api/mi-cuenta/perfil", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editForm),
-    });
-    const data = await res.json();
-    if (!res.ok) { setSaveError(data.error || "Error al guardar"); setSaving(false); return; }
-    setProfile((p) => p ? { ...p, ...data } : data);
-    setSaving(false);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    try {
+      const res = await fetch("/api/mi-cuenta/perfil", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (!res.ok) { setSaveError(data.error || "Error al guardar"); return; }
+      setProfile((p) => p ? { ...p, ...data } : data);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch {
+      setSaveError("Error de conexión. Intentá de nuevo.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function uploadPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingPhoto(true);
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
-    const data = await res.json();
-    if (!res.ok) { setUploadingPhoto(false); return; }
-    const imageUrl = data.url;
-    await fetch("/api/mi-cuenta/perfil", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: imageUrl }),
-    });
-    setProfile((p) => p ? { ...p, image: imageUrl } : p);
-    setUploadingPhoto(false);
+    setUploadError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) { setUploadError(data.error || "Error al subir la foto"); return; }
+      await fetch("/api/mi-cuenta/perfil", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: data.url }),
+      });
+      setProfile((p) => p ? { ...p, image: data.url } : p);
+    } catch {
+      setUploadError("Error de conexión.");
+    } finally {
+      setUploadingPhoto(false);
+    }
   }
 
   async function submitReview(productId: string, orderId: string) {
     const draft = reviewDrafts[productId];
     if (!draft?.rating) return;
     setSubmittingReview(productId);
-    const res = await fetch("/api/reviews", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId, orderId, rating: draft.rating, comment: draft.comment || null }),
-    });
-    const data = await res.json();
-    setSubmittingReview(null);
-    if (res.ok) {
+    setReviewError(null);
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, orderId, rating: draft.rating, comment: draft.comment || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setReviewError(res.status === 409 ? "Ya dejaste una reseña para este producto." : (data.error || "Error al publicar la reseña."));
+        return;
+      }
       const pending = pendingReviews.find((p) => p.productId === productId);
       if (pending) {
         setPendingReviews((prev) => prev.filter((x) => x.productId !== productId));
-        setSubmittedReviews((prev) => [
-          {
-            id: data.id,
-            rating: data.rating,
-            comment: data.comment,
-            createdAt: data.createdAt,
-            productId: data.productId,
-            productName: pending.productName,
-            productImages: pending.productImages,
-          },
-          ...prev,
-        ]);
+        setSubmittedReviews((prev) => [{
+          id: data.id,
+          rating: data.rating,
+          comment: data.comment,
+          createdAt: data.createdAt,
+          productId: data.productId,
+          productName: pending.productName,
+          productImages: pending.productImages,
+        }, ...prev]);
       }
+    } catch {
+      setReviewError("Error de conexión. Intentá de nuevo.");
+    } finally {
+      setSubmittingReview(null);
     }
   }
 
@@ -277,40 +405,55 @@ export default function MiCuentaPage() {
     unfollowPendingRef.current = true;
     setUnfollowConfirm(null);
     try {
-      await fetch("/api/store/follow", {
+      const res = await fetch("/api/store/follow", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ storeId }),
       });
-      setFollowedStores((prev) => prev.filter((f) => f.storeId !== storeId));
+      if (res.ok) setFollowedStores((prev) => prev.filter((f) => f.storeId !== storeId));
     } finally {
       unfollowPendingRef.current = false;
     }
   }
 
   async function removeFavorite(productId: string) {
-    await fetch("/api/favoritos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId }) });
     setFavorites((f) => f.filter((fav) => fav.productId !== productId));
+    try {
+      await fetch("/api/favoritos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId }),
+      });
+    } catch { /* optimistic — silently ignored */ }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f6f7fb] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+      <div className="min-h-screen bg-[#f5f4ff] flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-indigo-100 mb-4">
+            <Loader2 className="h-7 w-7 animate-spin text-indigo-500" />
+          </div>
+          <p className="text-sm text-gray-400 font-medium">Cargando tu cuenta...</p>
+        </div>
       </div>
     );
   }
 
-  const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
-    { key: "pedidos", label: "Mis pedidos", icon: Package },
-    { key: "favoritos", label: "Favoritos", icon: Heart },
-    { key: "tiendas", label: "Tiendas que sigo", icon: ThumbsUp },
-    { key: "resenas", label: "Reseñas", icon: Star },
-    { key: "perfil", label: "Mi perfil", icon: User },
+  const tabs: { key: Tab; label: string; icon: React.ElementType; count?: number }[] = [
+    { key: "pedidos",   label: "Pedidos",   icon: Package, count: fetchedTabs.current.has("pedidos")   ? orders.length          : undefined },
+    { key: "favoritos", label: "Favoritos", icon: Heart,   count: fetchedTabs.current.has("favoritos") ? favorites.length        : undefined },
+    { key: "tiendas",   label: "Siguiendo", icon: Store,   count: fetchedTabs.current.has("tiendas")   ? followedStores.length   : undefined },
+    { key: "resenas",   label: "Reseñas",   icon: Star,    count: fetchedTabs.current.has("resenas")   ? submittedReviews.length : undefined },
+    { key: "perfil",    label: "Perfil",    icon: User },
   ];
 
+  const memberSince = profile?.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString("es-AR", { month: "long", year: "numeric" })
+    : null;
+
   return (
-    <div className="min-h-screen bg-[#f6f7fb]">
+    <div className="min-h-screen bg-[#f5f4ff]">
       {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="mx-auto max-w-4xl px-4 py-4 flex items-center justify-between">
@@ -319,7 +462,10 @@ export default function MiCuentaPage() {
             TiendaApps
           </Link>
           <div className="flex items-center gap-3">
-            <Link href="/tiendas" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors">
+            <Link
+              href="/tiendas"
+              className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors shadow-sm shadow-indigo-200"
+            >
               Explorar tiendas
             </Link>
             <button
@@ -327,93 +473,155 @@ export default function MiCuentaPage() {
               className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-red-500 transition-colors"
             >
               <LogOut className="h-4 w-4" />
-              Salir
+              <span className="hidden sm:inline">Salir</span>
             </button>
           </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-4xl px-4 py-8">
-        {/* Perfil card */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
-          <div className="flex items-center gap-4">
-            {/* Avatar con botón de upload */}
-            <div className="relative shrink-0">
-              <div className="h-16 w-16 rounded-2xl bg-indigo-50 flex items-center justify-center overflow-hidden">
-                {profile?.image ? (
-                  <Image src={profile.image} alt={profile.name || ""} width={64} height={64} className="object-cover h-16 w-16" />
-                ) : (
-                  <User className="h-8 w-8 text-indigo-400" />
-                )}
+        {/* Profile card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
+          <div className="h-20 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-400" />
+          <div className="px-6 pb-6">
+            <div className="flex items-end justify-between -mt-10 mb-4">
+              <div className="relative">
+                <div className="h-20 w-20 rounded-2xl bg-white p-1 shadow-lg">
+                  <div className="h-full w-full rounded-xl bg-indigo-50 overflow-hidden flex items-center justify-center">
+                    {profile?.image ? (
+                      <Image
+                        src={profile.image}
+                        alt={profile.name || ""}
+                        width={72}
+                        height={72}
+                        className="object-cover h-full w-full"
+                      />
+                    ) : (
+                      <User className="h-9 w-9 text-indigo-300" />
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-indigo-600 flex items-center justify-center shadow-md hover:bg-indigo-700 transition-colors disabled:opacity-60"
+                  title="Cambiar foto"
+                >
+                  {uploadingPhoto
+                    ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+                    : <Camera className="h-3.5 w-3.5 text-white" />}
+                </button>
+                <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={uploadPhoto} />
               </div>
-              <button
-                onClick={() => photoInputRef.current?.click()}
-                disabled={uploadingPhoto}
-                className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-indigo-600 flex items-center justify-center shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                title="Cambiar foto"
-              >
-                {uploadingPhoto ? <Loader2 className="h-3 w-3 text-white animate-spin" /> : <Camera className="h-3 w-3 text-white" />}
-              </button>
-              <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={uploadPhoto} />
+              {memberSince && (
+                <p className="text-xs text-gray-400 pb-1">Miembro desde {memberSince}</p>
+              )}
             </div>
 
-            <div className="min-w-0 flex-1">
-              <h1 className="text-xl font-black text-gray-950 truncate">{profile?.name || profile?.email}</h1>
-              <p className="text-sm text-gray-400">{profile?.email}</p>
-              <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-gray-400">
-                {profile?.city && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{profile.city}</span>}
-                {profile?.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{profile.phone}</span>}
-                {profile?.instagramHandle && <span className="flex items-center gap-1"><AtSign className="h-3 w-3" />@{profile.instagramHandle.replace(/^@/, "")}</span>}
+            {uploadError && (
+              <p className="text-xs text-red-500 mb-2 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />{uploadError}
+              </p>
+            )}
+
+            <h1 className="text-xl font-black text-gray-950">{profile?.name || "Sin nombre"}</h1>
+            <p className="text-sm text-gray-400">{profile?.email}</p>
+
+            {(profile?.city || profile?.phone || profile?.instagramHandle) && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {profile?.city && (
+                  <span className="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">
+                    <MapPin className="h-3 w-3 text-indigo-400" />{profile.city}
+                  </span>
+                )}
+                {profile?.phone && (
+                  <span className="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">
+                    <Phone className="h-3 w-3 text-indigo-400" />{profile.phone}
+                  </span>
+                )}
+                {profile?.instagramHandle && (
+                  <span className="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full px-3 py-1 text-xs text-gray-500">
+                    <AtSign className="h-3 w-3 text-indigo-400" />@{profile.instagramHandle.replace(/^@/, "")}
+                  </span>
+                )}
               </div>
-            </div>
+            )}
+
+            {profile?.bio && (
+              <p className="mt-3 text-sm text-gray-500 bg-gray-50 rounded-xl p-3 border-l-4 border-indigo-200 leading-relaxed">
+                {profile.bio}
+              </p>
+            )}
           </div>
-          {profile?.bio && <p className="mt-4 text-sm text-gray-500 bg-gray-50 rounded-xl p-3">{profile.bio}</p>}
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 mb-6">
-          {tabs.map(({ key, label, icon: Icon }) => (
+        <div className="flex gap-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 mb-6 overflow-x-auto">
+          {tabs.map(({ key, label, icon: Icon, count }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all ${
+              className={`flex-shrink-0 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all ${
                 tab === key
-                  ? "bg-indigo-600 text-white shadow-sm"
+                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
                   : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
               }`}
             >
               <Icon className="h-4 w-4" />
               <span className="hidden sm:inline">{label}</span>
+              {count !== undefined && count > 0 && (
+                <span
+                  className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
+                    tab === key ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
+                  }`}
+                >
+                  {count}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
         {/* Pedidos */}
         {tab === "pedidos" && (
-          <div className="space-y-4">
-            {orders.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
-                <Package className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-                <h3 className="font-bold text-gray-900 mb-1">Todavía no hiciste ninguna compra</h3>
-                <p className="text-sm text-gray-400 mb-4">Cuando compres en una tienda, tus pedidos aparecen acá.</p>
-                <Link href="/tiendas" className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-500 transition-colors">
-                  Explorar tiendas <ChevronRight className="h-4 w-4" />
-                </Link>
-              </div>
-            ) : (
-              orders.map((order) => {
-                const { label, icon: StatusIcon, color, bg } = statusInfo(order.status);
+          tabLoading.pedidos ? <TabSkeleton /> :
+          tabError.pedidos ? (
+            <ErrorState onRetry={() => { fetchedTabs.current.delete("pedidos"); fetchTabData("pedidos"); }} />
+          ) : orders.length === 0 ? (
+            <EmptyState
+              icon={Package}
+              title="Todavía no hiciste ninguna compra"
+              desc="Cuando compres en una tienda, tus pedidos aparecen acá."
+              href="/tiendas"
+              cta="Explorar tiendas"
+              color="indigo"
+            />
+          ) : (
+            <div className="space-y-4">
+              {orders.map((order) => {
+                const { label, icon: StatusIcon, color, bg, accent } = statusInfo(order.status);
                 return (
-                  <article key={order.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <article
+                    key={order.id}
+                    className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                    style={{ borderLeftColor: accent, borderLeftWidth: 4 }}
+                  >
                     <div className="p-5 border-b border-gray-50">
                       <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <div>
-                          <p className="font-bold text-gray-950">{order.store.name}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {new Date(order.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
-                          </p>
-                        </div>
                         <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-xl bg-gray-50 overflow-hidden flex items-center justify-center border border-gray-100 shrink-0">
+                            {order.store.logo
+                              ? <img src={order.store.logo} alt={order.store.name} className="h-9 w-9 object-cover" />
+                              : <Store className="h-4 w-4 text-gray-300" />}
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-950">{order.store.name}</p>
+                            <p className="text-xs text-gray-400">
+                              {new Date(order.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${bg} ${color}`}>
                             <StatusIcon className="h-3.5 w-3.5" />
                             {label}
@@ -430,11 +638,11 @@ export default function MiCuentaPage() {
                     <div className="p-5">
                       <div className="space-y-3">
                         {order.items.map((item) => {
-                          const itemImgs = (() => { try { return JSON.parse(item.product.images); } catch { return []; } })();
+                          const imgs = parseImages(item.product.images);
                           return (
                             <div key={item.id} className="flex items-center gap-3">
-                              <div className="h-12 w-12 rounded-xl bg-gray-100 shrink-0 overflow-hidden">
-                                {itemImgs[0] && <img src={itemImgs[0]} alt={item.product.name} className="h-12 w-12 object-cover" />}
+                              <div className="h-12 w-12 rounded-xl bg-gray-50 shrink-0 overflow-hidden border border-gray-100">
+                                {imgs[0] && <img src={imgs[0]} alt={item.product.name} className="h-12 w-12 object-cover" />}
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-semibold text-gray-900 truncate">{item.product.name}</p>
@@ -446,125 +654,140 @@ export default function MiCuentaPage() {
                           );
                         })}
                       </div>
-                      <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
-                        <div className="text-xs text-gray-400 space-y-0.5">
-                          {order.shipping?.trackingCode && (
-                            <p>Tracking: <span className="font-mono font-semibold text-gray-700">{order.shipping.trackingCode}</span></p>
-                          )}
-                        </div>
+                      <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between gap-3 flex-wrap">
+                        {order.shipping?.trackingCode ? (
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                            <Truck className="h-3.5 w-3.5 text-indigo-400" />
+                            Tracking: <span className="font-mono font-semibold text-gray-700">{order.shipping.trackingCode}</span>
+                          </div>
+                        ) : <div />}
                         <p className="text-base font-black text-gray-950">Total: {money(order.total)}</p>
                       </div>
                     </div>
                   </article>
                 );
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )
         )}
 
         {/* Favoritos */}
         {tab === "favoritos" && (
-          <div>
-            {favorites.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
-                <Heart className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-                <h3 className="font-bold text-gray-900 mb-1">Todavía no tenés favoritos</h3>
-                <p className="text-sm text-gray-400 mb-4">Guardá productos que te gustan desde cualquier tienda.</p>
-                <Link href="/tiendas" className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-500 transition-colors">
-                  Explorar tiendas <ChevronRight className="h-4 w-4" />
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {favorites.map((fav) => {
-                  const imgs = (() => { try { return JSON.parse(fav.product.images); } catch { return []; } })();
-                  return (
-                    <div key={fav.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group">
-                      <div className="relative aspect-square bg-gray-100">
-                        {imgs[0] ? (
-                          <img src={imgs[0]} alt={fav.product.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center">
-                            <Package className="h-10 w-10 text-gray-200" />
-                          </div>
-                        )}
-                        <button
-                          onClick={() => removeFavorite(fav.productId)}
-                          className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-red-50 transition-colors"
-                        >
-                          <Heart className="h-4 w-4 fill-red-500 text-red-500" />
-                        </button>
-                      </div>
-                      <div className="p-3">
-                        <p className="text-sm font-bold text-gray-900 truncate">{fav.product.name}</p>
-                        <p className="text-xs text-gray-400 mb-2">{fav.product.store.name}</p>
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-black" style={{ color: fav.product.store.primaryColor }}>
-                            {money(fav.product.price)}
-                          </p>
-                          <Link
-                            href={`/tienda/${fav.product.store.slug}`}
-                            className="text-xs text-indigo-600 font-semibold hover:underline"
-                          >
-                            Ver tienda
-                          </Link>
+          tabLoading.favoritos ? <TabSkeleton /> :
+          tabError.favoritos ? (
+            <ErrorState onRetry={() => { fetchedTabs.current.delete("favoritos"); fetchTabData("favoritos"); }} />
+          ) : favorites.length === 0 ? (
+            <EmptyState
+              icon={Heart}
+              title="Todavía no tenés favoritos"
+              desc="Guardá productos que te gustan desde cualquier tienda."
+              href="/tiendas"
+              cta="Explorar tiendas"
+              color="rose"
+            />
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {favorites.map((fav) => {
+                const imgs = parseImages(fav.product.images);
+                return (
+                  <div
+                    key={fav.id}
+                    className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-md transition-shadow"
+                  >
+                    <div className="relative aspect-square bg-gray-50">
+                      {imgs[0] ? (
+                        <img
+                          src={imgs[0]}
+                          alt={fav.product.name}
+                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <Package className="h-10 w-10 text-gray-200" />
                         </div>
+                      )}
+                      <button
+                        onClick={() => removeFavorite(fav.productId)}
+                        className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-red-50 transition-colors"
+                        title="Quitar de favoritos"
+                      >
+                        <Heart className="h-4 w-4 fill-red-500 text-red-500" />
+                      </button>
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-bold text-gray-900 truncate">{fav.product.name}</p>
+                      <p className="text-xs text-gray-400 mb-2 truncate">{fav.product.store.name}</p>
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-sm font-black" style={{ color: fav.product.store.primaryColor }}>
+                          {money(fav.product.price)}
+                        </p>
+                        <Link
+                          href={`/tienda/${fav.product.store.slug}`}
+                          className="text-xs text-indigo-600 font-semibold hover:underline whitespace-nowrap"
+                        >
+                          Ver tienda
+                        </Link>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
         )}
 
         {/* Tiendas que sigo */}
         {tab === "tiendas" && (
-          <div className="space-y-3">
-            {followedStores.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
-                <ThumbsUp className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-                <h3 className="font-bold text-gray-900 mb-1">Todavía no seguís ninguna tienda</h3>
-                <p className="text-sm text-gray-400 mb-4">
-                  Tocá el ícono 👍 en cualquier tienda para seguirla y recibir sus novedades.
-                </p>
-                <Link href="/tiendas" className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-500 transition-colors">
-                  Explorar tiendas <ChevronRight className="h-4 w-4" />
-                </Link>
-              </div>
-            ) : (
-              followedStores.map((follow) => (
-                <div key={follow.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          tabLoading.tiendas ? <TabSkeleton /> :
+          tabError.tiendas ? (
+            <ErrorState onRetry={() => { fetchedTabs.current.delete("tiendas"); fetchTabData("tiendas"); }} />
+          ) : followedStores.length === 0 ? (
+            <EmptyState
+              icon={Store}
+              title="Todavía no seguís ninguna tienda"
+              desc="Seguí tiendas para recibir sus novedades y no perderte nada."
+              href="/tiendas"
+              cta="Explorar tiendas"
+              color="violet"
+            />
+          ) : (
+            <div className="space-y-3">
+              {followedStores.map((follow) => (
+                <div
+                  key={follow.id}
+                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                >
                   {unfollowConfirm === follow.storeId ? (
                     <div className="p-5">
                       <p className="font-bold text-gray-900 mb-1">¿Dejar de seguir a {follow.store.name}?</p>
                       <p className="text-sm text-gray-400 mb-4">
-                        Ya no recibirás notificaciones de esta tienda. Podés volver a seguirla cuando quieras.
+                        Ya no recibirás notificaciones. Podés volver a seguirla cuando quieras.
                       </p>
                       <div className="flex gap-3">
                         <button
                           onClick={() => unfollowStore(follow.storeId)}
                           className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-600 transition-colors"
                         >
-                          <ThumbsDown className="h-4 w-4" />
-                          Dejar de seguir
+                          <X className="h-4 w-4" /> Dejar de seguir
                         </button>
                         <button
                           onClick={() => setUnfollowConfirm(null)}
                           className="flex items-center gap-2 border border-gray-200 text-gray-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors"
                         >
-                          <X className="h-4 w-4" />
                           Cancelar
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div className="flex items-center gap-4 p-4">
-                      <div className="h-12 w-12 rounded-xl shrink-0 overflow-hidden bg-gray-100 flex items-center justify-center">
+                      <div
+                        className="h-12 w-12 rounded-xl shrink-0 overflow-hidden flex items-center justify-center"
+                        style={{ backgroundColor: follow.store.primaryColor + "20" }}
+                      >
                         {follow.store.logo ? (
                           <img src={follow.store.logo} alt={follow.store.name} className="h-12 w-12 object-cover" />
                         ) : (
-                          <Store className="h-6 w-6 text-gray-300" />
+                          <Store className="h-6 w-6" style={{ color: follow.store.primaryColor }} />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -582,172 +805,219 @@ export default function MiCuentaPage() {
                         </Link>
                         <button
                           onClick={() => setUnfollowConfirm(follow.storeId)}
+                          className="h-8 w-8 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:border-red-200 transition-colors"
                           title="Dejar de seguir"
-                          className="h-8 w-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:border-red-200 transition-colors"
                         >
-                          <ThumbsDown className="h-4 w-4 text-gray-400 hover:text-red-500" />
+                          <X className="h-4 w-4 text-gray-400" />
                         </button>
                       </div>
                     </div>
                   )}
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )
         )}
 
         {/* Reseñas */}
         {tab === "resenas" && (
-          <div className="space-y-6">
-            {pendingReviews.length === 0 && submittedReviews.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
-                <Star className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-                <h3 className="font-bold text-gray-900 mb-1">Todavía no tenés compras para reseñar</h3>
-                <p className="text-sm text-gray-400 mb-4">Cuando hagas una compra confirmada, podrás dejar tu opinión.</p>
-                <Link href="/tiendas" className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-500 transition-colors">
-                  Explorar tiendas <ChevronRight className="h-4 w-4" />
-                </Link>
-              </div>
-            ) : (
-              <>
-                {pendingReviews.length > 0 && (
-                  <div>
-                    <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                      Pendientes de reseña
-                    </h2>
-                    <div className="space-y-4">
-                      {pendingReviews.map((item) => {
-                        const imgs = (() => { try { return JSON.parse(item.productImages); } catch { return []; } })();
-                        const draft = reviewDrafts[item.productId] || { rating: 0, comment: "" };
-                        return (
-                          <div key={item.productId} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                            <div className="flex items-center gap-3 mb-4">
-                              <div className="h-12 w-12 rounded-xl bg-gray-100 shrink-0 overflow-hidden">
-                                {imgs[0] && <img src={imgs[0]} alt={item.productName} className="h-12 w-12 object-cover" />}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-bold text-gray-900 truncate">{item.productName}</p>
-                                <p className="text-xs text-gray-400">{item.storeName}</p>
-                              </div>
-                            </div>
-                            <div className="space-y-3">
-                              <div>
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Tu calificación</p>
-                                <Stars
-                                  rating={draft.rating}
-                                  interactive
-                                  onRate={(r) => setReviewDrafts((prev) => ({ ...prev, [item.productId]: { ...draft, rating: r } }))}
-                                />
-                              </div>
-                              <textarea
-                                value={draft.comment}
-                                onChange={(e) => setReviewDrafts((prev) => ({ ...prev, [item.productId]: { ...draft, comment: e.target.value } }))}
-                                placeholder="¿Qué te pareció el producto? (opcional)"
-                                rows={2}
-                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                              />
-                              <button
-                                onClick={() => submitReview(item.productId, item.orderId)}
-                                disabled={!draft.rating || submittingReview === item.productId}
-                                className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-500 disabled:opacity-40 transition-colors"
-                              >
-                                {submittingReview === item.productId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                Publicar reseña
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
+          tabLoading.resenas ? <TabSkeleton /> :
+          tabError.resenas ? (
+            <ErrorState onRetry={() => { fetchedTabs.current.delete("resenas"); fetchTabData("resenas"); }} />
+          ) : pendingReviews.length === 0 && submittedReviews.length === 0 ? (
+            <EmptyState
+              icon={Star}
+              title="Todavía no tenés reseñas"
+              desc="Cuando hagas una compra confirmada, podrás calificar los productos."
+              href="/tiendas"
+              cta="Explorar tiendas"
+              color="amber"
+            />
+          ) : (
+            <div className="space-y-6">
+              {pendingReviews.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="h-6 w-6 rounded-lg bg-amber-50 flex items-center justify-center">
+                      <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-400" />
                     </div>
+                    <h2 className="font-bold text-gray-900">Pendientes de reseña</h2>
+                    <span className="text-xs font-bold px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                      {pendingReviews.length}
+                    </span>
                   </div>
-                )}
-                {submittedReviews.length > 0 && (
-                  <div>
-                    <h2 className="font-bold text-gray-900 mb-4">Mis reseñas</h2>
-                    <div className="space-y-3">
-                      {submittedReviews.map((review) => {
-                        const imgs = (() => { try { return JSON.parse(review.productImages); } catch { return []; } })();
-                        return (
-                          <div key={review.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex gap-3">
-                            <div className="h-12 w-12 rounded-xl bg-gray-100 shrink-0 overflow-hidden">
-                              {imgs[0] && <img src={imgs[0]} alt={review.productName} className="h-12 w-12 object-cover" />}
+                  {reviewError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0" />{reviewError}
+                    </div>
+                  )}
+                  <div className="space-y-4">
+                    {pendingReviews.map((item) => {
+                      const imgs = parseImages(item.productImages);
+                      const draft = reviewDrafts[item.productId] || { rating: 0, comment: "" };
+                      return (
+                        <div key={item.productId} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="h-14 w-14 rounded-xl bg-gray-50 shrink-0 overflow-hidden border border-gray-100">
+                              {imgs[0] && <img src={imgs[0]} alt={item.productName} className="h-14 w-14 object-cover" />}
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-bold text-gray-900 text-sm truncate">{review.productName}</p>
-                              <Stars rating={review.rating} />
-                              {review.comment && <p className="text-sm text-gray-600 mt-1">{review.comment}</p>}
-                              <p className="text-xs text-gray-300 mt-1">
-                                {new Date(review.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
+                            <div className="min-w-0">
+                              <p className="font-bold text-gray-900 truncate">{item.productName}</p>
+                              <p className="text-xs text-gray-400">{item.storeName}</p>
+                              <p className="text-xs text-gray-300 mt-0.5">
+                                Comprado el {new Date(item.orderDate).toLocaleDateString("es-AR", { day: "2-digit", month: "short" })}
                               </p>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Tu calificación</p>
+                              <Stars
+                                rating={draft.rating}
+                                interactive
+                                size="lg"
+                                onRate={(r) => setReviewDrafts((prev) => ({ ...prev, [item.productId]: { ...draft, rating: r } }))}
+                              />
+                            </div>
+                            <textarea
+                              value={draft.comment}
+                              onChange={(e) => setReviewDrafts((prev) => ({ ...prev, [item.productId]: { ...draft, comment: e.target.value } }))}
+                              placeholder="¿Qué te pareció el producto? (opcional)"
+                              rows={2}
+                              maxLength={1000}
+                              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none placeholder-gray-300"
+                            />
+                            <button
+                              onClick={() => submitReview(item.productId, item.orderId)}
+                              disabled={!draft.rating || submittingReview === item.productId}
+                              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-500 disabled:opacity-40 transition-colors shadow-sm shadow-indigo-100"
+                            >
+                              {submittingReview === item.productId
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : <Check className="h-4 w-4" />}
+                              Publicar reseña
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
-              </>
-            )}
-          </div>
+                </div>
+              )}
+
+              {submittedReviews.length > 0 && (
+                <div>
+                  <h2 className="font-bold text-gray-900 mb-4">Mis reseñas</h2>
+                  <div className="space-y-3">
+                    {submittedReviews.map((review) => {
+                      const imgs = parseImages(review.productImages);
+                      return (
+                        <div
+                          key={review.id}
+                          className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex gap-3 hover:shadow-md transition-shadow"
+                        >
+                          <div className="h-14 w-14 rounded-xl bg-gray-50 shrink-0 overflow-hidden border border-gray-100">
+                            {imgs[0] && <img src={imgs[0]} alt={review.productName} className="h-14 w-14 object-cover" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-gray-900 text-sm truncate">{review.productName}</p>
+                            <Stars rating={review.rating} size="sm" />
+                            {review.comment && (
+                              <p className="text-sm text-gray-600 mt-1.5 leading-relaxed">{review.comment}</p>
+                            )}
+                            <p className="text-xs text-gray-300 mt-1.5">
+                              {new Date(review.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
         )}
 
         {/* Perfil */}
         {tab === "perfil" && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h2 className="font-bold text-gray-900 mb-6">Mis datos</h2>
-            <div className="space-y-4">
-              {[
-                { label: "Nombre", field: "name" as const, placeholder: "Tu nombre" },
-                { label: "Ciudad", field: "city" as const, placeholder: "Buenos Aires" },
-                { label: "Teléfono", field: "phone" as const, placeholder: "+54 11 1234-5678" },
-                { label: "Instagram", field: "instagramHandle" as const, placeholder: "@usuario" },
-              ].map(({ label, field, placeholder }) => (
-                <div key={field}>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">{label}</label>
-                  <input
-                    type="text"
-                    value={editForm[field]}
-                    onChange={(e) => setEditForm((f) => ({ ...f, [field]: e.target.value }))}
-                    placeholder={placeholder}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-300"
-                  />
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <h2 className="font-bold text-gray-900 mb-5 flex items-center gap-2">
+                <div className="h-6 w-6 rounded-lg bg-indigo-50 flex items-center justify-center">
+                  <User className="h-3.5 w-3.5 text-indigo-500" />
                 </div>
-              ))}
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Bio</label>
-                <textarea
-                  value={editForm.bio}
-                  onChange={(e) => setEditForm((f) => ({ ...f, bio: e.target.value }))}
-                  placeholder="Contá algo sobre vos..."
-                  rows={3}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-300 resize-none"
-                />
-              </div>
-              {saveError && <p className="text-sm text-red-500">{saveError}</p>}
-              {saveSuccess && (
-                <p className="text-sm text-green-600 font-semibold flex items-center gap-1.5">
-                  <Check className="h-4 w-4" /> Cambios guardados
-                </p>
-              )}
-              <button
-                onClick={saveProfile}
-                disabled={saving}
-                className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-indigo-500 disabled:opacity-50 transition-colors"
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                {saving ? "Guardando..." : "Guardar cambios"}
-              </button>
+                Mis datos
+              </h2>
+              <div className="space-y-4">
+                {([
+                  { label: "Nombre",    field: "name"            as const, placeholder: "Tu nombre",          icon: User    },
+                  { label: "Ciudad",    field: "city"            as const, placeholder: "Buenos Aires",       icon: MapPin  },
+                  { label: "Teléfono",  field: "phone"           as const, placeholder: "+54 11 1234-5678",   icon: Phone   },
+                  { label: "Instagram", field: "instagramHandle" as const, placeholder: "@usuario",           icon: AtSign  },
+                ] as const).map(({ label, field, placeholder, icon: FieldIcon }) => (
+                  <div key={field}>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+                      <FieldIcon className="h-3 w-3" />{label}
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm[field]}
+                      onChange={(e) => setEditForm((f) => ({ ...f, [field]: e.target.value }))}
+                      placeholder={placeholder}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-300 hover:border-gray-300 transition-colors"
+                    />
+                  </div>
+                ))}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Bio</label>
+                  <textarea
+                    value={editForm.bio}
+                    onChange={(e) => setEditForm((f) => ({ ...f, bio: e.target.value }))}
+                    placeholder="Contá algo sobre vos..."
+                    rows={3}
+                    maxLength={500}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-300 resize-none hover:border-gray-300 transition-colors"
+                  />
+                  <p className="text-xs text-gray-300 text-right mt-1">{editForm.bio.length}/500</p>
+                </div>
 
-              <div className="pt-4 border-t border-gray-100">
+                {saveError && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+                    <AlertCircle className="h-4 w-4 shrink-0" />{saveError}
+                  </div>
+                )}
+                {saveSuccess && (
+                  <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-600 font-semibold">
+                    <Check className="h-4 w-4" /> ¡Cambios guardados!
+                  </div>
+                )}
+
                 <button
-                  onClick={() => signOut("/")}
-                  className="w-full flex items-center justify-center gap-2 border border-red-200 text-red-500 py-3 rounded-xl font-semibold text-sm hover:bg-red-50 transition-colors"
+                  onClick={saveProfile}
+                  disabled={saving}
+                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-indigo-500 disabled:opacity-50 transition-colors shadow-sm shadow-indigo-200"
                 >
-                  <LogOut className="h-4 w-4" />
-                  Cerrar sesión
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  {saving ? "Guardando..." : "Guardar cambios"}
                 </button>
               </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="h-6 w-6 rounded-lg bg-red-50 flex items-center justify-center">
+                  <LogOut className="h-3.5 w-3.5 text-red-400" />
+                </div>
+                Sesión
+              </h2>
+              <button
+                onClick={() => signOut("/")}
+                className="w-full flex items-center justify-center gap-2 border border-red-200 text-red-500 py-3 rounded-xl font-semibold text-sm hover:bg-red-50 transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Cerrar sesión
+              </button>
             </div>
           </div>
         )}
