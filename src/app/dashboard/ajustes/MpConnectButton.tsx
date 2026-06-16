@@ -17,7 +17,7 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
     if (!confirm("¿Desconectar MercadoPago? Los pagos vuelven a ser manuales.")) return;
     setDisconnecting(true);
     await fetch("/api/mp/oauth/disconnect", { method: "POST" });
-    window.location.reload();
+    window.location.href = "/dashboard/ajustes";
   }
 
   return (
