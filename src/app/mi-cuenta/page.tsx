@@ -118,7 +118,9 @@ function money(n: number) {
 function parseImages(raw: string | string[] | null | undefined): string[] {
   if (!raw) return [];
   const arr = Array.isArray(raw) ? raw : (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; } })();
-  return arr.map(String).filter((s) => s && s.trim() !== "");
+  return arr
+    .map((item) => (item && typeof item === "object" ? (item as { url?: string }).url ?? "" : String(item ?? "")))
+    .filter((s) => s.trim() !== "");
 }
 
 function ProductImg({ src, alt, className }: { src: string | undefined; alt: string; className?: string }) {
