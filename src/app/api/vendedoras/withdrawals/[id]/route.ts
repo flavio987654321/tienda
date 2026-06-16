@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createNotification } from "@/lib/notifications";
+import { sendWithdrawalApprovedEmail } from "@/lib/email";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -31,7 +32,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
               affiliate: {
                 select: {
                   userId: true,
-                  store: { select: { ownerId: true } },
+                  store: { select: { ownerId: true, name: true } },
                 },
               },
             },
@@ -83,18 +84,34 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         type: "WITHDRAWAL_COMPLETED",
         title: "Tu retiro fue procesado",
         body: `$${withdrawal.amount.toLocaleString("es-AR")} transferidos a tu cuenta bancaria.`,
-        link: "/vendedoras/billetera",
+        link: "/afiliados/billetera",
       }).catch((err) => console.error("[notify] withdrawal paid", err));
 
       return tx.walletWithdrawal.update({
         where: { id },
         data: {
-          status: "APPROVED",
+          status: "PAID",
           approvedAt: new Date(),
           notes: notes || null,
         },
       });
     });
+
+    // Email al afiliado confirmando la transferencia (fire-and-forget)
+    if (action === "APPROVE") {
+      const affiliateUser = await prisma.user.findUnique({
+        where: { id: withdrawal.wallet.affiliate.userId },
+        select: { name: true, email: true },
+      });
+      if (affiliateUser?.email) {
+        sendWithdrawalApprovedEmail({
+          affiliateEmail: affiliateUser.email,
+          affiliateName: affiliateUser.name ?? "Afiliada",
+          storeName: withdrawal.wallet.affiliate.store.name ?? "la tienda",
+          amount: result.amount,
+        }).catch((err) => console.error("[email] sendWithdrawalApprovedEmail failed:", err));
+      }
+    }
 
     return NextResponse.json({ withdrawal: result });
   } catch (error) {

@@ -1001,6 +1001,46 @@ export async function sendWithdrawalRequestEmail({
   });
 }
 
+export async function sendWithdrawalApprovedEmail({
+  affiliateEmail,
+  affiliateName,
+  storeName,
+  amount,
+}: {
+  affiliateEmail: string;
+  affiliateName: string;
+  storeName: string;
+  amount: number;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
+
+  await transporter.sendMail({
+    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    to: affiliateEmail,
+    subject: `✅ Tu retiro de ${fmt(amount)} fue transferido — ${storeName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#16a34a;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.7);font-size:13px;margin:0 0 4px;">${escapeHtml(storeName)}</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:700;">¡Tu retiro fue procesado!</h1>
+          <p style="color:#fff;font-size:36px;font-weight:900;margin:8px 0 0;">${fmt(amount)}</p>
+        </div>
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(affiliateName)}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:24px;">
+          El dueño de la tienda <strong>${escapeHtml(storeName)}</strong> procesó tu retiro.
+          El dinero debería aparecer en tu cuenta en las próximas horas según tu banco o billetera virtual.
+        </p>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center;">
+          <p style="font-size:13px;color:#15803d;margin:0 0 4px;">Monto transferido</p>
+          <p style="font-size:28px;font-weight:900;color:#16a34a;margin:0;">${fmt(amount)}</p>
+        </div>
+        <p style="color:#6b7280;font-size:13px;">Si no recibís el dinero en 48hs hábiles, contactá al dueño de la tienda o a soporte de TiendaApps.</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendStoreOfflineEmail({
   affiliateEmail,
   affiliateName,
