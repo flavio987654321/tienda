@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
+import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
@@ -97,7 +98,10 @@ export default function AutoMotor() {
   const navTextMid     = navDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.45)";
   const navBorderColor = navDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.12)";
 
-  const [menuOpen,   setMenuOpen]   = useState(false);
+  const { user, signOut } = useAuth();
+  const [menuOpen,         setMenuOpen]         = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
   const [selected,   setSelected]   = useState<StorefrontProduct | null>(null);
   const [showReport, setShowReport] = useState(false);
   const [annIdx,     setAnnIdx]     = useState(0);
@@ -124,6 +128,16 @@ export default function AutoMotor() {
     const id = new URLSearchParams(window.location.search).get("producto");
     if (id) { const p = products.find(pr => pr.id === id); if (p) setSelected(p); }
   }, [products]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const visible = products.slice(0, 8);
   const hasMore = products.length > 8;
@@ -224,17 +238,67 @@ export default function AutoMotor() {
               </button>
             )}
             {isPreview && (config?.showPushBell ? (
-              <button onClick={config.onPreviewBellClick}
-                style={{ padding:4, display:"flex", alignItems:"center", color:navTextMid, background:"none", border:"none", cursor:"pointer" }}>
-                <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              </button>
+              <>
+                <button title="Los clientes pueden seguir tu tienda desde acá"
+                  style={{ padding:4, display:"flex", alignItems:"center", color:navTextMid, background:"none", border:"none", cursor:"default", opacity:0.85 }}>
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                </button>
+                <button onClick={config.onPreviewBellClick}
+                  style={{ padding:4, display:"flex", alignItems:"center", color:navTextMid, background:"none", border:"none", cursor:"pointer" }}>
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                </button>
+              </>
             ) : (
-              <button onClick={config?.onPreviewBellClick} title="🔒 Solo Plan Plus"
-                style={{ position:"relative", padding:4, display:"flex", alignItems:"center", color:navTextMid, opacity:0.5, background:"none", border:"none", cursor:"pointer" }}>
-                <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                <span style={{ position:"absolute", top:0, right:0, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
-              </button>
+              <>
+                <button onClick={config?.onPreviewBellClick} title="🔒 Solo Plan Plus"
+                  style={{ position:"relative", padding:4, display:"flex", alignItems:"center", color:navTextMid, opacity:0.5, background:"none", border:"none", cursor:"pointer" }}>
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                  <span style={{ position:"absolute", top:0, right:0, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
+                </button>
+                <button onClick={config?.onPreviewBellClick} title="🔒 Solo Plan Plus"
+                  style={{ position:"relative", padding:4, display:"flex", alignItems:"center", color:navTextMid, opacity:0.5, background:"none", border:"none", cursor:"pointer" }}>
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  <span style={{ position:"absolute", top:0, right:0, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
+                </button>
+              </>
             ))}
+          </div>
+          {/* User icon */}
+          <div ref={userDropdownRef} style={{ position:"relative" }}>
+            <button onClick={() => !isPreview && setUserDropdownOpen(o => !o)} title={isPreview ? "Menú de cuenta del cliente" : undefined}
+              style={{ background:"none", border:"none", color:navTextMid, cursor: isPreview ? "default" : "pointer", padding:4, display:"flex", alignItems:"center", opacity: isPreview ? 0.7 : 1 }}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </button>
+            {userDropdownOpen && !isPreview && (
+              <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:navBg, border:`1px solid ${navBorderColor}`, minWidth:190, zIndex:300, boxShadow:"0 8px 28px rgba(0,0,0,0.25)", overflow:"hidden" }}>
+                {user ? (
+                  <>
+                    <p style={{ padding:"10px 16px 4px", fontSize:11, color:navTextMid, margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                      {user.name || user.email.split("@")[0]}
+                    </p>
+                    <a href="/mi-cuenta" onClick={() => setUserDropdownOpen(false)}
+                      style={{ display:"block", padding:"10px 16px", fontSize:13, color:navText, textDecoration:"none", borderBottom:`1px solid ${navBorderColor}` }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity="0.75")}
+                      onMouseLeave={e => (e.currentTarget.style.opacity="1")}>Mi cuenta</a>
+                    <button onClick={() => { setUserDropdownOpen(false); signOut("/"); }}
+                      style={{ display:"block", width:"100%", padding:"10px 16px", fontSize:13, color:"#f87171", background:"none", border:"none", textAlign:"left", cursor:"pointer" }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity="0.75")}
+                      onMouseLeave={e => (e.currentTarget.style.opacity="1")}>Cerrar sesión</button>
+                  </>
+                ) : (
+                  <>
+                    <a href={`/login?redirect=/tienda/${config?.slug}`} onClick={() => setUserDropdownOpen(false)}
+                      style={{ display:"block", padding:"12px 16px", fontSize:13, color:navText, textDecoration:"none", borderBottom:`1px solid ${navBorderColor}` }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity="0.75")}
+                      onMouseLeave={e => (e.currentTarget.style.opacity="1")}>Iniciar sesión</a>
+                    <a href={`/registro?redirect=/tienda/${config?.slug}`} onClick={() => setUserDropdownOpen(false)}
+                      style={{ display:"block", padding:"12px 16px", fontSize:13, color:navText, textDecoration:"none" }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity="0.75")}
+                      onMouseLeave={e => (e.currentTarget.style.opacity="1")}>Registrarse</a>
+                  </>
+                )}
+              </div>
+            )}
           </div>
           <button className="am-burger" onClick={() => setMenuOpen(m => !m)}
             style={{ background:"none", border:`1px solid ${navBorderColor}`,

@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
+import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
@@ -100,6 +101,7 @@ export default function UrbanPulse() {
 
   const storeConfig = useStoreConfig();
   const pushBell = usePushBell();
+  const { user, signOut } = useAuth();
   const isPreview   = !!storeConfig?.previewFill;
   const isOwner     = !!storeConfig?.isOwner;
   const blockBuy    = isPreview || isOwner;
@@ -518,34 +520,65 @@ export default function UrbanPulse() {
             </button>
           )}
           {isPreview && (
-            storeConfig?.showPushBell ? (
-              <button onClick={storeConfig.onPreviewBellClick} title="Campanita de novedades — clic para configurar" style={{ ...iconBtn, position:"relative", opacity:0.85 }}>
-                <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              </button>
-            ) : (
-              <button onClick={storeConfig?.onPreviewBellClick} title="🔒 Solo Plan Plus — tocá para activar" style={{ ...iconBtn, position:"relative", opacity:0.38 }}>
-                <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                <span style={{ position:"absolute", top:4, right:4, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
-              </button>
-            )
+            <>
+              {storeConfig?.showPushBell ? (
+                <button title="Los clientes pueden seguir tu tienda desde acá" style={{ ...iconBtn, position:"relative", opacity:0.85, cursor:"default" }}>
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                </button>
+              ) : (
+                <button onClick={storeConfig?.onPreviewBellClick} title="🔒 Solo Plan Plus — tocá para activar" style={{ ...iconBtn, position:"relative", opacity:0.38 }}>
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                  <span style={{ position:"absolute", top:4, right:4, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
+                </button>
+              )}
+              {storeConfig?.showPushBell ? (
+                <button onClick={storeConfig.onPreviewBellClick} title="Campanita de novedades — clic para configurar" style={{ ...iconBtn, position:"relative", opacity:0.85 }}>
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                </button>
+              ) : (
+                <button onClick={storeConfig?.onPreviewBellClick} title="🔒 Solo Plan Plus — tocá para activar" style={{ ...iconBtn, position:"relative", opacity:0.38 }}>
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  <span style={{ position:"absolute", top:4, right:4, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
+                </button>
+              )}
+            </>
           )}
           <button onClick={() => setFavoritesOpen(true)} style={{ ...iconBtn, position:"relative" }}>
             <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? DARK : "none"} stroke={DARK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
             {favorites.length > 0 && <span style={{ position:"absolute", top:4, right:4, width:8, height:8, background:ACC, border:`2px solid ${DARK}`, borderRadius:"50%" }} />}
           </button>
           <div style={{ position:"relative" }} ref={userDropdownRef}>
-            <button onClick={() => setUserDropdownOpen(o => !o)} style={iconBtn}>
+            <button onClick={() => !isPreview && setUserDropdownOpen(o => !o)} title={isPreview ? "Menú de cuenta del cliente" : undefined} style={{ ...iconBtn, opacity: isPreview ? 0.7 : 1, cursor: isPreview ? "default" : "pointer" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
-            {userDropdownOpen && (
-              <div className="up-fade" style={{ position:"absolute", top:"calc(100% + 8px)", right:0, background:WHITE, border:`2px solid ${DARK}`, minWidth:180, zIndex:200 }}>
-                {["Iniciar sesión","Registrarse","Mis pedidos","Mi perfil"].map(label => (
-                  <button key={label} onClick={() => setUserDropdownOpen(false)}
-                    style={{ display:"block", width:"100%", padding:"10px 16px", background:"none", border:"none", borderBottom:`1px solid ${BG}`, textAlign:"left", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color:DARK }}
-                    onMouseEnter={e => { e.currentTarget.style.background = ACC; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
-                  >{label}</button>
-                ))}
+            {userDropdownOpen && !isPreview && (
+              <div className="up-fade" style={{ position:"absolute", top:"calc(100% + 8px)", right:0, background:WHITE, border:`2px solid ${DARK}`, minWidth:190, zIndex:200 }}>
+                {user ? (
+                  <>
+                    <p style={{ padding:"8px 16px 4px", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:MID, margin:0, borderBottom:`1px solid ${BG}`, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                      {user.name || user.email.split("@")[0]}
+                    </p>
+                    <a href="/mi-cuenta" onClick={() => setUserDropdownOpen(false)}
+                      style={{ display:"block", width:"100%", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK, borderBottom:`1px solid ${BG}` }}
+                      onMouseEnter={e => { e.currentTarget.style.background = ACC; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>Mi cuenta</a>
+                    <button onClick={() => { setUserDropdownOpen(false); signOut("/"); }}
+                      style={{ display:"block", width:"100%", padding:"10px 16px", background:"none", border:"none", textAlign:"left", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color:"#ef4444" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "#fff1f1"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>Cerrar sesión</button>
+                  </>
+                ) : (
+                  <>
+                    <a href={`/login?redirect=/tienda/${storeConfig?.slug}`} onClick={() => setUserDropdownOpen(false)}
+                      style={{ display:"block", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK, borderBottom:`1px solid ${BG}` }}
+                      onMouseEnter={e => { e.currentTarget.style.background = ACC; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>Iniciar sesión</a>
+                    <a href={`/registro?redirect=/tienda/${storeConfig?.slug}`} onClick={() => setUserDropdownOpen(false)}
+                      style={{ display:"block", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK }}
+                      onMouseEnter={e => { e.currentTarget.style.background = ACC; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>Registrarse</a>
+                  </>
+                )}
               </div>
             )}
           </div>

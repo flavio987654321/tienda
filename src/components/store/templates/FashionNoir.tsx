@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
+import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
@@ -117,6 +118,7 @@ export default function FashionNoir() {
 
   const storeConfig = useStoreConfig();
   const pushBell = usePushBell();
+  const { user, signOut } = useAuth();
   const isPreview   = !!storeConfig?.previewFill;
   const isOwner     = !!storeConfig?.isOwner;
   const blockBuy    = isPreview || isOwner;
@@ -604,16 +606,28 @@ export default function FashionNoir() {
               </button>
             )}
             {isPreview && (
-              storeConfig?.showPushBell ? (
-                <button onClick={storeConfig.onPreviewBellClick} title="Campanita de novedades — clic para configurar" style={{ position:"relative", padding:4, display:"flex", alignItems:"center", opacity:0.85, background:"none", border:"none", color:T, cursor:"pointer" }}>
-                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                </button>
-              ) : (
-                <button onClick={storeConfig?.onPreviewBellClick} title="🔒 Solo Plan Plus — tocá para activar" style={{ position:"relative", padding:4, display:"flex", alignItems:"center", opacity:0.38, background:"none", border:"none", color:T, cursor:"pointer" }}>
-                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                  <span style={{ position:"absolute", top:0, right:0, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
-                </button>
-              )
+              <>
+                {storeConfig?.showPushBell ? (
+                  <button title="Los clientes pueden seguir tu tienda desde acá" style={{ position:"relative", padding:4, display:"flex", alignItems:"center", opacity:0.85, background:"none", border:"none", color:T, cursor:"default" }}>
+                    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                  </button>
+                ) : (
+                  <button onClick={storeConfig?.onPreviewBellClick} title="🔒 Solo Plan Plus — tocá para activar" style={{ position:"relative", padding:4, display:"flex", alignItems:"center", opacity:0.38, background:"none", border:"none", color:T, cursor:"pointer" }}>
+                    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                    <span style={{ position:"absolute", top:0, right:0, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
+                  </button>
+                )}
+                {storeConfig?.showPushBell ? (
+                  <button onClick={storeConfig.onPreviewBellClick} title="Campanita de novedades — clic para configurar" style={{ position:"relative", padding:4, display:"flex", alignItems:"center", opacity:0.85, background:"none", border:"none", color:T, cursor:"pointer" }}>
+                    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  </button>
+                ) : (
+                  <button onClick={storeConfig?.onPreviewBellClick} title="🔒 Solo Plan Plus — tocá para activar" style={{ position:"relative", padding:4, display:"flex", alignItems:"center", opacity:0.38, background:"none", border:"none", color:T, cursor:"pointer" }}>
+                    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    <span style={{ position:"absolute", top:0, right:0, width:12, height:12, background:"#f59e0b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, color:"white", fontWeight:800 }}>★</span>
+                  </button>
+                )}
+              </>
             )}
             {/* Favorites icon */}
             {!isMobile && <button onClick={() => setFavoritesOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
@@ -622,23 +636,39 @@ export default function FashionNoir() {
             </button>}
             {/* User icon */}
             <div ref={userDropdownRef} style={{ position:"relative" }}>
-              <button onClick={() => setUserDropdownOpen(o => !o)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+              <button onClick={() => !isPreview && setUserDropdownOpen(o => !o)} title={isPreview ? "Menú de cuenta del cliente" : undefined} style={{ background:"none", border:"none", color:T, cursor: isPreview ? "default" : "pointer", padding:4, display:"flex", alignItems:"center", opacity: isPreview ? 0.7 : 1 }}>
                 <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </button>
-              {userDropdownOpen && (
-                <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#1a1a1a", border:`1px solid rgba(201,168,76,0.2)`, minWidth:180, zIndex:200, boxShadow:"0 8px 32px rgba(0,0,0,0.5)" }}>
-                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:"rgba(201,168,76,0.6)", padding:"10px 16px 4px", margin:0 }}>{"Mi cuenta"}</p>
-                  {["Iniciar sesión", "Registrarse"].map(item => (
-                    <button key={item} style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"10px 16px", fontSize:13, textAlign:"left", cursor:"pointer", transition:"background 0.2s" }}
-                      onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
-                      onMouseLeave={e => (e.currentTarget.style.background="none")}>{item}</button>
-                  ))}
-                  <div style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, margin:"4px 0" }}/>
-                  {["Mis pedidos", "Mi perfil"].map(item => (
-                    <button key={item} style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"10px 16px", fontSize:13, textAlign:"left", cursor:"pointer", transition:"background 0.2s" }}
-                      onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
-                      onMouseLeave={e => (e.currentTarget.style.background="none")}>{item}</button>
-                  ))}
+              {userDropdownOpen && !isPreview && (
+                <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#1a1a1a", border:`1px solid rgba(201,168,76,0.2)`, minWidth:190, zIndex:200, boxShadow:"0 8px 32px rgba(0,0,0,0.5)" }}>
+                  {user ? (
+                    <>
+                      <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:"rgba(201,168,76,0.6)", padding:"10px 16px 4px", margin:0, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                        {user.name || user.email.split("@")[0]}
+                      </p>
+                      <a href="/mi-cuenta" onClick={() => setUserDropdownOpen(false)}
+                        style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", transition:"background 0.2s" }}
+                        onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
+                        onMouseLeave={e => (e.currentTarget.style.background="none")}>Mi cuenta</a>
+                      <div style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, margin:"4px 0" }}/>
+                      <button onClick={() => { setUserDropdownOpen(false); signOut("/"); }}
+                        style={{ display:"block", width:"100%", background:"none", border:"none", color:"#f87171", padding:"10px 16px", fontSize:13, textAlign:"left", cursor:"pointer", transition:"background 0.2s" }}
+                        onMouseEnter={e => (e.currentTarget.style.background="rgba(248,113,113,0.08)")}
+                        onMouseLeave={e => (e.currentTarget.style.background="none")}>Cerrar sesión</button>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:"rgba(201,168,76,0.6)", padding:"10px 16px 4px", margin:0 }}>Mi cuenta</p>
+                      <a href={`/login?redirect=/tienda/${storeConfig?.slug}`} onClick={() => setUserDropdownOpen(false)}
+                        style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", transition:"background 0.2s" }}
+                        onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
+                        onMouseLeave={e => (e.currentTarget.style.background="none")}>Iniciar sesión</a>
+                      <a href={`/registro?redirect=/tienda/${storeConfig?.slug}`} onClick={() => setUserDropdownOpen(false)}
+                        style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", transition:"background 0.2s" }}
+                        onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
+                        onMouseLeave={e => (e.currentTarget.style.background="none")}>Registrarse</a>
+                    </>
+                  )}
                 </div>
               )}
             </div>
