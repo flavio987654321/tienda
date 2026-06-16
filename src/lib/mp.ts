@@ -37,7 +37,6 @@ export async function exchangeOAuthCode(code: string) {
     body: {
       client_id: MP_APP_ID,
       client_secret: MP_CLIENT_SECRET,
-      grant_type: "authorization_code",
       code,
       redirect_uri: MP_REDIRECT_URI,
     },
