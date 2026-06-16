@@ -115,8 +115,25 @@ function money(n: number) {
   return `$${n.toLocaleString("es-AR")}`;
 }
 
-function parseImages(raw: string): string[] {
-  try { return JSON.parse(raw); } catch { return []; }
+function parseImages(raw: string | string[] | null | undefined): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch { return []; }
+}
+
+function ProductImg({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const [broken, setBroken] = useState(false);
+  if (!src || broken) {
+    return (
+      <div className={`flex items-center justify-center bg-gray-50 ${className ?? ""}`}>
+        <Package className="h-8 w-8 text-gray-200" />
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} className={className} onError={() => setBroken(true)} />;
 }
 
 function Stars({
@@ -502,9 +519,17 @@ export default function MiCuentaPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-[#f5f4ff]">
+    <div className="min-h-screen bg-[#f5f4ff] relative overflow-x-hidden">
+      {/* Blobs decorativos de fondo */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden -z-0">
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-300/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 -right-24 w-80 h-80 bg-violet-300/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-24 -left-16 w-64 h-64 bg-purple-200/25 rounded-full blur-3xl" />
+        <div className="absolute -bottom-20 right-1/4 w-72 h-72 bg-indigo-200/20 rounded-full blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-10">
         <div className="mx-auto max-w-4xl px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-gray-950">
             <ShoppingBag className="h-5 w-5 text-indigo-600" />
@@ -528,7 +553,7 @@ export default function MiCuentaPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-4xl px-4 py-8">
+      <div className="relative z-10 mx-auto max-w-4xl px-4 py-8">
         {/* Profile card */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
           {/* Banner */}
@@ -711,7 +736,7 @@ export default function MiCuentaPage() {
                           return (
                             <div key={item.id} className="flex items-center gap-3">
                               <div className="h-12 w-12 rounded-xl bg-gray-50 shrink-0 overflow-hidden border border-gray-100">
-                                {imgs[0] && <img src={imgs[0]} alt={item.product.name} className="h-12 w-12 object-cover" />}
+                                <ProductImg src={imgs[0]} alt={item.product.name} className="h-12 w-12 object-cover" />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-semibold text-gray-900 truncate">{item.product.name}</p>
@@ -764,17 +789,11 @@ export default function MiCuentaPage() {
                     className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-md transition-shadow"
                   >
                     <div className="relative aspect-square bg-gray-50">
-                      {imgs[0] ? (
-                        <img
-                          src={imgs[0]}
-                          alt={fav.product.name}
-                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center">
-                          <Package className="h-10 w-10 text-gray-200" />
-                        </div>
-                      )}
+                      <ProductImg
+                        src={imgs[0]}
+                        alt={fav.product.name}
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
                       <button
                         onClick={() => removeFavorite(fav.productId)}
                         disabled={removingFavorite === fav.productId}
@@ -931,7 +950,7 @@ export default function MiCuentaPage() {
                         <div key={item.productId} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                           <div className="flex items-center gap-3 mb-4">
                             <div className="h-14 w-14 rounded-xl bg-gray-50 shrink-0 overflow-hidden border border-gray-100">
-                              {imgs[0] && <img src={imgs[0]} alt={item.productName} className="h-14 w-14 object-cover" />}
+                              <ProductImg src={imgs[0]} alt={item.productName} className="h-14 w-14 object-cover" />
                             </div>
                             <div className="min-w-0">
                               <p className="font-bold text-gray-900 truncate">{item.productName}</p>
@@ -989,7 +1008,7 @@ export default function MiCuentaPage() {
                           className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex gap-3 hover:shadow-md transition-shadow"
                         >
                           <div className="h-14 w-14 rounded-xl bg-gray-50 shrink-0 overflow-hidden border border-gray-100">
-                            {imgs[0] && <img src={imgs[0]} alt={review.productName} className="h-14 w-14 object-cover" />}
+                            <ProductImg src={imgs[0]} alt={review.productName} className="h-14 w-14 object-cover" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="font-bold text-gray-900 text-sm truncate">{review.productName}</p>
