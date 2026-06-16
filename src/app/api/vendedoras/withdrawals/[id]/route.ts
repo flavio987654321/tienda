@@ -22,30 +22,33 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Ingresá el motivo del rechazo" }, { status: 400 });
   }
 
-  try {
-    const result = await prisma.$transaction(async (tx) => {
-      const withdrawal = await tx.walletWithdrawal.findUnique({
-        where: { id },
+  const withdrawal = await prisma.walletWithdrawal.findUnique({
+    where: { id },
+    include: {
+      wallet: {
         include: {
-          wallet: {
-            include: {
-              affiliate: {
-                select: {
-                  userId: true,
-                  store: { select: { ownerId: true, name: true } },
-                },
-              },
+          affiliate: {
+            select: {
+              userId: true,
+              store: { select: { ownerId: true, name: true } },
             },
           },
         },
-      });
+      },
+    },
+  });
 
-      if (!withdrawal) throw new Error("Retiro no encontrado");
-      if (withdrawal.status !== "PENDING") throw new Error("Este retiro ya fue procesado");
+  if (!withdrawal) return NextResponse.json({ error: "Retiro no encontrado" }, { status: 404 });
+  if (withdrawal.status !== "PENDING") return NextResponse.json({ error: "Este retiro ya fue procesado" }, { status: 400 });
+  if (user.role === "OWNER" && withdrawal.wallet.affiliate.store.ownerId !== user.id) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
-      if (user.role === "OWNER" && withdrawal.wallet.affiliate.store.ownerId !== user.id) {
-        throw new Error("No autorizado");
-      }
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // Re-check status inside tx to avoid race conditions
+      const fresh = await tx.walletWithdrawal.findUnique({ where: { id }, select: { status: true } });
+      if (!fresh || fresh.status !== "PENDING") throw new Error("Este retiro ya fue procesado");
 
       const affiliateUserId = withdrawal.wallet.affiliate.userId;
 
