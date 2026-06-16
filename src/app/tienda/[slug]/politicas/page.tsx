@@ -176,7 +176,10 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
                 <> · <a href={`mailto:${store.owner.email}`} className="text-gray-300 hover:underline">{store.owner.email}</a></>
               ) : " desde el formulario de la tienda"}.
             </p>
-            <p className="text-xs text-gray-700 mt-2">Plataforma: TiendaApps · soporte: marketplacemitienda@gmail.com</p>
+            <p className="text-xs text-gray-700 mt-2">
+              Plataforma: TiendaApps · Responsable: Flavio Cesar Soltero Legoas · soporte:{" "}
+              <a href="mailto:marketplacemitienda@gmail.com" className="hover:underline">marketplacemitienda@gmail.com</a>
+            </p>
           </div>
 
         </div>

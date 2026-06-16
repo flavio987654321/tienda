@@ -18,9 +18,19 @@ export default function TerminosAfiliados() {
         <h1 className="text-3xl font-black text-white mb-2">
           Términos y Condiciones del Programa de Afiliados
         </h1>
-        <p className="text-gray-500 text-sm mb-12">
+        <p className="text-gray-500 text-sm mb-6">
           Versión 1.4 — Vigente desde junio de 2026
         </p>
+
+        <div className="rounded-xl border border-white/10 bg-white/5 p-5 mb-10 text-sm text-gray-300 space-y-1">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Responsable de la plataforma</p>
+          <p><span className="text-gray-500">Nombre:</span> Flavio Cesar Soltero Legoas</p>
+          <p><span className="text-gray-500">CUIL:</span> 20-94992405-0</p>
+          <p><span className="text-gray-500">Domicilio:</span> Buenos Aires, Argentina</p>
+          <p><span className="text-gray-500">Email:</span>{" "}
+            <a href="mailto:marketplacemitienda@gmail.com" className="text-indigo-400 hover:underline">marketplacemitienda@gmail.com</a>
+          </p>
+        </div>
 
         <div className="space-y-10 text-sm leading-relaxed">
 
