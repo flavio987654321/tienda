@@ -8,7 +8,7 @@ export async function GET() {
 
   const profile = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { id: true, name: true, email: true, image: true, bio: true, city: true, phone: true, instagramHandle: true, createdAt: true },
+    select: { id: true, name: true, email: true, image: true, bannerImage: true, bio: true, city: true, phone: true, instagramHandle: true, createdAt: true },
   });
 
   return NextResponse.json(profile);
@@ -18,7 +18,7 @@ export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { name, bio, city, phone, instagramHandle, image } = await req.json();
+  const { name, bio, city, phone, instagramHandle, image, bannerImage } = await req.json();
 
   if (name !== undefined && name !== null && name.trim() && name.trim().length < 2) {
     return NextResponse.json({ error: "El nombre debe tener al menos 2 caracteres" }, { status: 400 });
@@ -33,8 +33,9 @@ export async function PUT(req: NextRequest) {
       ...(phone !== undefined && { phone: phone?.trim() || null }),
       ...(instagramHandle !== undefined && { instagramHandle: instagramHandle?.trim() || null }),
       ...(image !== undefined && { image: image || null }),
+      ...(bannerImage !== undefined && { bannerImage: bannerImage || null }),
     },
-    select: { id: true, name: true, email: true, image: true, bio: true, city: true, phone: true, instagramHandle: true },
+    select: { id: true, name: true, email: true, image: true, bannerImage: true, bio: true, city: true, phone: true, instagramHandle: true },
   });
 
   return NextResponse.json(updated);
