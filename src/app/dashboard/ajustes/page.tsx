@@ -8,7 +8,8 @@ import AjustesClient from "./AjustesClient";
 import MpConnectButton from "./MpConnectButton";
 import LogoUploadCard from "@/components/LogoUploadCard";
 
-export default async function AjustesPage() {
+export default async function AjustesPage({ searchParams }: { searchParams: Promise<{ mp?: string }> }) {
+  const { mp } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.role !== "OWNER") redirect("/dashboard");
@@ -83,6 +84,7 @@ export default async function AjustesPage() {
               connected={!!store?.mpConnectedAt}
               connectedAt={store?.mpConnectedAt?.toISOString() ?? null}
               mpSellerId={store?.mpSellerId ?? null}
+              mpStatus={mp === "connected" ? "connected" : mp === "error" ? "error" : undefined}
             />
           </section>
 

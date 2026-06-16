@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, Loader2, Unlink, Zap } from "lucide-react";
+import { CheckCircle, Loader2, Unlink, Zap, XCircle } from "lucide-react";
 
 type Props = {
   connected: boolean;
   connectedAt: string | null;
   mpSellerId: string | null;
+  mpStatus?: "connected" | "error";
 };
 
-export default function MpConnectButton({ connected, connectedAt, mpSellerId }: Props) {
+export default function MpConnectButton({ connected, connectedAt, mpSellerId, mpStatus }: Props) {
   const [disconnecting, setDisconnecting] = useState(false);
 
   async function handleDisconnect() {
@@ -32,6 +33,19 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId }: 
           <p className="text-xs text-slate-400">Pagos automáticos con split para afiliadas</p>
         </div>
       </div>
+
+      {mpStatus === "connected" && (
+        <div className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 mb-4">
+          <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
+          <p className="text-sm font-semibold text-emerald-800">¡Cuenta de MercadoPago conectada con éxito!</p>
+        </div>
+      )}
+      {mpStatus === "error" && (
+        <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
+          <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+          <p className="text-sm font-semibold text-red-800">Hubo un error al conectar. Intentá de nuevo.</p>
+        </div>
+      )}
 
       {connected ? (
         <div>
