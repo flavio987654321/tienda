@@ -520,7 +520,7 @@ export default function BohoTerra() {
               </>
             )}
             {!isMobile && (
-              <button onClick={() => setFavoritesOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
+              <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); }} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
                 <svg width={18} height={18} viewBox="0 0 24 24" fill={favorites.length > 0 ? A : "none"} stroke={favorites.length > 0 ? A : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 {favorites.length > 0 && <span style={{ position:"absolute", top:-5, right:-5, background:A, color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
               </button>
@@ -528,12 +528,12 @@ export default function BohoTerra() {
             {/* User icon */}
             {!isMobile && (
               <div ref={userDropdownRef} style={{ position:"relative" }}>
-                <button onClick={() => setUserDropdownOpen(o => !o)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+                <button onClick={user && user.role !== "BUYER" ? undefined : () => { setUserDropdownOpen(o => !o); setFavoritesOpen(false); }} style={{ background:"none", border:"none", color:T, cursor: user && user.role !== "BUYER" ? "default" : "pointer", padding:4, display:"flex", alignItems:"center", opacity: user && user.role !== "BUYER" ? 0.35 : 1 }}>
                   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 </button>
                 {userDropdownOpen && (
                   <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#faf7f2", border:`1px solid rgba(44,34,24,0.12)`, borderRadius:10, minWidth:190, zIndex:200, boxShadow:"0 8px 28px rgba(44,34,24,0.12)", overflow:"hidden" }}>
-                    {user ? (
+                    {user && user.role === "BUYER" ? (
                       <>
                         <p style={{ padding:"10px 16px 4px", fontSize:11, color:"rgba(44,34,24,0.45)", margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                           {user.name || user.email.split("@")[0]}
@@ -620,7 +620,7 @@ export default function BohoTerra() {
             style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(44,34,24,0.06)`, color:MID, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
             Nuestra Historia
           </button>
-          <button onClick={() => { setFavoritesOpen(true); setMobileMenuOpen(false); }}
+          <button onClick={() => { setFavoritesOpen(true); setMobileMenuOpen(false); setUserDropdownOpen(false); }}
             style={{ display:"block", width:"100%", background:"none", border:"none", color:MID, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
             Favoritos {favorites.length > 0 && `(${favorites.length})`}
           </button>

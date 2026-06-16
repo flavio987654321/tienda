@@ -543,17 +543,17 @@ export default function UrbanPulse() {
               )}
             </>
           )}
-          <button onClick={() => setFavoritesOpen(true)} style={{ ...iconBtn, position:"relative" }}>
+          <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); }} style={{ ...iconBtn, position:"relative" }}>
             <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? DARK : "none"} stroke={DARK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
             {favorites.length > 0 && <span style={{ position:"absolute", top:4, right:4, width:8, height:8, background:ACC, border:`2px solid ${DARK}`, borderRadius:"50%" }} />}
           </button>
           <div style={{ position:"relative" }} ref={userDropdownRef}>
-            <button onClick={() => setUserDropdownOpen(o => !o)} style={{ ...iconBtn }}>
+            <button onClick={user && user.role !== "BUYER" ? undefined : () => { setUserDropdownOpen(o => !o); setFavoritesOpen(false); }} style={{ ...iconBtn, cursor: user && user.role !== "BUYER" ? "default" : "pointer", opacity: user && user.role !== "BUYER" ? 0.35 : 1 }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
             {userDropdownOpen && (
               <div className="up-fade" style={{ position:"absolute", top:"calc(100% + 8px)", right:0, background:WHITE, border:`2px solid ${DARK}`, minWidth:190, zIndex:200 }}>
-                {user ? (
+                {user && user.role === "BUYER" ? (
                   <>
                     <p style={{ padding:"8px 16px 4px", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:MID, margin:0, borderBottom:`1px solid ${BG}`, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                       {user.name || user.email.split("@")[0]}
@@ -1166,7 +1166,7 @@ export default function UrbanPulse() {
 
       {/* FAVORITES DRAWER */}
       {favoritesOpen && (
-        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex:500 }}>
+        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 500 }}>
           <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.5)" }} />
           <div style={{ position:"absolute", right:0, top:0, bottom:0, width:400, background:WHITE, display:"flex", flexDirection:"column" }}>
             <div style={{ padding:"20px 24px", borderBottom:`3px solid ${DARK}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>

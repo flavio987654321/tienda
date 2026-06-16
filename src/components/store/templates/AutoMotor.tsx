@@ -265,13 +265,13 @@ export default function AutoMotor() {
           </div>
           {/* User icon */}
           <div ref={userDropdownRef} style={{ position:"relative" }}>
-            <button onClick={() => setUserDropdownOpen(o => !o)}
-              style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+            <button onClick={user && user.role !== "BUYER" ? undefined : () => setUserDropdownOpen(o => !o)}
+              style={{ background:"none", border:"none", color:navTextMid, cursor: user && user.role !== "BUYER" ? "default" : "pointer", padding:4, display:"flex", alignItems:"center", opacity: user && user.role !== "BUYER" ? 0.35 : 1 }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
             {userDropdownOpen && (
               <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:navBg, border:`1px solid ${navBorderColor}`, minWidth:190, zIndex:300, boxShadow:"0 8px 28px rgba(0,0,0,0.25)", overflow:"hidden" }}>
-                {user ? (
+                {user && user.role === "BUYER" ? (
                   <>
                     <p style={{ padding:"10px 16px 4px", fontSize:11, color:navTextMid, margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                       {user.name || user.email.split("@")[0]}
