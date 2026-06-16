@@ -124,11 +124,11 @@ function parseImages(raw: string | string[] | null | undefined): string[] {
   } catch { return []; }
 }
 
-function ProductImg({ src, alt, className }: { src: string; alt: string; className?: string }) {
+function ProductImg({ src, alt, className }: { src: string | undefined; alt: string; className?: string }) {
   const [broken, setBroken] = useState(false);
-  if (!src || broken) {
+  if (!src || src.trim() === "" || broken) {
     return (
-      <div className={`flex items-center justify-center bg-gray-50 ${className ?? ""}`}>
+      <div className="flex items-center justify-center bg-gray-50 w-full h-full">
         <Package className="h-8 w-8 text-gray-200" />
       </div>
     );
@@ -519,13 +519,13 @@ export default function MiCuentaPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-[#f5f4ff] relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#f5f4ff] relative">
       {/* Blobs decorativos de fondo */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden -z-0">
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-300/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 -right-24 w-80 h-80 bg-violet-300/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-24 -left-16 w-64 h-64 bg-purple-200/25 rounded-full blur-3xl" />
-        <div className="absolute -bottom-20 right-1/4 w-72 h-72 bg-indigo-200/20 rounded-full blur-3xl" />
+      <div aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
+        <div style={{ position: "absolute", top: -128, left: -128, width: 384, height: 384, background: "radial-gradient(circle, rgba(129,140,248,0.18) 0%, transparent 70%)" }} />
+        <div style={{ position: "absolute", top: "33%", right: -96, width: 320, height: 320, background: "radial-gradient(circle, rgba(167,139,250,0.18) 0%, transparent 70%)" }} />
+        <div style={{ position: "absolute", bottom: 96, left: -64, width: 256, height: 256, background: "radial-gradient(circle, rgba(196,181,253,0.22) 0%, transparent 70%)" }} />
+        <div style={{ position: "absolute", bottom: -80, right: "25%", width: 288, height: 288, background: "radial-gradient(circle, rgba(129,140,248,0.15) 0%, transparent 70%)" }} />
       </div>
 
       {/* Header */}
