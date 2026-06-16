@@ -43,6 +43,7 @@ export default function PagosClient({ initial }: Props) {
     !initial.shippingConfigured ? "envios" : "transferencia"
   );
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const maskAll = useCallback(() => setRevealed({}), []);
@@ -60,6 +61,7 @@ export default function PagosClient({ initial }: Props) {
   }
 
   function setTransferencia(field: string, value: string | boolean) {
+    setValidationError(null);
     setPaymentInfo((p) => ({
       ...p,
       transferencia: { ...p.transferencia, [field]: value },
@@ -74,6 +76,15 @@ export default function PagosClient({ initial }: Props) {
   }
 
   async function handleSave() {
+    // Validación: si transferencia activa, necesita al menos un identificador
+    if (paymentInfo.transferencia.enabled) {
+      const t = paymentInfo.transferencia;
+      if (!t.cbu.trim() && !t.cvu.trim() && !t.alias.trim()) {
+        setValidationError("Si activás transferencia bancaria, completá al menos el CBU, CVU o alias.");
+        return;
+      }
+    }
+    setValidationError(null);
     setSaveState("saving");
     try {
       const res = await fetch("/api/pagos", {
@@ -174,6 +185,9 @@ export default function PagosClient({ initial }: Props) {
                   />
                 </Row>
               </div>
+              <p className="text-[11px] text-slate-400 -mt-1 px-0.5">
+                CBU = bancos tradicionales (Galicia, Santander, BBVA…) · CVU = billeteras virtuales (Mercado Pago, Ualá, Naranja X)
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Row label="Alias">
                   <Input
@@ -265,63 +279,65 @@ export default function PagosClient({ initial }: Props) {
             Estas opciones aparecen en el checkout cuando el cliente elige cómo recibir su compra. Podés poner precio fijo o "A coordinar" para acordarlo por WhatsApp.
           </div>
 
-          {shippingMethods.map((method, idx) => (
-            <div key={method.id} className="rounded-lg border border-slate-200 overflow-hidden">
-              {/* Header row */}
-              <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border-b border-slate-100">
-                {method.isPickup ? (
-                  <span className="text-xs font-semibold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md">Siempre activo</span>
-                ) : (
-                  <button
-                    onClick={() => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, enabled: !m.enabled } : m))}
-                    className="flex items-center gap-1.5 text-xs font-semibold"
-                  >
-                    {method.enabled
-                      ? <><ToggleRight className="h-5 w-5 text-sky-500" /><span className="text-sky-600">Activo</span></>
-                      : <><ToggleLeft className="h-5 w-5 text-slate-300" /><span className="text-slate-400">Inactivo</span></>}
-                  </button>
-                )}
-                <span className="flex-1 text-xs font-bold text-slate-600">
-                  {method.isPickup ? "Retiro / Acordar" : `Opción ${idx}`}
-                </span>
-              </div>
-
-              {/* Body */}
-              <div className={`px-4 py-3 space-y-3 bg-white ${!method.enabled && !method.isPickup ? "opacity-50 pointer-events-none" : ""}`}>
-                {/* Label */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">Nombre visible para el cliente</label>
-                  <input
-                    type="text"
-                    value={method.label}
-                    onChange={e => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, label: e.target.value.slice(0, 80) } : m))}
-                    maxLength={80}
-                    placeholder={method.isPickup ? "Ej: Retiro en local / acordar" : "Ej: Envío a domicilio"}
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors"
-                  />
+          {shippingMethods.map((method, idx) => {
+            const disabled = !method.enabled && !method.isPickup;
+            return (
+              <div
+                key={method.id}
+                className={`rounded-lg border p-4 space-y-3 transition-colors ${disabled ? "border-slate-150 bg-slate-50/50 opacity-60" : "border-slate-200 bg-white"}`}
+              >
+                {/* Fila superior: toggle + etiqueta del método */}
+                <div className="flex items-center gap-3">
+                  {method.isPickup ? (
+                    <span className="shrink-0 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                      Siempre activo
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, enabled: !m.enabled } : m))}
+                      className="shrink-0 flex items-center gap-1.5 text-xs font-semibold"
+                    >
+                      {method.enabled
+                        ? <><ToggleRight className="h-5 w-5 text-sky-500" /><span className="text-sky-600">Activo</span></>
+                        : <><ToggleLeft className="h-5 w-5 text-slate-300" /><span className="text-slate-400">Inactivo</span></>}
+                    </button>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <input
+                      type="text"
+                      value={method.label}
+                      onChange={e => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, label: e.target.value.slice(0, 80) } : m))}
+                      maxLength={80}
+                      placeholder={method.isPickup ? "Ej: Retiro en local / acordar" : "Ej: Envío a domicilio"}
+                      disabled={disabled}
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  {!method.isPickup && (
+                    <span className="shrink-0 text-[11px] text-slate-400">Opción {idx}</span>
+                  )}
                 </div>
 
-                {/* Precio — solo para métodos no pickup */}
-                {!method.isPickup && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-slate-600">Costo</label>
+                {/* Costo — solo envíos no pickup */}
+                {!method.isPickup && !disabled && (
+                  <div className="space-y-2 pl-[72px]">
                     <div className="flex gap-2">
                       <button
                         onClick={() => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, coordinar: true, price: 0 } : m))}
-                        className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-colors ${method.coordinar ? "bg-sky-50 border-sky-300 text-sky-700" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"}`}
+                        className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${method.coordinar ? "bg-sky-50 border-sky-300 text-sky-700" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"}`}
                       >
                         A coordinar
                       </button>
                       <button
                         onClick={() => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, coordinar: false } : m))}
-                        className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-colors ${!method.coordinar ? "bg-sky-50 border-sky-300 text-sky-700" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"}`}
+                        className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${!method.coordinar ? "bg-sky-50 border-sky-300 text-sky-700" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"}`}
                       >
                         Precio fijo
                       </button>
                     </div>
-                    {!method.coordinar && (
+                    {!method.coordinar ? (
                       <div className="relative">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">$</span>
                         <input
                           type="number"
                           min={0}
@@ -329,22 +345,21 @@ export default function PagosClient({ initial }: Props) {
                           value={method.price || ""}
                           onChange={e => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, price: Math.max(0, Math.floor(Number(e.target.value) || 0)) } : m))}
                           placeholder="0"
-                          className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors"
+                          className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-7 pr-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors"
                         />
                       </div>
-                    )}
-                    {method.coordinar && (
-                      <p className="text-xs text-slate-400">El costo se acuerda con el cliente después del pedido (por WhatsApp u otro medio).</p>
+                    ) : (
+                      <p className="text-[11px] text-slate-400">El cliente ve "A coordinar" en el checkout. Acordás el costo por WhatsApp u otro medio.</p>
                     )}
                   </div>
                 )}
 
                 {method.isPickup && (
-                  <p className="text-xs text-slate-400">Este método siempre es gratuito. Es el retiro en persona o acordado directamente con el comprador.</p>
+                  <p className="text-[11px] text-slate-400 pl-[72px]">Siempre gratuito — el comprador retira en persona o coordinan directamente.</p>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Section>
 
@@ -397,6 +412,12 @@ export default function PagosClient({ initial }: Props) {
 
       {/* SAVE BUTTON */}
       <div className="sticky bottom-4 pt-2">
+        {validationError && (
+          <div className="flex items-start gap-2 mb-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5">
+            <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+            <p className="text-xs text-red-700">{validationError}</p>
+          </div>
+        )}
         <button
           onClick={handleSave}
           disabled={saveState === "saving"}
