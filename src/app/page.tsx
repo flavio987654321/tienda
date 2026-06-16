@@ -10,7 +10,6 @@ import {
   ShoppingBag, Star, Zap, Shield, Send, MessageCircle, Mail,
   Package, Heart, ShoppingCart, Globe, Eye, ChevronRight, Menu, MapPin,
   BadgeCheck, Shirt, Car, Monitor, Home as HomeIcon, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, LayoutGrid,
-  BadgeCheck, Shirt, Car, Monitor, Home as HomeIcon, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, LayoutGrid,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
