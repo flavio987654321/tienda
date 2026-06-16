@@ -481,6 +481,7 @@ export async function sendOrderConfirmationEmail({
   total,
   paymentInfo,
   policies,
+  ownerContact,
 }: {
   buyerEmail: string;
   buyerName: string;
@@ -498,6 +499,7 @@ export async function sendOrderConfirmationEmail({
     efectivo?: { enabled?: boolean; instrucciones?: string };
   } | null;
   policies?: { returns?: string; shipping?: string; terms?: string } | null;
+  ownerContact?: { name: string | null; email: string | null; phone: string | null } | null;
 }) {
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
 
@@ -596,6 +598,15 @@ export async function sendOrderConfirmationEmail({
         </div>
 
         ${buildPoliciesBlock(policies)}
+
+        ${ownerContact && (ownerContact.email || ownerContact.phone) ? `
+        <!-- Vendor contact -->
+        <div style="border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px;margin-bottom:24px;">
+          <p style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 10px;">Contacto del vendedor</p>
+          ${ownerContact.name ? `<p style="font-size:14px;font-weight:600;color:#111827;margin:0 0 4px;">${escapeHtml(ownerContact.name)}</p>` : ""}
+          ${ownerContact.email ? `<p style="font-size:13px;color:#6b7280;margin:0 0 4px;">Email: <a href="mailto:${escapeHtml(ownerContact.email)}" style="color:#4f46e5;">${escapeHtml(ownerContact.email)}</a></p>` : ""}
+          ${ownerContact.phone ? `<p style="font-size:13px;color:#6b7280;margin:0;">WhatsApp / Tel: <strong>${escapeHtml(ownerContact.phone)}</strong></p>` : ""}
+        </div>` : ""}
 
         <!-- Footer -->
         <p style="color:#d1d5db;font-size:11px;text-align:center;margin:0;">

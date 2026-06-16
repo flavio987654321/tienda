@@ -299,7 +299,7 @@ export async function POST(req: NextRequest) {
         policyReturnsActive: true,
         policyShippingActive: true,
         policyTermsActive: true,
-        owner: { select: { email: true, name: true } },
+        owner: { select: { email: true, name: true, phone: true } },
       },
     });
     if (storeForEmail) {
@@ -361,6 +361,11 @@ export async function POST(req: NextRequest) {
         sendOrderConfirmationEmail({
           buyerEmail: customer.email,
           buyerName: customer.name,
+          ownerContact: {
+            name: storeForEmail.owner?.name ?? null,
+            email: storeForEmail.owner?.email ?? null,
+            phone: storeForEmail.owner?.phone ?? null,
+          },
           ...emailPayload,
         }).catch((e) => console.error("[email] buyer confirmation:", e));
       }

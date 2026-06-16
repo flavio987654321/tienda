@@ -142,7 +142,7 @@ export default function BohoTerra() {
     searchResults, favoriteProducts, wholesaleWarnings,
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
-    pagoOptions,
+    pagoOptions, acceptedTerms, setAcceptedTerms,
   } = useCartLogic(storefront);
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
@@ -1244,7 +1244,8 @@ export default function BohoTerra() {
                   <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth={2} strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
                 <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:22, color:T, marginBottom:10 }}>¡Pedido recibido!</p>
-                <p style={{ fontSize:13, color:MID, lineHeight:1.8, marginBottom:28 }}>Te contactamos a la brevedad para confirmar.</p>
+                <p style={{ fontSize:13, color:MID, lineHeight:1.8, marginBottom:12 }}>Te enviamos un email con el resumen. El vendedor te contactará para coordinar el envío.</p>
+                <p style={{ fontSize:11, color:MID, opacity:0.6, lineHeight:1.7, marginBottom:28 }}>¿Algún problema? Respondé el email o contactá al vendedor. Tenés 10 días corridos para cancelar (Ley 24.240).</p>
                 <button onClick={()=>{ setCheckoutOpen(false); setCheckoutStatus("idle"); }}
                   style={{ background:A, color:"#fff", border:"none", padding:"13px 32px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
                   Seguir comprando
@@ -1341,8 +1342,24 @@ export default function BohoTerra() {
                   </div>
                 </div>
                 <div style={{ padding:"14px 28px 24px", borderTop:`1px solid rgba(44,34,24,0.07)`, flexShrink:0 }}>
-                  <button type="submit" disabled={checkoutStatus==="placing"}
-                    style={{ width:"100%", background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", opacity:checkoutStatus==="placing"?0.7:1 }}>
+                  {/* seguridad */}
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, padding:"9px 12px", border:`1px solid rgba(44,34,24,0.1)`, borderRadius:4, background:"rgba(44,34,24,0.03)" }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color:"#16a34a", flexShrink:0 }}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <span style={{ fontSize:11, color:"rgba(44,34,24,0.45)", lineHeight:1.5 }}>
+                      Pago seguro vía <strong style={{ color:"rgba(44,34,24,0.65)" }}>MercadoPago</strong> · SSL cifrado
+                    </span>
+                  </div>
+                  <label style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:12, cursor:"pointer" }}>
+                    <input type="checkbox" checked={acceptedTerms} onChange={e=>setAcceptedTerms(e.target.checked)} style={{ marginTop:2, accentColor:A, flexShrink:0 }} />
+                    <span style={{ fontSize:11, color:"rgba(44,34,24,0.55)", lineHeight:1.6 }}>
+                      Acepto los{" "}
+                      <a href="/terminos?role=buyer" target="_blank" rel="noopener" style={{ color:A, textDecoration:"underline" }}>Términos y Condiciones</a>
+                      {" "}y la{" "}
+                      <a href="/privacidad?role=buyer" target="_blank" rel="noopener" style={{ color:A, textDecoration:"underline" }}>Política de Privacidad</a>
+                    </span>
+                  </label>
+                  <button type="submit" disabled={checkoutStatus==="placing" || !acceptedTerms}
+                    style={{ width:"100%", background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: (!acceptedTerms || checkoutStatus==="placing") ? "not-allowed" : "pointer", opacity: (!acceptedTerms || checkoutStatus==="placing") ? 0.45 : 1 }}>
                     {checkoutStatus==="placing"?"Procesando...":"Crear pedido"}
                   </button>
                 </div>

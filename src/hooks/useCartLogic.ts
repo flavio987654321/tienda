@@ -41,6 +41,7 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
   const [toastMsg,       setToastMsg]       = useState<string | null>(null);
   const [contactStatus,  setContactStatus]  = useState<ContactStatus>("idle");
   const [contactForm,    setContactForm]    = useState({ nombre:"", email:"", mensaje:"" });
+  const [acceptedTerms,  setAcceptedTerms]  = useState(false);
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -191,6 +192,7 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!acceptedTerms) { setCheckoutError("Debés aceptar los términos y condiciones para continuar."); return; }
     setCheckoutStatus("placing");
     setCheckoutError("");
     const res = await placeOrder({
@@ -266,6 +268,7 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg,
     contactStatus, setContactStatus, contactForm, setContactForm,
+    acceptedTerms, setAcceptedTerms,
     // Derived
     cartTotal, cartCount, envioPrice, couponDiscount, orderTotal,
     searchResults, favoriteProducts,

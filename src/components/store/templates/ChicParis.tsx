@@ -233,7 +233,7 @@ export default function ChicParis() {
     searchResults, favoriteProducts, wholesaleWarnings,
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
-    pagoOptions,
+    pagoOptions, acceptedTerms, setAcceptedTerms,
   } = useCartLogic(storefront);
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
@@ -1393,7 +1393,8 @@ export default function ChicParis() {
                   <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
                 <h3 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 900, color: "#111" }}>¡Pedido recibido!</h3>
-                <p style={{ fontSize: 14, color: "#666", margin: "0 0 28px" }}>Te contactamos en breve para confirmar y coordinar el pago.</p>
+                <p style={{ fontSize: 14, color: "#666", margin: "0 0 8px" }}>Te enviamos un email con el resumen. El vendedor te contactará para coordinar el envío.</p>
+                <p style={{ fontSize: 12, color: "#999", margin: "0 0 28px", lineHeight: 1.6 }}>¿Algún problema? Respondé el email o contactá al vendedor. Tenés 10 días corridos para cancelar (Ley 24.240).</p>
                 <button onClick={() => { setCheckoutOpen(false); setCheckoutStatus("idle"); }}
                   style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "12px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
                   Cerrar
@@ -1468,7 +1469,17 @@ export default function ChicParis() {
 
                 {/* Summary */}
                 <div style={{ padding: "16px 24px", borderTop: "1px solid #f0f0f0" }}>
-                  {[[`Subtotal (${cartCount} productos)`, fmt(cartTotal)], ["Envío", envioPrice === 0 ? "Gratis" : fmt(envioPrice)], ...(appliedCoupon ? [["Descuento", `−${fmt(couponDiscount)}`]] : [])].map(([k, v]) => (
+                  {/* items desglose */}
+                  {cartItems.map((item, idx) => (
+                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: "#555", maxWidth: "70%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {item.product.name}{item.size ? ` · ${item.size}` : ""}{item.color ? ` · ${item.color}` : ""} ×{item.qty}
+                      </span>
+                      <span style={{ fontSize: 12, color: "#111", fontWeight: 600, whiteSpace: "nowrap" }}>{fmt(item.product.price * item.qty)}</span>
+                    </div>
+                  ))}
+                  <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 8, paddingTop: 8 }} />
+                  {[["Envío", envioPrice === 0 ? "Gratis" : fmt(envioPrice)], ...(appliedCoupon ? [["Descuento", `−${fmt(couponDiscount)}`]] : [])].map(([k, v]) => (
                     <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                       <span style={{ fontSize: 13, color: "#666" }}>{k}</span>
                       <span style={{ fontSize: 13, color: k === "Descuento" ? "#16a34a" : "#111", fontWeight: k === "Descuento" ? 700 : 400 }}>{v}</span>
@@ -1479,8 +1490,24 @@ export default function ChicParis() {
                     <span style={{ fontSize: 16, fontWeight: 900, color: ACC }}>{fmt(orderTotal)}</span>
                   </div>
                   {checkoutError && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 8 }}>{checkoutError}</p>}
-                  <button type="submit" disabled={checkoutStatus === "placing"}
-                    style={{ width: "100%", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "14px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", marginTop: 14, opacity: checkoutStatus === "placing" ? 0.7 : 1 }}>
+                  {/* seguridad */}
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:14, marginBottom:0, padding:"9px 12px", border:"1px solid #e5e5e5", borderRadius:4, background:"#fafafa" }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color:"#16a34a", flexShrink:0 }}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <span style={{ fontSize:11, color:"#888", lineHeight:1.5 }}>
+                      Pago seguro vía <strong style={{ color:"#555" }}>MercadoPago</strong> · SSL cifrado
+                    </span>
+                  </div>
+                  <label style={{ display:"flex", alignItems:"flex-start", gap:10, marginTop:10, cursor:"pointer" }}>
+                    <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} style={{ marginTop:2, accentColor:ACC, flexShrink:0 }} />
+                    <span style={{ fontSize:11, color:"#888", lineHeight:1.6 }}>
+                      Acepto los{" "}
+                      <a href="/terminos?role=buyer" target="_blank" rel="noopener" style={{ color:ACC, textDecoration:"underline" }}>Términos y Condiciones</a>
+                      {" "}y la{" "}
+                      <a href="/privacidad?role=buyer" target="_blank" rel="noopener" style={{ color:ACC, textDecoration:"underline" }}>Política de Privacidad</a>
+                    </span>
+                  </label>
+                  <button type="submit" disabled={checkoutStatus === "placing" || !acceptedTerms}
+                    style={{ width: "100%", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "14px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: (!acceptedTerms || checkoutStatus==="placing") ? "not-allowed" : "pointer", marginTop: 12, opacity: (!acceptedTerms || checkoutStatus === "placing") ? 0.45 : 1 }}>
                     {checkoutStatus === "placing" ? "Procesando..." : "Confirmar pedido"}
                   </button>
                 </div>

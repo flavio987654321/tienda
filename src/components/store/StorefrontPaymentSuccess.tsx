@@ -40,7 +40,7 @@ export default function StorefrontPaymentSuccess() {
           <div>
             <h2 className="text-lg font-bold text-gray-900">¡Compra realizada!</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Tu pedido fue registrado correctamente. El vendedor se pondrá en contacto para coordinar el pago y el envío.
+              Tu pedido fue registrado. Te enviamos un email con el resumen. El vendedor te contactará para coordinar el envío.
             </p>
           </div>
 
@@ -51,6 +51,10 @@ export default function StorefrontPaymentSuccess() {
             </span>
           </div>
 
+          <p className="text-xs text-gray-400 text-center leading-relaxed">
+            ¿Algún problema? Respondé el email de confirmación o contactá al vendedor directamente.
+            Tenés <strong>10 días corridos</strong> para solicitar cancelación (Ley 24.240).
+          </p>
           <button
             onClick={() => setOrderId(null)}
             className="mt-1 w-full rounded-xl bg-emerald-500 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors"
