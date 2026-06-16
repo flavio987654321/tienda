@@ -7,7 +7,7 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
+import { ENVIO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
@@ -233,6 +233,7 @@ export default function ChicParis() {
     searchResults, favoriteProducts, wholesaleWarnings,
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
+    pagoOptions,
   } = useCartLogic(storefront);
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
@@ -1433,7 +1434,7 @@ export default function ChicParis() {
                   ))}
 
                   <p style={{ margin: "16px 0 10px", fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", color: "#333" }}>Pago</p>
-                  {PAGO_OPTIONS.map(opt => (
+                  {pagoOptions.map(opt => (
                     <label key={opt.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${pagoId === opt.id ? ACC : "#e0e0e0"}`, marginBottom: 8, cursor: "pointer", background: pagoId === opt.id ? `${ACC}10` : "#fff" }}>
                       <input type="radio" checked={pagoId === opt.id} onChange={() => setPagoId(opt.id)} style={{ accentColor: ACC }} />
                       <span style={{ fontSize: 13 }}>{opt.label}</span>

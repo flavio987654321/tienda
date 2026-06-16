@@ -17,9 +17,17 @@ export const ENVIO_OPTIONS = [
   { id: "nacional", label: "Envío nacional",             price: 6500 },
 ];
 
-export const PAGO_OPTIONS = [
+export const BASE_PAGO_OPTIONS = [
   { id: "transferencia", label: "Transferencia bancaria" },
   { id: "retirar",       label: "Pago al retirar / acordar" },
 ];
+
+export const MP_PAGO_OPTION = { id: "mercadopago", label: "MercadoPago (tarjeta / débito)" };
+
+export function getPagoOptions(hasMercadoPago: boolean) {
+  return hasMercadoPago ? [MP_PAGO_OPTION, ...BASE_PAGO_OPTIONS] : BASE_PAGO_OPTIONS;
+}
+
+export const PAGO_OPTIONS = BASE_PAGO_OPTIONS;
 
 export const fmt = (n: number) => "$" + n.toLocaleString("es-AR");

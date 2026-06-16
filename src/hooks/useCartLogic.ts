@@ -2,18 +2,19 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { StorefrontProduct, ValidatedCoupon, PlaceOrderParams } from "./useStorefront";
-import { ENVIO_OPTIONS, fmt as fmtFn, type CartItem, type ContactStatus, type CheckoutStatus } from "@/components/store/shared/cartTypes";
+import { ENVIO_OPTIONS, getPagoOptions, fmt as fmtFn, type CartItem, type ContactStatus, type CheckoutStatus } from "@/components/store/shared/cartTypes";
 
 type StorefrontDeps = {
   products: StorefrontProduct[];
   resolveVariantId: (product: StorefrontProduct, size: string, color: string) => string | null;
   validateCoupon: (code: string, subtotal: number) => Promise<{ coupon: ValidatedCoupon; discount: number } | { error: string }>;
-  placeOrder: (params: PlaceOrderParams) => Promise<{ ok: boolean; error?: string }>;
+  placeOrder: (params: PlaceOrderParams) => Promise<{ ok: boolean; orderId?: string; error?: string }>;
   checkoutMode?: "cart" | "inquiry";
   isWholesale?: boolean;
+  hasMercadoPago?: boolean;
 };
 
-export function useCartLogic({ products, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false }: StorefrontDeps) {
+export function useCartLogic({ products, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false }: StorefrontDeps) {
   const [cartItems,      setCartItems]      = useState<CartItem[]>([]);
   const [cartOpen,       setCartOpen]       = useState(false);
   const [modalProduct,   setModalProduct]   = useState<StorefrontProduct | null>(null);
@@ -213,6 +214,27 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
       couponId:        appliedCoupon?.id ?? null,
     });
     if (!res.ok) { setCheckoutStatus("idle"); setCheckoutError(res.error ?? "Error al procesar"); return; }
+
+    // Si eligió MercadoPago, crear preferencia y redirigir
+    if (pagoId === "mercadopago" && res.orderId) {
+      const mpRes = await fetch("/api/mp/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: res.orderId }),
+      });
+      const mpData = await mpRes.json().catch(() => ({}));
+      if (!mpRes.ok || !mpData.initPoint) {
+        setCheckoutStatus("idle");
+        setCheckoutError(mpData.error ?? "No se pudo iniciar el pago. Intentá de nuevo.");
+        return;
+      }
+      setCartItems([]);
+      setAppliedCoupon(null);
+      try { localStorage.removeItem("storefront_cart"); } catch {}
+      window.location.href = mpData.sandboxInitPoint ?? mpData.initPoint;
+      return;
+    }
+
     setCheckoutStatus("done");
     setCartItems([]);
     setAppliedCoupon(null);
@@ -248,6 +270,7 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
     cartTotal, cartCount, envioPrice, couponDiscount, orderTotal,
     searchResults, favoriteProducts,
     checkoutMode, isWholesale, wholesaleWarnings,
+    pagoOptions: getPagoOptions(hasMercadoPago),
     // Functions
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,

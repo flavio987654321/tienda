@@ -237,7 +237,7 @@ export function useStorefront() {
     return res.json();
   }
 
-  async function placeOrder(params: PlaceOrderParams): Promise<{ ok: boolean; error?: string }> {
+  async function placeOrder(params: PlaceOrderParams): Promise<{ ok: boolean; orderId?: string; error?: string }> {
     if (!storeId) return { ok: false, error: "Tienda no disponible" };
     const res = await fetch("/api/checkout", {
       method: "POST",
@@ -255,7 +255,7 @@ export function useStorefront() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, error: data?.error || "Error al procesar el pedido" };
-    return { ok: true };
+    return { ok: true, orderId: data.order?.id };
   }
 
   const storeTypeConfig    = getStoreType(config?.tipoTienda || "GENERAL");
@@ -264,6 +264,7 @@ export function useStorefront() {
   const ocultarPrecios     = config?.ocultarPreciosPublico ?? false;
   const defaultCategories  = storeTypeConfig.categorias;
   const featuredCategories = config?.featuredCategories ?? [];
+  const hasMercadoPago     = config?.hasMercadoPago ?? false;
 
-  return { products, loadingProducts, affiliateId, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories };
+  return { products, loadingProducts, affiliateId, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories, hasMercadoPago };
 }

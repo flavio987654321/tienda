@@ -73,6 +73,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
         tagline: true,
         tipoTienda: true,
         tieneVentaMayorista: true,
+        mpAccessToken: true,
         ownerId: true,
         isVerified: true,
         verifiedShowName: true,
@@ -134,6 +135,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
       slug,
       tipoTienda: store.tipoTienda ?? "GENERAL",
       tieneVentaMayorista: store.tieneVentaMayorista ?? false,
+      hasMercadoPago: !!store.mpAccessToken,
       isOwner,
       isVerified: store.isVerified,
       verifiedInfo: {

@@ -112,6 +112,7 @@ export type StoreConfig = {
   };
   tipoTienda?: string;
   tieneVentaMayorista?: boolean;
+  hasMercadoPago?: boolean;
   ocultarPreciosPublico?: boolean;
   featuredCategories?: string[];
   flyerConfig?: FlyerConfig;
