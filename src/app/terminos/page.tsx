@@ -260,7 +260,19 @@ export default async function TerminosPage({
           </div>
 
           <h1 className="text-4xl font-black mb-2">Términos y Condiciones</h1>
-          <p className="text-gray-500 text-sm mb-3">Última actualización: junio 2026</p>
+          <p className="text-gray-500 text-sm mb-6">Última actualización: junio 2026</p>
+
+          {/* Responsable */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5 mb-8 text-sm text-gray-300 space-y-1">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Datos del prestador del servicio</p>
+            <p><span className="text-gray-500">Nombre:</span> Flavio Cesar Soltero Legoas</p>
+            <p><span className="text-gray-500">CUIL:</span> 20-94992405-0</p>
+            <p><span className="text-gray-500">Domicilio:</span> Buenos Aires, Argentina</p>
+            <p><span className="text-gray-500">Email:</span>{" "}
+              <a href="mailto:marketplacemitienda@gmail.com" className="text-indigo-400 hover:underline">marketplacemitienda@gmail.com</a>
+            </p>
+            <p><span className="text-gray-500">Plataforma:</span> TiendaApps</p>
+          </div>
 
           {/* Tabs por tipo */}
           <div className="flex gap-2 mb-10 flex-wrap">
