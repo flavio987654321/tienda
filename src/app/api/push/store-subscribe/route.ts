@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth-session";
 
 // Límites de tamaño para evitar payloads gigantes
 const MAX_ENDPOINT_LEN = 512;
@@ -48,10 +49,14 @@ export async function POST(req: NextRequest) {
 
   const { auth, p256dh } = keys as Record<string, string>;
 
+  // Si hay sesión activa, linkear la suscripción al usuario
+  const currentUser = await getCurrentUser();
+  const userId = currentUser?.id ?? null;
+
   await prisma.storeSubscription.upsert({
     where: { endpoint },
-    update: { auth, p256dh, storeId },
-    create: { storeId, endpoint, auth, p256dh },
+    update: { auth, p256dh, storeId, ...(userId ? { userId } : {}) },
+    create: { storeId, endpoint, auth, p256dh, ...(userId ? { userId } : {}) },
   });
 
   return NextResponse.json({ ok: true });

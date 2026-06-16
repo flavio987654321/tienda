@@ -33,10 +33,12 @@ model User {
   asAffiliate   Affiliate[] @relation("AffiliateUser")
   favorites     Favorite[]
   reviews       Review[]
-  notifications     Notification[]
-  subscription      Subscription?
-  rewardCoupons     AffiliateRewardCoupon[]
-  pushSubscriptions PushSubscription[]
+  notifications       Notification[]
+  subscription        Subscription?
+  rewardCoupons       AffiliateRewardCoupon[]
+  pushSubscriptions   PushSubscription[]
+  storeSubscriptions  StoreSubscription[]
+  storeFollows        StoreFollow[]
 }
 
 model PushSubscription {
@@ -194,19 +196,39 @@ model Store {
   storeSubscriptions  StoreSubscription[]
   pushCampaigns       PushCampaign[]
   storeViews          StoreView[]
+  storeFollows        StoreFollow[]
 }
 
-// Suscripciones push de visitantes anónimos a tiendas específicas.
-// Separado de PushSubscription (que es para usuarios autenticados del dashboard).
+// Suscripciones push a tiendas. userId es null para suscriptores anónimos legacy;
+// los nuevos seguidores autenticados tienen userId seteado.
 model StoreSubscription {
   id        String   @id @default(cuid())
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   endpoint  String   @unique
   auth      String
   p256dh    String
   createdAt DateTime @default(now())
 
+  @@index([storeId])
+  @@index([userId])
+}
+
+// Seguidores autenticados de una tienda.
+// Creado cuando un BUYER toca "Seguir tienda" en el storefront.
+model StoreFollow {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId  String
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  storeId String
+  store   Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storeId])
   @@index([storeId])
 }
 

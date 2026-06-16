@@ -84,11 +84,11 @@ export async function POST(req: NextRequest) {
   // URL de destino: si no viene una, apuntar a la tienda
   const targetUrl = url ?? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/tienda/${store.slug}`;
 
-  // Verificar que haya suscriptores antes de crear la campaña
-  const subscriberCount = await prisma.storeSubscription.count({ where: { storeId: store.id } });
-  if (subscriberCount === 0) {
+  // Verificar que haya seguidores con push activo antes de crear la campaña
+  const followerCount = await prisma.storeFollow.count({ where: { storeId: store.id } });
+  if (followerCount === 0) {
     return NextResponse.json(
-      { error: "No tenés suscriptores todavía. La notificación no fue enviada." },
+      { error: "No tenés seguidores todavía. La notificación no fue enviada." },
       { status: 400 }
     );
   }
@@ -143,7 +143,7 @@ export async function GET() {
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   const [subscriberCount, recentUsed, campaigns] = await Promise.all([
-    prisma.storeSubscription.count({ where: { storeId: store.id } }),
+    prisma.storeFollow.count({ where: { storeId: store.id } }),
     prisma.pushCampaign.count({ where: { storeId: store.id, createdAt: { gte: weekAgo } } }),
     prisma.pushCampaign.findMany({
       where: { storeId: store.id },

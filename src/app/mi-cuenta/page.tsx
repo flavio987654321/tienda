@@ -23,10 +23,13 @@ import {
   XCircle,
   LogOut,
   Camera,
+  ThumbsUp,
+  ThumbsDown,
+  Store,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 
-type Tab = "pedidos" | "favoritos" | "resenas" | "perfil";
+type Tab = "pedidos" | "favoritos" | "tiendas" | "resenas" | "perfil";
 
 type Order = {
   id: string;
@@ -44,6 +47,19 @@ type Order = {
   }[];
   payment: { status: string; provider: string } | null;
   shipping: { trackingCode: string | null; status: string } | null;
+};
+
+type FollowedStore = {
+  id: string;
+  storeId: string;
+  createdAt: string;
+  store: {
+    id: string;
+    name: string;
+    slug: string;
+    logo: string | null;
+    primaryColor: string;
+  };
 };
 
 type Favorite = {
@@ -131,6 +147,9 @@ export default function MiCuentaPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const [followedStores, setFollowedStores] = useState<FollowedStore[]>([]);
+  const [unfollowConfirm, setUnfollowConfirm] = useState<string | null>(null);
+  const unfollowPendingRef = useRef(false);
   const [pendingReviews, setPendingReviews] = useState<PendingReview[]>([]);
   const [submittedReviews, setSubmittedReviews] = useState<SubmittedReview[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: number; comment: string }>>({});
@@ -171,6 +190,9 @@ export default function MiCuentaPage() {
     }
     if (tab === "favoritos" && favorites.length === 0) {
       fetch("/api/favoritos").then((r) => r.json()).then(setFavorites);
+    }
+    if (tab === "tiendas" && followedStores.length === 0) {
+      fetch("/api/mi-cuenta/tiendas-seguidas").then((r) => r.json()).then(setFollowedStores);
     }
     if (tab === "resenas" && !resenasFetched) {
       setResenasFetched(true);
@@ -250,6 +272,22 @@ export default function MiCuentaPage() {
     }
   }
 
+  async function unfollowStore(storeId: string) {
+    if (unfollowPendingRef.current) return;
+    unfollowPendingRef.current = true;
+    setUnfollowConfirm(null);
+    try {
+      await fetch("/api/store/follow", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeId }),
+      });
+      setFollowedStores((prev) => prev.filter((f) => f.storeId !== storeId));
+    } finally {
+      unfollowPendingRef.current = false;
+    }
+  }
+
   async function removeFavorite(productId: string) {
     await fetch("/api/favoritos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId }) });
     setFavorites((f) => f.filter((fav) => fav.productId !== productId));
@@ -266,6 +304,7 @@ export default function MiCuentaPage() {
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "pedidos", label: "Mis pedidos", icon: Package },
     { key: "favoritos", label: "Favoritos", icon: Heart },
+    { key: "tiendas", label: "Tiendas que sigo", icon: ThumbsUp },
     { key: "resenas", label: "Reseñas", icon: Star },
     { key: "perfil", label: "Mi perfil", icon: User },
   ];
@@ -475,6 +514,84 @@ export default function MiCuentaPage() {
                   );
                 })}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Tiendas que sigo */}
+        {tab === "tiendas" && (
+          <div className="space-y-3">
+            {followedStores.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
+                <ThumbsUp className="h-12 w-12 text-gray-200 mx-auto mb-4" />
+                <h3 className="font-bold text-gray-900 mb-1">Todavía no seguís ninguna tienda</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  Tocá el ícono 👍 en cualquier tienda para seguirla y recibir sus novedades.
+                </p>
+                <Link href="/tiendas" className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-500 transition-colors">
+                  Explorar tiendas <ChevronRight className="h-4 w-4" />
+                </Link>
+              </div>
+            ) : (
+              followedStores.map((follow) => (
+                <div key={follow.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  {unfollowConfirm === follow.storeId ? (
+                    <div className="p-5">
+                      <p className="font-bold text-gray-900 mb-1">¿Dejar de seguir a {follow.store.name}?</p>
+                      <p className="text-sm text-gray-400 mb-4">
+                        Ya no recibirás notificaciones de esta tienda. Podés volver a seguirla cuando quieras.
+                      </p>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => unfollowStore(follow.storeId)}
+                          className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-600 transition-colors"
+                        >
+                          <ThumbsDown className="h-4 w-4" />
+                          Dejar de seguir
+                        </button>
+                        <button
+                          onClick={() => setUnfollowConfirm(null)}
+                          className="flex items-center gap-2 border border-gray-200 text-gray-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-4 p-4">
+                      <div className="h-12 w-12 rounded-xl shrink-0 overflow-hidden bg-gray-100 flex items-center justify-center">
+                        {follow.store.logo ? (
+                          <img src={follow.store.logo} alt={follow.store.name} className="h-12 w-12 object-cover" />
+                        ) : (
+                          <Store className="h-6 w-6 text-gray-300" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-gray-900 truncate">{follow.store.name}</p>
+                        <p className="text-xs text-gray-400">
+                          Seguida desde {new Date(follow.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Link
+                          href={`/tienda/${follow.store.slug}`}
+                          className="inline-flex items-center gap-1 text-xs text-indigo-600 font-semibold hover:underline"
+                        >
+                          Ver tienda <ExternalLink className="h-3 w-3" />
+                        </Link>
+                        <button
+                          onClick={() => setUnfollowConfirm(follow.storeId)}
+                          title="Dejar de seguir"
+                          className="h-8 w-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:border-red-200 transition-colors"
+                        >
+                          <ThumbsDown className="h-4 w-4 text-gray-400 hover:text-red-500" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
             )}
           </div>
         )}

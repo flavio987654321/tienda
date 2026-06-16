@@ -22,6 +22,7 @@ export interface StoreTypeConfig {
   id: StoreType;
   label: string;
   emoji: string;
+  comingSoon?: boolean;
   supportsWholesale: boolean;
   supportsCondicion: boolean;
   hideVariants: boolean;
@@ -114,6 +115,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "TECH",
     label: "Tecnología",
     emoji: "💻",
+    comingSoon: true,
     supportsWholesale: false,
     supportsCondicion: true,
     hideVariants: false,
@@ -143,6 +145,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "HOGAR",
     label: "Hogar y muebles",
     emoji: "🏠",
+    comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,
     hideVariants: false,
@@ -171,6 +174,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "ALIMENTOS",
     label: "Alimentos",
     emoji: "🥗",
+    comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,
     hideVariants: false,
@@ -199,6 +203,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "BELLEZA",
     label: "Belleza y cuidado",
     emoji: "💄",
+    comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,
     hideVariants: false,
@@ -227,6 +232,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "DEPORTE",
     label: "Deporte y fitness",
     emoji: "⚽",
+    comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,
     hideVariants: false,
@@ -253,6 +259,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "MASCOTAS",
     label: "Mascotas",
     emoji: "🐾",
+    comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,
     hideVariants: false,
@@ -279,6 +286,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "LIBROS",
     label: "Libros y arte",
     emoji: "📚",
+    comingSoon: true,
     supportsWholesale: false,
     supportsCondicion: false,
     hideVariants: false,
@@ -306,6 +314,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "GENERAL",
     label: "General",
     emoji: "🏪",
+    comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,
     hideVariants: false,

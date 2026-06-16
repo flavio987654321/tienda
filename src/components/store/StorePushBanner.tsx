@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Bell, BellOff, Loader2, X, CheckCircle2 } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { usePushBell } from "@/contexts/PushBellContext";
 
 function timeAgo(iso: string): string {
@@ -31,14 +31,9 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [bell?.drawerOpen, bell]);
 
-  if (!bell || bell.subState === "checking") return null;
+  if (!bell) return null;
 
-  const { subState, campaigns, loadingCampaigns, drawerOpen, closeDrawer,
-          pushSupported, handleSubscribe, handleUnsubscribe } = bell;
-  const isSubscribed = subState === "subscribed";
-  const isLoading = subState === "loading";
-
-  const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const { campaigns, loadingCampaigns, drawerOpen, closeDrawer } = bell;
 
   return (
     <>
@@ -83,86 +78,6 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
           >
             <X className="h-5 w-5 text-gray-400" />
           </button>
-        </div>
-
-        {/* Bloque de suscripción */}
-        <div className="px-5 py-4 border-b border-gray-100 shrink-0">
-          {isSubscribed ? (
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 shrink-0">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-800 leading-tight">Notificaciones activas</p>
-                <p className="text-xs text-gray-400 mt-0.5">Te avisamos cuando haya novedades.</p>
-              </div>
-              <button
-                onClick={handleUnsubscribe}
-                disabled={isLoading}
-                className="shrink-0 px-3 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-50 min-h-[36px]"
-              >
-                {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Desactivar"}
-              </button>
-            </div>
-          ) : subState === "error" ? (
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 shrink-0 mt-0.5">
-                  <BellOff className="h-5 w-5 text-red-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-red-600 leading-tight">No se pudo activar</p>
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                    {isIOS
-                      ? "En iPhone, primero agregá esta tienda a tu pantalla de inicio y volvé a intentarlo."
-                      : "Tu navegador bloqueó los permisos. Tocá el ícono del candado en la barra de dirección, activá las notificaciones para este sitio y recargá la página."}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleSubscribe}
-                disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold transition-colors disabled:opacity-50"
-              >
-                {isLoading
-                  ? <><Loader2 className="h-4 w-4 animate-spin" /> Activando...</>
-                  : <><Bell className="h-4 w-4" /> Reintentar</>}
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 shrink-0 mt-0.5">
-                  {isLoading
-                    ? <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
-                    : <BellOff className="h-5 w-5 text-gray-400" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 leading-tight">
-                    {isIOS && !pushSupported ? "Instalá la tienda para recibir alertas" : "Activá las novedades"}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                    {!pushSupported
-                      ? isIOS
-                        ? "Tocá el botón Compartir en Safari y elegí \"Agregar a pantalla de inicio\" para activar las notificaciones."
-                        : "Tu navegador no soporta notificaciones push."
-                      : "Recibí alertas cuando la tienda publique ofertas o novedades, aunque tengas el navegador cerrado."}
-                  </p>
-                </div>
-              </div>
-              {pushSupported && (
-                <button
-                  onClick={handleSubscribe}
-                  disabled={isLoading}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold transition-colors disabled:opacity-50"
-                >
-                  {isLoading
-                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Activando...</>
-                    : <><Bell className="h-4 w-4" /> Activar notificaciones</>}
-                </button>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Lista de campañas */}

@@ -227,6 +227,23 @@ export default function StoreTypeModal({
             {STORE_TYPES.map((t) => {
               const active = selected === t.id;
               const isCurrent = t.id === currentType;
+              if (t.comingSoon) {
+                return (
+                  <div
+                    key={t.id}
+                    title="Próximamente disponible"
+                    className="relative flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed select-none"
+                  >
+                    <span className="text-2xl leading-none grayscale">{t.emoji}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold leading-tight text-gray-400">{t.label}</p>
+                    </div>
+                    <span className="absolute top-1.5 right-2 text-[10px] font-bold text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded-full leading-tight">
+                      Próximamente
+                    </span>
+                  </div>
+                );
+              }
               return (
                 <button
                   key={t.id}

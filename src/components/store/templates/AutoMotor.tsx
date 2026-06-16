@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
+import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
@@ -207,11 +208,14 @@ export default function AutoMotor() {
               Ver todos
             </Link>
             {pushBell && config?.showPushBell && !isPreview && (
+              <StoreFollowButton storeSlug={config?.slug ?? ""} color={navTextMid} size={20} />
+            )}
+            {pushBell && config?.showPushBell && !isPreview && (
               <button onClick={pushBell.openDrawer}
                 style={{ position:"relative", background:"none", border:"none", cursor:"pointer", padding:4,
                   display:"flex", alignItems:"center", color:navTextMid }}>
                 <svg width={20} height={20} viewBox="0 0 24 24"
-                  fill={pushBell.subState==="subscribed"?"currentColor":"none"}
+                  fill={pushBell.followState==="following"?"currentColor":"none"}
                   stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                 </svg>

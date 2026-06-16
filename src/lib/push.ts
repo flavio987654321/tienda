@@ -50,16 +50,27 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
   }
 }
 
-// Envía push a todos los visitantes suscriptos a una tienda (anónimos)
+// Envía push a los seguidores autenticados de una tienda (StoreFollow).
 // Retorna la cantidad de mensajes enviados con éxito.
 export async function sendPushToStore(storeId: string, payload: PushPayload): Promise<number> {
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return 0;
 
   const { prisma } = await import("@/lib/prisma");
-  const subscriptions = await prisma.storeSubscription.findMany({
+
+  // Obtener userIds de los seguidores de la tienda
+  const follows = await prisma.storeFollow.findMany({
     where: { storeId },
-    select: { id: true, endpoint: true, auth: true, p256dh: true },
+    select: { userId: true },
   });
+  const followerIds = follows.map((f) => f.userId);
+
+  // Obtener los endpoints push de esos usuarios
+  const subscriptions = followerIds.length > 0
+    ? await prisma.storeSubscription.findMany({
+        where: { storeId, userId: { in: followerIds } },
+        select: { id: true, endpoint: true, auth: true, p256dh: true },
+      })
+    : [];
 
   if (subscriptions.length === 0) return 0;
 

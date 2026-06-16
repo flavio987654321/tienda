@@ -8,7 +8,7 @@ import {
   unsubscribeFromStore,
 } from "@/lib/push-client";
 
-type SubState = "checking" | "prompt" | "subscribed" | "loading" | "error";
+export type FollowState = "checking" | "following" | "not_following" | "loading";
 
 export type Campaign = {
   id: string;
@@ -17,8 +17,10 @@ export type Campaign = {
   createdAt: string;
 };
 
+export type FollowResult = "ok" | "unauthorized" | "error";
+
 type PushBellCtx = {
-  subState: SubState;
+  followState: FollowState;
   hasNew: boolean;
   campaigns: Campaign[];
   loadingCampaigns: boolean;
@@ -26,8 +28,8 @@ type PushBellCtx = {
   pushSupported: boolean;
   openDrawer: () => void;
   closeDrawer: () => void;
-  handleSubscribe: () => Promise<void>;
-  handleUnsubscribe: () => Promise<void>;
+  handleFollow: () => Promise<FollowResult>;
+  handleUnfollow: () => Promise<void>;
 };
 
 const PushBellContext = createContext<PushBellCtx | null>(null);
@@ -49,24 +51,46 @@ export function PushBellProvider({
   storeSlug: string;
   enabled: boolean;
 }) {
-  const [subState, setSubState] = useState<SubState>("checking");
+  const [followState, setFollowState] = useState<FollowState>("checking");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [hasNew, setHasNew] = useState(false);
   const supported = useRef(false);
   const drawerOpenRef = useRef(false);
+  const followingRef = useRef(false);
 
   useEffect(() => { drawerOpenRef.current = drawerOpen; }, [drawerOpen]);
 
+  // Verificar estado inicial de follow (API + localStorage como fallback)
   useEffect(() => {
     if (!enabled) return;
     supported.current = isPushSupported();
-    isSubscribedToStore(storeId, storeSlug).then((subscribed) => {
-      setSubState(subscribed ? "subscribed" : "prompt");
-    });
+
+    async function checkFollowState() {
+      // Primero verificar en el servidor si el usuario está logueado y sigue la tienda
+      try {
+        const res = await fetch(`/api/store/follow?storeId=${storeId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.following) {
+            followingRef.current = true;
+            setFollowState("following");
+            return;
+          }
+        }
+      } catch { /* noop */ }
+
+      // Fallback: verificar suscripción push en el browser (usuarios legacy anónimos)
+      const hasPushSub = await isSubscribedToStore(storeId, storeSlug);
+      followingRef.current = hasPushSub;
+      setFollowState(hasPushSub ? "following" : "not_following");
+    }
+
+    checkFollowState();
   }, [storeId, storeSlug, enabled]);
 
+  // Cargar campañas al montar
   useEffect(() => {
     if (!enabled) return;
     setLoadingCampaigns(true);
@@ -84,7 +108,7 @@ export function PushBellProvider({
       .finally(() => setLoadingCampaigns(false));
   }, [storeId, storeSlug, enabled]);
 
-  // Escucha mensajes del SW para actualizar badge y campañas en tiempo real
+  // Actualizar campañas cuando llega un push en tiempo real
   useEffect(() => {
     if (!enabled || !("serviceWorker" in navigator)) return;
 
@@ -108,9 +132,6 @@ export function PushBellProvider({
     localStorage.setItem(LAST_SEEN_KEY(storeId), String(Date.now()));
     setHasNew(false);
     setDrawerOpen(true);
-    // Refetch campaigns every time the drawer opens so the list is always fresh,
-    // even when the push arrived while the app was in background/closed (SW can't
-    // deliver PUSH_RECEIVED to inactive clients).
     fetch(`/api/push/campaigns/${storeSlug}`)
       .then((r) => (r.ok ? r.json() : { campaigns: [] }))
       .then((data) => setCampaigns(data.campaigns ?? []))
@@ -119,31 +140,64 @@ export function PushBellProvider({
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
-  const handleSubscribe = useCallback(async () => {
-    if (!supported.current) return;
-    if (Notification.permission === "denied") { setSubState("error"); return; }
-    setSubState("loading");
-    const ok = await subscribeToStore(storeId, storeSlug);
-    setSubState(ok ? "subscribed" : "error");
-    // No cerramos el panel: el usuario ve el estado "activo" como confirmación
+  // Seguir tienda: crea StoreFollow en DB + suscribe push si soportado
+  const handleFollow = useCallback(async (): Promise<FollowResult> => {
+    if (followingRef.current) return "ok";
+    setFollowState("loading");
+
+    let followRes: Response;
+    try {
+      followRes = await fetch("/api/store/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeId }),
+      });
+    } catch {
+      setFollowState("not_following");
+      return "error";
+    }
+
+    if (followRes.status === 401) {
+      setFollowState("not_following");
+      return "unauthorized";
+    }
+    if (!followRes.ok) {
+      setFollowState("not_following");
+      return "error";
+    }
+
+    // Suscribir push si el browser lo soporta
+    if (supported.current && Notification.permission !== "denied") {
+      await subscribeToStore(storeId, storeSlug);
+    }
+
+    followingRef.current = true;
+    setFollowState("following");
+    return "ok";
   }, [storeId, storeSlug]);
 
-  const handleUnsubscribe = useCallback(async () => {
-    setSubState("loading");
-    const ok = await unsubscribeFromStore(storeId, storeSlug);
-    if (ok) {
-      localStorage.removeItem(LAST_SEEN_KEY(storeId));
-      setHasNew(false);
-      setSubState("prompt");
-      closeDrawer();
-    } else {
-      setSubState("subscribed");
-    }
-  }, [storeId, storeSlug, closeDrawer]);
+  // Dejar de seguir: elimina StoreFollow en DB + cancela push
+  const handleUnfollow = useCallback(async () => {
+    if (!followingRef.current) return;
+    setFollowState("loading");
+
+    await fetch("/api/store/follow", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storeId }),
+    });
+
+    await unsubscribeFromStore(storeId, storeSlug);
+
+    localStorage.removeItem(LAST_SEEN_KEY(storeId));
+    followingRef.current = false;
+    setHasNew(false);
+    setFollowState("not_following");
+  }, [storeId, storeSlug]);
 
   return (
     <PushBellContext.Provider value={{
-      subState,
+      followState,
       hasNew,
       campaigns,
       loadingCampaigns,
@@ -151,8 +205,8 @@ export function PushBellProvider({
       pushSupported: supported.current,
       openDrawer,
       closeDrawer,
-      handleSubscribe,
-      handleUnsubscribe,
+      handleFollow,
+      handleUnfollow,
     }}>
       {children}
     </PushBellContext.Provider>

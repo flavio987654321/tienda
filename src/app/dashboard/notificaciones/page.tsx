@@ -140,7 +140,7 @@ export default function NotificacionesPage() {
             Notificaciones push
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Enviá alertas directamente al celular de tus suscriptores, aunque tengan la tienda cerrada.
+            Enviá alertas directamente al celular de tus seguidores, aunque tengan la tienda cerrada.
           </p>
         </div>
 
@@ -149,14 +149,14 @@ export default function NotificacionesPage() {
           <div className="rounded-2xl border border-gray-100 bg-white p-4">
             <div className="flex items-center gap-2 mb-1">
               <Users className="h-4 w-4 text-indigo-400" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Suscriptores</span>
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Seguidores</span>
             </div>
             {loadingStats ? (
               <div className="h-7 w-12 rounded bg-gray-100 animate-pulse" />
             ) : (
               <p className="text-2xl font-bold text-gray-900">{stats?.subscriberCount ?? 0}</p>
             )}
-            <p className="text-[11px] text-gray-400 mt-0.5">Clientes con notificaciones activas</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">Clientes que siguen tu tienda</p>
           </div>
 
           <div className="rounded-2xl border border-gray-100 bg-white p-4">
@@ -183,11 +183,8 @@ export default function NotificacionesPage() {
         {/* Aviso de cómo funcionan */}
         <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
           <p className="text-xs text-blue-700 leading-relaxed">
-            <strong>¿Cómo funciona?</strong> Cuando alguien visita tu tienda, aparece un banner preguntando si
-            quiere recibir alertas. Si acepta, recibe tus notificaciones en el celular o computadora aunque tenga
-            el navegador cerrado — sin necesidad de instalar ninguna app. En iPhone solo funciona si el visitante
-            instaló la tienda en su pantalla de inicio. Podés enviar hasta{" "}
-            <strong>3 notificaciones por semana</strong> para no saturar a tus suscriptores.
+            <strong>¿Cómo funciona?</strong> Los clientes tocan el botón 👍 en tu tienda para seguirla. Al seguirla, aceptan recibir notificaciones push en su celular o computadora aunque tengan la tienda cerrada — en iPhone solo funciona si instalaron la tienda en su pantalla de inicio. Podés enviar hasta{" "}
+            <strong>3 notificaciones por semana</strong> para no saturar a tus seguidores.
           </p>
         </div>
 
@@ -395,7 +392,7 @@ export default function NotificacionesPage() {
                 <div>
                   <p className="text-sm font-semibold text-gray-900">¿Confirmar envío?</p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Se enviará a todos tus suscriptores y consumirá 1 notificación semanal.
+                    Se enviará a todos tus seguidores y consumirá 1 notificación semanal.
                   </p>
                 </div>
               </div>
@@ -481,10 +478,10 @@ export default function NotificacionesPage() {
         {!loadingStats && stats?.subscriberCount === 0 && (
           <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-8 text-center">
             <Bell className="h-8 w-8 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm font-medium text-gray-700">Todavía no tenés suscriptores</p>
+            <p className="text-sm font-medium text-gray-700">Todavía no tenés seguidores</p>
             <p className="text-xs text-gray-400 mt-1 max-w-xs mx-auto">
-              Cuando un cliente active las notificaciones desde tu tienda, aparecerá acá y
-              empezarás a poder contactarlos.
+              Cuando un cliente toque 👍 en tu tienda para seguirla, aparecerá acá y
+              empezarás a poder enviarle novedades.
             </p>
           </div>
         )}
