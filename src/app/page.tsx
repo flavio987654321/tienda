@@ -8,7 +8,8 @@ import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useSc
 import {
   ArrowRight, X, Store, Users, TrendingUp, Wallet, CheckCircle,
   ShoppingBag, Star, Zap, Shield, Send, MessageCircle, Mail,
-  ShoppingCart, Eye, ChevronRight, Menu,
+  Package, Heart, ShoppingCart, Globe, Eye, ChevronRight, Menu, MapPin,
+  BadgeCheck, Shirt, Car, Monitor, Home as HomeIcon, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, LayoutGrid,
   BadgeCheck, Shirt, Car, Monitor, Home as HomeIcon, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, LayoutGrid,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -310,7 +311,7 @@ const FEATURES = [
   { icon: Shield, title: "Vos mandás", desc: "Activás o pausás afiliados, ajustás el stock y controlás todo desde un panel. Tu negocio, tus reglas.", color: "#0ea5e9" },
 ];
 
-const TESTIMONIALS: never[] = [];
+const TESTIMONIALS: { name: string; role: string; text: string; img: string }[] = [];
 
 const SLOTS = 6;
 
