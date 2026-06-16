@@ -385,6 +385,7 @@ export async function POST(req: NextRequest) {
             email: storeForEmail.owner?.email ?? null,
             phone: storeForEmail.owner?.phone ?? null,
           },
+          paymentProvider,
           ...emailPayload,
         }).catch((e) => console.error("[email] buyer confirmation:", e));
       }
@@ -402,6 +403,7 @@ export async function POST(req: NextRequest) {
             city: customer.city,
             province: customer.province,
           },
+          paymentProvider,
           ...emailPayload,
         }).catch((e) => console.error("[email] owner new order:", e));
       }

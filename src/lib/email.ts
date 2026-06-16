@@ -482,6 +482,7 @@ export async function sendOrderConfirmationEmail({
   paymentInfo,
   policies,
   ownerContact,
+  paymentProvider,
 }: {
   buyerEmail: string;
   buyerName: string;
@@ -500,6 +501,7 @@ export async function sendOrderConfirmationEmail({
   } | null;
   policies?: { returns?: string; shipping?: string; terms?: string } | null;
   ownerContact?: { name: string | null; email: string | null; phone: string | null } | null;
+  paymentProvider?: string | null;
 }) {
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
 
@@ -542,7 +544,10 @@ export async function sendOrderConfirmationEmail({
         <!-- Greeting -->
         <p style="font-size:15px;color:#374151;margin:0 0 6px;">Hola <strong>${escapeHtml(buyerName)}</strong>,</p>
         <p style="font-size:15px;color:#6b7280;margin:0 0 28px;line-height:1.6;">
-          Recibimos tu pedido. El vendedor lo revisará y se va a poner en contacto con vos para coordinar el pago y el envío.
+          ${paymentProvider === "mp"
+            ? "Tu pago fue procesado con éxito a través de MercadoPago. El vendedor preparará tu pedido y se pondrá en contacto para coordinar el envío."
+            : "Recibimos tu pedido. El vendedor lo revisará y se va a poner en contacto con vos para coordinar el pago y el envío."
+          }
         </p>
 
         <!-- Products table -->
@@ -590,7 +595,13 @@ export async function sendOrderConfirmationEmail({
           </a>
         </div>
 
-        ${buildPaymentBlock(paymentInfo)}
+        ${paymentProvider === "mp"
+          ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px 20px;margin-bottom:28px;text-align:center;">
+              <p style="font-size:13px;font-weight:700;color:#15803d;margin:0 0 4px;">✅ Pago recibido con MercadoPago</p>
+              <p style="font-size:13px;color:#16a34a;margin:0;">El pago fue procesado exitosamente. No necesitás hacer ninguna transferencia.</p>
+             </div>`
+          : buildPaymentBlock(paymentInfo)
+        }
 
         <!-- Consumer rights -->
         <div style="background:#fffbeb;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;font-size:13px;color:#78350f;margin-bottom:28px;line-height:1.6;">
@@ -629,6 +640,7 @@ export async function sendNewOrderToOwnerEmail({
   shippingCost,
   shippingMethod,
   total,
+  paymentProvider,
 }: {
   ownerEmail: string;
   ownerName: string;
@@ -648,6 +660,7 @@ export async function sendNewOrderToOwnerEmail({
   shippingCost: number;
   shippingMethod: string;
   total: number;
+  paymentProvider?: string | null;
 }) {
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
 
@@ -757,9 +770,10 @@ export async function sendNewOrderToOwnerEmail({
           </div>
           <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">${escapeHtml(shippingMethod)}</div>
           <div style="border-top:1px solid #e5e7eb;padding-top:14px;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:15px;font-weight:700;color:#111827;">Total a cobrar</span>
-            <span style="font-size:22px;font-weight:800;color:#111827;">${fmt(total)}</span>
+            <span style="font-size:15px;font-weight:700;color:#111827;">${paymentProvider === "mp" ? "Total cobrado (MercadoPago)" : "Total a cobrar"}</span>
+            <span style="font-size:22px;font-weight:800;color:${paymentProvider === "mp" ? "#16a34a" : "#111827"};">${fmt(total)}</span>
           </div>
+          ${paymentProvider === "mp" ? `<div style="margin-top:10px;background:#f0fdf4;border-radius:8px;padding:8px 12px;font-size:12px;color:#15803d;font-weight:600;">✅ Pago ya recibido vía MercadoPago — no necesitás coordinar el pago con el comprador.</div>` : ""}
         </div>
 
         <!-- CTA -->
