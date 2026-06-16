@@ -117,16 +117,13 @@ function money(n: number) {
 
 function parseImages(raw: string | string[] | null | undefined): string[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw.filter(Boolean);
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
-  } catch { return []; }
+  const arr = Array.isArray(raw) ? raw : (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; } })();
+  return arr.map(String).filter((s) => s && s.trim() !== "");
 }
 
 function ProductImg({ src, alt, className }: { src: string | undefined; alt: string; className?: string }) {
   const [broken, setBroken] = useState(false);
-  if (!src || src.trim() === "" || broken) {
+  if (!src || broken) {
     return (
       <div className="flex items-center justify-center bg-gray-50 w-full h-full">
         <Package className="h-8 w-8 text-gray-200" />
