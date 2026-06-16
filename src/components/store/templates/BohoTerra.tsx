@@ -1245,7 +1245,7 @@ export default function BohoTerra() {
                 </div>
                 <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:22, color:T, marginBottom:10 }}>¡Pedido recibido!</p>
                 <p style={{ fontSize:13, color:MID, lineHeight:1.8, marginBottom:12 }}>Te enviamos un email con el resumen. El vendedor te contactará para coordinar el envío.</p>
-                <p style={{ fontSize:11, color:MID, opacity:0.6, lineHeight:1.7, marginBottom:28 }}>¿Algún problema? Respondé el email o contactá al vendedor. Tenés 10 días corridos para cancelar (Ley 24.240).</p>
+                <p style={{ fontSize:11, color:MID, opacity:0.6, lineHeight:1.7, marginBottom:28 }}>¿Algún inconveniente con tu pedido? Contactá al vendedor o escribinos a marketplacemitienda@gmail.com · Tenés 10 días corridos para cancelar (Ley 24.240).</p>
                 <button onClick={()=>{ setCheckoutOpen(false); setCheckoutStatus("idle"); }}
                   style={{ background:A, color:"#fff", border:"none", padding:"13px 32px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
                   Seguir comprando

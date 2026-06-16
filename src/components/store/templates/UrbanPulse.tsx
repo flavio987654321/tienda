@@ -1445,7 +1445,7 @@ export default function UrbanPulse() {
                 </div>
                 <h3 style={{ fontSize:26, fontWeight:900, textTransform:"uppercase", margin:"0 0 10px" }}>¡Pedido creado!</h3>
                 <p style={{ color:MID, fontSize:14, marginBottom:10 }}>Te enviamos un email con el resumen. El vendedor te contactará para coordinar el envío.</p>
-                <p style={{ color:MID, fontSize:11, opacity:0.6, lineHeight:1.7, marginBottom:32 }}>¿Problemas? Respondé el email o contactá al vendedor. Tenés 10 días corridos para cancelar (Ley 24.240).</p>
+                <p style={{ color:MID, fontSize:11, opacity:0.6, lineHeight:1.7, marginBottom:32 }}>¿Algún inconveniente con tu pedido? Contactá al vendedor o escribinos a marketplacemitienda@gmail.com · Tenés 10 días corridos para cancelar (Ley 24.240).</p>
                 <button onClick={() => setCheckoutOpen(false)} style={{ background:DARK, color:ACC, border:"none", padding:"14px 40px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>Cerrar</button>
               </div>
             ) : (

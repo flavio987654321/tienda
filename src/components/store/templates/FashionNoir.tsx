@@ -1384,7 +1384,7 @@ export default function FashionNoir() {
                 </div>
                 <p style={{ fontFamily:"Georgia, serif", fontSize:24, color:T, marginBottom:12 }}>¡Pedido recibido!</p>
                 <p style={{ fontSize:13, opacity:0.5, lineHeight:1.8, marginBottom:16 }}>Te enviamos un email con el resumen. El vendedor te contactará para coordinar el envío.</p>
-                <p style={{ fontSize:11, opacity:0.35, lineHeight:1.7, marginBottom:32 }}>¿Algún problema? Respondé el email o contactá al vendedor. Tenés 10 días corridos para cancelar (Ley 24.240).</p>
+                <p style={{ fontSize:11, opacity:0.35, lineHeight:1.7, marginBottom:32 }}>¿Algún inconveniente con tu pedido? Contactá al vendedor o escribinos a marketplacemitienda@gmail.com · Tenés 10 días corridos para cancelar (Ley 24.240).</p>
                 <button onClick={() => { setCheckoutOpen(false); setCheckoutStatus("idle"); }}
                   style={{ background:G, color:BG, border:"none", padding:"14px 36px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
                   Seguir comprando

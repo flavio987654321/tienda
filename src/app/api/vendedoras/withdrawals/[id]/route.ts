@@ -13,7 +13,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
   const { id } = await context.params;
   const body = await req.json().catch(() => ({}));
+  const action: "APPROVE" | "REJECT" = body.action ?? "APPROVE";
   const notes: string | undefined = body.notes;
+  const rejectionReason: string | undefined = body.rejectionReason;
+
+  if (action === "REJECT" && !rejectionReason?.trim()) {
+    return NextResponse.json({ error: "Ingresá el motivo del rechazo" }, { status: 400 });
+  }
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -40,8 +46,40 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         throw new Error("No autorizado");
       }
 
+      const affiliateUserId = withdrawal.wallet.affiliate.userId;
+
+      if (action === "REJECT") {
+        // Devolver el saldo a la wallet
+        await tx.wallet.update({
+          where: { id: withdrawal.walletId },
+          data: {
+            balance: { increment: withdrawal.amount },
+            totalWithdrawn: { decrement: withdrawal.amount },
+          },
+        });
+
+        await createNotification({
+          userId: affiliateUserId,
+          type: "WITHDRAWAL_REJECTED",
+          title: "Tu retiro fue rechazado",
+          body: `Tu retiro de $${withdrawal.amount.toLocaleString("es-AR")} fue rechazado. Motivo: ${rejectionReason}. El saldo fue devuelto a tu billetera.`,
+          link: "/vendedoras/billetera",
+        }).catch((err) => console.error("[notify] withdrawal rejected", err));
+
+        return tx.walletWithdrawal.update({
+          where: { id },
+          data: {
+            status: "REJECTED",
+            rejectedAt: new Date(),
+            rejectionReason: rejectionReason!.trim(),
+            notes: notes || null,
+          },
+        });
+      }
+
+      // APPROVE
       await createNotification({
-        userId: withdrawal.wallet.affiliate.userId,
+        userId: affiliateUserId,
         type: "WITHDRAWAL_COMPLETED",
         title: "Tu retiro fue procesado",
         body: `$${withdrawal.amount.toLocaleString("es-AR")} transferidos a tu cuenta bancaria.`,
@@ -50,7 +88,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
       return tx.walletWithdrawal.update({
         where: { id },
-        data: { status: "APPROVED", notes: notes || null },
+        data: {
+          status: "APPROVED",
+          approvedAt: new Date(),
+          notes: notes || null,
+        },
       });
     });
 

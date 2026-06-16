@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, useState } from "react";
-import { CheckCircle, Loader2, Copy, Wallet } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Copy, Wallet } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Withdrawal = {
@@ -28,7 +28,11 @@ export default function AdminRetirosPage() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<Record<string, boolean>>({});
-  const [done, setDone] = useState<Record<string, boolean>>({});
+  const [done, setDone] = useState<Record<string, "approved" | "rejected">>();
+  // Estado del form de rechazo por id
+  const [rejectOpen, setRejectOpen] = useState<Record<string, boolean>>({});
+  const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
+  const [rejectError, setRejectError] = useState<Record<string, string>>({});
 
   const fetchWithdrawals = useCallback(() => {
     fetch("/api/admin/retiros")
@@ -51,17 +55,37 @@ export default function AdminRetirosPage() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchWithdrawals]);
 
-  async function markSent(id: string) {
+  async function handleAction(id: string, action: "APPROVE" | "REJECT") {
+    if (action === "REJECT") {
+      const reason = rejectReason[id]?.trim();
+      if (!reason) {
+        setRejectError((e) => ({ ...e, [id]: "Ingresá el motivo del rechazo" }));
+        return;
+      }
+    }
+
     setProcessing((p) => ({ ...p, [id]: true }));
     try {
+      const body: Record<string, string> = { action };
+      if (action === "APPROVE") {
+        body.notes = "Transferencia procesada por admin.";
+      } else {
+        body.rejectionReason = rejectReason[id]?.trim();
+      }
+
       const res = await fetch(`/api/vendedoras/withdrawals/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes: "Transferencia procesada por admin." }),
+        body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error("Error");
-      setDone((d) => ({ ...d, [id]: true }));
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Error al procesar");
+      }
+      setDone((d) => ({ ...d, [id]: action === "APPROVE" ? "approved" : "rejected" }));
       setWithdrawals((prev) => prev.filter((w) => w.id !== id));
+    } catch (err: any) {
+      setRejectError((e) => ({ ...e, [id]: err.message ?? "Error" }));
     } finally {
       setProcessing((p) => ({ ...p, [id]: false }));
     }
@@ -72,7 +96,7 @@ export default function AdminRetirosPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Retiros pendientes</h1>
         <p className="text-gray-400 mt-1 text-sm">
-          Hacé la transferencia bancaria y luego marcá como enviado. La afiliada recibe una notificación automática.
+          Hacé la transferencia bancaria y marcá como enviado, o rechazá con un motivo. La afiliada recibe una notificación automática.
         </p>
       </div>
 
@@ -150,21 +174,68 @@ export default function AdminRetirosPage() {
               )}
             </div>
 
-            <div className="mt-4 flex justify-end">
-              {done[w.id] ? (
-                <span className="inline-flex items-center gap-1.5 text-green-400 text-sm font-semibold">
-                  <CheckCircle className="h-4 w-4" /> Marcado como enviado
-                </span>
-              ) : (
+            {/* Form de rechazo (toggle) */}
+            {rejectOpen[w.id] && (
+              <div className="mt-4 bg-red-950/40 border border-red-900/50 rounded-xl p-4 space-y-3">
+                <p className="text-xs font-semibold text-red-400 uppercase tracking-widest">Motivo del rechazo</p>
+                <textarea
+                  rows={2}
+                  placeholder="Ej: CBU inválido, datos incorrectos, monto no disponible…"
+                  value={rejectReason[w.id] ?? ""}
+                  onChange={(e) => {
+                    setRejectReason((r) => ({ ...r, [w.id]: e.target.value }));
+                    setRejectError((r) => ({ ...r, [w.id]: "" }));
+                  }}
+                  className="w-full bg-gray-900 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-red-500"
+                />
+                {rejectError[w.id] && (
+                  <p className="text-xs text-red-400">{rejectError[w.id]}</p>
+                )}
+              </div>
+            )}
+
+            <div className="mt-4 flex items-center justify-end gap-3 flex-wrap">
+              {/* Botón rechazar */}
+              {!rejectOpen[w.id] ? (
                 <button
-                  onClick={() => markSent(w.id)}
-                  disabled={processing[w.id]}
-                  className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+                  onClick={() => setRejectOpen((r) => ({ ...r, [w.id]: true }))}
+                  className="inline-flex items-center gap-2 bg-transparent border border-red-800 hover:border-red-600 text-red-400 hover:text-red-300 font-bold px-4 py-2.5 rounded-xl text-sm transition-colors"
                 >
-                  {processing[w.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                  Transferí — marcar como enviado
+                  <XCircle className="h-4 w-4" />
+                  Rechazar
                 </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setRejectOpen((r) => ({ ...r, [w.id]: false }));
+                      setRejectReason((r) => ({ ...r, [w.id]: "" }));
+                      setRejectError((r) => ({ ...r, [w.id]: "" }));
+                    }}
+                    className="text-gray-500 hover:text-gray-300 text-sm px-3 py-2 rounded-xl transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => handleAction(w.id, "REJECT")}
+                    disabled={processing[w.id]}
+                    className="inline-flex items-center gap-2 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-colors"
+                  >
+                    {processing[w.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                    Confirmar rechazo
+                  </button>
+                </div>
               )}
+
+              {/* Botón aprobar */}
+              <button
+                onClick={() => handleAction(w.id, "APPROVE")}
+                disabled={processing[w.id]}
+                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+              >
+                {processing[w.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                Transferí — marcar como enviado
+              </button>
             </div>
           </div>
         ))}

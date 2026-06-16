@@ -34,9 +34,11 @@ export async function GET(req: Request) {
 
   const result = withdrawals.map((w) => {
     const aff = w.wallet.affiliate;
-    const rawCbu = decryptIfNeeded(w.wallet.cbu);
-    const rawCuil = decryptIfNeeded(w.wallet.cuil);
-    const rawHolder = decryptIfNeeded(w.wallet.bankHolder);
+    // Preferir snapshot del momento del retiro; fallback a datos actuales de wallet
+    const rawCbu = decryptIfNeeded(w.snapshotCbu ?? w.wallet.cbu);
+    const rawCuil = decryptIfNeeded(w.snapshotCuil ?? w.wallet.cuil);
+    const rawHolder = decryptIfNeeded(w.snapshotHolder ?? w.wallet.bankHolder);
+    const alias = w.snapshotAlias ?? w.wallet.alias;
     return {
       id: w.id,
       amount: w.amount,
@@ -48,7 +50,7 @@ export async function GET(req: Request) {
       storeName: aff.store.name,
       storeSlug: aff.store.slug,
       cbu: rawCbu ?? null,
-      alias: w.wallet.alias ?? null,
+      alias: alias ?? null,
       cuil: rawCuil ?? null,
       bankHolder: rawHolder ?? null,
     };

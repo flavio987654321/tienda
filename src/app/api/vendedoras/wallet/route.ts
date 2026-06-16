@@ -215,15 +215,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (amount > walletFull.balance) {
-    return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
-  }
+  // Snapshot de datos bancarios al momento de solicitar (antes de la tx para el email; dentro de la tx para el registro)
+  const rawCbuSnap = decryptIfNeeded(walletFull.cbu);
+  const rawCuilSnap = decryptIfNeeded(walletFull.cuil);
+  const rawHolderSnap = decryptIfNeeded(walletFull.bankHolder);
 
-  // Transacción serializable para eliminar race condition
+  // Transacción serializable — balance check, pending check, snapshot y decremento DENTRO de la tx
   let withdrawal;
   try {
     [withdrawal] = await prisma.$transaction(
       async (tx) => {
+        // Re-leer el balance dentro de la tx para evitar TOCTOU
+        const freshWallet = await tx.wallet.findUnique({
+          where: { id: walletId },
+          select: { balance: true },
+        });
+        if (!freshWallet || freshWallet.balance < amount) throw new Error("INSUFFICIENT_BALANCE");
+
         const pendingCount = await tx.walletWithdrawal.count({
           where: { walletId, status: "PENDING" },
         });
@@ -234,12 +242,15 @@ export async function POST(req: NextRequest) {
             walletId,
             amount,
             status: "PENDING",
-            // No guardar datos bancarios en texto plano — el email al dueño ya los envía
-            notes: walletFull.alias ? `Alias: ${walletFull.alias}` : null,
+            // Snapshot cifrado de los datos bancarios del momento exacto del retiro
+            snapshotCbu: walletFull.cbu ?? null,
+            snapshotAlias: walletFull.alias ?? null,
+            snapshotCuil: walletFull.cuil ?? null,
+            snapshotHolder: walletFull.bankHolder ?? null,
           },
         });
 
-        await tx.wallet.update({
+        const updated = await tx.wallet.update({
           where: { id: walletId },
           data: {
             balance: { decrement: amount },
@@ -247,11 +258,17 @@ export async function POST(req: NextRequest) {
           },
         });
 
+        // Guardaría negativo si dos solicitudes corrieron en paralelo — abortar
+        if (updated.balance < 0) throw new Error("BALANCE_NEGATIVE");
+
         return [newWithdrawal];
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
     );
   } catch (e: any) {
+    if (e.message === "INSUFFICIENT_BALANCE" || e.message === "BALANCE_NEGATIVE") {
+      return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
+    }
     if (e.message === "PENDING_EXISTS") {
       return NextResponse.json(
         { error: "Ya tenés un retiro pendiente. Esperá que sea procesado antes de solicitar otro" },
@@ -271,9 +288,6 @@ export async function POST(req: NextRequest) {
   // Notificar al dueño de la tienda automáticamente con los datos bancarios (fire-and-forget)
   const owner = walletFull.affiliate.store.owner;
   if (owner?.email) {
-    const rawCbu = decryptIfNeeded(walletFull.cbu);
-    const rawCuil = decryptIfNeeded(walletFull.cuil);
-    const rawHolder = decryptIfNeeded(walletFull.bankHolder);
     const affiliateUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { name: true, email: true },
@@ -285,10 +299,10 @@ export async function POST(req: NextRequest) {
       affiliateName: affiliateUser?.name ?? "Afiliada",
       affiliateEmail: affiliateUser?.email ?? "",
       amount,
-      cbu: rawCbu ?? null,
+      cbu: rawCbuSnap ?? null,
       alias: walletFull.alias ?? null,
-      cuil: rawCuil ?? null,
-      bankHolder: rawHolder ?? null,
+      cuil: rawCuilSnap ?? null,
+      bankHolder: rawHolderSnap ?? null,
     }).catch((err) => console.error("[email] sendWithdrawalRequestEmail failed:", err));
   }
 

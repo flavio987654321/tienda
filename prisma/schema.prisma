@@ -552,11 +552,19 @@ model Notification {
 }
 
 model WalletWithdrawal {
-  id        String   @id @default(cuid())
-  amount    Float
-  status    String   @default("PENDING")
-  notes     String?
-  createdAt DateTime @default(now())
+  id               String    @id @default(cuid())
+  amount           Float
+  status           String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  notes            String?
+  createdAt        DateTime  @default(now())
+  approvedAt       DateTime?
+  rejectedAt       DateTime?
+  rejectionReason  String?
+  // Snapshot de datos bancarios al momento de solicitar el retiro
+  snapshotCbu      String?
+  snapshotAlias    String?
+  snapshotCuil     String?
+  snapshotHolder   String?
 
   walletId String
   wallet   Wallet @relation(fields: [walletId], references: [id])

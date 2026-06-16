@@ -1394,7 +1394,7 @@ export default function ChicParis() {
                 </div>
                 <h3 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 900, color: "#111" }}>¡Pedido recibido!</h3>
                 <p style={{ fontSize: 14, color: "#666", margin: "0 0 8px" }}>Te enviamos un email con el resumen. El vendedor te contactará para coordinar el envío.</p>
-                <p style={{ fontSize: 12, color: "#999", margin: "0 0 28px", lineHeight: 1.6 }}>¿Algún problema? Respondé el email o contactá al vendedor. Tenés 10 días corridos para cancelar (Ley 24.240).</p>
+                <p style={{ fontSize: 12, color: "#999", margin: "0 0 28px", lineHeight: 1.6 }}>¿Algún inconveniente con tu pedido? Contactá al vendedor o escribinos a marketplacemitienda@gmail.com · Tenés 10 días corridos para cancelar (Ley 24.240).</p>
                 <button onClick={() => { setCheckoutOpen(false); setCheckoutStatus("idle"); }}
                   style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "12px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
                   Cerrar
