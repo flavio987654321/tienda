@@ -926,7 +926,7 @@ export default function BohoTerra() {
       {modalProduct && (
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={()=>{ setModalProduct(null); setLightboxSrc(null); }}>
           <div style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.65)", backdropFilter:"blur(8px)" }}/>
-          <div style={{ position:"relative", background:"#fff", maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e=>e.stopPropagation()}>
+          <div style={{ position:"relative", background:"#fff", maxWidth:920, width:"calc(100% - 32px)", maxHeight: isPreview ? "100%" : "92vh", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e=>e.stopPropagation()}>
             <button onClick={()=>{ setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(44,34,24,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
             <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
             <div>
@@ -1381,7 +1381,7 @@ export default function BohoTerra() {
       {/* ── FLOATING CART BUTTON ────────────────────────────── */}
       {/* Cuando WA está activo, el carrito se apila encima (bottom:84) para evitar posición left:24 que queda fuera del frame en preview */}
       <button onClick={() => setCartOpen(true)}
-        style={{ position:"fixed", right:24, bottom: hasWA ? 84 : 24, zIndex:500, width:52, height:52, borderRadius:"50%", background:A, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(0,0,0,0.25)", transition:"bottom 0.2s, transform 0.2s" }}
+        style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:500, width:52, height:52, borderRadius:"50%", background:A, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(0,0,0,0.25)", transition:"transform 0.2s" }}
         onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
         onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
         <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={getContrastColor(A)==="light"?"#fff":"#1a0e08"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>

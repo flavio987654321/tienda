@@ -1974,7 +1974,7 @@ export default function ConfiguracionPage() {
           <div style={{ flex: 1, overflow: "hidden", position: "relative", padding: "12px 16px 0" }}>
             <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
-              isolation: "isolate" }}>
+              transform: "translateZ(0)" }}>
               <StoreConfigContext.Provider value={{ ...config, previewFill: true, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
