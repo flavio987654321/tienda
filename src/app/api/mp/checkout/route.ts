@@ -77,6 +77,5 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     preferenceId: pref.id,
     initPoint: pref.init_point,
-    sandboxInitPoint: pref.sandbox_init_point,
   });
 }

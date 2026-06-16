@@ -255,7 +255,7 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
       setCartItems([]);
       setAppliedCoupon(null);
       try { localStorage.removeItem("storefront_cart"); } catch {}
-      window.location.href = mpData.sandboxInitPoint ?? mpData.initPoint;
+      window.location.href = mpData.initPoint;
       return;
     }
 
