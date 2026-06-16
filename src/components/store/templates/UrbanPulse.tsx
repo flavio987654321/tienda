@@ -548,10 +548,10 @@ export default function UrbanPulse() {
             {favorites.length > 0 && <span style={{ position:"absolute", top:4, right:4, width:8, height:8, background:ACC, border:`2px solid ${DARK}`, borderRadius:"50%" }} />}
           </button>
           <div style={{ position:"relative" }} ref={userDropdownRef}>
-            <button onClick={() => !isPreview && setUserDropdownOpen(o => !o)} title={isPreview ? "Menú de cuenta del cliente" : undefined} style={{ ...iconBtn, opacity: isPreview ? 0.7 : 1, cursor: isPreview ? "default" : "pointer" }}>
+            <button onClick={() => setUserDropdownOpen(o => !o)} style={{ ...iconBtn }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
-            {userDropdownOpen && !isPreview && (
+            {userDropdownOpen && (
               <div className="up-fade" style={{ position:"absolute", top:"calc(100% + 8px)", right:0, background:WHITE, border:`2px solid ${DARK}`, minWidth:190, zIndex:200 }}>
                 {user ? (
                   <>
@@ -562,20 +562,20 @@ export default function UrbanPulse() {
                       style={{ display:"block", width:"100%", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK, borderBottom:`1px solid ${BG}` }}
                       onMouseEnter={e => { e.currentTarget.style.background = ACC; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>Mi cuenta</a>
-                    <button onClick={() => { setUserDropdownOpen(false); signOut("/"); }}
-                      style={{ display:"block", width:"100%", padding:"10px 16px", background:"none", border:"none", textAlign:"left", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color:"#ef4444" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#fff1f1"; }}
+                    <button onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
+                      style={{ display:"block", width:"100%", padding:"10px 16px", background:"none", border:"none", textAlign:"left", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer", color:"#ef4444", opacity: isPreview ? 0.45 : 1 }}
+                      onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background = "#fff1f1"; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>Cerrar sesión</button>
                   </>
                 ) : (
                   <>
-                    <a href={`/login?redirect=/tienda/${storeConfig?.slug}`} onClick={() => setUserDropdownOpen(false)}
-                      style={{ display:"block", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK, borderBottom:`1px solid ${BG}` }}
-                      onMouseEnter={e => { e.currentTarget.style.background = ACC; }}
+                    <a href={isPreview ? undefined : `/login?redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
+                      style={{ display:"block", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK, borderBottom:`1px solid ${BG}`, cursor: isPreview ? "default" : "pointer" }}
+                      onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background = ACC; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>Iniciar sesión</a>
-                    <a href={`/registro?redirect=/tienda/${storeConfig?.slug}`} onClick={() => setUserDropdownOpen(false)}
-                      style={{ display:"block", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK }}
-                      onMouseEnter={e => { e.currentTarget.style.background = ACC; }}
+                    <a href={isPreview ? undefined : `/registro?redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
+                      style={{ display:"block", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK, cursor: isPreview ? "default" : "pointer" }}
+                      onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background = ACC; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>Registrarse</a>
                   </>
                 )}

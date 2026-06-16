@@ -265,11 +265,11 @@ export default function AutoMotor() {
           </div>
           {/* User icon */}
           <div ref={userDropdownRef} style={{ position:"relative" }}>
-            <button onClick={() => !isPreview && setUserDropdownOpen(o => !o)} title={isPreview ? "Menú de cuenta del cliente" : undefined}
-              style={{ background:"none", border:"none", color:navTextMid, cursor: isPreview ? "default" : "pointer", padding:4, display:"flex", alignItems:"center", opacity: isPreview ? 0.7 : 1 }}>
+            <button onClick={() => setUserDropdownOpen(o => !o)}
+              style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
-            {userDropdownOpen && !isPreview && (
+            {userDropdownOpen && (
               <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:navBg, border:`1px solid ${navBorderColor}`, minWidth:190, zIndex:300, boxShadow:"0 8px 28px rgba(0,0,0,0.25)", overflow:"hidden" }}>
                 {user ? (
                   <>
@@ -280,20 +280,20 @@ export default function AutoMotor() {
                       style={{ display:"block", padding:"10px 16px", fontSize:13, color:navText, textDecoration:"none", borderBottom:`1px solid ${navBorderColor}` }}
                       onMouseEnter={e => (e.currentTarget.style.opacity="0.75")}
                       onMouseLeave={e => (e.currentTarget.style.opacity="1")}>Mi cuenta</a>
-                    <button onClick={() => { setUserDropdownOpen(false); signOut("/"); }}
-                      style={{ display:"block", width:"100%", padding:"10px 16px", fontSize:13, color:"#f87171", background:"none", border:"none", textAlign:"left", cursor:"pointer" }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity="0.75")}
-                      onMouseLeave={e => (e.currentTarget.style.opacity="1")}>Cerrar sesión</button>
+                    <button onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
+                      style={{ display:"block", width:"100%", padding:"10px 16px", fontSize:13, color:"#f87171", background:"none", border:"none", textAlign:"left", cursor: isPreview ? "default" : "pointer", opacity: isPreview ? 0.45 : 1 }}
+                      onMouseEnter={e => { if (!isPreview) e.currentTarget.style.opacity="0.75"; }}
+                      onMouseLeave={e => (e.currentTarget.style.opacity= isPreview ? "0.45" : "1")}>Cerrar sesión</button>
                   </>
                 ) : (
                   <>
-                    <a href={`/login?redirect=/tienda/${config?.slug}`} onClick={() => setUserDropdownOpen(false)}
-                      style={{ display:"block", padding:"12px 16px", fontSize:13, color:navText, textDecoration:"none", borderBottom:`1px solid ${navBorderColor}` }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity="0.75")}
+                    <a href={isPreview ? undefined : `/login?redirect=/tienda/${config?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
+                      style={{ display:"block", padding:"12px 16px", fontSize:13, color:navText, textDecoration:"none", borderBottom:`1px solid ${navBorderColor}`, cursor: isPreview ? "default" : "pointer" }}
+                      onMouseEnter={e => { if (!isPreview) e.currentTarget.style.opacity="0.75"; }}
                       onMouseLeave={e => (e.currentTarget.style.opacity="1")}>Iniciar sesión</a>
-                    <a href={`/registro?redirect=/tienda/${config?.slug}`} onClick={() => setUserDropdownOpen(false)}
-                      style={{ display:"block", padding:"12px 16px", fontSize:13, color:navText, textDecoration:"none" }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity="0.75")}
+                    <a href={isPreview ? undefined : `/registro?redirect=/tienda/${config?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
+                      style={{ display:"block", padding:"12px 16px", fontSize:13, color:navText, textDecoration:"none", cursor: isPreview ? "default" : "pointer" }}
+                      onMouseEnter={e => { if (!isPreview) e.currentTarget.style.opacity="0.75"; }}
                       onMouseLeave={e => (e.currentTarget.style.opacity="1")}>Registrarse</a>
                   </>
                 )}

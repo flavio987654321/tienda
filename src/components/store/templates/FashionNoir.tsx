@@ -636,10 +636,10 @@ export default function FashionNoir() {
             </button>}
             {/* User icon */}
             <div ref={userDropdownRef} style={{ position:"relative" }}>
-              <button onClick={() => !isPreview && setUserDropdownOpen(o => !o)} title={isPreview ? "Menú de cuenta del cliente" : undefined} style={{ background:"none", border:"none", color:T, cursor: isPreview ? "default" : "pointer", padding:4, display:"flex", alignItems:"center", opacity: isPreview ? 0.7 : 1 }}>
+              <button onClick={() => setUserDropdownOpen(o => !o)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
                 <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </button>
-              {userDropdownOpen && !isPreview && (
+              {userDropdownOpen && (
                 <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#1a1a1a", border:`1px solid rgba(201,168,76,0.2)`, minWidth:190, zIndex:200, boxShadow:"0 8px 32px rgba(0,0,0,0.5)" }}>
                   {user ? (
                     <>
@@ -651,21 +651,21 @@ export default function FashionNoir() {
                         onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
                         onMouseLeave={e => (e.currentTarget.style.background="none")}>Mi cuenta</a>
                       <div style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, margin:"4px 0" }}/>
-                      <button onClick={() => { setUserDropdownOpen(false); signOut("/"); }}
-                        style={{ display:"block", width:"100%", background:"none", border:"none", color:"#f87171", padding:"10px 16px", fontSize:13, textAlign:"left", cursor:"pointer", transition:"background 0.2s" }}
-                        onMouseEnter={e => (e.currentTarget.style.background="rgba(248,113,113,0.08)")}
+                      <button onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
+                        style={{ display:"block", width:"100%", background:"none", border:"none", color:"#f87171", padding:"10px 16px", fontSize:13, textAlign:"left", cursor: isPreview ? "default" : "pointer", opacity: isPreview ? 0.45 : 1, transition:"background 0.2s" }}
+                        onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(248,113,113,0.08)"; }}
                         onMouseLeave={e => (e.currentTarget.style.background="none")}>Cerrar sesión</button>
                     </>
                   ) : (
                     <>
                       <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:"rgba(201,168,76,0.6)", padding:"10px 16px 4px", margin:0 }}>Mi cuenta</p>
-                      <a href={`/login?redirect=/tienda/${storeConfig?.slug}`} onClick={() => setUserDropdownOpen(false)}
-                        style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", transition:"background 0.2s" }}
-                        onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
+                      <a href={isPreview ? undefined : `/login?redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
+                        style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", cursor: isPreview ? "default" : "pointer", transition:"background 0.2s" }}
+                        onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(201,168,76,0.08)"; }}
                         onMouseLeave={e => (e.currentTarget.style.background="none")}>Iniciar sesión</a>
-                      <a href={`/registro?redirect=/tienda/${storeConfig?.slug}`} onClick={() => setUserDropdownOpen(false)}
-                        style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", transition:"background 0.2s" }}
-                        onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
+                      <a href={isPreview ? undefined : `/registro?redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
+                        style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", cursor: isPreview ? "default" : "pointer", transition:"background 0.2s" }}
+                        onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(201,168,76,0.08)"; }}
                         onMouseLeave={e => (e.currentTarget.style.background="none")}>Registrarse</a>
                     </>
                   )}
@@ -1649,7 +1649,7 @@ export default function FashionNoir() {
       </div>
 
       {/* ── FAVORITES DRAWER ───────────────────────────────── */}
-      <div style={{ position:"fixed", inset:0, zIndex:155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
+      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
         <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.6)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }}/>
         <div style={{ position:"absolute", top:0, right:0, bottom:0, width:420, background:S, transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
           <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid rgba(240,235,227,0.07)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>

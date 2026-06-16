@@ -528,10 +528,10 @@ export default function BohoTerra() {
             {/* User icon */}
             {!isMobile && (
               <div ref={userDropdownRef} style={{ position:"relative" }}>
-                <button onClick={() => !isPreview && setUserDropdownOpen(o => !o)} title={isPreview ? "Menú de cuenta del cliente" : undefined} style={{ background:"none", border:"none", color:T, cursor: isPreview ? "default" : "pointer", padding:4, display:"flex", alignItems:"center", opacity: isPreview ? 0.7 : 1 }}>
+                <button onClick={() => setUserDropdownOpen(o => !o)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
                   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 </button>
-                {userDropdownOpen && !isPreview && (
+                {userDropdownOpen && (
                   <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#faf7f2", border:`1px solid rgba(44,34,24,0.12)`, borderRadius:10, minWidth:190, zIndex:200, boxShadow:"0 8px 28px rgba(44,34,24,0.12)", overflow:"hidden" }}>
                     {user ? (
                       <>
@@ -542,20 +542,20 @@ export default function BohoTerra() {
                           style={{ display:"block", padding:"10px 16px", fontSize:13, color:T, textDecoration:"none", borderBottom:`1px solid rgba(44,34,24,0.06)` }}
                           onMouseEnter={e => (e.currentTarget.style.background="rgba(44,34,24,0.04)")}
                           onMouseLeave={e => (e.currentTarget.style.background="transparent")}>Mi cuenta</a>
-                        <button onClick={() => { setUserDropdownOpen(false); signOut("/"); }}
-                          style={{ display:"block", width:"100%", padding:"10px 16px", fontSize:13, color:"#dc2626", background:"none", border:"none", textAlign:"left", cursor:"pointer" }}
-                          onMouseEnter={e => (e.currentTarget.style.background="rgba(220,38,38,0.06)")}
+                        <button onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
+                          style={{ display:"block", width:"100%", padding:"10px 16px", fontSize:13, color:"#dc2626", background:"none", border:"none", textAlign:"left", cursor: isPreview ? "default" : "pointer", opacity: isPreview ? 0.45 : 1 }}
+                          onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(220,38,38,0.06)"; }}
                           onMouseLeave={e => (e.currentTarget.style.background="transparent")}>Cerrar sesión</button>
                       </>
                     ) : (
                       <>
-                        <a href={`/login?redirect=/tienda/${storeConfig?.slug}`} onClick={() => setUserDropdownOpen(false)}
-                          style={{ display:"block", padding:"12px 16px", fontSize:13, color:T, textDecoration:"none", borderBottom:`1px solid rgba(44,34,24,0.06)` }}
-                          onMouseEnter={e => (e.currentTarget.style.background="rgba(44,34,24,0.04)")}
+                        <a href={isPreview ? undefined : `/login?redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
+                          style={{ display:"block", padding:"12px 16px", fontSize:13, color:T, textDecoration:"none", borderBottom:`1px solid rgba(44,34,24,0.06)`, cursor: isPreview ? "default" : "pointer" }}
+                          onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(44,34,24,0.04)"; }}
                           onMouseLeave={e => (e.currentTarget.style.background="transparent")}>Iniciar sesión</a>
-                        <a href={`/registro?redirect=/tienda/${storeConfig?.slug}`} onClick={() => setUserDropdownOpen(false)}
-                          style={{ display:"block", padding:"12px 16px", fontSize:13, color:T, textDecoration:"none" }}
-                          onMouseEnter={e => (e.currentTarget.style.background="rgba(44,34,24,0.04)")}
+                        <a href={isPreview ? undefined : `/registro?redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
+                          style={{ display:"block", padding:"12px 16px", fontSize:13, color:T, textDecoration:"none", cursor: isPreview ? "default" : "pointer" }}
+                          onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(44,34,24,0.04)"; }}
                           onMouseLeave={e => (e.currentTarget.style.background="transparent")}>Registrarse</a>
                       </>
                     )}
@@ -1242,7 +1242,7 @@ export default function BohoTerra() {
       </div>
 
       {/* ── FAVORITES DRAWER ───────────────────────────────── */}
-      <div style={{ position:"fixed", inset:0, zIndex:155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
+      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
         <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.4)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }}/>
         <div style={{ position:"absolute", top:0, right:0, bottom:0, width:400, background:"#fff", transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:`1px solid rgba(44,34,24,0.08)` }}>
           <div style={{ padding:"20px 24px 14px", borderBottom:`1px solid rgba(44,34,24,0.06)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
