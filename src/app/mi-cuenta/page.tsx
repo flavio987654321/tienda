@@ -522,10 +522,10 @@ export default function MiCuentaPage() {
     <div className="min-h-screen bg-[#f5f4ff] relative">
       {/* Blobs decorativos de fondo */}
       <div aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
-        <div style={{ position: "absolute", top: -128, left: -128, width: 384, height: 384, background: "radial-gradient(circle, rgba(129,140,248,0.18) 0%, transparent 70%)" }} />
-        <div style={{ position: "absolute", top: "33%", right: -96, width: 320, height: 320, background: "radial-gradient(circle, rgba(167,139,250,0.18) 0%, transparent 70%)" }} />
-        <div style={{ position: "absolute", bottom: 96, left: -64, width: 256, height: 256, background: "radial-gradient(circle, rgba(196,181,253,0.22) 0%, transparent 70%)" }} />
-        <div style={{ position: "absolute", bottom: -80, right: "25%", width: 288, height: 288, background: "radial-gradient(circle, rgba(129,140,248,0.15) 0%, transparent 70%)" }} />
+        <div style={{ position: "absolute", top: -128, left: -128, width: 384, height: 384, borderRadius: "50%", background: "rgba(129,140,248,0.25)", filter: "blur(80px)" }} />
+        <div style={{ position: "absolute", top: "33%", right: -96, width: 320, height: 320, borderRadius: "50%", background: "rgba(167,139,250,0.22)", filter: "blur(80px)" }} />
+        <div style={{ position: "absolute", bottom: 96, left: -64, width: 256, height: 256, borderRadius: "50%", background: "rgba(196,181,253,0.28)", filter: "blur(64px)" }} />
+        <div style={{ position: "absolute", bottom: -80, right: "25%", width: 288, height: 288, borderRadius: "50%", background: "rgba(129,140,248,0.18)", filter: "blur(72px)" }} />
       </div>
 
       {/* Header */}
@@ -781,7 +781,7 @@ export default function MiCuentaPage() {
             />
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {favorites.map((fav) => {
+              {favorites.filter((fav) => fav.product != null).map((fav) => {
                 const imgs = parseImages(fav.product.images);
                 return (
                   <div
