@@ -7,7 +7,6 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import { ENVIO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
@@ -214,9 +213,9 @@ export default function UrbanPulse() {
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
-    cartTotal, cartCount, envioPrice, couponDiscount, orderTotal,
+    cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     searchResults, favoriteProducts, wholesaleWarnings,
-    fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
+    fmt, fmtEnvioPrice, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
     pagoOptions, acceptedTerms, setAcceptedTerms,
   } = useCartLogic(storefront);
@@ -1474,11 +1473,11 @@ export default function UrbanPulse() {
                   </div>
                   <p style={{ margin:"0 0 10px", fontSize:10, fontWeight:900, letterSpacing:4, textTransform:"uppercase" }}>Envío</p>
                   <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:22 }}>
-                    {ENVIO_OPTIONS.map(opt => (
+                    {envioOptions.map(opt => (
                       <label key={opt.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"13px", border:`2px solid ${envioId === opt.id ? DARK : "#ddd"}`, cursor:"pointer" }}>
                         <input type="radio" name="envio" value={opt.id} checked={envioId === opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor:DARK }} />
                         <span style={{ flex:1, fontSize:13, fontWeight:700 }}>{opt.label}</span>
-                        <span style={{ fontSize:13, fontWeight:900 }}>{opt.price === 0 ? "Gratis" : fmt(opt.price)}</span>
+                        <span style={{ fontSize:13, fontWeight:900 }}>{fmtEnvioPrice(opt,fmt)}</span>
                       </label>
                     ))}
                   </div>
@@ -1520,7 +1519,7 @@ export default function UrbanPulse() {
                     )}
                     <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, paddingTop:8, borderTop:`1px solid #ddd` }}>
                       <span style={{ color:MID }}>Envío</span>
-                      <span style={{ fontWeight:700 }}>{envioPrice === 0 ? "Gratis" : fmt(envioPrice)}</span>
+                      <span style={{ fontWeight:700 }}>{envioCoordinar?"A coordinar":envioPrice===0?"Gratis":fmt(envioPrice)}</span>
                     </div>
                   </div>
                   <label style={{ display:"flex", gap:8, alignItems:"center", fontSize:12, color:MID, cursor:"pointer", marginBottom:8 }}>

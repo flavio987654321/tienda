@@ -7,7 +7,6 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import { ENVIO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
@@ -229,9 +228,9 @@ export default function ChicParis() {
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
-    cartTotal, cartCount, envioPrice, couponDiscount, orderTotal,
+    cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     searchResults, favoriteProducts, wholesaleWarnings,
-    fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
+    fmt, fmtEnvioPrice, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
     pagoOptions, acceptedTerms, setAcceptedTerms,
   } = useCartLogic(storefront);
@@ -1424,13 +1423,13 @@ export default function ChicParis() {
                   <input placeholder="Código postal" value={buyerForm.cp} onChange={e => setBuyerForm(b => ({ ...b, cp: e.target.value }))} style={{ ...iStyle, marginBottom: 16 }} onFocus={e => (e.target.style.borderColor = ACC)} onBlur={e => (e.target.style.borderColor = "#ddd")} />
 
                   <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", color: "#333" }}>Envío</p>
-                  {ENVIO_OPTIONS.map(opt => (
+                  {envioOptions.map(opt => (
                     <label key={opt.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", border: `1px solid ${envioId === opt.id ? ACC : "#e0e0e0"}`, marginBottom: 8, cursor: "pointer", background: envioId === opt.id ? `${ACC}10` : "#fff" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <input type="radio" checked={envioId === opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor: ACC }} />
                         <span style={{ fontSize: 13 }}>{opt.label}</span>
                       </span>
-                      <span style={{ fontSize: 13, fontWeight: 700 }}>{opt.price === 0 ? "Gratis" : fmt(opt.price)}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>{fmtEnvioPrice(opt,fmt)}</span>
                     </label>
                   ))}
 
@@ -1479,7 +1478,7 @@ export default function ChicParis() {
                     </div>
                   ))}
                   <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 8, paddingTop: 8 }} />
-                  {[["Envío", envioPrice === 0 ? "Gratis" : fmt(envioPrice)], ...(appliedCoupon ? [["Descuento", `−${fmt(couponDiscount)}`]] : [])].map(([k, v]) => (
+                  {[["Envío", envioCoordinar?"A coordinar":envioPrice===0?"Gratis":fmt(envioPrice)], ...(appliedCoupon ? [["Descuento", `−${fmt(couponDiscount)}`]] : [])].map(([k, v]) => (
                     <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                       <span style={{ fontSize: 13, color: "#666" }}>{k}</span>
                       <span style={{ fontSize: 13, color: k === "Descuento" ? "#16a34a" : "#111", fontWeight: k === "Descuento" ? 700 : 400 }}>{v}</span>

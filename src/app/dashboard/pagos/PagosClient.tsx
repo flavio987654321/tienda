@@ -4,14 +4,16 @@ import { useState, useEffect, useCallback } from "react";
 import {
   CreditCard, Banknote, FileText, Shield, Truck, Check,
   ChevronDown, ChevronUp, Save, AlertCircle, ToggleLeft, ToggleRight,
-  Eye, EyeOff, Lock, Mail,
+  Eye, EyeOff, Lock, Mail, Package,
 } from "lucide-react";
-import type { StorePaymentInfo } from "@/types/store-config";
-import { DEFAULT_PAYMENT_INFO } from "@/types/store-config";
+import type { StorePaymentInfo, ShippingMethod } from "@/types/store-config";
+import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
 
 type Props = {
   initial: {
     paymentInfo: StorePaymentInfo;
+    shippingMethods: ShippingMethod[];
+    shippingConfigured: boolean;
     policyReturns: string;
     policyShipping: string;
     policyTerms: string;
@@ -27,6 +29,9 @@ export default function PagosClient({ initial }: Props) {
   const [paymentInfo, setPaymentInfo] = useState<StorePaymentInfo>(
     initial.paymentInfo ?? DEFAULT_PAYMENT_INFO
   );
+  const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>(
+    initial.shippingMethods?.length ? initial.shippingMethods : DEFAULT_SHIPPING_METHODS
+  );
   const [policyReturns, setPolicyReturns] = useState(initial.policyReturns);
   const [policyShipping, setPolicyShipping] = useState(initial.policyShipping);
   const [policyTerms, setPolicyTerms] = useState(initial.policyTerms);
@@ -34,7 +39,9 @@ export default function PagosClient({ initial }: Props) {
   const [policyShippingActive, setPolicyShippingActive] = useState(initial.policyShippingActive);
   const [policyTermsActive, setPolicyTermsActive] = useState(initial.policyTermsActive);
 
-  const [openSection, setOpenSection] = useState<"transferencia" | "efectivo" | "policies" | null>("transferencia");
+  const [openSection, setOpenSection] = useState<"transferencia" | "efectivo" | "envios" | "policies" | null>(
+    !initial.shippingConfigured ? "envios" : "transferencia"
+  );
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
@@ -74,6 +81,7 @@ export default function PagosClient({ initial }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paymentInfo,
+          shippingMethods,
           policyReturns,
           policyShipping,
           policyTerms,
@@ -239,6 +247,104 @@ export default function PagosClient({ initial }: Props) {
               </Row>
             </div>
           )}
+        </div>
+      </Section>
+
+      {/* MÉTODOS DE ENVÍO */}
+      <Section
+        open={openSection === "envios"}
+        onToggle={() => setOpenSection(openSection === "envios" ? null : "envios")}
+        icon={<Package className="h-4 w-4 text-sky-500" />}
+        title="Métodos de envío"
+        subtitle="Definí cómo tus clientes pueden recibir su compra y cuánto cobrar"
+        badge={shippingMethods.filter(m => m.enabled && !m.isPickup).length > 0 ? "Configurado" : undefined}
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-2.5 bg-sky-50 border border-sky-100 rounded-lg p-3.5 text-xs text-sky-700 leading-relaxed">
+            <Truck className="h-3.5 w-3.5 shrink-0 mt-0.5 text-sky-400" />
+            Estas opciones aparecen en el checkout cuando el cliente elige cómo recibir su compra. Podés poner precio fijo o "A coordinar" para acordarlo por WhatsApp.
+          </div>
+
+          {shippingMethods.map((method, idx) => (
+            <div key={method.id} className="rounded-lg border border-slate-200 overflow-hidden">
+              {/* Header row */}
+              <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border-b border-slate-100">
+                {method.isPickup ? (
+                  <span className="text-xs font-semibold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md">Siempre activo</span>
+                ) : (
+                  <button
+                    onClick={() => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, enabled: !m.enabled } : m))}
+                    className="flex items-center gap-1.5 text-xs font-semibold"
+                  >
+                    {method.enabled
+                      ? <><ToggleRight className="h-5 w-5 text-sky-500" /><span className="text-sky-600">Activo</span></>
+                      : <><ToggleLeft className="h-5 w-5 text-slate-300" /><span className="text-slate-400">Inactivo</span></>}
+                  </button>
+                )}
+                <span className="flex-1 text-xs font-bold text-slate-600">
+                  {method.isPickup ? "Retiro / Acordar" : `Opción ${idx}`}
+                </span>
+              </div>
+
+              {/* Body */}
+              <div className={`px-4 py-3 space-y-3 bg-white ${!method.enabled && !method.isPickup ? "opacity-50 pointer-events-none" : ""}`}>
+                {/* Label */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Nombre visible para el cliente</label>
+                  <input
+                    type="text"
+                    value={method.label}
+                    onChange={e => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, label: e.target.value.slice(0, 80) } : m))}
+                    maxLength={80}
+                    placeholder={method.isPickup ? "Ej: Retiro en local / acordar" : "Ej: Envío a domicilio"}
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors"
+                  />
+                </div>
+
+                {/* Precio — solo para métodos no pickup */}
+                {!method.isPickup && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-slate-600">Costo</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, coordinar: true, price: 0 } : m))}
+                        className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-colors ${method.coordinar ? "bg-sky-50 border-sky-300 text-sky-700" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"}`}
+                      >
+                        A coordinar
+                      </button>
+                      <button
+                        onClick={() => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, coordinar: false } : m))}
+                        className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-colors ${!method.coordinar ? "bg-sky-50 border-sky-300 text-sky-700" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"}`}
+                      >
+                        Precio fijo
+                      </button>
+                    </div>
+                    {!method.coordinar && (
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">$</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={100}
+                          value={method.price || ""}
+                          onChange={e => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, price: Math.max(0, Math.floor(Number(e.target.value) || 0)) } : m))}
+                          placeholder="0"
+                          className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors"
+                        />
+                      </div>
+                    )}
+                    {method.coordinar && (
+                      <p className="text-xs text-slate-400">El costo se acuerda con el cliente después del pedido (por WhatsApp u otro medio).</p>
+                    )}
+                  </div>
+                )}
+
+                {method.isPickup && (
+                  <p className="text-xs text-slate-400">Este método siempre es gratuito. Es el retiro en persona o acordado directamente con el comprador.</p>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </Section>
 

@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import DashboardLayout from "@/components/DashboardLayout";
 import PagosClient from "./PagosClient";
-import type { StorePaymentInfo } from "@/types/store-config";
-import { DEFAULT_PAYMENT_INFO } from "@/types/store-config";
+import type { StorePaymentInfo, ShippingMethod } from "@/types/store-config";
+import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
 
 export default async function PagosPage() {
   const user = await getCurrentUser();
@@ -33,9 +33,15 @@ export default async function PagosPage() {
     : [0, 0];
 
   let paymentInfo: StorePaymentInfo = DEFAULT_PAYMENT_INFO;
+  let shippingMethods: ShippingMethod[] = DEFAULT_SHIPPING_METHODS;
+  let shippingConfigured = false;
   try {
     const config = JSON.parse(store?.storeConfig || "{}");
     if (config.paymentInfo) paymentInfo = config.paymentInfo;
+    if (Array.isArray(config.shippingMethods)) {
+      shippingMethods = config.shippingMethods;
+      shippingConfigured = true;
+    }
   } catch { /* noop */ }
 
   return (
@@ -65,6 +71,8 @@ export default async function PagosPage() {
             <PagosClient
               initial={{
                 paymentInfo,
+                shippingMethods,
+                shippingConfigured,
                 policyReturns: store?.policyReturns ?? "",
                 policyShipping: store?.policyShipping ?? "",
                 policyTerms: store?.policyTerms ?? "",

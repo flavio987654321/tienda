@@ -27,6 +27,21 @@ export type FlyerConfig = {
   images: string[]; // hasta 3 URLs de Supabase Storage
 };
 
+export type ShippingMethod = {
+  id: string;
+  label: string;
+  price: number;
+  coordinar: boolean;
+  enabled: boolean;
+  isPickup: boolean;
+};
+
+export const DEFAULT_SHIPPING_METHODS: ShippingMethod[] = [
+  { id: "retiro",   label: "Retiro en local / acordar", price: 0, coordinar: false, enabled: true, isPickup: true  },
+  { id: "estandar", label: "Envío estándar",             price: 0, coordinar: true,  enabled: true, isPickup: false },
+  { id: "nacional", label: "Envío nacional",             price: 0, coordinar: true,  enabled: true, isPickup: false },
+];
+
 export type PaymentMethodTransferencia = {
   enabled: boolean;
   titular: string;
@@ -119,6 +134,7 @@ export type StoreConfig = {
   showPushBell?: boolean;
   onPreviewBellClick?: () => void;
   paymentInfo?: StorePaymentInfo;
+  shippingMethods?: ShippingMethod[];
   policies?: {
     returns?: string;
     shipping?: string;

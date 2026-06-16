@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { revalidatePath } from "next/cache";
-import type { StorePaymentInfo } from "@/types/store-config";
-import { DEFAULT_PAYMENT_INFO } from "@/types/store-config";
+import type { StorePaymentInfo, ShippingMethod } from "@/types/store-config";
+import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
 
 const MAX_TEXT = 2000;
 
@@ -38,6 +38,18 @@ function sanitizePaymentInfo(raw: unknown): StorePaymentInfo {
   };
 }
 
+function sanitizeShippingMethods(raw: unknown): ShippingMethod[] {
+  if (!Array.isArray(raw) || raw.length === 0) return DEFAULT_SHIPPING_METHODS;
+  return raw.slice(0, 5).map((m: Record<string, unknown>, i: number) => ({
+    id: typeof m.id === "string" && m.id.trim() ? m.id.trim().slice(0, 40) : `method_${i}`,
+    label: typeof m.label === "string" && m.label.trim() ? m.label.trim().slice(0, 80) : "Método de envío",
+    price: typeof m.price === "number" && m.price >= 0 ? Math.floor(m.price) : 0,
+    coordinar: Boolean(m.coordinar),
+    enabled: Boolean(m.enabled),
+    isPickup: Boolean(m.isPickup),
+  }));
+}
+
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -58,13 +70,21 @@ export async function GET() {
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
   let paymentInfo: StorePaymentInfo = DEFAULT_PAYMENT_INFO;
+  let shippingMethods: ShippingMethod[] = DEFAULT_SHIPPING_METHODS;
+  let shippingConfigured = false;
   try {
     const config = JSON.parse(store.storeConfig || "{}");
     if (config.paymentInfo) paymentInfo = config.paymentInfo;
+    if (Array.isArray(config.shippingMethods)) {
+      shippingMethods = config.shippingMethods;
+      shippingConfigured = true;
+    }
   } catch { /* noop */ }
 
   return NextResponse.json({
     paymentInfo,
+    shippingMethods,
+    shippingConfigured,
     policyReturns: store.policyReturns ?? "",
     policyShipping: store.policyShipping ?? "",
     policyTerms: store.policyTerms ?? "",
@@ -81,6 +101,7 @@ export async function PUT(req: NextRequest) {
   const body = await req.json();
 
   const paymentInfo = sanitizePaymentInfo(body.paymentInfo);
+  const shippingMethods = sanitizeShippingMethods(body.shippingMethods);
 
   const policyReturns = sanitizeText(body.policyReturns);
   const policyShipping = sanitizeText(body.policyShipping);
@@ -100,6 +121,7 @@ export async function PUT(req: NextRequest) {
   try { config = JSON.parse(store.storeConfig || "{}"); } catch { /* noop */ }
 
   config.paymentInfo = paymentInfo;
+  config.shippingMethods = shippingMethods;
 
   await prisma.store.update({
     where: { ownerId: user.id },

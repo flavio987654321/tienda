@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { StorefrontProduct, ValidatedCoupon, PlaceOrderParams } from "./useStorefront";
-import { ENVIO_OPTIONS, getPagoOptions, fmt as fmtFn, type CartItem, type ContactStatus, type CheckoutStatus } from "@/components/store/shared/cartTypes";
+import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, type CartItem, type ContactStatus, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
 
 type StorefrontDeps = {
   products: StorefrontProduct[];
@@ -12,9 +12,10 @@ type StorefrontDeps = {
   checkoutMode?: "cart" | "inquiry";
   isWholesale?: boolean;
   hasMercadoPago?: boolean;
+  shippingMethods?: ShippingMethod[] | null;
 };
 
-export function useCartLogic({ products, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false }: StorefrontDeps) {
+export function useCartLogic({ products, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods }: StorefrontDeps) {
   const [cartItems,      setCartItems]      = useState<CartItem[]>([]);
   const [cartOpen,       setCartOpen]       = useState(false);
   const [modalProduct,   setModalProduct]   = useState<StorefrontProduct | null>(null);
@@ -124,7 +125,10 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
     i.product.cantMinMayorista && i.qty < i.product.cantMinMayorista
   ) : [];
   const cartCount      = cartItems.reduce((s, i) => s + i.qty, 0);
-  const envioPrice     = ENVIO_OPTIONS.find(o => o.id === envioId)?.price ?? 0;
+  const envioOptions   = getEnvioOptions(shippingMethods);
+  const selectedEnvio  = envioOptions.find(o => o.id === envioId) ?? envioOptions[0];
+  const envioPrice     = selectedEnvio?.coordinar ? 0 : (selectedEnvio?.price ?? 0);
+  const envioCoordinar = selectedEnvio?.coordinar ?? false;
   const couponDiscount = appliedCoupon?.discount ?? 0;
   const orderTotal     = cartTotal + envioPrice - couponDiscount;
 
@@ -211,7 +215,7 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
         postalCode: buyerForm.cp,
         notes:      notas,
       },
-      shippingMethod:  envioId === "retiro" ? "pickup" : envioId === "estandar" ? "standard" : "national",
+      shippingMethod:  envioId,
       paymentProvider: pagoId,
       couponId:        appliedCoupon?.id ?? null,
     });
@@ -270,10 +274,11 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
     contactStatus, setContactStatus, contactForm, setContactForm,
     acceptedTerms, setAcceptedTerms,
     // Derived
-    cartTotal, cartCount, envioPrice, couponDiscount, orderTotal,
+    cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     searchResults, favoriteProducts,
     checkoutMode, isWholesale, wholesaleWarnings,
     pagoOptions: getPagoOptions(hasMercadoPago),
+    fmtEnvioPrice,
     // Functions
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,

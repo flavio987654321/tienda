@@ -1,4 +1,6 @@
 import type { StorefrontProduct } from "@/hooks/useStorefront";
+import type { ShippingMethod } from "@/types/store-config";
+import { DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
 
 export type CartItem = {
   product: StorefrontProduct;
@@ -11,11 +13,21 @@ export type CartItem = {
 export type ContactStatus = "idle" | "sending" | "sent";
 export type CheckoutStatus = "idle" | "placing" | "done";
 
-export const ENVIO_OPTIONS = [
-  { id: "retiro",   label: "Retiro en local / acordar", price: 0 },
-  { id: "estandar", label: "Envío estándar",             price: 3500 },
-  { id: "nacional", label: "Envío nacional",             price: 6500 },
-];
+export type { ShippingMethod };
+
+export function getEnvioOptions(methods?: ShippingMethod[] | null): ShippingMethod[] {
+  const src = methods?.length ? methods : DEFAULT_SHIPPING_METHODS;
+  return src.filter(m => m.enabled);
+}
+
+export function fmtEnvioPrice(opt: ShippingMethod, fmt: (n: number) => string): string {
+  if (opt.isPickup) return "Gratis";
+  if (opt.coordinar) return "A coordinar";
+  if (opt.price === 0) return "Gratis";
+  return fmt(opt.price);
+}
+
+export const ENVIO_OPTIONS = DEFAULT_SHIPPING_METHODS;
 
 export const BASE_PAGO_OPTIONS = [
   { id: "transferencia", label: "Transferencia bancaria" },

@@ -4,6 +4,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { createNotification } from "@/lib/notifications";
 import { sendOrderConfirmationEmail, sendNewOrderToOwnerEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/push";
+import type { ShippingMethod } from "@/types/store-config";
+import { DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
 
 type CheckoutItem = {
   productId: string;
@@ -31,11 +33,16 @@ type CheckoutBody = {
   paymentProvider: string;
 };
 
-const SHIPPING_COSTS: Record<string, { label: string; cost: number }> = {
-  pickup: { label: "Retiro en local / acordar", cost: 0 },
-  standard: { label: "Envio estandar", cost: 3500 },
-  national: { label: "Envio nacional", cost: 6500 },
-};
+function resolveShipping(shippingMethodId: string, methods: ShippingMethod[]): { label: string; cost: number } {
+  // Backward compat: old frontend sent "pickup"/"standard"/"national"
+  const legacyMap: Record<string, string> = { pickup: "retiro", standard: "estandar", national: "nacional" };
+  const normalizedId = legacyMap[shippingMethodId] ?? shippingMethodId;
+  const found = methods.find(m => m.id === normalizedId && m.enabled);
+  if (found) return { label: found.label, cost: found.coordinar ? 0 : found.price };
+  // fallback to pickup
+  const pickup = methods.find(m => m.isPickup) ?? DEFAULT_SHIPPING_METHODS[0];
+  return { label: pickup.label, cost: 0 };
+}
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
@@ -58,7 +65,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email inválido" }, { status: 400 });
   }
 
-  const shipping = SHIPPING_COSTS[shippingMethod] ?? SHIPPING_COSTS.pickup;
+  // Resolve shipping from store's config (dynamic per-store pricing)
+  const storeForShipping = await prisma.store.findUnique({
+    where: { id: storeId },
+    select: { storeConfig: true },
+  });
+  let storeShippingMethods: ShippingMethod[] = DEFAULT_SHIPPING_METHODS;
+  try {
+    const cfg = JSON.parse(storeForShipping?.storeConfig || "{}");
+    if (Array.isArray(cfg.shippingMethods) && cfg.shippingMethods.length > 0) {
+      storeShippingMethods = cfg.shippingMethods;
+    }
+  } catch { /* noop */ }
+  const shipping = resolveShipping(shippingMethod, storeShippingMethods);
 
   try {
     let usedRewardCouponId: string | null = null;

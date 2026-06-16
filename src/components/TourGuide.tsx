@@ -27,8 +27,8 @@ const STEPS_DEFAULT: Step[] = [
   },
   {
     tourId: "pagos",
-    title: "Pagos y cobros",
-    body: "Conectá MercadoPago para cobrar automáticamente. También configurá envíos y políticas de devolución.",
+    title: "Pagos y envíos",
+    body: "Configurá cómo cobrar (CBU, alias o efectivo) y definí tus opciones de envío — precio fijo o 'a coordinar'. Los clientes ven todo esto al finalizar su compra.",
   },
   {
     tourId: "afiliados",
@@ -70,8 +70,8 @@ const STEPS_AUTOS: Step[] = [
   },
   {
     tourId: "pagos",
-    title: "Pagos y señas",
-    body: "Conectá MercadoPago si querés aceptar señas online. También podés usar solo el modo contacto sin cobro.",
+    title: "Pagos y cobros",
+    body: "Configurá tus datos de cobro (CBU, alias o efectivo). Los clientes los reciben por email al confirmar una seña o consulta.",
   },
   {
     tourId: "afiliados",

@@ -33,7 +33,7 @@ export default async function DashboardPage() {
   // Extra fields for onboarding checklist
   const storeExtra = await prisma.store.findUnique({
     where: { id: store.id },
-    select: { logo: true, isPublished: true, mpConnectedAt: true, storeConfig: true },
+    select: { logo: true, isPublished: true, mpConnectedAt: true, storeConfig: true, description: true },
   });
 
   const sub = await getUserSubscription(userId);
@@ -85,9 +85,18 @@ export default async function DashboardPage() {
 
   // Onboarding checklist
   let hasTemplate = false;
+  let hasShippingConfigured = false;
+  let hasPaymentData = false;
+  let hasDescription = !!(storeExtra?.description?.trim());
   try {
     const cfg = JSON.parse(storeExtra?.storeConfig || "{}");
     hasTemplate = !!cfg.template;
+    hasShippingConfigured = Array.isArray(cfg.shippingMethods);
+    const pi = cfg.paymentInfo;
+    hasPaymentData = !!(
+      (pi?.transferencia?.enabled && (pi.transferencia.cbu?.length > 0 || pi.transferencia.alias?.length > 0)) ||
+      (pi?.efectivo?.enabled)
+    );
   } catch { /* noop */ }
 
   const onboardingSteps = [
@@ -113,7 +122,25 @@ export default async function DashboardPage() {
       done: !!storeExtra?.mpConnectedAt,
       label: "Conectá MercadoPago para cobrar",
       href: "/dashboard/ajustes",
-      tip: "Necesario para recibir pagos de tus clientes.",
+      tip: "Necesario para recibir pagos con tarjeta o débito.",
+    },
+    {
+      done: hasPaymentData,
+      label: "Completá tus datos de cobro",
+      href: "/dashboard/pagos",
+      tip: "CBU, alias o efectivo — para que los clientes sepan cómo pagarte.",
+    },
+    ...(!isAutos ? [{
+      done: hasShippingConfigured,
+      label: "Configurá tus métodos de envío",
+      href: "/dashboard/pagos",
+      tip: "Definí si entregás en persona, con precio fijo o a coordinar.",
+    }] : []),
+    {
+      done: hasDescription,
+      label: "Escribí una descripción de tu tienda",
+      href: "/dashboard/ajustes",
+      tip: "Aparece en el listado público de tiendas. Máximo 150 caracteres.",
     },
     {
       done: !!storeExtra?.isPublished,

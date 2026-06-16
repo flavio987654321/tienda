@@ -7,7 +7,6 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import { ENVIO_OPTIONS } from "@/components/store/shared/cartTypes";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
@@ -138,9 +137,9 @@ export default function BohoTerra() {
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
-    cartTotal, cartCount, envioPrice, couponDiscount, orderTotal,
+    cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     searchResults, favoriteProducts, wholesaleWarnings,
-    fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
+    fmt, fmtEnvioPrice, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
     pagoOptions, acceptedTerms, setAcceptedTerms,
   } = useCartLogic(storefront);
@@ -1287,13 +1286,13 @@ export default function BohoTerra() {
                   </label>
                   <p style={{ fontSize:12, fontWeight:600, color:T, marginBottom:10, letterSpacing:1 }}>Envío</p>
                   <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:20 }}>
-                    {ENVIO_OPTIONS.map(opt=>(
+                    {envioOptions.map(opt=>(
                       <label key={opt.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", border:`1px solid ${envioId===opt.id?A:"rgba(44,34,24,0.14)"}`, cursor:"pointer", transition:"border-color 0.2s" }}>
                         <span style={{ display:"flex", alignItems:"center", gap:10 }}>
                           <input type="radio" name="envio" value={opt.id} checked={envioId===opt.id} onChange={()=>setEnvioId(opt.id)} style={{ accentColor:A }}/>
                           <span style={{ fontSize:13, color:T }}>{opt.label}</span>
                         </span>
-                        <span style={{ fontSize:13, fontWeight:700, color:opt.price===0?A:T }}>{opt.price===0?"Gratis":fmt(opt.price)}</span>
+                        <span style={{ fontSize:13, fontWeight:700, color:(opt.isPickup||(!opt.coordinar&&opt.price===0))?A:T }}>{fmtEnvioPrice(opt,fmt)}</span>
                       </label>
                     ))}
                   </div>
@@ -1332,7 +1331,7 @@ export default function BohoTerra() {
                       </div>
                     )}
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14 }}>
-                      <span style={{ fontSize:13, color:MID }}>Envío</span><span style={{ fontSize:13, color:MID }}>{envioPrice===0?"Gratis":fmt(envioPrice)}</span>
+                      <span style={{ fontSize:13, color:MID }}>Envío</span><span style={{ fontSize:13, color:MID }}>{envioCoordinar?"A coordinar":envioPrice===0?"Gratis":fmt(envioPrice)}</span>
                     </div>
                     <div style={{ display:"flex", justifyContent:"space-between" }}>
                       <span style={{ fontSize:16, fontWeight:700, color:T }}>Total</span>
