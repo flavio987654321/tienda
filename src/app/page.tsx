@@ -397,6 +397,9 @@ export default function Home() {
             ))}
             <Link href="/quienes-somos" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Quiénes somos</Link>
             <Link href="/precios" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Precios</Link>
+            <Link href="/seguimiento" className="text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5">
+              <Package className="h-4 w-4" />Seguimiento
+            </Link>
             <button onClick={() => setContact(true)} className="text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5">
               <MessageCircle className="h-4 w-4" />Contacto
             </button>
@@ -453,6 +456,7 @@ export default function Home() {
                 ))}
                 <Link href="/quienes-somos" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Quiénes somos</Link>
                 <Link href="/precios" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Precios</Link>
+                <Link href="/seguimiento" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Seguimiento</Link>
                 <button onClick={() => { setContact(true); setMobileMenu(false); }} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors w-full text-left">Contacto</button>
                 <div className="pt-3 border-t border-white/10 flex flex-col gap-2 mt-2">
                   {sessionUser ? (
