@@ -40,16 +40,21 @@ export default function QuienesSomosPage() {
             </div>
             <span className="text-lg font-bold text-white">TiendaApps</span>
           </Link>
-          <div className="hidden md:flex items-center gap-3">
-            <Link href="/precios" className="text-gray-300 hover:text-white text-sm font-medium px-4 py-2 transition-colors">
-              Precios
-            </Link>
-            <Link href="/login" className="text-gray-300 hover:text-white text-sm font-medium px-5 py-2.5 rounded-xl border border-white/10 hover:border-white/25 transition-all">
-              Iniciar sesión
-            </Link>
-            <Link href="/registro" className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
-              Crear cuenta
-            </Link>
+          <div className="hidden md:flex items-center gap-6">
+            <Link href="/#tiendas" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Tiendas</Link>
+            <Link href="/#como-funciona" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Cómo funciona</Link>
+            <Link href="/quienes-somos" className="text-white text-sm font-semibold transition-colors">Quiénes somos</Link>
+            <Link href="/precios" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Precios</Link>
+            <Link href="/seguimiento" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Seguimiento</Link>
+            <Link href="/#contacto" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Contacto</Link>
+            <div className="flex items-center gap-3 ml-2">
+              <Link href="/login" className="text-gray-300 hover:text-white text-sm font-medium px-5 py-2.5 rounded-xl border border-white/10 hover:border-white/25 transition-all">
+                Iniciar sesión
+              </Link>
+              <Link href="/registro" className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
+                Crear cuenta
+              </Link>
+            </div>
           </div>
 
           <button onClick={() => setMobileMenu(true)} className="md:hidden text-gray-400 hover:text-white">
