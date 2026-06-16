@@ -93,6 +93,7 @@ type Profile = {
   name: string | null;
   email: string;
   image: string | null;
+  bannerImage: string | null;
   bio: string | null;
   city: string | null;
   phone: string | null;
@@ -254,11 +255,16 @@ export default function MiCuentaPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", bio: "", city: "", phone: "", instagramHandle: "" });
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof typeof editForm, string>>>({});
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [uploadBannerError, setUploadBannerError] = useState("");
+  const [removingFavorite, setRemovingFavorite] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/mi-cuenta/perfil")
@@ -269,7 +275,7 @@ export default function MiCuentaPage() {
       })
       .then((data) => {
         if (!data) return;
-        setProfile(data);
+        setProfile({ ...data, bannerImage: data.bannerImage ?? null });
         setEditForm({
           name: data.name || "",
           bio: data.bio || "",
@@ -319,14 +325,25 @@ export default function MiCuentaPage() {
   useEffect(() => { if (!loading) fetchTabData(tab); }, [tab, loading]);
 
   async function saveProfile() {
+    const errors: Partial<Record<keyof typeof editForm, string>> = {};
+    const name = editForm.name.trim();
+    const phone = editForm.phone.trim();
+    if (name && name.length < 2) errors.name = "El nombre debe tener al menos 2 caracteres.";
+    if (phone && !/^[+\d\s\-()]{6,20}$/.test(phone)) errors.phone = "Número de teléfono no válido.";
+    if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
+    setFormErrors({});
     setSaving(true);
     setSaveError("");
     setSaveSuccess(false);
+    const payload = {
+      ...editForm,
+      instagramHandle: editForm.instagramHandle.replace(/^@/, "").trim() || null,
+    };
     try {
       const res = await fetch("/api/mi-cuenta/perfil", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) { setSaveError(data.error || "Error al guardar"); return; }
@@ -361,6 +378,32 @@ export default function MiCuentaPage() {
       setUploadError("Error de conexión.");
     } finally {
       setUploadingPhoto(false);
+      if (e.target) e.target.value = "";
+    }
+  }
+
+  async function uploadBanner(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingBanner(true);
+    setUploadBannerError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) { setUploadBannerError(data.error || "Error al subir la imagen"); return; }
+      await fetch("/api/mi-cuenta/perfil", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bannerImage: data.url }),
+      });
+      setProfile((p) => p ? { ...p, bannerImage: data.url } : p);
+    } catch {
+      setUploadBannerError("Error de conexión.");
+    } finally {
+      setUploadingBanner(false);
+      if (e.target) e.target.value = "";
     }
   }
 
@@ -417,14 +460,20 @@ export default function MiCuentaPage() {
   }
 
   async function removeFavorite(productId: string) {
-    setFavorites((f) => f.filter((fav) => fav.productId !== productId));
+    if (removingFavorite) return;
+    setRemovingFavorite(productId);
     try {
       await fetch("/api/favoritos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId }),
       });
-    } catch { /* optimistic — silently ignored */ }
+      setFavorites((f) => f.filter((fav) => fav.productId !== productId));
+    } catch {
+      // silently ignored — user can retry
+    } finally {
+      setRemovingFavorite(null);
+    }
   }
 
   if (loading) {
@@ -482,7 +531,27 @@ export default function MiCuentaPage() {
       <div className="mx-auto max-w-4xl px-4 py-8">
         {/* Profile card */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-          <div className="h-20 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-400" />
+          {/* Banner */}
+          <div className="relative h-28 group">
+            {profile?.bannerImage ? (
+              <img src={profile.bannerImage} alt="banner" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-400" />
+            )}
+            <button
+              onClick={() => bannerInputRef.current?.click()}
+              disabled={uploadingBanner}
+              title="Cambiar portada"
+              className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-black/40 hover:bg-black/60 text-white text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {uploadingBanner
+                ? <Loader2 className="h-3 w-3 animate-spin" />
+                : <Camera className="h-3 w-3" />}
+              {uploadingBanner ? "Subiendo..." : "Cambiar portada"}
+            </button>
+            <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={uploadBanner} />
+          </div>
+
           <div className="px-6 pb-6">
             <div className="flex items-end justify-between -mt-10 mb-4">
               <div className="relative">
@@ -504,7 +573,7 @@ export default function MiCuentaPage() {
                 <button
                   onClick={() => photoInputRef.current?.click()}
                   disabled={uploadingPhoto}
-                  className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-indigo-600 flex items-center justify-center shadow-md hover:bg-indigo-700 transition-colors disabled:opacity-60"
+                  className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-indigo-600 flex items-center justify-center shadow-md hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   title="Cambiar foto"
                 >
                   {uploadingPhoto
@@ -518,9 +587,9 @@ export default function MiCuentaPage() {
               )}
             </div>
 
-            {uploadError && (
+            {(uploadError || uploadBannerError) && (
               <p className="text-xs text-red-500 mb-2 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />{uploadError}
+                <AlertCircle className="h-3 w-3" />{uploadError || uploadBannerError}
               </p>
             )}
 
@@ -708,10 +777,13 @@ export default function MiCuentaPage() {
                       )}
                       <button
                         onClick={() => removeFavorite(fav.productId)}
-                        className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-red-50 transition-colors"
+                        disabled={removingFavorite === fav.productId}
+                        className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-red-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                         title="Quitar de favoritos"
                       >
-                        <Heart className="h-4 w-4 fill-red-500 text-red-500" />
+                        {removingFavorite === fav.productId
+                          ? <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                          : <Heart className="h-4 w-4 fill-red-500 text-red-500" />}
                       </button>
                     </div>
                     <div className="p-3">
@@ -963,10 +1035,22 @@ export default function MiCuentaPage() {
                     <input
                       type="text"
                       value={editForm[field]}
-                      onChange={(e) => setEditForm((f) => ({ ...f, [field]: e.target.value }))}
+                      onChange={(e) => {
+                        setEditForm((f) => ({ ...f, [field]: e.target.value }));
+                        if (formErrors[field]) setFormErrors((fe) => ({ ...fe, [field]: undefined }));
+                      }}
                       placeholder={placeholder}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-300 hover:border-gray-300 transition-colors"
+                      className={`w-full border rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 placeholder-gray-300 hover:border-gray-300 transition-colors ${
+                        formErrors[field]
+                          ? "border-red-300 focus:ring-red-400 bg-red-50"
+                          : "border-gray-200 focus:ring-indigo-500"
+                      }`}
                     />
+                    {formErrors[field] && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3 shrink-0" />{formErrors[field]}
+                      </p>
+                    )}
                   </div>
                 ))}
                 <div>
@@ -996,7 +1080,7 @@ export default function MiCuentaPage() {
                 <button
                   onClick={saveProfile}
                   disabled={saving}
-                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-indigo-500 disabled:opacity-50 transition-colors shadow-sm shadow-indigo-200"
+                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm shadow-indigo-200"
                 >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                   {saving ? "Guardando..." : "Guardar cambios"}

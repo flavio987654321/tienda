@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { StorefrontProduct, ValidatedCoupon, PlaceOrderParams } from "./useStorefront";
 import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, type CartItem, type ContactStatus, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
+import { useAuth } from "@/components/AuthProvider";
 
 type StorefrontDeps = {
   products: StorefrontProduct[];
@@ -45,26 +46,43 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
   const [acceptedTerms,  setAcceptedTerms]  = useState(false);
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
+  const { status } = useAuth();
 
-  // Restaurar carrito, favoritos y datos del comprador desde localStorage
+  // Restaurar carrito y datos del comprador desde localStorage
   useEffect(() => {
     try {
       const savedCart = localStorage.getItem("storefront_cart");
       if (savedCart) setCartItems(JSON.parse(savedCart));
-      const savedFavs = localStorage.getItem("storefront_favorites");
-      if (savedFavs) setFavorites(JSON.parse(savedFavs));
       const savedBuyer = localStorage.getItem("storefront_buyer");
       if (savedBuyer) { setBuyerForm(JSON.parse(savedBuyer)); setRememberData(true); }
     } catch {}
   }, []);
 
+  // Cargar favoritos: desde API si está logueado, desde localStorage si no
+  useEffect(() => {
+    if (status === "loading") return;
+    if (status === "authenticated") {
+      fetch("/api/favoritos")
+        .then(r => r.ok ? r.json() : [])
+        .then((data: { productId: string }[]) => setFavorites(data.map(f => f.productId)))
+        .catch(() => {});
+    } else {
+      try {
+        const savedFavs = localStorage.getItem("storefront_favorites");
+        if (savedFavs) setFavorites(JSON.parse(savedFavs));
+      } catch {}
+    }
+  }, [status]);
+
   useEffect(() => {
     try { localStorage.setItem("storefront_cart", JSON.stringify(cartItems)); } catch {}
   }, [cartItems]);
 
+  // Solo persistir en localStorage cuando no está logueado
   useEffect(() => {
+    if (status === "authenticated") return;
     try { localStorage.setItem("storefront_favorites", JSON.stringify(favorites)); } catch {}
-  }, [favorites]);
+  }, [favorites, status]);
 
   useEffect(() => {
     try {
@@ -253,8 +271,24 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
     setTimeout(() => { setContactStatus("sent"); setContactForm({ nombre:"", email:"", mensaje:"" }); }, 1400);
   };
 
-  const toggleFavorite = (id: string) =>
+  const toggleFavorite = async (id: string) => {
+    if (status !== "authenticated") {
+      showToast("Iniciá sesión para guardar favoritos");
+      return;
+    }
+    // Optimistic update
     setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
+    try {
+      await fetch("/api/favoritos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: id }),
+      });
+    } catch {
+      // Revert on error
+      setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
+    }
+  };
 
   return {
     // State

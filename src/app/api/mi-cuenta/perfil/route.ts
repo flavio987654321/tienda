@@ -8,7 +8,7 @@ export async function GET() {
 
   const profile = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { id: true, name: true, email: true, image: true, bio: true, city: true, phone: true, instagramHandle: true, createdAt: true },
+    select: { id: true, name: true, email: true, image: true, bannerImage: true, bio: true, city: true, phone: true, instagramHandle: true, createdAt: true },
   });
 
   return NextResponse.json(profile);
@@ -18,23 +18,24 @@ export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { name, bio, city, phone, instagramHandle, image } = await req.json();
+  const { name, bio, city, phone, instagramHandle, image, bannerImage } = await req.json();
 
-  if (name !== undefined && (!name.trim() || name.trim().length < 2)) {
+  if (name !== undefined && name !== null && name.trim() && name.trim().length < 2) {
     return NextResponse.json({ error: "El nombre debe tener al menos 2 caracteres" }, { status: 400 });
   }
 
   const updated = await prisma.user.update({
     where: { id: user.id },
     data: {
-      ...(name !== undefined && { name: name.trim() }),
+      ...(name !== undefined && { name: name?.trim() || null }),
       ...(bio !== undefined && { bio: bio?.trim() || null }),
       ...(city !== undefined && { city: city?.trim() || null }),
       ...(phone !== undefined && { phone: phone?.trim() || null }),
       ...(instagramHandle !== undefined && { instagramHandle: instagramHandle?.trim() || null }),
       ...(image !== undefined && { image: image || null }),
+      ...(bannerImage !== undefined && { bannerImage: bannerImage || null }),
     },
-    select: { id: true, name: true, email: true, image: true, bio: true, city: true, phone: true, instagramHandle: true },
+    select: { id: true, name: true, email: true, image: true, bannerImage: true, bio: true, city: true, phone: true, instagramHandle: true },
   });
 
   return NextResponse.json(updated);
