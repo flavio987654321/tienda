@@ -85,6 +85,15 @@ export async function POST(req: NextRequest) {
         data: { status: "CONFIRMED" },
       });
 
+      await tx.orderStatusLog.create({
+        data: {
+          orderId: order.id,
+          fromStatus: "PENDING",
+          toStatus: "CONFIRMED",
+          changedBy: "mp_webhook",
+        },
+      });
+
       // Acreditar comisión si hay afiliada y rate bloqueado
       if (order.affiliateId && order.lockedCommissionRate !== null && !order.commission) {
         const rate = order.lockedCommissionRate ?? order.store.commissionRate;

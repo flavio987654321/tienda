@@ -232,9 +232,27 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           });
         }
 
-        // La comisión NO se revierte al cancelar: la afiliada cumplió su parte
-        // (trajo el cliente y se confirmó el pago). Si el dueño cancela después,
-        // es su responsabilidad, no de la afiliada.
+        // Si la orden ya estaba CONFIRMED y tiene comisión acreditada, revertirla.
+        // El dueño canceló una venta ya cobrada → la comisión no debería mantenerse.
+        if (order.commission && order.affiliateId) {
+          const freshWallet = await tx.wallet.findUnique({
+            where: { affiliateId: order.affiliateId },
+            select: { balance: true, totalEarned: true },
+          });
+          if (freshWallet) {
+            await tx.wallet.update({
+              where: { affiliateId: order.affiliateId },
+              data: {
+                balance: Math.max(0, freshWallet.balance - order.commission.amount),
+                totalEarned: Math.max(0, freshWallet.totalEarned - order.commission.amount),
+              },
+            });
+          }
+          await tx.commission.update({
+            where: { id: order.commission.id },
+            data: { status: "REVERSED" },
+          });
+        }
 
         await tx.payment.updateMany({
           where: { orderId: order.id },
@@ -312,6 +330,23 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         body: `El pedido fue cancelado y el stock fue restaurado.`,
         link: `/dashboard/pedidos/${result.id}`,
       });
+
+      // Si se revirtió comisión, notificar a la afiliada
+      if (result.commission && result.affiliateId) {
+        const affUser = await prisma.affiliate.findUnique({
+          where: { id: result.affiliateId },
+          select: { userId: true },
+        });
+        if (affUser) {
+          createNotification({
+            userId: affUser.userId,
+            type: "COMMISSION_REVERSED",
+            title: "Comisión revertida",
+            body: `La comisión de $${result.commission.amount.toLocaleString("es-AR")} fue revertida porque el dueño canceló el pedido.`,
+            link: "/afiliados/billetera",
+          });
+        }
+      }
     }
 
     return NextResponse.json({ order: result });
