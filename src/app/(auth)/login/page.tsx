@@ -48,9 +48,7 @@ function LoginForm() {
     } else {
       setRedirecting(true);
       router.refresh();
-      const me = await fetch("/api/auth/me", { cache: "no-store" }).then((r) => r.json()).catch(() => ({}));
-      const role = me?.user?.role;
-      router.push(role === "SELLER" ? "/afiliados" : "/dashboard");
+      router.push("/panel");
     }
   }
 
