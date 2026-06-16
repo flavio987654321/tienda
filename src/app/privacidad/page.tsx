@@ -20,6 +20,15 @@ const CONTENT = {
         ],
       },
       {
+        title: "1 bis. Menores de edad",
+        body: null,
+        list: [
+          "TiendaApps no está dirigido a personas menores de 18 años y no recopilamos intencionalmente datos personales de menores.",
+          "Si tomamos conocimiento de que hemos recopilado datos de un menor de edad, procederemos a eliminar la cuenta y todos sus datos dentro de los 30 días.",
+          "Para reportar una cuenta de menor de edad o solicitar la eliminación de datos de un menor escribinos a marketplacemitienda@gmail.com con el asunto 'Cuenta de menor de edad — eliminación de datos'.",
+        ],
+      },
+      {
         title: "3 bis. Verificación de identidad — datos sensibles",
         body: "El programa de Verificación de identidad es completamente voluntario. Si decidís participar, recopilamos documentos que constituyen datos sensibles según el art. 2 de la Ley 25.326 de Protección de Datos Personales:",
         list: [
@@ -133,6 +142,15 @@ const CONTENT = {
         ],
       },
       {
+        title: "1 bis. Menores de edad",
+        body: null,
+        list: [
+          "TiendaApps no está dirigido a personas menores de 18 años y no recopilamos intencionalmente datos personales de menores.",
+          "Si tomamos conocimiento de que hemos recopilado datos de un menor de edad, procederemos a eliminar la cuenta y todos sus datos dentro de los 30 días.",
+          "Para reportar una cuenta de menor de edad o solicitar la eliminación de datos de un menor escribinos a marketplacemitienda@gmail.com con el asunto 'Cuenta de menor de edad — eliminación de datos'.",
+        ],
+      },
+      {
         title: "2. Cómo usamos tu información",
         body: null,
         list: [
@@ -197,6 +215,15 @@ const CONTENT = {
         ],
       },
       {
+        title: "1 bis. Menores de edad",
+        body: null,
+        list: [
+          "TiendaApps no está dirigido a personas menores de 18 años y no recopilamos intencionalmente datos personales de menores.",
+          "Si tomamos conocimiento de que hemos recopilado datos de un menor de edad, procederemos a eliminar la cuenta y todos sus datos dentro de los 30 días.",
+          "Para reportar una cuenta de menor de edad o solicitar la eliminación de datos de un menor escribinos a marketplacemitienda@gmail.com con el asunto 'Cuenta de menor de edad — eliminación de datos'.",
+        ],
+      },
+      {
         title: "2. Cómo usamos tu información",
         body: null,
         list: [
@@ -210,6 +237,17 @@ const CONTENT = {
       {
         title: "3. Datos compartidos con tiendas",
         body: "Cuando realizás una compra, tus datos de envío y contacto son compartidos con el dueño de la tienda para que pueda gestionar el pedido. Esos datos son tratados por cada tienda según su propia política.",
+      },
+      {
+        title: "3 bis. Política de privacidad de cada tienda",
+        body: null,
+        list: [
+          "Cada tienda dentro de TiendaApps puede publicar su propia Política de Privacidad, redactada por el dueño de esa tienda.",
+          "TiendaApps no redacta, revisa ni avala el contenido de esas políticas individuales. Son responsabilidad exclusiva del dueño de cada tienda.",
+          "Al comprar en una tienda, tus datos pueden ser tratados también según la política de privacidad de esa tienda en particular.",
+          "Te recomendamos leer la política de privacidad de cada tienda antes de realizar una compra.",
+          "Si una tienda usa tus datos de manera inapropiada o contraria a lo declarado, podés reportarlo a marketplacemitienda@gmail.com",
+        ],
       },
       {
         title: "4. Compartir con terceros",

@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Demasiados intentos. Esperá un momento e intentá de nuevo." }, { status: 429 });
     }
 
-    const { name, email, password, storeName, accountType, billing, tier } = await req.json();
+    const { name, email, password, storeName, accountType, billing, tier, phone } = await req.json();
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
@@ -32,6 +32,15 @@ export async function POST(req: NextRequest) {
     }
     if (typeof password !== "string" || password.length > 72) {
       return NextResponse.json({ error: "La contraseña no puede superar 72 caracteres" }, { status: 400 });
+    }
+    if (phone !== undefined) {
+      if (typeof phone !== "string" || phone.length > 30) {
+        return NextResponse.json({ error: "Teléfono inválido" }, { status: 400 });
+      }
+      const digits = phone.replace(/\D/g, "");
+      if (digits.length < 8 || digits.length > 15) {
+        return NextResponse.json({ error: "El teléfono debe tener entre 8 y 15 dígitos" }, { status: 400 });
+      }
     }
 
     const type = accountType === "seller" ? "SELLER" : accountType === "buyer" ? "BUYER" : "OWNER";
@@ -81,6 +90,7 @@ export async function POST(req: NextRequest) {
           email: normalizedEmail,
           password: null,
           role: type,
+          ...(phone ? { phone: phone.trim() } : {}),
           ...(type === "OWNER"
             ? {
                 store: {

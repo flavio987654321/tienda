@@ -116,7 +116,7 @@ function money(n: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 }
 
-function validate(form: { name: string; email: string; password: string; storeName: string }, accountType: AccountType) {
+function validate(form: { name: string; email: string; password: string; storeName: string; phone: string }, accountType: AccountType) {
   if (!form.name.trim() || form.name.trim().length < 2)
     return "El nombre debe tener al menos 2 caracteres.";
   if (/\d/.test(form.name))
@@ -129,6 +129,9 @@ function validate(form: { name: string; email: string; password: string; storeNa
     if (!form.storeName.trim() || form.storeName.trim().length < 3)
       return "El nombre de tu tienda debe tener al menos 3 caracteres.";
   }
+  const phoneDigits = form.phone.replace(/\D/g, "");
+  if (!form.phone.trim() || phoneDigits.length < 8 || phoneDigits.length > 15)
+    return "Ingresá un teléfono válido (mínimo 8 dígitos).";
   return null;
 }
 
@@ -160,9 +163,10 @@ function RegistroContent() {
   const [billing, setBilling] = useState<"MONTHLY" | "ANNUAL">(
     billingParam === "annual" ? "ANNUAL" : "MONTHLY"
   );
-  const [form, setForm] = useState({ name: "", email: "", password: "", storeName: "" });
-  const [fieldErrors, setFieldErrors] = useState({ name: "", email: "", password: "", storeName: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", storeName: "", phone: "" });
+  const [fieldErrors, setFieldErrors] = useState({ name: "", email: "", password: "", storeName: "", phone: "" });
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -193,6 +197,10 @@ function RegistroContent() {
     if (name === "storeName" && value && accountType === "owner") {
       if (value.trim().length < 3) err = "Mínimo 3 caracteres.";
     }
+    if (name === "phone" && value) {
+      const digits = value.replace(/\D/g, "");
+      if (digits.length < 8) err = "Mínimo 8 dígitos.";
+    }
     setFieldErrors((p) => ({ ...p, [name]: err }));
   }
 
@@ -206,6 +214,10 @@ function RegistroContent() {
     e.preventDefault();
     const err = validate(form, accountType);
     if (err) { setError(err); return; }
+    if (!ageConfirmed) {
+      setError("Debés confirmar que tenés 18 años o más para registrarte.");
+      return;
+    }
     if (!termsAccepted) {
       setError("Debés aceptar los términos y condiciones para continuar.");
       return;
@@ -215,7 +227,7 @@ function RegistroContent() {
     const res = await fetch("/api/auth/registro", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, accountType, billing, tier: ownerTier }),
+      body: JSON.stringify({ ...form, accountType, billing, tier: ownerTier, phone: form.phone.trim() }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -511,6 +523,19 @@ function RegistroContent() {
                 }
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1.5">Teléfono</label>
+                <input
+                  type="tel" name="phone" value={form.phone} onChange={handleChange} onBlur={handleBlur}
+                  placeholder="Ej: 11 4567-8901"
+                  className={`w-full bg-white/5 border rounded-2xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all ${fieldErrors.phone ? "border-red-500/50" : "border-white/10"}`}
+                />
+                {fieldErrors.phone
+                  ? <p className="text-xs text-red-400 mt-1">{fieldErrors.phone}</p>
+                  : <p className="text-xs text-gray-600 mt-1">Con código de área, sin el 0. Ej: 11 4567-8901</p>
+                }
+              </div>
+
               {accountType === "owner" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1.5">Nombre de tu tienda</label>
@@ -573,6 +598,18 @@ function RegistroContent() {
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                 {loading ? "Creando cuenta..." : selected.cta}
               </button>
+
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={ageConfirmed}
+                  onChange={(e) => { setAgeConfirmed(e.target.checked); setError(""); }}
+                  className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 accent-indigo-500 cursor-pointer flex-shrink-0"
+                />
+                <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-400 transition-colors">
+                  Confirmo que tengo <span className="text-gray-300 font-semibold">18 años o más</span>. Entiendo que el uso de esta plataforma está reservado para mayores de edad.
+                </span>
+              </label>
 
               <label className="flex items-start gap-3 cursor-pointer group">
                 <input

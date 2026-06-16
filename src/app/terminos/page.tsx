@@ -12,6 +12,16 @@ const CONTENT = {
         body: "Al crear una cuenta como Dueño de tienda en TiendaApps, aceptás estos Términos y Condiciones en su totalidad. Si no estás de acuerdo con alguna parte, no podés usar el servicio.",
       },
       {
+        title: "1 bis. Edad mínima requerida",
+        body: null,
+        list: [
+          "Para usar TiendaApps como Dueño de tienda debés tener al menos 18 años de edad.",
+          "Al registrarte, declarás bajo responsabilidad propia que cumplís con este requisito. TiendaApps no es responsable por declaraciones falsas.",
+          "Si tomamos conocimiento de que una cuenta pertenece a una persona menor de 18 años, procederemos a suspenderla y eliminar los datos asociados, sin derecho a reembolso de períodos abonados.",
+          "Para reportar una cuenta de menor de edad escribinos a marketplacemitienda@gmail.com con el asunto 'Cuenta de menor de edad'.",
+        ],
+      },
+      {
         title: "2. Descripción del servicio para dueños",
         body: "Como Dueño de tienda, podés crear y gestionar tu propia tienda online dentro de la plataforma TiendaApps. Esto incluye cargar productos, definir precios, configurar métodos de pago y gestionar una red de vendedores afiliados que comercialicen tus productos a cambio de comisiones.",
       },
@@ -47,6 +57,18 @@ const CONTENT = {
           "No podés publicar productos prohibidos, falsificados, ilegales o que infrinjan derechos de terceros.",
           "Sos responsable de las comisiones que acordés con tus afiliados.",
           "Sos responsable de cumplir con las obligaciones impositivas de tu actividad comercial.",
+        ],
+      },
+      {
+        title: "5 bis. Términos y política de privacidad de tu tienda",
+        body: null,
+        list: [
+          "La plataforma te permite redactar y publicar tus propios Términos y Condiciones y Política de Privacidad dentro de tu tienda, visibles para tus clientes.",
+          "Sos el único responsable del contenido que escribas en esos documentos. TiendaApps no redacta, revisa, valida ni avala el contenido de los términos o políticas de cada tienda.",
+          "Debés asegurarte de que lo que escribas sea legal, veraz y no contradiga la legislación vigente (Ley 24.240 de Defensa del Consumidor, Ley 25.326 de Protección de Datos Personales y normativas aplicables).",
+          "No podés incluir cláusulas que restrinjan derechos irrenunciables del consumidor ni que contradigan la legislación argentina.",
+          "TiendaApps no es parte en la relación contractual entre vos y tus clientes. Los acuerdos establecidos en los términos de tu tienda son exclusivamente entre vos y el comprador.",
+          "En caso de que tus términos o políticas sean utilizados para perjudicar a compradores o infringir la ley, TiendaApps puede suspender tu tienda sin previo aviso.",
         ],
       },
       {
@@ -105,6 +127,17 @@ const CONTENT = {
       {
         title: "1. Aceptación de los términos",
         body: "Al crear una cuenta como Vendedor/Afiliado en TiendaApps, aceptás estos Términos y Condiciones en su totalidad. Si no estás de acuerdo con alguna parte, no podés usar el servicio.",
+      },
+      {
+        title: "1 bis. Edad mínima requerida",
+        body: null,
+        list: [
+          "Para usar TiendaApps como Vendedor/Afiliado debés tener al menos 18 años de edad.",
+          "Al registrarte, declarás bajo responsabilidad propia que cumplís con este requisito. TiendaApps no es responsable por declaraciones falsas.",
+          "Dado que el rol de Afiliado implica percibir ingresos económicos y manejar una billetera digital, la mayoría de edad es un requisito irrenunciable.",
+          "Si tomamos conocimiento de que una cuenta pertenece a una persona menor de 18 años, procederemos a suspenderla y retener los fondos disponibles hasta verificar la situación ante las autoridades competentes.",
+          "Para reportar una cuenta de menor de edad escribinos a marketplacemitienda@gmail.com con el asunto 'Cuenta de menor de edad'.",
+        ],
       },
       {
         title: "2. Descripción del servicio para afiliados",
@@ -166,6 +199,17 @@ const CONTENT = {
         body: "Al crear una cuenta como Cliente en TiendaApps, aceptás estos Términos y Condiciones en su totalidad. Si no estás de acuerdo, no podés usar el servicio.",
       },
       {
+        title: "1 bis. Edad mínima requerida",
+        body: null,
+        list: [
+          "Para usar TiendaApps como Cliente debés tener al menos 18 años de edad.",
+          "Al registrarte, declarás bajo responsabilidad propia que cumplís con este requisito.",
+          "Si un menor de edad realiza compras usando una cuenta de adulto, la responsabilidad recae sobre el titular de la cuenta.",
+          "Si tomamos conocimiento de que una cuenta pertenece a una persona menor de 18 años, procederemos a suspenderla y eliminar los datos asociados.",
+          "Para reportar una cuenta de menor de edad escribinos a marketplacemitienda@gmail.com con el asunto 'Cuenta de menor de edad'.",
+        ],
+      },
+      {
         title: "2. Descripción del servicio para clientes",
         body: "Como Cliente, podés explorar tiendas dentro de TiendaApps, agregar productos al carrito, realizar compras y hacer seguimiento de tus pedidos. La cuenta es completamente gratuita sin suscripción requerida.",
       },
@@ -181,6 +225,17 @@ const CONTENT = {
           "TiendaApps actúa como plataforma tecnológica y no es parte en la relación de compraventa.",
           "Las disputas sobre productos, envíos o devoluciones deben resolverse directamente con el dueño de la tienda.",
           "TiendaApps puede mediar en casos de conflicto pero no garantiza resultados.",
+        ],
+      },
+      {
+        title: "4 bis. Términos y políticas de cada tienda",
+        body: null,
+        list: [
+          "Cada tienda dentro de TiendaApps puede tener sus propios Términos y Condiciones y Política de Privacidad, redactados por el dueño de esa tienda.",
+          "TiendaApps no redacta, revisa, valida ni avala el contenido de los términos o políticas de cada tienda individual. Ese contenido es exclusiva responsabilidad del dueño de la tienda.",
+          "Al comprar en una tienda, estás aceptando los términos de esa tienda en particular, que pueden ser distintos a estos Términos Generales de TiendaApps.",
+          "Te recomendamos leer los términos y la política de privacidad de cada tienda antes de realizar una compra.",
+          "Si los términos de una tienda te parecen abusivos o ilegales, podés reportarlo a marketplacemitienda@gmail.com y lo analizaremos.",
         ],
       },
       {
