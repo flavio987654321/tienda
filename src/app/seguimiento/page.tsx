@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Search, Package, CheckCircle, Truck, ShoppingBag, XCircle, Loader2, MessageCircle } from "lucide-react";
 
+
 type Step = { key: string; label: string; desc: string; icon: React.ReactNode };
 
 const STEPS: Step[] = [
@@ -61,13 +62,13 @@ export default function SeguimientoPage() {
     <div className="min-h-screen bg-gray-950 flex flex-col">
 
       {/* Navbar */}
-      <nav className="border-b border-white/10 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <nav className="bg-gray-950/90 backdrop-blur-xl border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <Package className="h-4 w-4 text-white" />
+            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
+              <ShoppingBag className="h-5 w-5 text-white" />
             </div>
-            <span className="text-white font-black text-lg tracking-tight">TiendaApps</span>
+            <span className="text-lg font-bold text-white">TiendaApps</span>
           </Link>
           <div className="hidden md:flex items-center gap-8">
             <Link href="/#tiendas" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Tiendas</Link>
