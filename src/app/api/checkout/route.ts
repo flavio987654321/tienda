@@ -51,7 +51,12 @@ export async function POST(req: NextRequest) {
   }
 
   const body = (await req.json()) as CheckoutBody;
-  const { storeId, affiliateId, couponId, rewardCouponCode, items, customer, shippingMethod, paymentProvider } = body;
+  const { storeId, affiliateId, couponId, rewardCouponCode, items, customer, shippingMethod } = body;
+  // Whitelist para evitar que el frontend inyecte un proveedor falso (ej: "mp" en pedido manual)
+  const VALID_PROVIDERS = ["mp", "mercadopago", "transferencia", "efectivo", "transfer"] as const;
+  const paymentProvider = VALID_PROVIDERS.includes(body.paymentProvider as typeof VALID_PROVIDERS[number])
+    ? body.paymentProvider
+    : "transfer";
 
   if (!storeId || !items?.length) {
     return NextResponse.json({ error: "El carrito esta vacio" }, { status: 400 });

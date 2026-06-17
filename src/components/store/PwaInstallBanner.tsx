@@ -123,7 +123,7 @@ export default function PwaInstallBanner({ logo, name, color, slug }: Props) {
                   {name}
                 </p>
                 <p className="text-white/45 text-[11px] mt-0.5 leading-snug">
-                  Agregá la tienda a tu pantalla de inicio
+                  Instalá la app y recibí notificaciones de novedades y ofertas
                 </p>
               </div>
 
@@ -149,7 +149,7 @@ export default function PwaInstallBanner({ logo, name, color, slug }: Props) {
                 }}
               >
                 <Download size={14} strokeWidth={2.5} />
-                Instalar app
+                Instalar gratis
               </button>
             </div>
           </div>

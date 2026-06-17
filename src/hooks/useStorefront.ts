@@ -267,5 +267,5 @@ export function useStorefront() {
   const hasMercadoPago     = config?.hasMercadoPago ?? false;
   const shippingMethods    = config?.shippingMethods ?? null;
 
-  return { products, loadingProducts, affiliateId, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories, hasMercadoPago, shippingMethods };
+  return { products, loadingProducts, affiliateId, storeId, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories, hasMercadoPago, shippingMethods };
 }

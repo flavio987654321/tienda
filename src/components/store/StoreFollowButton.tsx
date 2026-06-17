@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { ThumbsUp, ThumbsDown, Loader2, X } from "lucide-react";
 import { usePushBell } from "@/contexts/PushBellContext";
 
-type AlertType = "follow" | "unfollow" | "login" | "ios" | null;
+type AlertType = "follow" | "unfollow" | "login" | "ios" | "activate_push" | null;
 
 interface Props {
   storeSlug: string;
@@ -19,7 +19,7 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
 
   if (!bell) return null;
 
-  const { followState, handleFollow, handleUnfollow, pushSupported } = bell;
+  const { followState, handleFollow, handleUnfollow, pushSupported, needsPushActivation, activatePushOnDevice } = bell;
   const isLoading = followState === "loading" || followState === "checking";
   const isFollowing = followState === "following";
   const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -27,6 +27,7 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
   function onClickButton() {
     if (pendingRef.current || isLoading) return;
     if (isFollowing) {
+      if (needsPushActivation) { setAlert("activate_push"); return; }
       setAlert("unfollow");
     } else if (isIOS && !pushSupported) {
       setAlert("ios");
@@ -120,6 +121,21 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
         />
       )}
 
+      {alert === "activate_push" && (
+        <FollowAlert
+          title="Notificaciones desactivadas"
+          description="Ya seguís esta tienda pero las notificaciones no están activas en este dispositivo. ¿Querés activarlas ahora?"
+          confirmLabel="Activar notificaciones"
+          confirmColor="#4f46e5"
+          onConfirm={async () => {
+            setAlert(null);
+            await activatePushOnDevice();
+          }}
+          onCancel={() => setAlert("unfollow")}
+          cancelLabel="Dejar de seguir"
+        />
+      )}
+
       {alert === "ios" && (
         <FollowAlert
           title="Instalá la tienda primero"
@@ -141,6 +157,7 @@ function FollowAlert({
   confirmColor,
   onConfirm,
   onCancel,
+  cancelLabel = "Cancelar",
 }: {
   title: string;
   description: string;
@@ -148,6 +165,7 @@ function FollowAlert({
   confirmColor: string;
   onConfirm: () => void;
   onCancel: (() => void) | null;
+  cancelLabel?: string;
 }) {
   return (
     <div
@@ -205,7 +223,7 @@ function FollowAlert({
                 fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer",
               }}
             >
-              Cancelar
+              {cancelLabel}
             </button>
           )}
           <button

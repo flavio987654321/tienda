@@ -3,10 +3,17 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import MercadoPagoConfig, { Payment } from "mercadopago";
 import { createNotification } from "@/lib/notifications";
+import { sendOrderPaymentConfirmedEmail } from "@/lib/email";
 
 function verifyMPSignature(req: NextRequest, dataId: string): boolean {
   const secret = process.env.MP_WEBHOOK_SECRET;
-  if (!secret) return true; // en dev sin secret configurado, permitir
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("CRÍTICO: MP_WEBHOOK_SECRET no está configurado en producción — todas las solicitudes son rechazadas");
+      return false;
+    }
+    return true; // solo en dev/test sin secret
+  }
 
   const xSignature = req.headers.get("x-signature");
   const xRequestId = req.headers.get("x-request-id") ?? "";
@@ -63,6 +70,7 @@ export async function POST(req: NextRequest) {
       where: { id: orderId },
       include: {
         store: true,
+        buyer: { select: { email: true, name: true } },
         affiliate: { include: { wallet: true, user: { select: { email: true, name: true } } } },
         commission: true,
       },
@@ -137,6 +145,18 @@ export async function POST(req: NextRequest) {
         link: `/dashboard/pedidos/${order.id}`,
       });
     });
+
+    // Notificar al comprador que el pago fue procesado por MP
+    if (order.buyer?.email) {
+      sendOrderPaymentConfirmedEmail({
+        buyerEmail: order.buyer.email,
+        buyerName: order.buyer.name || "",
+        orderId: order.id,
+        storeName: order.store.name,
+        storeSlug: order.store.slug,
+        total: order.total,
+      }).catch((err) => console.error("[email] sendOrderPaymentConfirmedEmail (mp webhook) failed:", err));
+    }
 
     console.log(`[mp/webhook] pago confirmado — paymentId=${paymentId} orderId=${orderId}`);
     return NextResponse.json({ ok: true });

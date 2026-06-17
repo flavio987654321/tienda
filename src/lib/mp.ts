@@ -17,14 +17,15 @@ export function sellerClient(accessToken: string) {
   return new MercadoPagoConfig({ accessToken });
 }
 
-// URL de autorización OAuth para que el dueño conecte su cuenta MP
-export function getOAuthUrl(storeId: string) {
+// URL de autorización OAuth para que el dueño conecte su cuenta MP.
+// `state` debe ser un nonce aleatorio (no el storeId) para prevenir CSRF.
+export function getOAuthUrl(state: string) {
   const params = new URLSearchParams({
     client_id: MP_APP_ID,
     response_type: "code",
     platform_id: "mp",
     redirect_uri: MP_REDIRECT_URI,
-    state: storeId,
+    state,
   });
   return `https://auth.mercadopago.com.ar/authorization?${params.toString()}`;
 }

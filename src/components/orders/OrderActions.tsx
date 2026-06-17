@@ -7,6 +7,7 @@ import { Loader2, AlertTriangle } from "lucide-react";
 type Props = {
   orderId: string;
   status: string;
+  trackingCode?: string | null;
   paymentProvider?: string | null;
   paymentStatus?: string | null;
 };
@@ -16,13 +17,14 @@ const CONFIRM_MSG: Record<string, string> = {
   markShipped:    "¿Marcás el pedido como enviado? Se le avisará al comprador.",
   markDelivered:  "¿El pedido fue entregado correctamente al comprador?",
   cancel:         "¿Cancelás este pedido? Se restaurará el stock automáticamente.",
+  updateTracking: "Actualizá el código de seguimiento del envío.",
 };
 
-export default function OrderActions({ orderId, status, paymentProvider, paymentStatus }: Props) {
+export default function OrderActions({ orderId, status, trackingCode: initialTracking, paymentProvider, paymentStatus }: Props) {
   const router = useRouter();
   const [loading, setLoading]       = useState(false);
   const [confirm, setConfirm]       = useState<string | null>(null);
-  const [trackingCode, setTracking] = useState("");
+  const [trackingCode, setTracking] = useState(initialTracking ?? "");
   const [error, setError]           = useState("");
 
   const isMPApproved = paymentProvider === "mp" && paymentStatus === "APPROVED";
@@ -54,11 +56,11 @@ export default function OrderActions({ orderId, status, paymentProvider, payment
           <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-800 font-medium leading-snug">{CONFIRM_MSG[confirm]}</p>
         </div>
-        {confirm === "markShipped" && (
+        {(confirm === "markShipped" || confirm === "updateTracking") && (
           <input
             value={trackingCode}
             onChange={e => setTracking(e.target.value)}
-            placeholder="Código de seguimiento (opcional)"
+            placeholder={confirm === "updateTracking" ? "Nuevo código de seguimiento" : "Código de seguimiento (opcional)"}
             className="rounded-lg border border-gray-200 px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500"
           />
         )}
@@ -125,13 +127,22 @@ export default function OrderActions({ orderId, status, paymentProvider, payment
       )}
 
       {status === "SHIPPED" && (
-        <button
-          onClick={() => setConfirm("markDelivered")}
-          disabled={loading}
-          className="rounded-lg bg-gray-950 hover:bg-gray-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 transition-colors"
-        >
-          Marcar entregado
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setConfirm("markDelivered")}
+            disabled={loading}
+            className="rounded-lg bg-gray-950 hover:bg-gray-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 transition-colors"
+          >
+            Marcar entregado
+          </button>
+          <button
+            onClick={() => setConfirm("updateTracking")}
+            disabled={loading}
+            className="rounded-lg bg-gray-100 hover:bg-indigo-50 hover:text-indigo-700 border border-transparent hover:border-indigo-200 px-3 py-2 text-xs font-semibold text-gray-600 disabled:opacity-50 transition-colors"
+          >
+            Actualizar tracking
+          </button>
+        </div>
       )}
     </div>
   );

@@ -63,9 +63,11 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "storeId requerido" }, { status: 400 });
   }
 
-  await prisma.storeFollow.deleteMany({
-    where: { userId: user.id, storeId },
-  });
+  await prisma.$transaction([
+    prisma.storeFollow.deleteMany({ where: { userId: user.id, storeId } }),
+    // Limpiar todos los endpoints push del usuario para esta tienda en todos sus dispositivos
+    prisma.storeSubscription.deleteMany({ where: { userId: user.id, storeId } }),
+  ]);
 
   return NextResponse.json({ ok: true, following: false });
 }

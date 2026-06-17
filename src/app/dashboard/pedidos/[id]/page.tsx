@@ -7,10 +7,7 @@ import OrderActions from "@/components/orders/OrderActions";
 import { prisma } from "@/lib/prisma";
 import { ArrowLeft, Clock, Package, Truck, UserRound } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
-
-function money(value: number) {
-  return `$${value.toLocaleString("es-AR")}`;
-}
+import { money } from "@/lib/utils";
 
 function statusLabel(status: string) {
   const map: Record<string, string> = {
@@ -112,6 +109,7 @@ export default async function PedidoDetailPage({ params }: Props) {
         <OrderActions
           orderId={order.id}
           status={order.status}
+          trackingCode={order.trackingCode}
           paymentProvider={order.payment?.provider}
           paymentStatus={order.payment?.status}
         />

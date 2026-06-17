@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { sendLowStockEmail, sendReviewRequestEmail, sendCommissionEarnedEmail, sendAffiliateOrderNotificationEmail, sendOrderShippedEmail } from "@/lib/email";
+import { sendLowStockEmail, sendReviewRequestEmail, sendCommissionEarnedEmail, sendAffiliateOrderNotificationEmail, sendOrderShippedEmail, sendOrderPaymentConfirmedEmail, sendOrderCancelledEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 
 type RouteContext = {
@@ -39,6 +39,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         markShipped:    ["CONFIRMED"],
         markDelivered:  ["SHIPPED"],
         cancel:         ["PENDING", "CONFIRMED"],
+        updateTracking: ["SHIPPED", "DELIVERED"],
       };
       if (!VALID_TRANSITIONS[action]) throw new Error("Accion no valida");
       if (!VALID_TRANSITIONS[action].includes(order.status)) {
@@ -48,10 +49,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
 
       if (action === "confirmPayment") {
-        if (["CONFIRMED", "SHIPPED", "DELIVERED"].includes(order.status)) {
-          return order;
-        }
-
         // El stock ya fue decrementado al crear el pedido en checkout.
         // Aquí solo revisamos si alguna variante quedó con stock bajo para alertar.
         const stockAlerts: { name: string; variant: string; stock: number }[] = [];
@@ -165,6 +162,16 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         await tx.orderStatusLog.create({
           data: { orderId: order.id, fromStatus: order.status, toStatus: "CONFIRMED", changedBy: ownerId },
         });
+
+        sendOrderPaymentConfirmedEmail({
+          buyerEmail: order.buyer.email,
+          buyerName: order.buyer.name || "",
+          orderId: order.id,
+          storeName: order.store.name,
+          storeSlug: order.store.slug,
+          total: order.total,
+        }).catch((err) => console.error("[email] sendOrderPaymentConfirmedEmail failed:", err));
+
         return confirmed;
       }
 
@@ -266,7 +273,34 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         await tx.orderStatusLog.create({
           data: { orderId: order.id, fromStatus: order.status, toStatus: "CANCELLED", changedBy: ownerId },
         });
+
+        const ownerForCancel = await tx.user.findUnique({
+          where: { id: ownerId },
+          select: { email: true, phone: true },
+        });
+        sendOrderCancelledEmail({
+          buyerEmail: order.buyer.email,
+          buyerName: order.buyer.name || "",
+          orderId: order.id,
+          storeName: order.store.name,
+          ownerContact: { email: ownerForCancel?.email, phone: ownerForCancel?.phone },
+        }).catch((err) => console.error("[email] sendOrderCancelledEmail failed:", err));
+
         return cancelled;
+      }
+
+      if (action === "updateTracking") {
+        if (!trackingCode) throw new Error("Código de seguimiento requerido");
+        await tx.shipping.updateMany({
+          where: { orderId: order.id },
+          data: { trackingCode },
+        });
+        const updated = await tx.order.update({
+          where: { id: order.id },
+          data: { trackingCode },
+          include: { payment: true, shipping: true, items: true, commission: true },
+        });
+        return updated;
       }
 
       // No debería llegar acá — el guard de arriba cubre todos los casos

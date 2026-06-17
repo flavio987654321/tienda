@@ -43,9 +43,10 @@ type PromptState = "idle" | "loading" | "error";
 interface Props {
   appVersion?: string;
   versionKey?: string;
+  disableNotifPrompt?: boolean;
 }
 
-export default function PWAManager({ appVersion, versionKey }: Props) {
+export default function PWAManager({ appVersion, versionKey, disableNotifPrompt = false }: Props) {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
   const [updating, setUpdating] = useState(false);
@@ -113,14 +114,15 @@ export default function PWAManager({ appVersion, versionKey }: Props) {
     };
   }, []);
 
-  // ── Notification permission prompt ───────────────────────────────────────
+  // ── Notification permission prompt (dashboard only) ──────────────────────
   useEffect(() => {
+    if (disableNotifPrompt) return;
     if (!isPushSupported()) return;
     if (Notification.permission !== "default") return;
     if (localStorage.getItem(NOTIF_PROMPT_KEY)) return;
     const t = setTimeout(() => setShowNotifBanner(true), 4000);
     return () => clearTimeout(t);
-  }, []);
+  }, [disableNotifPrompt]);
 
   // ── Toast post-reload ────────────────────────────────────────────────────
   useEffect(() => {

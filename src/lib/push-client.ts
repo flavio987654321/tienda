@@ -192,22 +192,6 @@ export async function unsubscribeFromStore(storeId: string, storeSlug: string): 
   }
 }
 
-// Devuelve true si localStorage dice suscripto Y el browser tiene suscripción activa.
-export async function isSubscribedToStore(storeId: string, storeSlug: string): Promise<boolean> {
-  try {
-    if (!localStorage.getItem(STORE_SUB_KEY(storeId))) return false;
-    const reg = await getStoreReg(storeSlug);
-    const sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      // El browser ya no tiene suscripción (permiso revocado o scope cambiado), limpiar localStorage
-      localStorage.removeItem(STORE_SUB_KEY(storeId));
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 // Migrates an existing push subscription to the store-scoped SW.
 // Called on page load: if the user was subscribed under the root SW (before per-store

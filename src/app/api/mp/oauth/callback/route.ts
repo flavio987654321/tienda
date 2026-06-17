@@ -6,13 +6,19 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
 // GET /api/mp/oauth/callback
 // MercadoPago redirige acá después de que el dueño autoriza.
-// Recibe ?code=...&state={storeId}
+// Recibe ?code=...&state={nonce} — el storeId viene de la cookie firmada, no del parámetro público.
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code  = searchParams.get("code");
-  const storeId = searchParams.get("state");
+  const state = searchParams.get("state");
 
-  if (!code || !storeId) {
+  // Leer cookie con nonce:storeId guardada al iniciar el flujo
+  const cookieValue = req.cookies.get("mp_oauth_state")?.value ?? "";
+  const [cookieNonce, storeId] = cookieValue.split(":");
+
+  // Verificar que el nonce coincide (protección CSRF)
+  if (!code || !state || !cookieNonce || !storeId || state !== cookieNonce) {
+    console.warn("MP OAuth callback: nonce inválido o faltante", { state, cookieNonce });
     return NextResponse.redirect(`${APP_URL}/dashboard/ajustes?mp=error`);
   }
 
@@ -31,7 +37,10 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.redirect(`${APP_URL}/dashboard/ajustes?mp=connected`);
+    const res = NextResponse.redirect(`${APP_URL}/dashboard/ajustes?mp=connected`);
+    // Borrar la cookie de estado una vez usada
+    res.cookies.delete("mp_oauth_state");
+    return res;
   } catch (err) {
     console.error("MP OAuth callback error:", err);
     return NextResponse.redirect(`${APP_URL}/dashboard/ajustes?mp=error`);

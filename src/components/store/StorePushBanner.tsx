@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { Bell, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Bell, X, Loader2 } from "lucide-react";
 import { usePushBell } from "@/contexts/PushBellContext";
 
 function timeAgo(iso: string): string {
@@ -16,9 +16,31 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "short" });
 }
 
-export default function StorePushBanner({ storeName }: { storeName: string }) {
+const ACTIVATION_DISMISSED_KEY = (storeId: string) => `push_act_dismissed_${storeId}`;
+
+export default function StorePushBanner({ storeName, storeId }: { storeName: string; storeId: string }) {
   const bell = usePushBell();
   const drawerRef = useRef<HTMLDivElement>(null);
+  const [activating, setActivating] = useState(false);
+  const [activationDismissed, setActivationDismissed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && localStorage.getItem(ACTIVATION_DISMISSED_KEY(storeId))) {
+      setActivationDismissed(true);
+    }
+  }, [storeId]);
+
+  function dismissActivation() {
+    setActivationDismissed(true);
+    localStorage.setItem(ACTIVATION_DISMISSED_KEY(storeId), "1");
+  }
+
+  async function handleActivate() {
+    if (!bell) return;
+    setActivating(true);
+    await bell.activatePushOnDevice();
+    setActivating(false);
+  }
 
   useEffect(() => {
     if (!bell?.drawerOpen) return;
@@ -33,10 +55,47 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
 
   if (!bell) return null;
 
-  const { campaigns, loadingCampaigns, drawerOpen, closeDrawer } = bell;
+  const { campaigns, loadingCampaigns, drawerOpen, closeDrawer, needsPushActivation } = bell;
+
+  const showActivationBanner = needsPushActivation && !activationDismissed;
 
   return (
     <>
+      {/* Banner: activar notificaciones en este dispositivo */}
+      {showActivationBanner && (
+        <div className="fixed bottom-5 left-1/2 z-[9989] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-2xl border border-white/10 bg-gray-900/95 backdrop-blur-xl shadow-2xl overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent" />
+          <div className="flex items-start gap-3 p-4">
+            <div className="shrink-0 flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/15">
+              <Bell className="h-4 w-4 text-indigo-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-semibold text-[13px] leading-snug">
+                Activá las notificaciones
+              </p>
+              <p className="text-white/45 text-[11px] mt-0.5 leading-snug">
+                Ya seguís esta tienda. Activá para recibir novedades en este dispositivo.
+              </p>
+              <button
+                onClick={handleActivate}
+                disabled={activating}
+                className="mt-3 flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 px-4 py-2 text-[12px] font-bold text-white transition-colors"
+              >
+                {activating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Bell className="h-3 w-3" />}
+                {activating ? "Activando…" : "Activar ahora"}
+              </button>
+            </div>
+            <button
+              onClick={dismissActivation}
+              aria-label="Cerrar"
+              className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full text-white/20 hover:text-white/50 transition-colors"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Backdrop */}
       {drawerOpen && (
         <div

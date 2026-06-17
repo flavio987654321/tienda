@@ -155,7 +155,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
 
   return (
     <>
-      <PWAManager appVersion={STORE_VERSION} versionKey="pwa_store_version" />
+      <PWAManager appVersion={STORE_VERSION} versionKey="pwa_store_version" disableNotifPrompt />
       <PwaFadeIn />
       {ownerIsPremium && !isOwner && (
         <PwaInstallBanner

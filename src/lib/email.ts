@@ -931,7 +931,7 @@ export async function sendOrderShippedEmail({
         </div>
 
         <div style="text-align:center;margin-bottom:28px;">
-          <a href="${appUrl}/mi-cuenta"
+          <a href="${appUrl}/seguimiento/${shortId}"
              style="display:inline-block;background:#0ea5e9;color:#ffffff;padding:14px 36px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;">
             Ver estado de mi pedido
           </a>
@@ -1135,6 +1135,120 @@ export async function sendStoreOfflineEmail({
 
         <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
           Este aviso fue generado automáticamente · TiendaApps
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendOrderPaymentConfirmedEmail({
+  buyerEmail,
+  buyerName,
+  orderId,
+  storeName,
+  storeSlug,
+  total,
+}: {
+  buyerEmail: string;
+  buyerName: string;
+  orderId: string;
+  storeName: string;
+  storeSlug: string;
+  total: number;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const shortId = orderId.slice(-8).toUpperCase();
+  void storeSlug;
+
+  await transporter.sendMail({
+    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    to: buyerEmail,
+    subject: `Pago confirmado — Pedido #${shortId} en preparación`,
+    html: `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:32px 16px;color:#111827;background:#ffffff;">
+
+        <div style="background:linear-gradient(135deg,#16a34a,#15803d);border-radius:16px;padding:32px 28px;margin-bottom:28px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.8);font-size:12px;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px;font-weight:600;">${escapeHtml(storeName)}</p>
+          <div style="font-size:48px;margin-bottom:8px;">✅</div>
+          <h1 style="color:#ffffff;font-size:22px;margin:0 0 6px;font-weight:800;letter-spacing:-0.02em;">¡Pago confirmado!</h1>
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0;">Pedido <strong>#${shortId}</strong></p>
+        </div>
+
+        <p style="font-size:15px;color:#374151;margin:0 0 6px;">Hola <strong>${escapeHtml(buyerName)}</strong>,</p>
+        <p style="font-size:15px;color:#6b7280;margin:0 0 24px;line-height:1.6;">
+          Tu pago fue confirmado y el pedido ya está en preparación. Te avisaremos cuando sea despachado.
+        </p>
+
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px 20px;margin-bottom:28px;text-align:center;">
+          <p style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 6px;">Total confirmado</p>
+          <p style="font-size:28px;font-weight:900;color:#16a34a;margin:0;">$${total.toLocaleString("es-AR")}</p>
+        </div>
+
+        <div style="text-align:center;margin-bottom:28px;">
+          <a href="${appUrl}/seguimiento/${shortId}"
+             style="display:inline-block;background:#16a34a;color:#ffffff;padding:14px 36px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;">
+            Seguir mi pedido
+          </a>
+        </div>
+
+        <p style="color:#d1d5db;font-size:11px;text-align:center;margin:0;">
+          ${escapeHtml(storeName)} · Pedido <strong>#${shortId}</strong>
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendOrderCancelledEmail({
+  buyerEmail,
+  buyerName,
+  orderId,
+  storeName,
+  ownerContact,
+}: {
+  buyerEmail: string;
+  buyerName: string;
+  orderId: string;
+  storeName: string;
+  ownerContact?: { email?: string | null; phone?: string | null } | null;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const shortId = orderId.slice(-8).toUpperCase();
+
+  const contactBlock = ownerContact?.email || ownerContact?.phone ? `
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin-bottom:24px;">
+      <p style="font-size:13px;color:#6b7280;margin:0 0 8px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Contactar a la tienda</p>
+      ${ownerContact.email ? `<p style="margin:0 0 4px;font-size:14px;">📧 <a href="mailto:${escapeHtml(ownerContact.email)}" style="color:#6366f1;">${escapeHtml(ownerContact.email)}</a></p>` : ""}
+      ${ownerContact.phone ? `<p style="margin:0;font-size:14px;">📱 ${escapeHtml(ownerContact.phone)}</p>` : ""}
+    </div>` : "";
+
+  await transporter.sendMail({
+    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    to: buyerEmail,
+    subject: `Tu pedido #${shortId} fue cancelado — ${storeName}`,
+    html: `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:32px 16px;color:#111827;background:#ffffff;">
+
+        <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);border-radius:16px;padding:32px 28px;margin-bottom:28px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.8);font-size:12px;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px;font-weight:600;">${escapeHtml(storeName)}</p>
+          <div style="font-size:48px;margin-bottom:8px;">❌</div>
+          <h1 style="color:#ffffff;font-size:22px;margin:0 0 6px;font-weight:800;letter-spacing:-0.02em;">Pedido cancelado</h1>
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0;">Pedido <strong>#${shortId}</strong></p>
+        </div>
+
+        <p style="font-size:15px;color:#374151;margin:0 0 6px;">Hola <strong>${escapeHtml(buyerName)}</strong>,</p>
+        <p style="font-size:15px;color:#6b7280;margin:0 0 24px;line-height:1.6;">
+          Lamentamos informarte que tu pedido <strong>#${shortId}</strong> en <strong>${escapeHtml(storeName)}</strong> fue cancelado.
+          Si tenés preguntas, podés contactar a la tienda directamente.
+        </p>
+
+        ${contactBlock}
+
+        <p style="color:#d1d5db;font-size:11px;text-align:center;margin:0;">
+          ${escapeHtml(storeName)} · Pedido <strong>#${shortId}</strong>
         </p>
       </div>
     `,

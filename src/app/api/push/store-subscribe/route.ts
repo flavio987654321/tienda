@@ -15,8 +15,11 @@ function isValidHttpsUrl(val: string): boolean {
   }
 }
 
-// POST — visitante se suscribe a notificaciones de una tienda (sin autenticación)
+// POST — usuario autenticado registra su endpoint push para una tienda
 export async function POST(req: NextRequest) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
   let body: unknown;
   try {
     body = await req.json();
@@ -47,16 +50,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
   }
 
-  const { auth, p256dh } = keys as Record<string, string>;
+  // Verificar que el usuario realmente sigue esta tienda (evita registro de endpoints sin follow)
+  const follow = await prisma.storeFollow.findUnique({
+    where: { userId_storeId: { userId: currentUser.id, storeId } },
+    select: { id: true },
+  });
+  if (!follow) {
+    return NextResponse.json({ error: "No seguís esta tienda" }, { status: 403 });
+  }
 
-  // Si hay sesión activa, linkear la suscripción al usuario
-  const currentUser = await getCurrentUser();
-  const userId = currentUser?.id ?? null;
+  const { auth, p256dh } = keys as Record<string, string>;
 
   await prisma.storeSubscription.upsert({
     where: { endpoint },
-    update: { auth, p256dh, storeId, ...(userId ? { userId } : {}) },
-    create: { storeId, endpoint, auth, p256dh, ...(userId ? { userId } : {}) },
+    update: { auth, p256dh, storeId, userId: currentUser.id },
+    create: { storeId, endpoint, auth, p256dh, userId: currentUser.id },
   });
 
   return NextResponse.json({ ok: true });

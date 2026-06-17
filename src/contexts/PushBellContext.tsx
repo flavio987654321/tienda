@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import {
   isPushSupported,
-  isSubscribedToStore,
   subscribeToStore,
   unsubscribeFromStore,
 } from "@/lib/push-client";
@@ -26,6 +25,8 @@ type PushBellCtx = {
   loadingCampaigns: boolean;
   drawerOpen: boolean;
   pushSupported: boolean;
+  needsPushActivation: boolean;
+  activatePushOnDevice: () => Promise<void>;
   openDrawer: () => void;
   closeDrawer: () => void;
   handleFollow: () => Promise<FollowResult>;
@@ -56,6 +57,7 @@ export function PushBellProvider({
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [hasNew, setHasNew] = useState(false);
+  const [needsPushActivation, setNeedsPushActivation] = useState(false);
   const supported = useRef(false);
   const drawerOpenRef = useRef(false);
   const followingRef = useRef(false);
@@ -68,23 +70,26 @@ export function PushBellProvider({
     supported.current = isPushSupported();
 
     async function checkFollowState() {
-      // Primero verificar en el servidor si el usuario está logueado y sigue la tienda
       try {
         const res = await fetch(`/api/store/follow?storeId=${storeId}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.following) {
-            followingRef.current = true;
-            setFollowState("following");
-            return;
+          followingRef.current = !!data.following;
+          setFollowState(data.following ? "following" : "not_following");
+
+          if (data.following && supported.current) {
+            if (Notification.permission === "granted") {
+              // Registrar este dispositivo silenciosamente (ej: seguido en PC, ahora en celular)
+              subscribeToStore(storeId, storeSlug).catch(() => {});
+            } else if (Notification.permission === "default") {
+              // Sigue en DB pero nunca activó push en este dispositivo
+              setNeedsPushActivation(true);
+            }
           }
+          return;
         }
       } catch { /* noop */ }
-
-      // Fallback: verificar suscripción push en el browser (usuarios legacy anónimos)
-      const hasPushSub = await isSubscribedToStore(storeId, storeSlug);
-      followingRef.current = hasPushSub;
-      setFollowState(hasPushSub ? "following" : "not_following");
+      setFollowState("not_following");
     }
 
     checkFollowState();
@@ -168,7 +173,11 @@ export function PushBellProvider({
 
     // Suscribir push si el browser lo soporta
     if (supported.current && Notification.permission !== "denied") {
-      await subscribeToStore(storeId, storeSlug);
+      const pushOk = await subscribeToStore(storeId, storeSlug);
+      // Si el usuario canceló el diálogo de permiso push, marcar que necesita activarlo
+      if (!pushOk && Notification.permission !== "granted") {
+        setNeedsPushActivation(true);
+      }
     }
 
     followingRef.current = true;
@@ -195,6 +204,18 @@ export function PushBellProvider({
     setFollowState("not_following");
   }, [storeId, storeSlug]);
 
+  const activatePushOnDevice = useCallback(async () => {
+    if (!supported.current) return;
+    // Pedir permiso explícitamente primero (requerido por Safari y más claro en todos los browsers)
+    if (Notification.permission === "default") {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") return;
+    }
+    if (Notification.permission !== "granted") return;
+    const ok = await subscribeToStore(storeId, storeSlug);
+    if (ok) setNeedsPushActivation(false);
+  }, [storeId, storeSlug]);
+
   return (
     <PushBellContext.Provider value={{
       followState,
@@ -203,6 +224,8 @@ export function PushBellProvider({
       loadingCampaigns,
       drawerOpen,
       pushSupported: supported.current,
+      needsPushActivation,
+      activatePushOnDevice,
       openDrawer,
       closeDrawer,
       handleFollow,

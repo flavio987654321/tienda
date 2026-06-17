@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 
 type StorefrontDeps = {
   products: StorefrontProduct[];
+  storeId?: string | null;
   resolveVariantId: (product: StorefrontProduct, size: string, color: string) => string | null;
   validateCoupon: (code: string, subtotal: number) => Promise<{ coupon: ValidatedCoupon; discount: number } | { error: string }>;
   placeOrder: (params: PlaceOrderParams) => Promise<{ ok: boolean; orderId?: string; error?: string }>;
@@ -16,7 +17,7 @@ type StorefrontDeps = {
   shippingMethods?: ShippingMethod[] | null;
 };
 
-export function useCartLogic({ products, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods }: StorefrontDeps) {
+export function useCartLogic({ products, storeId, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods }: StorefrontDeps) {
   const [cartItems,      setCartItems]      = useState<CartItem[]>([]);
   const [cartOpen,       setCartOpen]       = useState(false);
   const [modalProduct,   setModalProduct]   = useState<StorefrontProduct | null>(null);
@@ -265,10 +266,30 @@ export function useCartLogic({ products, resolveVariantId, validateCoupon, place
     try { localStorage.removeItem("storefront_cart"); } catch {}
   };
 
-  const handleContact = (e: React.FormEvent) => {
+  const handleContact = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!storeId) return;
     setContactStatus("sending");
-    setTimeout(() => { setContactStatus("sent"); setContactForm({ nombre:"", email:"", mensaje:"" }); }, 1400);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId,
+          nombre: contactForm.nombre,
+          email: contactForm.email,
+          mensaje: contactForm.mensaje,
+        }),
+      });
+      if (res.ok) {
+        setContactStatus("sent");
+        setContactForm({ nombre: "", email: "", mensaje: "" });
+      } else {
+        setContactStatus("idle");
+      }
+    } catch {
+      setContactStatus("idle");
+    }
   };
 
   const toggleFavorite = async (id: string) => {
