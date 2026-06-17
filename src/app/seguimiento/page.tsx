@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search, Package, CheckCircle, Truck, ShoppingBag, XCircle, Loader2 } from "lucide-react";
+import { Search, Package, CheckCircle, Truck, ShoppingBag, XCircle, Loader2, MessageCircle } from "lucide-react";
 
 type Step = { key: string; label: string; desc: string; icon: React.ReactNode };
 
@@ -72,14 +72,14 @@ export default function SeguimientoPage() {
           <div className="hidden md:flex items-center gap-8">
             <Link href="/#tiendas" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Tiendas</Link>
             <Link href="/#como-funciona" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Cómo funciona</Link>
-            <Link href="/#quienes-somos" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Quiénes somos</Link>
+            <Link href="/quienes-somos" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Quiénes somos</Link>
             <Link href="/precios" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Precios</Link>
-            <Link href="/seguimiento" className="text-white text-sm font-medium transition-colors">Seguimiento</Link>
-            <Link href="/#contacto" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Contacto</Link>
+            <Link href="/seguimiento" className="text-white text-sm font-medium transition-colors flex items-center gap-1.5"><Package className="h-4 w-4" />Seguimiento</Link>
+            <button onClick={() => {}} className="text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5"><MessageCircle className="h-4 w-4" />Contacto</button>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="text-gray-400 hover:text-white text-sm font-medium transition-colors">Iniciar sesión</Link>
-            <Link href="/registro" className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors">
+          <div className="hidden md:flex items-center gap-3">
+            <Link href="/login" className="text-gray-300 hover:text-white text-sm font-medium px-5 py-2.5 rounded-xl border border-white/10 hover:border-white/25 transition-all">Iniciar sesión</Link>
+            <Link href="/registro" className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
               Crear cuenta
             </Link>
           </div>
