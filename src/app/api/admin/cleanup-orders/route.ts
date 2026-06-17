@@ -27,6 +27,25 @@ export async function GET(req: NextRequest) {
       })
     : [];
 
+  // Si confirm=yes, ejecuta el borrado directamente
+  if (req.nextUrl.searchParams.get("confirm") === "yes") {
+    if (!store) return NextResponse.json({ error: "Sin tienda" });
+    const orderIds = orders.map(o => o.id);
+    if (orderIds.length === 0) return NextResponse.json({ deleted: 0, message: "No había pedidos." });
+
+    await prisma.$transaction([
+      prisma.orderStatusLog.deleteMany({ where: { orderId: { in: orderIds } } }),
+      prisma.commission.deleteMany({ where: { orderId: { in: orderIds } } }),
+      prisma.payment.deleteMany({ where: { orderId: { in: orderIds } } }),
+      prisma.shipping.deleteMany({ where: { orderId: { in: orderIds } } }),
+      prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } }),
+      prisma.review.deleteMany({ where: { orderId: { in: orderIds } } }),
+      prisma.order.deleteMany({ where: { id: { in: orderIds } } }),
+    ]);
+
+    return NextResponse.json({ deleted: orderIds.length, message: `✅ Se eliminaron ${orderIds.length} pedidos de "${store.name}".` });
+  }
+
   return NextResponse.json({
     user: { name: user.name, role: user.role },
     store: store?.name ?? "sin tienda",
@@ -37,7 +56,7 @@ export async function GET(req: NextRequest) {
       total: o.total,
       date: o.createdAt,
     })),
-    nextStep: `Para borrar: GET /api/admin/cleanup-orders?secret=${SECRET}&confirm=yes`,
+    nextStep: `Para borrar: /api/admin/cleanup-orders?secret=${SECRET}&confirm=yes`,
   });
 }
 
