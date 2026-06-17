@@ -17,6 +17,9 @@ export default function ContactoPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!form.name.trim() || form.name.trim().length < 2) { setError("Ingresá tu nombre (mínimo 2 caracteres)."); return; }
+    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { setError("Ingresá un email válido."); return; }
+    if (!form.message.trim() || form.message.trim().length < 10) { setError("El mensaje es muy corto (mínimo 10 caracteres)."); return; }
     setLoading(true);
     try {
       const res = await fetch("/api/contacto", {
@@ -138,6 +141,8 @@ export default function ContactoPage() {
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nombre *</label>
                       <input
+                        required
+                        minLength={2}
                         value={form.name}
                         onChange={e => set("name", e.target.value)}
                         placeholder="Tu nombre"
@@ -147,6 +152,7 @@ export default function ContactoPage() {
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email *</label>
                       <input
+                        required
                         type="email"
                         value={form.email}
                         onChange={e => set("email", e.target.value)}
@@ -169,6 +175,8 @@ export default function ContactoPage() {
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Mensaje *</label>
                     <textarea
+                      required
+                      minLength={10}
                       value={form.message}
                       onChange={e => set("message", e.target.value)}
                       placeholder="Contanos tu consulta con el mayor detalle posible..."
