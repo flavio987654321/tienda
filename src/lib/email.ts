@@ -589,7 +589,7 @@ export async function sendOrderConfirmationEmail({
 
         <!-- CTA -->
         <div style="text-align:center;margin-bottom:28px;">
-          <a href="${appUrl}/seguimiento?codigo=${shortId}"
+          <a href="${appUrl}/seguimiento/${shortId}"
              style="display:inline-block;background:#111827;color:#ffffff;padding:14px 36px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;letter-spacing:0.01em;">
             Ver estado de mi pedido
           </a>

@@ -15,13 +15,18 @@ export async function GET(req: NextRequest) {
       createdAt: true,
       trackingCode: true,
       shippingMethod: true,
+      shippingAddress: true,
       total: true,
-      store: { select: { name: true, slug: true } },
+      subtotal: true,
+      discountAmount: true,
+      shippingCost: true,
+      store: { select: { name: true, slug: true, logo: true } },
       items: {
         select: {
           quantity: true,
+          price: true,
           product: { select: { name: true } },
-          variant: { select: { value: true } },
+          variant: { select: { value: true, name: true } },
         },
       },
       statusLogs: {

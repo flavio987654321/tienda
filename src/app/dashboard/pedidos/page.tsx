@@ -8,9 +8,20 @@ import { ArrowUpRight, Clock, Download, Package, ShoppingBag, Truck, UserRound }
 import { getCurrentUser } from "@/lib/auth-session";
 import { money } from "@/lib/utils";
 
+function statusLabel(status: string) {
+  const map: Record<string, string> = {
+    PENDING:   "Pendiente",
+    CONFIRMED: "En preparación",
+    SHIPPED:   "Enviado",
+    DELIVERED: "Entregado",
+    CANCELLED: "Cancelado",
+  };
+  return map[status] ?? status;
+}
+
 function statusClass(status: string) {
   if (status === "CONFIRMED") return "bg-green-100 text-green-700";
-  if (status === "SHIPPED") return "bg-blue-100 text-blue-700";
+  if (status === "SHIPPED")   return "bg-blue-100 text-blue-700";
   if (status === "DELIVERED") return "bg-gray-900 text-white";
   if (status === "CANCELLED") return "bg-red-100 text-red-700";
   return "bg-yellow-100 text-yellow-700";
@@ -135,14 +146,19 @@ export default async function PedidosPage() {
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-gray-50 pb-4">
                   <div>
                     <div className="mb-2 flex items-center gap-2">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(order.status)}`}>{order.status}</span>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
                       <span className="text-xs text-gray-400">#{order.id.slice(-6).toUpperCase()}</span>
                       <span className="text-xs text-gray-400">{order.createdAt.toLocaleString("es-AR")}</span>
                     </div>
                     <p className="text-lg font-bold text-gray-900">{money(order.total)}</p>
                     <p className="text-sm text-gray-400">{itemCount} producto(s) - pago {order.payment?.provider ?? "manual"} / {order.payment?.status ?? "PENDING"}</p>
                   </div>
-                  <OrderActions orderId={order.id} status={order.status} />
+                  <OrderActions
+                    orderId={order.id}
+                    status={order.status}
+                    paymentProvider={order.payment?.provider}
+                    paymentStatus={order.payment?.status}
+                  />
                 </div>
 
                 <div className="grid gap-5 pt-4 lg:grid-cols-[1.1fr_1fr_1fr]">

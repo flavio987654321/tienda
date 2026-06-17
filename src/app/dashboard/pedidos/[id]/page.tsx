@@ -14,9 +14,9 @@ function money(value: number) {
 
 function statusLabel(status: string) {
   const map: Record<string, string> = {
-    PENDING: "Pendiente",
-    CONFIRMED: "Confirmado",
-    SHIPPED: "Enviado",
+    PENDING:   "Pendiente",
+    CONFIRMED: "En preparación",
+    SHIPPED:   "Enviado",
     DELIVERED: "Entregado",
     CANCELLED: "Cancelado",
   };
@@ -109,7 +109,12 @@ export default async function PedidoDetailPage({ params }: Props) {
             {itemCount} producto{itemCount !== 1 ? "s" : ""} · {order.createdAt.toLocaleString("es-AR")}
           </p>
         </div>
-        <OrderActions orderId={order.id} status={order.status} />
+        <OrderActions
+          orderId={order.id}
+          status={order.status}
+          paymentProvider={order.payment?.provider}
+          paymentStatus={order.payment?.status}
+        />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1.1fr_1fr_1fr]">
