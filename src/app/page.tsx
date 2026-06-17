@@ -44,103 +44,6 @@ function Card3D({ children, className = "" }: { children: React.ReactNode; class
   );
 }
 
-/* ─── Contact Modal ─── */
-function ContactModal({ onClose }: { onClose: () => void }) {
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
-  const [sent, setSent] = useState(false);
-  const [sending, setSending] = useState(false);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setSending(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setSent(true);
-    setSending(false);
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.9, opacity: 0, y: 20 }}
-        transition={{ type: "spring", stiffness: 280, damping: 22 }}
-        onClick={(e) => e.stopPropagation()}
-        className="relative bg-gray-950 border border-white/10 rounded-3xl p-8 w-full max-w-md shadow-2xl"
-      >
-        <button onClick={onClose} className="absolute top-5 right-5 text-gray-500 hover:text-white transition-colors">
-          <X className="h-5 w-5" />
-        </button>
-
-        {sent ? (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 bg-indigo-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="h-8 w-8 text-indigo-400" />
-            </div>
-            <h3 className="text-xl font-bold text-white mb-2">¡Mensaje enviado!</h3>
-            <p className="text-gray-400">Te respondemos en menos de 24 hs.</p>
-            <button onClick={onClose} className="mt-6 bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-indigo-500 transition-colors">
-              Cerrar
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="mb-6">
-              <h3 className="text-2xl font-bold text-white">Contáctanos</h3>
-              <p className="text-gray-400 mt-1">Respondemos todas las consultas.</p>
-            </div>
-            <form onSubmit={submit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1.5">Nombre</label>
-                <input
-                  type="text" required value={form.name}
-                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="Tu nombre"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1.5">Email</label>
-                <input
-                  type="email" required value={form.email}
-                  onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                  placeholder="tu@email.com"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1.5">Mensaje</label>
-                <textarea
-                  required value={form.message}
-                  onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))}
-                  rows={4} placeholder="¿En qué podemos ayudarte?"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-none"
-                />
-              </div>
-              <button
-                type="submit" disabled={sending}
-                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-xl font-semibold transition-all disabled:opacity-60"
-              >
-                {sending ? (
-                  <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <><Send className="h-4 w-4" /> Enviar mensaje</>
-                )}
-              </button>
-            </form>
-          </>
-        )}
-      </motion.div>
-    </motion.div>
-  );
-}
 
 const fadeUp = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, transition: { duration: 0.55 } } };
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
@@ -333,7 +236,6 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
 };
 
 export default function Home() {
-  const [contact, setContact] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
   const [realStores, setRealStores] = useState<RealStore[]>([]);
@@ -400,9 +302,9 @@ export default function Home() {
             <Link href="/seguimiento" className="text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5">
               <Package className="h-4 w-4" />Seguimiento
             </Link>
-            <button onClick={() => setContact(true)} className="text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5">
+            <Link href="/contacto" className="text-gray-400 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5">
               <MessageCircle className="h-4 w-4" />Contacto
-            </button>
+            </Link>
           </div>
 
           <div className="hidden md:flex items-center gap-3">
@@ -457,7 +359,7 @@ export default function Home() {
                 <Link href="/quienes-somos" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Quiénes somos</Link>
                 <Link href="/precios" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Precios</Link>
                 <Link href="/seguimiento" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Seguimiento</Link>
-                <button onClick={() => { setContact(true); setMobileMenu(false); }} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors w-full text-left">Contacto</button>
+                <Link href="/contacto" onClick={() => setMobileMenu(false)} className="block text-gray-300 hover:text-white py-3 px-3 rounded-xl hover:bg-white/5 transition-colors">Contacto</Link>
                 <div className="pt-3 border-t border-white/10 flex flex-col gap-2 mt-2">
                   {sessionUser ? (
                     <Link href={panelHref} onClick={() => setMobileMenu(false)} className="text-center bg-indigo-600 hover:bg-indigo-500 rounded-xl py-3 text-sm font-semibold text-white transition-colors">
@@ -1096,9 +998,9 @@ export default function Home() {
                 La plataforma de ecommerce con sistema de afiliados para crecer con equipo.
               </p>
               <div className="flex items-center gap-4 mt-5">
-                <button onClick={() => setContact(true)} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-400 transition-colors">
+                <Link href="/contacto" className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-400 transition-colors">
                   <Mail className="h-4 w-4" /> hola@tiendaapps.com
-                </button>
+                </Link>
               </div>
             </div>
             <div>
@@ -1115,7 +1017,7 @@ export default function Home() {
                 {[["/afiliados", "Postularme"], ["/afiliados/billetera", "Mi billetera"], ["/quienes-somos", "Quiénes somos"]].map(([href, label]) => (
                   <li key={label}><a href={href} className="text-gray-500 hover:text-white text-sm transition-colors">{label}</a></li>
                 ))}
-                <li><button onClick={() => setContact(true)} className="text-gray-500 hover:text-white text-sm transition-colors">Contacto</button></li>
+                <li><Link href="/contacto" className="text-gray-500 hover:text-white text-sm transition-colors">Contacto</Link></li>
               </ul>
             </div>
           </div>
@@ -1127,21 +1029,20 @@ export default function Home() {
       </footer>
 
       {/* ── Floating contact button ── */}
-      <motion.button
+      <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ delay: 1.5, type: "spring" }}
-        onClick={() => setContact(true)}
-        className="fixed bottom-6 right-6 z-40 bg-indigo-600 hover:bg-indigo-500 text-white w-14 h-14 rounded-full shadow-2xl shadow-indigo-500/40 flex items-center justify-center transition-all hover:scale-110"
-        title="Contacto"
+        className="fixed bottom-6 right-6 z-40"
       >
-        <MessageCircle className="h-6 w-6" />
-      </motion.button>
-
-      {/* ── Contact Modal ── */}
-      <AnimatePresence>
-        {contact && <ContactModal onClose={() => setContact(false)} />}
-      </AnimatePresence>
+        <Link
+          href="/contacto"
+          className="bg-indigo-600 hover:bg-indigo-500 text-white w-14 h-14 rounded-full shadow-2xl shadow-indigo-500/40 flex items-center justify-center transition-all hover:scale-110"
+          title="Contacto"
+        >
+          <MessageCircle className="h-6 w-6" />
+        </Link>
+      </motion.div>
 
       {/* ── Testimonio Modal ── */}
       <AnimatePresence>
