@@ -272,6 +272,12 @@ export default function Home() {
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
         @keyframes gradient-shift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
         .float { animation: float 5s ease-in-out infinite; }
+        @keyframes fab-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+        .fab-float { animation: fab-float 2.6s ease-in-out infinite; }
+        @keyframes fab-ring-indigo { 0%,100%{box-shadow:0 8px 24px rgba(99,102,241,.45),0 0 0 0 rgba(99,102,241,.45)} 50%{box-shadow:0 8px 24px rgba(99,102,241,.45),0 0 0 10px rgba(99,102,241,0)} }
+        @keyframes fab-ring-amber { 0%,100%{box-shadow:0 8px 24px rgba(245,158,11,.45),0 0 0 0 rgba(245,158,11,.45)} 50%{box-shadow:0 8px 24px rgba(245,158,11,.45),0 0 0 10px rgba(245,158,11,0)} }
+        .fab-ring-indigo { animation: fab-ring-indigo 2.6s ease-in-out infinite; }
+        .fab-ring-amber { animation: fab-ring-amber 2.6s ease-in-out infinite; }
         .gradient-text {
           background: linear-gradient(135deg, #818cf8, #a78bfa, #f472b6, #818cf8);
           background-size: 300% 300%;
@@ -1042,7 +1048,7 @@ export default function Home() {
       >
         <Link
           href="/contacto"
-          className="bg-indigo-600 hover:bg-indigo-500 text-white w-14 h-14 rounded-full shadow-2xl shadow-indigo-500/40 flex items-center justify-center transition-all hover:scale-110"
+          className="fab-float fab-ring-indigo bg-indigo-600 hover:bg-indigo-500 text-white w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110"
           title="Contacto"
         >
           <MessageCircle className="h-6 w-6" />
@@ -1059,7 +1065,7 @@ export default function Home() {
         >
           <Link
             href="/canasta"
-            className="bg-amber-500 hover:bg-amber-400 text-gray-950 w-14 h-14 rounded-full shadow-2xl shadow-amber-500/40 flex items-center justify-center transition-all hover:scale-110"
+            className="fab-float fab-ring-amber bg-amber-500 hover:bg-amber-400 text-gray-950 w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110"
             title="Canasta Solidaria"
           >
             <HeartHandshake className="h-6 w-6" />

@@ -386,10 +386,10 @@ function CanastaContent() {
 
           <Link
             href="/canasta/sorteo"
-            className={`relative rounded-2xl border p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-1 shadow-sm transition-colors ${
+            className={`relative rounded-2xl border p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-1 transition-all hover:scale-[1.03] active:scale-[0.98] ${
               drawLive
-                ? "border-red-400 bg-red-50 pulse-live"
-                : "border-amber-900/10 bg-white hover:bg-amber-50"
+                ? "border-red-400 bg-red-50 pulse-live shadow-sm"
+                : "border-amber-500/30 bg-gradient-to-b from-amber-100 to-amber-50 shadow-md shadow-amber-500/10 hover:shadow-amber-500/20"
             }`}
           >
             {drawLive ? (
@@ -400,7 +400,7 @@ function CanastaContent() {
             ) : (
               <>
                 <Gift className="h-4 w-4 sm:h-5 sm:w-5 text-amber-700" />
-                <span className="text-[10px] sm:text-xs font-semibold text-amber-700">Sorteo</span>
+                <span className="text-[10px] sm:text-xs font-bold text-amber-800">Sorteo</span>
               </>
             )}
           </Link>
