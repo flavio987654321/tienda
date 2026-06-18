@@ -2,7 +2,7 @@
 
 > Creado: 2026-06-16 | Feature completa de donación colectiva y sorteo
 > Workflow: 🟪 pendiente | 🟦 en progreso | ✅ hecho | ❌ descartado con justificación
-> Última actualización: 2026-06-16
+> Última actualización: 2026-06-18
 
 ---
 
@@ -17,16 +17,18 @@ Un espacio donde la comunidad dona colectivamente para armar una **canasta famil
 ### Donación
 - **Mínimo por donación: $1.000**
 - **Una sola donación por persona por campaña** (igualdad de chances, sin ventaja por monto)
-- **Anti-abuso:** validación por userId en DB + fallback por IP
+- **Se puede donar con o sin cuenta registrada** (igual que las compras en tienda)
+- **Anti-abuso:** si está logueado, valida por userId. Si es invitado, valida por combinación email+teléfono. Fallback adicional por IP/día
 - El monto es libre desde $1.000 (alguien puede donar los $60.000 enteros y completar la canasta)
 - La plata va directo a MercadoPago del admin (fondo de propósito específico, no retirable como wallet)
 
 ### Campaña
-- **Meta total: $60.000** → $54.545 productos + 10% reserva operativa ($5.455 para envío y gastos)
+- **No se fija un monto "tope" a mano.** La meta sale sola de sumar los precios de los productos cargados + 10% de reserva. Si el admin agrega o quita productos, la meta se recalcula automáticamente.
 - El **10% de reserva** se muestra públicamente para total transparencia
 - Los precios de los productos los carga el admin por campaña (los precios suben, cada campaña puede tener precios actualizados)
 - **Una campaña activa a la vez**
-- **Fin de campaña:** al llegar al 100% del monto → admin lanza sorteo manualmente → nueva campaña arranca
+- **Corte automático:** en cuanto el total donado confirma cubrir el último producto + el 10% de reserva, el sistema **corta las donaciones automáticamente** (la campaña pasa a estado `COMPLETED`, el endpoint de donar rechaza nuevos pagos) y queda lista para el sorteo
+- **No arranca una campaña nueva** hasta que el admin entregue el premio y cierre la anterior manualmente
 
 ### Canasta básica — productos sugeridos (~14 ítems)
 > El admin define los precios por campaña. Esta es la lista base propuesta:
@@ -58,12 +60,12 @@ Al momento de donar se pide:
 
 Esta información llega al admin y también queda asociada a la `Donation` en DB.
 
-### Sorteo y cascada de ganadores (NUEVO)
+### Sorteo y cascada de ganadores (✅ confirmado)
 - **Sistema de ranking:** el sorteo genera 3 posiciones (1°, 2°, 3°)
-- **1° ganador:** recibe notificación push + email con 48hs para responder
+- **1° ganador:** recibe notificación push + email con 48hs para responder. Admin también intenta contactarlo directamente (teléfono)
 - **Si no responde en 48hs:** pasa al 2° ganador con las mismas condiciones
 - **Si tampoco responde:** pasa al 3° ganador
-- **Si ninguno responde:** el admin decide (campaña archivada, fondo a la siguiente, etc.)
+- **Si ninguno de los 3 responde:** se vuelve a programar el sorteo automáticamente para el día siguiente (nuevo sorteo entre los mismos donantes confirmados, se descartan los 3 que no respondieron)
 - El admin marca manualmente el estado del ganador desde el panel: PENDIENTE / CONFIRMADO / SIN_RESPUESTA
 
 ### Carrito de compras — donación integrada (NUEVO)
@@ -79,12 +81,18 @@ Esta información llega al admin y también queda asociada a la `Donation` en DB
 - Flujo: usuario paga la compra → al confirmarse, si eligió donar → se abre el checkout de donación
 - El email de confirmación de compra incluye un apartado con los datos de la donación
 
-### Flyer desde el admin (NUEVO)
-- El admin puede crear un banner/flyer visible en la página principal
-- El flyer muestra: nombre de campaña, progreso actual, fecha estimada de sorteo, CTA "Donar ahora"
-- Se genera con `html-to-image` o es un componente estilizado configurable
-- El admin puede activarlo/desactivarlo sin deployar
-- Aparece en home como banner fijo (sticky top o sección destacada)
+### Botón flotante en el home (DEFINIDO ✅)
+- Se agrega un **segundo botón flotante** en el home, mismo patrón que el botón de contacto existente (`src/app/page.tsx:1031-1045`)
+- Posición: **del lado izquierdo** de la pantalla (ej: `bottom-6 left-6`), NO apilado arriba del botón de contacto que sigue a la derecha. Mismo tamaño (`w-14 h-14`), círculo
+- Ícono: `HeartHandshake` de Lucide (manos en gesto de ayuda, estilo silueta)
+- Color distinto al de contacto (ej: dorado/naranja `bg-amber-500`) para diferenciarlo
+- Al hacer click → navega a `/canasta` (página completa, no popup ni modal)
+- Solo se muestra si hay una campaña ACTIVE (si no hay campaña activa, el botón no aparece)
+- Animación de entrada igual a la del botón de contacto (`motion.div` con spring)
+
+### Flyer compartible (para redes, no para el home)
+- Botón "Compartir" dentro de `/canasta` que genera una imagen (html-to-image) con el progreso actual de la campaña
+- Pensado para compartir en WhatsApp/redes, no es parte de la página principal
 
 ---
 
@@ -94,10 +102,10 @@ Esta información llega al admin y también queda asociada a la `Donation` en DB
 
 | # | Estado | Modelo | Descripción |
 |---|--------|--------|-------------|
-| A-01 | 🟪 | `DonationCampaign` | id, nombre, descripción, meta ($60.000), reservaPct (10), estado (ACTIVE/DRAWN/CANCELLED), fechaSorteoEstimada, createdAt |
-| A-02 | 🟪 | `DonationProduct` | id, campaignId, nombre, imagen, precioObjetivo, orden. La suma = meta × (1 - reservaPct) |
-| A-03 | 🟪 | `Donation` | id, userId, campaignId, monto, mpPaymentId, estado (PENDING/CONFIRMED/FAILED), donorName, donorPhone, donorEmail, donorLocalidad, donorPrefEntrega (ENVIO/RETIRO), createdAt |
-| A-04 | 🟪 | `DonationDraw` | id, campaignId, winner1Id, winner2Id, winner3Id, winnerFinalId, estadoGanador (PENDIENTE/CONFIRMADO/SIN_RESPUESTA), conductedAt, notasAdmin |
+| A-01 | ✅ | `DonationCampaign` | id, nombre, descripción, meta ($60.000), reservaPct (10), estado (ACTIVE/DRAWN/CANCELLED), fechaSorteoEstimada, createdAt |
+| A-02 | ✅ | `DonationProduct` | id, campaignId, nombre, imagen, precioObjetivo, orden. La suma = meta × (1 - reservaPct) |
+| A-03 | ✅ | `Donation` | id, userId (nullable — null si es invitado), campaignId, monto, mpPaymentId, estado (PENDING/CONFIRMED/FAILED), donorName, donorPhone, donorEmail, donorLocalidad, donorPrefEntrega (ENVIO/RETIRO), createdAt. Índice único en (campaignId, donorEmail, donorPhone) para evitar doble donación de invitados |
+| A-04 | ✅ | `DonationDraw` | id, campaignId, intentoNro (1, 2, 3...), winner1Id, winner2Id, winner3Id, winnerFinalId, estadoGanador (PENDIENTE/CONFIRMADO/SIN_RESPUESTA), excluidos (array de userIds descartados de intentos previos), conductedAt, reintentoProgramadoPara, notasAdmin |
 
 **Relaciones clave:**
 - `DonationCampaign` 1→N `DonationProduct`
@@ -115,7 +123,7 @@ Esta información llega al admin y también queda asociada a la `Donation` en DB
 | B-02 | 🟪 | `/canasta/donar` | Formulario donante + monto + checkout MP. Si ya donó: muestra su donación actual |
 | B-03 | 🟪 | `/canasta/terminos` | T&C propios de la canasta solidaria |
 | B-04 | 🟪 | `/canasta/historial` | Campañas pasadas: fecha, total, ganador, foto entrega si hay |
-| B-05 | 🟪 | `/` (home) | Botón "Ayudar es posible 🧺" + banner del admin si está activo |
+| B-05 | 🟪 | `/` (home) | Botón flotante (ícono `HeartHandshake`) del lado izquierdo, mismo patrón visual que el de contacto (que queda a la derecha). Solo visible si hay campaña ACTIVE. Link a `/canasta` |
 
 ---
 
@@ -123,7 +131,7 @@ Esta información llega al admin y también queda asociada a la `Donation` en DB
 
 | # | Estado | Endpoint | Método | Descripción |
 |---|--------|----------|--------|-------------|
-| C-01 | 🟪 | `/api/canasta/campaign` | GET | Campaña activa con productos, total recaudado, cantidad donantes |
+| C-01 | ✅ | `/api/canasta/campaign` | GET | Campaña activa con productos, total recaudado, cantidad donantes |
 | C-02 | 🟪 | `/api/canasta/donate` | POST | Valida reglas, guarda Donation en PENDING, crea preferencia MP, devuelve init_point |
 | C-03 | 🟪 | `/api/canasta/webhook` | POST | IPN de MP → actualiza Donation a CONFIRMED, dispara push si hito (50%, 100%) |
 | C-04 | 🟪 | `/api/canasta/check-eligibility` | GET | ¿Ya donó el usuario en esta campaña? → true/false + datos de su donación |
@@ -141,7 +149,7 @@ Esta información llega al admin y también queda asociada a la `Donation` en DB
 | # | Estado | Sección | Descripción |
 |---|--------|---------|-------------|
 | D-01 | 🟪 | Dashboard | Stats en tiempo real: $ recaudado, % completado, cantidad donantes, días estimados al sorteo |
-| D-02 | 🟪 | Gestión de campaña | Crear nueva campaña. Campos: nombre, descripción, meta total, % reserva, fecha estimada, productos (nombre+imagen+precio). Toggle banner en home |
+| D-02 | 🟦 | Gestión de campaña | ✅ Editar productos (foto, precio), ✅ % reserva editable, ✅ agregar alimentos nuevos. 🟪 Falta: crear campaña nueva desde cero, fecha estimada de sorteo, toggle banner en home |
 | D-03 | 🟪 | Lista de donantes | Tabla: nombre, localidad, teléfono, email, monto, fecha, estado del pago. Exportable |
 | D-04 | 🟪 | Ruleta de sorteo | Interfaz con todos los participantes elegibles. Botón "Sortear" → animación de ruleta → muestra ganador 1°/2°/3°. El resultado ya viene calculado del backend |
 | D-05 | 🟪 | Gestión de ganadores | Cards de los 3 ganadores con: datos de contacto, estado (PENDIENTE/CONFIRMADO/SIN_RESPUESTA), botón "Marcar como sin respuesta → pasar al siguiente" |
@@ -155,14 +163,14 @@ Esta información llega al admin y también queda asociada a la `Donation` en DB
 
 | # | Estado | Elemento | Descripción |
 |---|--------|---------|-------------|
-| E-01 | 🟪 | Canasta 3D liviana | CSS `perspective` + `transform: rotateX(20deg)` + múltiples `box-shadow`. Sin Three.js. Con Framer Motion para micro-animaciones al entrar |
-| E-02 | 🟪 | Productos en la canasta | Grid de tarjetas con imagen del producto. Apagadas = gris desaturado. Iluminadas = color vibrante + glow |
-| E-03 | 🟪 | Estado visual por producto | El % de iluminación = progreso proporcional. Si el total recaudado superó el precio de ese producto → 100% encendido. Si no → gradiente parcial. CSS `filter: saturate()` + `brightness()` animado |
-| E-04 | 🟪 | Barra de progreso total | "$38.000 de $60.000 recaudados" con barra animada. Color naranja/dorado |
-| E-05 | 🟪 | Contador de sorteo | DD:HH:MM:SS. Si no hay fecha estimada → "Se sortea al completarse la canasta" |
-| E-06 | 🟪 | Feed de donantes recientes | "Ana G. donó $2.000 · hace 3 min" — actualiza cada 30s. Solo confirmados. Nombre + inicial apellido |
-| E-07 | 🟪 | Botón CTA donar | Grande, visible. Si ya donaste → "Ya participás 🎉" deshabilitado + ver tu donación |
-| E-08 | 🟪 | % reserva visible | Texto pequeño debajo de la barra: "Incluye 10% para costos de envío y gastos operativos" |
+| E-01 | ✅ | Canasta 3D liviana | Hecho con CSS `perspective` + Framer Motion. Paleta clara/cálida (no la oscura del resto del sitio) |
+| E-02 | ✅ | Productos en la canasta | Grid de tarjetas con ícono real (Lucide) o foto subida desde admin. Apagadas = gris desaturado |
+| E-03 | ✅ | Estado visual por producto | Llenado en cascada según `sortOrder` (no proporcional parejo) |
+| E-04 | ✅ | Barra de progreso total | Hecha, con efecto shimmer animado |
+| E-05 | 🟪 | Contador de sorteo | Falta el countdown real DD:HH:MM:SS — hoy solo muestra la fecha si existe |
+| E-06 | 🟪 | Feed de donantes recientes | Falta — depende de que existan donaciones reales (Fase 2) |
+| E-07 | 🟪 | Botón CTA donar | Hoy el botón siempre dice "Donar desde $1.000" — falta el estado "Ya participás" cuando el usuario ya donó |
+| E-08 | ✅ | % reserva visible | Hecho, debajo de la barra de progreso |
 
 ---
 
@@ -277,22 +285,78 @@ Esta información llega al admin y también queda asociada a la `Donation` en DB
 | P-06 | ✅ | 1 donación por persona por campaña |
 | P-07 | ✅ | Cascada de ganadores: 1°→2°→3° con 48hs cada uno |
 | P-08 | ✅ | Formulario de donante con nombre, teléfono, email, localidad |
-| P-09 | ❓ | **¿Qué alimentos exactos y en qué cantidad?** → Lista base propuesta arriba, admin puede ajustar por campaña |
-| P-10 | ❓ | **¿Si los 3 ganadores no responden?** → ¿Plata pasa a la siguiente campaña? ¿Admin decide? Definir para los T&C |
-| P-11 | ❓ | **¿El banner en home es un popup o sección fija?** → Propuesta: sección fija visible, sin popup intrusivo |
-| P-12 | ❓ | **¿Los donantes anónimos (sin cuenta) pueden donar?** → Propuesta: solo usuarios registrados (para validar 1 por persona) |
+| P-09 | ✅ | **Resuelto en la práctica:** no hace falta definir la lista de antemano — el admin carga, edita precio/foto y agrega alimentos nuevos directo desde `/admin/canasta`, y la meta se recalcula sola |
+| P-10 | ✅ | **Resuelto, es lo mismo que P-13:** si ninguno de los 3 responde, se reprograma el sorteo para el día siguiente excluyendo a esos 3 (no hace falta una regla aparte) |
+| P-11 | ✅ | **Resuelto, ver P-14:** no es un banner, es el botón flotante en el home |
+| P-12 | ✅ | **Donantes sin cuenta SÍ pueden donar** (igual que la tienda permite comprar con o sin registro). Validación de "1 por persona" se hace por combinación email+teléfono en vez de userId cuando es invitado |
+| P-13 | ✅ | Si ningún ganador (1°/2°/3°) responde → se reprograma sorteo automáticamente para el día siguiente, excluyendo a los que no respondieron, entre el resto de donantes confirmados |
+| P-14 | ✅ | Botón de acceso a la canasta en el home: **botón flotante con ícono `HeartHandshake`**, ubicado del **lado izquierdo** de la pantalla (el de contacto sigue a la derecha), mismo estilo. Lleva a `/canasta` completa |
 
 ---
 
 ## NOTAS TÉCNICAS
 
 - **3D liviano:** CSS `perspective` + Framer Motion para entrada. Sin Three.js ni WebGL.
-- **MP split:** Las donaciones van a las credenciales del admin (variables de entorno separadas `ADMIN_MP_ACCESS_TOKEN`). No usar el split del marketplace.
+- **MP split:** Las donaciones van a las credenciales del admin. Ya existe `MP_ACCESS_TOKEN` en `.env.local` (token de la plataforma/admin, usado en `platformClient()` de `src/lib/mp.ts`) — se reutiliza ese, no hace falta crear una variable nueva. No usar el split del marketplace para donaciones.
 - **Ruleta:** Backend calcula el ganador antes de la animación. Frontend solo anima. La ruleta gira y "frena" en el nombre ya determinado.
-- **Progreso por producto (fondo general):** total_recaudado se distribuye proporcionalmente. Producto con precio X tiene % = min(100, (total_recaudado / meta_sin_reserva) × 100). No es por producto individual, es el avance general aplicado a todos.
+- **Progreso por producto (fondo general):** se llenan en cascada según el orden (`sortOrder`). El total recaudado completa el primer producto al 100%, después el segundo, así sucesivamente — efecto visual de "se va llenando un producto a la vez", más fiel a la idea original ("la leche aparece con color pero casi llena").
 - **Rate limiting:** Reutilizar `rate-limit.ts` en `/api/canasta/donate`.
 - **Push existente:** Reutilizar `sendPushToUser` y `createNotification`. Push masivo usa el sistema de `PushCampaign`.
 - **Carrito:** Las credenciales MP del admin para la donación tienen que estar en variables de entorno del servidor. El frontend nunca las ve.
+
+---
+
+## BLOQUE J — SORTEO EN VIVO (diseño técnico detallado)
+
+> Resultado de análisis con agente de planificación especializado. Cubre seguridad, tiempo real y anti-bugs antes de tocar código.
+
+### Modelo de datos nuevo (extiende lo ya creado)
+- `DonationCampaign`: agregar `scheduledDrawAt` (fecha/hora exacta que el admin programa), `drawStatus` (SCHEDULED/LIVE/FINISHED), `drawStartedAt` (timestamp real de cuándo arrancó)
+- `DonationDraw`: agregar `revealAt` (momento exacto en que se puede mostrar el resultado, calculado como inicio + duración de animación)
+- Constraint a nivel de base de datos (no solo en el código) que impide dos campañas `ACTIVE` al mismo tiempo — así no vuelve a pasar lo de las campañas duplicadas
+
+### Cómo se sincroniza la ruleta "en vivo" para todos
+- La página pública (`/canasta/sorteo`) consulta al servidor cada 2 segundos "¿ya arrancó?". Cuando lo activás desde el panel, todos los que están mirando lo detectan casi al instante y la ruleta arranca sincronizada, sin depender del reloj de la computadora de cada uno (el servidor manda su propia hora real en cada respuesta)
+- Es polling simple, no algo más pesado — para este tamaño de proyecto es la opción más simple y confiable, sin riesgo de que se rompa con muchas personas mirando a la vez
+
+### Seguridad anti-manipulación del resultado (✅ confirmado, diseño a prueba de trampas)
+- El ganador se calcula y se guarda en la base **en el instante en que apretás "Activar sorteo"**, nunca durante la animación
+- Ningún dato del ganador se entrega al navegador de nadie hasta el segundo exacto en que la ruleta tiene que frenar — verificado explícitamente para que ni inspeccionando el código ni mirando las peticiones de red se pueda adivinar antes de tiempo
+- El panel admin de "Gestión de ganadores" solo permite cambiar el *estado* (pendiente/confirmado/sin respuesta), nunca permite editar a mano quién ganó
+
+### Seguridad anti doble-click (✅ confirmado)
+- Capa visual: el botón se desactiva apenas se toca una vez
+- Capa real (la que importa): la base de datos no permite que la misma acción se repita dos veces, sea por doble click, dos pestañas abiertas, o lo que sea — aplica a "Donar", "Activar sorteo" y "Marcar sin respuesta"
+
+### Decisiones tomadas sobre el sorteo
+- **Duración de la animación de la ruleta: 10 segundos**
+- **Lista pública de participantes: nombre y apellido completo** (no inicial)
+- **Si los 3 ganadores no responden:** el admin programa la nueva fecha/hora a mano otra vez para el día siguiente (no es automático)
+- **Reprogramar un sorteo ya programado (antes de que arranque):** sí, hay un botón para editar la fecha/hora las veces que haga falta, mientras no haya arrancado todavía
+
+### Página pública `/canasta/sorteo` — estados
+1. **Antes de la hora:** contador de cuenta regresiva + lista de participantes al costado
+2. **En vivo (girando):** la ruleta animada, con info de contexto visible (total recaudado, cantidad de participantes, nombre de campaña)
+3. **Resultado mostrado:** se revela 1°, 2° y 3° puesto
+4. **Sorteo ya pasado:** cualquiera que entre después ve el resultado final directo, sin animación
+
+### Estado: ✅ TODO CONSTRUIDO (18/06)
+1. ✅ Migración de los campos nuevos + constraint de "una sola campaña activa" + constraint de "un solo intento de sorteo por número"
+2. ✅ Endpoint de estado del sorteo (`GET /api/canasta/draw-status`, público, nunca expone ganador antes de `revealAt`)
+3. ✅ Programar/editar fecha desde el admin (`PUT /api/admin/canasta/campaign`, bloqueado una vez que el sorteo arrancó)
+4. ✅ Activar sorteo (`POST /api/admin/canasta/draw/activate`) — calcula y guarda el resultado con `crypto.randomInt`, protegido con compare-and-swap transaccional
+5. ✅ Cascada de ganadores (`PUT /api/admin/canasta/draw/winner-status`) — avanza 1°→2°→3°, reprograma si los 3 fallan
+6. ✅ Tabla de donantes en el admin (`GET /api/admin/canasta/donors` + UI en `/admin/canasta`)
+7. ✅ Email manual a todos los donantes (`POST /api/admin/canasta/notify-donors`)
+8. ✅ Función de email automático al admin lista (`sendCanastaCompletedAdminEmail` en `src/lib/resend.ts`) — falta conectarla al momento real de "se completó la meta", que depende del webhook de pagos (Fase de pagos, pendiente)
+9. ✅ Endpoint público de participantes (`GET /api/canasta/participants`, solo nombre y apellido)
+10. ✅ Página pública del sorteo (`/canasta/sorteo`) con sus 4 estados
+11. ✅ Animación de la ruleta (`RouletteWheel.tsx`) — efecto de suspenso genérico, nunca conoce el resultado real de antemano
+12. ✅ Pruebas de seguridad automatizadas contra la base real (`prisma/test-race-conditions.ts`): 5 activaciones simultáneas → solo 1 sorteo creado; 5 "marcar sin respuesta" simultáneas → la cascada avanza una sola vez; confirmado que el resultado nunca se marca como revelable antes de tiempo
+
+**Pendiente de esta sección (queda para cuando se construyan los pagos):** conectar el momento real en que una donación confirmada completa la meta → disparar `sendCanastaCompletedAdminEmail` y pasar `campaign.status` a `COMPLETED` automáticamente.
+
+**Regla a aplicar en el formulario de donación / webhook (decidido el 18/06, pendiente de implementar):** tope máximo por donación = **20-25% de la meta de la campaña** (no un monto fijo en pesos, porque la meta cambia según los productos cargados). Sin este tope, una sola persona podría cubrir toda la canasta y el sorteo perdería sentido (un único donante = ganador garantizado, sin nada que sortear). Validar tanto en el frontend (UX) como en el backend (seguridad, no confiar solo en el cliente).
 
 ---
 

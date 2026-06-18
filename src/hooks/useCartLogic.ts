@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import type { StorefrontProduct, ValidatedCoupon, PlaceOrderParams } from "./useStorefront";
 import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, type CartItem, type ContactStatus, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
 import { useAuth } from "@/components/AuthProvider";
@@ -10,7 +11,7 @@ type StorefrontDeps = {
   storeId?: string | null;
   resolveVariantId: (product: StorefrontProduct, size: string, color: string) => string | null;
   validateCoupon: (code: string, subtotal: number) => Promise<{ coupon: ValidatedCoupon; discount: number } | { error: string }>;
-  placeOrder: (params: PlaceOrderParams) => Promise<{ ok: boolean; orderId?: string; error?: string }>;
+  placeOrder: (params: PlaceOrderParams) => Promise<{ ok: boolean; orderId?: string; donationId?: string; error?: string }>;
   checkoutMode?: "cart" | "inquiry";
   isWholesale?: boolean;
   hasMercadoPago?: boolean;
@@ -45,9 +46,13 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
   const [contactStatus,  setContactStatus]  = useState<ContactStatus>("idle");
   const [contactForm,    setContactForm]    = useState({ nombre:"", email:"", mensaje:"" });
   const [acceptedTerms,  setAcceptedTerms]  = useState(false);
+  const [donationEnabled, setDonationEnabled] = useState(false);
+  const [donationAmount,  setDonationAmount]  = useState(1000);
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const { status } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
 
   // Restaurar carrito y datos del comprador desde localStorage
   useEffect(() => {
@@ -237,6 +242,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
       shippingMethod:  envioId,
       paymentProvider: pagoId,
       couponId:        appliedCoupon?.id ?? null,
+      donationAmount:  donationEnabled ? donationAmount : undefined,
     });
     if (!res.ok) { setCheckoutStatus("idle"); setCheckoutError(res.error ?? "Error al procesar"); return; }
 
@@ -245,7 +251,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
       const mpRes = await fetch("/api/mp/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: res.orderId }),
+        body: JSON.stringify({ orderId: res.orderId, donationId: res.donationId }),
       });
       const mpData = await mpRes.json().catch(() => ({}));
       if (!mpRes.ok || !mpData.initPoint) {
@@ -260,10 +266,21 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
       return;
     }
 
-    setCheckoutStatus("done");
     setCartItems([]);
     setAppliedCoupon(null);
     try { localStorage.removeItem("storefront_cart"); } catch {}
+
+    // Pago por transferencia: no hay redirección a MP para la compra. Si
+    // pidió donar, ese segundo pago (siempre vía MercadoPago) se ofrece en
+    // el mismo modal de "compra confirmada" que usa el camino de MP, en vez
+    // de mostrarlo metido dentro del panel de checkout.
+    if (res.donationId && res.orderId) {
+      setCheckoutOpen(false);
+      router.replace(`${pathname}?pago=ok&orden=${res.orderId}&donacionId=${res.donationId}`, { scroll: false });
+      return;
+    }
+
+    setCheckoutStatus("done");
   };
 
   const handleContact = async (e: React.FormEvent) => {
@@ -328,6 +345,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
     toastMsg,
     contactStatus, setContactStatus, contactForm, setContactForm,
     acceptedTerms, setAcceptedTerms,
+    donationEnabled, setDonationEnabled, donationAmount, setDonationAmount,
     // Derived
     cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     searchResults, favoriteProducts,

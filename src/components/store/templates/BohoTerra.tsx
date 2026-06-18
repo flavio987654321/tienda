@@ -145,6 +145,7 @@ export default function BohoTerra() {
     fmt, fmtEnvioPrice, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
     pagoOptions, acceptedTerms, setAcceptedTerms,
+    donationEnabled, setDonationEnabled, donationAmount, setDonationAmount,
   } = useCartLogic(storefront);
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
@@ -1393,6 +1394,31 @@ export default function BohoTerra() {
                       <span style={{ fontSize:16, fontWeight:700, color:T }}>Total</span>
                       <span style={{ fontSize:20, fontWeight:800, color:A }}>{fmt(orderTotal)}</span>
                     </div>
+
+                    {/* donación opcional a la Canasta Solidaria — pago aparte, no se suma al total */}
+                    <div style={{ marginTop:18, paddingTop:14, borderTop:`1px solid rgba(44,34,24,0.07)` }}>
+                      <label style={{ display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
+                        <span style={{ fontSize:13, color:T }}>❤️ ¿Donar?</span>
+                        <input type="checkbox" checked={donationEnabled} onChange={e => setDonationEnabled(e.target.checked)} style={{ accentColor:A }} />
+                      </label>
+                      <p style={{ fontSize:10, color:MID, marginTop:6, lineHeight:1.5 }}>
+                        Sumá un aporte aparte para completar una canasta de alimentos para un vecino — se paga por separado, no afecta tu compra.{" "}
+                        <a href="/canasta" target="_blank" rel="noopener" style={{ color:A, textDecoration:"underline" }}>¿Cómo funciona?</a>
+                      </p>
+                      {donationEnabled && (
+                        <div style={{ marginTop:10 }}>
+                          <input
+                            type="number"
+                            min={1000}
+                            value={donationAmount}
+                            onChange={e => setDonationAmount(Number(e.target.value) || 0)}
+                            style={{ width:"100%", background:"#fff", border:`1px solid rgba(44,34,24,0.15)`, color:T, padding:"10px 14px", fontSize:13, outline:"none", borderRadius:4 }}
+                          />
+                          <p style={{ fontSize:10, color:MID, marginTop:6, lineHeight:1.5 }}>Mínimo $1.000.</p>
+                        </div>
+                      )}
+                    </div>
+
                     {checkoutError && <p style={{ fontSize:12, color:"#dc2626", marginTop:10 }}>{checkoutError}</p>}
                   </div>
                 </div>

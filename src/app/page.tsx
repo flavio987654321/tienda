@@ -7,7 +7,7 @@ import { STORE_TYPES } from "@/lib/storeTypes";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent } from "framer-motion";
 import {
   ArrowRight, X, Store, Users, TrendingUp, Wallet, CheckCircle,
-  ShoppingBag, Star, Zap, Shield, Send, MessageCircle, Mail,
+  ShoppingBag, Star, Zap, Shield, Send, MessageCircle, Mail, HeartHandshake,
   Package, Heart, ShoppingCart, Globe, Eye, ChevronRight, Menu, MapPin,
   BadgeCheck, Shirt, Car, Monitor, Home as HomeIcon, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, LayoutGrid,
 } from "lucide-react";
@@ -241,6 +241,7 @@ export default function Home() {
   const [realStores, setRealStores] = useState<RealStore[]>([]);
   const [realTestimonials, setRealTestimonials] = useState<RealTestimonial[]>([]);
   const [testimonioModal, setTestimonioModal] = useState(false);
+  const [canastaActiva, setCanastaActiva] = useState(false);
   const { user: sessionUser } = useAuth();
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (v) => setNavScrolled(v > 50));
@@ -253,6 +254,10 @@ export default function Home() {
     fetch("/api/testimonios")
       .then((r) => r.json())
       .then((d) => { if (Array.isArray(d)) setRealTestimonials(d); })
+      .catch(() => {});
+    fetch("/api/canasta/campaign")
+      .then((r) => r.json())
+      .then((d) => setCanastaActiva(!!d.campaign))
       .catch(() => {});
   }, []);
 
@@ -1043,6 +1048,24 @@ export default function Home() {
           <MessageCircle className="h-6 w-6" />
         </Link>
       </motion.div>
+
+      {/* ── Floating canasta solidaria button ── */}
+      {canastaActiva && (
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 1.6, type: "spring" }}
+          className="fixed bottom-6 left-6 z-40"
+        >
+          <Link
+            href="/canasta"
+            className="bg-amber-500 hover:bg-amber-400 text-gray-950 w-14 h-14 rounded-full shadow-2xl shadow-amber-500/40 flex items-center justify-center transition-all hover:scale-110"
+            title="Canasta Solidaria"
+          >
+            <HeartHandshake className="h-6 w-6" />
+          </Link>
+        </motion.div>
+      )}
 
       {/* ── Testimonio Modal ── */}
       <AnimatePresence>

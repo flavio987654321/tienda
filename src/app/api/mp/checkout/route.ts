@@ -8,8 +8,12 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 // Crea una preferencia de pago en MercadoPago para una orden ya existente.
 // La orden debe estar PENDING y la tienda debe tener MP conectado.
 export async function POST(req: NextRequest) {
-  const { orderId } = await req.json();
+  const { orderId, donationId } = await req.json();
   if (!orderId) return NextResponse.json({ error: "orderId requerido" }, { status: 400 });
+  // donationId es opcional: si la compra incluyó una donación a la Canasta
+  // Solidaria, lo llevamos a través de la ida y vuelta de MP para poder
+  // ofrecer pagarla aparte apenas vuelva de pagar la compra.
+  const donationParam = typeof donationId === "string" && donationId ? `&donacionId=${donationId}` : "";
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -60,9 +64,9 @@ export async function POST(req: NextRequest) {
         marketplaceFee,
         externalReference: order.id,
         backUrls: {
-          success: `${APP_URL}/tienda/${order.store.slug}?pago=ok&orden=${order.id}`,
-          failure: `${APP_URL}/tienda/${order.store.slug}?pago=error&orden=${order.id}`,
-          pending: `${APP_URL}/tienda/${order.store.slug}?pago=pendiente&orden=${order.id}`,
+          success: `${APP_URL}/tienda/${order.store.slug}?pago=ok&orden=${order.id}${donationParam}`,
+          failure: `${APP_URL}/tienda/${order.store.slug}?pago=error&orden=${order.id}${donationParam}`,
+          pending: `${APP_URL}/tienda/${order.store.slug}?pago=pendiente&orden=${order.id}${donationParam}`,
         },
         notificationUrl: `${APP_URL}/api/mp/webhook`,
       }),

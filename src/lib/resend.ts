@@ -325,3 +325,194 @@ export async function sendSubscriptionConfirmationEmail({
     `,
   });
 }
+
+// ───────────────── Canasta Solidaria ─────────────────
+
+export async function sendCanastaCompletedAdminEmail({
+  to,
+  campaignName,
+  totalRaised,
+  goalAmount,
+}: {
+  to: string;
+  campaignName: string;
+  totalRaised: number;
+  goalAmount: number;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `¡Se completó la ${campaignName}!`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#d97706;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">Canasta Solidaria</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">¡Se completó la canasta!</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;"><strong>${campaignName}</strong> llegó a su meta.</p>
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:14px;color:#92400e;margin:0;font-weight:600;">Total recaudado: ${fmt(totalRaised)} de ${fmt(goalAmount)}</p>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">Ya podés programar y activar el sorteo desde el panel.</p>
+        <div style="text-align:center;margin-bottom:28px;">
+          <a href="${APP_URL}/admin/canasta"
+             style="display:inline-block;background:#d97706;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            Ir al panel
+          </a>
+        </div>
+      </div>
+    `,
+  });
+}
+
+export async function sendCanastaDrawTimeReminderEmail({
+  to,
+  campaignName,
+  scheduledDrawAt,
+}: {
+  to: string;
+  campaignName: string;
+  scheduledDrawAt: Date;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Ya es la hora del sorteo de "${campaignName}"`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#d97706;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">Canasta Solidaria</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">¡Llegó la hora del sorteo!</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">
+          Programaste el sorteo de <strong>${campaignName}</strong> para
+          ${scheduledDrawAt.toLocaleString("es-AR", { dateStyle: "long", timeStyle: "short" })} y ya pasó esa hora.
+        </p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">
+          Entrá al panel cuando estés listo para activarlo (recordá: la ruleta arranca recién 5 minutos después de activarlo).
+        </p>
+        <div style="text-align:center;margin-bottom:28px;">
+          <a href="${APP_URL}/admin/canasta"
+             style="display:inline-block;background:#d97706;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            Ir al panel
+          </a>
+        </div>
+      </div>
+    `,
+  });
+}
+
+export async function sendCanastaDonationConfirmedEmail({
+  to,
+  donorName,
+  amount,
+  campaignName,
+  trackingUrl,
+}: {
+  to: string;
+  donorName: string;
+  amount: number;
+  campaignName: string;
+  trackingUrl: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Gracias por tu donación a la Canasta Solidaria",
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#d97706;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">Canasta Solidaria</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">¡Gracias por donar!</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${donorName}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:16px;">
+          Tu donación de <strong>${fmt(amount)}</strong> a la <strong>${campaignName}</strong> ya está registrada. Ya estás participando del sorteo — te vamos a avisar por este mismo correo cuándo es y si ganás.
+        </p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">
+          Gracias a aportes como el tuyo, hoy un vecino va a tener una canasta completa en su mesa. No es solo plata: es una forma concreta de decirle a alguien que no está solo. ¡Gracias por ser parte! 💛
+        </p>
+        <div style="text-align:center;margin-bottom:28px;">
+          <a href="${trackingUrl}"
+             style="display:inline-block;background:#d97706;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            Ver el estado de mi donación
+          </a>
+        </div>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">
+          Esta donación es voluntaria y no reembolsable. Guardá este correo para consultar tu participación.
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendCanastaAnnouncementEmail({
+  to,
+  donorName,
+  campaignName,
+  message,
+}: {
+  to: string;
+  donorName: string;
+  campaignName: string;
+  message: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Novedades de la ${campaignName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#d97706;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">Canasta Solidaria</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:800;">${campaignName}</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${donorName}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;white-space:pre-line;">${message}</p>
+        <div style="text-align:center;margin-bottom:28px;">
+          <a href="${APP_URL}/canasta/sorteo"
+             style="display:inline-block;background:#d97706;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            Ver el sorteo
+          </a>
+        </div>
+      </div>
+    `,
+  });
+}
+
+export async function sendCanastaWinnerEmail({
+  to,
+  donorName,
+  position,
+}: {
+  to: string;
+  donorName: string;
+  position: 1 | 2 | 3;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const positionLabel = position === 1 ? "1er puesto" : position === 2 ? "2do puesto" : "3er puesto";
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "¡Ganaste la Canasta Solidaria!",
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#d97706;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">Canasta Solidaria</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">¡Felicitaciones, ganaste! 🎉</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${donorName}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">
+          Saliste sorteado en el <strong>${positionLabel}</strong> de la Canasta Solidaria. Nos vamos a comunicar con vos por teléfono para coordinar la entrega. Tenés <strong>48 horas</strong> para responder — si no podemos contactarte en ese plazo, el premio pasa al siguiente ganador.
+        </p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">
+          Si tenés dudas escribinos a soporte@tiendaapps.com
+        </p>
+      </div>
+    `,
+  });
+}

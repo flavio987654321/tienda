@@ -40,6 +40,7 @@ model User {
   pushSubscriptions   PushSubscription[]
   storeSubscriptions  StoreSubscription[]
   storeFollows        StoreFollow[]
+  donations           Donation[]
 }
 
 model PushSubscription {
@@ -747,4 +748,139 @@ model StoreReport {
 
   @@index([storeId])
   @@index([status, createdAt(sort: Desc)])
+}
+
+// CANASTA SOLIDARIA
+// Campaña de donación colectiva. Una sola ACTIVE a la vez.
+// goalAmount incluye el reservePct (% para envío/gastos operativos).
+model DonationCampaign {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  goalAmount      Float
+  reservePct      Float     @default(10)
+  status          String    @default("ACTIVE") // ACTIVE | COMPLETED | CANCELLED
+  estimatedDrawAt DateTime?
+  bannerActive    Boolean   @default(false)
+  // Sorteo en vivo
+  scheduledDrawAt DateTime? // fecha/hora exacta que el admin programó para el sorteo
+  drawStatus      String    @default("SCHEDULED") // SCHEDULED | LIVE | FINISHED
+  drawStartedAt   DateTime? // timestamp real (server) de cuándo arrancó la animación
+  reminderSentAt  DateTime? // cuándo se mandó el email recordatorio de "ya es la hora" — se resetea al reprogramar
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  products      DonationProduct[]
+  donations     Donation[]
+  draws         DonationDraw[]
+  notifications DonationNotification[]
+  testimonial   DonationTestimonial?
+
+  @@index([status])
+}
+
+// Productos visuales de la canasta (no se compran individualmente,
+// el fondo es general — sirven para mostrar el progreso visual por producto).
+model DonationProduct {
+  id          String   @id @default(cuid())
+  campaignId  String
+  campaign    DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name        String
+  image       String?
+  targetPrice Float
+  sortOrder   Int      @default(0)
+
+  @@index([campaignId])
+}
+
+// Donación individual. userId es null para donantes invitados (igual que las
+// compras en tienda permiten checkout sin cuenta). La dedup de "1 por persona"
+// usa userId cuando hay sesión, o email+telefono cuando es invitado.
+// OJO: la unicidad real está en índices únicos PARCIALES (WHERE status =
+// 'CONFIRMED'), agregados a mano vía SQL — no se pueden expresar con @@unique
+// en Prisma. Así, un intento de pago abandonado (PENDING) nunca bloquea un
+// reintento real; solo bloquea cuando ya existe una donación confirmada.
+model Donation {
+  id                String   @id @default(cuid())
+  campaignId        String
+  campaign          DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  amount            Float
+  mpPaymentId       String?  @unique
+  status            String   @default("PENDING") // PENDING | CONFIRMED | FAILED
+  donorName         String
+  donorPhone        String
+  donorEmail        String
+  donorLocalidad    String
+  donorDeliveryPref String   @default("ENVIO") // ENVIO | RETIRO
+  createdAt         DateTime @default(now())
+
+  asWinner1 DonationDraw[] @relation("DrawWinner1")
+  asWinner2 DonationDraw[] @relation("DrawWinner2")
+  asWinner3 DonationDraw[] @relation("DrawWinner3")
+
+  @@index([campaignId, status])
+}
+
+// Sorteo de una campaña. Si los 3 ganadores no responden, se crea un nuevo
+// registro con attemptNumber + 1 al día siguiente, excluyendo a los anteriores.
+model DonationDraw {
+  id                  String   @id @default(cuid())
+  campaignId          String
+  campaign            DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  attemptNumber       Int      @default(1)
+  winner1Id           String?
+  winner1             Donation? @relation("DrawWinner1", fields: [winner1Id], references: [id])
+  winner2Id           String?
+  winner2             Donation? @relation("DrawWinner2", fields: [winner2Id], references: [id])
+  winner3Id           String?
+  winner3             Donation? @relation("DrawWinner3", fields: [winner3Id], references: [id])
+  // currentPosition indica cuál de los 3 ganadores está activo en la cascada
+  // (1, 2 o 3). winnerStatus aplica siempre al ganador de esa posición.
+  // Al marcar NO_RESPONSE: si currentPosition < 3, avanza +1 y winnerStatus
+  // vuelve a PENDING para el siguiente. Si currentPosition === 3, el draw
+  // entero queda agotado y hay que reprogramar para el día siguiente.
+  currentPosition     Int      @default(1)
+  winnerStatus        String   @default("PENDING") // PENDING | CONFIRMED | NO_RESPONSE
+  excludedDonationIds String   @default("[]") // JSON array de Donation.id descartados en intentos previos
+  conductedAt         DateTime @default(now())
+  nextAttemptAt       DateTime?
+  adminNotes          String?
+  // Sorteo en vivo: el resultado ya está calculado y guardado arriba (winner1Id/2/3)
+  // desde el instante en que se activa el sorteo. revealAt es el momento en que
+  // el endpoint público tiene permiso de devolver esos nombres (cuando termina
+  // la animación), nunca antes — así nadie puede verlo antes de tiempo.
+  revealAt            DateTime?
+
+  @@unique([campaignId, attemptNumber])
+  @@index([campaignId])
+}
+
+// Historial de avisos manuales mandados a los donantes (ej: día y hora del
+// sorteo). Se usa también para el límite de 3 envíos por día.
+model DonationNotification {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  message    String
+  sentCount  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([campaignId, createdAt(sort: Desc)])
+}
+
+// Agradecimiento/reseña de una canasta ya entregada. El admin lo carga a
+// mano (no hay subida pública) después de confirmar la entrega — por eso no
+// necesita un estado de aprobación separado: que el admin lo suba ya implica
+// que está aprobado.
+model DonationTestimonial {
+  id         String   @id @default(cuid())
+  campaignId String   @unique
+  campaign   DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  donorName  String
+  mediaUrl   String?
+  mediaType  String?  // IMAGE | VIDEO
+  text       String?
+  createdAt  DateTime @default(now())
 }

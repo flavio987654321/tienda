@@ -57,6 +57,7 @@ export type PlaceOrderParams = {
   paymentProvider: string;
   couponId?: string | null;
   rewardCouponCode?: string | null;
+  donationAmount?: number | null;
 };
 
 // Claves que mapean a "talle" (dimensión principal no-color) según tipoTienda
@@ -237,7 +238,7 @@ export function useStorefront() {
     return res.json();
   }
 
-  async function placeOrder(params: PlaceOrderParams): Promise<{ ok: boolean; orderId?: string; error?: string }> {
+  async function placeOrder(params: PlaceOrderParams): Promise<{ ok: boolean; orderId?: string; donationId?: string; error?: string }> {
     if (!storeId) return { ok: false, error: "Tienda no disponible" };
     const res = await fetch("/api/checkout", {
       method: "POST",
@@ -251,11 +252,12 @@ export function useStorefront() {
         customer: params.customer,
         shippingMethod:  params.shippingMethod,
         paymentProvider: params.paymentProvider,
+        donationAmount:  params.donationAmount ?? undefined,
       }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, error: data?.error || "Error al procesar el pedido" };
-    return { ok: true, orderId: data.order?.id };
+    return { ok: true, orderId: data.order?.id, donationId: data.donationId ?? undefined };
   }
 
   const storeTypeConfig    = getStoreType(config?.tipoTienda || "GENERAL");

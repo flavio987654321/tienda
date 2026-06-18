@@ -2,27 +2,51 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CheckCircle, X, ShoppingBag } from "lucide-react";
+import { CheckCircle, X, ShoppingBag, HeartHandshake, Loader2 } from "lucide-react";
 
 export default function StorefrontPaymentSuccess() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [donationId, setDonationId] = useState<string | null>(null);
+  const [donationPaying, setDonationPaying] = useState(false);
+  const [donationError, setDonationError] = useState("");
 
   useEffect(() => {
     if (searchParams.get("pago") === "ok") {
       setOrderId(searchParams.get("orden"));
+      setDonationId(searchParams.get("donacionId"));
       const url = new URL(window.location.href);
       url.searchParams.delete("pago");
       url.searchParams.delete("orden");
+      url.searchParams.delete("donacionId");
       router.replace(url.pathname + url.search, { scroll: false });
     }
   }, [searchParams, router]);
 
+  async function payDonation() {
+    if (donationPaying || !donationId) return;
+    setDonationPaying(true);
+    setDonationError("");
+    try {
+      const res = await fetch("/api/canasta/donation-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ donationId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.checkoutUrl) throw new Error(data.error || "No se pudo iniciar el pago de la donación");
+      window.location.href = data.checkoutUrl;
+    } catch (e) {
+      setDonationError(e instanceof Error ? e.message : "No se pudo iniciar el pago de la donación");
+      setDonationPaying(false);
+    }
+  }
+
   if (!orderId) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 px-4">
       <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
         <button
           onClick={() => setOrderId(null)}
@@ -55,6 +79,25 @@ export default function StorefrontPaymentSuccess() {
             ¿Algún problema? Respondé el email de confirmación o contactá al vendedor directamente.
             Tenés <strong>10 días corridos</strong> para solicitar cancelación (Ley 24.240).
           </p>
+
+          {donationId && (
+            <div className="w-full rounded-xl border border-amber-200 bg-amber-50 p-3 text-left">
+              <p className="text-sm font-semibold text-amber-800 flex items-center gap-1.5 mb-1">
+                <HeartHandshake className="h-4 w-4" /> Te falta completar tu donación
+              </p>
+              <p className="text-xs text-amber-700 mb-2">Es un pago aparte, no afecta tu compra recién confirmada.</p>
+              <button
+                onClick={payDonation}
+                disabled={donationPaying}
+                className="w-full rounded-lg bg-amber-500 hover:bg-amber-600 disabled:opacity-60 py-2 text-sm font-semibold text-white transition-colors flex items-center justify-center gap-2"
+              >
+                {donationPaying ? <Loader2 className="h-4 w-4 animate-spin" /> : <HeartHandshake className="h-4 w-4" />}
+                {donationPaying ? "Redirigiendo..." : "Completar donación"}
+              </button>
+              {donationError && <p className="text-xs text-red-600 mt-1.5">{donationError}</p>}
+            </div>
+          )}
+
           <button
             onClick={() => setOrderId(null)}
             className="mt-1 w-full rounded-xl bg-emerald-500 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors"

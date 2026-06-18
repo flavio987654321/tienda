@@ -6,6 +6,7 @@ import { sendOrderConfirmationEmail, sendNewOrderToOwnerEmail } from "@/lib/emai
 import { sendPushToUser } from "@/lib/push";
 import type { ShippingMethod } from "@/types/store-config";
 import { DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
+import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
 
 type CheckoutItem = {
   productId: string;
@@ -31,6 +32,7 @@ type CheckoutBody = {
   };
   shippingMethod: string;
   paymentProvider: string;
+  donationAmount?: number;
 };
 
 function resolveShipping(shippingMethodId: string, methods: ShippingMethod[]): { label: string; cost: number } {
@@ -287,7 +289,55 @@ export async function POST(req: NextRequest) {
       }
 
       return createdOrder;
-    });
+    }, { timeout: 15_000 });
+
+    // Donación opcional a la Canasta Solidaria (toggle del carrito) — un
+    // agregado totalmente aparte de la compra, nunca debe romper ni
+    // revertir la orden ya creada. Va a la cuenta de la plataforma, no a
+    // la de esta tienda, por eso vive fuera de la transacción de la orden.
+    let donationId: string | null = null;
+    const phone = customer.phone?.trim() || "";
+    if (
+      phone &&
+      typeof body.donationAmount === "number" &&
+      Number.isFinite(body.donationAmount) &&
+      body.donationAmount >= MIN_DONATION
+    ) {
+      try {
+        const campaign = await prisma.donationCampaign.findFirst({
+          where: { status: "ACTIVE" },
+          include: { products: { orderBy: { sortOrder: "asc" } } },
+          orderBy: { createdAt: "desc" },
+        });
+        if (campaign) {
+          const goalAmount = calculateGoalAmount(campaign.products, campaign.reservePct);
+          const maxDonation = Math.floor(goalAmount * MAX_DONATION_PCT_OF_GOAL);
+          const donationAmount = Math.min(body.donationAmount, maxDonation);
+
+          const existingConfirmed = await prisma.donation.findFirst({
+            where: { campaignId: campaign.id, status: "CONFIRMED", donorEmail: emailNorm, donorPhone: phone },
+          });
+          if (!existingConfirmed && donationAmount >= MIN_DONATION) {
+            const donation = await prisma.donation.create({
+              data: {
+                campaignId: campaign.id,
+                userId: order.buyerId,
+                amount: donationAmount,
+                status: "PENDING",
+                donorName: customer.name.trim(),
+                donorPhone: phone,
+                donorEmail: emailNorm,
+                donorLocalidad: customer.city?.trim() || "Sin especificar",
+                donorDeliveryPref: "ENVIO",
+              },
+            });
+            donationId = donation.id;
+          }
+        }
+      } catch (e) {
+        console.error("[checkout] error creando donación opcional:", e);
+      }
+    }
 
     // Notificar al dueño de la tienda en tiempo real
     const storeOwner = await prisma.store.findUnique({
@@ -414,7 +464,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ order });
+    return NextResponse.json({ order, donationId });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "No se pudo crear el pedido" },
