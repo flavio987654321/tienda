@@ -55,7 +55,8 @@ export default function StorePushBanner({ storeName, storeId }: { storeName: str
 
   if (!bell) return null;
 
-  const { campaigns, loadingCampaigns, drawerOpen, closeDrawer, needsPushActivation } = bell;
+  const { campaigns, loadingCampaigns, drawerOpen, closeDrawer, needsPushActivation, followState } = bell;
+  const isFollowing = followState === "following";
 
   const showActivationBanner = needsPushActivation && !activationDismissed;
 
@@ -150,6 +151,16 @@ export default function StorePushBanner({ storeName, storeId }: { storeName: str
                   <div className="h-3 bg-gray-100 rounded-full w-1/2" />
                 </div>
               ))}
+            </div>
+          ) : !isFollowing ? (
+            <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 mb-4">
+                <Bell className="h-7 w-7 text-gray-200" />
+              </div>
+              <p className="text-sm font-semibold text-gray-500">Seguí la tienda para ver sus novedades</p>
+              <p className="text-xs text-gray-400 mt-1 leading-relaxed max-w-[200px]">
+                Las novedades son solo para quienes siguen esta tienda.
+              </p>
             </div>
           ) : campaigns.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-14 px-6 text-center">

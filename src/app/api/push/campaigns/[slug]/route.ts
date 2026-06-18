@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isSubscriptionActive } from "@/lib/subscription";
+import { getCurrentUser } from "@/lib/auth-session";
 
 export const runtime = "nodejs";
 
@@ -39,6 +40,17 @@ export async function GET(
     isSubscriptionActive(sub as Parameters<typeof isSubscriptionActive>[0]);
 
   if (!isPremium) return NextResponse.json({ campaigns: [] });
+
+  // El contenido de las novedades es solo para quienes siguen la tienda —
+  // seguir es lo único que controla el acceso, no si el push llegó al dispositivo.
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ campaigns: [] });
+
+  const follow = await prisma.storeFollow.findUnique({
+    where: { userId_storeId: { userId: user.id, storeId: store.id } },
+    select: { id: true },
+  });
+  if (!follow) return NextResponse.json({ campaigns: [] });
 
   const campaigns = await prisma.pushCampaign.findMany({
     where: { storeId: store.id },

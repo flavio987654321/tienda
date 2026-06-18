@@ -564,12 +564,12 @@ export default function ChicParis() {
               <svg width={18} height={18} viewBox="0 0 24 24" fill={favorites.length > 0 ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
             </button>
             <div ref={userDropdownRef} style={{ position: "relative" }}>
-              <button onClick={user && user.role !== "BUYER" ? undefined : () => { setUserDropdownOpen(v => !v); setFavoritesOpen(false); }} style={{ background: "none", border: "none", cursor: user && user.role !== "BUYER" ? "default" : "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", transition: "color 0.3s", opacity: user && user.role !== "BUYER" ? 0.35 : 1 }}>
+              <button onClick={() => { setUserDropdownOpen(v => !v); setFavoritesOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", transition: "color 0.3s" }}>
                 <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </button>
               {userDropdownOpen && (
                 <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 10, minWidth: 180, boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 2000, overflow: "hidden" }}>
-                  {user && user.role === "BUYER" ? (
+                  {user ? (
                     <>
                       <p style={{ padding: "10px 16px 4px", fontSize: 11, color: "#aaa", margin: 0, fontWeight: 600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                         {user.name || user.email.split("@")[0]}

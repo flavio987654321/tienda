@@ -637,12 +637,12 @@ export default function FashionNoir() {
             </button>}
             {/* User icon */}
             <div ref={userDropdownRef} style={{ position:"relative" }}>
-              <button onClick={user && user.role !== "BUYER" ? undefined : () => { setUserDropdownOpen(o => !o); setFavoritesOpen(false); }} style={{ background:"none", border:"none", color:T, cursor: user && user.role !== "BUYER" ? "default" : "pointer", padding:4, display:"flex", alignItems:"center", opacity: user && user.role !== "BUYER" ? 0.35 : 1 }}>
+              <button onClick={() => { setUserDropdownOpen(o => !o); setFavoritesOpen(false); }} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
                 <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </button>
               {userDropdownOpen && (
                 <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#1a1a1a", border:`1px solid rgba(201,168,76,0.2)`, minWidth:190, zIndex:200, boxShadow:"0 8px 32px rgba(0,0,0,0.5)" }}>
-                  {user && user.role === "BUYER" ? (
+                  {user ? (
                     <>
                       <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:"rgba(201,168,76,0.6)", padding:"10px 16px 4px", margin:0, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                         {user.name || user.email.split("@")[0]}

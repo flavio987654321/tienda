@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
+import FavoritesDrawer from "@/components/FavoritesDrawer";
 import {
   CheckCircle, Clock, Loader2, Send, Store, Wallet,
   XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
@@ -1184,6 +1185,7 @@ export default function VendedorasClient() {
 
           {/* Desktop — se oculta en mobile */}
           <div className="hidden sm:flex items-center gap-3">
+            <FavoritesDrawer buttonClassName="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all" />
             {true && user?.id && <NotificationBell userId={user.id} />}
             {mounted && (
               <button
@@ -1268,6 +1270,7 @@ export default function VendedorasClient() {
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">{userName}</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  <FavoritesDrawer buttonClassName="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10" />
                   {true && user?.id && <NotificationBell userId={user.id} />}
                   <button
                     onClick={() => setMobileMenuOpen(false)}

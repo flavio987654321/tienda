@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, Clock, CreditCard, X } from "lucide-react";
 import PaymentModal from "./PaymentModal";
+import { useAuth } from "@/components/AuthProvider";
 
 type Props = {
   status: "TRIAL" | "ACTIVE" | "GRACE" | "EXPIRED" | "CANCELLED";
@@ -17,6 +18,8 @@ type Props = {
 export default function SubscriptionGate({ status, daysLeft, role, tier, plan }: Props) {
   const planKey = role === "OWNER" ? (tier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC") : "AFFILIATE";
   const [payModal, setPayModal] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const { signOut } = useAuth();
   const pathname = usePathname();
   const showBanner = pathname === "/dashboard" || pathname === "/dashboard/mi-plan";
 
@@ -117,9 +120,16 @@ export default function SubscriptionGate({ status, daysLeft, role, tier, plan }:
               Renovar suscripción
             </button>
 
-            <Link href="/" className="block text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            <Link href="/" className="block text-sm text-gray-400 hover:text-gray-600 transition-colors mb-3">
               Volver al inicio
             </Link>
+            <button
+              onClick={() => { if (!signingOut) { setSigningOut(true); signOut("/"); } }}
+              disabled={signingOut}
+              className="text-sm text-red-400 hover:text-red-500 transition-colors disabled:opacity-50"
+            >
+              Cerrar sesión
+            </button>
           </div>
         </div>
 

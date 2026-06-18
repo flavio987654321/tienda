@@ -181,6 +181,17 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
     setSearchOpen(false);
   };
 
+  // Deep link a un producto puntual (ej: ?producto=ID desde favoritos en otro panel)
+  useEffect(() => {
+    if (!products.length) return;
+    const id = new URLSearchParams(window.location.search).get("producto");
+    if (id) {
+      const p = products.find((pr) => pr.id === id);
+      if (p) openModal(p);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products]);
+
   const addToCart = () => {
     if (!modalProduct) return;
     const variantId = resolveVariantId(modalProduct, selectedSize, selectedColor);

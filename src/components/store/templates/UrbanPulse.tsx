@@ -549,12 +549,12 @@ export default function UrbanPulse() {
             {favorites.length > 0 && <span style={{ position:"absolute", top:4, right:4, width:8, height:8, background:ACC, border:`2px solid ${DARK}`, borderRadius:"50%" }} />}
           </button>
           <div style={{ position:"relative" }} ref={userDropdownRef}>
-            <button onClick={user && user.role !== "BUYER" ? undefined : () => { setUserDropdownOpen(o => !o); setFavoritesOpen(false); }} style={{ ...iconBtn, cursor: user && user.role !== "BUYER" ? "default" : "pointer", opacity: user && user.role !== "BUYER" ? 0.35 : 1 }}>
+            <button onClick={() => { setUserDropdownOpen(o => !o); setFavoritesOpen(false); }} style={{ ...iconBtn, cursor:"pointer" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
             {userDropdownOpen && (
               <div className="up-fade" style={{ position:"absolute", top:"calc(100% + 8px)", right:0, background:WHITE, border:`2px solid ${DARK}`, minWidth:190, zIndex:200 }}>
-                {user && user.role === "BUYER" ? (
+                {user ? (
                   <>
                     <p style={{ padding:"8px 16px 4px", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:MID, margin:0, borderBottom:`1px solid ${BG}`, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                       {user.name || user.email.split("@")[0]}

@@ -12,6 +12,7 @@ import {
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 import HelpButton from "@/components/HelpButton";
+import FavoritesDrawer from "@/components/FavoritesDrawer";
 import TourGuide, { TOUR_STORAGE_KEY } from "@/components/TourGuide";
 
 const LEADS_STORE_TYPES = ["AUTOS"];
@@ -396,6 +397,7 @@ export default function DashboardLayout({
         </Link>
 
         <div className="flex items-center gap-1">
+          <FavoritesDrawer buttonClassName="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 transition-colors text-gray-500" />
           <HelpButton onStartTour={() => setShowTour(true)} />
           {userId && <NotificationBell userId={userId} />}
         </div>
@@ -494,6 +496,7 @@ export default function DashboardLayout({
       <main className={`lg:ml-14 flex-1 flex flex-col bg-gray-50 pt-14 lg:pt-0 overflow-x-hidden ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
         {!hideHelp && !pathname.startsWith("/dashboard/configuracion") && (
           <div className="hidden lg:flex justify-end items-center gap-1 px-4 pt-3 pb-0 shrink-0">
+            <FavoritesDrawer buttonClassName="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 transition-colors text-gray-500" />
             <HelpButton onStartTour={() => setShowTour(true)} />
             {userId && <NotificationBell userId={userId} />}
           </div>
