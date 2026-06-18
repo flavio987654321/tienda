@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HeartHandshake, ShieldCheck } from "lucide-react";
+import { ArrowLeft, HeartHandshake, ShieldCheck } from "lucide-react";
 
 const PUNTOS = [
   "Es un aporte voluntario. No es el pago de un producto ni de un servicio — por eso no aplica el derecho de arrepentimiento de la Ley 24.240 ni las garantías legales de productos.",
@@ -17,8 +17,14 @@ export default function TerminosCanastaPage() {
   return (
     <div className="min-h-screen bg-[#FFFBF5] text-gray-900">
       <div className="border-b border-amber-900/10 px-6 py-5 grid grid-cols-3 items-center sticky top-0 bg-[#FFFBF5]/90 backdrop-blur-xl z-10">
-        <Link href="/canasta" className="text-gray-500 hover:text-gray-900 text-sm transition-colors justify-self-start">← Canasta</Link>
-        <span className="text-sm font-bold text-gray-900 justify-self-center">TiendaApps</span>
+        <Link
+          href="/canasta"
+          aria-label="Volver a la canasta"
+          className="w-9 h-9 rounded-full border border-amber-900/10 bg-white flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-amber-50 transition-colors justify-self-start"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+        <Link href="/" className="text-sm font-bold text-gray-900 justify-self-center hover:text-amber-700 transition-colors">TiendaApps</Link>
         <div className="flex items-center gap-2 text-amber-700 justify-self-end">
           <HeartHandshake className="h-5 w-5" />
           <span className="text-sm font-semibold hidden sm:inline">Términos de la donación</span>

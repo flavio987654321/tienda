@@ -574,7 +574,7 @@ export default function UrbanPulse() {
                       style={{ display:"block", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK, borderBottom:`1px solid ${BG}`, cursor: isPreview ? "default" : "pointer" }}
                       onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background = ACC; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>Iniciar sesión</a>
-                    <a href={isPreview ? undefined : `/registro?redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
+                    <a href={isPreview ? undefined : `/registro?plan=buyer&redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
                       style={{ display:"block", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK, cursor: isPreview ? "default" : "pointer" }}
                       onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background = ACC; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>Registrarse</a>
@@ -853,9 +853,9 @@ export default function UrbanPulse() {
         </div>
         <div style={{ textAlign:"center", marginTop:48 }}>
           <a href={`/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}`}
-            style={{ display:"inline-block", background:DARK, color:ACC, border:`3px solid ${DARK}`, padding:"16px 52px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s" }}
-            onMouseEnter={e=>{ e.currentTarget.style.background=ACC; e.currentTarget.style.color=DARK; e.currentTarget.style.borderColor=DARK; }}
-            onMouseLeave={e=>{ e.currentTarget.style.background=DARK; e.currentTarget.style.color=ACC; e.currentTarget.style.borderColor=DARK; }}>
+            style={{ display:"inline-block", background:productosTextUp, color:productosBgUp, border:`3px solid ${productosTextUp}`, padding:"16px 52px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s" }}
+            onMouseEnter={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=productosTextUp; }}
+            onMouseLeave={e=>{ e.currentTarget.style.background=productosTextUp; e.currentTarget.style.color=productosBgUp; }}>
             Ver colección completa
           </a>
         </div>

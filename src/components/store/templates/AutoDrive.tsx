@@ -349,7 +349,7 @@ export default function AutoDrive() {
                       style={{ display:"block", padding:"12px 16px", fontSize:13, color:navText, textDecoration:"none", borderBottom:`1px solid ${navBorderColor}`, cursor: isPreview ? "default" : "pointer" }}
                       onMouseEnter={e => { if (!isPreview) e.currentTarget.style.opacity="0.75"; }}
                       onMouseLeave={e => (e.currentTarget.style.opacity="1")}>Iniciar sesión</a>
-                    <a href={isPreview ? undefined : `/registro?redirect=/tienda/${config?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
+                    <a href={isPreview ? undefined : `/registro?plan=buyer&redirect=/tienda/${config?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
                       style={{ display:"block", padding:"12px 16px", fontSize:13, color:navText, textDecoration:"none", cursor: isPreview ? "default" : "pointer" }}
                       onMouseEnter={e => { if (!isPreview) e.currentTarget.style.opacity="0.75"; }}
                       onMouseLeave={e => (e.currentTarget.style.opacity="1")}>Registrarse</a>

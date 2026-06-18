@@ -16,6 +16,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();
   const registered = searchParams.get("registered");
+  const redirectTo = searchParams.get("redirect");
   const [inPwa, setInPwa] = useState(false);
 
   useEffect(() => { setInPwa(isPwa()); }, []);
@@ -48,7 +49,8 @@ function LoginForm() {
     } else {
       setRedirecting(true);
       router.refresh();
-      router.push("/panel");
+      const safeRedirect = redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : null;
+      router.push(safeRedirect || "/panel");
     }
   }
 

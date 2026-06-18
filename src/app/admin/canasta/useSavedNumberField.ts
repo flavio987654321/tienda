@@ -49,3 +49,54 @@ export function useSavedNumberField(initialValue: number, save: (value: number) 
     },
   };
 }
+
+export function useSavedTextField(initialValue: string, save: (value: string) => Promise<void>) {
+  const [text, setText] = useState(initialValue);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const lastSaved = useRef(initialValue);
+  const committing = useRef(false);
+
+  async function commit() {
+    if (committing.current) return;
+    const value = text.trim();
+    if (!value) {
+      setError("No puede estar vacío");
+      return;
+    }
+    if (value === lastSaved.current) return;
+
+    committing.current = true;
+    setSaving(true);
+    setError(null);
+    try {
+      await save(value);
+      lastSaved.current = value;
+      setText(value);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo guardar");
+    } finally {
+      setSaving(false);
+      committing.current = false;
+    }
+  }
+
+  return {
+    text,
+    setText,
+    saving,
+    error,
+    saved,
+    inputProps: {
+      value: text,
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => setText(e.target.value),
+      onBlur: commit,
+      onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+      },
+    },
+  };
+}

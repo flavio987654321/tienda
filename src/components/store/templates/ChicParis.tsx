@@ -589,7 +589,7 @@ export default function ChicParis() {
                         style={{ display: "block", padding: "12px 16px", fontSize: 13, color: "#333", textDecoration: "none", borderBottom: "1px solid #f5f5f5", cursor: isPreview ? "default" : "pointer" }}
                         onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background = "#fafafa"; }}
                         onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>Iniciar sesión</a>
-                      <a href={isPreview ? undefined : `/registro?redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
+                      <a href={isPreview ? undefined : `/registro?plan=buyer&redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
                         style={{ display: "block", padding: "12px 16px", fontSize: 13, color: "#333", textDecoration: "none", cursor: isPreview ? "default" : "pointer" }}
                         onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background = "#fafafa"; }}
                         onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>Registrarse</a>
@@ -848,7 +848,7 @@ export default function ChicParis() {
               </div>
               <div style={{ textAlign: "center", marginTop: 48 }}>
                 <a href={`/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}`}
-                  style={{ display: "inline-block", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", padding: "14px 44px", fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", textDecoration: "none", transition: "opacity 0.2s" }}
+                  style={{ display: "inline-block", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: `1px solid ${prodText}`, padding: "14px 44px", fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", textDecoration: "none", transition: "opacity 0.2s" }}
                   onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
                   onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
                   Ver colección completa

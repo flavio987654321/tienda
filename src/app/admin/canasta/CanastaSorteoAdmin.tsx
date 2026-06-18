@@ -30,6 +30,7 @@ type Donor = {
 type Campaign = {
   id: string;
   name: string;
+  status: string;
   drawStatus: string;
   scheduledDrawAt: string | Date | null;
 } | null;
@@ -121,7 +122,8 @@ function ScheduleDrawForm({ campaign }: { campaign: Campaign }) {
     campaign?.scheduledDrawAt ? new Date(campaign.scheduledDrawAt).toLocaleString("es-AR", { dateStyle: "long", timeStyle: "short" }) : null
   );
 
-  const locked = campaign?.drawStatus === "LIVE" || campaign?.drawStatus === "FINISHED";
+  const notCompleted = campaign?.status !== "COMPLETED";
+  const locked = campaign?.drawStatus === "LIVE" || campaign?.drawStatus === "FINISHED" || notCompleted;
 
   async function save() {
     if (!campaign || !value || saving) return;
@@ -172,6 +174,9 @@ function ScheduleDrawForm({ campaign }: { campaign: Campaign }) {
         </button>
       </div>
       {savedLabel && !locked && <p className="text-xs text-green-400 mt-2">Programado para: {savedLabel}</p>}
+      {notCompleted && campaign.drawStatus === "SCHEDULED" && (
+        <p className="text-xs text-gray-500 mt-2">Esperando que se complete la meta de la canasta para poder programar el sorteo.</p>
+      )}
       {campaign.drawStatus === "LIVE" && <p className="text-xs text-gray-500 mt-2">El sorteo ya arrancó, no se puede reprogramar desde aquí.</p>}
       {campaign.drawStatus === "FINISHED" && <p className="text-xs text-gray-500 mt-2">Esta campaña ya terminó (el ganador confirmó). Para la próxima canasta se crea una campaña nueva.</p>}
       {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
@@ -569,8 +574,9 @@ export default function CanastaSorteoAdmin({
   const hasNotified = notifiedCount > 0;
   const isLive = campaign.drawStatus === "LIVE";
   const isFinished = campaign.drawStatus === "FINISHED";
+  const isCompleted = campaign.status === "COMPLETED";
 
-  const step1: StepStatus = hasDate ? "done" : "current";
+  const step1: StepStatus = hasDate ? "done" : isCompleted ? "current" : "pending";
   const step2: StepStatus = !hasDate ? "pending" : hasNotified ? "done" : "current";
   const step3: StepStatus = !hasNotified ? "pending" : isLive || isFinished ? "done" : "current";
   const step4: StepStatus = !(isLive || isFinished) ? "pending" : isFinished ? "done" : "current";

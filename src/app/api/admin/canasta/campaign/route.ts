@@ -33,6 +33,18 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  // Se crean 14 productos "placeholder" para que el admin no tenga que
+  // apretar "Agregar alimento" uno por uno — solo edita nombre, precio y foto.
+  const PLACEHOLDER_COUNT = 14;
+  await prisma.donationProduct.createMany({
+    data: Array.from({ length: PLACEHOLDER_COUNT }, (_, i) => ({
+      campaignId: campaign.id,
+      name: `Producto ${i + 1}`,
+      targetPrice: 100,
+      sortOrder: i,
+    })),
+  });
+
   return NextResponse.json(campaign);
 }
 
@@ -65,9 +77,12 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ error: "Fecha de sorteo inválida (tiene que ser futura)" }, { status: 400 });
       }
       // Solo se puede programar/editar la fecha mientras el sorteo no haya arrancado.
-      const campaign = await prisma.donationCampaign.findUnique({ where: { id }, select: { drawStatus: true } });
+      const campaign = await prisma.donationCampaign.findUnique({ where: { id }, select: { status: true, drawStatus: true } });
       if (campaign?.drawStatus === "LIVE" || campaign?.drawStatus === "FINISHED") {
         return NextResponse.json({ error: "El sorteo ya arrancó, no se puede reprogramar" }, { status: 409 });
+      }
+      if (campaign?.status !== "COMPLETED") {
+        return NextResponse.json({ error: "Todavía no se completó la meta de la canasta" }, { status: 409 });
       }
       data.scheduledDrawAt = date;
       // Nueva fecha → si ya se había mandado el recordatorio de "ya es la

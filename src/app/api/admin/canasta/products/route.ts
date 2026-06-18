@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const { campaignId, name, targetPrice } = await req.json();
+  const { campaignId, name, targetPrice, image } = await req.json();
   if (typeof campaignId !== "string" || !campaignId) {
     return NextResponse.json({ error: "campaignId requerido" }, { status: 400 });
   }
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
       campaignId,
       name: name.trim(),
       targetPrice,
+      image: typeof image === "string" && image ? image : null,
       sortOrder: (last?.sortOrder ?? -1) + 1,
     },
   });

@@ -92,6 +92,17 @@ const PASOS = [
   },
 ];
 
+// Se muestran solo si la campaña todavía no tiene productos cargados desde
+// el admin, para que la canasta nunca se vea vacía/rota mientras se cargan
+// las fotos reales. En cuanto haya un producto real, estos desaparecen.
+const DEMO_PRODUCTS: Product[] = Array.from({ length: 8 }, (_, i) => ({
+  id: `demo-${i}`,
+  name: "Próximamente",
+  image: null,
+  targetPrice: 0,
+  fundedPct: 0,
+}));
+
 const COMPROMISOS = [
   "Cada peso recaudado se destina exclusivamente a la compra de los alimentos de la canasta.",
   "El 10% de reserva para envío y gastos operativos se informa de forma pública, sin costos ocultos.",
@@ -159,7 +170,8 @@ function CanastaContent() {
     );
   }
 
-  const { campaign, products = [], totalRaised = 0, progressPct = 0, donorsCount = 0 } = data;
+  const { campaign, products: loadedProducts = [], totalRaised = 0, progressPct = 0, donorsCount = 0 } = data;
+  const products = loadedProducts.length > 0 ? loadedProducts : DEMO_PRODUCTS;
 
   return (
     <div className="min-h-screen bg-[#FFFBF5] text-gray-900 overflow-x-hidden">
@@ -328,7 +340,7 @@ function CanastaContent() {
                       </div>
                     )}
                     <span className="text-[11px] text-gray-700 leading-tight">{p.name}</span>
-                    <span className="text-[10px] text-gray-400">{formatMoney(p.targetPrice)}</span>
+                    <span className="text-[10px] text-gray-400">{p.targetPrice > 0 ? formatMoney(p.targetPrice) : "—"}</span>
                     {full && (
                       <span className="absolute -top-1.5 -right-1.5 bg-green-600 text-white rounded-full text-[10px] w-5 h-5 flex items-center justify-center font-bold">
                         ✓

@@ -664,7 +664,7 @@ export default function FashionNoir() {
                         style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", cursor: isPreview ? "default" : "pointer", transition:"background 0.2s" }}
                         onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(201,168,76,0.08)"; }}
                         onMouseLeave={e => (e.currentTarget.style.background="none")}>Iniciar sesión</a>
-                      <a href={isPreview ? undefined : `/registro?redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
+                      <a href={isPreview ? undefined : `/registro?plan=buyer&redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
                         style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", cursor: isPreview ? "default" : "pointer", transition:"background 0.2s" }}
                         onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(201,168,76,0.08)"; }}
                         onMouseLeave={e => (e.currentTarget.style.background="none")}>Registrarse</a>
@@ -731,6 +731,10 @@ export default function FashionNoir() {
               {label}
             </button>
           ))}
+          <button onClick={() => { setFavoritesOpen(true); setMobileMenuOpen(false); setUserDropdownOpen(false); }}
+            style={{ display:"block", width:"100%", background:"none", border:"none", color:"rgba(240,235,227,0.6)", padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
+            Favoritos {favorites.length > 0 && `(${favorites.length})`}
+          </button>
         </div>
       )}
 
@@ -914,7 +918,7 @@ export default function FashionNoir() {
           </p>
           <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
             <a href={`/tienda/${storeConfig?.slug ?? ""}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}`}
-              style={{ background:G, color:BG, padding:"14px 36px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:700, cursor:"pointer", textDecoration:"none", display:"inline-block", transition:"opacity 0.2s" }}
+              style={{ background:G, color:BG, border:`1px solid ${productosText}`, padding:"14px 36px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:700, cursor:"pointer", textDecoration:"none", display:"inline-block", transition:"opacity 0.2s" }}
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity="0.85"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity="1"; }}>
               Ver toda la colección →

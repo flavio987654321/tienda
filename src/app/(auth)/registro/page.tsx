@@ -153,6 +153,8 @@ function RegistroContent() {
     rawPlan === "seller" ? "seller" :
     null;
   const billingParam = searchParams.get("billing");
+  const rawRedirect = searchParams.get("redirect");
+  const redirectParam = rawRedirect && rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : null;
 
   const rawTier = searchParams.get("tier");
   const tierParam: "BASIC" | "PREMIUM" = rawTier === "premium" || rawTier === "PREMIUM" ? "PREMIUM" : "BASIC";
@@ -237,7 +239,7 @@ function RegistroContent() {
     }
     setRedirecting(true);
     if (accountType === "buyer") {
-      router.push("/login?registered=buyer");
+      router.push(`/login?registered=buyer${redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ""}`);
     } else if (accountType === "seller") {
       router.push(`/precios?registered=true&role=affiliate&billing=${billing.toLowerCase()}`);
     } else {

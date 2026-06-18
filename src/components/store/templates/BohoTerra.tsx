@@ -554,7 +554,7 @@ export default function BohoTerra() {
                           style={{ display:"block", padding:"12px 16px", fontSize:13, color:T, textDecoration:"none", borderBottom:`1px solid rgba(44,34,24,0.06)`, cursor: isPreview ? "default" : "pointer" }}
                           onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(44,34,24,0.04)"; }}
                           onMouseLeave={e => (e.currentTarget.style.background="transparent")}>Iniciar sesión</a>
-                        <a href={isPreview ? undefined : `/registro?redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
+                        <a href={isPreview ? undefined : `/registro?plan=buyer&redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
                           style={{ display:"block", padding:"12px 16px", fontSize:13, color:T, textDecoration:"none", cursor: isPreview ? "default" : "pointer" }}
                           onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(44,34,24,0.04)"; }}
                           onMouseLeave={e => (e.currentTarget.style.background="transparent")}>Registrarse</a>
@@ -622,9 +622,33 @@ export default function BohoTerra() {
             Nuestra Historia
           </button>
           <button onClick={() => { setFavoritesOpen(true); setMobileMenuOpen(false); setUserDropdownOpen(false); }}
-            style={{ display:"block", width:"100%", background:"none", border:"none", color:MID, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+            style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(44,34,24,0.06)`, color:MID, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
             Favoritos {favorites.length > 0 && `(${favorites.length})`}
           </button>
+          {/* Cuenta — mismo contenido que el dropdown de escritorio, adaptado a lista */}
+          {user && user.role === "BUYER" ? (
+            <>
+              <a href="/mi-cuenta" onClick={() => setMobileMenuOpen(false)}
+                style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"16px 24px", fontSize:13, textAlign:"left", letterSpacing:2, textTransform:"uppercase", textDecoration:"none" }}>
+                Mi cuenta
+              </a>
+              <button onClick={() => { if (isPreview) return; setMobileMenuOpen(false); signOut("/"); }}
+                style={{ display:"block", width:"100%", background:"none", border:"none", color:"#dc2626", padding:"16px 24px", fontSize:13, textAlign:"left", cursor: isPreview ? "default" : "pointer", letterSpacing:2, textTransform:"uppercase", opacity: isPreview ? 0.45 : 1 }}>
+                Cerrar sesión
+              </button>
+            </>
+          ) : !user ? (
+            <>
+              <a href={isPreview ? undefined : `/login?redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setMobileMenuOpen(false)}
+                style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"16px 24px", fontSize:13, textAlign:"left", letterSpacing:2, textTransform:"uppercase", textDecoration:"none", cursor: isPreview ? "default" : "pointer" }}>
+                Iniciar sesión
+              </a>
+              <a href={isPreview ? undefined : `/registro?plan=buyer&redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setMobileMenuOpen(false)}
+                style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"16px 24px", fontSize:13, textAlign:"left", letterSpacing:2, textTransform:"uppercase", textDecoration:"none", cursor: isPreview ? "default" : "pointer" }}>
+                Registrarse
+              </a>
+            </>
+          ) : null}
         </div>
       )}
 
@@ -779,9 +803,9 @@ export default function BohoTerra() {
         {/* Ver colección completa */}
         <div style={{ textAlign:"center", marginTop:48 }}>
           <a href={`/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}`}
-            style={{ display:"inline-block", border:`1px solid ${T}`, color:T, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s", fontFamily:"Georgia, serif", fontStyle:"italic" }}
-            onMouseEnter={e=>{ e.currentTarget.style.background=T; e.currentTarget.style.color=coleccionBg; }}
-            onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=T; }}>
+            style={{ display:"inline-block", border:`1px solid ${coleccionText}`, color:coleccionText, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s", fontFamily:"Georgia, serif", fontStyle:"italic" }}
+            onMouseEnter={e=>{ e.currentTarget.style.background=coleccionText; e.currentTarget.style.color=coleccionBg; }}
+            onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=coleccionText; }}>
             Ver colección completa
           </a>
         </div>
