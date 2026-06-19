@@ -1,20 +1,15 @@
 "use client";
-
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Megaphone, X } from "lucide-react";
+import { useState, useEffect } from "react";
 
 type Promotion = { id: string; imageUrl: string; link: string | null };
 
-const AUTO_ROTATE_MS = 5000;
-
+// Mismo patrón que el flyer de las tiendas (FlyerPopup): cartel flotante con
+// fondo oscuro, no una franja fija en la página.
 export default function PromotionsCarousel() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [visible, setVisible] = useState(false);
   const [index, setIndex] = useState(0);
-  const [dir, setDir] = useState<1 | -1>(1);
-  // Mismo criterio que el flyer de las tiendas: se puede cerrar con la X y
-  // listo, no insiste — vuelve a aparecer en la próxima visita/recarga.
-  const [closed, setClosed] = useState(false);
+  const [dir, setDir] = useState<"next" | "prev">("next");
 
   useEffect(() => {
     fetch("/api/promociones")
@@ -23,108 +18,162 @@ export default function PromotionsCarousel() {
       .catch(() => {});
   }, []);
 
-  const total = promotions.length;
-
   useEffect(() => {
-    if (total <= 1) return;
-    const t = setInterval(() => {
-      setDir(1);
-      setIndex((i) => (i + 1) % total);
-    }, AUTO_ROTATE_MS);
-    return () => clearInterval(t);
-  }, [total]);
+    if (promotions.length === 0) return;
+    const isPwa =
+      new URLSearchParams(window.location.search).get("source") === "pwa" ||
+      window.matchMedia("(display-mode: standalone)").matches;
+    const t = setTimeout(() => setVisible(true), isPwa ? 1200 : 400);
+    return () => clearTimeout(t);
+  }, [promotions.length]);
 
+  if (!visible) return null;
+
+  const total = promotions.length;
   if (total === 0) return null;
 
-  function go(newDir: 1 | -1) {
-    setDir(newDir);
-    setIndex((i) => (i + newDir + total) % total);
-  }
+  function prev() { setDir("prev"); setIndex((i) => (i - 1 + total) % total); }
+  function next() { setDir("next"); setIndex((i) => (i + 1) % total); }
 
   const current = promotions[index];
 
-  const Slide = (
-    <motion.div
-      key={current.id}
-      initial={{ opacity: 0, x: dir * 40 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -dir * 40 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="absolute inset-0"
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={current.imageUrl} alt="Promoción" className="w-full h-full object-cover" />
-    </motion.div>
-  );
-
   return (
-    <AnimatePresence>
-      {!closed && (
-        <motion.section
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0 }}
-          className="px-6 py-10 bg-gray-950 overflow-hidden"
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 99999,
+        background: "rgba(0,0,0,0.78)", backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "16px",
+        animation: "flyerFadeIn 0.35s ease",
+      }}
+      onClick={() => setVisible(false)}
+    >
+      <style>{`
+        @keyframes flyerFadeIn {
+          from { opacity: 0 }
+          to   { opacity: 1 }
+        }
+        @keyframes flyerSlideUp {
+          from { opacity: 0; transform: translateY(28px) scale(0.97) }
+          to   { opacity: 1; transform: translateY(0)   scale(1)    }
+        }
+        @keyframes flyerImgNext {
+          from { opacity: 0; transform: translateX(36px) scale(0.97) }
+          to   { opacity: 1; transform: translateX(0)    scale(1)    }
+        }
+        @keyframes flyerImgPrev {
+          from { opacity: 0; transform: translateX(-36px) scale(0.97) }
+          to   { opacity: 1; transform: translateX(0)     scale(1)    }
+        }
+      `}</style>
+
+      <div
+        style={{
+          position: "relative", width: "100%", maxWidth: 340,
+          animation: "flyerSlideUp 0.4s cubic-bezier(0.22,1,0.36,1)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Botón cerrar */}
+        <button
+          onClick={() => setVisible(false)}
+          aria-label="Cerrar promociones"
+          style={{
+            position: "absolute", top: -14, right: -6, zIndex: 2,
+            width: 36, height: 36, borderRadius: "50%",
+            background: "rgba(15,23,42,0.85)",
+            border: "1.5px solid rgba(255,255,255,0.18)",
+            color: "white", fontSize: 22, lineHeight: 1,
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+          }}
         >
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center gap-2 mb-4 justify-center text-amber-400">
-              <Megaphone className="h-4 w-4" />
-              <span className="text-xs font-semibold uppercase tracking-widest">Promociones</span>
-            </div>
+          ×
+        </button>
 
-            <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-black/40 aspect-[16/9] sm:aspect-[21/9] bg-gray-900">
-              {current.link ? (
-                <a href={current.link} target="_blank" rel="noopener noreferrer" className="absolute inset-0 z-10 cursor-pointer" aria-label="Ver promoción" />
-              ) : null}
-              <AnimatePresence mode="popLayout">
-                {Slide}
-              </AnimatePresence>
+        {/* Imagen con animación direccional — clickeable si tiene link */}
+        <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "0 32px 80px rgba(0,0,0,0.5)" }}>
+          {current.link ? (
+            <a href={current.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                key={index}
+                src={current.imageUrl}
+                alt={`Promoción ${index + 1}`}
+                style={{
+                  width: "100%", display: "block", cursor: "pointer",
+                  objectFit: "cover", maxHeight: "80vh",
+                  animation: `${dir === "next" ? "flyerImgNext" : "flyerImgPrev"} 0.35s cubic-bezier(0.22,1,0.36,1)`,
+                }}
+              />
+            </a>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={index}
+              src={current.imageUrl}
+              alt={`Promoción ${index + 1}`}
+              style={{
+                width: "100%", display: "block",
+                objectFit: "cover", maxHeight: "80vh",
+                animation: `${dir === "next" ? "flyerImgNext" : "flyerImgPrev"} 0.35s cubic-bezier(0.22,1,0.36,1)`,
+              }}
+            />
+          )}
+        </div>
 
+        {/* Flechas */}
+        {total > 1 && (
+          <>
+            <button onClick={prev} aria-label="Anterior"
+              style={{
+                position: "absolute", left: -14, top: "50%", transform: "translateY(-50%)",
+                width: 38, height: 38, borderRadius: "50%",
+                background: "rgba(15,23,42,0.75)", border: "1.5px solid rgba(255,255,255,0.18)",
+                color: "white", fontSize: 20, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
+              }}
+            >‹</button>
+            <button onClick={next} aria-label="Siguiente"
+              style={{
+                position: "absolute", right: -14, top: "50%", transform: "translateY(-50%)",
+                width: 38, height: 38, borderRadius: "50%",
+                background: "rgba(15,23,42,0.75)", border: "1.5px solid rgba(255,255,255,0.18)",
+                color: "white", fontSize: 20, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
+              }}
+            >›</button>
+          </>
+        )}
+
+        {/* Dots */}
+        {total > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 14 }}>
+            {promotions.map((p, i) => (
               <button
-                type="button"
-                onClick={() => setClosed(true)}
-                aria-label="Cerrar promociones"
-                className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 border border-white/15 text-white flex items-center justify-center backdrop-blur-sm transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-
-              {total > 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => go(-1)}
-                    aria-label="Anterior"
-                    className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 border border-white/15 text-white flex items-center justify-center backdrop-blur-sm transition-colors"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => go(1)}
-                    aria-label="Siguiente"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 border border-white/15 text-white flex items-center justify-center backdrop-blur-sm transition-colors"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5">
-                    {promotions.map((p, i) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => { setDir(i > index ? 1 : -1); setIndex(i); }}
-                        aria-label={`Ir a la promoción ${i + 1}`}
-                        className="h-1.5 rounded-full transition-all"
-                        style={{ width: i === index ? 20 : 7, background: i === index ? "#fff" : "rgba(255,255,255,0.35)" }}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+                key={p.id}
+                onClick={() => { setDir(i > index ? "next" : "prev"); setIndex(i); }}
+                aria-label={`Ir a la promoción ${i + 1}`}
+                style={{
+                  width: i === index ? 22 : 8, height: 8,
+                  borderRadius: 4, border: "none", padding: 0, cursor: "pointer",
+                  background: i === index ? "white" : "rgba(255,255,255,0.3)",
+                  transition: "width 0.25s ease, background 0.2s",
+                }}
+              />
+            ))}
           </div>
-        </motion.section>
-      )}
-    </AnimatePresence>
+        )}
+
+        <p style={{
+          textAlign: "center", color: "rgba(255,255,255,0.35)",
+          fontSize: 11, marginTop: 10, userSelect: "none",
+        }}>
+          Tocá afuera para cerrar
+        </p>
+      </div>
+    </div>
   );
 }

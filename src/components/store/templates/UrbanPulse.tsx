@@ -12,6 +12,7 @@ import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
+import { HandHeart } from "lucide-react";
 
 type Product = StorefrontProduct;
 
@@ -221,7 +222,7 @@ export default function UrbanPulse() {
     fmt, fmtEnvioPrice, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
     pagoOptions, acceptedTerms, setAcceptedTerms,
-    donationEnabled, setDonationEnabled, donationAmount, setDonationAmount,
+    donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
   } = useCartLogic(storefront);
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
@@ -1571,10 +1572,11 @@ export default function UrbanPulse() {
                     <span style={{ fontSize:22, fontWeight:900 }}>{fmt(orderTotal)}</span>
                   </div>
 
-                  {/* donación opcional a la Canasta Solidaria — pago aparte, no se suma al total */}
+                  {/* donación opcional a la Canasta Solidaria — pago aparte, no se suma al total. Solo se muestra si hay una campaña ACTIVE recibiendo donaciones. */}
+                  {canastaDisponible && (
                   <div style={{ marginBottom:14, paddingTop:10, borderTop:`1px solid #ddd` }}>
                     <label style={{ display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
-                      <span style={{ fontSize:13 }}>❤️ ¿Donar?</span>
+                      <span style={{ fontSize:13, display:"flex", alignItems:"center", gap:6 }}><HandHeart size={16} style={{ color:ACC }} /> ¿Donar?</span>
                       <input type="checkbox" checked={donationEnabled} onChange={e => setDonationEnabled(e.target.checked)} style={{ accentColor:ACC }} />
                     </label>
                     <p style={{ fontSize:10, color:MID, marginTop:6, lineHeight:1.5 }}>
@@ -1594,6 +1596,7 @@ export default function UrbanPulse() {
                       </div>
                     )}
                   </div>
+                  )}
 
                   {checkoutError && <p style={{ fontSize:12, color:RED, marginBottom:10 }}>{checkoutError}</p>}
                   {/* seguridad */}

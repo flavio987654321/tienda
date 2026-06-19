@@ -48,11 +48,23 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
   const [acceptedTerms,  setAcceptedTerms]  = useState(false);
   const [donationEnabled, setDonationEnabled] = useState(false);
   const [donationAmount,  setDonationAmount]  = useState(1000);
+  // El toggle de "¿Donar?" del checkout solo tiene sentido si hay una
+  // canasta ACTIVE recibiendo donaciones — si no hay ninguna, o ya se
+  // completó, el backend de /api/checkout ignora el aporte en silencio, así
+  // que ocultamos el toggle entero para no dejar donar "al aire".
+  const [canastaDisponible, setCanastaDisponible] = useState(false);
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const { status } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    fetch("/api/canasta/campaign")
+      .then((r) => r.json())
+      .then((d) => setCanastaDisponible(d?.campaign?.status === "ACTIVE"))
+      .catch(() => {});
+  }, []);
 
   // Restaurar carrito y datos del comprador desde localStorage
   useEffect(() => {
@@ -356,7 +368,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
     toastMsg,
     contactStatus, setContactStatus, contactForm, setContactForm,
     acceptedTerms, setAcceptedTerms,
-    donationEnabled, setDonationEnabled, donationAmount, setDonationAmount,
+    donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
     // Derived
     cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     searchResults, favoriteProducts,

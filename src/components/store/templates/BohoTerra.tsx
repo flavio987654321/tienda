@@ -12,6 +12,7 @@ import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
+import { HandHeart } from "lucide-react";
 
 const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
@@ -145,7 +146,7 @@ export default function BohoTerra() {
     fmt, fmtEnvioPrice, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
     pagoOptions, acceptedTerms, setAcceptedTerms,
-    donationEnabled, setDonationEnabled, donationAmount, setDonationAmount,
+    donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
   } = useCartLogic(storefront);
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
@@ -1419,10 +1420,11 @@ export default function BohoTerra() {
                       <span style={{ fontSize:20, fontWeight:800, color:A }}>{fmt(orderTotal)}</span>
                     </div>
 
-                    {/* donación opcional a la Canasta Solidaria — pago aparte, no se suma al total */}
+                    {/* donación opcional a la Canasta Solidaria — pago aparte, no se suma al total. Solo se muestra si hay una campaña ACTIVE recibiendo donaciones. */}
+                    {canastaDisponible && (
                     <div style={{ marginTop:18, paddingTop:14, borderTop:`1px solid rgba(44,34,24,0.07)` }}>
                       <label style={{ display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
-                        <span style={{ fontSize:13, color:T }}>❤️ ¿Donar?</span>
+                        <span style={{ fontSize:13, color:T, display:"flex", alignItems:"center", gap:6 }}><HandHeart size={16} style={{ color:A }} /> ¿Donar?</span>
                         <input type="checkbox" checked={donationEnabled} onChange={e => setDonationEnabled(e.target.checked)} style={{ accentColor:A }} />
                       </label>
                       <p style={{ fontSize:10, color:MID, marginTop:6, lineHeight:1.5 }}>
@@ -1442,6 +1444,7 @@ export default function BohoTerra() {
                         </div>
                       )}
                     </div>
+                    )}
 
                     {checkoutError && <p style={{ fontSize:12, color:"#dc2626", marginTop:10 }}>{checkoutError}</p>}
                   </div>
