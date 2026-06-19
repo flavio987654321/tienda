@@ -53,7 +53,10 @@ export async function GET(
   if (!follow) return NextResponse.json({ campaigns: [] });
 
   const campaigns = await prisma.pushCampaign.findMany({
-    where: { storeId: store.id },
+    where: {
+      storeId: store.id,
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+    },
     orderBy: { createdAt: "desc" },
     take: 10,
     select: { id: true, title: true, body: true, createdAt: true },

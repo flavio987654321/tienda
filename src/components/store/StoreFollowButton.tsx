@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ThumbsUp, ThumbsDown, Loader2, X } from "lucide-react";
 import { usePushBell } from "@/contexts/PushBellContext";
 
@@ -12,19 +12,57 @@ interface Props {
   size?: number;
 }
 
+const HINT_SHOWN_KEY = (slug: string) => `push_activate_hint_${slug}`;
+const HINT_WIDTH = 220;
+const VIEWPORT_MARGIN = 12;
+
 export default function StoreFollowButton({ storeSlug, color = "currentColor", size = 20 }: Props) {
   const bell = usePushBell();
   const [alert, setAlert] = useState<AlertType>(null);
+  const [showHint, setShowHint] = useState(false);
+  const [hintPos, setHintPos] = useState({ top: 0, left: 0, arrowLeft: HINT_WIDTH - 20 });
   const pendingRef = useRef(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const needsPushActivation = bell?.needsPushActivation ?? false;
+
+  // Globo de aviso: solo la primera vez que abre la app instalada (PWA) en
+  // este dispositivo y todavía no activó las notificaciones acá. Posición
+  // calculada en base al botón real para no salirse de la pantalla en mobile.
+  useEffect(() => {
+    if (!needsPushActivation) return;
+    const isStandalone =
+      window.matchMedia?.("(display-mode: standalone)").matches ||
+      (navigator as unknown as { standalone?: boolean }).standalone === true;
+    if (!isStandalone) return;
+    if (localStorage.getItem(HINT_SHOWN_KEY(storeSlug))) return;
+    if (!wrapRef.current) return;
+
+    const rect = wrapRef.current.getBoundingClientRect();
+    const idealLeft = rect.right - HINT_WIDTH;
+    const left = Math.min(
+      Math.max(idealLeft, VIEWPORT_MARGIN),
+      window.innerWidth - HINT_WIDTH - VIEWPORT_MARGIN
+    );
+    const buttonCenter = rect.left + rect.width / 2;
+    const arrowLeft = Math.min(Math.max(buttonCenter - left - 6, 14), HINT_WIDTH - 26);
+
+    localStorage.setItem(HINT_SHOWN_KEY(storeSlug), "1");
+    setHintPos({ top: rect.bottom + 10, left, arrowLeft });
+    setShowHint(true);
+    const t = setTimeout(() => setShowHint(false), 7000);
+    return () => clearTimeout(t);
+  }, [needsPushActivation, storeSlug]);
 
   if (!bell) return null;
 
-  const { followState, handleFollow, handleUnfollow, pushSupported, needsPushActivation, activatePushOnDevice } = bell;
+  const { followState, handleFollow, handleUnfollow, pushSupported, activatePushOnDevice } = bell;
   const isLoading = followState === "loading" || followState === "checking";
   const isFollowing = followState === "following";
   const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   function onClickButton() {
+    setShowHint(false);
     if (pendingRef.current || isLoading) return;
     if (isFollowing) {
       if (needsPushActivation) { setAlert("activate_push"); return; }
@@ -55,31 +93,80 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
 
   return (
     <>
-      <button
-        onClick={onClickButton}
-        disabled={isLoading}
-        aria-label={isFollowing ? "Dejar de seguir tienda" : "Seguir tienda"}
-        title={isFollowing ? "Dejar de seguir" : "Seguir tienda"}
-        style={{
-          background: "none",
-          border: "none",
-          color,
-          cursor: isLoading ? "default" : "pointer",
-          padding: 4,
-          display: "flex",
-          alignItems: "center",
-          opacity: isLoading ? 0.5 : 1,
-          transition: "opacity 0.2s",
-        }}
-      >
-        {isLoading ? (
-          <Loader2 width={size} height={size} style={{ animation: "spin 1s linear infinite" }} />
-        ) : isFollowing ? (
-          <ThumbsDown width={size} height={size} />
-        ) : (
-          <ThumbsUp width={size} height={size} />
-        )}
-      </button>
+      <div ref={wrapRef} style={{ position: "relative", display: "inline-flex" }}>
+        <button
+          onClick={onClickButton}
+          disabled={isLoading}
+          aria-label={isFollowing ? "Dejar de seguir tienda" : "Seguir tienda"}
+          title={isFollowing ? "Dejar de seguir" : "Seguir tienda"}
+          style={{
+            background: "none",
+            border: "none",
+            color,
+            cursor: isLoading ? "default" : "pointer",
+            padding: 4,
+            display: "flex",
+            alignItems: "center",
+            opacity: isLoading ? 0.5 : 1,
+            transition: "opacity 0.2s",
+          }}
+        >
+          {isLoading ? (
+            <Loader2 width={size} height={size} style={{ animation: "spin 1s linear infinite" }} />
+          ) : isFollowing ? (
+            <ThumbsDown width={size} height={size} />
+          ) : (
+            <ThumbsUp width={size} height={size} />
+          )}
+        </button>
+
+      </div>
+
+      {showHint && (
+        <div
+          role="status"
+          style={{
+            position: "fixed",
+            top: hintPos.top,
+            left: hintPos.left,
+            zIndex: 9998,
+            width: HINT_WIDTH,
+            maxWidth: `calc(100vw - ${VIEWPORT_MARGIN * 2}px)`,
+            background: "#111827",
+            color: "#fff",
+            borderRadius: 12,
+            padding: "10px 12px",
+            boxShadow: "0 12px 28px rgba(0,0,0,0.25)",
+            animation: "fadeSlideDown 0.25s ease-out",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: -6,
+              left: hintPos.arrowLeft,
+              width: 12,
+              height: 12,
+              background: "#111827",
+              transform: "rotate(45deg)",
+            }}
+          />
+          <button
+            onClick={() => setShowHint(false)}
+            aria-label="Cerrar"
+            style={{
+              position: "absolute", top: 4, right: 4,
+              background: "none", border: "none", cursor: "pointer",
+              color: "#9ca3af", display: "flex", padding: 4,
+            }}
+          >
+            <X width={12} height={12} />
+          </button>
+          <p style={{ fontSize: 12, lineHeight: 1.4, paddingRight: 14, margin: 0 }}>
+            👆 Tocá aquí para activar las notificaciones y no perderte las novedades de esta tienda
+          </p>
+        </div>
+      )}
 
       {alert === "follow" && (
         <FollowAlert

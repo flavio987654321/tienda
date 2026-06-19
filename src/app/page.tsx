@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { STORE_TYPES } from "@/lib/storeTypes";
+import PromotionsCarousel from "@/components/PromotionsCarousel";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent } from "framer-motion";
 import {
   ArrowRight, X, Store, Users, TrendingUp, Wallet, CheckCircle,
@@ -558,6 +559,8 @@ export default function Home() {
           ))}
         </div>
       </div>
+
+      <PromotionsCarousel />
 
       {/* ── FEATURES ── */}
       <section id="como-funciona" className="relative py-24 bg-white">

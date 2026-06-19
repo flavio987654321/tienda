@@ -106,8 +106,10 @@ export default function StoreTypeModal({
           <span className="absolute text-4xl">{toConfig?.emoji}</span>
         </div>
         <div className="text-center">
-          <p className="text-white text-xl font-bold">Cambiando a {toConfig?.label}...</p>
-          <p className="text-white/60 text-sm mt-1">Limpiando datos anteriores</p>
+          <p className="text-white text-xl font-bold">
+            {isChangingType ? `Cambiando a ${toConfig?.label}...` : `Configurando tu tienda como ${toConfig?.label}...`}
+          </p>
+          {isChangingType && <p className="text-white/60 text-sm mt-1">Limpiando datos anteriores</p>}
         </div>
       </div>
     );

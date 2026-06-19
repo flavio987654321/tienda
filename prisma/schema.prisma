@@ -219,7 +219,8 @@ model StoreSubscription {
 }
 
 // Seguidores autenticados de una tienda.
-// Creado cuando un BUYER toca "Seguir tienda" en el storefront.
+// Creado cuando un usuario logueado toca "Seguir tienda" en el storefront
+// (no está restringido por rol: dueños y afiliados también pueden seguir tiendas).
 model StoreFollow {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -237,14 +238,18 @@ model StoreFollow {
 // Historial de notificaciones push enviadas por una tienda.
 // Usado también para rate limiting (max 2 por semana).
 model PushCampaign {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   storeId   String
-  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
   title     String
   body      String
   url       String?
-  sentCount Int      @default(0)
-  createdAt DateTime @default(now())
+  sentCount Int       @default(0)
+  createdAt DateTime  @default(now())
+  // Null = nunca expira. Si tiene fecha, deja de mostrarse en la tienda
+  // pública al pasar esa fecha, pero el registro se conserva para el
+  // historial del dueño hasta que él lo borre.
+  expiresAt DateTime?
 
   @@index([storeId, createdAt(sort: Desc)])
 }
@@ -670,6 +675,24 @@ model AdminActionLog {
   targetType String   // USER | STORE | SUBSCRIPTION
   details    String   // JSON con datos adicionales del cambio
   ip         String?
+}
+
+// PROMOCIONES — flyers que el admin de la plataforma sube y se muestran en
+// un carrusel en la home pública. Máximo 3 activas a la vez (se valida en
+// la API, no acá), ordenadas por sortOrder. sortOrder es único porque cada
+// valor representa un "slot" fijo del panel admin (0, 1, 2) — esto es lo
+// que evita que una doble carrera de clicks cree dos promociones en el
+// mismo espacio.
+model Promotion {
+  id        String   @id @default(cuid())
+  imageUrl  String
+  link      String?
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sortOrder])
 }
 
 // SUSCRIPCIONES

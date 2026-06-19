@@ -392,8 +392,39 @@ export async function PATCH(req: NextRequest) {
 
   const prevStore = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, isPublished: true, slug: true, name: true, commissionRate: true, affiliatesEnabled: true },
+    select: {
+      id: true, isPublished: true, slug: true, name: true, commissionRate: true, affiliatesEnabled: true,
+      mpConnectedAt: true, storeConfig: true,
+      _count: { select: { products: { where: { deletedAt: null } } } },
+    },
   });
+
+  // Publicar exige un mínimo: diseño elegido, al menos un producto y alguna
+  // forma de cobrar. Despublicar siempre está permitido, sin chequeos.
+  if (isPublished && !prevStore?.isPublished) {
+    let hasTemplate = false;
+    let hasPaymentData = false;
+    try {
+      const cfg = JSON.parse(prevStore?.storeConfig || "{}");
+      hasTemplate = !!cfg.template;
+      const pi = cfg.paymentInfo;
+      hasPaymentData = !!(
+        (pi?.transferencia?.enabled && (pi.transferencia.cbu?.length > 0 || pi.transferencia.alias?.length > 0)) ||
+        pi?.efectivo?.enabled
+      );
+    } catch { /* noop */ }
+    const hasPayment = hasPaymentData || !!prevStore?.mpConnectedAt;
+    const hasProducts = (prevStore?._count.products ?? 0) > 0;
+
+    const missing = [
+      !hasTemplate && "elegir el diseño de tu tienda",
+      !hasProducts && "agregar al menos un producto",
+      !hasPayment && "configurar un método de cobro (MercadoPago, transferencia o efectivo)",
+    ].filter(Boolean);
+    if (missing.length > 0) {
+      return NextResponse.json({ error: `Para publicar tu tienda primero tenés que ${missing.join(" y ")}.` }, { status: 400 });
+    }
+  }
 
   const store = await prisma.store.update({
     where: { ownerId: user.id },

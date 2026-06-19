@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, Suspense, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase/client";
@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();
   const registered = searchParams.get("registered");
@@ -48,9 +47,11 @@ function LoginForm() {
       setLoading(false);
     } else {
       setRedirecting(true);
-      router.refresh();
       const safeRedirect = redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : null;
-      router.push(safeRedirect || "/panel");
+      // Navegación completa (no router.push): la cookie de sesión recién
+      // escrita por el cliente de Supabase puede no estar lista todavía para
+      // una transición "soft" de Next — con un request HTTP real siempre llega.
+      window.location.href = safeRedirect || "/panel";
     }
   }
 

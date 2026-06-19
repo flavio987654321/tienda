@@ -126,13 +126,15 @@ export default function DashboardLayout({
       .catch(() => {});
   }, []);
 
-  // Auto-start tour for first-time users on desktop
+  // Auto-start tour for first-time users on desktop — espera a que el tipo
+  // de tienda ya esté configurado, así no se superpone con ese modal.
   useEffect(() => {
+    if (!storeType) return;
     if (window.innerWidth >= 1024 && !localStorage.getItem(TOUR_STORAGE_KEY)) {
       const t = setTimeout(() => setShowTour(true), 1200);
       return () => clearTimeout(t);
     }
-  }, []);
+  }, [storeType]);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);

@@ -241,9 +241,9 @@ function RegistroContent() {
     if (accountType === "buyer") {
       router.push(`/login?registered=buyer${redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ""}`);
     } else if (accountType === "seller") {
-      router.push(`/precios?registered=true&role=affiliate&billing=${billing.toLowerCase()}`);
+      router.push(`/login?registered=seller`);
     } else {
-      router.push(`/precios?registered=true&role=owner&billing=${billing.toLowerCase()}&tier=${ownerTier.toLowerCase()}`);
+      router.push(`/login?registered=true`);
     }
   }
 

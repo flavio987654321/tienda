@@ -39,6 +39,10 @@ body {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 .animate-pop-in     { animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 .animate-fade-slide { animation: fadeSlideUp 0.2s ease forwards; }
 

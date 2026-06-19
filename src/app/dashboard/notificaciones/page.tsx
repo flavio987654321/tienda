@@ -11,6 +11,17 @@ import Link from "next/link";
 const TITLE_MAX = 50;
 const BODY_MAX = 150;
 const URL_MAX = 512;
+const EXPIRY_OPTIONS = [
+  { days: 3, label: "3 días" },
+  { days: 7, label: "7 días" },
+  { days: 14, label: "14 días" },
+  { days: 30, label: "30 días" },
+];
+const DEFAULT_EXPIRY_DAYS = 7;
+
+function isExpired(expiresAt: string | null): boolean {
+  return !!expiresAt && new Date(expiresAt).getTime() < Date.now();
+}
 
 type Campaign = {
   id: string;
@@ -18,6 +29,7 @@ type Campaign = {
   body: string;
   sentCount: number;
   createdAt: string;
+  expiresAt: string | null;
 };
 
 type Stats = {
@@ -45,12 +57,15 @@ export default function NotificacionesPage() {
   const [message, setMessage] = useState("");
   const [url, setUrl] = useState("");
   const [showUrlField, setShowUrlField] = useState(false);
+  const [expiresInDays, setExpiresInDays] = useState(DEFAULT_EXPIRY_DAYS);
   const [tosAccepted, setTosAccepted] = useState(false);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
 
   function loadStats() {
@@ -86,7 +101,7 @@ export default function NotificacionesPage() {
     setResult(null);
 
     try {
-      const body: Record<string, string> = { title: title.trim(), message: message.trim() };
+      const body: Record<string, string | number> = { title: title.trim(), message: message.trim(), expiresInDays };
       if (url.trim().length > 0) body.url = url.trim();
 
       const res = await fetch("/api/push/send", {
@@ -119,9 +134,37 @@ export default function NotificacionesPage() {
       const res = await fetch(`/api/push/send?id=${id}`, { method: "DELETE" });
       if (res.ok) {
         setStats((prev) => prev ? { ...prev, campaigns: prev.campaigns.filter((c) => c.id !== id) } : prev);
+        setSelectedIds((prev) => prev.filter((x) => x !== id));
       }
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  }
+
+  function toggleSelectAll() {
+    if (!stats) return;
+    setSelectedIds((prev) => prev.length === stats.campaigns.length ? [] : stats.campaigns.map((c) => c.id));
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const res = await fetch("/api/push/send", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      if (res.ok) {
+        setStats((prev) => prev ? { ...prev, campaigns: prev.campaigns.filter((c) => !selectedIds.includes(c.id)) } : prev);
+        setSelectedIds([]);
+      }
+    } finally {
+      setBulkDeleting(false);
     }
   }
 
@@ -306,6 +349,32 @@ export default function NotificacionesPage() {
                 </button>
               )}
 
+              {/* Duración de la novedad */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1.5 block">
+                  Visible durante
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {EXPIRY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.days}
+                      type="button"
+                      onClick={() => setExpiresInDays(opt.days)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        expiresInDays === opt.days
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1.5">
+                  Pasado ese tiempo desaparece del banner de novedades de la tienda, pero queda en tu historial.
+                </p>
+              </div>
+
               {/* Preview */}
               {(title || message) && (
                 <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
@@ -436,40 +505,87 @@ export default function NotificacionesPage() {
               {showHistory ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
             </button>
             {showHistory && (
-              <div className="divide-y divide-gray-50">
-                {stats.campaigns.map((c) => (
-                  <div key={c.id} className="px-5 py-3 group">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-gray-800 truncate">{c.title}</p>
-                        <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{c.body}</p>
-                      </div>
-                      <div className="shrink-0 text-right flex items-start gap-2">
-                        <div>
-                          <span className="text-[11px] font-medium text-indigo-600">
-                            {c.sentCount} enviado{c.sentCount !== 1 ? "s" : ""}
-                          </span>
-                          <p className="text-[10px] text-gray-400 mt-0.5">
-                            {new Date(c.createdAt).toLocaleDateString("es-AR", {
-                              day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-                            })}
-                          </p>
+              <>
+                <div className="flex items-center justify-between gap-2 px-5 py-2.5 border-t border-gray-50 bg-gray-50/50">
+                  <label className="flex items-center gap-2 text-[11px] font-medium text-gray-500 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.length === stats.campaigns.length}
+                      onChange={toggleSelectAll}
+                      className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    Seleccionar todo
+                  </label>
+                  {selectedIds.length > 0 && (
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={bulkDeleting}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-red-500 hover:text-red-600 disabled:opacity-50 transition-colors"
+                    >
+                      {bulkDeleting
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <Trash2 className="h-3 w-3" />}
+                      Eliminar ({selectedIds.length})
+                    </button>
+                  )}
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {stats.campaigns.map((c) => {
+                    const expired = isExpired(c.expiresAt);
+                    return (
+                      <div key={c.id} className="px-5 py-3 group flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(c.id)}
+                          onChange={() => toggleSelect(c.id)}
+                          className="mt-1 h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                        />
+                        <div className="flex items-start justify-between gap-2 flex-1 min-w-0">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-semibold text-gray-800 truncate">{c.title}</p>
+                              {expired && (
+                                <span className="shrink-0 text-[9px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                                  Expirada
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{c.body}</p>
+                            {c.expiresAt && (
+                              <p className="text-[10px] text-gray-400 mt-0.5">
+                                {expired ? "Dejó de mostrarse el " : "Visible hasta el "}
+                                {new Date(c.expiresAt).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}
+                              </p>
+                            )}
+                          </div>
+                          <div className="shrink-0 text-right flex items-start gap-2">
+                            <div>
+                              <span className="text-[11px] font-medium text-indigo-600">
+                                {c.sentCount} enviado{c.sentCount !== 1 ? "s" : ""}
+                              </span>
+                              <p className="text-[10px] text-gray-400 mt-0.5">
+                                {new Date(c.createdAt).toLocaleDateString("es-AR", {
+                                  day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleDelete(c.id)}
+                              disabled={deletingId === c.id}
+                              className="mt-0.5 p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100"
+                              title="Eliminar del historial"
+                            >
+                              {deletingId === c.id
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                : <Trash2 className="h-3.5 w-3.5" />}
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => handleDelete(c.id)}
-                          disabled={deletingId === c.id}
-                          className="mt-0.5 p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100"
-                          title="Eliminar del historial"
-                        >
-                          {deletingId === c.id
-                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            : <Trash2 className="h-3.5 w-3.5" />}
-                        </button>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}

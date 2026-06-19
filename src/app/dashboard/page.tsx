@@ -87,7 +87,7 @@ export default async function DashboardPage() {
   let hasTemplate = false;
   let hasShippingConfigured = false;
   let hasPaymentData = false;
-  let hasDescription = !!(storeExtra?.description?.trim());
+  const hasDescription = !!(storeExtra?.description?.trim());
   try {
     const cfg = JSON.parse(storeExtra?.storeConfig || "{}");
     hasTemplate = !!cfg.template;
@@ -270,7 +270,12 @@ export default async function DashboardPage() {
             </div>
             {/* Publish toggle */}
             <div className="px-3 py-3">
-              <PublishToggle initialPublished={store.isPublished} />
+              <PublishToggle
+                initialPublished={store.isPublished}
+                hasProducts={store._count.products > 0}
+                hasPayment={hasPaymentData || !!storeExtra?.mpConnectedAt}
+                hasTemplate={hasTemplate}
+              />
             </div>
           </div>
         )}

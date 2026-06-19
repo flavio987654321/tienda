@@ -7,6 +7,8 @@ import { sendPushToStore } from "@/lib/push";
 const TITLE_MAX = 50;
 const BODY_MAX = 150;
 const CAMPAIGNS_PER_WEEK = 3;
+const EXPIRY_OPTIONS_DAYS = [3, 7, 14, 30] as const;
+const DEFAULT_EXPIRY_DAYS = 7;
 
 // Elimina caracteres de control y recorta espacios
 function sanitize(str: string): string {
@@ -35,7 +37,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
   }
 
-  const { title: rawTitle, message: rawMessage, url: rawUrl } = body as Record<string, unknown>;
+  const { title: rawTitle, message: rawMessage, url: rawUrl, expiresInDays: rawExpiresInDays } = body as Record<string, unknown>;
 
   if (typeof rawTitle !== "string" || rawTitle.trim().length === 0) {
     return NextResponse.json({ error: "El título es requerido" }, { status: 400 });
@@ -84,6 +86,11 @@ export async function POST(req: NextRequest) {
   // URL de destino: si no viene una, apuntar a la tienda
   const targetUrl = url ?? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/tienda/${store.slug}`;
 
+  const expiresInDays = EXPIRY_OPTIONS_DAYS.includes(rawExpiresInDays as never)
+    ? (rawExpiresInDays as number)
+    : DEFAULT_EXPIRY_DAYS;
+  const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000);
+
   // Verificar que haya seguidores con push activo antes de crear la campaña
   const followerCount = await prisma.storeFollow.count({ where: { storeId: store.id } });
   if (followerCount === 0) {
@@ -96,7 +103,7 @@ export async function POST(req: NextRequest) {
   // Guardar en historial ANTES de enviar el push: así cuando el dispositivo
   // recibe la notificación y fetchea las campañas, el registro ya existe en la DB.
   const campaign = await prisma.pushCampaign.create({
-    data: { storeId: store.id, title, body: message, url: targetUrl, sentCount: 0 },
+    data: { storeId: store.id, title, body: message, url: targetUrl, sentCount: 0, expiresAt },
   });
 
   let sentCount = 0;
@@ -148,8 +155,8 @@ export async function GET() {
     prisma.pushCampaign.findMany({
       where: { storeId: store.id },
       orderBy: { createdAt: "desc" },
-      take: 10,
-      select: { id: true, title: true, body: true, sentCount: true, createdAt: true },
+      take: 200,
+      select: { id: true, title: true, body: true, sentCount: true, createdAt: true, expiresAt: true },
     }),
   ]);
 
@@ -183,6 +190,13 @@ export async function DELETE(req: NextRequest) {
   if (id) {
     await prisma.pushCampaign.deleteMany({ where: { id, storeId: store.id } });
     return NextResponse.json({ ok: true, deleted: 1 });
+  }
+
+  // Borrado múltiple: { ids: string[] } en el body
+  const ids = await req.json().then((b) => (Array.isArray(b?.ids) ? b.ids.filter((x: unknown) => typeof x === "string") : null)).catch(() => null);
+  if (ids) {
+    const { count } = await prisma.pushCampaign.deleteMany({ where: { id: { in: ids }, storeId: store.id } });
+    return NextResponse.json({ ok: true, deleted: count });
   }
 
   const { count } = await prisma.pushCampaign.deleteMany({ where: { storeId: store.id } });
