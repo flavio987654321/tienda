@@ -2,6 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 
+export async function DELETE(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "id requerido" }, { status: 400 });
+  }
+
+  const confirmedCount = await prisma.donation.count({ where: { campaignId: id, status: "CONFIRMED" } });
+  if (confirmedCount > 0) {
+    return NextResponse.json({ error: "No se puede eliminar: ya tiene donaciones confirmadas" }, { status: 409 });
+  }
+
+  await prisma.donationCampaign.delete({ where: { id } });
+
+  return NextResponse.json({ ok: true });
+}
+
 // POST /api/admin/canasta/campaign
 // Crea una campaña nueva desde cero (solo cuando no hay ninguna activa —
 // el índice único parcial "one_active_campaign" en la base ya protege esto

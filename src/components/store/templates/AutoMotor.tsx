@@ -99,6 +99,8 @@ export default function AutoMotor() {
   const navBorderColor = navDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.12)";
 
   const { user, signOut } = useAuth();
+  const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
+  const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const [menuOpen,         setMenuOpen]         = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -276,10 +278,10 @@ export default function AutoMotor() {
                     <p style={{ padding:"10px 16px 4px", fontSize:11, color:navTextMid, margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                       {user.name || user.email.split("@")[0]}
                     </p>
-                    <a href="/mi-cuenta" onClick={() => setUserDropdownOpen(false)}
+                    <a href={panelHref} onClick={() => setUserDropdownOpen(false)}
                       style={{ display:"block", padding:"10px 16px", fontSize:13, color:navText, textDecoration:"none", borderBottom:`1px solid ${navBorderColor}` }}
                       onMouseEnter={e => (e.currentTarget.style.opacity="0.75")}
-                      onMouseLeave={e => (e.currentTarget.style.opacity="1")}>Mi cuenta</a>
+                      onMouseLeave={e => (e.currentTarget.style.opacity="1")}>{panelLabel}</a>
                     <button onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
                       style={{ display:"block", width:"100%", padding:"10px 16px", fontSize:13, color:"#f87171", background:"none", border:"none", textAlign:"left", cursor: isPreview ? "default" : "pointer", opacity: isPreview ? 0.45 : 1 }}
                       onMouseEnter={e => { if (!isPreview) e.currentTarget.style.opacity="0.75"; }}

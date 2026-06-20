@@ -120,6 +120,8 @@ export default function FashionNoir() {
   const storeConfig = useStoreConfig();
   const pushBell = usePushBell();
   const { user, signOut } = useAuth();
+  const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
+  const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const isPreview   = !!storeConfig?.previewFill;
   const isOwner     = !!storeConfig?.isOwner;
   const blockBuy    = isPreview || isOwner;
@@ -648,10 +650,10 @@ export default function FashionNoir() {
                       <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:"rgba(201,168,76,0.6)", padding:"10px 16px 4px", margin:0, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                         {user.name || user.email.split("@")[0]}
                       </p>
-                      <a href="/mi-cuenta" onClick={() => setUserDropdownOpen(false)}
+                      <a href={panelHref} onClick={() => setUserDropdownOpen(false)}
                         style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", transition:"background 0.2s" }}
                         onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
-                        onMouseLeave={e => (e.currentTarget.style.background="none")}>Mi cuenta</a>
+                        onMouseLeave={e => (e.currentTarget.style.background="none")}>{panelLabel}</a>
                       <div style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, margin:"4px 0" }}/>
                       <button onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
                         style={{ display:"block", width:"100%", background:"none", border:"none", color:"#f87171", padding:"10px 16px", fontSize:13, textAlign:"left", cursor: isPreview ? "default" : "pointer", opacity: isPreview ? 0.45 : 1, transition:"background 0.2s" }}

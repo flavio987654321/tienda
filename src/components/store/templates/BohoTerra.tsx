@@ -44,6 +44,8 @@ export default function BohoTerra() {
   const storeConfig = useStoreConfig();
   const pushBell = usePushBell();
   const { user, signOut } = useAuth();
+  const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
+  const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const isPreview   = !!storeConfig?.previewFill;
   const isOwner     = !!storeConfig?.isOwner;
   const blockBuy    = isPreview || isOwner;
@@ -540,10 +542,10 @@ export default function BohoTerra() {
                         <p style={{ padding:"10px 16px 4px", fontSize:11, color:"rgba(44,34,24,0.45)", margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                           {user.name || user.email.split("@")[0]}
                         </p>
-                        <a href="/mi-cuenta" onClick={() => setUserDropdownOpen(false)}
+                        <a href={panelHref} onClick={() => setUserDropdownOpen(false)}
                           style={{ display:"block", padding:"10px 16px", fontSize:13, color:T, textDecoration:"none", borderBottom:`1px solid rgba(44,34,24,0.06)` }}
                           onMouseEnter={e => (e.currentTarget.style.background="rgba(44,34,24,0.04)")}
-                          onMouseLeave={e => (e.currentTarget.style.background="transparent")}>Mi cuenta</a>
+                          onMouseLeave={e => (e.currentTarget.style.background="transparent")}>{panelLabel}</a>
                         <button onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
                           style={{ display:"block", width:"100%", padding:"10px 16px", fontSize:13, color:"#dc2626", background:"none", border:"none", textAlign:"left", cursor: isPreview ? "default" : "pointer", opacity: isPreview ? 0.45 : 1 }}
                           onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background="rgba(220,38,38,0.06)"; }}
@@ -629,9 +631,9 @@ export default function BohoTerra() {
           {/* Cuenta — mismo contenido que el dropdown de escritorio, adaptado a lista */}
           {user ? (
             <>
-              <a href="/mi-cuenta" onClick={() => setMobileMenuOpen(false)}
+              <a href={panelHref} onClick={() => setMobileMenuOpen(false)}
                 style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"16px 24px", fontSize:13, textAlign:"left", letterSpacing:2, textTransform:"uppercase", textDecoration:"none" }}>
-                Mi cuenta
+                {panelLabel}
               </a>
               <button onClick={() => { if (isPreview) return; setMobileMenuOpen(false); signOut("/"); }}
                 style={{ display:"block", width:"100%", background:"none", border:"none", color:"#dc2626", padding:"16px 24px", fontSize:13, textAlign:"left", cursor: isPreview ? "default" : "pointer", letterSpacing:2, textTransform:"uppercase", opacity: isPreview ? 0.45 : 1 }}>

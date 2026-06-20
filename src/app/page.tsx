@@ -242,7 +242,6 @@ export default function Home() {
   const [realStores, setRealStores] = useState<RealStore[]>([]);
   const [realTestimonials, setRealTestimonials] = useState<RealTestimonial[]>([]);
   const [testimonioModal, setTestimonioModal] = useState(false);
-  const [canastaActiva, setCanastaActiva] = useState(false);
   const { user: sessionUser } = useAuth();
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (v) => setNavScrolled(v > 50));
@@ -255,10 +254,6 @@ export default function Home() {
     fetch("/api/testimonios")
       .then((r) => r.json())
       .then((d) => { if (Array.isArray(d)) setRealTestimonials(d); })
-      .catch(() => {});
-    fetch("/api/canasta/campaign")
-      .then((r) => r.json())
-      .then((d) => setCanastaActiva(!!d.campaign))
       .catch(() => {});
   }, []);
 
@@ -1059,22 +1054,20 @@ export default function Home() {
       </motion.div>
 
       {/* ── Floating canasta solidaria button ── */}
-      {canastaActiva && (
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 1.6, type: "spring" }}
-          className="fixed bottom-6 left-6 z-40"
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 1.6, type: "spring" }}
+        className="fixed bottom-6 left-6 z-40"
+      >
+        <Link
+          href="/canasta"
+          className="fab-float fab-ring-amber bg-amber-500 hover:bg-amber-400 text-gray-950 w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110"
+          title="Canasta Solidaria"
         >
-          <Link
-            href="/canasta"
-            className="fab-float fab-ring-amber bg-amber-500 hover:bg-amber-400 text-gray-950 w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110"
-            title="Canasta Solidaria"
-          >
-            <HeartHandshake className="h-6 w-6" />
-          </Link>
-        </motion.div>
-      )}
+          <HeartHandshake className="h-6 w-6" />
+        </Link>
+      </motion.div>
 
       {/* ── Testimonio Modal ── */}
       <AnimatePresence>

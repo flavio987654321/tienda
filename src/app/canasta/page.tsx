@@ -74,23 +74,25 @@ function formatMoney(n: number) {
   return `$${Math.round(n).toLocaleString("es-AR")}`;
 }
 
-const PASOS = [
-  {
-    icon: HeartHandshake,
-    title: "1. Donás lo que puedas",
-    text: "Desde $1.000. Tu aporte se suma al de toda la comunidad para completar una canasta real.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "2. Se compra la canasta",
-    text: "Cuando se junta el 100%, compramos los alimentos. El 10% queda reservado para envío y gastos.",
-  },
-  {
-    icon: Gift,
-    title: "3. Se sortea entre todos",
-    text: "Todos los que donaron entran al sorteo en vivo, sin importar cuánto aportaron. Gana un vecino real.",
-  },
-];
+function pasos(reservePct: number) {
+  return [
+    {
+      icon: HeartHandshake,
+      title: "1. Donás lo que puedas",
+      text: "Desde $1.000. Tu aporte se suma al de toda la comunidad para completar una canasta real.",
+    },
+    {
+      icon: ShieldCheck,
+      title: "2. Se compra la canasta",
+      text: `Cuando se junta el 100%, compramos los alimentos. El ${reservePct}% queda reservado para envío y gastos.`,
+    },
+    {
+      icon: Gift,
+      title: "3. Se sortea entre todos",
+      text: "Todos los que donaron entran al sorteo en vivo, sin importar cuánto aportaron. Gana un vecino real.",
+    },
+  ];
+}
 
 // Se muestran solo si la campaña todavía no tiene productos cargados desde
 // el admin, para que la canasta nunca se vea vacía/rota mientras se cargan
@@ -103,12 +105,14 @@ const DEMO_PRODUCTS: Product[] = Array.from({ length: 8 }, (_, i) => ({
   fundedPct: 0,
 }));
 
-const COMPROMISOS = [
-  "Cada peso recaudado se destina exclusivamente a la compra de los alimentos de la canasta.",
-  "El 10% de reserva para envío y gastos operativos se informa de forma pública, sin costos ocultos.",
-  "El sorteo se realiza en vivo, con reglas claras y verificables por cualquier participante.",
-  "No es una rifa comercial: es una colecta comunitaria sin fines de lucro, con un único ganador real por campaña.",
-];
+function compromisos(reservePct: number) {
+  return [
+    "Cada peso recaudado se destina exclusivamente a la compra de los alimentos de la canasta.",
+    `El ${reservePct}% de reserva para envío y gastos operativos se informa de forma pública, sin costos ocultos.`,
+    "El sorteo se realiza en vivo, con reglas claras y verificables por cualquier participante.",
+    "No es una rifa comercial: es una colecta comunitaria sin fines de lucro, con un único ganador real por campaña.",
+  ];
+}
 
 export default function CanastaPage() {
   return (
@@ -157,15 +161,83 @@ function CanastaContent() {
 
   if (!data?.campaign) {
     return (
-      <div className="min-h-screen bg-[#FFFBF5] flex flex-col items-center justify-center text-center px-6">
-        <HeartHandshake className="h-14 w-14 text-amber-500 mb-4" />
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">No hay una canasta activa ahora</h1>
-        <p className="text-gray-500 max-w-md">
-          Cuando se lance una nueva campaña solidaria vas a poder donar y participar del sorteo desde aquí.
-        </p>
-        <Link href="/" className="mt-6 text-amber-600 hover:text-amber-700 text-sm font-medium">
-          ← Volver al inicio
-        </Link>
+      <div className="min-h-screen bg-[#FFFBF5] text-gray-900 overflow-x-hidden">
+        <div className="grid-bg-empty absolute inset-0 pointer-events-none opacity-40" />
+        <style>{`
+          .grid-bg-empty { background-image: linear-gradient(rgba(217,119,6,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(217,119,6,.06) 1px, transparent 1px); background-size: 48px 48px; }
+          .warm-gradient-text {
+            background: linear-gradient(135deg, #d97706, #16a34a);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+          }
+        `}</style>
+
+        {/* ── Hero: qué es y por qué existe ── */}
+        <section className="relative px-6 pt-20 pb-14 text-center max-w-2xl mx-auto">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring" }}
+            className="w-20 h-20 rounded-3xl bg-amber-500/15 flex items-center justify-center mx-auto mb-6"
+          >
+            <HeartHandshake className="h-10 w-10 text-amber-600" />
+          </motion.div>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-4">
+            Una <span className="warm-gradient-text">canasta solidaria</span>, hecha entre todos
+          </h1>
+          <p className="text-gray-600 text-base leading-relaxed mb-3">
+            Acá no se dona a una causa abstracta: cada peso que entra se ve, en tiempo real, llenando los productos
+            de una canasta real para una familia real. Cuando se completa el 100%, la compramos y la sorteamos en
+            vivo entre todos los que aportaron.
+          </p>
+          <p className="text-amber-700 font-semibold text-sm bg-amber-100 inline-block px-4 py-2 rounded-full mt-2">
+            Hoy no hay una campaña abierta, pero así funciona cuando lanzamos una nueva.
+          </p>
+        </section>
+
+        {/* ── Cómo funciona ── */}
+        <section className="px-6 py-12 bg-white border-y border-amber-100">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-xl font-bold text-center mb-2">¿Cómo funciona?</h2>
+            <p className="text-gray-500 text-center text-sm mb-10">Tres pasos, todo transparente.</p>
+            <div className="grid sm:grid-cols-3 gap-6">
+              {pasos(10).map((paso) => (
+                <div key={paso.title} className="text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/15 flex items-center justify-center mx-auto mb-3">
+                    <paso.icon className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-1.5 text-sm">{paso.title}</h3>
+                  <p className="text-gray-500 text-sm leading-relaxed">{paso.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Por qué existe este espacio ── */}
+        <section className="px-6 py-14 max-w-3xl mx-auto">
+          <h2 className="text-xl font-bold text-center mb-8">¿Para qué creamos este espacio?</h2>
+          <div className="space-y-4">
+            {compromisos(10).map((texto) => (
+              <div key={texto} className="flex items-start gap-3 bg-white border border-amber-100 rounded-2xl p-4">
+                <ShieldCheck className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+                <p className="text-gray-600 text-sm leading-relaxed">{texto}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── CTA final ── */}
+        <section className="px-6 pb-20 text-center">
+          <p className="text-gray-500 text-sm mb-4">
+            Avisamos por la tienda y redes en cuanto se abre una nueva campaña. Volvé pronto.
+          </p>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold text-sm px-6 py-3 rounded-full transition-all"
+          >
+            <ArrowLeft className="h-4 w-4" /> Volver al inicio
+          </Link>
+        </section>
       </div>
     );
   }
@@ -254,7 +326,7 @@ function CanastaContent() {
 
       {/* Cómo funciona */}
       <div className="max-w-5xl mx-auto px-6 py-12 grid sm:grid-cols-3 gap-4">
-        {PASOS.map((p, i) => (
+        {pasos(campaign.reservePct).map((p, i) => (
           <motion.div
             key={p.title}
             initial={{ opacity: 0, y: 10 }}
@@ -458,7 +530,7 @@ function CanastaContent() {
             <h3 className="text-xl font-bold text-gray-900">Nuestro compromiso</h3>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
-            {COMPROMISOS.map((c) => (
+            {compromisos(campaign.reservePct).map((c) => (
               <div key={c} className="flex items-start gap-3 rounded-xl border border-amber-900/10 bg-amber-50/40 p-4">
                 <ShieldCheck className="h-4 w-4 text-green-700 mt-0.5 shrink-0" />
                 <p className="text-sm text-gray-600 leading-relaxed">{c}</p>

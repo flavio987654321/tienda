@@ -463,10 +463,13 @@ function CreateCampaignForm() {
 }
 
 export default function CanastaAdmin({ campaign }: { campaign: Campaign }) {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>(campaign?.products ?? []);
   const [prices, setPrices] = useState<Record<string, number>>(
     () => Object.fromEntries((campaign?.products ?? []).map((p) => [p.id, p.targetPrice]))
   );
+  const [deletingCampaign, setDeletingCampaign] = useState(false);
+  const [deleteCampaignError, setDeleteCampaignError] = useState<string | null>(null);
 
   if (!campaign) {
     return <CreateCampaignForm />;
@@ -475,12 +478,37 @@ export default function CanastaAdmin({ campaign }: { campaign: Campaign }) {
   const productsTotal = Object.values(prices).reduce((sum, p) => sum + p, 0);
   const goalAmount = Math.round(productsTotal / (1 - campaign.reservePct / 100));
 
+  async function handleDeleteCampaign() {
+    if (!confirm(`¿Eliminar la campaña "${campaign!.name}"? Solo se puede si todavía no tiene donaciones confirmadas. Esta acción no se puede deshacer.`)) return;
+    setDeletingCampaign(true);
+    setDeleteCampaignError(null);
+    try {
+      await deleteJSON(`/api/admin/canasta/campaign?id=${campaign!.id}`);
+      router.refresh();
+    } catch (e) {
+      setDeleteCampaignError(e instanceof Error ? e.message : "No se pudo eliminar");
+      setDeletingCampaign(false);
+    }
+  }
+
   return (
     <div className="p-6 sm:p-8 max-w-5xl">
-      <div className="flex items-center gap-2 mb-1">
-        <HeartHandshake className="h-5 w-5 text-amber-500" />
-        <h1 className="text-xl font-bold text-white">Canasta Solidaria</h1>
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="flex items-center gap-2">
+          <HeartHandshake className="h-5 w-5 text-amber-500" />
+          <h1 className="text-xl font-bold text-white">Canasta Solidaria</h1>
+        </div>
+        <button
+          onClick={handleDeleteCampaign}
+          disabled={deletingCampaign}
+          className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
+          title="Eliminar campaña"
+        >
+          {deletingCampaign ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+          Eliminar campaña
+        </button>
       </div>
+      {deleteCampaignError && <p className="text-xs text-red-400 mb-2">{deleteCampaignError}</p>}
       <p className="text-gray-500 text-sm mb-3">
         {campaign.name} — Meta {formatMoney(goalAmount)} (productos {formatMoney(productsTotal)} + {campaign.reservePct}% reserva)
       </p>

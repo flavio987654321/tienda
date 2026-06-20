@@ -103,6 +103,8 @@ export default function UrbanPulse() {
   const storeConfig = useStoreConfig();
   const pushBell = usePushBell();
   const { user, signOut } = useAuth();
+  const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
+  const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const isPreview   = !!storeConfig?.previewFill;
   const isOwner     = !!storeConfig?.isOwner;
   const blockBuy    = isPreview || isOwner;
@@ -560,10 +562,10 @@ export default function UrbanPulse() {
                     <p style={{ padding:"8px 16px 4px", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:MID, margin:0, borderBottom:`1px solid ${BG}`, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                       {user.name || user.email.split("@")[0]}
                     </p>
-                    <a href="/mi-cuenta" onClick={() => setUserDropdownOpen(false)}
+                    <a href={panelHref} onClick={() => setUserDropdownOpen(false)}
                       style={{ display:"block", width:"100%", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK, borderBottom:`1px solid ${BG}` }}
                       onMouseEnter={e => { e.currentTarget.style.background = ACC; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>Mi cuenta</a>
+                      onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>{panelLabel}</a>
                     <button onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
                       style={{ display:"block", width:"100%", padding:"10px 16px", background:"none", border:"none", textAlign:"left", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer", color:"#ef4444", opacity: isPreview ? 0.45 : 1 }}
                       onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background = "#fff1f1"; }}
