@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 // /api/checkout). No crea una donación nueva, solo el cobro.
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-  if (!checkRateLimit(`canasta-donation-checkout:${ip}`, 10, 60_000)) {
+  if (!(await checkRateLimit(`canasta-donation-checkout:${ip}`, 10, 60_000))) {
     return NextResponse.json({ error: "Demasiados intentos. Esperá un momento." }, { status: 429 });
   }
 

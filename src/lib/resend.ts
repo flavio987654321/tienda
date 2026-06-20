@@ -4,9 +4,20 @@ const resend = new Resend(process.env.RESEND_API_KEY ?? "no-key");
 
 const FROM = process.env.RESEND_FROM ?? "TiendaApps <noreply@tiendaapps.com>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
+const CANASTA_SUPPORT_EMAIL = process.env.CANASTA_SUPPORT_EMAIL ?? process.env.ADMIN_EMAIL ?? "";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
+}
+
+function escapeHtml(s: string | null | undefined): string {
+  if (!s) return "";
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 export async function sendVerificationReceivedEmail({
@@ -421,6 +432,7 @@ export async function sendCanastaDonationConfirmedEmail({
   await resend.emails.send({
     from: FROM,
     to,
+    replyTo: CANASTA_SUPPORT_EMAIL || undefined,
     subject: "Gracias por tu donación a la Canasta Solidaria",
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
@@ -464,6 +476,7 @@ export async function sendCanastaAnnouncementEmail({
   await resend.emails.send({
     from: FROM,
     to,
+    replyTo: CANASTA_SUPPORT_EMAIL || undefined,
     subject: `Novedades de la ${campaignName}`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
@@ -498,6 +511,7 @@ export async function sendCanastaWinnerEmail({
   await resend.emails.send({
     from: FROM,
     to,
+    replyTo: CANASTA_SUPPORT_EMAIL || undefined,
     subject: "¡Ganaste la Canasta Solidaria!",
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
@@ -510,8 +524,49 @@ export async function sendCanastaWinnerEmail({
           Saliste sorteado en el <strong>${positionLabel}</strong> de la Canasta Solidaria. Nos vamos a comunicar con vos por teléfono para coordinar la entrega. Tenés <strong>48 horas</strong> para responder — si no podemos contactarte en ese plazo, el premio pasa al siguiente ganador.
         </p>
         <p style="color:#9ca3af;font-size:12px;text-align:center;">
-          Si tenés dudas escribinos a soporte@tiendaapps.com
+          Si tenés dudas, respondé este correo${CANASTA_SUPPORT_EMAIL ? ` o escribinos a ${CANASTA_SUPPORT_EMAIL}` : ""}.
         </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendCanastaSoporteEmail({
+  nombre,
+  email,
+  telefono,
+  localidad,
+  edad,
+  mensaje,
+}: {
+  nombre: string;
+  email: string;
+  telefono: string;
+  localidad: string;
+  edad: string;
+  mensaje: string;
+}) {
+  if (!process.env.RESEND_API_KEY || !CANASTA_SUPPORT_EMAIL) return;
+  await resend.emails.send({
+    from: FROM,
+    to: CANASTA_SUPPORT_EMAIL,
+    replyTo: email,
+    subject: `🆘 Soporte Canasta Solidaria: ${nombre}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#d97706;border-radius:16px;padding:24px;margin-bottom:24px;">
+          <p style="color:#fde68a;font-size:13px;margin:0 0 4px;">Canasta Solidaria</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:800;">Consulta de soporte</h1>
+        </div>
+        <table style="width:100%;margin-bottom:20px;font-size:14px;">
+          <tr><td style="color:#6b7280;padding:4px 0;width:110px;">Nombre</td><td style="font-weight:600;">${escapeHtml(nombre)}</td></tr>
+          <tr><td style="color:#6b7280;padding:4px 0;">Email</td><td><a href="mailto:${escapeHtml(email)}" style="color:#d97706;">${escapeHtml(email)}</a></td></tr>
+          <tr><td style="color:#6b7280;padding:4px 0;">Teléfono</td><td style="font-weight:600;">${escapeHtml(telefono) || "—"}</td></tr>
+          <tr><td style="color:#6b7280;padding:4px 0;">Localidad</td><td style="font-weight:600;">${escapeHtml(localidad) || "—"}</td></tr>
+          <tr><td style="color:#6b7280;padding:4px 0;">Edad</td><td style="font-weight:600;">${escapeHtml(edad) || "—"}</td></tr>
+        </table>
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;font-size:14px;line-height:1.6;color:#374151;white-space:pre-wrap;">${escapeHtml(mensaje)}</div>
+        <p style="color:#9ca3af;font-size:12px;margin-top:16px;">Respondé directamente a este email para contestarle.</p>
       </div>
     `,
   });

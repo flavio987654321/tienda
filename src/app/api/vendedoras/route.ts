@@ -97,7 +97,7 @@ const TC_VERSION = "1.3";
 // POST - afiliado se une a una tienda
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (!checkRateLimit(`affiliate-apply:${ip}`, 5, 60 * 60_000)) {
+  if (!(await checkRateLimit(`affiliate-apply:${ip}`, 5, 60 * 60_000))) {
     return NextResponse.json({ error: "Demasiadas solicitudes. Esperá un momento." }, { status: 429 });
   }
 

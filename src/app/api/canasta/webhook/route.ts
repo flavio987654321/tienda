@@ -108,9 +108,10 @@ export async function POST(req: NextRequest) {
           where: { id: campaign.id, status: "ACTIVE" },
           data: { status: "COMPLETED" },
         });
-        if (closed.count > 0 && process.env.ADMIN_EMAIL) {
+        const canastaSupportEmail = process.env.CANASTA_SUPPORT_EMAIL ?? process.env.ADMIN_EMAIL;
+        if (closed.count > 0 && canastaSupportEmail) {
           sendCanastaCompletedAdminEmail({
-            to: process.env.ADMIN_EMAIL,
+            to: canastaSupportEmail,
             campaignName: campaign.name,
             totalRaised,
             goalAmount,

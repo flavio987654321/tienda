@@ -48,7 +48,7 @@ function resolveShipping(shippingMethodId: string, methods: ShippingMethod[]): {
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-  if (!checkRateLimit(`checkout:${ip}`, 10, 60_000)) {
+  if (!(await checkRateLimit(`checkout:${ip}`, 10, 60_000))) {
     return NextResponse.json({ error: "Demasiados pedidos. Esperá un momento." }, { status: 429 });
   }
 

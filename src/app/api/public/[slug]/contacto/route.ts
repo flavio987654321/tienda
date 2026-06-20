@@ -8,7 +8,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const { slug } = await params;
 
   // 5 mensajes por hora por IP + tienda
-  if (!checkRateLimit(`contact:${ip}:${slug}`, 5, 60 * 60 * 1000)) {
+  if (!(await checkRateLimit(`contact:${ip}:${slug}`, 5, 60 * 60 * 1000))) {
     return NextResponse.json(
       { error: "Demasiados mensajes enviados. Esperá un momento antes de volver a intentarlo." },
       { status: 429 }

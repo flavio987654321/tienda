@@ -5,7 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-  if (!checkRateLimit(`reward-coupon:${ip}`, 15, 60_000)) {
+  if (!(await checkRateLimit(`reward-coupon:${ip}`, 15, 60_000))) {
     return NextResponse.json({ error: "Demasiados intentos. Esperá un momento." }, { status: 429 });
   }
 

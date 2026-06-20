@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-    if (!checkRateLimit(`upload:${user.id}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)) {
+    if (!(await checkRateLimit(`upload:${user.id}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS))) {
       return NextResponse.json(
         { error: "Demasiadas subidas en poco tiempo. Esperá un momento." },
         { status: 429 }

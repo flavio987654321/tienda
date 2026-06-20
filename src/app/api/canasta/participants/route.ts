@@ -19,9 +19,12 @@ export async function GET() {
 
   const donations = await prisma.donation.findMany({
     where: { campaignId: campaign.id, status: "CONFIRMED" },
-    select: { donorName: true },
+    select: { donorName: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
 
-  return NextResponse.json({ participants: donations.map((d) => d.donorName) });
+  return NextResponse.json({
+    participants: donations.map((d) => d.donorName),
+    donors: donations.map((d) => ({ donorName: d.donorName, createdAt: d.createdAt })),
+  });
 }

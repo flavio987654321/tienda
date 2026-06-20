@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { HeartHandshake, Clock, Users, Radio, Trophy, Gift, PhoneCall, ArrowRightCircle, ArrowLeft } from "lucide-react";
 import RouletteWheel from "./RouletteWheel";
 import Confetti from "./Confetti";
+import SoporteBanner from "./SoporteBanner";
 
 const PASOS_SORTEO = [
   { icon: Users, title: "1. Participan todos", text: "Cada persona que donó entra al sorteo con la misma chance, sin importar el monto." },
@@ -364,6 +365,10 @@ export default function SorteoLive() {
             </div>
           </div>
         )}
+
+        <div className="mt-8">
+          <SoporteBanner />
+        </div>
       </div>
     </div>
   );

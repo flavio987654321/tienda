@@ -11,9 +11,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminEmail = process.env.CANASTA_SUPPORT_EMAIL ?? process.env.ADMIN_EMAIL;
   if (!adminEmail) {
-    return NextResponse.json({ reminded: 0, note: "ADMIN_EMAIL no configurado" });
+    return NextResponse.json({ reminded: 0, note: "CANASTA_SUPPORT_EMAIL no configurado" });
   }
 
   const now = new Date();

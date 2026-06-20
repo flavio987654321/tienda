@@ -9,6 +9,8 @@ import {
   Milk, Wheat, Droplet, Candy, Coffee, Bean, Cookie, Package, Soup,
   type LucideIcon,
 } from "lucide-react";
+import SoporteBanner from "@/components/canasta/SoporteBanner";
+import DonorsModal from "@/components/canasta/DonorsModal";
 
 type Product = {
   id: string;
@@ -228,6 +230,9 @@ function CanastaContent() {
 
         {/* ── CTA final ── */}
         <section className="px-6 pb-20 text-center">
+          <div className="max-w-md mx-auto mb-8 text-left">
+            <SoporteBanner />
+          </div>
           <p className="text-gray-500 text-sm mb-4">
             Avisamos por la tienda y redes en cuanto se abre una nueva campaña. Volvé pronto.
           </p>
@@ -448,13 +453,18 @@ function CanastaContent() {
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-10">
-          <div className="rounded-2xl border border-amber-900/10 bg-white p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-1 shadow-sm">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-amber-700" />
-            </div>
-            <p className="text-base sm:text-lg font-semibold text-gray-900">{donorsCount}</p>
-            <p className="text-[10px] sm:text-xs text-gray-400">Donantes</p>
-          </div>
+          <DonorsModal
+            triggerClassName="rounded-2xl border border-amber-900/10 bg-white p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-1 shadow-sm transition-all hover:scale-[1.03] hover:shadow-md active:scale-[0.98] cursor-pointer w-full"
+            trigger={
+              <>
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-amber-700" />
+                </div>
+                <p className="text-base sm:text-lg font-semibold text-gray-900">{donorsCount}</p>
+                <p className="text-[10px] sm:text-xs text-gray-400">Donantes</p>
+              </>
+            }
+          />
 
           <Link
             href="/canasta/sorteo"
@@ -578,6 +588,12 @@ function CanastaContent() {
           </div>
         </div>
       )}
+
+      <div className="border-t border-amber-900/10 bg-[#FFFBF5] px-6 py-10">
+        <div className="max-w-3xl mx-auto">
+          <SoporteBanner />
+        </div>
+      </div>
     </div>
   );
 }

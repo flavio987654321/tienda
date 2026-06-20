@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { HeartHandshake, Loader2, Sparkles, Truck, Store, ArrowLeft } from "lucide-react";
+import SoporteBanner from "@/components/canasta/SoporteBanner";
 
 const QUICK_AMOUNTS = [1000, 2000, 5000, 10000];
 
@@ -245,6 +246,10 @@ function DonarContent() {
           <p className="text-center text-[11px] text-gray-400">
             Esta donación es voluntaria y no reembolsable. Una donación por persona por campaña.
           </p>
+        </div>
+
+        <div className="mt-8">
+          <SoporteBanner />
         </div>
       </div>
     </div>

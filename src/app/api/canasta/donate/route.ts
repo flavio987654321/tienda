@@ -17,7 +17,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // suscripciones), no a un vendedor. Permite donar con o sin cuenta.
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-  if (!checkRateLimit(`canasta-donate:${ip}`, 5, 60_000)) {
+  if (!(await checkRateLimit(`canasta-donate:${ip}`, 5, 60_000))) {
     return NextResponse.json({ error: "Demasiados intentos. Esperá un momento." }, { status: 429 });
   }
 
