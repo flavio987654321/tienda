@@ -171,9 +171,21 @@ export default function AsistenteIA({ userId }: { userId: string }) {
         aria-label="Abrir asistente Sacha"
         title="Sacha, tu asistente"
         initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ delay: 0.8, type: "spring" }}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg shadow-orange-500/30 hover:scale-110 transition-transform"
+        animate={{
+          scale: 1,
+          y: [0, -7, 0],
+          boxShadow: [
+            "0 8px 24px rgba(249,115,22,.45), 0 0 0 0 rgba(249,115,22,.45)",
+            "0 8px 24px rgba(249,115,22,.45), 0 0 0 10px rgba(249,115,22,0)",
+            "0 8px 24px rgba(249,115,22,.45), 0 0 0 0 rgba(249,115,22,.45)",
+          ],
+        }}
+        transition={{
+          scale: { delay: 0.8, type: "spring" },
+          y: { delay: 0.8, duration: 2.6, repeat: Infinity, ease: "easeInOut" },
+          boxShadow: { delay: 0.8, duration: 2.6, repeat: Infinity, ease: "easeInOut" },
+        }}
+        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full hover:scale-110 transition-transform"
       >
         <AsistentePersonaje estado={estadoBurbuja} size={56} />
       </motion.button>

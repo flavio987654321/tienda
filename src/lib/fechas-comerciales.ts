@@ -94,6 +94,26 @@ function buildCalendar(year: number): Omit<FechaComercial, "diasFaltan">[] {
 }
 
 /**
+ * Fecha y hora actual en Argentina, para que Sacha pueda saludar acorde al momento del día
+ * (buen día / buenas tardes / buenas noches) sin depender de la hora del servidor (UTC).
+ */
+export function getArgentinaAhora(): { fechaTexto: string; hora: number } {
+  const now = new Date();
+  const hora = parseInt(
+    new Intl.DateTimeFormat("en-GB", { timeZone: AR_TZ, hour: "2-digit", hour12: false }).format(now),
+    10
+  );
+  const fechaTexto = new Intl.DateTimeFormat("es-AR", {
+    timeZone: AR_TZ,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(now);
+  return { fechaTexto, hora };
+}
+
+/**
  * Fechas comerciales argentinas dentro de los próximos `daysAhead` días (por defecto 21),
  * calculadas siempre en zona horaria Argentina, sin depender del reloj del servidor.
  */

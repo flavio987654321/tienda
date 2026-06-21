@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getUserSubscription, getSubscriptionStatus } from "@/lib/subscription";
 import { getStoreSnapshot, getChecklistEstado } from "@/lib/asistente-insights";
-import { getUpcomingDates } from "@/lib/fechas-comerciales";
+import { getUpcomingDates, getArgentinaAhora } from "@/lib/fechas-comerciales";
 import { buildSystemPrompt } from "@/lib/asistente-prompt";
 import { anthropic } from "@/lib/anthropic";
 
@@ -139,10 +139,11 @@ export async function POST(req: NextRequest) {
     upcomingDates,
     planTier,
     checklist,
+    momento: getArgentinaAhora(),
   });
 
   const messages: ChatMessage[] = greet
-    ? [{ role: "user", content: "Saludame y contame qué es importante para mi tienda hoy, en base a los datos que tenés." }]
+    ? [{ role: "user", content: "Saludame y contame, brevemente, lo más importante para mi tienda hoy (una sola cosa, no una lista)." }]
     : historial;
 
   const encoder = new TextEncoder();
