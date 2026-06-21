@@ -13,6 +13,7 @@ import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 import HelpButton from "@/components/HelpButton";
 import FavoritesDrawer from "@/components/FavoritesDrawer";
+import AsistenteIA from "@/components/dashboard/AsistenteIA";
 import TourGuide, { TOUR_STORAGE_KEY } from "@/components/TourGuide";
 
 const LEADS_STORE_TYPES = ["AUTOS"];
@@ -103,14 +104,30 @@ export default function DashboardLayout({
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [pendingLeadsCount, setPendingLeadsCount] = useState(0);
   const [storeType, setStoreType] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== "undefined" ? navigator.onLine : true));
   const [showTour, setShowTour] = useState(false);
   const [warnings, setWarnings] = useState<Warnings | null>(null);
 
+  // Cerrar el menú mobile y resincronizar los contadores cuando cambian sus
+  // fuentes (ruta / props del servidor) — ajuste durante el render en vez de
+  // un efecto, evita un re-render en cascada (react-hooks/set-state-in-effect).
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setMobileOpen(false);
+  }
+  const [prevInitialPendingAffiliateCount, setPrevInitialPendingAffiliateCount] = useState(initialPendingAffiliateCount);
+  if (initialPendingAffiliateCount !== prevInitialPendingAffiliateCount) {
+    setPrevInitialPendingAffiliateCount(initialPendingAffiliateCount);
+    setPendingAffiliateCount(initialPendingAffiliateCount);
+  }
+  const [prevInitialLowStockCount, setPrevInitialLowStockCount] = useState(initialLowStockCount);
+  if (initialLowStockCount !== prevInitialLowStockCount) {
+    setPrevInitialLowStockCount(initialLowStockCount);
+    setLowStockCount(initialLowStockCount);
+  }
+
   useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
-  useEffect(() => { setMobileOpen(false); }, [pathname]);
-  useEffect(() => { setPendingAffiliateCount(initialPendingAffiliateCount); }, [initialPendingAffiliateCount]);
-  useEffect(() => { setLowStockCount(initialLowStockCount); }, [initialLowStockCount]);
 
   useEffect(() => {
     fetch("/api/verificacion")
@@ -137,7 +154,6 @@ export default function DashboardLayout({
   }, [storeType]);
 
   useEffect(() => {
-    setIsOnline(navigator.onLine);
     const up = () => setIsOnline(true);
     const dn = () => setIsOnline(false);
     window.addEventListener("online", up);
@@ -163,7 +179,7 @@ export default function DashboardLayout({
     ch.on("postgres_changes" as Parameters<typeof ch.on>[0], { event: "*", schema: "public", table: "Affiliate" }, () => fetchAffiliateCount());
     ch.subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [fetchAffiliateCount]);
+  }, [fetchAffiliateCount, instanceId]);
 
   useEffect(() => {
     fetch("/api/pedidos")
@@ -507,6 +523,8 @@ export default function DashboardLayout({
           {children}
         </div>
       </main>
+
+      {userId && <AsistenteIA userId={userId} />}
     </div>
   );
 }
