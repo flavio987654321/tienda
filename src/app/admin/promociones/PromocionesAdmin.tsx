@@ -171,7 +171,7 @@ function PromotionSlot({
               className="absolute inset-0"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={promotion.imageUrl} alt={`Promoción ${slot + 1}`} className="w-full h-full object-cover" />
+              <img src={promotion.imageUrl} alt={`Promoción ${slot + 1}`} className="w-full h-full object-contain" />
               <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">#{slot + 1}</div>
               {/* Botones siempre visibles (no solo al hover) para que también
                   se puedan usar desde tablet/celular, sin mouse. */}

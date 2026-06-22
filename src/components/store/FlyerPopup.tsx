@@ -86,7 +86,7 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
             alt={`Flyer ${index + 1}`}
             style={{
               width: "100%", display: "block",
-              objectFit: "cover", maxHeight: "80vh",
+              objectFit: "contain", maxHeight: "80vh",
               animation: `${dir === "next" ? "flyerImgNext" : "flyerImgPrev"} 0.35s cubic-bezier(0.22,1,0.36,1)`,
             }}
           />
@@ -97,7 +97,7 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
           <>
             <button onClick={prev} aria-label="Anterior"
               style={{
-                position: "absolute", left: -14, top: "50%", transform: "translateY(-50%)",
+                position: "absolute", left: -24, top: "50%", transform: "translateY(-50%)",
                 width: 38, height: 38, borderRadius: "50%",
                 background: "rgba(15,23,42,0.75)", border: "1.5px solid rgba(255,255,255,0.18)",
                 color: "white", fontSize: 20, cursor: "pointer",
@@ -107,7 +107,7 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
             >‹</button>
             <button onClick={next} aria-label="Siguiente"
               style={{
-                position: "absolute", right: -14, top: "50%", transform: "translateY(-50%)",
+                position: "absolute", right: -24, top: "50%", transform: "translateY(-50%)",
                 width: 38, height: 38, borderRadius: "50%",
                 background: "rgba(15,23,42,0.75)", border: "1.5px solid rgba(255,255,255,0.18)",
                 color: "white", fontSize: 20, cursor: "pointer",
