@@ -35,8 +35,8 @@ export default function CanastaSoportePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Error al enviar");
       setSent(true);
-    } catch (err: any) {
-      setError(err.message ?? "No se pudo enviar. Intentá de nuevo.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo enviar. Intentá de nuevo.");
     } finally {
       setSending(false);
     }
@@ -47,10 +47,10 @@ export default function CanastaSoportePage() {
       <div className="max-w-lg mx-auto px-6 py-8">
 
         <div className="flex items-center gap-3 mb-8">
-          <Link href="/canasta" className="text-gray-400 hover:text-gray-600 transition-colors">
+          <Link href="/comunidad" className="text-gray-400 hover:text-gray-600 transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900 flex-1">Soporte Canasta Solidaria</h1>
+          <h1 className="text-2xl font-bold text-gray-900 flex-1">Iniciar una solicitud</h1>
         </div>
 
         {sent ? (

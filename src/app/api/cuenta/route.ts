@@ -155,9 +155,14 @@ export async function DELETE(req: NextRequest) {
   const userData = await prisma.user.findUnique({
     where: { id: user.id },
     select: {
+      name: true,
+      email: true,
       image: true,
       createdAt: true,
       subscription: true,
+      termsAcceptedAt: true,
+      termsVersion: true,
+      termsAcceptedIp: true,
       store: {
         select: {
           id: true,
@@ -271,8 +276,13 @@ export async function DELETE(req: NextRequest) {
         data: {
           deletedByAdminId: user.id, // self-deletion
           originalUserId: user.id,
+          originalEmail: userData?.email ?? null,
+          originalName: userData?.name ?? null,
           accountType: user.role,
           accountCreatedAt: userData?.createdAt ?? new Date(),
+          generalTermsAcceptedAt: userData?.termsAcceptedAt ?? null,
+          generalTermsVersion: userData?.termsVersion ?? null,
+          generalTermsAcceptedIp: userData?.termsAcceptedIp ?? null,
           tcOwnerAcceptedAt: userData?.store?.tcOwnerAcceptedAt ?? null,
           tcOwnerVersion: userData?.store?.tcOwnerVersion ?? null,
           tcOwnerAcceptedIp: userData?.store?.tcOwnerAcceptedIp ?? null,

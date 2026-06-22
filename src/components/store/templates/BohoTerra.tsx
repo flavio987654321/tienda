@@ -117,7 +117,7 @@ export default function BohoTerra() {
       return false;
     };
     const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1 && !allowsPinch(e.target as Element)) e.preventDefault(); };
-    const preventGesture = (e: Event) => { if (!allowsPinch((e as any).target as Element)) e.preventDefault(); };
+    const preventGesture = (e: Event) => { if (!allowsPinch(e.target as Element)) e.preventDefault(); };
     document.addEventListener("touchmove", preventPinch, { passive: false });
     document.addEventListener("gesturestart", preventGesture as EventListener);
     document.addEventListener("gesturechange", preventGesture as EventListener);
@@ -161,7 +161,7 @@ export default function BohoTerra() {
       try {
         const a = JSON.parse(v.name);
         if (a && typeof a === "object") {
-          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          const vals = Object.values(a).map((x: unknown) => String(x).toLowerCase());
           const sizeOk = !selectedSize  || vals.includes(selectedSize.toLowerCase());
           const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
           return sizeOk && colorOk;
@@ -197,9 +197,10 @@ export default function BohoTerra() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
 
-  // Cargar reseñas al abrir modal (D-04)
+  // Cargar reseñas al abrir modal (D-04): sincroniza el estado de reseñas con el modalProduct.id actual (fetch + reset), patrón estándar de "fetch on id change"
   useEffect(() => {
     const slug = storeConfig?.slug;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!modalProduct || !slug) { setReviews([]); return; }
     setReviewsLoading(true); setReviewDone(false); setReelIndex(0);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
@@ -297,7 +298,7 @@ export default function BohoTerra() {
     );
     if (imgIdx !== -1) setModalImg(imgIdx);
     const colorVariants = modalProduct.variants.filter(v => {
-      try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x: any) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
+      try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x: unknown) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
     });
     if (!colorVariants.length) return;
     const best = colorVariants.find(v => v.stock > 0) ?? colorVariants[0];
@@ -317,7 +318,7 @@ export default function BohoTerra() {
         try {
           const a = JSON.parse(v.name);
           if (typeof a !== "object") return false;
-          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          const vals = Object.values(a).map((x: unknown) => String(x).toLowerCase());
           return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
         } catch { return false; }
       });
@@ -327,7 +328,7 @@ export default function BohoTerra() {
       try {
         const a = JSON.parse(v.name);
         if (typeof a !== "object") return false;
-        return Object.entries(a).some(([k, val]: any) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
+        return Object.entries(a).some(([k, val]: [string, unknown]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
       } catch { return false; }
     });
     if (!sizeVariants.length) return;
@@ -440,7 +441,7 @@ export default function BohoTerra() {
             </div>
           )}
           {searchQuery.trim().length > 0 && searchResults.length === 0 && (
-            <p style={{ color:MID, marginTop:32, fontSize:14 }}>Sin resultados para "{searchQuery}"</p>
+            <p style={{ color:MID, marginTop:32, fontSize:14 }}>Sin resultados para &ldquo;{searchQuery}&rdquo;</p>
           )}
         </div>
       )}
@@ -833,8 +834,8 @@ export default function BohoTerra() {
         <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "48px 20px" : "72px 40px", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr", gap: isMobile ? 32 : 80, alignItems:"start" }}>
           <div>
             <p style={{ fontSize:10, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:16 }}><EditableZone field="aboutKicker" label="Etiqueta 'Nosotros'">Nuestra historia</EditableZone></p>
-            <p style={{ fontSize:15, color:nosotrosText, lineHeight:1.9, marginBottom:20 }}><EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'" block>Terra nació en Mendoza en 2019 como un pequeño taller de confección artesanal. Hoy somos un equipo de 12 personas que diseña, tiñe y cose cada prenda con materiales de origen responsable.</EditableZone></p>
-            <p style={{ fontSize:15, color:nosotrosMid, lineHeight:1.9 }}><EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'" block>Trabajamos con productores locales de lino, alpaca y algodón orgánico. Nuestras tinturas son 100% vegetales: cúrcuma, añil, madreselva y cochinilla.</EditableZone></p>
+            <p style={{ fontSize:15, color:nosotrosText, lineHeight:1.9, marginBottom:20 }}><EditableZone field="aboutParagraph1" label="Párrafo 1 'Nosotros'">Terra nació en Mendoza en 2019 como un pequeño taller de confección artesanal. Hoy somos un equipo de 12 personas que diseña, tiñe y cose cada prenda con materiales de origen responsable.</EditableZone></p>
+            <p style={{ fontSize:15, color:nosotrosMid, lineHeight:1.9 }}><EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'">Trabajamos con productores locales de lino, alpaca y algodón orgánico. Nuestras tinturas son 100% vegetales: cúrcuma, añil, madreselva y cochinilla.</EditableZone></p>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:32 }}>
             {([["aboutStat1","aboutStatLabel1","2019","Año de fundación"],["aboutStat2","aboutStatLabel2","100%","Fibras naturales"],["aboutStat3","aboutStatLabel3","12","Artesanas"],["aboutStat4","aboutStatLabel4","Mendoza","Origen"]] as const).map(([fv,fl,n,label])=>(
@@ -1431,7 +1432,7 @@ export default function BohoTerra() {
                       </label>
                       <p style={{ fontSize:10, color:MID, marginTop:6, lineHeight:1.5 }}>
                         Sumá un aporte aparte para completar una canasta de alimentos para un vecino — se paga por separado, no afecta tu compra.{" "}
-                        <a href="/canasta" target="_blank" rel="noopener" style={{ color:A, textDecoration:"underline" }}>¿Cómo funciona?</a>
+                        <a href="/comunidad/campana" target="_blank" rel="noopener" style={{ color:A, textDecoration:"underline" }}>¿Cómo funciona?</a>
                       </p>
                       {donationEnabled && (
                         <div style={{ marginTop:10 }}>

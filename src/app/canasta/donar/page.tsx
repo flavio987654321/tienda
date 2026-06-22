@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { HeartHandshake, Loader2, Sparkles, Truck, Store, ArrowLeft } from "lucide-react";
+import { HeartHandshake, Loader2, Sparkles, ArrowLeft } from "lucide-react";
 import SoporteBanner from "@/components/canasta/SoporteBanner";
 
 const QUICK_AMOUNTS = [1000, 2000, 5000, 10000];
@@ -36,7 +36,6 @@ function DonarContent() {
   const [donorPhone, setDonorPhone] = useState("");
   const [donorEmail, setDonorEmail] = useState("");
   const [donorLocalidad, setDonorLocalidad] = useState("");
-  const [donorDeliveryPref, setDonorDeliveryPref] = useState<"ENVIO" | "RETIRO">("ENVIO");
 
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -64,7 +63,7 @@ function DonarContent() {
       return;
     }
     if (maxDonation && amount > maxDonation) {
-      setError(`El máximo por donación es ${formatMoney(maxDonation)}, para que el sorteo tenga sentido entre varios donantes.`);
+      setError(`El máximo por donación es ${formatMoney(maxDonation)}, para que la campaña sea un aporte de toda la comunidad.`);
       return;
     }
     if (!donorName.trim() || !donorPhone.trim() || !donorEmail.trim() || !donorLocalidad.trim()) {
@@ -77,7 +76,7 @@ function DonarContent() {
       const res = await fetch("/api/canasta/donate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, donorName, donorPhone, donorEmail, donorLocalidad, donorDeliveryPref }),
+        body: JSON.stringify({ amount, donorName, donorPhone, donorEmail, donorLocalidad }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo iniciar la donación");
@@ -100,9 +99,9 @@ function DonarContent() {
     return (
       <div className="min-h-screen bg-[#FFFBF5] flex flex-col items-center justify-center text-center px-6">
         <HeartHandshake className="h-14 w-14 text-amber-500 mb-4" />
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">No hay una canasta activa ahora</h1>
-        <Link href="/canasta" className="mt-4 text-amber-600 hover:text-amber-700 text-sm font-medium">
-          ← Volver a la canasta
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">No hay ninguna campaña activa ahora</h1>
+        <Link href="/comunidad" className="mt-4 text-amber-600 hover:text-amber-700 text-sm font-medium">
+          ← Volver
         </Link>
       </div>
     );
@@ -112,8 +111,8 @@ function DonarContent() {
     <div className="min-h-screen bg-[#FFFBF5] text-gray-900">
       <div className="border-b border-amber-900/10 px-6 py-5 grid grid-cols-3 items-center sticky top-0 bg-[#FFFBF5]/90 backdrop-blur-xl z-10">
         <Link
-          href="/canasta"
-          aria-label="Volver a la canasta"
+          href="/comunidad/campana"
+          aria-label="Volver"
           className="w-9 h-9 rounded-full border border-amber-900/10 bg-white flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-amber-50 transition-colors justify-self-start"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -192,30 +191,6 @@ function DonarContent() {
             placeholder="Localidad"
             className="w-full bg-white border border-amber-900/10 rounded-lg px-3 py-2.5 text-sm"
           />
-
-          <div>
-            <label className="text-xs font-semibold text-gray-500 mb-1.5 block">Si ganás, preferís...</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setDonorDeliveryPref("ENVIO")}
-                className={`flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg py-2.5 border transition-colors ${
-                  donorDeliveryPref === "ENVIO" ? "bg-amber-500 text-white border-amber-500" : "bg-white border-amber-900/10 text-gray-700"
-                }`}
-              >
-                <Truck className="h-3.5 w-3.5" /> Envío
-              </button>
-              <button
-                type="button"
-                onClick={() => setDonorDeliveryPref("RETIRO")}
-                className={`flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg py-2.5 border transition-colors ${
-                  donorDeliveryPref === "RETIRO" ? "bg-amber-500 text-white border-amber-500" : "bg-white border-amber-900/10 text-gray-700"
-                }`}
-              >
-                <Store className="h-3.5 w-3.5" /> Retiro
-              </button>
-            </div>
-          </div>
 
           <label className="flex items-start gap-2.5 cursor-pointer">
             <input

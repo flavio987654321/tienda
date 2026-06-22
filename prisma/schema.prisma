@@ -9,38 +9,42 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  bannerImage   String?
-  password      String?
-  role          String    @default("BUYER")
-  banned        Boolean   @default(false)
-  bio           String?
-  city          String?
+  id              String    @id @default(cuid())
+  name            String?
+  email           String    @unique
+  emailVerified   DateTime?
+  image           String?
+  bannerImage     String?
+  password        String?
+  role            String    @default("BUYER")
+  banned          Boolean   @default(false)
+  bio             String?
+  city            String?
   instagramHandle String?
-  phone         String?
-  notifyNewStores Boolean  @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  phone           String?
+  notifyNewStores Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  // Aceptación de Términos y Condiciones generales al registrarse (cualquier rol)
+  termsAcceptedAt DateTime?
+  termsVersion    String?
+  termsAcceptedIp String?
 
-  accounts      Account[]
-  sessions      Session[]
-  store         Store?
-  orders        Order[]
-  affiliates    Affiliate[] @relation("AffiliateOwner")
-  asAffiliate   Affiliate[] @relation("AffiliateUser")
-  favorites     Favorite[]
-  reviews       Review[]
-  notifications       Notification[]
-  subscription        Subscription?
-  rewardCoupons       AffiliateRewardCoupon[]
-  pushSubscriptions   PushSubscription[]
-  storeSubscriptions  StoreSubscription[]
-  storeFollows        StoreFollow[]
-  donations           Donation[]
+  accounts           Account[]
+  sessions           Session[]
+  store              Store?
+  orders             Order[]
+  affiliates         Affiliate[]             @relation("AffiliateOwner")
+  asAffiliate        Affiliate[]             @relation("AffiliateUser")
+  favorites          Favorite[]
+  reviews            Review[]
+  notifications      Notification[]
+  subscription       Subscription?
+  rewardCoupons      AffiliateRewardCoupon[]
+  pushSubscriptions  PushSubscription[]
+  storeSubscriptions StoreSubscription[]
+  storeFollows       StoreFollow[]
+  donations          Donation[]
 }
 
 model PushSubscription {
@@ -83,12 +87,12 @@ model Session {
 }
 
 model AffiliateGoal {
-  id          String   @id @default(cuid())
-  storeId     String
-  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  storeId      String
+  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   targetAmount Float
   bonusRate    Float
-  month        String   // "2026-05"
+  month        String // "2026-05"
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -97,91 +101,91 @@ model AffiliateGoal {
 }
 
 model Store {
-  id             String   @id @default(cuid())
-  slug           String   @unique
-  customDomain   String?  @unique
-  name           String
-  description    String?
-  logo           String?
-  logoColor      String?
-  banner         String?
-  tagline        String?
-  primaryColor   String   @default("#6366f1")
-  secondaryColor String   @default("#f1f5f9")
-  accentColor    String   @default("#f59e0b")
-  fontFamily     String   @default("Inter")
-  templateId     String   @default("default")
-  productLayout  String   @default("grid3")
-  heroStyle      String   @default("full")
-  showPrices     Boolean  @default(true)
-  showStock      Boolean  @default(true)
-  showRatings    Boolean  @default(false)
+  id                    String    @id @default(cuid())
+  slug                  String    @unique
+  customDomain          String?   @unique
+  name                  String
+  description           String?
+  logo                  String?
+  logoColor             String?
+  banner                String?
+  tagline               String?
+  primaryColor          String    @default("#6366f1")
+  secondaryColor        String    @default("#f1f5f9")
+  accentColor           String    @default("#f59e0b")
+  fontFamily            String    @default("Inter")
+  templateId            String    @default("default")
+  productLayout         String    @default("grid3")
+  heroStyle             String    @default("full")
+  showPrices            Boolean   @default(true)
+  showStock             Boolean   @default(true)
+  showRatings           Boolean   @default(false)
   // Anuncio
-  announcementBar      String?
-  announcementBarColor String  @default("#6366f1")
+  announcementBar       String?
+  announcementBarColor  String    @default("#6366f1")
   // Navbar
-  navbarStyle    String   @default("solid")
+  navbarStyle           String    @default("solid")
   // Botones
-  buttonStyle    String   @default("rounded")
+  buttonStyle           String    @default("rounded")
   // Tarjetas
-  cardRadius     String   @default("md")
-  cardShadow     String   @default("sm")
-  cardHover      String   @default("scale")
+  cardRadius            String    @default("md")
+  cardShadow            String    @default("sm")
+  cardHover             String    @default("scale")
   // Fondo
-  backgroundStyle String  @default("plain")
+  backgroundStyle       String    @default("plain")
   // Redes sociales
-  instagramUrl   String?
-  facebookUrl    String?
-  tiktokUrl      String?
-  whatsappNumber String?
-  showWhatsappButton Boolean @default(false)
+  instagramUrl          String?
+  facebookUrl           String?
+  tiktokUrl             String?
+  whatsappNumber        String?
+  showWhatsappButton    Boolean   @default(false)
   // Footer
-  footerText     String?
+  footerText            String?
   // Moneda y SEO
-  currency       String   @default("ARS")
-  seoTitle       String?
-  seoDescription String?
-  isActive       Boolean  @default(true)
-  isPublished    Boolean  @default(false)
-  affiliatesEnabled Boolean @default(false)
-  commissionRate Float    @default(10)
-  acceptsRewardCoupons Boolean @default(false)
+  currency              String    @default("ARS")
+  seoTitle              String?
+  seoDescription        String?
+  isActive              Boolean   @default(true)
+  isPublished           Boolean   @default(false)
+  affiliatesEnabled     Boolean   @default(false)
+  commissionRate        Float     @default(10)
+  acceptsRewardCoupons  Boolean   @default(false)
   // Aceptación de términos del programa de afiliados por el titular
-  tcOwnerAcceptedAt DateTime?
-  tcOwnerAcceptedIp String?
-  tcOwnerVersion    String?
-  pageBlocks          String   @default("[]")
-  navLinks            String   @default("[]")
+  tcOwnerAcceptedAt     DateTime?
+  tcOwnerAcceptedIp     String?
+  tcOwnerVersion        String?
+  pageBlocks            String    @default("[]")
+  navLinks              String    @default("[]")
   // Políticas legales
-  policyReturns        String?
-  policyShipping       String?
-  policyTerms          String?
-  policyReturnsActive  Boolean  @default(true)
-  policyShippingActive Boolean  @default(true)
-  policyTermsActive    Boolean  @default(true)
+  policyReturns         String?
+  policyShipping        String?
+  policyTerms           String?
+  policyReturnsActive   Boolean   @default(true)
+  policyShippingActive  Boolean   @default(true)
+  policyTermsActive     Boolean   @default(true)
   // Footer
-  footerDescription    String?
-  footerShowLegal      Boolean  @default(true)
-  tipoTienda          String   @default("ROPA")
-  tipoTiendaConfigurado Boolean @default(false)
-  tieneVentaMayorista Boolean  @default(false)
+  footerDescription     String?
+  footerShowLegal       Boolean   @default(true)
+  tipoTienda            String    @default("ROPA")
+  tipoTiendaConfigurado Boolean   @default(false)
+  tieneVentaMayorista   Boolean   @default(false)
   // Config visual del nuevo editor de templates
-  storeConfig     String   @default("{}")
+  storeConfig           String    @default("{}")
   // MercadoPago Marketplace — credenciales del dueño de la tienda (cifradas)
-  mpAccessToken   String?
-  mpRefreshToken  String?
-  mpSellerId      String?
-  mpConnectedAt   DateTime?
+  mpAccessToken         String?
+  mpRefreshToken        String?
+  mpSellerId            String?
+  mpConnectedAt         DateTime?
   // Preview image generada al guardar el template
-  previewImage         String?
+  previewImage          String?
   // Verificación de identidad
-  isVerified           Boolean  @default(false)
-  verifiedShowName     Boolean  @default(false)
-  verifiedShowCity     Boolean  @default(false)
-  verifiedShowPhone    Boolean  @default(false)
-  verifiedShowSince    Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isVerified            Boolean   @default(false)
+  verifiedShowName      Boolean   @default(false)
+  verifiedShowCity      Boolean   @default(false)
+  verifiedShowPhone     Boolean   @default(false)
+  verifiedShowSince     Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   ownerId String @unique
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -225,11 +229,11 @@ model StoreFollow {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
 
-  userId  String
-  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   storeId String
-  store   Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, storeId])
   @@index([storeId])
@@ -255,57 +259,57 @@ model PushCampaign {
 }
 
 model VerificationRequest {
-  id          String    @id @default(cuid())
-  storeId     String    @unique
-  store       Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  status      String    @default("PENDING") // PENDING | APPROVED | REJECTED
-  dniFront    String
-  dniBack     String
-  selfie      String
-  reviewNote  String?
-  reviewedAt  DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  storeId    String    @unique
+  store      Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  status     String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  dniFront   String
+  dniBack    String
+  selfie     String
+  reviewNote String?
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([status])
 }
 
 model Product {
-  id           String   @id @default(cuid())
-  name         String
-  description  String?
-  price        Float
-  comparePrice Float?
-  images       String   @default("[]")
-  category     String   @default("general")
-  subcategory  String?
-  gender       String   @default("unisex")
-  tags         String   @default("[]")
-  attributes       String   @default("[]")
-  reelUrls         String   @default("[]")
+  id               String    @id @default(cuid())
+  name             String
+  description      String?
+  price            Float
+  comparePrice     Float?
+  images           String    @default("[]")
+  category         String    @default("general")
+  subcategory      String?
+  gender           String    @default("unisex")
+  tags             String    @default("[]")
+  attributes       String    @default("[]")
+  reelUrls         String    @default("[]")
   precioMayorista  Float?
   cantMinMayorista Int?
-  isActive     Boolean   @default(true)
-  deletedAt    DateTime?
-  publishAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  isActive         Boolean   @default(true)
+  deletedAt        DateTime?
+  publishAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  vehicleStatus String?
-  soldAt        DateTime?
-  soldPrice     Float?
-  soldBuyerName String?
+  vehicleStatus  String?
+  soldAt         DateTime?
+  soldPrice      Float?
+  soldBuyerName  String?
   soldBuyerPhone String?
-  soldNotes     String?
+  soldNotes      String?
 
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
-  variants       ProductVariant[]
-  orderItems     OrderItem[]
-  favorites      Favorite[]
-  reviews        Review[]
-  publicReviews  PublicReview[]
+  variants      ProductVariant[]
+  orderItems    OrderItem[]
+  favorites     Favorite[]
+  reviews       Review[]
+  publicReviews PublicReview[]
 
   @@index([deletedAt])
 }
@@ -325,15 +329,15 @@ model ProductVariant {
 }
 
 model Order {
-  id              String   @id @default(cuid())
-  status          String   @default("PENDING")
-  total           Float
-  subtotal        Float    @default(0)
-  discountAmount  Float    @default(0)
-  shippingCost    Float    @default(0)
-  shippingMethod  String?
-  trackingCode    String?
-  notes           String?
+  id                   String   @id @default(cuid())
+  status               String   @default("PENDING")
+  total                Float
+  subtotal             Float    @default(0)
+  discountAmount       Float    @default(0)
+  shippingCost         Float    @default(0)
+  shippingMethod       String?
+  trackingCode         String?
+  notes                String?
   shippingAddress      String   @default("{}")
   lockedCommissionRate Float?
   createdAt            DateTime @default(now())
@@ -415,20 +419,20 @@ model Shipping {
 }
 
 model Affiliate {
-  id        String   @id @default(cuid())
-  status    String   @default("PENDING")
-  isActive  Boolean  @default(false)
+  id                 String    @id @default(cuid())
+  status             String    @default("PENDING")
+  isActive           Boolean   @default(false)
   applicationMessage String?
-  experience String?
-  cvUrl     String?
-  socialUrl String?
-  requestedAt DateTime @default(now())
-  reviewedAt DateTime?
-  createdAt DateTime @default(now())
+  experience         String?
+  cvUrl              String?
+  socialUrl          String?
+  requestedAt        DateTime  @default(now())
+  reviewedAt         DateTime?
+  createdAt          DateTime  @default(now())
   // Aceptación de términos y condiciones
-  tcAcceptedAt DateTime?
-  tcVersion    String?
-  tcAcceptedIp String?
+  tcAcceptedAt       DateTime?
+  tcVersion          String?
+  tcAcceptedIp       String?
 
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -449,13 +453,13 @@ model Affiliate {
 }
 
 model AffiliateClick {
-  id          String   @id @default(cuid())
-  affiliateId String
-  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
-  storeId     String
-  ip          String?
-  convertedToOrder Boolean @default(false)
-  createdAt   DateTime @default(now())
+  id               String    @id @default(cuid())
+  affiliateId      String
+  affiliate        Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  storeId          String
+  ip               String?
+  convertedToOrder Boolean   @default(false)
+  createdAt        DateTime  @default(now())
 
   @@index([affiliateId])
   @@index([storeId])
@@ -464,12 +468,12 @@ model AffiliateClick {
 }
 
 model Commission {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   amount    Float
   rate      Float
-  status    String   @default("PENDING")
+  status    String    @default("PENDING")
   paidAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   affiliateId String
   affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
@@ -479,18 +483,18 @@ model Commission {
 }
 
 model Wallet {
-  id            String   @id @default(cuid())
-  balance       Float    @default(0)
-  totalEarned   Float    @default(0)
-  totalWithdrawn Float   @default(0)
+  id             String    @id @default(cuid())
+  balance        Float     @default(0)
+  totalEarned    Float     @default(0)
+  totalWithdrawn Float     @default(0)
   // Datos bancarios para retiros
-  cbu           String?
-  alias         String?
-  cuil          String?
-  bankHolder    String?
-  bankUpdatedAt DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  cbu            String?
+  alias          String?
+  cuil           String?
+  bankHolder     String?
+  bankUpdatedAt  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   affiliateId String    @unique
   affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
@@ -536,8 +540,8 @@ model PublicReview {
   reviewer  String
   createdAt DateTime @default(now())
 
-  storeId   String
-  store     Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -546,16 +550,16 @@ model PublicReview {
 }
 
 model Coupon {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   code           String
-  discountType   String   @default("percentage")
+  discountType   String    @default("percentage")
   discountValue  Float
-  minOrderAmount Float    @default(0)
+  minOrderAmount Float     @default(0)
   maxUses        Int?
-  usedCount      Int      @default(0)
+  usedCount      Int       @default(0)
   expiresAt      DateTime?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
 
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -581,19 +585,19 @@ model Notification {
 }
 
 model WalletWithdrawal {
-  id               String    @id @default(cuid())
-  amount           Float
-  status           String    @default("PENDING") // PENDING | APPROVED | REJECTED
-  notes            String?
-  createdAt        DateTime  @default(now())
-  approvedAt       DateTime?
-  rejectedAt       DateTime?
-  rejectionReason  String?
+  id              String    @id @default(cuid())
+  amount          Float
+  status          String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  notes           String?
+  createdAt       DateTime  @default(now())
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
   // Snapshot de datos bancarios al momento de solicitar el retiro
-  snapshotCbu      String?
-  snapshotAlias    String?
-  snapshotCuil     String?
-  snapshotHolder   String?
+  snapshotCbu     String?
+  snapshotAlias   String?
+  snapshotCuil    String?
+  snapshotHolder  String?
 
   walletId String
   wallet   Wallet @relation(fields: [walletId], references: [id])
@@ -616,21 +620,21 @@ model Testimonial {
 // type:   STORE | SUBSCRIPTION
 // status: AVAILABLE | USED | EXPIRED
 model AffiliateRewardCoupon {
-  id            String   @id @default(cuid())
-  code          String   @unique
+  id            String    @id @default(cuid())
+  code          String    @unique
   userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type          String   // STORE | SUBSCRIPTION
-  level         String   // SILVER | GOLD | DIAMOND
-  plan          String   // MONTHLY | ANNUAL
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String // STORE | SUBSCRIPTION
+  level         String // SILVER | GOLD | DIAMOND
+  plan          String // MONTHLY | ANNUAL
   discountValue Float
-  earnedMonth   String   // "2026-04"
-  status        String   @default("AVAILABLE") // AVAILABLE | USED | EXPIRED
+  earnedMonth   String // "2026-04"
+  status        String    @default("AVAILABLE") // AVAILABLE | USED | EXPIRED
   usedAt        DateTime?
   usedOrderId   String?
   usedStoreName String?
   expiresAt     DateTime
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
 }
 
 // AUDIT DE CUENTAS ELIMINADAS — resguardo legal/fiscal
@@ -641,10 +645,15 @@ model DeletedAccountAudit {
   deletedAt        DateTime @default(now())
   deletedByAdminId String
   originalUserId   String
-  originalEmail    String?  // guardado antes de anonimizar
-  originalName     String?  // guardado antes de anonimizar
-  accountType      String   // OWNER | SELLER | BUYER
+  originalEmail    String? // guardado antes de anonimizar
+  originalName     String? // guardado antes de anonimizar
+  accountType      String // OWNER | SELLER | BUYER
   accountCreatedAt DateTime
+
+  // Aceptación de T&C generales al registrarse (cualquier rol)
+  generalTermsAcceptedAt DateTime?
+  generalTermsVersion    String?
+  generalTermsAcceptedIp String?
 
   // Aceptación de T&C del programa de afiliados
   tcAffiliateAcceptedAt DateTime?
@@ -670,10 +679,10 @@ model AdminActionLog {
   createdAt  DateTime @default(now())
   adminId    String
   adminEmail String
-  action     String   // BAN | UNBAN | DELETE | CHANGE_STATUS | CHANGE_TIER | CHANGE_PLAN | TOGGLE_STORE
-  targetId   String   // userId o storeId afectado
-  targetType String   // USER | STORE | SUBSCRIPTION
-  details    String   // JSON con datos adicionales del cambio
+  action     String // BAN | UNBAN | DELETE | CHANGE_STATUS | CHANGE_TIER | CHANGE_PLAN | TOGGLE_STORE
+  targetId   String // userId o storeId afectado
+  targetType String // USER | STORE | SUBSCRIPTION
+  details    String // JSON con datos adicionales del cambio
   ip         String?
 }
 
@@ -700,45 +709,45 @@ model Promotion {
 // plan:   MONTHLY | ANNUAL
 // role:   AFFILIATE | OWNER
 model Subscription {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role              String   // AFFILIATE | OWNER
-  tier              String   @default("BASIC") // BASIC | PREMIUM (solo para OWNER)
-  plan              String   // MONTHLY | ANNUAL
-  status            String   @default("TRIAL") // TRIAL | ACTIVE | GRACE | EXPIRED | CANCELLED
-  trialEndsAt       DateTime
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role               String // AFFILIATE | OWNER
+  tier               String    @default("BASIC") // BASIC | PREMIUM (solo para OWNER)
+  plan               String // MONTHLY | ANNUAL
+  status             String    @default("TRIAL") // TRIAL | ACTIVE | GRACE | EXPIRED | CANCELLED
+  trialEndsAt        DateTime
   currentPeriodStart DateTime?
-  currentPeriodEnd  DateTime?
-  gracePeriodEndsAt DateTime?
-  cancelAtPeriodEnd Boolean  @default(false)
-  mpPaymentId       String?
-  mpPreapprovalId   String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  currentPeriodEnd   DateTime?
+  gracePeriodEndsAt  DateTime?
+  cancelAtPeriodEnd  Boolean   @default(false)
+  mpPaymentId        String?
+  mpPreapprovalId    String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 // Consultas/leads para tiendas de tipo inquiry (VEHICULOS, INMOBILIARIA, etc.)
 // Se crea cuando un cliente hace click en "Consultar por WhatsApp" desde un link de afiliado
 model Lead {
-  id              String    @id @default(cuid())
-  storeId         String
-  store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  affiliateId     String?
-  affiliate       Affiliate? @relation(fields: [affiliateId], references: [id], onDelete: SetNull)
-  productId       String?
-  productName     String
-  productPrice    Float
-  customerName    String?
-  customerPhone   String?
-  customerMessage String?
+  id               String     @id @default(cuid())
+  storeId          String
+  store            Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  affiliateId      String?
+  affiliate        Affiliate? @relation(fields: [affiliateId], references: [id], onDelete: SetNull)
+  productId        String?
+  productName      String
+  productPrice     Float
+  customerName     String?
+  customerPhone    String?
+  customerMessage  String?
   // PENDING = consultó / CONFIRMED = venta confirmada / REJECTED = no concretó
-  status          String    @default("PENDING")
+  status           String     @default("PENDING")
   commissionAmount Float?
-  commissionRate  Float?
-  confirmedAt     DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  commissionRate   Float?
+  confirmedAt      DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   @@index([storeId, createdAt(sort: Desc)])
   @@index([affiliateId])
@@ -759,15 +768,15 @@ model StoreView {
 }
 
 model StoreReport {
-  id           String   @id @default(cuid())
-  storeId      String
-  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  storeId       String
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   reporterEmail String?
-  reason       String
-  description  String?
-  status       String   @default("PENDING")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  reason        String
+  description   String?
+  status        String   @default("PENDING")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([storeId])
   @@index([status, createdAt(sort: Desc)])
@@ -777,25 +786,19 @@ model StoreReport {
 // Campaña de donación colectiva. Una sola ACTIVE a la vez.
 // goalAmount incluye el reservePct (% para envío/gastos operativos).
 model DonationCampaign {
-  id              String    @id @default(cuid())
-  name            String
-  description     String?
-  goalAmount      Float
-  reservePct      Float     @default(10)
-  status          String    @default("ACTIVE") // ACTIVE | COMPLETED | CANCELLED
-  estimatedDrawAt DateTime?
-  bannerActive    Boolean   @default(false)
-  // Sorteo en vivo
-  scheduledDrawAt DateTime? // fecha/hora exacta que el admin programó para el sorteo
-  drawStatus      String    @default("SCHEDULED") // SCHEDULED | LIVE | FINISHED
-  drawStartedAt   DateTime? // timestamp real (server) de cuándo arrancó la animación
-  reminderSentAt  DateTime? // cuándo se mandó el email recordatorio de "ya es la hora" — se resetea al reprogramar
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  goalAmount   Float
+  reservePct   Float    @default(10)
+  status       String    @default("ACTIVE") // ACTIVE | COMPLETED | CANCELLED
+  bannerActive Boolean   @default(false)
+  deliveredAt  DateTime? // cuándo el admin confirmó a qué familia se le entregó la canasta — marca esta campaña como cerrada/archivada
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime @updatedAt
 
   products      DonationProduct[]
   donations     Donation[]
-  draws         DonationDraw[]
   notifications DonationNotification[]
   testimonial   DonationTestimonial?
 
@@ -805,13 +808,13 @@ model DonationCampaign {
 // Productos visuales de la canasta (no se compran individualmente,
 // el fondo es general — sirven para mostrar el progreso visual por producto).
 model DonationProduct {
-  id          String   @id @default(cuid())
+  id          String           @id @default(cuid())
   campaignId  String
   campaign    DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   name        String
   image       String?
   targetPrice Float
-  sortOrder   Int      @default(0)
+  sortOrder   Int              @default(0)
 
   @@index([campaignId])
 }
@@ -824,71 +827,32 @@ model DonationProduct {
 // en Prisma. Así, un intento de pago abandonado (PENDING) nunca bloquea un
 // reintento real; solo bloquea cuando ya existe una donación confirmada.
 model Donation {
-  id                String   @id @default(cuid())
-  campaignId        String
-  campaign          DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  userId            String?
-  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  amount            Float
-  mpPaymentId       String?  @unique
-  status            String   @default("PENDING") // PENDING | CONFIRMED | FAILED
-  donorName         String
-  donorPhone        String
-  donorEmail        String
-  donorLocalidad    String
-  donorDeliveryPref String   @default("ENVIO") // ENVIO | RETIRO
-  createdAt         DateTime @default(now())
-
-  asWinner1 DonationDraw[] @relation("DrawWinner1")
-  asWinner2 DonationDraw[] @relation("DrawWinner2")
-  asWinner3 DonationDraw[] @relation("DrawWinner3")
+  id             String           @id @default(cuid())
+  campaignId     String
+  campaign       DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  amount         Float
+  mpPaymentId    String?          @unique
+  status         String           @default("PENDING") // PENDING | CONFIRMED | FAILED
+  donorName      String
+  donorPhone     String
+  donorEmail     String
+  donorLocalidad String
+  createdAt      DateTime         @default(now())
 
   @@index([campaignId, status])
 }
 
-// Sorteo de una campaña. Si los 3 ganadores no responden, se crea un nuevo
-// registro con attemptNumber + 1 al día siguiente, excluyendo a los anteriores.
-model DonationDraw {
-  id                  String   @id @default(cuid())
-  campaignId          String
-  campaign            DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  attemptNumber       Int      @default(1)
-  winner1Id           String?
-  winner1             Donation? @relation("DrawWinner1", fields: [winner1Id], references: [id])
-  winner2Id           String?
-  winner2             Donation? @relation("DrawWinner2", fields: [winner2Id], references: [id])
-  winner3Id           String?
-  winner3             Donation? @relation("DrawWinner3", fields: [winner3Id], references: [id])
-  // currentPosition indica cuál de los 3 ganadores está activo en la cascada
-  // (1, 2 o 3). winnerStatus aplica siempre al ganador de esa posición.
-  // Al marcar NO_RESPONSE: si currentPosition < 3, avanza +1 y winnerStatus
-  // vuelve a PENDING para el siguiente. Si currentPosition === 3, el draw
-  // entero queda agotado y hay que reprogramar para el día siguiente.
-  currentPosition     Int      @default(1)
-  winnerStatus        String   @default("PENDING") // PENDING | CONFIRMED | NO_RESPONSE
-  excludedDonationIds String   @default("[]") // JSON array de Donation.id descartados en intentos previos
-  conductedAt         DateTime @default(now())
-  nextAttemptAt       DateTime?
-  adminNotes          String?
-  // Sorteo en vivo: el resultado ya está calculado y guardado arriba (winner1Id/2/3)
-  // desde el instante en que se activa el sorteo. revealAt es el momento en que
-  // el endpoint público tiene permiso de devolver esos nombres (cuando termina
-  // la animación), nunca antes — así nadie puede verlo antes de tiempo.
-  revealAt            DateTime?
-
-  @@unique([campaignId, attemptNumber])
-  @@index([campaignId])
-}
-
-// Historial de avisos manuales mandados a los donantes (ej: día y hora del
-// sorteo). Se usa también para el límite de 3 envíos por día.
+// Historial de avisos manuales mandados a los donantes (ej: novedades de la
+// campaña). Se usa también para el límite de 3 envíos por día.
 model DonationNotification {
-  id         String   @id @default(cuid())
+  id         String           @id @default(cuid())
   campaignId String
   campaign   DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   message    String
-  sentCount  Int      @default(0)
-  createdAt  DateTime @default(now())
+  sentCount  Int              @default(0)
+  createdAt  DateTime         @default(now())
 
   @@index([campaignId, createdAt(sort: Desc)])
 }
@@ -898,12 +862,12 @@ model DonationNotification {
 // necesita un estado de aprobación separado: que el admin lo suba ya implica
 // que está aprobado.
 model DonationTestimonial {
-  id         String   @id @default(cuid())
-  campaignId String   @unique
+  id         String           @id @default(cuid())
+  campaignId String           @unique
   campaign   DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   donorName  String
   mediaUrl   String?
-  mediaType  String?  // IMAGE | VIDEO
+  mediaType  String? // IMAGE | VIDEO
   text       String?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime         @default(now())
 }

@@ -5,9 +5,10 @@ import { calculateGoalAmount } from "@/lib/canasta";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // Incluye COMPLETED (meta ya alcanzada, esperando sorteo) además de
-  // ACTIVE — si no, la página se queda sin nada que mostrar justo en el
-  // momento más importante: cuando se completa la canasta.
+  // Incluye COMPLETED (meta ya alcanzada, esperando que el admin elija a
+  // quién se le entrega) además de ACTIVE — si no, la página se queda sin
+  // nada que mostrar justo en el momento más importante: cuando se completa
+  // la canasta.
   const campaign = await prisma.donationCampaign.findFirst({
     where: { status: { in: ["ACTIVE", "COMPLETED"] } },
     include: { products: { orderBy: { sortOrder: "asc" } } },
@@ -50,8 +51,6 @@ export async function GET() {
       description: campaign.description,
       goalAmount,
       reservePct: campaign.reservePct,
-      scheduledDrawAt: campaign.scheduledDrawAt,
-      drawStatus: campaign.drawStatus,
       bannerActive: campaign.bannerActive,
     },
     products,

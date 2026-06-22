@@ -29,7 +29,6 @@ export async function GET() {
       donorPhone: true,
       donorEmail: true,
       donorLocalidad: true,
-      donorDeliveryPref: true,
       amount: true,
       status: true,
       createdAt: true,

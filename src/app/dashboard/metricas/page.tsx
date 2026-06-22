@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -18,7 +19,55 @@ import {
   MessageSquare,
 } from "lucide-react";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Rango de fechas ──────────────────────────────────────────────────────────
+// Todas las comparaciones usan ventanas de igual longitud (período actual vs.
+// el período inmediatamente anterior de la misma cantidad de días). Así se evita
+// comparar un mes a medias contra un mes anterior completo.
+
+const RANGE_OPTIONS = [7, 30, 90] as const;
+type RangeDays = (typeof RANGE_OPTIONS)[number];
+const RANGE_LABELS: Record<RangeDays, string> = { 7: "7 días", 30: "30 días", 90: "90 días" };
+
+function utcDateStr(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function utcDayLabel(dateStr: string) {
+  const [, m, day] = dateStr.split("-");
+  return `${parseInt(day, 10)}/${parseInt(m, 10)}`;
+}
+
+function addUtcDays(d: Date, n: number) {
+  const r = new Date(d);
+  r.setUTCDate(r.getUTCDate() + n);
+  return r;
+}
+
+// Construye una serie diaria en UTC para cualquier colección con fecha + valor.
+// Se usa para ingresos, consultas y visitas — así los tres gráficos quedan
+// alineados al mismo eje de fechas (antes, visitas usaba UTC e ingresos/consultas
+// usaban la hora local del servidor, y podían desalinearse un día).
+function buildDailySeries(
+  rangeStart: Date,
+  rangeDays: number,
+  entries: { dateStr: string; value: number }[]
+) {
+  const map = new Map<string, number>();
+  for (let i = 0; i < rangeDays; i++) {
+    map.set(utcDateStr(addUtcDays(rangeStart, i)), 0);
+  }
+  for (const { dateStr, value } of entries) {
+    if (map.has(dateStr)) map.set(dateStr, (map.get(dateStr) ?? 0) + value);
+  }
+  return [...map.entries()].map(([dateStr, value]) => ({ label: utcDayLabel(dateStr), value }));
+}
+
+function pctDiff(current: number, previous: number): number | null {
+  if (previous <= 0) return null;
+  return Math.round(((current - previous) / previous) * 100);
+}
+
+// ─── Helpers de presentación ──────────────────────────────────────────────────
 
 function money(value: number) {
   return `$${Math.round(value).toLocaleString("es-AR")}`;
@@ -51,6 +100,8 @@ function BarChart({
   const H = 140;
   const padL = 4;
   const barW = Math.floor((W - padL * 2) / data.length) - 2;
+  const highlightFrom = Math.max(0, data.length - 7);
+  const labelStep = Math.max(1, Math.ceil(data.length / 12));
 
   return (
     <div className="overflow-x-auto">
@@ -59,7 +110,7 @@ function BarChart({
           const barH = Math.max(2, Math.round((d.value / max) * H));
           const x = padL + i * ((W - padL * 2) / data.length);
           const y = H - barH;
-          const isLast7 = i >= data.length - 7;
+          const isRecent = i >= highlightFrom;
           return (
             <g key={i}>
               <rect
@@ -68,9 +119,9 @@ function BarChart({
                 width={barW}
                 height={barH}
                 rx={3}
-                fill={isLast7 ? color : lightColor}
+                fill={isRecent ? color : lightColor}
               />
-              {i % 5 === 0 && (
+              {i % labelStep === 0 && (
                 <text
                   x={x + barW / 2}
                   y={H + 16}
@@ -112,6 +163,7 @@ function KPICard({ label, value, sub, trend, icon: Icon, iconBg }: KPICardProps)
                 ? "bg-green-50 text-green-600"
                 : "bg-red-50 text-red-500"
             }`}
+            title="vs. el período anterior de igual duración"
           >
             {trend >= 0 ? "↑" : "↓"} {Math.abs(trend)}%
           </span>
@@ -124,9 +176,31 @@ function KPICard({ label, value, sub, trend, icon: Icon, iconBg }: KPICardProps)
   );
 }
 
+function RangeSelector({ active }: { active: RangeDays }) {
+  return (
+    <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1">
+      {RANGE_OPTIONS.map((r) => (
+        <Link
+          key={r}
+          href={r === 30 ? "/dashboard/metricas" : `/dashboard/metricas?range=${r}`}
+          className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+            r === active ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50"
+          }`}
+        >
+          {RANGE_LABELS[r]}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default async function MetricasPage() {
+export default async function MetricasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -138,29 +212,27 @@ export default async function MetricasPage() {
 
   const isAutos = store.tipoTienda === "AUTOS";
 
+  const { range } = await searchParams;
+  const parsedRange = Number(range);
+  const rangeDays: RangeDays = (RANGE_OPTIONS as readonly number[]).includes(parsedRange)
+    ? (parsedRange as RangeDays)
+    : 30;
+
   const now = new Date();
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  // ── Boundaries para queries de Order (DateTime, Prisma convierte a UTC) ──
-  const startOf30 = new Date(now);
-  startOf30.setDate(now.getDate() - 29);
-  startOf30.setHours(0, 0, 0, 0);
+  // ── Ventanas de comparación: período actual vs. período anterior de igual duración ──
+  const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const periodStart = addUtcDays(todayUtc, -(rangeDays - 1));
+  const periodEndExclusive = addUtcDays(todayUtc, 1);
+  const prevPeriodStart = addUtcDays(periodStart, -rangeDays);
+  const prevPeriodEndExclusive = periodStart;
 
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+  const periodStartStr = utcDateStr(periodStart);
+  const prevPeriodStartStr = utcDateStr(prevPeriodStart);
+  const prevPeriodEndStr = utcDateStr(addUtcDays(prevPeriodEndExclusive, -1));
 
-  // ── Boundaries para queries de StoreView (String "YYYY-MM-DD" UTC) ──
-  const startOf30Str = startOf30.toISOString().slice(0, 10);
-
-  const utcY = now.getUTCFullYear();
-  const utcM = now.getUTCMonth(); // 0-indexed
-  const startOfMonthStr = `${utcY}-${String(utcM + 1).padStart(2, "0")}-01`;
-
-  const prevY = utcM === 0 ? utcY - 1 : utcY;
-  const prevM = utcM === 0 ? 11 : utcM - 1;
-  const lastMonthStr = `${prevY}-${String(prevM + 1).padStart(2, "0")}-01`;
-  const endOfLastMonthStr = new Date(Date.UTC(utcY, utcM, 0)).toISOString().slice(0, 10);
+  const CONFIRMED_ORDER_STATUSES = ["CONFIRMED", "SHIPPED", "DELIVERED"];
 
   // ── Queries compartidas ──
   const [affiliateCount, pushSubscribers, pushCampaigns7d, pushCampaignsTotal] = await Promise.all([
@@ -171,52 +243,78 @@ export default async function MetricasPage() {
   ]);
 
   // ── Queries AUTOS ──
-  let leadsThisMonth = 0, leadsTotal = 0, leadsConfirmed = 0;
+  let leadsPeriodRaw: { createdAt: Date }[] = [];
+  let leadsTotal = 0, leadsConfirmedTotal = 0, leadsPrevCount = 0;
+  let leadsConfirmedCurrent = 0, leadsConfirmedPrev = 0;
   let vehiculosDisponibles = 0, vehiculosVendidos = 0, vehiculosReservados = 0;
   let soldPriceAvg: { _avg: { soldPrice: number | null } } = { _avg: { soldPrice: null } };
-  let leads30raw: { createdAt: Date }[] = [];
 
   if (isAutos) {
-    [leadsThisMonth, leadsTotal, leadsConfirmed, vehiculosDisponibles, vehiculosVendidos, vehiculosReservados, soldPriceAvg, leads30raw] = await Promise.all([
-      prisma.lead.count({ where: { storeId: store.id, createdAt: { gte: startOfMonth } } }),
+    [
+      leadsPeriodRaw,
+      leadsTotal,
+      leadsConfirmedTotal,
+      leadsPrevCount,
+      leadsConfirmedCurrent,
+      leadsConfirmedPrev,
+      vehiculosDisponibles,
+      vehiculosVendidos,
+      vehiculosReservados,
+      soldPriceAvg,
+    ] = await Promise.all([
+      prisma.lead.findMany({
+        where: { storeId: store.id, createdAt: { gte: periodStart, lt: periodEndExclusive } },
+        select: { createdAt: true },
+        orderBy: { createdAt: "asc" },
+      }),
       prisma.lead.count({ where: { storeId: store.id } }),
       prisma.lead.count({ where: { storeId: store.id, status: "CONFIRMED" } }),
+      prisma.lead.count({
+        where: { storeId: store.id, createdAt: { gte: prevPeriodStart, lt: prevPeriodEndExclusive } },
+      }),
+      // "Confirmada" = se marcó como venta confirmada dentro del período (no cuándo se creó la consulta)
+      prisma.lead.count({
+        where: { storeId: store.id, confirmedAt: { gte: periodStart, lt: periodEndExclusive } },
+      }),
+      prisma.lead.count({
+        where: { storeId: store.id, confirmedAt: { gte: prevPeriodStart, lt: prevPeriodEndExclusive } },
+      }),
       prisma.product.count({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "AVAILABLE" } }),
       prisma.product.count({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD" } }),
       prisma.product.count({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "RESERVED" } }),
       prisma.product.aggregate({ where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD" }, _avg: { soldPrice: true } }),
-      prisma.lead.findMany({ where: { storeId: store.id, createdAt: { gte: startOf30 } }, select: { createdAt: true }, orderBy: { createdAt: "asc" } }),
     ]);
   }
 
   // ── Queries tienda normal (no AUTOS) ──
-  let orders30: { total: number; createdAt: Date }[] = [];
-  let ordersThisMonth: { _sum: { total: number | null }; _count: number } = { _sum: { total: null }, _count: 0 };
-  let ordersLastMonth: { _sum: { total: number | null }; _count: number } = { _sum: { total: null }, _count: 0 };
+  let ordersPeriod: { total: number; status: string; createdAt: Date }[] = [];
+  let revenuePrevAgg: { _sum: { total: number | null } } = { _sum: { total: null } };
+  let ordersPrevCount = 0;
   let topProducts: { productId: string; _sum: { quantity: number | null } }[] = [];
   let reviewStats: { _avg: { rating: number | null }; _count: number } = { _avg: { rating: null }, _count: 0 };
   let ordersByStatus: { status: string; _count: number }[] = [];
 
   if (!isAutos) {
-    [orders30, ordersThisMonth, ordersLastMonth, topProducts, reviewStats, ordersByStatus] = await Promise.all([
+    [ordersPeriod, revenuePrevAgg, ordersPrevCount, topProducts, reviewStats, ordersByStatus] = await Promise.all([
       prisma.order.findMany({
-        where: { storeId: store.id, createdAt: { gte: startOf30 }, status: { not: "CANCELLED" } },
-        select: { total: true, createdAt: true },
+        where: { storeId: store.id, createdAt: { gte: periodStart, lt: periodEndExclusive }, status: { not: "CANCELLED" } },
+        select: { total: true, status: true, createdAt: true },
         orderBy: { createdAt: "asc" },
       }),
       prisma.order.aggregate({
-        where: { storeId: store.id, createdAt: { gte: startOfMonth }, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+        where: {
+          storeId: store.id,
+          createdAt: { gte: prevPeriodStart, lt: prevPeriodEndExclusive },
+          status: { in: CONFIRMED_ORDER_STATUSES },
+        },
         _sum: { total: true },
-        _count: true,
       }),
-      prisma.order.aggregate({
-        where: { storeId: store.id, createdAt: { gte: startOfLastMonth, lte: endOfLastMonth }, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
-        _sum: { total: true },
-        _count: true,
+      prisma.order.count({
+        where: { storeId: store.id, createdAt: { gte: prevPeriodStart, lt: prevPeriodEndExclusive }, status: { not: "CANCELLED" } },
       }),
       prisma.orderItem.groupBy({
         by: ["productId"],
-        where: { order: { storeId: store.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } } },
+        where: { order: { storeId: store.id, status: { in: CONFIRMED_ORDER_STATUSES } } },
         _sum: { quantity: true },
         orderBy: { _sum: { quantity: "desc" } },
         take: 5,
@@ -227,27 +325,22 @@ export default async function MetricasPage() {
   }
 
   // ── Queries de StoreView (requieren migración SQL — fallan silenciosamente si la tabla no existe) ──
-  let viewsThisMonth: { _sum: { count: number | null } } = { _sum: { count: null } };
-  let viewsLastMonth: { _sum: { count: number | null } } = { _sum: { count: null } };
-  let views30raw: { date: string; count: number }[] = [];
+  let viewsPrevAgg: { _sum: { count: number | null } } = { _sum: { count: null } };
+  let viewsPeriodRaw: { date: string; count: number }[] = [];
   try {
-    [viewsThisMonth, viewsLastMonth, views30raw] = await Promise.all([
+    [viewsPrevAgg, viewsPeriodRaw] = await Promise.all([
       prisma.storeView.aggregate({
-        where: { storeId: store.id, date: { gte: startOfMonthStr } },
-        _sum: { count: true },
-      }),
-      prisma.storeView.aggregate({
-        where: { storeId: store.id, date: { gte: lastMonthStr, lte: endOfLastMonthStr } },
+        where: { storeId: store.id, date: { gte: prevPeriodStartStr, lte: prevPeriodEndStr } },
         _sum: { count: true },
       }),
       prisma.storeView.findMany({
-        where: { storeId: store.id, date: { gte: startOf30Str } },
+        where: { storeId: store.id, date: { gte: periodStartStr } },
         select: { date: true, count: true },
         orderBy: { date: "asc" },
       }),
     ]);
-  } catch {
-    // Tabla StoreView pendiente de migración — visitas aparecerán una vez creada
+  } catch (err) {
+    console.error("[metricas] StoreView aggregate falló — ¿falta la migración?", err);
   }
 
   // ── Nombres de productos para el top ──
@@ -260,83 +353,49 @@ export default async function MetricasPage() {
     : [];
   const nameMap = Object.fromEntries(productNames.map((p) => [p.id, p.name]));
 
-  // ── Datos para gráfico de ingresos (30 días) ──
-  const dayMap = new Map<string, number>();
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(startOf30);
-    d.setDate(startOf30.getDate() + i);
-    dayMap.set(`${d.getDate()}/${d.getMonth() + 1}`, 0);
-  }
-  for (const order of orders30) {
-    const d = new Date(order.createdAt);
-    const key = `${d.getDate()}/${d.getMonth() + 1}`;
-    dayMap.set(key, (dayMap.get(key) ?? 0) + order.total);
-  }
-  const revenueChartData = [...dayMap.entries()].map(([label, value]) => ({ label, value }));
-
-  // ── Datos para gráfico de visitas (30 días, alineado con el de ingresos) ──
-  const visitMap = new Map<string, { label: string; count: number }>();
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(startOf30);
-    d.setDate(startOf30.getDate() + i);
-    visitMap.set(d.toISOString().slice(0, 10), {
-      label: `${d.getDate()}/${d.getMonth() + 1}`,
-      count: 0,
-    });
-  }
-  for (const v of views30raw) {
-    const entry = visitMap.get(v.date);
-    if (entry) entry.count = v.count;
-  }
-  const visitsChartData = [...visitMap.values()].map(({ label, count }) => ({
-    label,
-    value: count,
-  }));
+  // ── Series diarias (todas en UTC, mismo eje de fechas) ──
+  const revenueChartData = buildDailySeries(
+    periodStart,
+    rangeDays,
+    ordersPeriod.map((o) => ({ dateStr: utcDateStr(o.createdAt), value: o.total }))
+  );
+  const leadsChartData = buildDailySeries(
+    periodStart,
+    rangeDays,
+    leadsPeriodRaw.map((l) => ({ dateStr: utcDateStr(l.createdAt), value: 1 }))
+  );
+  const visitsChartData = buildDailySeries(
+    periodStart,
+    rangeDays,
+    viewsPeriodRaw.map((v) => ({ dateStr: v.date, value: v.count }))
+  );
 
   // ── Métricas calculadas — tienda normal ──
-  const thisMonthRevenue = ordersThisMonth._sum.total ?? 0;
-  const lastMonthRevenue = ordersLastMonth._sum.total ?? 0;
-  const revDiff =
-    lastMonthRevenue > 0
-      ? Math.round(((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
-      : null;
+  const totalOrdersPeriod = ordersPeriod.length;
+  const totalRevenuePeriod = ordersPeriod
+    .filter((o) => CONFIRMED_ORDER_STATUSES.includes(o.status))
+    .reduce((s, o) => s + o.total, 0);
+  const totalRevenuePrev = revenuePrevAgg._sum.total ?? 0;
+  const revDiff = pctDiff(totalRevenuePeriod, totalRevenuePrev);
+  const ordersDiff = pctDiff(totalOrdersPeriod, ordersPrevCount);
+  const avgTicket = totalOrdersPeriod > 0 ? totalRevenuePeriod / totalOrdersPeriod : 0;
 
-  const totalOrders30 = orders30.length;
-  const totalRevenue30 = orders30.reduce((s, o) => s + o.total, 0);
-  const avgTicket = totalOrders30 > 0 ? totalRevenue30 / totalOrders30 : 0;
-
-  const totalViews30 = visitsChartData.reduce((s, v) => s + v.value, 0);
-  const totalViewsThisMonth = viewsThisMonth._sum.count ?? 0;
-  const totalViewsLastMonth = viewsLastMonth._sum.count ?? 0;
-  const viewsDiff =
-    totalViewsLastMonth > 0
-      ? Math.round(((totalViewsThisMonth - totalViewsLastMonth) / totalViewsLastMonth) * 100)
-      : null;
+  const totalViewsPeriod = visitsChartData.reduce((s, v) => s + v.value, 0);
+  const totalViewsPrev = viewsPrevAgg._sum.count ?? 0;
+  const viewsDiff = pctDiff(totalViewsPeriod, totalViewsPrev);
 
   const conversionRate =
-    totalViews30 > 0 ? ((totalOrders30 / totalViews30) * 100).toFixed(1) : null;
+    totalViewsPeriod > 0 ? ((totalOrdersPeriod / totalViewsPeriod) * 100).toFixed(1) : null;
 
   const totalOrdersAllStatuses = ordersByStatus.reduce((s, o) => s + o._count, 0);
 
   // ── Métricas calculadas — AUTOS ──
+  const totalLeadsPeriod = leadsPeriodRaw.length;
+  const leadsDiff = pctDiff(totalLeadsPeriod, leadsPrevCount);
+  const leadsConfirmedDiff = pctDiff(leadsConfirmedCurrent, leadsConfirmedPrev);
   const leadsConversionRate =
-    leadsTotal > 0 ? Math.round((leadsConfirmed / leadsTotal) * 100) : null;
+    leadsTotal > 0 ? Math.round((leadsConfirmedTotal / leadsTotal) * 100) : null;
   const avgSoldPrice = soldPriceAvg._avg.soldPrice ?? 0;
-
-  // Gráfico de consultas diarias (30 días)
-  const leadsDayMap = new Map<string, number>();
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(startOf30);
-    d.setDate(startOf30.getDate() + i);
-    leadsDayMap.set(`${d.getDate()}/${d.getMonth() + 1}`, 0);
-  }
-  for (const lead of leads30raw) {
-    const d = new Date(lead.createdAt);
-    const key = `${d.getDate()}/${d.getMonth() + 1}`;
-    leadsDayMap.set(key, (leadsDayMap.get(key) ?? 0) + 1);
-  }
-  const leadsChartData = [...leadsDayMap.entries()].map(([label, value]) => ({ label, value }));
-  const totalLeads30 = leads30raw.length;
 
   // ── Render ──
   return (
@@ -344,42 +403,46 @@ export default async function MetricasPage() {
       <div className="mx-auto w-full max-w-6xl space-y-6">
 
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Métricas</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Rendimiento de <strong>{store.name}</strong> — últimos 30 días
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Métricas</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Rendimiento de <strong>{store.name}</strong> — comparado contra el período anterior de igual duración
+            </p>
+          </div>
+          <RangeSelector active={rangeDays} />
         </div>
 
         {/* ── KPIs ── */}
         {isAutos ? (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KPICard
-              label="Consultas este mes"
-              value={leadsThisMonth}
+              label={`Consultas (${RANGE_LABELS[rangeDays]})`}
+              value={totalLeadsPeriod}
               sub={`${leadsTotal} en total`}
+              trend={leadsDiff}
               icon={MessageSquare}
               iconBg="bg-indigo-50 text-indigo-600"
             />
             <KPICard
-              label="Ventas confirmadas"
-              value={leadsConfirmed}
-              sub={leadsConversionRate !== null ? `${leadsConversionRate}% de conversión` : "Sin datos"}
-              trend={leadsConversionRate}
+              label={`Ventas confirmadas (${RANGE_LABELS[rangeDays]})`}
+              value={leadsConfirmedCurrent}
+              sub={leadsConversionRate !== null ? `${leadsConversionRate}% de conversión histórica` : "Sin datos"}
+              trend={leadsConfirmedDiff}
               icon={TrendingUp}
               iconBg="bg-green-50 text-green-600"
             />
             <KPICard
               label="Precio prom. de venta"
               value={avgSoldPrice > 0 ? money(avgSoldPrice) : "—"}
-              sub={vehiculosVendidos > 0 ? `${vehiculosVendidos} vehículo${vehiculosVendidos !== 1 ? "s" : ""} vendido${vehiculosVendidos !== 1 ? "s" : ""}` : "Sin ventas aún"}
+              sub={vehiculosVendidos > 0 ? `${vehiculosVendidos} vehículo${vehiculosVendidos !== 1 ? "s" : ""} vendido${vehiculosVendidos !== 1 ? "s" : ""} en total` : "Sin ventas aún"}
               icon={ShoppingBag}
               iconBg="bg-amber-50 text-amber-600"
             />
             <KPICard
-              label="Visitas (30 días)"
-              value={totalViews30.toLocaleString("es-AR")}
-              sub={viewsDiff === null ? "Sin datos del mes anterior" : undefined}
+              label={`Visitas (${RANGE_LABELS[rangeDays]})`}
+              value={totalViewsPeriod.toLocaleString("es-AR")}
+              sub={viewsDiff === null ? "Sin datos del período anterior" : undefined}
               trend={viewsDiff}
               icon={Eye}
               iconBg="bg-blue-50 text-blue-600"
@@ -388,24 +451,25 @@ export default async function MetricasPage() {
         ) : (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KPICard
-              label="Ingresos este mes"
-              value={money(thisMonthRevenue)}
-              sub={revDiff === null ? "Primer mes registrado" : undefined}
+              label={`Ingresos (${RANGE_LABELS[rangeDays]})`}
+              value={money(totalRevenuePeriod)}
+              sub={revDiff === null ? "Sin datos del período anterior" : undefined}
               trend={revDiff}
               icon={TrendingUp}
               iconBg="bg-green-50 text-green-600"
             />
             <KPICard
-              label="Pedidos (30 días)"
-              value={totalOrders30}
+              label={`Pedidos (${RANGE_LABELS[rangeDays]})`}
+              value={totalOrdersPeriod}
               sub={`Ticket prom. ${money(avgTicket)}`}
+              trend={ordersDiff}
               icon={ShoppingBag}
               iconBg="bg-indigo-50 text-indigo-600"
             />
             <KPICard
-              label="Visitas (30 días)"
-              value={totalViews30.toLocaleString("es-AR")}
-              sub={viewsDiff === null ? "Sin datos del mes anterior" : undefined}
+              label={`Visitas (${RANGE_LABELS[rangeDays]})`}
+              value={totalViewsPeriod.toLocaleString("es-AR")}
+              sub={viewsDiff === null ? "Sin datos del período anterior" : undefined}
               trend={viewsDiff}
               icon={Eye}
               iconBg="bg-blue-50 text-blue-600"
@@ -426,14 +490,14 @@ export default async function MetricasPage() {
             <div className="rounded-2xl border border-gray-100 bg-white p-6">
               <div className="flex items-center justify-between mb-1">
                 <h2 className="font-bold text-gray-900">Consultas diarias</h2>
-                <p className="text-lg font-black text-indigo-600">{totalLeads30}</p>
+                <p className="text-lg font-black text-indigo-600">{totalLeadsPeriod}</p>
               </div>
-              <p className="text-xs text-gray-400 mb-5">Últimos 30 días · morado oscuro = última semana</p>
-              {totalLeads30 > 0 ? (
+              <p className="text-xs text-gray-400 mb-5">Últimos {rangeDays} días · morado oscuro = últimos 7 días</p>
+              {totalLeadsPeriod > 0 ? (
                 <BarChart data={leadsChartData} color="#6366f1" lightColor="#c7d2fe" />
               ) : (
                 <div className="flex h-32 items-center justify-center text-sm text-gray-400">
-                  Sin consultas en los últimos 30 días
+                  Sin consultas en este período
                 </div>
               )}
             </div>
@@ -441,14 +505,14 @@ export default async function MetricasPage() {
             <div className="rounded-2xl border border-gray-100 bg-white p-6">
               <div className="flex items-center justify-between mb-1">
                 <h2 className="font-bold text-gray-900">Ingresos diarios</h2>
-                <p className="text-lg font-black text-green-600">{money(totalRevenue30)}</p>
+                <p className="text-lg font-black text-green-600">{money(totalRevenuePeriod)}</p>
               </div>
-              <p className="text-xs text-gray-400 mb-5">Últimos 30 días · verde oscuro = última semana</p>
-              {totalRevenue30 > 0 ? (
+              <p className="text-xs text-gray-400 mb-5">Últimos {rangeDays} días · verde oscuro = últimos 7 días</p>
+              {totalRevenuePeriod > 0 ? (
                 <BarChart data={revenueChartData} color="#16a34a" lightColor="#bbf7d0" />
               ) : (
                 <div className="flex h-32 items-center justify-center text-sm text-gray-400">
-                  Sin ventas en los últimos 30 días
+                  Sin ventas en este período
                 </div>
               )}
             </div>
@@ -457,16 +521,16 @@ export default async function MetricasPage() {
           <div className="rounded-2xl border border-gray-100 bg-white p-6">
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-bold text-gray-900">Visitas diarias</h2>
-              <p className="text-lg font-black text-blue-600">{totalViews30.toLocaleString("es-AR")}</p>
+              <p className="text-lg font-black text-blue-600">{totalViewsPeriod.toLocaleString("es-AR")}</p>
             </div>
-            <p className="text-xs text-gray-400 mb-5">Últimos 30 días · azul oscuro = última semana</p>
-            {totalViews30 > 0 ? (
+            <p className="text-xs text-gray-400 mb-5">Últimos {rangeDays} días · azul oscuro = últimos 7 días</p>
+            {totalViewsPeriod > 0 ? (
               <BarChart data={visitsChartData} color="#2563eb" lightColor="#bfdbfe" />
             ) : (
               <div className="flex h-32 flex-col items-center justify-center gap-2 text-gray-400">
                 <Eye className="h-8 w-8 opacity-20" />
                 <p className="text-sm">El registro de visitas acaba de activarse</p>
-                <p className="text-xs text-gray-300">Los datos aparecerán en las próximas horas</p>
+                <p className="text-xs text-gray-300">Las visitas del propio dueño no se cuentan</p>
               </div>
             )}
           </div>
@@ -502,25 +566,27 @@ export default async function MetricasPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {topProducts.map((p, i) => {
+                  {(() => {
                     const maxQty = topProducts[0]._sum.quantity ?? 1;
-                    const qty = p._sum.quantity ?? 0;
-                    const pct = Math.round((qty / maxQty) * 100);
-                    return (
-                      <div key={p.productId}>
-                        <div className="mb-1.5 flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="w-5 shrink-0 text-xs font-bold text-gray-400">#{i + 1}</span>
-                            <span className="font-medium text-gray-800 truncate">{nameMap[p.productId] ?? "Producto"}</span>
+                    return topProducts.map((p, i) => {
+                      const qty = p._sum.quantity ?? 0;
+                      const pct = Math.round((qty / maxQty) * 100);
+                      return (
+                        <div key={p.productId}>
+                          <div className="mb-1.5 flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="w-5 shrink-0 text-xs font-bold text-gray-400">#{i + 1}</span>
+                              <span className="font-medium text-gray-800 truncate">{nameMap[p.productId] ?? "Producto eliminado"}</span>
+                            </div>
+                            <span className="ml-2 shrink-0 font-bold text-gray-700">{qty} u.</span>
                           </div>
-                          <span className="ml-2 shrink-0 font-bold text-gray-700">{qty} u.</span>
+                          <div className="h-2 rounded-full bg-gray-100">
+                            <div className="h-2 rounded-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
+                          </div>
                         </div>
-                        <div className="h-2 rounded-full bg-gray-100">
-                          <div className="h-2 rounded-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </div>
@@ -652,13 +718,13 @@ export default async function MetricasPage() {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Este mes</span>
-                    <span className="font-bold text-gray-900">{leadsThisMonth}</span>
+                    <span className="text-gray-500">{RANGE_LABELS[rangeDays]}</span>
+                    <span className="font-bold text-gray-900">{totalLeadsPeriod}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Confirmadas</span>
+                    <span className="text-gray-500">Confirmadas (histórico)</span>
                     <span className="font-bold text-green-600">
-                      {leadsConfirmed}
+                      {leadsConfirmedTotal}
                       {leadsConversionRate !== null && (
                         <span className="ml-1 text-xs font-normal text-gray-400">
                           ({leadsConversionRate}%)

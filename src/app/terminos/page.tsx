@@ -107,11 +107,22 @@ const CONTENT = {
       },
       {
         title: "8. Propiedad intelectual",
-        body: "Las imágenes, descripciones y contenidos que cargás en tu tienda siguen siendo de tu propiedad. Al subirlos, otorgás a TiendaApps una licencia no exclusiva para mostrarlos a compradores dentro de la plataforma.",
+        body: "Las imágenes, descripciones y contenidos que cargás en tu tienda deben ser de tu propiedad o estar autorizados expresamente por su titular para que los uses. Al subirlos, otorgás a TiendaApps una licencia no exclusiva para mostrarlos a compradores dentro de la plataforma. Ver sección 8 ter para las consecuencias de subir contenido que no te pertenece.",
       },
       {
         title: "8 bis. Donaciones a la Canasta Solidaria",
         body: "Como cualquier usuario de TiendaApps, podés donar de forma opcional a la iniciativa \"Canasta Solidaria\" — al hacerlo, sea desde la página de la canasta o desde el carrito de una compra, se aplican términos específicos detallados en tiendaapps.com/canasta/terminos.",
+      },
+      {
+        title: "8 ter. Contenido robado o que infringe derechos de terceros",
+        body: "Sos el único responsable de las imágenes, videos, descripciones y demás contenido que cargues en tu tienda. No podés usar fotos, videos o textos tomados de otros sitios, marcas o personas sin su autorización.",
+        list: [
+          "Indemnidad: si un tercero reclama o demanda a TiendaApps por contenido que vos subiste (por ejemplo, imágenes o videos de otro sitio o de otra marca), te comprometés a cubrir los gastos, honorarios y daños que esto le genere a TiendaApps, en la medida que el reclamo se origine en contenido cargado por vos.",
+          "Denuncia de contenido robado: cualquier persona o empresa que considere que una imagen, video o texto de una tienda infringe sus derechos puede denunciarlo a marketplacemitienda@gmail.com con el asunto 'Denuncia de contenido — [nombre de la tienda]', adjuntando prueba de la titularidad.",
+          "Ante una denuncia con prueba suficiente, TiendaApps puede dar de baja el contenido denunciado de forma preventiva mientras se resuelve el reclamo, sin necesidad de orden judicial previa.",
+          "La reiteración de denuncias confirmadas contra una misma tienda puede derivar en la suspensión de la cuenta sin derecho a reembolso.",
+          "TiendaApps actúa únicamente como intermediario tecnológico que aloja el contenido cargado por cada dueño de tienda y no revisa ni avala el contenido subido antes de su publicación.",
+        ],
       },
       {
         title: "9. Modificaciones",
@@ -267,10 +278,10 @@ const CONTENT = {
           "Es un aporte voluntario, separado de cualquier compra que hagas en una tienda. No es el pago de un producto ni de un servicio, por lo que no aplica el derecho de arrepentimiento de la Ley 24.240 ni las garantías legales de productos.",
           "Las donaciones son no reembolsables, salvo error de cobro comprobado.",
           "El dinero donado va directo a la cuenta de TiendaApps (no a la tienda donde estabas comprando), y se destina exclusivamente a la compra de los alimentos de la canasta correspondiente.",
-          "Cuando se completa la meta de una campaña, se realiza un sorteo en vivo y aleatorio entre todos los donantes confirmados de esa campaña. Donar no garantiza ganar el sorteo.",
-          "El sorteo se transmite públicamente y sus reglas están detalladas en tiendaapps.com/canasta.",
+          "Cuando se completa la meta de una campaña, el equipo de TiendaApps selecciona una familia beneficiaria según criterio de necesidad y le entrega la canasta — no es un sorteo ni garantiza ningún premio a quien dona.",
+          "El detalle completo de montos mínimos/máximos por donación y el límite de una donación por persona por campaña está en tiendaapps.com/canasta/terminos.",
           "TiendaApps puede modificar, pausar o cancelar una campaña de Canasta Solidaria en cualquier momento, informando a los donantes por email ante cambios relevantes.",
-          "Para consultas o reclamos sobre una donación, escribinos a marketplacemitienda@gmail.com",
+          "Para consultas o reclamos sobre una donación, escribinos a tiendaapps.solidaria@gmail.com",
         ],
       },
       {

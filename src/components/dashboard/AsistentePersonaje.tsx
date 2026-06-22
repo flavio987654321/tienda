@@ -69,32 +69,34 @@ export default function AsistentePersonaje({
       <rect x="4" y="4" width="80" height="80" rx="28" fill="url(#sachaGradient)" />
 
       <motion.rect
-        x="24" width="14" height="4" rx="2" fill="#7c2d12"
+        x="24" y={CEJA_Y[estado]} width="14" height="4" rx="2" fill="#7c2d12"
         animate={{ y: CEJA_Y[estado] }}
         transition={{ duration: 0.25 }}
       />
       <motion.rect
-        x="50" width="14" height="4" rx="2" fill="#7c2d12"
+        x="50" y={CEJA_Y[estado]} width="14" height="4" rx="2" fill="#7c2d12"
         animate={{ y: CEJA_Y[estado] }}
         transition={{ duration: 0.25 }}
       />
 
       <motion.ellipse
         cx="31" cy="42" fill="#fff"
+        rx={rxBase} ry={ojoIzqCerrado ? 0.6 : ryBase}
         animate={{ rx: rxBase, ry: ojoIzqCerrado ? 0.6 : ryBase }}
         transition={{ duration: 0.12 }}
       />
       {!ojoIzqCerrado && (
-        <motion.circle r="2.5" fill="#1c1917" cy="42" animate={{ cx: 31 + PUPILA_DX[estado] }} transition={{ duration: 0.25 }} />
+        <motion.circle cx={31 + PUPILA_DX[estado]} r="2.5" fill="#1c1917" cy="42" animate={{ cx: 31 + PUPILA_DX[estado] }} transition={{ duration: 0.25 }} />
       )}
 
       <motion.ellipse
         cx="57" cy="42" fill="#fff"
+        rx={rxBase} ry={ojoDerCerrado ? 0.6 : ryBase}
         animate={{ rx: rxBase, ry: ojoDerCerrado ? 0.6 : ryBase }}
         transition={{ duration: 0.12 }}
       />
       {!ojoDerCerrado && (
-        <motion.circle r="2.5" fill="#1c1917" cy="42" animate={{ cx: 57 + PUPILA_DX[estado] }} transition={{ duration: 0.25 }} />
+        <motion.circle cx={57 + PUPILA_DX[estado]} r="2.5" fill="#1c1917" cy="42" animate={{ cx: 57 + PUPILA_DX[estado] }} transition={{ duration: 0.25 }} />
       )}
 
       <motion.path

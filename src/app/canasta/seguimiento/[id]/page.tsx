@@ -3,15 +3,14 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { HeartHandshake, Trophy, Clock, CheckCircle2 } from "lucide-react";
+import { HeartHandshake, Clock, CheckCircle2 } from "lucide-react";
 
 type Status = {
   donorName: string;
   amount: number;
   status: string;
   campaignName: string | null;
-  drawHappened: boolean;
-  winnerPosition: 1 | 2 | 3 | null;
+  campaignDelivered: boolean;
 };
 
 function formatMoney(n: number) {
@@ -40,8 +39,8 @@ export default function SeguimientoPage() {
       <div className="min-h-screen bg-[#FFFBF5] flex flex-col items-center justify-center text-center px-6">
         <HeartHandshake className="h-14 w-14 text-amber-500 mb-4" />
         <h1 className="text-xl font-bold text-gray-900 mb-2">No encontramos esa donación</h1>
-        <Link href="/canasta" className="mt-4 text-amber-600 hover:text-amber-700 text-sm font-medium">
-          ← Volver a la canasta
+        <Link href="/comunidad" className="mt-4 text-amber-600 hover:text-amber-700 text-sm font-medium">
+          ← Volver
         </Link>
       </div>
     );
@@ -57,23 +56,17 @@ export default function SeguimientoPage() {
 
   return (
     <div className="min-h-screen bg-[#FFFBF5] flex flex-col items-center justify-center text-center px-6">
-      {data.winnerPosition ? (
+      {data.campaignDelivered ? (
         <>
-          <Trophy className="h-14 w-14 text-amber-500 mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">¡Ganaste el {data.winnerPosition}° puesto!</h1>
-          <p className="text-gray-500 max-w-sm mb-6">Te vamos a contactar por teléfono para coordinar la entrega.</p>
-        </>
-      ) : data.drawHappened ? (
-        <>
-          <HeartHandshake className="h-14 w-14 text-amber-400 mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Esta vez no salió tu nombre</h1>
-          <p className="text-gray-500 max-w-sm mb-6">Gracias por ser parte — tu aporte ayudó a completar una canasta real para un vecino.</p>
+          <HeartHandshake className="h-14 w-14 text-amber-500 mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">¡Esta campaña ya se entregó!</h1>
+          <p className="text-gray-500 max-w-sm mb-6">Gracias por ser parte — tu aporte ayudó a completar una canasta real para una familia que lo necesitaba.</p>
         </>
       ) : data.status === "CONFIRMED" ? (
         <>
           <CheckCircle2 className="h-14 w-14 text-green-600 mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Tu donación está confirmada</h1>
-          <p className="text-gray-500 max-w-sm mb-6">Ya estás participando del sorteo. Te vamos a avisar por email cuándo es.</p>
+          <p className="text-gray-500 max-w-sm mb-6">Cuando se complete la meta, nuestro equipo elige a la familia que recibe la canasta. Te vamos a contar por email cómo siguió la historia.</p>
         </>
       ) : (
         <>
@@ -89,8 +82,8 @@ export default function SeguimientoPage() {
         <p className="text-lg font-bold text-amber-700">{formatMoney(data.amount)}</p>
       </div>
 
-      <Link href="/canasta" className="mt-6 text-amber-600 hover:text-amber-700 text-sm font-medium">
-        ← Volver a la canasta
+      <Link href="/comunidad" className="mt-6 text-amber-600 hover:text-amber-700 text-sm font-medium">
+        ← Volver
       </Link>
     </div>
   );

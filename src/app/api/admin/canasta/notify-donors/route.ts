@@ -5,7 +5,7 @@ import { sendCanastaAnnouncementEmail } from "@/lib/resend";
 
 // POST /api/admin/canasta/notify-donors
 // Manda un email con texto libre a todos los donantes CONFIRMED de la
-// campaña vigente (ej: avisar día y hora del sorteo).
+// campaña vigente (ej: avisar una novedad de la campaña).
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || user.role !== "ADMIN") {

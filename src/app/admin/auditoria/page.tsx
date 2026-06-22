@@ -21,6 +21,7 @@ export default async function AdminAuditoriaPage() {
     accountCreatedAt: r.accountCreatedAt.toISOString(),
     originalEmail: r.originalEmail ?? null,
     originalName: r.originalName ?? null,
+    generalTermsAcceptedAt: r.generalTermsAcceptedAt?.toISOString() ?? null,
     tcAffiliateAcceptedAt: r.tcAffiliateAcceptedAt?.toISOString() ?? null,
     tcOwnerAcceptedAt: r.tcOwnerAcceptedAt?.toISOString() ?? null,
     subscriptionCreatedAt: r.subscriptionCreatedAt?.toISOString() ?? null,

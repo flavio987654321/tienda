@@ -1,22 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import CanastaAdmin from "./CanastaAdmin";
-import CanastaSorteoAdmin from "./CanastaSorteoAdmin";
+import CanastaEntregaAdmin from "./CanastaEntregaAdmin";
 
 export default async function AdminCanastaPage() {
   const campaign = await prisma.donationCampaign.findFirst({
-    where: { status: { in: ["ACTIVE", "COMPLETED"] } },
-    include: {
-      products: { orderBy: { sortOrder: "asc" } },
-      draws: {
-        orderBy: { attemptNumber: "desc" },
-        take: 1,
-        include: {
-          winner1: { select: { donorName: true, donorPhone: true, donorEmail: true } },
-          winner2: { select: { donorName: true, donorPhone: true, donorEmail: true } },
-          winner3: { select: { donorName: true, donorPhone: true, donorEmail: true } },
-        },
-      },
-    },
+    where: { status: { in: ["ACTIVE", "COMPLETED"] }, deliveredAt: null },
+    include: { products: { orderBy: { sortOrder: "asc" } } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -41,41 +30,23 @@ export default async function AdminCanastaPage() {
     ? await prisma.donationNotification.count({ where: { campaignId: campaign.id } })
     : 0;
 
-  const finishedCampaigns = await prisma.donationCampaign.findMany({
-    where: { drawStatus: "FINISHED" },
-    orderBy: { createdAt: "desc" },
-    include: {
-      draws: {
-        orderBy: { attemptNumber: "desc" },
-        take: 1,
-        include: {
-          winner1: { select: { donorName: true } },
-          winner2: { select: { donorName: true } },
-          winner3: { select: { donorName: true } },
-        },
-      },
-      testimonial: true,
-    },
+  const deliveredCampaigns = await prisma.donationCampaign.findMany({
+    where: { deliveredAt: { not: null } },
+    orderBy: { deliveredAt: "desc" },
+    include: { testimonial: true },
   });
 
-  const history = finishedCampaigns.map((c) => {
-    const draw = c.draws[0];
-    const winnerName = draw
-      ? [draw.winner1?.donorName, draw.winner2?.donorName, draw.winner3?.donorName][draw.currentPosition - 1] ?? null
-      : null;
-    return {
-      campaignId: c.id,
-      campaignName: c.name,
-      finishedAt: c.updatedAt,
-      winnerName,
-      testimonial: c.testimonial,
-    };
-  });
+  const history = deliveredCampaigns.map((c) => ({
+    campaignId: c.id,
+    campaignName: c.name,
+    deliveredAt: c.deliveredAt as Date,
+    testimonial: c.testimonial,
+  }));
 
   return (
     <div>
       <CanastaAdmin campaign={campaign} />
-      <CanastaSorteoAdmin campaign={campaign} draw={campaign?.draws[0] ?? null} donors={donors} notifiedCount={notifiedCount} history={history} />
+      <CanastaEntregaAdmin campaign={campaign} donors={donors} notifiedCount={notifiedCount} history={history} />
     </div>
   );
 }

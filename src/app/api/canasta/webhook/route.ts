@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
     }).catch((e) => console.error("[canasta/webhook] error mandando email de confirmación:", e));
 
     // ¿Esta donación completó la meta? Si es así, cerrar la campaña a nuevas
-    // donaciones y avisar al admin que ya puede programar el sorteo.
+    // donaciones y avisar al admin que ya puede elegir a la familia beneficiaria.
     if (campaign.status === "ACTIVE") {
       const goalAmount = calculateGoalAmount(campaign.products, campaign.reservePct);
       const confirmedDonations = await prisma.donation.aggregate({

@@ -12,6 +12,9 @@ type AuditRow = {
   originalName: string | null;
   accountType: string;
   accountCreatedAt: string;
+  generalTermsAcceptedAt: string | null;
+  generalTermsVersion: string | null;
+  generalTermsAcceptedIp: string | null;
   tcAffiliateAcceptedAt: string | null;
   tcAffiliateVersion: string | null;
   tcAffiliateAcceptedIp: string | null;
@@ -86,6 +89,9 @@ function downloadSingleCSV(r: AuditRow) {
     ["Fecha eliminación", fmtFull(r.deletedAt)],
     ["Cuenta creada", fmtFull(r.accountCreatedAt)],
     ["ID original (técnico)", r.originalUserId],
+    ["T&C Registro — Fecha", fmtFull(r.generalTermsAcceptedAt)],
+    ["T&C Registro — Versión", r.generalTermsVersion],
+    ["T&C Registro — IP", r.generalTermsAcceptedIp],
     ["T&C Dueño — Fecha", fmtFull(r.tcOwnerAcceptedAt)],
     ["T&C Dueño — Versión", r.tcOwnerVersion],
     ["T&C Dueño — IP", r.tcOwnerAcceptedIp],
@@ -112,6 +118,7 @@ function downloadSingleCSV(r: AuditRow) {
 function downloadCSV(rows: AuditRow[]) {
   const headers = [
     "Nombre original", "Email original", "Fecha eliminación", "ID original", "Tipo de cuenta", "Cuenta creada",
+    "T&C Registro — Fecha", "T&C Registro — Versión", "T&C Registro — IP",
     "T&C Dueño — Fecha", "T&C Dueño — Versión", "T&C Dueño — IP",
     "T&C Afiliado — Fecha", "T&C Afiliado — Versión", "T&C Afiliado — IP",
     "Suscripción — Rol", "Suscripción — Plan", "Suscripción — Estado", "Suscripción — Inicio",
@@ -125,6 +132,9 @@ function downloadCSV(rows: AuditRow[]) {
     r.originalUserId,
     r.accountType,
     fmtFull(r.accountCreatedAt),
+    fmtFull(r.generalTermsAcceptedAt),
+    r.generalTermsVersion,
+    r.generalTermsAcceptedIp,
     fmtFull(r.tcOwnerAcceptedAt),
     r.tcOwnerVersion,
     r.tcOwnerAcceptedIp,
@@ -243,6 +253,7 @@ function CuentasTab({ records }: { records: AuditRow[] }) {
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Usuario</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Eliminado</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">T&amp;C Registro</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">T&amp;C Dueño</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">T&amp;C Afiliado</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Suscripción</th>
@@ -252,7 +263,7 @@ function CuentasTab({ records }: { records: AuditRow[] }) {
             <tbody className="divide-y divide-white/5">
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-gray-500 text-sm">
+                  <td colSpan={8} className="px-5 py-12 text-center text-gray-500 text-sm">
                     No hay registros{query ? ` para "${query}"` : ""}
                   </td>
                 </tr>
@@ -291,6 +302,26 @@ function CuentasTab({ records }: { records: AuditRow[] }) {
                     <td className="px-5 py-4">
                       <p className="text-white text-xs font-medium">{fmt(r.deletedAt)}</p>
                       <p className="text-gray-500 text-xs mt-0.5">Creada: {fmt(r.accountCreatedAt)}</p>
+                    </td>
+                    <td className="px-5 py-4">
+                      {r.generalTermsAcceptedAt ? (
+                        <div className="space-y-0.5">
+                          <p className="text-emerald-400 text-xs font-semibold flex items-center gap-1">
+                            <ShieldCheck className="h-3 w-3" /> Aceptado
+                          </p>
+                          <p className="text-gray-400 text-xs flex items-center gap-1">
+                            <Calendar className="h-3 w-3" /> {fmt(r.generalTermsAcceptedAt)}
+                          </p>
+                          {r.generalTermsVersion && <p className="text-gray-500 text-xs">v{r.generalTermsVersion}</p>}
+                          {r.generalTermsAcceptedIp && (
+                            <p className="text-gray-500 text-xs flex items-center gap-1">
+                              <Monitor className="h-3 w-3" /> {r.generalTermsAcceptedIp}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-600 text-xs">—</span>
+                      )}
                     </td>
                     <td className="px-5 py-4">
                       {r.tcOwnerAcceptedAt ? (

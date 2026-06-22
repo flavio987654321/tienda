@@ -1583,7 +1583,7 @@ export default function UrbanPulse() {
                     </label>
                     <p style={{ fontSize:10, color:MID, marginTop:6, lineHeight:1.5 }}>
                       Sumá un aporte aparte para completar una canasta de alimentos para un vecino — se paga por separado, no afecta tu compra.{" "}
-                      <a href="/canasta" target="_blank" rel="noopener" style={{ color:DARK, textDecoration:"underline" }}>¿Cómo funciona?</a>
+                      <a href="/comunidad/campana" target="_blank" rel="noopener" style={{ color:DARK, textDecoration:"underline" }}>¿Cómo funciona?</a>
                     </p>
                     {donationEnabled && (
                       <div style={{ marginTop:10 }}>

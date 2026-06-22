@@ -1541,7 +1541,7 @@ export default function ChicParis() {
                     </label>
                     <p style={{ fontSize: 10, color: "#888", marginTop: 6, lineHeight: 1.5 }}>
                       Sumá un aporte aparte para completar una canasta de alimentos para un vecino — se paga por separado, no afecta tu compra.{" "}
-                      <a href="/canasta" target="_blank" rel="noopener" style={{ color: ACC, textDecoration: "underline" }}>¿Cómo funciona?</a>
+                      <a href="/comunidad/campana" target="_blank" rel="noopener" style={{ color: ACC, textDecoration: "underline" }}>¿Cómo funciona?</a>
                     </p>
                     {donationEnabled && (
                       <div style={{ marginTop: 10 }}>

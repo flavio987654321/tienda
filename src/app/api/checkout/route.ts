@@ -328,7 +328,6 @@ export async function POST(req: NextRequest) {
                 donorPhone: phone,
                 donorEmail: emailNorm,
                 donorLocalidad: customer.city?.trim() || "Sin especificar",
-                donorDeliveryPref: "ENVIO",
               },
             });
             donationId = donation.id;

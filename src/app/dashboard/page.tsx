@@ -48,15 +48,17 @@ export default async function DashboardPage() {
   }) : [];
 
   const totalRevenue = !isAutos ? await prisma.order.aggregate({
-    where: { storeId: store.id, status: { in: ["CONFIRMED", "DELIVERED"] } },
+    where: { storeId: store.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
     _sum: { total: true },
   }) : { _sum: { total: null } };
 
   const pendingAffiliateCount = await prisma.affiliate.count({
     where: { storeId: store.id, status: "PENDING" },
   });
+  // "every" da true (vacuosamente) en productos sin variantes — se excluyen explícitamente
+  // para no marcarlos como "sin stock" cuando en realidad no usan control de stock por variante.
   const initialLowStockCount = !isAutos ? await prisma.product.count({
-    where: { storeId: store.id, deletedAt: null, variants: { every: { stock: 0 } } },
+    where: { storeId: store.id, deletedAt: null, variants: { some: {}, every: { stock: 0 } } },
   }) : 0;
 
   const recentReviews = !isAutos ? await prisma.review.findMany({

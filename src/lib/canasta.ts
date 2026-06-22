@@ -11,6 +11,8 @@ export function calculateGoalAmount(products: { targetPrice: number }[], reserve
 }
 
 export const MIN_DONATION = 1000;
+// Tope por persona para que la campaña sea un aporte colectivo y no la
+// financie una sola persona.
 export const MAX_DONATION_PCT_OF_GOAL = 0.2;
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
@@ -36,9 +38,9 @@ export async function createDonationCheckout(donation: { id: string; amount: num
       ],
       external_reference: donation.id,
       back_urls: {
-        success: `${APP_URL}/canasta?donacion=ok`,
-        failure: `${APP_URL}/canasta?donacion=error`,
-        pending: `${APP_URL}/canasta?donacion=pendiente`,
+        success: `${APP_URL}/comunidad/campana?donacion=ok`,
+        failure: `${APP_URL}/comunidad/campana?donacion=error`,
+        pending: `${APP_URL}/comunidad/campana?donacion=pendiente`,
       },
       auto_return: "approved",
       notification_url: `${APP_URL}/api/canasta/webhook`,

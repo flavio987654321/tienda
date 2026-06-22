@@ -27,6 +27,7 @@ export default function MetasWidget() {
   const [targetAmount, setTargetAmount] = useState("");
   const [bonusRate, setBonusRate] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
   const month = currentMonth();
 
@@ -54,9 +55,15 @@ export default function MetasWidget() {
   }
 
   async function handleDelete() {
+    if (deleting) return;
     if (!confirm("¿Eliminar la meta de este mes?")) return;
-    await fetch(`/api/vendedoras/metas?month=${month}`, { method: "DELETE" });
-    setGoal(null);
+    setDeleting(true);
+    try {
+      await fetch(`/api/vendedoras/metas?month=${month}`, { method: "DELETE" });
+      setGoal(null);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   function startEdit() {
@@ -77,8 +84,12 @@ export default function MetasWidget() {
         </div>
         <div className="flex gap-2">
           {goal && !editing && (
-            <button onClick={handleDelete} className="text-xs text-red-400 hover:text-red-600 transition-colors">
-              <Trash2 className="h-4 w-4" />
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="text-xs text-red-400 hover:text-red-600 disabled:opacity-50 transition-colors"
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             </button>
           )}
           <button onClick={editing ? () => setEditing(false) : startEdit}

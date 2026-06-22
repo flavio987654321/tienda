@@ -42,7 +42,7 @@ type Lead = {
   affiliate: { id: string; userName: string | null; userEmail: string | null } | null;
 };
 
-function statusLabel(s: string) {
+function leadStatusLabel(s: string) {
   if (s === "CONFIRMED") return { label: "Confirmada", cls: "bg-green-100 text-green-700" };
   if (s === "REJECTED") return { label: "Rechazada", cls: "bg-red-100 text-red-700" };
   return { label: "Pendiente", cls: "bg-yellow-100 text-yellow-700" };
@@ -189,7 +189,7 @@ export default function LeadsClient({
 
       <div className="divide-y divide-gray-50">
         {filtered.map((lead) => {
-          const { label, cls } = statusLabel(lead.status);
+          const { label, cls } = leadStatusLabel(lead.status);
           const isExpanded = expanded === lead.id;
           const estimatedCommission = Math.floor((lead.productPrice * commissionRate) / 100);
 

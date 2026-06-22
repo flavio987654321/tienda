@@ -35,13 +35,15 @@ export default function StoreShell({ config, storeId, storeName, storeSlug, show
   }, [storeId, storeSlug, showPushBell]);
 
   // Registra una visita por día por sesión (dedup con sessionStorage).
+  // El dueño viendo su propia tienda no cuenta como visita.
   useEffect(() => {
+    if (config.isOwner) return;
     const today = new Date().toISOString().slice(0, 10);
     const key = `sv_${storeSlug}_${today}`;
     if (sessionStorage.getItem(key)) return;
     sessionStorage.setItem(key, "1");
     fetch(`/api/store-views/${storeSlug}`, { method: "POST" }).catch(() => {});
-  }, [storeSlug]);
+  }, [storeSlug, config.isOwner]);
 
   return (
     <PushBellProvider storeId={storeId} storeSlug={storeSlug} enabled={showPushBell}>

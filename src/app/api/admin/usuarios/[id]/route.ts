@@ -104,6 +104,9 @@ export async function DELETE(
       role: true,
       createdAt: true,
       subscription: true,
+      termsAcceptedAt: true,
+      termsVersion: true,
+      termsAcceptedIp: true,
       store: {
         select: {
           id: true,
@@ -154,6 +157,9 @@ export async function DELETE(
         originalName: userData?.name ?? null,
         accountType: userData?.role ?? "BUYER",
         accountCreatedAt: userData?.createdAt ?? new Date(),
+        generalTermsAcceptedAt: userData?.termsAcceptedAt ?? null,
+        generalTermsVersion: userData?.termsVersion ?? null,
+        generalTermsAcceptedIp: userData?.termsAcceptedIp ?? null,
         tcOwnerAcceptedAt: userData?.store?.tcOwnerAcceptedAt ?? null,
         tcOwnerVersion: userData?.store?.tcOwnerVersion ?? null,
         tcOwnerAcceptedIp: userData?.store?.tcOwnerAcceptedIp ?? null,

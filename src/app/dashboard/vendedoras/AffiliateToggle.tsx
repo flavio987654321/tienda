@@ -114,10 +114,11 @@ export default function AffiliateToggle({
             </div>
             <input
               type="range" min="1" max="50" value={rate}
+              disabled={saving}
               onChange={(e) => setRate(Number(e.target.value))}
               onMouseUp={() => save(true, rate)}
               onTouchEnd={() => save(true, rate)}
-              className="w-full accent-green-600"
+              className="w-full accent-green-600 disabled:opacity-60"
             />
             <div className="flex justify-between text-xs text-green-600 mt-1">
               <span>1%</span>

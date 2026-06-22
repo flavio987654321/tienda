@@ -303,6 +303,87 @@ const CONTENT = {
       },
     ],
   },
+  donor: {
+    label: "Donante / Comunidad Solidaria",
+    color: "text-amber-400",
+    badge: "bg-amber-500/10 border-amber-500/20 text-amber-400",
+    sections: [
+      {
+        title: "1. Información que recopilamos",
+        body: "Si donás a una campaña o iniciás una solicitud de ayuda en la Comunidad Solidaria, recopilamos:",
+        list: [
+          "Datos de la donación: nombre, teléfono, email, localidad y preferencia de envío/retiro.",
+          "Datos de pago: el monto donado y un identificador de pago de Mercado Pago. No almacenamos datos de tarjetas — los procesa directamente Mercado Pago.",
+          "Si iniciás una solicitud de ayuda: nombre, email, teléfono, localidad, edad (opcional) y el mensaje donde contás tu situación. Ese mensaje puede incluir información sensible si decidís compartirla (por ejemplo, tu situación de salud o económica).",
+          "Cuenta de usuario (opcional): si donás con sesión iniciada, vinculamos la donación a tu cuenta. También podés donar sin crear una cuenta.",
+        ],
+      },
+      {
+        title: "1 bis. Menores de edad",
+        body: null,
+        list: [
+          "TiendaApps no está dirigido a personas menores de 18 años y no recopilamos intencionalmente datos personales de menores.",
+          "Si tomamos conocimiento de que hemos recopilado datos de un menor de edad, procederemos a eliminar la cuenta y todos sus datos dentro de los 30 días.",
+          "Para reportar una cuenta de menor de edad o solicitar la eliminación de datos de un menor escribinos a tiendaapps.solidaria@gmail.com con el asunto 'Cuenta de menor de edad — eliminación de datos'.",
+        ],
+      },
+      {
+        title: "2. Cómo usamos tu información",
+        body: null,
+        list: [
+          "Para confirmar tu donación y darte acceso al seguimiento de la campaña correspondiente.",
+          "Para contactarte por email o teléfono sobre el estado de la campaña o tu solicitud de ayuda.",
+          "Para evaluar tu solicitud de ayuda y, si corresponde, publicar una campaña.",
+          "Para prevenir donaciones duplicadas o fraudulentas (una donación confirmada por persona, por campaña).",
+        ],
+      },
+      {
+        title: "3. Información sensible en tu solicitud de ayuda",
+        body: "Si nos escribís contando tu situación para pedir ayuda, ese mensaje puede contener datos sensibles según el art. 2 de la Ley 25.326 (por ejemplo, salud o situación económica):",
+        list: [
+          "Tratamos esa información con confidencialidad: solo la lee el equipo de administración de TiendaApps para evaluar tu solicitud.",
+          "No publicamos tu solicitud ni tu situación en la web. Si decidimos armar una campaña a partir de tu historia, te consultamos antes qué información, fotos o videos vas a compartir públicamente, y solo publicamos lo que autorices expresamente.",
+          "El mensaje se envía por email al equipo de TiendaApps y no queda guardado en una base de datos propia del formulario.",
+          "Podés pedir que eliminemos tu solicitud o que no la tengamos más en cuenta escribiendo a tiendaapps.solidaria@gmail.com.",
+        ],
+      },
+      {
+        title: "4. Publicación de agradecimientos",
+        body: "Si tu campaña se concreta y sos la familia beneficiaria elegida, podés compartir un mensaje, foto o video agradeciendo, que publicamos en la página de la campaña. Solo publicamos contenido que nos autorices expresamente a mostrar, y podés pedir que lo bajemos en cualquier momento.",
+      },
+      {
+        title: "5. Procesadores de datos (terceros que procesan tus datos)",
+        body: "No vendemos tus datos. Trabajamos con los siguientes proveedores:",
+        list: [
+          "Mercado Pago (mercadopago.com.ar): procesamiento del pago de tu donación. Nunca almacenamos datos de tarjetas.",
+          "Resend (resend.com): envío de los emails de confirmación y de las consultas del formulario de ayuda.",
+          "Supabase (supabase.com) y Vercel (vercel.com): infraestructura de base de datos y hosting de la plataforma.",
+          "Autoridades competentes cuando sea requerido por ley.",
+        ],
+      },
+      {
+        title: "6. Retención de datos",
+        body: null,
+        list: [
+          "Datos de la donación (nombre, teléfono, email, localidad): se conservan junto con el historial de la campaña, para sostener la transparencia pública y permitir reclamos.",
+          "Solicitudes de ayuda enviadas por email: se conservan en la casilla de correo del equipo mientras sea necesario para evaluar y dar seguimiento a tu pedido.",
+          "Para solicitar la eliminación de tus datos como donante escribí a tiendaapps.solidaria@gmail.com con el asunto 'Eliminación de datos — donación'.",
+        ],
+      },
+      {
+        title: "7. Seguridad",
+        body: "Las comunicaciones con nuestros servidores usan HTTPS. El pago lo procesa Mercado Pago, certificado PCI-DSS nivel 1. No almacenamos datos de tarjetas en ningún momento.",
+      },
+      {
+        title: "8. Tus derechos (ARCO — Ley 25.326)",
+        body: "Podés ejercer tus derechos de Acceso, Rectificación, Cancelación y Oposición escribiendo a tiendaapps.solidaria@gmail.com con el asunto 'Solicitud ARCO — [tipo de derecho]'. Respondemos dentro de los 10 días hábiles. Si tu solicitud no es atendida podés recurrir a la Dirección Nacional de Protección de Datos Personales (argentina.gob.ar/aaip/datospersonales).",
+      },
+      {
+        title: "9. Cambios a esta política",
+        body: "Te notificaremos por los canales de contacto que nos dejaste ante cambios significativos.",
+      },
+    ],
+  },
 };
 
 export default async function PrivacidadPage({

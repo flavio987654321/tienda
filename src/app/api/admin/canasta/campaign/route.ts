@@ -50,7 +50,6 @@ export async function POST(req: NextRequest) {
       reservePct: pct,
       goalAmount: 0,
       status: "ACTIVE",
-      drawStatus: "SCHEDULED",
     },
   });
 
@@ -75,41 +74,18 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const { id, reservePct, scheduledDrawAt } = await req.json();
+  const { id, reservePct } = await req.json();
   if (typeof id !== "string" || !id) {
     return NextResponse.json({ error: "id requerido" }, { status: 400 });
   }
 
-  const data: { reservePct?: number; scheduledDrawAt?: Date | null; reminderSentAt?: null } = {};
+  const data: { reservePct?: number } = {};
 
   if (reservePct !== undefined) {
     if (typeof reservePct !== "number" || reservePct < 0 || reservePct > 50) {
       return NextResponse.json({ error: "reservePct inválido (0 a 50)" }, { status: 400 });
     }
     data.reservePct = reservePct;
-  }
-
-  if (scheduledDrawAt !== undefined) {
-    if (scheduledDrawAt === null) {
-      data.scheduledDrawAt = null;
-    } else {
-      const date = new Date(scheduledDrawAt);
-      if (Number.isNaN(date.getTime()) || date.getTime() <= Date.now()) {
-        return NextResponse.json({ error: "Fecha de sorteo inválida (tiene que ser futura)" }, { status: 400 });
-      }
-      // Solo se puede programar/editar la fecha mientras el sorteo no haya arrancado.
-      const campaign = await prisma.donationCampaign.findUnique({ where: { id }, select: { status: true, drawStatus: true } });
-      if (campaign?.drawStatus === "LIVE" || campaign?.drawStatus === "FINISHED") {
-        return NextResponse.json({ error: "El sorteo ya arrancó, no se puede reprogramar" }, { status: 409 });
-      }
-      if (campaign?.status !== "COMPLETED") {
-        return NextResponse.json({ error: "Todavía no se completó la meta de la canasta" }, { status: 409 });
-      }
-      data.scheduledDrawAt = date;
-      // Nueva fecha → si ya se había mandado el recordatorio de "ya es la
-      // hora" para la fecha anterior, hay que poder mandarlo de nuevo.
-      data.reminderSentAt = null;
-    }
   }
 
   if (Object.keys(data).length === 0) {

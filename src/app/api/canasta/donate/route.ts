@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { amount, donorName, donorPhone, donorEmail, donorLocalidad, donorDeliveryPref } = body;
+  const { amount, donorName, donorPhone, donorEmail, donorLocalidad } = body;
 
   if (typeof amount !== "number" || !Number.isFinite(amount) || amount < MIN_DONATION) {
     return NextResponse.json({ error: `El monto mínimo es $${MIN_DONATION.toLocaleString("es-AR")}` }, { status: 400 });
@@ -39,7 +39,6 @@ export async function POST(req: NextRequest) {
   if (typeof donorLocalidad !== "string" || !donorLocalidad.trim()) {
     return NextResponse.json({ error: "Falta la localidad" }, { status: 400 });
   }
-  const deliveryPref = donorDeliveryPref === "RETIRO" ? "RETIRO" : "ENVIO";
 
   const campaign = await prisma.donationCampaign.findFirst({
     where: { status: "ACTIVE" },
@@ -52,7 +51,7 @@ export async function POST(req: NextRequest) {
   const maxDonation = Math.floor(goalAmount * MAX_DONATION_PCT_OF_GOAL);
   if (amount > maxDonation) {
     return NextResponse.json(
-      { error: `El máximo por donación es $${maxDonation.toLocaleString("es-AR")} (${Math.round(MAX_DONATION_PCT_OF_GOAL * 100)}% de la meta), para que el sorteo tenga sentido entre varios donantes.` },
+      { error: `El máximo por donación es $${maxDonation.toLocaleString("es-AR")} (${Math.round(MAX_DONATION_PCT_OF_GOAL * 100)}% de la meta), para que la campaña sea un aporte de toda la comunidad.` },
       { status: 400 }
     );
   }
@@ -82,7 +81,6 @@ export async function POST(req: NextRequest) {
       donorPhone: phone,
       donorEmail: email,
       donorLocalidad: donorLocalidad.trim(),
-      donorDeliveryPref: deliveryPref,
     },
   });
 
@@ -102,9 +100,9 @@ export async function POST(req: NextRequest) {
         ],
         external_reference: donation.id,
         back_urls: {
-          success: `${APP_URL}/canasta?donacion=ok`,
+          success: `${APP_URL}/comunidad/campana?donacion=ok`,
           failure: `${APP_URL}/canasta/donar?donacion=error`,
-          pending: `${APP_URL}/canasta?donacion=pendiente`,
+          pending: `${APP_URL}/comunidad/campana?donacion=pendiente`,
         },
         auto_return: "approved",
         notification_url: `${APP_URL}/api/canasta/webhook`,

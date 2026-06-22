@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 
+const TERMS_VERSION = "1.0";
+
 function toSlug(text: string) {
   return text
     .toLowerCase()
@@ -19,10 +21,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Demasiados intentos. Esperá un momento e intentá de nuevo." }, { status: 429 });
     }
 
-    const { name, email, password, storeName, accountType, billing, tier, phone } = await req.json();
+    const { name, email, password, storeName, accountType, billing, tier, phone, termsAccepted, ageConfirmed } = await req.json();
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
+    }
+    if (!termsAccepted || !ageConfirmed) {
+      return NextResponse.json({ error: "Debés aceptar los términos y condiciones y confirmar tu edad para continuar." }, { status: 400 });
     }
     if (typeof name !== "string" || name.trim().length > 100) {
       return NextResponse.json({ error: "El nombre no puede superar 100 caracteres" }, { status: 400 });
@@ -90,6 +95,9 @@ export async function POST(req: NextRequest) {
           email: normalizedEmail,
           password: null,
           role: type,
+          termsAcceptedAt: new Date(),
+          termsVersion: TERMS_VERSION,
+          termsAcceptedIp: ip,
           ...(phone ? { phone: phone.trim() } : {}),
           ...(type === "OWNER"
             ? {

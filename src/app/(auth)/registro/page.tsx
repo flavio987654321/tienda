@@ -229,7 +229,7 @@ function RegistroContent() {
     const res = await fetch("/api/auth/registro", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, accountType, billing, tier: ownerTier, phone: form.phone.trim() }),
+      body: JSON.stringify({ ...form, accountType, billing, tier: ownerTier, phone: form.phone.trim(), termsAccepted, ageConfirmed }),
     });
     const data = await res.json();
     if (!res.ok) {
