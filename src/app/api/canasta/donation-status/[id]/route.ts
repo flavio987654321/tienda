@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const campaign = await prisma.donationCampaign.findUnique({
     where: { id: donation.campaignId },
-    select: { name: true, deliveredAt: true },
+    select: { name: true, type: true, deliveredAt: true },
   });
 
   return NextResponse.json({
@@ -25,6 +25,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     amount: donation.amount,
     status: donation.status,
     campaignName: campaign?.name ?? null,
+    campaignType: campaign?.type === "LIBRE" ? "LIBRE" : "CANASTA",
     createdAt: donation.createdAt,
     campaignDelivered: !!campaign?.deliveredAt,
   });

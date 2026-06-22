@@ -10,17 +10,25 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-export default function DonorsModal({ trigger, triggerClassName }: { trigger: ReactNode; triggerClassName?: string }) {
+export default function DonorsModal({
+  trigger,
+  triggerClassName,
+  type = "CANASTA",
+}: {
+  trigger: ReactNode;
+  triggerClassName?: string;
+  type?: "CANASTA" | "LIBRE";
+}) {
   const [open, setOpen] = useState(false);
   const [donors, setDonors] = useState<Donor[] | null>(null);
 
   useEffect(() => {
     if (!open || donors) return;
-    fetch("/api/canasta/participants", { cache: "no-store" })
+    fetch(`/api/canasta/participants?type=${type}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => setDonors(d.donors ?? []))
       .catch(() => setDonors([]));
-  }, [open, donors]);
+  }, [open, donors, type]);
 
   return (
     <>

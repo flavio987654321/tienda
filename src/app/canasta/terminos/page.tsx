@@ -4,9 +4,9 @@ import { ArrowLeft, HeartHandshake, ShieldCheck } from "lucide-react";
 const PUNTOS = [
   "Es un aporte voluntario. No es el pago de un producto ni de un servicio — por eso no aplica el derecho de arrepentimiento de la Ley 24.240 ni las garantías legales de productos.",
   "Las donaciones son no reembolsables, salvo error de cobro comprobado.",
-  "El dinero donado va directo a la cuenta de TiendaApps y se destina exclusivamente a la compra de los alimentos de la canasta correspondiente. Nunca va a la cuenta de una tienda, aunque hayas donado desde el carrito de una compra.",
-  "Cuando se completa la meta de una campaña, el equipo de TiendaApps selecciona una familia beneficiaria según criterio de necesidad, y le entrega la canasta. Esa familia no es necesariamente alguien que donó a la campaña. Donar no es un sorteo ni garantiza ningún premio.",
-  "Mínimo $1.000 por donación, y un máximo del 20% de la meta de la campaña por persona — para que la campaña sea un aporte de toda la comunidad y no la financie una sola persona.",
+  "El dinero donado va directo a la cuenta de TiendaApps y se destina exclusivamente al objetivo de la campaña correspondiente (la canasta de alimentos, o la causa puntual que se describe en esa campaña). Nunca va a la cuenta de una tienda, aunque hayas donado desde el carrito de una compra.",
+  "Donar no te da derecho a recibir nada a cambio ni ningún premio: funciona como una colecta solidaria (igual que una donación a la Cruz Roja o a un banco de alimentos). El equipo de TiendaApps decide quién recibe lo recaudado en cada campaña (una familia que lo necesite, o la persona/causa descripta en una Causa Libre) — nunca es uno de los donantes.",
+  "Mínimo $1.000 por donación, y un máximo del 20% de la meta de la campaña por persona (cuando la campaña tiene una meta definida) — para que la campaña sea un aporte de toda la comunidad y no la financie una sola persona.",
   "Una donación confirmada por persona, por campaña.",
   "TiendaApps puede modificar, pausar o cancelar una campaña en cualquier momento, informando a los donantes por email ante cambios relevantes.",
   "Para consultas o reclamos sobre una donación, escribinos a tiendaapps.solidaria@gmail.com",
@@ -33,10 +33,10 @@ export default function TerminosCanastaPage() {
       <div className="max-w-2xl mx-auto px-6 py-12">
         <div className="flex items-center gap-2.5 mb-3">
           <ShieldCheck className="h-5 w-5 text-green-700" />
-          <h1 className="text-2xl font-bold text-gray-900">Términos de la Canasta Solidaria</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Términos de la donación</h1>
         </div>
         <p className="text-sm text-gray-500 mb-8">
-          Esto aplica a cualquier persona que done a una campaña de Canasta Solidaria, tenga o no una cuenta en TiendaApps.
+          Esto aplica a cualquier persona que done a una campaña de Canasta Solidaria o de Causa Libre, tenga o no una cuenta en TiendaApps.
           Última actualización: junio 2026.
         </p>
 

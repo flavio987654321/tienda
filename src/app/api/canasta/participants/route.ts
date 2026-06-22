@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -7,9 +7,11 @@ export const dynamic = "force-dynamic";
 // Lista pública de quienes donaron a la campaña vigente.
 // Select explícito: SOLO donorName. Nunca incluir teléfono, email, localidad
 // ni el id real de la donación.
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const type = req.nextUrl.searchParams.get("type") === "LIBRE" ? "LIBRE" : "CANASTA";
+
   const campaign = await prisma.donationCampaign.findFirst({
-    where: { status: { in: ["ACTIVE", "COMPLETED"] } },
+    where: { type, status: { in: ["ACTIVE", "COMPLETED"] }, deliveredAt: null },
     orderBy: { createdAt: "desc" },
     select: { id: true },
   });

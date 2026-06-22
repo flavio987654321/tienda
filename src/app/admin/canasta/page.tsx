@@ -1,10 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import CanastaAdmin from "./CanastaAdmin";
-import CanastaEntregaAdmin from "./CanastaEntregaAdmin";
+import CanastaAdminTabs from "./CanastaAdminTabs";
 
-export default async function AdminCanastaPage() {
+async function loadBundle(type: "CANASTA" | "LIBRE") {
   const campaign = await prisma.donationCampaign.findFirst({
-    where: { status: { in: ["ACTIVE", "COMPLETED"] }, deliveredAt: null },
+    where: { type, status: { in: ["ACTIVE", "COMPLETED"] }, deliveredAt: null },
     include: { products: { orderBy: { sortOrder: "asc" } } },
     orderBy: { createdAt: "desc" },
   });
@@ -26,12 +25,8 @@ export default async function AdminCanastaPage() {
       })
     : [];
 
-  const notifiedCount = campaign
-    ? await prisma.donationNotification.count({ where: { campaignId: campaign.id } })
-    : 0;
-
   const deliveredCampaigns = await prisma.donationCampaign.findMany({
-    where: { deliveredAt: { not: null } },
+    where: { type, deliveredAt: { not: null } },
     orderBy: { deliveredAt: "desc" },
     include: { testimonial: true },
   });
@@ -43,10 +38,11 @@ export default async function AdminCanastaPage() {
     testimonial: c.testimonial,
   }));
 
-  return (
-    <div>
-      <CanastaAdmin campaign={campaign} />
-      <CanastaEntregaAdmin campaign={campaign} donors={donors} notifiedCount={notifiedCount} history={history} />
-    </div>
-  );
+  return { campaign, donors, history };
+}
+
+export default async function AdminCanastaPage() {
+  const [canasta, libre] = await Promise.all([loadBundle("CANASTA"), loadBundle("LIBRE")]);
+
+  return <CanastaAdminTabs canasta={canasta} libre={libre} />;
 }

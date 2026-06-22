@@ -23,6 +23,9 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const { amount, donorName, donorPhone, donorEmail, donorLocalidad } = body;
+  const type = body.type === "LIBRE" ? "LIBRE" : "CANASTA";
+  const campaignPagePath = type === "LIBRE" ? "/comunidad/causa" : "/comunidad/campana";
+  const donarPagePath = type === "LIBRE" ? "/comunidad/causa/donar" : "/canasta/donar";
 
   if (typeof amount !== "number" || !Number.isFinite(amount) || amount < MIN_DONATION) {
     return NextResponse.json({ error: `El monto mínimo es $${MIN_DONATION.toLocaleString("es-AR")}` }, { status: 400 });
@@ -41,19 +44,39 @@ export async function POST(req: NextRequest) {
   }
 
   const campaign = await prisma.donationCampaign.findFirst({
-    where: { status: "ACTIVE" },
+    where: { type, status: "ACTIVE", deliveredAt: null },
     include: { products: { orderBy: { sortOrder: "asc" } } },
     orderBy: { createdAt: "desc" },
   });
-  if (!campaign) return NextResponse.json({ error: "No hay una canasta activa para donar ahora" }, { status: 404 });
+  if (!campaign) return NextResponse.json({ error: "No hay ninguna campaña activa para donar ahora" }, { status: 404 });
 
-  const goalAmount = calculateGoalAmount(campaign.products, campaign.reservePct);
-  const maxDonation = Math.floor(goalAmount * MAX_DONATION_PCT_OF_GOAL);
-  if (amount > maxDonation) {
-    return NextResponse.json(
-      { error: `El máximo por donación es $${maxDonation.toLocaleString("es-AR")} (${Math.round(MAX_DONATION_PCT_OF_GOAL * 100)}% de la meta), para que la campaña sea un aporte de toda la comunidad.` },
-      { status: 400 }
-    );
+  const goalAmount = type === "LIBRE" ? campaign.goalAmount : calculateGoalAmount(campaign.products, campaign.reservePct);
+  if (goalAmount) {
+    const maxDonation = Math.floor(goalAmount * MAX_DONATION_PCT_OF_GOAL);
+    if (amount > maxDonation) {
+      return NextResponse.json(
+        { error: `El máximo por donación es $${maxDonation.toLocaleString("es-AR")} (${Math.round(MAX_DONATION_PCT_OF_GOAL * 100)}% de la meta), para que la campaña sea un aporte de toda la comunidad.` },
+        { status: 400 }
+      );
+    }
+
+    // No dejamos que una donación se pase de la meta: si falta menos de lo
+    // que la persona quiere donar, el tope pasa a ser justo lo que falta.
+    const confirmedSum = await prisma.donation.aggregate({
+      where: { campaignId: campaign.id, status: "CONFIRMED" },
+      _sum: { amount: true },
+    });
+    const totalRaised = confirmedSum._sum.amount ?? 0;
+    const remaining = goalAmount - totalRaised;
+    if (remaining <= 0) {
+      return NextResponse.json({ error: "Esta campaña ya alcanzó su meta." }, { status: 409 });
+    }
+    if (amount > remaining) {
+      return NextResponse.json(
+        { error: `Solo faltan $${Math.floor(remaining).toLocaleString("es-AR")} para completar la meta — doná ese monto o menos.` },
+        { status: 400 }
+      );
+    }
   }
 
   const user = await getCurrentUser();
@@ -100,9 +123,9 @@ export async function POST(req: NextRequest) {
         ],
         external_reference: donation.id,
         back_urls: {
-          success: `${APP_URL}/comunidad/campana?donacion=ok`,
-          failure: `${APP_URL}/canasta/donar?donacion=error`,
-          pending: `${APP_URL}/comunidad/campana?donacion=pendiente`,
+          success: `${APP_URL}${campaignPagePath}?donacion=ok`,
+          failure: `${APP_URL}${donarPagePath}?donacion=error`,
+          pending: `${APP_URL}${campaignPagePath}?donacion=pendiente`,
         },
         auto_return: "approved",
         notification_url: `${APP_URL}/api/canasta/webhook`,

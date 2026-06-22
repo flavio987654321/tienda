@@ -30,7 +30,7 @@ const NAV_GROUPS = [
     label: "Operaciones",
     items: [
       { href: "/admin/retiros", label: "Retiros", icon: Wallet },
-      { href: "/admin/canasta", label: "Canasta Solidaria", icon: HeartHandshake },
+      { href: "/admin/canasta", label: "Donaciones", icon: HeartHandshake },
       { href: "/admin/promociones", label: "Promociones", icon: Megaphone },
     ],
   },

@@ -9,7 +9,7 @@ import SoporteBanner from "@/components/canasta/SoporteBanner";
 const QUICK_AMOUNTS = [1000, 2000, 5000, 10000];
 
 type CampaignInfo = {
-  campaign: { id: string; name: string; goalAmount: number } | null;
+  campaign: { id: string; name: string; goalAmount: number | null } | null;
   totalRaised?: number;
 };
 
@@ -17,15 +17,15 @@ function formatMoney(n: number) {
   return `$${Math.round(n).toLocaleString("es-AR")}`;
 }
 
-export default function DonarPage() {
+export default function DonarCausaPage() {
   return (
     <Suspense>
-      <DonarContent />
+      <DonarCausaContent />
     </Suspense>
   );
 }
 
-function DonarContent() {
+function DonarCausaContent() {
   const searchParams = useSearchParams();
   const failed = searchParams.get("donacion") === "error";
 
@@ -44,7 +44,7 @@ function DonarContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/canasta/campaign", { cache: "no-store" })
+    fetch("/api/canasta/campaign?type=LIBRE", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         setCampaign(d.campaign ?? null);
@@ -53,8 +53,8 @@ function DonarContent() {
       .finally(() => setLoadingCampaign(false));
   }, []);
 
-  const remaining = campaign ? Math.max(0, campaign.goalAmount - totalRaised) : null;
-  const maxDonation = campaign ? Math.min(Math.floor(campaign.goalAmount * 0.2), remaining ?? Infinity) : null;
+  const remaining = campaign?.goalAmount ? Math.max(0, campaign.goalAmount - totalRaised) : null;
+  const maxDonation = campaign?.goalAmount ? Math.min(Math.floor(campaign.goalAmount * 0.2), remaining ?? Infinity) : null;
 
   async function submit() {
     if (submitting) return;
@@ -87,7 +87,7 @@ function DonarContent() {
       const res = await fetch("/api/canasta/donate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, donorName, donorPhone, donorEmail, donorLocalidad }),
+        body: JSON.stringify({ amount, donorName, donorPhone, donorEmail, donorLocalidad, type: "LIBRE" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo iniciar la donación");
@@ -110,7 +110,7 @@ function DonarContent() {
     return (
       <div className="min-h-screen bg-[#FFFBF5] flex flex-col items-center justify-center text-center px-6">
         <HeartHandshake className="h-14 w-14 text-amber-500 mb-4" />
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">No hay ninguna campaña activa ahora</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">No hay ninguna causa activa ahora</h1>
         <Link href="/comunidad" className="mt-4 text-amber-600 hover:text-amber-700 text-sm font-medium">
           ← Volver
         </Link>
@@ -122,7 +122,7 @@ function DonarContent() {
     <div className="min-h-screen bg-[#FFFBF5] text-gray-900">
       <div className="border-b border-amber-900/10 px-6 py-5 grid grid-cols-3 items-center sticky top-0 bg-[#FFFBF5]/90 backdrop-blur-xl z-10">
         <Link
-          href="/comunidad/campana"
+          href="/comunidad/causa"
           aria-label="Volver"
           className="w-9 h-9 rounded-full border border-amber-900/10 bg-white flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-amber-50 transition-colors justify-self-start"
         >

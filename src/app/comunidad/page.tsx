@@ -47,19 +47,30 @@ type Testimonial = {
 export default function ComunidadPage() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
+  const [showBothChoice, setShowBothChoice] = useState(false);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
 
+  // Canasta y Causa Libre son independientes y pueden estar activas a la
+  // vez. Si solo una lo está, vamos directo a su página. Si las dos lo
+  // están, no hay a cuál redirigir sola — mostramos un selector.
   useEffect(() => {
-    fetch("/api/canasta/campaign", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d?.campaign) {
-          router.replace("/comunidad/campana");
-        } else {
-          setChecking(false);
-        }
-      })
-      .catch(() => setChecking(false));
+    Promise.all([
+      fetch("/api/canasta/campaign", { cache: "no-store" }).then((r) => r.json()).catch(() => ({ campaign: null })),
+      fetch("/api/canasta/campaign?type=LIBRE", { cache: "no-store" }).then((r) => r.json()).catch(() => ({ campaign: null })),
+    ]).then(([canastaRes, libreRes]) => {
+      const hasCanasta = !!canastaRes?.campaign;
+      const hasLibre = !!libreRes?.campaign;
+      if (hasCanasta && !hasLibre) {
+        router.replace("/comunidad/campana");
+        return;
+      }
+      if (hasLibre && !hasCanasta) {
+        router.replace("/comunidad/causa");
+        return;
+      }
+      if (hasCanasta && hasLibre) setShowBothChoice(true);
+      setChecking(false);
+    });
   }, [router]);
 
   useEffect(() => {
@@ -121,9 +132,28 @@ export default function ComunidadPage() {
           TiendaApps abre este espacio para que personas con una necesidad concreta puedan pedir
           ayuda a la comunidad, de forma transparente y verificable.
         </p>
-        <p className="relative text-amber-700 font-semibold text-sm bg-amber-100 inline-block px-4 py-2 rounded-full mt-2">
-          Hoy no hay ninguna campaña publicada. Cuando se publique una, va a funcionar de esta manera.
-        </p>
+        {showBothChoice ? (
+          <div className="relative grid sm:grid-cols-2 gap-3 mt-4">
+            <Link
+              href="/comunidad/campana"
+              className="rounded-2xl border border-amber-900/10 bg-white p-5 text-left shadow-sm hover:shadow-md hover:scale-[1.01] transition-all"
+            >
+              <p className="text-sm font-semibold text-gray-900">Canasta Solidaria</p>
+              <p className="text-xs text-gray-500 mt-1">Donamos para armar una canasta de alimentos →</p>
+            </Link>
+            <Link
+              href="/comunidad/causa"
+              className="rounded-2xl border border-amber-900/10 bg-white p-5 text-left shadow-sm hover:shadow-md hover:scale-[1.01] transition-all"
+            >
+              <p className="text-sm font-semibold text-gray-900">Causa Libre</p>
+              <p className="text-xs text-gray-500 mt-1">Donamos para ayudar a una causa puntual →</p>
+            </Link>
+          </div>
+        ) : (
+          <p className="relative text-amber-700 font-semibold text-sm bg-amber-100 inline-block px-4 py-2 rounded-full mt-2">
+            Hoy no hay ninguna campaña publicada. Cuando se publique una, va a funcionar de esta manera.
+          </p>
+        )}
       </section>
 
       {/* Por qué existe este espacio */}

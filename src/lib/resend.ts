@@ -344,28 +344,31 @@ export async function sendCanastaCompletedAdminEmail({
   campaignName,
   totalRaised,
   goalAmount,
+  campaignType = "CANASTA",
 }: {
   to: string;
   campaignName: string;
   totalRaised: number;
   goalAmount: number;
+  campaignType?: "CANASTA" | "LIBRE";
 }) {
   if (!process.env.RESEND_API_KEY) return;
+  const label = campaignType === "LIBRE" ? "Causa Libre" : "Canasta Solidaria";
   await resend.emails.send({
     from: FROM,
     to,
-    subject: `¡Se completó la ${campaignName}!`,
+    subject: `¡Se completó la meta de ${campaignName}!`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
         <div style="background:#d97706;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
-          <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">Canasta Solidaria</p>
-          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">¡Se completó la canasta!</h1>
+          <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">${label}</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">¡Se completó la meta!</h1>
         </div>
         <p style="font-size:15px;color:#374151;margin-bottom:6px;"><strong>${campaignName}</strong> llegó a su meta.</p>
         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:20px;margin-bottom:24px;">
           <p style="font-size:14px;color:#92400e;margin:0;font-weight:600;">Total recaudado: ${fmt(totalRaised)} de ${fmt(goalAmount)}</p>
         </div>
-        <p style="font-size:15px;color:#374151;margin-bottom:24px;">Ya podés elegir la familia beneficiaria y confirmar la entrega desde el panel.</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">Ya podés elegir a quién se le entrega y confirmar la entrega desde el panel.</p>
         <div style="text-align:center;margin-bottom:28px;">
           <a href="${APP_URL}/admin/canasta"
              style="display:inline-block;background:#d97706;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
@@ -382,41 +385,52 @@ export async function sendCanastaDonationConfirmedEmail({
   donorName,
   amount,
   campaignName,
-  trackingUrl,
+  campaignUrl,
+  campaignType = "CANASTA",
 }: {
   to: string;
   donorName: string;
   amount: number;
   campaignName: string;
-  trackingUrl: string;
+  campaignUrl: string;
+  campaignType?: "CANASTA" | "LIBRE";
 }) {
   if (!process.env.RESEND_API_KEY) return;
+  const label = campaignType === "LIBRE" ? "Causa Libre" : "Canasta Solidaria";
+  const bodyText =
+    campaignType === "LIBRE"
+      ? `Tu donación de <strong>${fmt(amount)}</strong> a la <strong>${campaignName}</strong> ya está registrada. Nuestro equipo se encarga de hacerla llegar. Si querés ver cómo sigue, podés entrar a la página de la causa cuando quieras.`
+      : `Tu donación de <strong>${fmt(amount)}</strong> a la <strong>${campaignName}</strong> ya está registrada. Cuando se complete la meta, nuestro equipo elige a la familia que la recibe. Si querés ver cómo sigue, podés entrar a la página de la campaña cuando quieras.`;
+  const closingText =
+    campaignType === "LIBRE"
+      ? "Gracias a aportes como el tuyo, alguien va a recibir una ayuda real. No es solo plata: es una forma concreta de decirle a alguien que no está solo. ¡Gracias por ser parte! 💛"
+      : "Gracias a aportes como el tuyo, hoy un vecino va a tener una canasta completa en su mesa. No es solo plata: es una forma concreta de decirle a alguien que no está solo. ¡Gracias por ser parte! 💛";
   await resend.emails.send({
     from: FROM,
     to,
     replyTo: CANASTA_SUPPORT_EMAIL || undefined,
-    subject: "Gracias por tu donación a la Canasta Solidaria",
+    subject: `Gracias por tu donación a ${label}`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
         <div style="background:#d97706;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
-          <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">Canasta Solidaria</p>
+          <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">${label}</p>
           <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">¡Gracias por donar!</h1>
         </div>
         <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${donorName}</strong>,</p>
         <p style="font-size:15px;color:#374151;margin-bottom:16px;">
-          Tu donación de <strong>${fmt(amount)}</strong> a la <strong>${campaignName}</strong> ya está registrada. Cuando se complete la meta, nuestro equipo elige a la familia que recibe la canasta y te vamos a contar por este mismo correo cómo siguió la historia.
+          ${bodyText}
         </p>
         <p style="font-size:15px;color:#374151;margin-bottom:24px;">
-          Gracias a aportes como el tuyo, hoy un vecino va a tener una canasta completa en su mesa. No es solo plata: es una forma concreta de decirle a alguien que no está solo. ¡Gracias por ser parte! 💛
+          ${closingText}
         </p>
         <div style="text-align:center;margin-bottom:28px;">
-          <a href="${trackingUrl}"
+          <a href="${campaignUrl}"
              style="display:inline-block;background:#d97706;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
-            Ver el estado de mi donación
+            Ver la campaña
           </a>
         </div>
         <p style="color:#9ca3af;font-size:12px;text-align:center;">
-          Esta donación es voluntaria y no reembolsable. Guardá este correo para consultar tu participación.
+          Esta donación es voluntaria y no reembolsable. No te vamos a mandar más correos sobre esta donación — para ver novedades, entrá a la campaña cuando quieras.
         </p>
       </div>
     `,
@@ -428,13 +442,18 @@ export async function sendCanastaAnnouncementEmail({
   donorName,
   campaignName,
   message,
+  campaignUrl,
+  campaignType = "CANASTA",
 }: {
   to: string;
   donorName: string;
   campaignName: string;
   message: string;
+  campaignUrl?: string;
+  campaignType?: "CANASTA" | "LIBRE";
 }) {
   if (!process.env.RESEND_API_KEY) return;
+  const label = campaignType === "LIBRE" ? "Causa Libre" : "Canasta Solidaria";
   await resend.emails.send({
     from: FROM,
     to,
@@ -443,13 +462,13 @@ export async function sendCanastaAnnouncementEmail({
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
         <div style="background:#d97706;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
-          <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">Canasta Solidaria</p>
+          <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">${label}</p>
           <h1 style="color:#fff;font-size:20px;margin:0;font-weight:800;">${campaignName}</h1>
         </div>
         <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${donorName}</strong>,</p>
         <p style="font-size:15px;color:#374151;margin-bottom:24px;white-space:pre-line;">${message}</p>
         <div style="text-align:center;margin-bottom:28px;">
-          <a href="${APP_URL}/comunidad/campana"
+          <a href="${campaignUrl || `${APP_URL}/comunidad/campana`}"
              style="display:inline-block;background:#d97706;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
             Ver la campaña
           </a>

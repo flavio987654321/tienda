@@ -1,13 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/canasta/testimonials
-// Lista pública de agradecimientos de canastas ya entregadas, las más
+// GET /api/canasta/testimonials?type=CANASTA|LIBRE
+// Lista pública de agradecimientos de campañas ya entregadas, las más
 // recientes primero. Solo existen los que el admin cargó a mano.
-export async function GET() {
+// Sin `type`, devuelve los dos tipos mezclados (lo usa la landing genérica
+// /comunidad). Con `type`, lo usa cada página específica para no mezclar
+// entregas de un tipo con el otro.
+export async function GET(req: NextRequest) {
+  const typeParam = req.nextUrl.searchParams.get("type");
+  const type = typeParam === "LIBRE" || typeParam === "CANASTA" ? typeParam : undefined;
+
   const testimonials = await prisma.donationTestimonial.findMany({
+    where: type ? { campaign: { type } } : undefined,
     orderBy: { createdAt: "desc" },
     include: { campaign: { select: { name: true } } },
   });

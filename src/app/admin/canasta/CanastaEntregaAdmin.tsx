@@ -19,6 +19,7 @@ type Campaign = {
   id: string;
   name: string;
   status: string;
+  goalAmount?: number | null;
 } | null;
 
 type TestimonialData = { donorName: string; mediaUrl: string | null; mediaType: string | null; text: string | null } | null;
@@ -34,7 +35,7 @@ function formatMoney(n: number) {
   return `$${Math.round(n).toLocaleString("es-AR")}`;
 }
 
-function NotifyDonorsForm() {
+function NotifyDonorsForm({ type }: { type: "CANASTA" | "LIBRE" }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -51,7 +52,7 @@ function NotifyDonorsForm() {
       const res = await fetch("/api/admin/canasta/notify-donors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, type }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo enviar");
@@ -74,7 +75,7 @@ function NotifyDonorsForm() {
       <textarea
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        placeholder="Ej: ¡Ya llegamos a la meta! Pronto les contamos a quién le entregamos la canasta."
+        placeholder="Ej: ¡Gracias por tu aporte! Pronto les contamos en qué se usó."
         rows={3}
         className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm text-white resize-none"
       />
@@ -96,7 +97,7 @@ function NotifyDonorsForm() {
 // Formulario único: el admin elige a mano la familia beneficiaria (no
 // necesariamente alguien que donó) y confirma la entrega en un solo paso.
 // Eso cierra esta campaña para siempre y arranca la próxima automáticamente.
-function CompletarCampanaForm({ campaign }: { campaign: Campaign }) {
+function CompletarCampanaForm({ campaign, type }: { campaign: Campaign; type: "CANASTA" | "LIBRE" }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [donorName, setDonorName] = useState("");
@@ -126,13 +127,12 @@ function CompletarCampanaForm({ campaign }: { campaign: Campaign }) {
   }
 
   async function confirmar() {
-    if (!campaign || submitting || !donorName.trim()) return;
-    if (
-      !confirm(
-        `¿Confirmar que la canasta se le entrega a "${donorName}"? Esta campaña se cierra para siempre y se crea una nueva, vacía, automáticamente. No se puede deshacer.`
-      )
-    )
-      return;
+    if (!campaign || submitting || uploading || !donorName.trim()) return;
+    const confirmText =
+      type === "CANASTA"
+        ? `¿Confirmar que se le entrega a "${donorName}"? Esta campaña se cierra para siempre y se crea una nueva, vacía, automáticamente. No se puede deshacer.`
+        : `¿Confirmar que se le entrega a "${donorName}"? Esta campaña se cierra para siempre. No se puede deshacer.`;
+    if (!confirm(confirmText)) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -144,7 +144,9 @@ function CompletarCampanaForm({ campaign }: { campaign: Campaign }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo confirmar");
       alert(
-        `¡Listo! Esta campaña quedó cerrada y se creó "${data.newCampaignName}", lista para recibir donaciones desde cero. El detalle de esta entrega quedó en la pestaña "Historial".`
+        data.newCampaignName
+          ? `¡Listo! Esta campaña quedó cerrada y se creó "${data.newCampaignName}", lista para recibir donaciones desde cero. El detalle de esta entrega quedó en la pestaña "Historial".`
+          : `¡Listo! Esta campaña quedó cerrada. El detalle de esta entrega quedó en la pestaña "Historial".`
       );
       router.refresh();
     } catch (e) {
@@ -154,16 +156,19 @@ function CompletarCampanaForm({ campaign }: { campaign: Campaign }) {
     }
   }
 
-  if (!campaign || campaign.status !== "COMPLETED") return null;
+  const canComplete = campaign && (campaign.status === "COMPLETED" || (campaign.status === "ACTIVE" && campaign.goalAmount === null));
+  if (!campaign || !canComplete) return null;
 
   return (
     <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4 mb-8 space-y-3">
       <div className="flex items-center gap-2">
         <HeartHandshake className="h-4 w-4 text-amber-500" />
-        <span className="text-sm font-semibold text-white">Se completó la meta — elegí a quién se le entrega</span>
+        <span className="text-sm font-semibold text-white">
+          {campaign.status === "COMPLETED" ? "Se completó la meta — elegí a quién se le entrega" : "Cerrar y elegir a quién se le entrega"}
+        </span>
       </div>
       <p className="text-xs text-gray-400">
-        Esta canasta ya juntó el 100%. Elegí la familia beneficiaria (no tiene que ser alguien que donó) y confirmá la entrega para cerrar esta campaña.
+        Elegí a quién se le entrega lo recaudado (nunca uno de los donantes) y confirmá para cerrar esta campaña.
       </p>
 
       {mediaUrl &&
@@ -199,7 +204,7 @@ function CompletarCampanaForm({ campaign }: { campaign: Campaign }) {
         type="text"
         value={donorName}
         onChange={(e) => setDonorName(e.target.value)}
-        placeholder="Nombre de la familia beneficiaria"
+        placeholder={type === "LIBRE" ? "Nombre de quién recibe la ayuda" : "Nombre de la familia beneficiaria"}
         className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm text-white"
       />
       <textarea
@@ -212,12 +217,13 @@ function CompletarCampanaForm({ campaign }: { campaign: Campaign }) {
       <button
         type="button"
         onClick={confirmar}
-        disabled={submitting || !donorName.trim()}
+        disabled={submitting || uploading || !donorName.trim()}
         className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2"
       >
         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
         Confirmar entrega y cerrar campaña
       </button>
+      {uploading && <p className="text-xs text-gray-500">Esperá a que termine de subir la foto/video antes de confirmar.</p>}
       {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   );
@@ -256,7 +262,7 @@ function TestimonialEditor({ campaignId, defaultDonorName, existing }: { campaig
   }
 
   async function save() {
-    if (saving || !donorName.trim()) return;
+    if (saving || uploading || !donorName.trim()) return;
     setSaving(true);
     setError(null);
     try {
@@ -278,7 +284,7 @@ function TestimonialEditor({ campaignId, defaultDonorName, existing }: { campaig
   }
 
   async function remove() {
-    if (deleting) return;
+    if (deleting || saving) return;
     if (!confirm("¿Eliminar esta reseña? Va a dejar de mostrarse en /comunidad. No se puede deshacer.")) return;
     setDeleting(true);
     setError(null);
@@ -332,7 +338,7 @@ function TestimonialEditor({ campaignId, defaultDonorName, existing }: { campaig
         type="text"
         value={donorName}
         onChange={(e) => setDonorName(e.target.value)}
-        placeholder="Nombre de la familia"
+        placeholder="Nombre de quién lo recibió"
         className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm text-white"
       />
       <textarea
@@ -346,7 +352,7 @@ function TestimonialEditor({ campaignId, defaultDonorName, existing }: { campaig
         <button
           type="button"
           onClick={save}
-          disabled={saving || deleting || !donorName.trim()}
+          disabled={saving || deleting || uploading || !donorName.trim()}
           className="bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-gray-950 text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5"
         >
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : null}
@@ -390,14 +396,14 @@ function HistorialTab({ history }: { history: HistoryItem[] }) {
 }
 
 export default function CanastaEntregaAdmin({
+  type,
   campaign,
   donors,
-  notifiedCount,
   history,
 }: {
+  type: "CANASTA" | "LIBRE";
   campaign: Campaign;
   donors: Donor[];
-  notifiedCount: number;
   history: HistoryItem[];
 }) {
   const [tab, setTab] = useState<"entrega" | "historial">("entrega");
@@ -408,7 +414,7 @@ export default function CanastaEntregaAdmin({
     <div className="p-6 sm:p-8 max-w-5xl border-t border-white/5 mt-4">
       <div className="flex items-center gap-2 mb-4">
         <HeartHandshake className="h-5 w-5 text-amber-500" />
-        <h2 className="text-xl font-bold text-white">Canasta Solidaria — Entrega</h2>
+        <h2 className="text-xl font-bold text-white">{type === "LIBRE" ? "Causa Libre" : "Canasta Solidaria"} — Entrega</h2>
       </div>
 
       <div className="flex gap-1 mb-6 border-b border-white/10">
@@ -436,10 +442,10 @@ export default function CanastaEntregaAdmin({
         <HistorialTab history={history} />
       ) : (
         <>
-          <CompletarCampanaForm campaign={campaign} />
+          <CompletarCampanaForm campaign={campaign} type={type} />
 
           <div className="mb-8">
-            <NotifyDonorsForm />
+            <NotifyDonorsForm type={type} />
           </div>
 
           <div>

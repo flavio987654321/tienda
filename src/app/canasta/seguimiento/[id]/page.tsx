@@ -10,6 +10,7 @@ type Status = {
   amount: number;
   status: string;
   campaignName: string | null;
+  campaignType: "CANASTA" | "LIBRE";
   campaignDelivered: boolean;
 };
 
@@ -54,19 +55,21 @@ export default function SeguimientoPage() {
     );
   }
 
+  const campaignUrl = data.campaignType === "LIBRE" ? "/comunidad/causa" : "/comunidad/campana";
+
   return (
     <div className="min-h-screen bg-[#FFFBF5] flex flex-col items-center justify-center text-center px-6">
       {data.campaignDelivered ? (
         <>
           <HeartHandshake className="h-14 w-14 text-amber-500 mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">¡Esta campaña ya se entregó!</h1>
-          <p className="text-gray-500 max-w-sm mb-6">Gracias por ser parte — tu aporte ayudó a completar una canasta real para una familia que lo necesitaba.</p>
+          <p className="text-gray-500 max-w-sm mb-6">Gracias por ser parte — tu aporte ayudó a alguien que lo necesitaba.</p>
         </>
       ) : data.status === "CONFIRMED" ? (
         <>
           <CheckCircle2 className="h-14 w-14 text-green-600 mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Tu donación está confirmada</h1>
-          <p className="text-gray-500 max-w-sm mb-6">Cuando se complete la meta, nuestro equipo elige a la familia que recibe la canasta. Te vamos a contar por email cómo siguió la historia.</p>
+          <p className="text-gray-500 max-w-sm mb-6">Cuando se complete la meta, nuestro equipo decide a quién se le entrega lo recaudado. Para ver cómo sigue, entrá a la página de la campaña cuando quieras.</p>
         </>
       ) : (
         <>
@@ -82,8 +85,8 @@ export default function SeguimientoPage() {
         <p className="text-lg font-bold text-amber-700">{formatMoney(data.amount)}</p>
       </div>
 
-      <Link href="/comunidad" className="mt-6 text-amber-600 hover:text-amber-700 text-sm font-medium">
-        ← Volver
+      <Link href={campaignUrl} className="mt-6 text-amber-600 hover:text-amber-700 text-sm font-medium">
+        Ver la campaña →
       </Link>
     </div>
   );

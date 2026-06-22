@@ -88,13 +88,17 @@ export async function POST(req: NextRequest) {
       donorName: donation.donorName,
       amount: donation.amount,
       campaignName: campaign.name,
-      trackingUrl: `${APP_URL}/canasta/seguimiento/${donation.id}`,
+      campaignUrl: `${APP_URL}${campaign.type === "LIBRE" ? "/comunidad/causa" : "/comunidad/campana"}`,
+      campaignType: campaign.type === "LIBRE" ? "LIBRE" : "CANASTA",
     }).catch((e) => console.error("[canasta/webhook] error mandando email de confirmación:", e));
 
     // ¿Esta donación completó la meta? Si es así, cerrar la campaña a nuevas
-    // donaciones y avisar al admin que ya puede elegir a la familia beneficiaria.
-    if (campaign.status === "ACTIVE") {
-      const goalAmount = calculateGoalAmount(campaign.products, campaign.reservePct);
+    // donaciones y avisar al admin que ya puede elegir a quién se le entrega.
+    // CANASTA siempre tiene meta (se calcula de productos). LIBRE puede no
+    // tener meta (sin techo) — en ese caso nunca se auto-completa, el admin
+    // la cierra a mano cuando decida.
+    const goalAmount = campaign.type === "LIBRE" ? campaign.goalAmount : calculateGoalAmount(campaign.products, campaign.reservePct);
+    if (campaign.status === "ACTIVE" && goalAmount) {
       const confirmedDonations = await prisma.donation.aggregate({
         where: { campaignId: campaign.id, status: "CONFIRMED" },
         _sum: { amount: true },
@@ -115,6 +119,7 @@ export async function POST(req: NextRequest) {
             campaignName: campaign.name,
             totalRaised,
             goalAmount,
+            campaignType: campaign.type === "LIBRE" ? "LIBRE" : "CANASTA",
           }).catch((e) => console.error("[canasta/webhook] error mandando email al admin:", e));
         }
       }

@@ -782,27 +782,36 @@ model StoreReport {
   @@index([status, createdAt(sort: Desc)])
 }
 
-// CANASTA SOLIDARIA
-// Campaña de donación colectiva. Una sola ACTIVE a la vez.
-// goalAmount incluye el reservePct (% para envío/gastos operativos).
+// CANASTA SOLIDARIA / CAUSA LIBRE
+// Campaña de donación colectiva. Una sola ACTIVE por tipo a la vez (ver
+// índice parcial one_active_campaign_per_type, no expresable en este schema).
+// type=CANASTA: goalAmount siempre se recalcula con calculateGoalAmount a
+// partir de products + reservePct (nunca null en la práctica).
+// type=LIBRE: no usa products; goalAmount es opcional (null = sin techo,
+// el admin la cierra a mano); mediaUrl/mediaType/contactPhone presentan la
+// causa al público (separado del testimonio de entrega post-cierre).
 model DonationCampaign {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
+  type         String    @default("CANASTA") // CANASTA | LIBRE
   name         String
   description  String?
-  goalAmount   Float
-  reservePct   Float    @default(10)
+  goalAmount   Float?
+  reservePct   Float     @default(10)
   status       String    @default("ACTIVE") // ACTIVE | COMPLETED | CANCELLED
   bannerActive Boolean   @default(false)
-  deliveredAt  DateTime? // cuándo el admin confirmó a qué familia se le entregó la canasta — marca esta campaña como cerrada/archivada
+  mediaUrl     String? // foto/video de presentación de la causa (solo LIBRE)
+  mediaType    String? // IMAGE | VIDEO
+  contactPhone String? // teléfono de contacto de la causa (solo LIBRE)
+  deliveredAt  DateTime? // cuándo el admin confirmó a quién se le entregó — marca esta campaña como cerrada/archivada
   createdAt    DateTime  @default(now())
-  updatedAt    DateTime @updatedAt
+  updatedAt    DateTime  @updatedAt
 
   products      DonationProduct[]
   donations     Donation[]
   notifications DonationNotification[]
   testimonial   DonationTestimonial?
 
-  @@index([status])
+  @@index([type, status])
 }
 
 // Productos visuales de la canasta (no se compran individualmente,

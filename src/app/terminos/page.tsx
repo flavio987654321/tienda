@@ -110,8 +110,8 @@ const CONTENT = {
         body: "Las imágenes, descripciones y contenidos que cargás en tu tienda deben ser de tu propiedad o estar autorizados expresamente por su titular para que los uses. Al subirlos, otorgás a TiendaApps una licencia no exclusiva para mostrarlos a compradores dentro de la plataforma. Ver sección 8 ter para las consecuencias de subir contenido que no te pertenece.",
       },
       {
-        title: "8 bis. Donaciones a la Canasta Solidaria",
-        body: "Como cualquier usuario de TiendaApps, podés donar de forma opcional a la iniciativa \"Canasta Solidaria\" — al hacerlo, sea desde la página de la canasta o desde el carrito de una compra, se aplican términos específicos detallados en tiendaapps.com/canasta/terminos.",
+        title: "8 bis. Donaciones a la Canasta Solidaria o a una Causa Libre",
+        body: "Como cualquier usuario de TiendaApps, podés donar de forma opcional a la iniciativa \"Canasta Solidaria\" o a una \"Causa Libre\" — al hacerlo, sea desde la página de la campaña o desde el carrito de una compra, se aplican términos específicos detallados en tiendaapps.com/canasta/terminos.",
       },
       {
         title: "8 ter. Contenido robado o que infringe derechos de terceros",
@@ -195,8 +195,8 @@ const CONTENT = {
         body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tus comisiones ya acreditadas en billetera seguirán disponibles para retirar durante 30 días desde la cancelación. Si no renovás, perdés acceso a tu link de afiliado activo.",
       },
       {
-        title: "7 bis. Donaciones a la Canasta Solidaria",
-        body: "Como cualquier usuario de TiendaApps, podés donar de forma opcional a la iniciativa \"Canasta Solidaria\" — al hacerlo, sea desde la página de la canasta o desde el carrito de una compra, se aplican términos específicos detallados en tiendaapps.com/canasta/terminos.",
+        title: "7 bis. Donaciones a la Canasta Solidaria o a una Causa Libre",
+        body: "Como cualquier usuario de TiendaApps, podés donar de forma opcional a la iniciativa \"Canasta Solidaria\" o a una \"Causa Libre\" — al hacerlo, sea desde la página de la campaña o desde el carrito de una compra, se aplican términos específicos detallados en tiendaapps.com/canasta/terminos.",
       },
       {
         title: "8. Modificaciones",
@@ -272,15 +272,15 @@ const CONTENT = {
         body: "Las políticas de devolución y reembolso son definidas por cada tienda. Te recomendamos consultar la política de la tienda antes de comprar. En caso de incumplimiento grave por parte de una tienda, podés reportarlo a marketplacemitienda@gmail.com",
       },
       {
-        title: "6 bis. Donaciones a la Canasta Solidaria",
-        body: "TiendaApps ofrece, de forma opcional, la posibilidad de donar a la iniciativa \"Canasta Solidaria\" — una colecta comunitaria sin fines de lucro para comprar una canasta de alimentos real a un vecino. Al donar, aceptás lo siguiente:",
+        title: "6 bis. Donaciones a la Canasta Solidaria o a una Causa Libre",
+        body: "TiendaApps ofrece, de forma opcional, la posibilidad de donar a la iniciativa \"Canasta Solidaria\" (una colecta comunitaria para comprar una canasta de alimentos real a un vecino) o a una \"Causa Libre\" (una colecta para una persona o situación puntual, descripta en cada campaña) — las dos sin fines de lucro. Al donar, aceptás lo siguiente:",
         list: [
           "Es un aporte voluntario, separado de cualquier compra que hagas en una tienda. No es el pago de un producto ni de un servicio, por lo que no aplica el derecho de arrepentimiento de la Ley 24.240 ni las garantías legales de productos.",
           "Las donaciones son no reembolsables, salvo error de cobro comprobado.",
-          "El dinero donado va directo a la cuenta de TiendaApps (no a la tienda donde estabas comprando), y se destina exclusivamente a la compra de los alimentos de la canasta correspondiente.",
-          "Cuando se completa la meta de una campaña, el equipo de TiendaApps selecciona una familia beneficiaria según criterio de necesidad y le entrega la canasta — no es un sorteo ni garantiza ningún premio a quien dona.",
+          "El dinero donado va directo a la cuenta de TiendaApps (no a la tienda donde estabas comprando), y se destina exclusivamente al objetivo de la campaña correspondiente.",
+          "Donar funciona como una colecta solidaria tradicional (igual que donarle a la Cruz Roja): el equipo de TiendaApps decide quién recibe lo recaudado en cada campaña — nunca es uno de los donantes, y donar no es un sorteo ni garantiza ningún premio.",
           "El detalle completo de montos mínimos/máximos por donación y el límite de una donación por persona por campaña está en tiendaapps.com/canasta/terminos.",
-          "TiendaApps puede modificar, pausar o cancelar una campaña de Canasta Solidaria en cualquier momento, informando a los donantes por email ante cambios relevantes.",
+          "TiendaApps puede modificar, pausar o cancelar una campaña en cualquier momento, informando a los donantes por email ante cambios relevantes.",
           "Para consultas o reclamos sobre una donación, escribinos a tiendaapps.solidaria@gmail.com",
         ],
       },

@@ -92,7 +92,7 @@ function pasos(reservePct: number) {
     {
       icon: Gift,
       title: "3. Elegimos a la familia",
-      text: "El equipo de TiendaApps selecciona a quién se le entrega la canasta, según necesidad — no tiene que ser alguien que donó.",
+      text: "El equipo de TiendaApps elige una familia que lo necesite y le entrega la canasta — nunca es uno de los donantes, igual que en una colecta solidaria tradicional.",
     },
   ];
 }

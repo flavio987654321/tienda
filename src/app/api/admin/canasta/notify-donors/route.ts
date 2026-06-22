@@ -12,13 +12,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const { message } = await req.json();
+  const { message, type } = await req.json();
   if (typeof message !== "string" || !message.trim()) {
     return NextResponse.json({ error: "El mensaje no puede estar vacío" }, { status: 400 });
   }
+  const campaignType = type === "LIBRE" ? "LIBRE" : "CANASTA";
 
   const campaign = await prisma.donationCampaign.findFirst({
-    where: { status: { in: ["ACTIVE", "COMPLETED"] } },
+    where: { type: campaignType, status: { in: ["ACTIVE", "COMPLETED"] }, deliveredAt: null },
     orderBy: { createdAt: "desc" },
   });
   if (!campaign) return NextResponse.json({ error: "No hay campaña vigente" }, { status: 404 });
@@ -48,6 +49,8 @@ export async function POST(req: NextRequest) {
         donorName: d.donorName,
         campaignName: campaign.name,
         message: message.trim(),
+        campaignUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}${campaignType === "LIBRE" ? "/comunidad/causa" : "/comunidad/campana"}`,
+        campaignType,
       })
     )
   );

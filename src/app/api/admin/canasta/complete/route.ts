@@ -15,9 +15,9 @@ function nextCampaignName(name: string) {
 }
 
 // POST /api/admin/canasta/complete
-// El admin elige a mano a qué familia se le entrega la canasta (no
-// necesariamente alguien que donó) y confirma la entrega. Esto cierra la
-// campaña para siempre (archivada con todo su historial intacto) y arranca
+// El admin elige a mano a quién se le entrega lo recaudado (nunca uno de
+// los donantes) y confirma la entrega. Esto cierra la campaña para siempre
+// (archivada con todo su historial intacto). Para CANASTA, arranca
 // automáticamente la próxima, clonando los mismos productos pero en $0.
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -41,14 +41,17 @@ export async function POST(req: NextRequest) {
     include: { products: { orderBy: { sortOrder: "asc" } } },
   });
   if (!campaign) return NextResponse.json({ error: "Campaña no encontrada" }, { status: 404 });
-  if (campaign.status !== "COMPLETED") {
-    return NextResponse.json({ error: "Todavía no se completó la meta de esta canasta" }, { status: 409 });
+
+  // CANASTA siempre llega por COMPLETED (la meta se calcula sola). Una
+  // LIBRE sin meta (goalAmount null) nunca llega a COMPLETED solo, así que
+  // el admin la puede cerrar directo desde ACTIVE.
+  const canComplete = campaign.status === "COMPLETED" || (campaign.status === "ACTIVE" && campaign.type === "LIBRE" && campaign.goalAmount === null);
+  if (!canComplete) {
+    return NextResponse.json({ error: "Todavía no se completó la meta de esta campaña" }, { status: 409 });
   }
   if (campaign.deliveredAt) {
     return NextResponse.json({ error: "Esta campaña ya quedó cerrada" }, { status: 409 });
   }
-
-  const goalAmount = calculateGoalAmount(campaign.products, campaign.reservePct);
 
   const newCampaign = await prisma.$transaction(async (tx) => {
     await tx.donationTestimonial.upsert({
@@ -68,34 +71,48 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // status: "COMPLETED" explícito acá también para el caso LIBRE sin
+    // meta (se cierra directo desde ACTIVE) — si no, el índice "una activa
+    // por tipo" la sigue contando como activa y bloquea crear la próxima.
     await tx.donationCampaign.update({
       where: { id: campaignId },
-      data: { deliveredAt: new Date() },
+      data: { status: "COMPLETED", deliveredAt: new Date() },
     });
 
-    // Arranca la próxima canasta de cero, clonando los mismos productos
+    // CANASTA: arranca la próxima de cero, clonando los mismos productos
     // (mismos alimentos/precios, editables después) pero con $0 recaudados
     // y sin donantes. goalAmount queda solo como valor inicial: el resto del
     // sistema siempre la recalcula en vivo a partir de productos + reservePct.
-    return tx.donationCampaign.create({
-      data: {
-        name: nextCampaignName(campaign.name),
-        description: campaign.description,
-        goalAmount,
-        reservePct: campaign.reservePct,
-        bannerActive: campaign.bannerActive,
-        status: "ACTIVE",
-        products: {
-          create: campaign.products.map((p) => ({
-            name: p.name,
-            image: p.image,
-            targetPrice: p.targetPrice,
-            sortOrder: p.sortOrder,
-          })),
+    // LIBRE: no se clona — cada causa es de una persona/situación distinta,
+    // el admin crea la próxima a mano cuando tenga una causa nueva.
+    if (campaign.type === "CANASTA") {
+      const goalAmount = calculateGoalAmount(campaign.products, campaign.reservePct);
+      return tx.donationCampaign.create({
+        data: {
+          type: "CANASTA",
+          name: nextCampaignName(campaign.name),
+          description: campaign.description,
+          goalAmount,
+          reservePct: campaign.reservePct,
+          bannerActive: campaign.bannerActive,
+          status: "ACTIVE",
+          products: {
+            create: campaign.products.map((p) => ({
+              name: p.name,
+              image: p.image,
+              targetPrice: p.targetPrice,
+              sortOrder: p.sortOrder,
+            })),
+          },
         },
-      },
-    });
+      });
+    }
+    return null;
   });
 
-  return NextResponse.json({ ok: true, newCampaignId: newCampaign.id, newCampaignName: newCampaign.name });
+  return NextResponse.json({
+    ok: true,
+    newCampaignId: newCampaign?.id ?? null,
+    newCampaignName: newCampaign?.name ?? null,
+  });
 }
