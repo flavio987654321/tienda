@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider";
 import { STORE_TYPES } from "@/lib/storeTypes";
 import PromotionsCarousel from "@/components/PromotionsCarousel";
@@ -482,7 +483,9 @@ export default function Home() {
                         { name: "Jean cargo", price: "$12.900", img: "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=200&q=80" },
                       ].map((p) => (
                         <div key={p.name} className="bg-gray-800/60 rounded-2xl overflow-hidden border border-white/5">
-                          <img src={p.img} alt={p.name} className="w-full h-24 object-cover" />
+                          <div className="relative w-full h-24">
+                            <Image src={p.img} alt={p.name} fill className="object-cover" />
+                          </div>
                           <div className="p-2.5">
                             <p className="text-white text-xs font-medium truncate">{p.name}</p>
                             <p className="text-indigo-400 text-xs font-bold mt-0.5">{p.price}</p>
@@ -492,8 +495,8 @@ export default function Home() {
                     </div>
                     {/* Afiliado row */}
                     <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full overflow-hidden">
-                        <img src="https://i.pravatar.cc/80?img=47" alt="" className="w-full h-full object-cover" />
+                      <div className="relative w-8 h-8 rounded-full overflow-hidden">
+                        <Image src="https://i.pravatar.cc/80?img=47" alt="" fill className="object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-emerald-400 text-xs font-semibold">Valentina vendió $18.400</p>
@@ -578,7 +581,7 @@ export default function Home() {
               {
                 icon: Users, color: "#a855f7", gradient: "from-purple-600/20 to-pink-600/10", border: "border-purple-500/20",
                 title: "Afiliado", sub: "Vendé productos de tiendas reales y cobrá por cada venta que cerrás.",
-                items: ["Elegís las tiendas que te interesan y te postulás", "Link propio con seguimiento de clics y ventas", "Sin stock, sin inversión, sin riesgo", "Metas mensuales con bono extra si las cumplís", "Billetera digital con historial de comisiones", "Retirá cuando quieras, por transferencia bancaria", "7 días de prueba gratis"],
+                items: ["Elegís las tiendas que te interesan y te postulás", "Link propio con seguimiento de clics y ventas", "Sin stock, sin inversión, sin riesgo", "Metas mensuales con bono extra si las cumplís", "Billetera digital con historial de comisiones", "Retirá cuando quieras, por transferencia bancaria", "100% gratis, para siempre"],
                 cta: "Quiero ser afiliado", href: "/afiliados",
               },
               {
@@ -668,15 +671,23 @@ export default function Home() {
             <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
               <p className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Ropa y moda</p>
               <div className="grid grid-cols-2 gap-3">
-                <img src="/marketing/rubro-ropa-1.png" alt="Tienda de ropa con diseño natural" className="col-span-2 w-full rounded-2xl border border-gray-100 shadow-sm object-cover h-48" />
-                <img src="/marketing/rubro-ropa-2.png" alt="Tienda de ropa con diseño urbano" className="w-full rounded-2xl border border-gray-100 shadow-sm object-cover h-36" />
-                <img src="/marketing/rubro-ropa-3.png" alt="Tienda de ropa con diseño elegante" className="w-full rounded-2xl border border-gray-100 shadow-sm object-cover h-36" />
+                <div className="relative col-span-2 w-full h-48 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <Image src="/marketing/rubro-ropa-1.png" alt="Tienda de ropa con diseño natural" fill className="object-cover" />
+                </div>
+                <div className="relative w-full h-36 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <Image src="/marketing/rubro-ropa-2.png" alt="Tienda de ropa con diseño urbano" fill className="object-cover" />
+                </div>
+                <div className="relative w-full h-36 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <Image src="/marketing/rubro-ropa-3.png" alt="Tienda de ropa con diseño elegante" fill className="object-cover" />
+                </div>
               </div>
             </motion.div>
 
             <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.1 }}>
               <p className="text-indigo-600 font-semibold text-sm uppercase tracking-widest mb-3">Autos y motos</p>
-              <img src="/marketing/rubro-autos-1.png" alt="Tienda de vehículos" className="w-full rounded-2xl border border-gray-100 shadow-sm object-cover h-[280px]" />
+              <div className="relative w-full h-[280px] rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <Image src="/marketing/rubro-autos-1.png" alt="Tienda de vehículos" fill className="object-cover" />
+              </div>
             </motion.div>
           </div>
 
@@ -704,10 +715,11 @@ export default function Home() {
               className="col-span-12 lg:col-span-7 relative"
             >
               <div className="relative rounded-3xl overflow-hidden h-[440px] glow-border">
-                <img
+                <Image
                   src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=80"
                   alt="Compradora online"
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-transparent to-transparent" />
                 {/* Floating card sobre imagen */}
@@ -743,7 +755,7 @@ export default function Home() {
                   initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }}
                   className="relative rounded-2xl overflow-hidden h-[206px] group"
                 >
-                  <img src={src} alt={label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <Image src={src} alt={label} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                   <span className="absolute bottom-3 left-3 text-white text-xs font-semibold">{label}</span>
                 </motion.div>
@@ -1022,7 +1034,9 @@ export default function Home() {
                       <p className="text-gray-700 text-sm leading-relaxed mb-6 italic flex-1">&ldquo;{t.text}&rdquo;</p>
                       <div className="flex items-center gap-3">
                         {"img" in t && (t as {img:string}).img ? (
-                          <img src={(t as {img:string}).img} alt={t.name} className="w-11 h-11 rounded-full object-cover flex-shrink-0" />
+                          <div className="relative w-11 h-11 rounded-full overflow-hidden flex-shrink-0">
+                            <Image src={(t as {img:string}).img} alt={t.name} fill className="object-cover" />
+                          </div>
                         ) : (
                           <div className="w-11 h-11 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
                             <span className="text-indigo-400 font-bold text-sm">{t.name[0]}</span>

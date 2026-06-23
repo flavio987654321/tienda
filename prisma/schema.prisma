@@ -23,6 +23,7 @@ model User {
   instagramHandle String?
   phone           String?
   notifyNewStores Boolean   @default(false)
+  preferredPlacaTemplate String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   // Aceptación de Términos y Condiciones generales al registrarse (cualquier rol)
@@ -481,6 +482,7 @@ model AffiliateClick {
   affiliate        Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
   storeId          String
   ip               String?
+  utmSource        String?
   convertedToOrder Boolean   @default(false)
   createdAt        DateTime  @default(now())
 
@@ -647,9 +649,8 @@ model AffiliateRewardCoupon {
   code          String    @unique
   userId        String
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type          String // STORE | SUBSCRIPTION
+  type          String // STORE
   level         String // SILVER | GOLD | DIAMOND
-  plan          String // MONTHLY | ANNUAL
   discountValue Float
   earnedMonth   String // "2026-04"
   status        String    @default("AVAILABLE") // AVAILABLE | USED | EXPIRED

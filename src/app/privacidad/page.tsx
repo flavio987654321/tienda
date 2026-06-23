@@ -133,7 +133,7 @@ const CONTENT = {
       },
       {
         title: "9. Cambios a esta política",
-        body: "Te notificaremos por email con al menos 15 días de anticipación ante cambios significativos.",
+        body: "Ante cambios significativos te avisaremos por el canal que consideremos más adecuado (email, aviso en tu panel u otro medio de contacto que nos hayas dejado), con razonable anticipación. La fecha de 'última actualización' al inicio de esta página siempre refleja la versión vigente.",
       },
     ],
   },
@@ -149,7 +149,6 @@ const CONTENT = {
           "Datos de cuenta: nombre, email y contraseña (almacenada con hash bcrypt).",
           "Datos de actividad: ventas generadas, clicks en tu link, comisiones acumuladas.",
           "Datos de cobro: información necesaria para liquidar comisiones (puede incluir CUIT/CUIL).",
-          "Datos de pago de suscripción: procesados por Mercado Pago.",
           "Datos de uso: acciones en el panel y tiendas visitadas.",
         ],
       },
@@ -168,7 +167,6 @@ const CONTENT = {
         list: [
           "Para generar y gestionar tu link personal de afiliado con tracking.",
           "Para calcular y liquidar tus comisiones.",
-          "Para procesar pagos de suscripción a través de Mercado Pago.",
           "Para enviarte reportes de ventas y alertas de comisiones.",
           "Para prevenir fraudes y uso abusivo del sistema.",
         ],
@@ -182,7 +180,6 @@ const CONTENT = {
         body: "No vendemos tus datos. Los compartimos únicamente con:",
         list: [
           "Los dueños de tiendas a las que estés afiliado (solo tus estadísticas de ventas, no tus datos personales).",
-          "Mercado Pago para procesar suscripciones.",
           "Supabase y Vercel como proveedores de infraestructura.",
           "Autoridades competentes cuando sea requerido por ley.",
         ],
@@ -207,7 +204,7 @@ const CONTENT = {
       },
       {
         title: "8. Cambios a esta política",
-        body: "Te notificaremos por email con al menos 15 días de anticipación ante cambios significativos.",
+        body: "Ante cambios significativos te avisaremos por el canal que consideremos más adecuado (email, aviso en tu panel u otro medio de contacto que nos hayas dejado), con razonable anticipación. La fecha de 'última actualización' al inicio de esta página siempre refleja la versión vigente.",
       },
     ],
   },
@@ -311,7 +308,7 @@ const CONTENT = {
       },
       {
         title: "9. Cambios a esta política",
-        body: "Te notificaremos por email ante cambios significativos.",
+        body: "Ante cambios significativos te avisaremos por el canal que consideremos más adecuado (email, aviso en tu panel u otro medio de contacto que nos hayas dejado), con razonable anticipación. La fecha de 'última actualización' al inicio de esta página siempre refleja la versión vigente.",
       },
     ],
   },
@@ -392,7 +389,7 @@ const CONTENT = {
       },
       {
         title: "9. Cambios a esta política",
-        body: "Te notificaremos por los canales de contacto que nos dejaste ante cambios significativos.",
+        body: "Ante cambios significativos te avisaremos por el canal que consideremos más adecuado (email, aviso en tu panel u otro medio de contacto que nos hayas dejado), con razonable anticipación. La fecha de 'última actualización' al inicio de esta página siempre refleja la versión vigente.",
       },
     ],
   },

@@ -45,31 +45,50 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const store = await prisma.store.findUnique({
-    where: { ownerId: user.id },
-    select: {
-      name: true,
-      orders: {
-        where: { status: { in: ["PENDING", "PROCESSING"] } },
-        select: { id: true },
+  if (user.role === "OWNER") {
+    const store = await prisma.store.findUnique({
+      where: { ownerId: user.id },
+      select: {
+        name: true,
+        orders: {
+          where: { status: { in: ["PENDING", "PROCESSING"] } },
+          select: { id: true },
+        },
+        affiliates: {
+          where: { isActive: true },
+          select: { wallet: { select: { balance: true } } },
+        },
       },
-      affiliates: {
-        where: { isActive: true },
-        select: { wallet: { select: { balance: true } } },
-      },
-    },
-  });
+    });
 
-  const pendingOrders = store?.orders.length ?? 0;
-  const pendingBalances = store?.affiliates
+    const pendingOrders = store?.orders.length ?? 0;
+    const pendingBalances = store?.affiliates
+      .filter(a => a.wallet && a.wallet.balance > 0)
+      .reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0) ?? 0;
+
+    return NextResponse.json({
+      role: user.role,
+      email: user.email,
+      storeName: store?.name ?? "",
+      pendingOrders,
+      pendingBalances,
+    });
+  }
+
+  // Afiliada (u otro rol sin tienda): el saldo a revisar es el propio, en cada tienda donde está afiliada
+  const affiliations = await prisma.affiliate.findMany({
+    where: { userId: user.id },
+    select: { wallet: { select: { balance: true } } },
+  });
+  const pendingBalances = affiliations
     .filter(a => a.wallet && a.wallet.balance > 0)
-    .reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0) ?? 0;
+    .reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0);
 
   return NextResponse.json({
     role: user.role,
     email: user.email,
-    storeName: store?.name ?? "",
-    pendingOrders,
+    storeName: "",
+    pendingOrders: 0,
     pendingBalances,
   });
 }
@@ -151,6 +170,21 @@ export async function DELETE(req: NextRequest) {
     }
   }
 
+  // ── Para afiliada eliminando su cuenta: verificar saldo pendiente propio ──
+  if (!isOwner && target === "account") {
+    const affiliations = await prisma.affiliate.findMany({
+      where: { userId: user.id },
+      select: { wallet: { select: { balance: true } } },
+    });
+    const pendingBalances = affiliations
+      .filter(a => a.wallet && a.wallet.balance > 0)
+      .reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0);
+
+    if (pendingBalances > 0) {
+      return NextResponse.json({ error: "Bloqueado", pendingOrders: 0, pendingBalances }, { status: 409 });
+    }
+  }
+
   // ── Recolectar archivos ANTES de modificar la BD ─────────────────────────
   const userData = await prisma.user.findUnique({
     where: { id: user.id },
@@ -181,6 +215,8 @@ export async function DELETE(req: NextRequest) {
           tcAcceptedAt: true,
           tcVersion: true,
           tcAcceptedIp: true,
+          ownerId: true,
+          store: { select: { name: true } },
         },
       },
     },
@@ -321,10 +357,10 @@ export async function DELETE(req: NextRequest) {
         });
       }
 
-      // Null out cvUrl y T&C en afiliaciones a otras tiendas
+      // Null out cvUrl y T&C en afiliaciones a otras tiendas, y desactivarlas (ya no puede operar como afiliada)
       await tx.affiliate.updateMany({
         where: { userId: user.id },
-        data: { cvUrl: null, tcAcceptedAt: null, tcVersion: null, tcAcceptedIp: null },
+        data: { cvUrl: null, tcAcceptedAt: null, tcVersion: null, tcAcceptedIp: null, isActive: false, status: "REMOVED" },
       });
 
       // Eliminar datos sin valor fiscal
@@ -337,6 +373,20 @@ export async function DELETE(req: NextRequest) {
       await tx.subscription.deleteMany({ where: { userId: user.id } });
     }
   }, { timeout: 30_000 });
+
+  // Si era afiliada, avisar a los dueños de las tiendas donde estaba afiliada
+  if (!isOwner && target === "account" && userData?.asAffiliate.length) {
+    const affiliateName = userData.name ?? userData.email;
+    await createNotificationMany(
+      userData.asAffiliate.map((a) => ({
+        userId: a.ownerId,
+        type: "AFFILIATE_LEFT",
+        title: `Tu afiliada ${affiliateName} eliminó su cuenta`,
+        body: `La cuenta de tu afiliada en ${a.store.name} fue eliminada. Su link de afiliado dejó de funcionar.`,
+        link: "/dashboard/vendedoras",
+      }))
+    );
+  }
 
   // ── Eliminar de Supabase Auth — libera email para re-registro ─────────────
   if (target === "account") {

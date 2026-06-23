@@ -19,6 +19,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Faltan datos del plan" }, { status: 400 });
   }
 
+  // El plan de afiliadas es gratuito — nunca debería llegar un pago para él
+  if (plan === "AFFILIATE") {
+    return NextResponse.json({ error: "El plan de afiliadas es gratuito, no requiere pago" }, { status: 400 });
+  }
+
   const baseAmount = PRICES[plan as keyof typeof PRICES]?.[billing as "MONTHLY" | "ANNUAL"];
   if (!baseAmount) return NextResponse.json({ error: "Plan inválido" }, { status: 400 });
 

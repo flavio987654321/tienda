@@ -10,13 +10,14 @@ import { useAuth } from "@/components/AuthProvider";
 type Props = {
   status: "TRIAL" | "ACTIVE" | "GRACE" | "EXPIRED" | "CANCELLED";
   daysLeft: number;
-  role: "OWNER" | "AFFILIATE";
+  role: "OWNER";
   tier: "BASIC" | "PREMIUM";
   plan: "MONTHLY" | "ANNUAL";
 };
 
-export default function SubscriptionGate({ status, daysLeft, role, tier, plan }: Props) {
-  const planKey = role === "OWNER" ? (tier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC") : "AFFILIATE";
+// Esta pantalla sólo se usa para OWNER — el plan de afiliadas es gratuito y no tiene gate
+export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props) {
+  const planKey = tier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC";
   const [payModal, setPayModal] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const { signOut } = useAuth();
@@ -47,7 +48,7 @@ export default function SubscriptionGate({ status, daysLeft, role, tier, plan }:
           <PaymentModal
             plan={planKey}
             billing={plan}
-            amount={planKey === "OWNER_PREMIUM" ? (plan === "MONTHLY" ? 25000 : 225000) : planKey === "OWNER_BASIC" ? (plan === "MONTHLY" ? 20000 : 180000) : (plan === "MONTHLY" ? 15000 : 135000)}
+            amount={planKey === "OWNER_PREMIUM" ? (plan === "MONTHLY" ? 25000 : 225000) : (plan === "MONTHLY" ? 20000 : 180000)}
             onClose={() => setPayModal(false)}
             onSuccess={() => { setPayModal(false); window.location.reload(); }}
           />
@@ -89,7 +90,7 @@ export default function SubscriptionGate({ status, daysLeft, role, tier, plan }:
           <PaymentModal
             plan={planKey}
             billing={plan}
-            amount={planKey === "OWNER_PREMIUM" ? (plan === "MONTHLY" ? 25000 : 225000) : planKey === "OWNER_BASIC" ? (plan === "MONTHLY" ? 20000 : 180000) : (plan === "MONTHLY" ? 15000 : 135000)}
+            amount={planKey === "OWNER_PREMIUM" ? (plan === "MONTHLY" ? 25000 : 225000) : (plan === "MONTHLY" ? 20000 : 180000)}
             onClose={() => setPayModal(false)}
             onSuccess={() => { setPayModal(false); window.location.reload(); }}
           />
@@ -137,7 +138,7 @@ export default function SubscriptionGate({ status, daysLeft, role, tier, plan }:
           <PaymentModal
             plan={planKey}
             billing={plan}
-            amount={planKey === "OWNER_PREMIUM" ? (plan === "MONTHLY" ? 25000 : 225000) : planKey === "OWNER_BASIC" ? (plan === "MONTHLY" ? 20000 : 180000) : (plan === "MONTHLY" ? 15000 : 135000)}
+            amount={planKey === "OWNER_PREMIUM" ? (plan === "MONTHLY" ? 25000 : 225000) : (plan === "MONTHLY" ? 20000 : 180000)}
             onClose={() => setPayModal(false)}
             onSuccess={() => { setPayModal(false); window.location.reload(); }}
           />

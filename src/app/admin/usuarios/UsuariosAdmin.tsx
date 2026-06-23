@@ -13,9 +13,7 @@ type Sub = {
 };
 
 function getTierLabel(sub: Sub): string {
-  if (sub.role === "AFFILIATE") return "Afiliado";
-  if (sub.tier === "PREMIUM") return "Tienda Premium";
-  return "Tienda Pro";
+  return sub.tier === "PREMIUM" ? "Tienda Premium" : "Tienda Pro";
 }
 
 export type User = {
@@ -72,6 +70,7 @@ function applyUserFilter(users: User[], filter: string): User[] {
 export default function UsuariosAdmin({ users: initial, filter: activeFilter }: { users: User[]; filter: string }) {
   const baseUsers = useMemo(() => applyUserFilter(initial, activeFilter), [initial, activeFilter]);
   const [users, setUsers] = useState(baseUsers);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- resincroniza la lista local cuando cambia el filtro/listado del servidor
   useEffect(() => { setUsers(baseUsers); }, [baseUsers]);
 
   const [subModal, setSubModal] = useState<User | null>(null);
@@ -312,7 +311,11 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                       </span>
                     </td>
                     <td className="px-5 py-4">
-                      {sub ? (
+                      {u.role === "SELLER" ? (
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full text-emerald-400 bg-emerald-500/10">
+                          Gratis
+                        </span>
+                      ) : sub ? (
                         <button
                           onClick={() => setSubModal(u)}
                           className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-opacity hover:opacity-70 ${sub.color}`}
@@ -457,10 +460,9 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
       )}
 
       {/* Modal suscripción */}
-      {subModal && subModal.subscription && (() => {
+      {subModal && subModal.subscription && subModal.role === "OWNER" && (() => {
         const s = subModal.subscription;
         const isLoading = loadingId === subModal.id + "-sub";
-        const isAffiliate = s.role === "AFFILIATE";
         const trialStillActive = s.status === "TRIAL" && new Date(s.trialEndsAt) > new Date();
 
         const willActivate = s.status === "TRIAL" && pendingPlan !== null;
@@ -534,69 +536,65 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                 )}
               </div>
 
-              {/* Cambiar tipo de plan (solo para dueños) */}
-              {!isAffiliate && (
-                <div className="mb-4">
-                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Tipo de plan</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { label: "Tienda Pro",     body: { tier: "BASIC" } },
-                      { label: "Tienda Premium", body: { tier: "PREMIUM" } },
-                    ].map(({ label, body }) => {
-                      const isCurrent = body.tier === "BASIC" ? s.tier === "BASIC" : s.tier === "PREMIUM";
-                      const isPending = pendingPlan?.tier === body.tier;
-                      return (
-                        <button
-                          key={label}
-                          onClick={() => isCurrent ? undefined : setPendingPlan(body)}
-                          disabled={isLoading || isCurrent}
-                          className={`text-xs font-semibold py-2.5 rounded-lg border transition-all disabled:cursor-default ${
-                            isPending
-                              ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                              : isCurrent
-                                ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
-                                : "bg-gray-800 text-gray-400 border-white/5 hover:border-indigo-500/30 hover:text-white"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
+              {/* Cambiar tipo de plan */}
+              <div className="mb-4">
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Tipo de plan</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "Tienda Pro",     body: { tier: "BASIC" } },
+                    { label: "Tienda Premium", body: { tier: "PREMIUM" } },
+                  ].map(({ label, body }) => {
+                    const isCurrent = body.tier === "BASIC" ? s.tier === "BASIC" : s.tier === "PREMIUM";
+                    const isPending = pendingPlan?.tier === body.tier;
+                    return (
+                      <button
+                        key={label}
+                        onClick={() => isCurrent ? undefined : setPendingPlan(body)}
+                        disabled={isLoading || isCurrent}
+                        className={`text-xs font-semibold py-2.5 rounded-lg border transition-all disabled:cursor-default ${
+                          isPending
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                            : isCurrent
+                              ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
+                              : "bg-gray-800 text-gray-400 border-white/5 hover:border-indigo-500/30 hover:text-white"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
 
-              {/* Cambiar facturación (solo para dueños) */}
-              {!isAffiliate && (
-                <div className="mb-4">
-                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Facturación</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { label: "Mensual", body: { plan: "MONTHLY" } },
-                      { label: "Anual",   body: { plan: "ANNUAL" } },
-                    ].map(({ label, body }) => {
-                      const isCurrent = body.plan === "MONTHLY" ? s.plan === "MONTHLY" : s.plan === "ANNUAL";
-                      const isPending = pendingPlan?.plan === body.plan;
-                      return (
-                        <button
-                          key={label}
-                          onClick={() => isCurrent ? undefined : setPendingPlan(body)}
-                          disabled={isLoading || isCurrent}
-                          className={`text-xs font-semibold py-2.5 rounded-lg border transition-all disabled:cursor-default ${
-                            isPending
-                              ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                              : isCurrent
-                                ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
-                                : "bg-gray-800 text-gray-400 border-white/5 hover:border-indigo-500/30 hover:text-white"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
+              {/* Cambiar facturación */}
+              <div className="mb-4">
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Facturación</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "Mensual", body: { plan: "MONTHLY" } },
+                    { label: "Anual",   body: { plan: "ANNUAL" } },
+                  ].map(({ label, body }) => {
+                    const isCurrent = body.plan === "MONTHLY" ? s.plan === "MONTHLY" : s.plan === "ANNUAL";
+                    const isPending = pendingPlan?.plan === body.plan;
+                    return (
+                      <button
+                        key={label}
+                        onClick={() => isCurrent ? undefined : setPendingPlan(body)}
+                        disabled={isLoading || isCurrent}
+                        className={`text-xs font-semibold py-2.5 rounded-lg border transition-all disabled:cursor-default ${
+                          isPending
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                            : isCurrent
+                              ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
+                              : "bg-gray-800 text-gray-400 border-white/5 hover:border-indigo-500/30 hover:text-white"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
 
               {/* Confirmación de cambio de plan */}
               {pendingPlan && (

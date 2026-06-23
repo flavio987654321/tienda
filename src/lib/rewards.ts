@@ -32,27 +32,18 @@ export const LEVEL_THRESHOLDS: Record<StoreCategoria, { DIAMOND: number; GOLD: n
   },
 };
 
-// ─── Cupones de tienda según plan ────────────────────────────────────────────
+// ─── Cupones de tienda por nivel ──────────────────────────────────────────────
+// El plan de afiliadas es gratuito — el premio es siempre descuento en tiendas.
 
-const STORE_DISCOUNT: Record<string, Record<string, number>> = {
-  MONTHLY: { SILVER: 10, GOLD: 15, DIAMOND: 20 },
-  ANNUAL:  { SILVER: 15, GOLD: 20, DIAMOND: 25 },
-};
-
-// ─── Cupones de suscripción (solo plan mensual) ───────────────────────────────
-
-const SUBSCRIPTION_DISCOUNT: Record<string, number> = {
-  SILVER:  10,
+const STORE_DISCOUNT: Record<string, number> = {
+  SILVER:  15,
   GOLD:    20,
-  DIAMOND: 100, // mes gratis
+  DIAMOND: 25,
 };
 
 // ─── Bonus por racha de 3 meses consecutivos en Diamante ─────────────────────
 
-const DIAMOND_STREAK_BONUS: Record<string, number> = {
-  MONTHLY: 30,
-  ANNUAL:  40,
-};
+const DIAMOND_STREAK_BONUS = 40;
 
 // ─── Helpers públicos ─────────────────────────────────────────────────────────
 
@@ -186,17 +177,12 @@ export async function generarCuponesMensuales(
   const affiliate = await prisma.affiliate.findUnique({
     where:   { id: affiliateId },
     include: {
-      user:  { include: { subscription: true } },
       store: { select: { tieneVentaMayorista: true } },
     },
   });
 
   if (!affiliate || !affiliate.isActive) return;
 
-  const subscription = affiliate.user.subscription;
-  if (!subscription || !["ACTIVE", "TRIAL"].includes(subscription.status)) return;
-
-  const plan      = subscription.plan as "MONTHLY" | "ANNUAL";
   const categoria = await detectarCategoria(affiliateId);
   const comisiones = await getComisionesDelMes(affiliateId, year, month);
   const nivel      = calcularNivelConCategoria(comisiones, categoria);
@@ -213,39 +199,22 @@ export async function generarCuponesMensuales(
   if (yaGenerados) return;
 
   type CuponData = {
-    code: string; userId: string; type: string; level: string; plan: string;
+    code: string; userId: string; type: string; level: string;
     discountValue: number; earnedMonth: string; expiresAt: Date;
   };
   const cupones: CuponData[] = [];
 
-  const storeDiscount = STORE_DISCOUNT[plan]?.[nivel];
+  const storeDiscount = STORE_DISCOUNT[nivel];
   if (storeDiscount) {
     cupones.push({
       code:          `PREMIO-${nivel.slice(0, 2)}-${nanoid(8).toUpperCase()}`,
       userId:        affiliate.userId,
       type:          "STORE",
       level:         nivel,
-      plan,
       discountValue: storeDiscount,
       earnedMonth,
       expiresAt,
     });
-  }
-
-  if (plan === "MONTHLY") {
-    const subDiscount = SUBSCRIPTION_DISCOUNT[nivel];
-    if (subDiscount) {
-      cupones.push({
-        code:          `SUB-${nivel.slice(0, 2)}-${nanoid(8).toUpperCase()}`,
-        userId:        affiliate.userId,
-        type:          "SUBSCRIPTION",
-        level:         nivel,
-        plan,
-        discountValue: subDiscount,
-        earnedMonth,
-        expiresAt,
-      });
-    }
   }
 
   if (nivel === "DIAMOND") {
@@ -256,8 +225,7 @@ export async function generarCuponesMensuales(
         userId:        affiliate.userId,
         type:          "STORE",
         level:         "DIAMOND",
-        plan,
-        discountValue: DIAMOND_STREAK_BONUS[plan],
+        discountValue: DIAMOND_STREAK_BONUS,
         earnedMonth,
         expiresAt,
       });

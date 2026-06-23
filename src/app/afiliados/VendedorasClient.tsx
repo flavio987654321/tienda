@@ -3,17 +3,20 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 import FavoritesDrawer from "@/components/FavoritesDrawer";
+import { QRCodeCanvas } from "qrcode.react";
 import {
   CheckCircle, Clock, Loader2, Send, Store, Wallet,
   XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
   Star, Package, ArrowRight, ArrowLeft, ChevronLeft, ChevronRight, Eye, Edit3, MapPin, Phone, Save,
   DollarSign, ShoppingCart, Award, FileText, UploadCloud, Trash2, Download, Search,
-  Moon, Sun, Menu, X, BarChart3, MessageSquare, Target, Trophy, LayoutGrid, List, LifeBuoy,
+  Moon, Sun, Menu, X, BarChart3, MessageSquare, Target, Trophy, LayoutGrid, List,
+  QrCode as QrCodeIcon, AlertTriangle, ShieldAlert, UserX, HelpCircle, Headset,
 } from "lucide-react";
 
 const IgIconLg = () => <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>;
@@ -33,6 +36,7 @@ interface ShareProduct {
   comparePrice: number | null;
   images: string;
   category: string;
+  salesCount?: number;
 }
 interface ShareTarget { storeSlug: string; storeName: string; affiliateId: string; commissionRate: number; }
 
@@ -87,7 +91,307 @@ function formatCategory(value: string) {
   return value.split("-").filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
-function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => void }) {
+function loadCardImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+/* ── Plantillas de placa ── */
+type PlacaTemplateId = "clasica" | "minimal" | "oferta";
+
+const PLACA_TEMPLATES: { id: PlacaTemplateId; label: string; description: string }[] = [
+  { id: "clasica", label: "Clásica", description: "Fondo oscuro, foto completa" },
+  { id: "minimal", label: "Minimal", description: "Fondo blanco, estilo limpio" },
+  { id: "oferta", label: "Oferta", description: "Colores cálidos, ideal para descuentos" },
+];
+
+type PlacaProduct = Pick<ShareProduct, "name" | "price" | "comparePrice" | "description">;
+
+function drawClasicaTemplate(
+  ctx: CanvasRenderingContext2D,
+  px: (n: number) => number,
+  size: { w: number; h: number },
+  image: HTMLImageElement | null,
+  product: PlacaProduct,
+  storeName: string
+) {
+  ctx.fillStyle = "#070b18";
+  ctx.fillRect(0, 0, size.w, size.h);
+
+  if (image) {
+    const imgScale = Math.max(size.w / image.width, px(760) / image.height);
+    const width = image.width * imgScale;
+    const height = image.height * imgScale;
+    ctx.drawImage(image, (size.w - width) / 2, 0, width, height);
+  } else {
+    ctx.fillStyle = "#111827";
+    ctx.fillRect(0, 0, size.w, px(760));
+  }
+
+  const gradient = ctx.createLinearGradient(0, px(520), 0, size.h);
+  gradient.addColorStop(0, "rgba(7,11,24,0)");
+  gradient.addColorStop(0.24, "rgba(7,11,24,.86)");
+  gradient.addColorStop(1, "#070b18");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, px(420), size.w, size.h - px(420));
+
+  ctx.fillStyle = "#a5b4fc";
+  ctx.font = `700 ${px(34)}px Arial`;
+  ctx.fillText(storeName.toUpperCase(), px(72), px(785));
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `900 ${px(76)}px Arial`;
+  wrapCanvasText(ctx, product.name, px(72), px(875), px(930), px(84), 3);
+
+  ctx.fillStyle = "#34d399";
+  ctx.font = `900 ${px(68)}px Arial`;
+  ctx.fillText(money(product.price), px(72), px(1120));
+
+  if (product.description) {
+    ctx.fillStyle = "#cbd5e1";
+    ctx.font = `400 ${px(30)}px Arial`;
+    wrapCanvasText(ctx, product.description, px(72), px(1180), px(780), px(40), 2);
+  }
+
+  ctx.fillStyle = "#4f46e5";
+  ctx.beginPath();
+  ctx.roundRect(px(72), px(1245), px(300), px(62), px(31));
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `800 ${px(26)}px Arial`;
+  ctx.fillText("Comprá ahora →", px(108), px(1285));
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = `500 ${px(24)}px Arial`;
+  ctx.fillText("Link en bio / stories", px(620), px(1285));
+}
+
+function drawMinimalTemplate(
+  ctx: CanvasRenderingContext2D,
+  px: (n: number) => number,
+  size: { w: number; h: number },
+  image: HTMLImageElement | null,
+  product: PlacaProduct
+) {
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size.w, size.h);
+
+  const margin = px(60);
+  const imgW = size.w - margin * 2;
+  const imgH = px(760);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(margin, margin, imgW, imgH, px(28));
+  ctx.clip();
+  ctx.fillStyle = "#f1f5f9";
+  ctx.fillRect(margin, margin, imgW, imgH);
+  if (image) {
+    const imgScale = Math.max(imgW / image.width, imgH / image.height);
+    const width = image.width * imgScale;
+    const height = image.height * imgScale;
+    ctx.drawImage(image, margin + (imgW - width) / 2, margin + (imgH - height) / 2, width, height);
+  }
+  ctx.restore();
+
+  let y = margin + imgH + px(90);
+  ctx.fillStyle = "#0f172a";
+  ctx.font = `900 ${px(60)}px Arial`;
+  wrapCanvasText(ctx, product.name, margin, y, size.w - margin * 2, px(68), 2);
+
+  y += px(150);
+  ctx.fillStyle = "#0f172a";
+  ctx.font = `900 ${px(70)}px Arial`;
+  ctx.fillText(money(product.price), margin, y);
+
+  const btnY = size.h - px(140);
+  ctx.strokeStyle = "#0f172a";
+  ctx.lineWidth = px(3);
+  ctx.beginPath();
+  ctx.roundRect(margin, btnY, px(320), px(64), px(32));
+  ctx.stroke();
+  ctx.fillStyle = "#0f172a";
+  ctx.font = `800 ${px(26)}px Arial`;
+  ctx.fillText("Comprá ahora →", margin + px(34), btnY + px(40));
+}
+
+function drawOfertaTemplate(
+  ctx: CanvasRenderingContext2D,
+  px: (n: number) => number,
+  size: { w: number; h: number },
+  image: HTMLImageElement | null,
+  product: PlacaProduct,
+  storeName: string
+) {
+  ctx.fillStyle = "#1a0a05";
+  ctx.fillRect(0, 0, size.w, size.h);
+
+  if (image) {
+    const imgScale = Math.max(size.w / image.width, px(820) / image.height);
+    const width = image.width * imgScale;
+    const height = image.height * imgScale;
+    ctx.drawImage(image, (size.w - width) / 2, 0, width, height);
+  } else {
+    ctx.fillStyle = "#3f1d0a";
+    ctx.fillRect(0, 0, size.w, px(820));
+  }
+
+  const gradient = ctx.createLinearGradient(0, px(480), 0, size.h);
+  gradient.addColorStop(0, "rgba(26,10,5,0)");
+  gradient.addColorStop(0.3, "rgba(26,10,5,.9)");
+  gradient.addColorStop(1, "#1a0a05");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, px(380), size.w, size.h - px(380));
+
+  const hasDiscount = !!(product.comparePrice && product.comparePrice > product.price);
+  if (hasDiscount) {
+    const pct = Math.round((1 - product.price / product.comparePrice!) * 100);
+    ctx.fillStyle = "#f97316";
+    ctx.beginPath();
+    ctx.roundRect(px(60), px(60), px(180), px(70), px(16));
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `900 ${px(36)}px Arial`;
+    ctx.fillText(`-${pct}%`, px(90), px(108));
+  }
+
+  ctx.fillStyle = "#fdba74";
+  ctx.font = `800 ${px(34)}px Arial`;
+  ctx.fillText(storeName.toUpperCase(), px(72), px(880));
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `900 ${px(74)}px Arial`;
+  wrapCanvasText(ctx, product.name, px(72), px(965), px(930), px(82), 2);
+
+  let priceY = px(1130);
+  if (hasDiscount) {
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = `500 ${px(36)}px Arial`;
+    const oldPriceText = money(product.comparePrice!);
+    ctx.fillText(oldPriceText, px(72), priceY);
+    const oldW = ctx.measureText(oldPriceText).width;
+    ctx.strokeStyle = "#94a3b8";
+    ctx.lineWidth = px(2);
+    ctx.beginPath();
+    ctx.moveTo(px(72), priceY - px(12));
+    ctx.lineTo(px(72) + oldW, priceY - px(12));
+    ctx.stroke();
+    priceY += px(70);
+  }
+  ctx.fillStyle = "#fb923c";
+  ctx.font = `900 ${px(72)}px Arial`;
+  ctx.fillText(money(product.price), px(72), priceY);
+
+  ctx.fillStyle = "#f97316";
+  ctx.beginPath();
+  ctx.roundRect(px(72), size.h - px(110), px(300), px(62), px(31));
+  ctx.fill();
+  ctx.fillStyle = "#1a0a05";
+  ctx.font = `800 ${px(26)}px Arial`;
+  ctx.fillText("¡Aprovechá! →", px(100), size.h - px(70));
+}
+
+const PLACA_PREVIEW_SIZE = { w: 220, h: 275 };
+
+function TemplatePreview({ templateId, product, storeName }: { templateId: PlacaTemplateId; product: PlacaProduct & { images: string }; storeName: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.width = PLACA_PREVIEW_SIZE.w;
+    canvas.height = PLACA_PREVIEW_SIZE.h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const scale = PLACA_PREVIEW_SIZE.w / 1080;
+    const px = (n: number) => Math.round(n * scale);
+
+    let cancelled = false;
+    const imageUrl = parseImages(product.images)[0];
+
+    (async () => {
+      let image: HTMLImageElement | null = null;
+      if (imageUrl) {
+        try { image = await loadCardImage(imageUrl); } catch { image = null; }
+      }
+      if (cancelled) return;
+      if (templateId === "minimal") drawMinimalTemplate(ctx, px, PLACA_PREVIEW_SIZE, image, product);
+      else if (templateId === "oferta") drawOfertaTemplate(ctx, px, PLACA_PREVIEW_SIZE, image, product, storeName);
+      else drawClasicaTemplate(ctx, px, PLACA_PREVIEW_SIZE, image, product, storeName);
+    })();
+
+    return () => { cancelled = true; };
+  }, [templateId, product, storeName]);
+
+  return <canvas ref={canvasRef} className="w-full h-auto rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-gray-800" />;
+}
+
+function TemplatePickerModal({
+  product,
+  storeName,
+  selected,
+  onSelect,
+  onClose,
+}: {
+  product: ShareProduct;
+  storeName: string;
+  selected: PlacaTemplateId | null;
+  onSelect: (id: PlacaTemplateId) => void;
+  onClose: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative bg-white dark:bg-gray-950 border border-gray-200 dark:border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl max-h-[85vh] flex flex-col"
+      >
+        <div className="p-5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
+          <div>
+            <p className="text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-widest mb-1">Elegí un estilo</p>
+            <h3 className="text-lg font-black text-gray-900 dark:text-white">¿Cómo querés tu placa?</h3>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="p-3 sm:p-5 grid grid-cols-3 gap-2 sm:gap-3 overflow-y-auto">
+          {PLACA_TEMPLATES.map((t) => (
+            <button key={t.id} onClick={() => onSelect(t.id)}
+              className={`flex flex-col gap-1.5 sm:gap-2 rounded-2xl p-1.5 sm:p-2 border-2 transition-all text-left ${selected === t.id ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10" : "border-transparent hover:border-gray-200 dark:hover:border-white/10"}`}>
+              <TemplatePreview templateId={t.id} product={product} storeName={storeName} />
+              <div>
+                <p className="text-[11px] sm:text-xs font-bold text-gray-900 dark:text-white leading-tight">{t.label}</p>
+                <p className="hidden sm:block text-[10px] text-gray-400 dark:text-gray-500 leading-tight mt-0.5">{t.description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+        <p className="px-5 pb-5 text-xs text-gray-400 dark:text-gray-600">Guardamos tu elección para la próxima vez. Podés cambiarla cuando quieras.</p>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function ShareModal({
+  target,
+  onClose,
+  preferredTemplate,
+  onTemplatePreferenceSaved,
+}: {
+  target: ShareTarget;
+  onClose: () => void;
+  preferredTemplate: PlacaTemplateId | null;
+  onTemplatePreferenceSaved: (id: PlacaTemplateId) => void;
+}) {
   const [copied, setCopied] = useState<string | null>(null);
   const [products, setProducts] = useState<ShareProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -99,13 +403,22 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
   const [selectedImages, setSelectedImages] = useState<Record<string, number>>({});
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [expandedDescs, setExpandedDescs] = useState<Set<string>>(new Set());
+  const [showQr, setShowQr] = useState(false);
+  const [downloadingQr, setDownloadingQr] = useState(false);
+  const [templatePicker, setTemplatePicker] = useState<{ product: ShareProduct; autoShare: boolean } | null>(null);
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const touchStartX = useRef<number>(0);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const storeUrl = `${origin}/tienda/${target.storeSlug}?ref=${target.affiliateId}`;
+  // Link corto con vista previa (foto + tienda) en vez del link largo de /tienda
+  const shortLink = `${origin}/v/${target.affiliateId}`;
+  function shareLink(utmSource: string) {
+    return `${shortLink}?utm_source=${utmSource}`;
+  }
 
   useEffect(() => {
-    fetch(`/api/public/${target.storeSlug}`)
+    fetch(`/api/public/${target.storeSlug}?withSales=1`)
       .then((r) => r.json())
       .then((d) => { setProducts(d.store?.products ?? []); setLoadingProducts(false); })
       .catch(() => setLoadingProducts(false));
@@ -115,6 +428,19 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
     navigator.clipboard.writeText(text);
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
+  }
+
+  function downloadQr() {
+    if (downloadingQr) return;
+    setDownloadingQr(true);
+    const canvas = document.getElementById("affiliate-qr-canvas") as HTMLCanvasElement | null;
+    if (canvas) {
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = `qr-${target.storeSlug}.png`;
+      a.click();
+    }
+    setTimeout(() => setDownloadingQr(false), 600);
   }
 
   function productUrl(productId: string) {
@@ -129,16 +455,6 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
       product.description ? product.description : "",
       url,
     ].filter(Boolean).join("\n");
-  }
-
-  async function loadCardImage(src: string) {
-    return new Promise<HTMLImageElement>((resolve, reject) => {
-      const image = new Image();
-      image.crossOrigin = "anonymous";
-      image.onload = () => resolve(image);
-      image.onerror = reject;
-      image.src = src;
-    });
   }
 
   async function downloadWithWatermark(imageUrl: string, productName: string) {
@@ -181,77 +497,46 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
     }
   }
 
-  async function makeProductCard(product: ShareProduct, imageIndex = 0) {
+  async function makeProductCard(
+    product: ShareProduct,
+    imageIndex = 0,
+    template: PlacaTemplateId = "clasica",
+    size: { w: number; h: number } = { w: 1080, h: 1350 }
+  ) {
     const imageUrl = parseImages(product.images)[imageIndex];
     const canvas = document.createElement("canvas");
-    canvas.width = 1080;
-    canvas.height = 1350;
+    canvas.width = size.w;
+    canvas.height = size.h;
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("No se pudo crear la placa");
 
-    ctx.fillStyle = "#070b18";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const scale = size.w / 1080;
+    const px = (n: number) => Math.round(n * scale);
 
+    let image: HTMLImageElement | null = null;
     if (imageUrl) {
-      try {
-        const image = await loadCardImage(imageUrl);
-        const scale = Math.max(1080 / image.width, 760 / image.height);
-        const width = image.width * scale;
-        const height = image.height * scale;
-        ctx.drawImage(image, (1080 - width) / 2, 0, width, height);
-      } catch {
-        ctx.fillStyle = "#111827";
-        ctx.fillRect(0, 0, 1080, 760);
-      }
+      try { image = await loadCardImage(imageUrl); } catch { image = null; }
     }
 
-    const gradient = ctx.createLinearGradient(0, 520, 0, 1350);
-    gradient.addColorStop(0, "rgba(7,11,24,0)");
-    gradient.addColorStop(0.24, "rgba(7,11,24,.86)");
-    gradient.addColorStop(1, "#070b18");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 420, 1080, 930);
-
-    ctx.fillStyle = "#a5b4fc";
-    ctx.font = "700 34px Arial";
-    ctx.fillText(target.storeName.toUpperCase(), 72, 785);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "900 76px Arial";
-    wrapCanvasText(ctx, product.name, 72, 875, 930, 84, 3);
-
-    ctx.fillStyle = "#34d399";
-    ctx.font = "900 68px Arial";
-    ctx.fillText(money(product.price), 72, 1120);
-
-    if (product.description) {
-      ctx.fillStyle = "#cbd5e1";
-      ctx.font = "400 30px Arial";
-      wrapCanvasText(ctx, product.description, 72, 1180, 780, 40, 2);
+    if (template === "minimal") {
+      drawMinimalTemplate(ctx, px, size, image, product);
+    } else if (template === "oferta") {
+      drawOfertaTemplate(ctx, px, size, image, product, target.storeName);
+    } else {
+      drawClasicaTemplate(ctx, px, size, image, product, target.storeName);
     }
-
-    ctx.fillStyle = "#4f46e5";
-    ctx.roundRect(72, 1245, 300, 62, 31);
-    ctx.fill();
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "800 26px Arial";
-    ctx.fillText("Comprá ahora →", 108, 1285);
-
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "500 24px Arial";
-    ctx.fillText("Link en bio / stories", 620, 1285);
 
     return new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("No se pudo exportar la placa"))), "image/png", 0.92);
     });
   }
 
-  async function shareCard(product: ShareProduct) {
+  async function shareCard(product: ShareProduct, template: PlacaTemplateId) {
     setCardLoading(product.id);
     setCardError(null);
     try {
       const imageIndex = selectedImages[product.id] ?? 0;
-      const blob = await makeProductCard(product, imageIndex);
+      const blob = await makeProductCard(product, imageIndex, template);
       const file = new File([blob], `${product.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-placa.png`, { type: "image/png" });
       const text = productShareText(product, productUrl(product.id));
 
@@ -269,6 +554,36 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
     } finally {
       setCardLoading(null);
     }
+  }
+
+  // Si ya hay un estilo guardado lo usa directo; si no, abre el selector y comparte apenas elige uno
+  function handleGenerateClick(product: ShareProduct) {
+    if (preferredTemplate) {
+      shareCard(product, preferredTemplate);
+    } else {
+      setTemplatePicker({ product, autoShare: true });
+    }
+  }
+
+  function openTemplatePicker(previewProduct: ShareProduct) {
+    setTemplatePicker({ product: previewProduct, autoShare: false });
+  }
+
+  async function confirmTemplate(id: PlacaTemplateId) {
+    const picker = templatePicker;
+    setTemplatePicker(null);
+    if (!picker || savingTemplate) return;
+    setSavingTemplate(true);
+    try {
+      const res = await fetch("/api/vendedoras/perfil", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferredPlacaTemplate: id }),
+      });
+      if (res.ok) onTemplatePreferenceSaved(id);
+    } catch { /* no bloquea el compartir si falla el guardado */ }
+    setSavingTemplate(false);
+    if (picker.autoShare) shareCard(picker.product, id);
   }
 
   return (
@@ -312,18 +627,32 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
               <div className="bg-gray-50 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-2xl p-4">
                 <p className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-2">Tu link de afiliado</p>
                 <div className="flex items-center gap-3">
-                  <p className="flex-1 text-xs text-indigo-600 dark:text-indigo-300 font-mono break-all leading-relaxed">{storeUrl}</p>
-                  <button onClick={() => copy(storeUrl, "store")}
+                  <p className="flex-1 text-xs text-indigo-600 dark:text-indigo-300 font-mono break-all leading-relaxed">{shortLink}</p>
+                  <button onClick={() => copy(shortLink, "store")}
                     className="flex-shrink-0 flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all">
                     {copied === "store" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                     {copied === "store" ? "¡Copiado!" : "Copiar"}
                   </button>
                 </div>
+                <button onClick={() => setShowQr((v) => !v)}
+                  className="mt-3 flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
+                  <QrCodeIcon className="h-3.5 w-3.5" /> {showQr ? "Ocultar código QR" : "Mostrar código QR"}
+                </button>
+                {showQr && (
+                  <div className="mt-3 flex flex-col items-center gap-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-4">
+                    <QRCodeCanvas id="affiliate-qr-canvas" value={shortLink} size={180} level="H" marginSize={2} />
+                    <button onClick={downloadQr} disabled={downloadingQr}
+                      className="flex items-center justify-center gap-2 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 disabled:opacity-60 text-gray-700 dark:text-gray-200 text-xs font-bold px-3 py-2 rounded-xl transition-all">
+                      {downloadingQr ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                      Descargar PNG
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* WhatsApp — hero */}
               <button
-                onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá esta tienda! 🛍️\n${target.storeName}\n${storeUrl}`)}`, "_blank")}
+                onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá esta tienda! 🛍️\n${target.storeName}\n${shareLink("whatsapp")}`)}`, "_blank")}
                 className="w-full flex items-center justify-center gap-3 bg-[#25D366] hover:bg-[#20b85a] text-white font-black py-4 rounded-2xl text-base transition-all shadow-lg shadow-[#25D366]/20"
               >
                 <WaIcon /> Compartir por WhatsApp
@@ -331,15 +660,15 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
 
               {/* Other networks */}
               <div className="grid grid-cols-3 gap-2">
-                <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(storeUrl)}`, "_blank")}
+                <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink("facebook"))}`, "_blank")}
                   className="flex items-center justify-center gap-2 bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/20 text-[#1877F2] font-bold py-3 rounded-xl text-sm transition-all">
                   <FbIcon /> Facebook
                 </button>
-                <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`¡Mirá ${target.storeName}! 🛍️`)}&url=${encodeURIComponent(storeUrl)}`, "_blank")}
+                <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`¡Mirá ${target.storeName}! 🛍️`)}&url=${encodeURIComponent(shareLink("x"))}`, "_blank")}
                   className="flex items-center justify-center gap-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl text-sm transition-all">
                   <TwIcon /> X
                 </button>
-                <button onClick={() => window.open(`https://t.me/share/url?url=${encodeURIComponent(storeUrl)}&text=${encodeURIComponent(`¡Mirá ${target.storeName}!`)}`, "_blank")}
+                <button onClick={() => window.open(`https://t.me/share/url?url=${encodeURIComponent(shareLink("telegram"))}&text=${encodeURIComponent(`¡Mirá ${target.storeName}!`)}`, "_blank")}
                   className="flex items-center justify-center gap-2 bg-[#0088CC]/10 hover:bg-[#0088CC]/20 border border-[#0088CC]/20 text-[#0088CC] font-bold py-3 rounded-xl text-sm transition-all">
                   <TgIcon /> Telegram
                 </button>
@@ -359,7 +688,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                     </li>
                   ))}
                 </ol>
-                <button onClick={() => copy(storeUrl, "ig")}
+                <button onClick={() => copy(shareLink("instagram"), "ig")}
                   className="w-full flex items-center justify-center gap-2 bg-purple-100 dark:bg-purple-700/30 hover:bg-purple-200 dark:hover:bg-purple-700/50 border border-purple-300 dark:border-purple-500/40 text-purple-700 dark:text-purple-200 font-bold py-2.5 rounded-xl text-sm transition-all">
                   {copied === "ig" ? <Check className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
                   {copied === "ig" ? "¡Link copiado!" : "Copiar link"}
@@ -389,6 +718,10 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                   const matchCat = categoryFilter === "all" || p.category === categoryFilter;
                   return matchSearch && matchCat;
                 });
+                // products ya viene ordenado por ventas (desc) desde el servidor — el top 3 con ventas reales se destaca
+                const topSellerIds = new Set(
+                  products.filter((p) => (p.salesCount ?? 0) > 0).slice(0, 3).map((p) => p.id)
+                );
 
                 return (
                   <div className="space-y-4 max-w-4xl mx-auto">
@@ -443,6 +776,21 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                       </p>
                     </div>
 
+                    {/* Estilo de placa elegido */}
+                    {products.length > 0 && (
+                      <div className="flex items-center justify-between gap-3 bg-gray-50 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-2xl px-4 py-3">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Estilo de placa: <span className="font-bold text-gray-900 dark:text-white">
+                            {PLACA_TEMPLATES.find((t) => t.id === preferredTemplate)?.label ?? "Sin elegir"}
+                          </span>
+                        </p>
+                        <button onClick={() => openTemplatePicker(filteredProducts[0] ?? products[0])}
+                          className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex-shrink-0">
+                          Cambiar
+                        </button>
+                      </div>
+                    )}
+
                     {/* Products grid / list */}
                     {filteredProducts.length === 0 ? (
                       <div className="text-center py-12">
@@ -457,15 +805,20 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                           return (
                             <div key={p.id} className="flex items-center gap-3 bg-white dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-3">
                               {/* Thumbnail */}
-                              <div className="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                              <div className="relative w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
                                 {imgs[0]
-                                  ? <img src={imgs[0]} alt={p.name} className="w-full h-full object-cover" />
+                                  ? <Image src={imgs[0]} alt={p.name} fill className="object-cover" />
                                   : <div className="w-full h-full flex items-center justify-center"><Package className="h-5 w-5 text-gray-400" /></div>
                                 }
                               </div>
                               {/* Info */}
                               <div className="flex-1 min-w-0">
-                                <p className="text-gray-900 dark:text-white font-bold text-sm leading-snug truncate">{p.name}</p>
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-gray-900 dark:text-white font-bold text-sm leading-snug truncate">{p.name}</p>
+                                  {topSellerIds.has(p.id) && (
+                                    <span className="flex-shrink-0 text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-1.5 py-0.5 rounded-full">🔥 Top</span>
+                                  )}
+                                </div>
                                 <p className="text-emerald-600 dark:text-emerald-400 font-black text-sm">{money(p.price)}</p>
                               </div>
                               {/* Actions */}
@@ -478,7 +831,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                                   className="p-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 rounded-lg transition-all">
                                   {copied === p.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                                 </button>
-                                <button onClick={() => shareCard(p)} disabled={isLoading}
+                                <button onClick={() => handleGenerateClick(p)} disabled={isLoading}
                                   className="p-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-60 text-white rounded-lg transition-all">
                                   {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className="h-3.5 w-3.5" />}
                                 </button>
@@ -513,7 +866,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                                 }}
                               >
                                 {imgs[selectedIdx]
-                                  ? <img src={imgs[selectedIdx]} alt={p.name} className="w-full h-full object-cover transition-opacity duration-200" />
+                                  ? <Image src={imgs[selectedIdx]} alt={p.name} fill className="object-cover transition-opacity duration-200" />
                                   : <div className="w-full h-full flex items-center justify-center"><Package className="h-10 w-10 text-gray-400 dark:text-gray-700" /></div>
                                 }
 
@@ -561,7 +914,12 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                               <div className="p-4 flex flex-col gap-3 flex-1">
                                 {/* Info + descripción expandible */}
                                 <div>
-                                  <p className="text-gray-900 dark:text-white font-bold text-sm leading-snug">{p.name}</p>
+                                  <div className="flex items-center gap-1.5">
+                                    <p className="text-gray-900 dark:text-white font-bold text-sm leading-snug">{p.name}</p>
+                                    {topSellerIds.has(p.id) && (
+                                      <span className="flex-shrink-0 text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-1.5 py-0.5 rounded-full">🔥 Top</span>
+                                    )}
+                                  </div>
                                   {p.description && (
                                     <div className="mt-1">
                                       <p className={`text-gray-500 dark:text-gray-400 text-xs leading-relaxed ${isExpanded ? "" : "line-clamp-2"}`}>
@@ -569,7 +927,11 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                                       </p>
                                       {descLong && (
                                         <button
-                                          onClick={() => setExpandedDescs((prev) => { const n = new Set(prev); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; })}
+                                          onClick={() => setExpandedDescs((prev) => {
+                                            const n = new Set(prev);
+                                            if (n.has(p.id)) n.delete(p.id); else n.add(p.id);
+                                            return n;
+                                          })}
                                           className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 hover:underline mt-0.5">
                                           {isExpanded ? "Ver menos" : "Ver más"}
                                         </button>
@@ -580,7 +942,7 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
                                 </div>
 
                                 {/* CTA placa */}
-                                <button onClick={() => shareCard(p)} disabled={isLoading}
+                                <button onClick={() => handleGenerateClick(p)} disabled={isLoading}
                                   className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-60 text-white font-black py-3 rounded-xl text-sm transition-all shadow-md shadow-purple-500/20 mt-auto">
                                   {isLoading
                                     ? <><Loader2 className="h-4 w-4 animate-spin" /> Generando...</>
@@ -621,6 +983,16 @@ function ShareModal({ target, onClose }: { target: ShareTarget; onClose: () => v
             </div>
           )}
         </div>
+
+        {templatePicker && (
+          <TemplatePickerModal
+            product={templatePicker.product}
+            storeName={target.storeName}
+            selected={preferredTemplate}
+            onSelect={confirmTemplate}
+            onClose={() => setTemplatePicker(null)}
+          />
+        )}
     </motion.div>
   );
 }
@@ -821,6 +1193,7 @@ interface UserProfile {
   id: string; name: string | null; email: string; image: string | null;
   bio: string | null; city: string | null; instagramHandle: string | null; phone: string | null;
   notifyNewStores: boolean;
+  preferredPlacaTemplate: string | null;
 }
 interface VendedoraStats {
   totalOrders: number; totalEarned: number; pendingBalance: number; pendingCommissions: number;
@@ -828,12 +1201,60 @@ interface VendedoraStats {
 
 /* ── Profile Edit Modal ── */
 function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; onClose: () => void; onSave: (p: UserProfile) => void }) {
+  const { signOut } = useAuth();
   const [form, setForm] = useState({ name: profile.name ?? "", bio: profile.bio ?? "", city: profile.city ?? "", instagramHandle: profile.instagramHandle ?? "", phone: profile.phone ?? "", image: profile.image ?? "", notifyNewStores: profile.notifyNewStores ?? false });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const upd = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
   type StringKey = { [K in keyof typeof form]: (typeof form)[K] extends string ? K : never }[keyof typeof form];
+
+  // Eliminar cuenta
+  const [deleteStep, setDeleteStep] = useState<"closed" | "loading" | "blocked" | "confirm">("closed");
+  const [pendingBalance, setPendingBalance] = useState(0);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  async function openDeleteAccount() {
+    setDeleteError("");
+    setDeleteConfirmText("");
+    setDeleteStep("loading");
+    try {
+      const res = await fetch("/api/cuenta?target=account");
+      const data = await res.json();
+      setPendingBalance(data.pendingBalances ?? 0);
+      setDeleteStep((data.pendingBalances ?? 0) > 0 ? "blocked" : "confirm");
+    } catch {
+      setDeleteError("No pudimos verificar tu cuenta. Intentá de nuevo.");
+      setDeleteStep("closed");
+    }
+  }
+
+  async function confirmDeleteAccount() {
+    if (deleting || deleteConfirmText !== profile.email) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      const res = await fetch("/api/cuenta", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: "account", confirm: deleteConfirmText }),
+      });
+      if (res.ok) {
+        await signOut("/");
+        return;
+      }
+      const err = await res.json().catch(() => ({}));
+      setDeleteError(err.error === "Bloqueado"
+        ? "Tenés saldo pendiente en tu billetera. Retiralo antes de eliminar tu cuenta."
+        : (err.error ?? "Ocurrió un error. Intentá de nuevo."));
+    } catch {
+      setDeleteError("Error de conexión. Intentá de nuevo.");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -869,6 +1290,7 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
   );
 
   return (
+    <>
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/75 backdrop-blur-md" />
@@ -891,7 +1313,7 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
             <button type="button" onClick={() => fileRef.current?.click()}
               className="relative group w-24 h-24 rounded-2xl overflow-hidden border-2 border-white/10 hover:border-indigo-500/50 transition-all shadow-xl focus:outline-none">
               {form.image ? (
-                <img src={form.image} alt="" className="w-full h-full object-cover" />
+                <Image src={form.image} alt="" fill className="object-cover" />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-4xl font-black">
                   {initial}
@@ -937,6 +1359,24 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
               </div>
             </button>
           </div>
+
+          {/* Zona de peligro */}
+          <div className="rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50/60 dark:bg-red-500/5 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-red-200 dark:border-red-500/20">
+              <ShieldAlert className="h-4 w-4 text-red-500 shrink-0" />
+              <p className="text-sm font-bold text-red-700 dark:text-red-400">Zona de peligro</p>
+            </div>
+            <div className="p-4">
+              <button type="button" onClick={openDeleteAccount} disabled={deleteStep === "loading"}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-red-300 dark:border-red-500/30 bg-red-100 dark:bg-red-500/10 hover:bg-red-200 dark:hover:bg-red-500/20 text-sm text-red-800 dark:text-red-300 font-semibold transition-colors text-left disabled:opacity-50">
+                {deleteStep === "loading" ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <UserX className="h-4 w-4 shrink-0" />}
+                <div>
+                  <p className="font-semibold">Eliminar mi cuenta</p>
+                  <p className="text-xs text-red-500 dark:text-red-400/80 font-normal mt-0.5">Anonimiza tus datos. Podés volver a registrarte.</p>
+                </div>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="px-6 pb-6 pt-4 border-t border-gray-100 dark:border-white/5 flex gap-3">
@@ -950,6 +1390,76 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
         </div>
       </motion.form>
     </motion.div>
+
+    {(deleteStep === "blocked" || deleteStep === "confirm") && (
+      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md" onClick={() => !deleting && setDeleteStep("closed")}>
+        <motion.div initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring", damping: 28, stiffness: 320 }}
+          onClick={e => e.stopPropagation()}
+          className="bg-white dark:bg-[#0d0f1a] border border-gray-200 dark:border-white/8 rounded-2xl shadow-2xl max-w-sm w-full">
+          <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100 dark:border-white/5">
+            <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-500/10 flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white text-base">Eliminar mi cuenta</h3>
+              <p className="text-xs text-gray-500">Esta acción no se puede deshacer</p>
+            </div>
+          </div>
+
+          <div className="px-6 py-5 space-y-4">
+            {deleteStep === "blocked" ? (
+              <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-3">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                    Tenés ${pendingBalance.toLocaleString("es-AR")} pendientes en tu billetera
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400/80 mt-0.5">Retiralos desde &ldquo;Mi billetera&rdquo; antes de eliminar tu cuenta.</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 space-y-1.5">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Qué pasa al eliminar</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400 shrink-0" /> Se borran tus datos personales (nombre, foto, bio, contacto)</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400 shrink-0" /> Tus links de afiliada dejan de funcionar</p>
+                  <p className="text-xs text-gray-400 mt-2">El historial de comisiones se conserva por requisito legal (AFIP). Podés volver a registrarte con el mismo email.</p>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-2">
+                    Escribí tu email para confirmar: <strong className="text-gray-900 dark:text-white">{profile.email}</strong>
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={e => { setDeleteConfirmText(e.target.value); setDeleteError(""); }}
+                    placeholder={profile.email}
+                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-400"
+                  />
+                </div>
+                {deleteError && (
+                  <p className="text-sm text-red-600 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl px-4 py-2.5">{deleteError}</p>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="px-6 pb-6 flex gap-3">
+            <button type="button" onClick={() => !deleting && setDeleteStep("closed")}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+              Cancelar
+            </button>
+            {deleteStep === "confirm" && (
+              <button type="button" onClick={confirmDeleteAccount} disabled={deleting || deleteConfirmText !== profile.email}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold disabled:opacity-40 hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
+                {deleting ? <><Loader2 className="h-4 w-4 animate-spin" /> Eliminando...</> : <><Trash2 className="h-4 w-4" /> Eliminar cuenta</>}
+              </button>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -965,9 +1475,9 @@ function ProfileCard({ profile, stats, onEdit }: { profile: UserProfile; stats: 
 
       <div className="relative flex flex-col sm:flex-row gap-5 items-start sm:items-center">
         {/* Avatar */}
-        <div className="relative shrink-0">
+        <div className="relative shrink-0 w-20 h-20">
           {profile.image ? (
-            <img src={profile.image} alt="" className="w-20 h-20 rounded-2xl object-cover border-2 border-indigo-500/30 shadow-xl" />
+            <Image src={profile.image} alt="" fill className="rounded-2xl object-cover border-2 border-indigo-500/30 shadow-xl" />
           ) : (
             <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-3xl font-black shadow-xl shadow-indigo-500/20">
               {initial}
@@ -1055,6 +1565,63 @@ const STATUS: Record<string, { label: string; cls: string; dot: string }> = {
   REMOVED: { label: "Dada de baja", cls: "bg-red-500/10 text-red-400 border-red-500/20", dot: "bg-red-400" },
 };
 
+/* ── Modal de ayuda — cómo funciona cada parte del panel ── */
+const HELP_SECTIONS: { icon: React.ElementType; iconColor: string; title: string; body: string }[] = [
+  { icon: Store, iconColor: "text-indigo-500", title: "Tiendas disponibles", body: "Postulate a las tiendas que te interesen. Cuando el dueño te acepte, vas a poder compartir tus productos y ganar comisión por cada venta." },
+  { icon: Share2, iconColor: "text-purple-500", title: "Compartir", body: "Desde cada producto generás tu link de afiliada, un código QR o una placa lista para redes (Instagram, WhatsApp, etc). Todo lleva tu identificador para que la venta te quede asignada." },
+  { icon: Wallet, iconColor: "text-emerald-500", title: "Mi billetera", body: "Ahí ves tu saldo disponible y tus comisiones pendientes de aprobación. Podés pedir el retiro cuando quieras; el dueño de la tienda te transfiere directamente." },
+  { icon: Award, iconColor: "text-amber-500", title: "Mis premios", body: "Cupones de descuento que ganás automáticamente según tu nivel (Plata, Oro, Diamante) calculado por tus ventas del mes. Se usan en cualquier tienda de TiendaApps." },
+  { icon: BarChart3, iconColor: "text-blue-500", title: "Estadísticas", body: "Pedidos generados, clicks en tus links y de qué canal vienen (WhatsApp, Instagram, etc), para que sepas qué te está funcionando mejor." },
+  { icon: Trophy, iconColor: "text-amber-500", title: "Ranking", body: "Tu posición comparada con las demás afiliadas de cada tienda, según comisiones generadas." },
+  { icon: MessageSquare, iconColor: "text-purple-500", title: "Plantillas", body: "Mensajes ya escritos para WhatsApp, Instagram y otras redes, con tu link incluido, listos para pegar y enviar." },
+  { icon: Download, iconColor: "text-indigo-500", title: "Kit de contenido", body: "Fotos y videos de los productos de tus tiendas para usar en tus publicaciones, sin tener que pedírselos al dueño." },
+  { icon: Target, iconColor: "text-orange-500", title: "Mis metas", body: "Objetivos mensuales de ventas que podés fijarte para hacer seguimiento de tu progreso." },
+  { icon: ShoppingBag, iconColor: "text-green-500", title: "Mis pedidos", body: "Listado de las ventas generadas con tu link, con su estado y la comisión que te corresponde por cada una." },
+];
+
+function HelpModal({ onClose }: { onClose: () => void }) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-md" />
+      <motion.div initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: "spring", damping: 28, stiffness: 320 }}
+        onClick={e => e.stopPropagation()}
+        className="relative bg-white dark:bg-[#0d0f1a] border border-gray-200 dark:border-white/8 rounded-3xl w-full max-w-lg shadow-2xl shadow-black/20 dark:shadow-black/60 overflow-hidden">
+
+        <div className="px-6 pt-6 pb-5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <HelpCircle className="h-5 w-5 text-indigo-500" />
+            <h3 className="text-lg font-black text-gray-900 dark:text-white">Cómo funciona el panel</h3>
+          </div>
+          <button type="button" onClick={onClose} className="w-8 h-8 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-700 dark:hover:text-white transition-all">
+            <XCircle className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
+          {HELP_SECTIONS.map(({ icon: Icon, iconColor, title, body }) => (
+            <div key={title} className="flex gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0">
+                <Icon className={`h-4 w-4 ${iconColor}`} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">{title}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="px-6 pb-6 pt-4 border-t border-gray-100 dark:border-white/5">
+          <button type="button" onClick={onClose} className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/20">
+            Entendido
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function VendedorasClient() {
   const { user, status: sessionStatus, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -1068,7 +1635,9 @@ export default function VendedorasClient() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<VendedoraStats | null>(null);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- mounted flag estándar para evitar mismatch de hidratación SSR/cliente (mismo patrón en todo el proyecto)
   useEffect(() => { setMounted(true); }, []);
 
   const fetchStores = useCallback(() => {
@@ -1130,6 +1699,7 @@ export default function VendedorasClient() {
     if (!applyId) return;
     const store = stores.find((s) => s.id === applyId);
     if (store) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza con el query param de la URL (sistema externo), solo corre una vez que cargan las tiendas
       setApplyStore(store);
       window.history.replaceState({}, "", "/afiliados");
     }
@@ -1202,7 +1772,7 @@ export default function VendedorasClient() {
           {/* Desktop — íconos + salir, se oculta en mobile */}
           <div className="hidden sm:flex items-center justify-end gap-1">
             <FavoritesDrawer buttonClassName="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all" />
-            {true && user?.id && <NotificationBell userId={user.id} />}
+            {user?.id && <NotificationBell userId={user.id} />}
             {mounted && (
               <button
                 type="button"
@@ -1213,13 +1783,14 @@ export default function VendedorasClient() {
                 {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
               </button>
             )}
-            <Link
-              href="/afiliados/soporte"
-              title="Soporte"
+            <button
+              type="button"
+              onClick={() => setShowHelp(true)}
+              title="Ayuda"
               className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
             >
-              <LifeBuoy className="h-4 w-4" />
-            </Link>
+              <HelpCircle className="h-4 w-4" />
+            </button>
             <button
               onClick={() => signOut("/")}
               title="Cerrar sesión"
@@ -1272,7 +1843,7 @@ export default function VendedorasClient() {
                 </div>
                 <div className="flex items-center gap-2">
                   <FavoritesDrawer buttonClassName="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10" />
-                  {true && user?.id && <NotificationBell userId={user.id} />}
+                  {user?.id && <NotificationBell userId={user.id} />}
                   <button
                     onClick={() => setMobileMenuOpen(false)}
                     className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"
@@ -1323,9 +1894,13 @@ export default function VendedorasClient() {
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <Trophy className="h-4 w-4 text-amber-500" /> Ranking
                     </Link>
+                    <button type="button" onClick={() => { setShowHelp(true); setMobileMenuOpen(false); }}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors w-full text-left">
+                      <HelpCircle className="h-4 w-4 text-indigo-500" /> Ayuda
+                    </button>
                     <Link href="/afiliados/soporte" onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <LifeBuoy className="h-4 w-4 text-indigo-500" /> Soporte
+                      <Headset className="h-4 w-4 text-indigo-500" /> Soporte
                     </Link>
                     {mounted && (
                       <button
@@ -1566,7 +2141,12 @@ export default function VendedorasClient() {
           />
         )}
         {shareTarget && (
-          <ShareModal target={shareTarget} onClose={() => setShareTarget(null)} />
+          <ShareModal
+            target={shareTarget}
+            onClose={() => setShareTarget(null)}
+            preferredTemplate={(profile?.preferredPlacaTemplate as PlacaTemplateId | null) ?? null}
+            onTemplatePreferenceSaved={(id) => setProfile((p) => (p ? { ...p, preferredPlacaTemplate: id } : p))}
+          />
         )}
         {showProfileEdit && profile && (
           <ProfileEditModal
@@ -1575,7 +2155,17 @@ export default function VendedorasClient() {
             onSave={(p) => { setProfile(p); setShowProfileEdit(false); }}
           />
         )}
+        {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
       </AnimatePresence>
+
+      {/* Botón flotante de soporte */}
+      <Link
+        href="/afiliados/soporte"
+        title="Soporte"
+        className="fixed bottom-6 right-6 z-[90] w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-2xl shadow-indigo-900/40 transition-all hover:scale-105"
+      >
+        <Headset className="h-6 w-6" />
+      </Link>
     </div>
   );
 }

@@ -75,6 +75,7 @@ export default function RankingPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga el ranking al cambiar de tienda seleccionada
     if (selectedStoreId) loadRanking(selectedStoreId);
   }, [selectedStoreId, loadRanking]);
 

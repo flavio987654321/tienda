@@ -15,6 +15,7 @@ import HelpButton from "@/components/HelpButton";
 import FavoritesDrawer from "@/components/FavoritesDrawer";
 import AsistenteIA from "@/components/dashboard/AsistenteIA";
 import TourGuide, { TOUR_STORAGE_KEY } from "@/components/TourGuide";
+import TermsUpdateBanner from "@/components/TermsUpdateBanner";
 
 const LEADS_STORE_TYPES = ["AUTOS"];
 
@@ -520,6 +521,7 @@ export default function DashboardLayout({
           </div>
         )}
         <div className={`flex-1 ${fullHeight ? "overflow-hidden min-h-0" : "p-4 pt-2"}`}>
+          {!fullHeight && <TermsUpdateBanner />}
           {children}
         </div>
       </main>

@@ -114,6 +114,7 @@ export default function PedidosPage() {
         }));
         setStores(uniqueStores);
       });
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial de pedidos al autenticarse
     loadData(1, "");
   }, [sessionStatus, loadData]);
 

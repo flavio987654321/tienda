@@ -197,17 +197,32 @@ export function useStorefront() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [affiliateId, setAffiliateId] = useState<string | null>(null);
 
-  // Lee ?ref= de la URL
+  // Lee ?ref= de la URL y registra el click de la afiliada (una vez por sesión de navegador)
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const ref = new URLSearchParams(window.location.search).get("ref");
-    if (ref) setAffiliateId(ref);
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (!ref) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza con el query param ?ref= de la URL (sistema externo)
+    setAffiliateId(ref);
+
+    const dedupeKey = `aff_click_${ref}`;
+    if (sessionStorage.getItem(dedupeKey)) return;
+    sessionStorage.setItem(dedupeKey, "1");
+
+    const utmSource = params.get("utm_source");
+    fetch("/api/track-click", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ affiliateId: ref, utmSource }),
+    }).catch(() => {});
   }, []);
 
   // Carga productos reales; usa demo cuando no hay slug (preview del dashboard)
   useEffect(() => {
     if (!slug) {
       const tipoTienda = config?.tipoTienda ?? "ROPA";
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza el preview demo con el tipo de tienda elegido en el editor
       setProducts(tipoTienda === "AUTOS" ? DEMO_PRODUCTS_AUTOS : DEMO_PRODUCTS);
       setLoadingProducts(false);
       return;
@@ -231,7 +246,7 @@ export function useStorefront() {
       })
       .catch(() => {})
       .finally(() => setLoadingProducts(false));
-  }, [slug, previewFill]);
+  }, [slug, previewFill, config?.tipoTienda]);
 
   // Encuentra el variantId que coincide con el valor seleccionado
   function resolveVariantId(product: StorefrontProduct, sizeValue: string, colorValue: string): string | null {

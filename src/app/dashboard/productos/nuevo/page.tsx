@@ -705,9 +705,9 @@ function ProductoFormPage() {
           <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl text-sm mb-4">{error}</div>
         )}
 
-        <div className="flex gap-6 flex-1 min-h-0">
+        <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
           {/* Form */}
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-1 space-y-5 pb-6">
+          <form onSubmit={handleSubmit} className="flex-1 lg:overflow-y-auto lg:pr-1 space-y-5 pb-6">
             {loadingProduct && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6 text-sm text-gray-500 flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -945,7 +945,7 @@ function ProductoFormPage() {
                   </div>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoria</label>
                   <select
@@ -1013,13 +1013,13 @@ function ProductoFormPage() {
             {storeTypeConfig.supportsCondicion && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6">
                 <h2 className="font-semibold text-gray-900 mb-3">Condición del vehículo</h2>
-                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${(storeTypeConfig.condicionOptions ?? ["Nuevo","Usado"]).length}, 1fr)` }}>
+                <div className="flex flex-wrap gap-2">
                   {(storeTypeConfig.condicionOptions ?? ["Nuevo", "Usado"]).map((opt) => (
                     <button
                       key={opt}
                       type="button"
                       onClick={() => { setCondicion(opt); markDirty(); }}
-                      className={`py-2.5 px-2 rounded-xl text-sm font-semibold border-2 transition-all text-center ${
+                      className={`flex-1 min-w-[100px] py-2.5 px-2 rounded-xl text-sm font-semibold border-2 transition-all text-center ${
                         condicion === opt
                           ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                           : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-300"
@@ -1295,7 +1295,7 @@ function ProductoFormPage() {
 
               {/* Campos tipados del store type (Marca, Año, Km, etc.) */}
               {storeTypeConfig.extraFields.length > 0 && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {storeTypeConfig.extraFields.map((field) => {
                     const attrIdx = attributes.findIndex((a) => a.key === field.label);
                     const val = attrIdx >= 0 ? attributes[attrIdx].value : "";
@@ -1347,7 +1347,7 @@ function ProductoFormPage() {
                 .map((attr, idx) => ({ attr, idx }))
                 .filter(({ attr }) => !storeTypeConfig.extraFields.some((f) => f.label === attr.key))
                 .map(({ attr, idx }) => (
-                  <div key={idx} className="flex gap-3 items-end">
+                  <div key={idx} className="flex flex-col sm:flex-row gap-3 sm:items-end">
                     <div className="flex-1">
                       <label className="block text-xs font-medium text-gray-500 mb-1">Nombre del atributo</label>
                       <input
@@ -1434,8 +1434,8 @@ function ProductoFormPage() {
           </form>
 
           {/* Preview */}
-          <div className="w-80 flex-shrink-0">
-            <div className="sticky top-0">
+          <div className="w-full lg:w-80 flex-shrink-0">
+            <div className="lg:sticky lg:top-0">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-semibold text-gray-700">Vista previa</p>
                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">Tu tienda</span>

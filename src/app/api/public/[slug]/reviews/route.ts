@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(
   _req: NextRequest,
@@ -28,6 +29,12 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
+
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  if (!(await checkRateLimit(`review:${ip}`, 3, 10 * 60_000))) {
+    return NextResponse.json({ error: "Demasiadas reseñas. Esperá un momento." }, { status: 429 });
+  }
+
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 

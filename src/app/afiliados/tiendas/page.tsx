@@ -1,9 +1,10 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import Fuse from "fuse.js";
 import { useAuth } from "@/components/AuthProvider";
 import {
   ArrowLeft, Store, Search, Send, Loader2, ShoppingBag, Star, Package, X, Ticket,
@@ -44,18 +45,26 @@ export default function TiendasPage() {
       .catch(() => setLoading(false));
   }, []);
 
-  const available = stores
-    .filter((s) => s.affiliates.length === 0 || ["REJECTED", "REMOVED"].includes(s.affiliates[0]?.status))
-    .sort((a, b) => scoreStore(b) - scoreStore(a));
+  const available = useMemo(
+    () =>
+      stores
+        .filter((s) => s.affiliates.length === 0 || ["REJECTED", "REMOVED"].includes(s.affiliates[0]?.status))
+        .sort((a, b) => scoreStore(b) - scoreStore(a)),
+    [stores]
+  );
 
-  const filtered = search.trim()
-    ? available.filter(
-        (s) =>
-          s.name.toLowerCase().includes(search.toLowerCase()) ||
-          s.owner.name?.toLowerCase().includes(search.toLowerCase()) ||
-          s.description?.toLowerCase().includes(search.toLowerCase())
-      )
-    : available;
+  // Búsqueda difusa: tolera errores de tipeo y coincidencias parciales
+  const fuse = useMemo(
+    () =>
+      new Fuse(available, {
+        keys: ["name", "owner.name", "description"],
+        threshold: 0.35,
+        ignoreLocation: true,
+      }),
+    [available]
+  );
+
+  const filtered = search.trim() ? fuse.search(search.trim()).map((r) => r.item) : available;
 
   function handleApply(store: StoreItem) {
     if (sessionStatus !== "authenticated") {

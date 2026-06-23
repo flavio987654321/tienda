@@ -34,17 +34,11 @@ export async function GET() {
     rachaDiamante = await calcularRachaDiamante(userId);
   }
 
-  const subscription = await prisma.subscription.findUnique({
-    where: { userId },
-    select: { plan: true },
-  });
-
   return NextResponse.json({
     cupones,
     nivelActual,
     nivelLabel:     getNivelLabel(nivelActual),
     nivelColor:     getNivelColor(nivelActual),
-    plan:           subscription?.plan ?? "MONTHLY",
     rachaDiamante,
     esMayorista,
     categoria,

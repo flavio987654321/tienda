@@ -61,9 +61,9 @@ interface PageData {
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function affiliateUrl(slug: string, id: string) {
-  if (typeof window === "undefined") return `/tienda/${slug}?ref=${id}`;
-  return `${window.location.origin}/tienda/${slug}?ref=${id}`;
+function affiliateUrl(id: string) {
+  if (typeof window === "undefined") return `/v/${id}`;
+  return `${window.location.origin}/v/${id}`;
 }
 
 function CopyLinkButton({ url }: { url: string }) {
@@ -90,7 +90,8 @@ function CopyLinkButton({ url }: { url: string }) {
 }
 
 function WhatsAppButton({ url, storeName }: { url: string; storeName: string }) {
-  const text = encodeURIComponent(`¡Mirá los productos de ${storeName}! ${url}`);
+  const shareUrl = `${url}${url.includes("?") ? "&" : "?"}utm_source=whatsapp`;
+  const text = encodeURIComponent(`¡Mirá los productos de ${storeName}! ${shareUrl}`);
   return (
     <a
       href={`https://wa.me/?text=${text}`}
@@ -108,6 +109,7 @@ function WhatsAppButton({ url, storeName }: { url: string; storeName: string }) 
 
 function LockoutBanner({ until }: { until: string }) {
   const date = new Date(until);
+  // eslint-disable-next-line react-hooks/purity -- estimación de horas restantes para mostrar en UI, no afecta el bloqueo real (eso lo valida el backend)
   const hoursLeft = Math.ceil((date.getTime() - Date.now()) / 3600000);
   return (
     <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
@@ -388,6 +390,7 @@ export default function BilleteraPage() {
   const [showBankForm, setShowBankForm] = useState<string | null>(null);
   const [showWithdraw, setShowWithdraw] = useState(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- mounted flag estándar para evitar mismatch de hidratación SSR/cliente (mismo patrón en todo el proyecto)
   useEffect(() => { setMounted(true); }, []);
 
   function loadData() {
@@ -462,7 +465,7 @@ export default function BilleteraPage() {
 
         {/* Tarjetas por afiliación */}
         {data?.affiliates.map((affiliate) => {
-          const url = affiliateUrl(affiliate.store.slug, affiliate.id);
+          const url = affiliateUrl(affiliate.id);
           const isActive = affiliate.status === "APPROVED" && affiliate.isActive;
           const hasActivity = affiliate.totalCommissions > 0 || affiliate.totalOrders > 0;
 
@@ -516,7 +519,7 @@ export default function BilleteraPage() {
                 <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-500/20 p-4">
                   <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 mb-2">Tu link de venta</p>
                   <p className="break-all text-xs text-indigo-500 dark:text-indigo-300 font-mono mb-3">
-                    /tienda/{affiliate.store.slug}?ref={affiliate.id}
+                    /v/{affiliate.id}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <CopyLinkButton url={url} />

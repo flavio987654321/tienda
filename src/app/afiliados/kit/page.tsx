@@ -135,22 +135,24 @@ export default function KitPage() {
       });
   }, [sessionStatus]);
 
-  const loadProducts = useCallback((affId: string) => {
-    if (!affId) return;
+  const loadProducts = useCallback((slug: string) => {
+    if (!slug) return;
     setLoadingProducts(true);
     setKit(null);
     setSelectedProductId("");
-    fetch("/api/productos")
+    fetch(`/api/public/${slug}`)
       .then((r) => r.json())
       .then((d) => {
-        setProducts(d.products ?? []);
+        setProducts(d.store?.products ?? []);
         setLoadingProducts(false);
       });
   }, []);
 
   useEffect(() => {
-    if (selectedAffId) loadProducts(selectedAffId);
-  }, [selectedAffId, loadProducts]);
+    const slug = affiliates.find((a) => a.id === selectedAffId)?.store.slug;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza la carga de productos con la tienda seleccionada
+    if (slug) loadProducts(slug);
+  }, [selectedAffId, affiliates, loadProducts]);
 
   async function loadKit(productId: string) {
     if (!productId || !selectedAffId) return;

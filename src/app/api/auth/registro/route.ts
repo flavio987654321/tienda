@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 
-const TERMS_VERSION = "1.0";
+const TERMS_VERSION = CURRENT_TERMS_VERSION;
 
 function toSlug(text: string) {
   return text
@@ -109,15 +110,16 @@ export async function POST(req: NextRequest) {
                 },
               }
             : {}),
-          ...(type === "OWNER" || type === "SELLER"
+          // El plan de afiliadas (SELLER) es gratuito — no se crea Subscription para ese rol
+          ...(type === "OWNER"
             ? {
                 subscription: {
                   create: {
-                    role: type === "OWNER" ? "OWNER" : "AFFILIATE",
+                    role: "OWNER",
                     plan: billing === "ANNUAL" ? "ANNUAL" : "MONTHLY",
                     status: "TRIAL",
                     trialEndsAt,
-                    ...(type === "OWNER" ? { tier: tier === "PREMIUM" ? "PREMIUM" : "BASIC" } : {}),
+                    tier: tier === "PREMIUM" ? "PREMIUM" : "BASIC",
                   },
                 },
               }

@@ -6,7 +6,10 @@ import { MapPin, ExternalLink, ShoppingBag } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ utm_source?: string }>;
+};
 
 function parseFirstImage(images: string): string | null {
   try {
@@ -29,8 +32,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function VendedoraPage({ params }: Props) {
+export default async function VendedoraPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { utm_source } = await searchParams;
 
   const affiliate = await prisma.affiliate.findFirst({
     where: { id, isActive: true, status: "APPROVED" },
@@ -57,7 +61,8 @@ export default async function VendedoraPage({ params }: Props) {
   if (!affiliate) notFound();
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://mitienda.vercel.app";
-  const affiliateLink = `${baseUrl}/tienda/${affiliate.store.slug}?ref=${affiliate.id}`;
+  const utmSuffix = utm_source ? `&utm_source=${encodeURIComponent(utm_source)}` : "";
+  const affiliateLink = `${baseUrl}/tienda/${affiliate.store.slug}?ref=${affiliate.id}${utmSuffix}`;
   const { user, store } = affiliate;
 
   return (

@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
       description: s.description || s.tagline || null,
     }));
 
-    return NextResponse.json({ stores: result, _debug: { count: result.length, userId: user.id } });
+    return NextResponse.json({ stores: result });
   }
 
   // Ver afiliados de mi tienda
@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
 }
 
 
-const TC_VERSION = "1.3";
+const TC_VERSION = "1.5";
 
 // POST - afiliado se une a una tienda
 export async function POST(req: NextRequest) {

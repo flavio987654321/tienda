@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
 
+// El plan de afiliadas (AFFILIATE) es gratuito — se deja en 0 en vez de borrar la clave
+// para no romper el resto del código que ya destructura PRICES.AFFILIATE.
 export const PRICES = {
   OWNER_BASIC:   { MONTHLY: 20000, ANNUAL: 180000 },
   OWNER_PREMIUM: { MONTHLY: 25000, ANNUAL: 225000 },
-  AFFILIATE:     { MONTHLY: 15000, ANNUAL: 135000 },
+  AFFILIATE:     { MONTHLY: 0, ANNUAL: 0 },
 };
 
 // Compatibilidad con código existente que usa PRICES["OWNER"] o PRICES["AFFILIATE"]

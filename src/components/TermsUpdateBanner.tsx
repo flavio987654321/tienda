@@ -1,0 +1,64 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { FileText, X, Loader2 } from "lucide-react";
+
+export default function TermsUpdateBanner() {
+  const [visible, setVisible] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("termsBannerDismissed") === "1") return;
+    fetch("/api/auth/terms-status")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.needsAcceptance) setVisible(true); })
+      .catch(() => {});
+  }, []);
+
+  async function accept() {
+    setAccepting(true);
+    try {
+      const res = await fetch("/api/auth/terms-status", { method: "POST" });
+      if (res.ok) setVisible(false);
+    } finally {
+      setAccepting(false);
+    }
+  }
+
+  function dismiss() {
+    sessionStorage.setItem("termsBannerDismissed", "1");
+    setVisible(false);
+  }
+
+  if (!visible) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 bg-indigo-50 border border-indigo-200 text-indigo-900 px-4 py-3 rounded-xl mb-4 text-sm">
+      <FileText className="h-4 w-4 shrink-0 text-indigo-500" />
+      <p className="flex-1 min-w-[200px]">
+        Actualizamos nuestros{" "}
+        <Link href="/terminos" target="_blank" className="font-semibold underline">Términos y Condiciones</Link>{" "}
+        y{" "}
+        <Link href="/privacidad" target="_blank" className="font-semibold underline">Política de Privacidad</Link>.
+      </p>
+      <button
+        type="button"
+        onClick={accept}
+        disabled={accepting}
+        className="flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
+      >
+        {accepting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+        Entendido, acepto
+      </button>
+      <button
+        type="button"
+        onClick={dismiss}
+        aria-label="Cerrar"
+        className="text-indigo-400 hover:text-indigo-600 transition-colors"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}

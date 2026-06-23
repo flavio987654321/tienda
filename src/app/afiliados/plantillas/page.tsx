@@ -229,10 +229,11 @@ export default function PlantillasPage() {
 
   const selectedAff = affiliates.find((a) => a.id === selectedAffId);
 
-  const getLink = useCallback(() => {
+  const getLink = useCallback((utmSource?: string) => {
     if (!selectedAff) return "";
-    if (typeof window === "undefined") return `/tienda/${selectedAff.store.slug}?ref=${selectedAff.id}`;
-    return `${window.location.origin}/tienda/${selectedAff.store.slug}?ref=${selectedAff.id}`;
+    const base = typeof window === "undefined" ? "" : window.location.origin;
+    const utm = utmSource ? `?utm_source=${utmSource}` : "";
+    return `${base}/v/${selectedAff.id}${utm}`;
   }, [selectedAff]);
 
   const ctx: TemplateContext = {
@@ -327,7 +328,7 @@ export default function PlantillasPage() {
             {/* Plantillas */}
             <div className="space-y-2">
               {filtered.map((t) => (
-                <TemplateCard key={t.id} template={t} context={ctx} />
+                <TemplateCard key={t.id} template={t} context={{ ...ctx, link: getLink(t.platform) }} />
               ))}
             </div>
 

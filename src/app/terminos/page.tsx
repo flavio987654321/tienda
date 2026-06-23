@@ -126,7 +126,7 @@ const CONTENT = {
       },
       {
         title: "9. Modificaciones",
-        body: "Podemos actualizar estos términos. Te notificaremos por email ante cambios significativos con al menos 15 días de anticipación.",
+        body: "Podemos actualizar estos términos. Ante cambios significativos te avisaremos por el canal que consideremos más adecuado (email, aviso en tu panel u otro medio de contacto que nos hayas dejado), con razonable anticipación. La fecha de 'última actualización' al inicio de esta página siempre refleja la versión vigente.",
       },
       {
         title: "10. Contacto",
@@ -159,13 +159,12 @@ const CONTENT = {
         body: "Como Afiliado, podés postularte a tiendas activas dentro de TiendaApps y, una vez aceptado, compartir tu link personal de afiliado para generar ventas. Por cada venta concretada a través de tu link, recibís una comisión definida por el dueño de la tienda.",
       },
       {
-        title: "3. Suscripción y pagos",
+        title: "3. Acceso a la plataforma",
         body: null,
         list: [
-          "El plan Afiliado tiene un costo de $15.000 ARS/mes o $135.000 ARS/año (equivalente a 9 meses, 3 meses gratis).",
-          "Incluye 7 días de prueba gratuita sin tarjeta de crédito.",
-          "Al vencer la prueba, se requiere suscripción activa para generar y usar tu link de afiliado.",
-          "Los pagos de suscripción se procesan a través de Mercado Pago.",
+          "El plan de Afiliado/a es gratuito, sin costo de suscripción y sin límite de tiempo.",
+          "No se requiere tarjeta de crédito para usar la plataforma como afiliado/a.",
+          "Una vez aprobado/a por una tienda, podés generar y usar tu link de afiliado de inmediato, sin necesidad de pagar ni de período de prueba.",
           "Las comisiones ganadas se acreditan en tu billetera digital dentro de la plataforma.",
           "El cobro de comisiones está sujeto a los períodos de liquidación de cada tienda.",
           "Podés afiliarte a múltiples tiendas simultáneamente según las disponibilidades de cada una.",
@@ -191,8 +190,8 @@ const CONTENT = {
         body: "TiendaApps puede ofrecer premios o cupones adicionales por volumen de ventas a afiliados destacados. Estos beneficios son opcionales y pueden modificarse sin previo aviso.",
       },
       {
-        title: "7. Cancelación",
-        body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tus comisiones ya acreditadas en billetera seguirán disponibles para retirar durante 30 días desde la cancelación. Si no renovás, perdés acceso a tu link de afiliado activo.",
+        title: "7. Baja de la cuenta",
+        body: "Podés dejar de usar la plataforma como afiliado/a en cualquier momento, sin necesidad de cancelar ninguna suscripción. Tus comisiones ya acreditadas en billetera siguen disponibles para retirar. Si una tienda te da de baja como afiliado/a, perdés acceso a tu link para esa tienda, pero tu cuenta sigue activa para postularte a otras.",
       },
       {
         title: "7 bis. Donaciones a la Canasta Solidaria o a una Causa Libre",
@@ -200,7 +199,7 @@ const CONTENT = {
       },
       {
         title: "8. Modificaciones",
-        body: "Podemos actualizar estos términos. Te notificaremos por email ante cambios significativos con al menos 15 días de anticipación.",
+        body: "Podemos actualizar estos términos. Ante cambios significativos te avisaremos por el canal que consideremos más adecuado (email, aviso en tu panel u otro medio de contacto que nos hayas dejado), con razonable anticipación. La fecha de 'última actualización' al inicio de esta página siempre refleja la versión vigente.",
       },
       {
         title: "9. Contacto",
@@ -302,7 +301,7 @@ const CONTENT = {
       },
       {
         title: "9. Modificaciones",
-        body: "Podemos actualizar estos términos. Te notificaremos por email ante cambios significativos.",
+        body: "Podemos actualizar estos términos. Ante cambios significativos te avisaremos por el canal que consideremos más adecuado (email, aviso en tu panel u otro medio de contacto que nos hayas dejado), con razonable anticipación. La fecha de 'última actualización' al inicio de esta página siempre refleja la versión vigente.",
       },
       {
         title: "10. Contacto y reclamos",

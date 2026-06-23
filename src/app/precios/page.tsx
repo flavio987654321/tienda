@@ -63,7 +63,7 @@ function PreciosContent() {
       const name = data.user?.user_metadata?.name ?? data.user?.user_metadata?.full_name ?? null;
       setUserName(name);
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -83,7 +83,7 @@ function PreciosContent() {
     });
 
     return () => { if (channel) supabase.removeChannel(channel); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const ownerPrices = {
     BASIC:   { monthly: 20000, annual: 180000 },
@@ -97,27 +97,29 @@ function PreciosContent() {
   const viewingBilling: "MONTHLY" | "ANNUAL" = isAnnual ? "ANNUAL" : "MONTHLY";
   const isOnAnnual = userSub?.plan === "ANNUAL";
 
-  function isCurrentPlan(cardRole: "OWNER" | "AFFILIATE", cardTier?: "BASIC" | "PREMIUM") {
+  // El plan de afiliadas es gratuito — estas funciones de precio sólo se usan para la tarjeta de OWNER
+  function isCurrentPlan(cardRole: "OWNER", cardTier?: "BASIC" | "PREMIUM") {
     if (!userSub) return false;
     if (userSub.role !== cardRole) return false;
-    if (cardRole === "OWNER" && userSub.tier !== (cardTier ?? "BASIC")) return false;
+    if (userSub.tier !== (cardTier ?? "BASIC")) return false;
     return userSub.plan === viewingBilling;
   }
 
-  function isUpgradeToAnnual(cardRole: "OWNER" | "AFFILIATE", cardTier?: "BASIC" | "PREMIUM") {
+  function isUpgradeToAnnual(cardRole: "OWNER", cardTier?: "BASIC" | "PREMIUM") {
     if (!userSub) return false;
     if (userSub.role !== cardRole) return false;
-    if (cardRole === "OWNER" && userSub.tier !== (cardTier ?? "BASIC")) return false;
+    if (userSub.tier !== (cardTier ?? "BASIC")) return false;
     return userSub.plan === "MONTHLY" && viewingBilling === "ANNUAL" && userSub.status === "ACTIVE";
   }
 
-  function getProratedAmount(plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE") {
+  function getProratedAmount(plan: "OWNER_BASIC" | "OWNER_PREMIUM") {
     if (!userSub?.currentPeriodEnd) return ownerPrice;
+    // eslint-disable-next-line react-hooks/purity -- estimación de precio para mostrar en UI, una pequeña variación de "ahora" entre renders no tiene impacto (no se usa para cobrar)
     const now = Date.now();
     const periodEnd = new Date(userSub.currentPeriodEnd).getTime();
     const daysLeft = Math.max(0, Math.ceil((periodEnd - now) / 86400000));
-    const monthlyPrice = plan === "OWNER_PREMIUM" ? 25000 : plan === "OWNER_BASIC" ? 20000 : 15000;
-    const annualPrice = plan === "OWNER_PREMIUM" ? 225000 : plan === "OWNER_BASIC" ? 180000 : 135000;
+    const monthlyPrice = plan === "OWNER_PREMIUM" ? 25000 : 20000;
+    const annualPrice = plan === "OWNER_PREMIUM" ? 225000 : 180000;
     const credit = Math.round((daysLeft / 30) * monthlyPrice);
     return Math.max(0, annualPrice - credit);
   }
@@ -299,15 +301,9 @@ function PreciosContent() {
 
               <div className="mb-2">
                 <div className="flex items-end gap-2">
-                  <span className="text-4xl font-black text-white">{money(isAnnual ? Math.round(135000 / 12) : 15000)}</span>
-                  <span className="text-gray-400 text-sm mb-1.5">/mes</span>
+                  <span className="text-4xl font-black text-white">Gratis</span>
                 </div>
-                {isAnnual && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {money(135000)} facturado anualmente
-                    <span className="ml-2 text-emerald-400 font-semibold">Ahorrás {money(15000 * 12 - 135000)}</span>
-                  </p>
-                )}
+                <p className="text-xs text-emerald-400 font-semibold mt-1">Sin costo, sin límite de tiempo</p>
               </div>
 
               <div className="h-px bg-white/5 my-6" />
@@ -328,38 +324,22 @@ function PreciosContent() {
                 ))}
               </ul>
 
-              {isCurrentPlan("AFFILIATE") ? (
-                <div className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-                  <BadgeCheck className="h-4 w-4" /> Tu plan actual
-                </div>
-              ) : isUpgradeToAnnual("AFFILIATE") ? (
-                <button
-                  onClick={() => {
-                    const proratedAmt = getProratedAmount("AFFILIATE");
-                    setPayModal({ plan: "AFFILIATE", billing: "ANNUAL", amount: proratedAmt, prorated: true });
-                  }}
+              {userName ? (
+                <Link
+                  href="/afiliados"
                   className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg"
                 >
-                  Cambiar a anual <ArrowRight className="h-4 w-4" />
-                </button>
-              ) : isRegistered ? (
-                <button
-                  onClick={() => setPayModal({ plan: "AFFILIATE", billing: isAnnual ? "ANNUAL" : "MONTHLY", amount: isAnnual ? 135000 : 15000 })}
-                  className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg"
-                >
-                  Suscribirme ahora <ArrowRight className="h-4 w-4" />
-                </button>
+                  Ir a mi panel <ArrowRight className="h-4 w-4" />
+                </Link>
               ) : (
                 <Link
-                  href={`/registro?plan=seller&billing=${isAnnual ? "annual" : "monthly"}`}
+                  href="/registro?plan=seller"
                   className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg"
                 >
-                  Empezar prueba gratis <ArrowRight className="h-4 w-4" />
+                  Empezar gratis <ArrowRight className="h-4 w-4" />
                 </Link>
               )}
-              <p className="text-center text-xs text-gray-600 mt-3">
-                {isCurrentPlan("AFFILIATE") ? `${userSub!.daysLeft} días restantes` : "7 días gratis · Sin tarjeta · Cancelá cuando quieras"}
-              </p>
+              <p className="text-center text-xs text-gray-600 mt-3">Sin costo · Sin tarjeta · Acceso inmediato</p>
             </div>
 
             {/* ── DUEÑO DE TIENDA (con selector interno) ── */}

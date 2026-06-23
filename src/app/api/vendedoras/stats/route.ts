@@ -21,7 +21,7 @@ export async function GET() {
 
   const statsPerAffiliate = await Promise.all(
     affiliates.map(async (aff) => {
-      const [clicksLast30, ordersLast30, topProducts, clicksByDay] = await Promise.all([
+      const [clicksLast30, ordersLast30, topProducts, clicksByDay, clicksByChannel] = await Promise.all([
         prisma.affiliateClick.count({
           where: { affiliateId: aff.id, createdAt: { gte: thirtyDaysAgo } },
         }),
@@ -40,6 +40,12 @@ export async function GET() {
         prisma.affiliateClick.findMany({
           where: { affiliateId: aff.id, createdAt: { gte: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000) } },
           select: { createdAt: true },
+        }),
+        // desglose por canal (utm_source) últimos 30 días
+        prisma.affiliateClick.groupBy({
+          by: ["utmSource"],
+          where: { affiliateId: aff.id, createdAt: { gte: thirtyDaysAgo } },
+          _count: { utmSource: true },
         }),
       ]);
 
@@ -69,6 +75,10 @@ export async function GET() {
         return { date: key, clicks: dayMap[key] ?? 0 };
       });
 
+      const channelBreakdown = clicksByChannel
+        .map((c) => ({ channel: c.utmSource ?? "directo", clicks: c._count.utmSource }))
+        .sort((a, b) => b.clicks - a.clicks);
+
       return {
         affiliateId: aff.id,
         storeId: aff.storeId,
@@ -81,6 +91,7 @@ export async function GET() {
         ordersLast30,
         conversionRate,
         clicksTimeline,
+        channelBreakdown,
         topProducts: topProducts.map((tp) => ({
           product: productMap[tp.productId] ?? null,
           orderCount: tp._count.productId,

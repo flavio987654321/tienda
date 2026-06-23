@@ -28,6 +28,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import TermsUpdateBanner from "@/components/TermsUpdateBanner";
 
 type Tab = "pedidos" | "favoritos" | "tiendas" | "resenas" | "perfil";
 
@@ -553,6 +554,7 @@ export default function MiCuentaPage() {
       </header>
 
       <div className="relative z-10 mx-auto max-w-4xl px-4 py-8">
+        <TermsUpdateBanner />
         {/* Profile card */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
           {/* Banner */}

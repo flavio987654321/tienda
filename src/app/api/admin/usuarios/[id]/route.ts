@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { logAdminAction } from "@/lib/admin-log";
+import { createNotificationMany } from "@/lib/notifications";
 
 export async function PATCH(
   req: NextRequest,
@@ -26,22 +27,45 @@ export async function PATCH(
   }
 
   const { banned } = await req.json();
+  const isBanned = Boolean(banned);
 
   const user = await prisma.user.update({
     where: { id },
-    data: { banned: Boolean(banned) },
-    select: { id: true, banned: true },
+    data: { banned: isBanned },
+    select: { id: true, banned: true, name: true, email: true },
   });
 
   await logAdminAction({
     adminId: current.id,
     adminEmail: current.email,
-    action: banned ? "BAN" : "UNBAN",
+    action: isBanned ? "BAN" : "UNBAN",
     targetId: id,
     targetType: "USER",
-    details: { banned: Boolean(banned) },
+    details: { banned: isBanned },
     ip: req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip"),
   });
+
+  // Si la cuenta afectada es afiliada, avisar a los dueños de las tiendas donde está afiliada
+  if (target.role === "SELLER") {
+    const affiliations = await prisma.affiliate.findMany({
+      where: { userId: id },
+      select: { ownerId: true, store: { select: { name: true } } },
+    });
+    const affiliateName = user.name ?? user.email;
+    await createNotificationMany(
+      affiliations.map((a) => ({
+        userId: a.ownerId,
+        type: isBanned ? "AFFILIATE_ADMIN_BANNED" : "AFFILIATE_ADMIN_UNBANNED",
+        title: isBanned
+          ? `Tu afiliada ${affiliateName} fue suspendida por TiendaApps`
+          : `Tu afiliada ${affiliateName} fue reactivada por TiendaApps`,
+        body: isBanned
+          ? `El equipo de TiendaApps suspendió la cuenta de tu afiliada en ${a.store.name}. Su link de afiliado dejó de funcionar.`
+          : `El equipo de TiendaApps reactivó la cuenta de tu afiliada en ${a.store.name}.`,
+        link: "/dashboard/vendedoras",
+      }))
+    );
+  }
 
   return NextResponse.json(user);
 }
@@ -126,10 +150,30 @@ export async function DELETE(
           tcAcceptedAt: true,
           tcVersion: true,
           tcAcceptedIp: true,
+          ownerId: true,
+          store: { select: { name: true } },
+          wallet: { select: { balance: true } },
         },
       },
     },
   });
+
+  // No se puede eliminar (de forma irreversible) una afiliada con saldo pendiente en la billetera:
+  // esa plata quedaría huérfana, sin forma de cobrarse ni rastro de qué pasó con ella.
+  const affiliationsWithBalance = (userData?.asAffiliate ?? []).filter(
+    (a) => (a.wallet?.balance ?? 0) > 0
+  );
+  if (affiliationsWithBalance.length > 0) {
+    const detail = affiliationsWithBalance
+      .map((a) => `${a.store.name}: $${(a.wallet?.balance ?? 0).toLocaleString("es-AR")}`)
+      .join(", ");
+    return NextResponse.json(
+      {
+        error: `No se puede eliminar: la cuenta tiene saldo pendiente en su billetera (${detail}). Liquidá el saldo con el/la dueño/a de la tienda antes de eliminar la cuenta.`,
+      },
+      { status: 400 }
+    );
+  }
 
   const allFileUrls: (string | null | undefined)[] = [
     userData?.image,
@@ -294,6 +338,20 @@ export async function DELETE(
     },
     ip: _req.headers.get("x-forwarded-for") ?? _req.headers.get("x-real-ip"),
   });
+
+  // Si era afiliada, avisar a los dueños de las tiendas donde estaba afiliada
+  if (userData?.role === "SELLER" && userData.asAffiliate.length > 0) {
+    const affiliateName = userData.name ?? userData.email;
+    await createNotificationMany(
+      userData.asAffiliate.map((a) => ({
+        userId: a.ownerId,
+        type: "AFFILIATE_ADMIN_DELETED",
+        title: `Tu afiliada ${affiliateName} eliminó su cuenta`,
+        body: `La cuenta de tu afiliada en ${a.store.name} fue eliminada. Su link de afiliado dejó de funcionar.`,
+        link: "/dashboard/vendedoras",
+      }))
+    );
+  }
 
   // ── 4. Borrar archivos de Supabase Storage (best-effort) ─────────────────
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");

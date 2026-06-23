@@ -17,8 +17,9 @@ export const metadata: Metadata = {
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
 
+  // El plan de afiliadas (SELLER) es gratuito — el gate de suscripción es solo para OWNER
   let gate = null;
-  if (user && (user.role === "OWNER" || user.role === "SELLER")) {
+  if (user && user.role === "OWNER") {
     const sub = await getUserSubscription(user.id);
     if (sub) {
       const status = getSubscriptionStatus(sub);
@@ -32,7 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <SubscriptionGate
           status={status}
           daysLeft={days}
-          role={sub.role as "OWNER" | "AFFILIATE"}
+          role="OWNER"
           tier={(sub.tier ?? "BASIC") as "BASIC" | "PREMIUM"}
           plan={sub.plan as "MONTHLY" | "ANNUAL"}
         />

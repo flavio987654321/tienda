@@ -21,6 +21,13 @@ export async function PATCH(
   const sub = await prisma.subscription.findUnique({ where: { userId } });
   if (!sub) return NextResponse.json({ error: "Sin suscripción" }, { status: 404 });
 
+  if (sub.role === "AFFILIATE") {
+    return NextResponse.json(
+      { error: "Las cuentas de afiliada son gratuitas, no tienen suscripción para gestionar" },
+      { status: 400 }
+    );
+  }
+
   const data: Record<string, unknown> = {};
 
   if (status && VALID_STATUSES.includes(status)) {
@@ -36,10 +43,6 @@ export async function PATCH(
   if (tier === "BASIC" || tier === "PREMIUM") {
     data.tier = tier;
     data.role = "OWNER";
-  }
-
-  if (tier === "AFFILIATE") {
-    data.role = "AFFILIATE";
   }
 
   if (plan === "MONTHLY" || plan === "ANNUAL") {

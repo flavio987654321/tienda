@@ -21,6 +21,11 @@ interface ClickDay {
   clicks: number;
 }
 
+interface ChannelStat {
+  channel: string;
+  clicks: number;
+}
+
 interface AffiliateStats {
   affiliateId: string;
   storeId: string;
@@ -33,7 +38,21 @@ interface AffiliateStats {
   ordersLast30: number;
   conversionRate: number;
   clicksTimeline: ClickDay[];
+  channelBreakdown: ChannelStat[];
   topProducts: TopProduct[];
+}
+
+const CHANNEL_LABELS: Record<string, string> = {
+  whatsapp: "WhatsApp",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  telegram: "Telegram",
+  x: "X (Twitter)",
+  directo: "Link directo / otros",
+};
+
+function channelLabel(channel: string) {
+  return CHANNEL_LABELS[channel.toLowerCase()] ?? channel;
 }
 
 function parseFirstImage(images: string): string | null {
@@ -190,6 +209,36 @@ export default function EstadisticasPage() {
                     <span className="text-xs text-gray-400">Hoy</span>
                   </div>
                 </div>
+
+                {/* Desglose por canal (de dónde vienen los clicks) */}
+                {current.channelBreakdown.length > 0 && (
+                  <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <BarChart3 className="h-4 w-4 text-indigo-400" />
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm">Clicks por canal</p>
+                    </div>
+                    <div className="space-y-3">
+                      {(() => {
+                        const maxClicks = Math.max(...current.channelBreakdown.map((c) => c.clicks), 1);
+                        return current.channelBreakdown.map((c) => (
+                          <div key={c.channel}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{channelLabel(c.channel)}</span>
+                              <span className="text-sm font-semibold text-gray-900 dark:text-white">{c.clicks}</span>
+                            </div>
+                            <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2">
+                              <div
+                                className="h-full bg-indigo-500 rounded-full"
+                                style={{ width: `${Math.max((c.clicks / maxClicks) * 100, 4)}%` }}
+                              />
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-3">Últimos 30 días. &quot;Link directo&quot; incluye clicks sin canal identificado.</p>
+                  </div>
+                )}
 
                 {/* Productos que más convierten */}
                 {current.topProducts.length > 0 && (

@@ -11,6 +11,7 @@ export default function SubscriptionSuccessBanner() {
 
   useEffect(() => {
     if (searchParams.get("suscripcion") === "ok") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza con el query param de retorno de pago (sistema externo)
       setShow(true);
       // Limpiar el query param de la URL sin recargar
       const url = new URL(window.location.href);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET() {
   const testimonials = await prisma.testimonial.findMany({
@@ -11,6 +12,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  if (!(await checkRateLimit(`testimonio:${ip}`, 3, 10 * 60_000))) {
+    return NextResponse.json({ error: "Demasiados envíos. Esperá un momento." }, { status: 429 });
+  }
+
   const body = await req.json();
   const { name, role, location, text, rating } = body;
 

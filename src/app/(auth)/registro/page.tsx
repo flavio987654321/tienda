@@ -20,12 +20,12 @@ export default function RegistroPage() {
 
 type AccountType = "owner" | "seller" | "buyer";
 
+// El plan de vendedor/a (seller) es gratuito, por eso no tiene precios acá
 const PRICES = {
   owner: {
     BASIC:   { MONTHLY: 20000, ANNUAL: 180000 },
     PREMIUM: { MONTHLY: 25000, ANNUAL: 225000 },
   },
-  seller: { MONTHLY: 15000, ANNUAL: 135000 },
 };
 
 const TYPES = [
@@ -257,12 +257,8 @@ function RegistroContent() {
 
   const selected = TYPES.find((t) => t.key === accountType)!;
   const colors = COLOR_MAP[selected.color];
-  const hasPlan = accountType !== "buyer";
-  const planPrices = hasPlan
-    ? accountType === "owner"
-      ? PRICES.owner[ownerTier]
-      : PRICES.seller
-    : null;
+  const hasPlan = accountType === "owner"; // El plan de vendedor/a (seller) es gratuito, no tiene selector de precio
+  const planPrices = hasPlan ? PRICES.owner[ownerTier] : null;
 
   const LEFT_PANEL: Record<AccountType, { gradient: string; headline: string; sub: string }> = {
     owner: {
@@ -750,7 +746,7 @@ function RegistroContent() {
                     <p className="text-xs text-gray-600 mb-3">
                       {key === "owner"
                         ? `${money(PRICES.owner[step1Tier].MONTHLY)}/mes · 7 días gratis`
-                        : `Desde ${money(PRICES.seller.MONTHLY)}/mes · 7 días gratis`}
+                        : "Gratis · Sin tarjeta · Sin límite de tiempo"}
                     </p>
                   )}
                   <div className={`flex items-center gap-2 text-sm ${c.text} font-semibold group-hover:gap-3 transition-all`}>

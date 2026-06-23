@@ -11,13 +11,20 @@ const MAX_LENGTHS: Record<string, number> = {
   phone: 30,
 };
 
+const PLACA_TEMPLATE_IDS = ["clasica", "minimal", "oferta"];
+
+const PROFILE_SELECT = {
+  id: true, name: true, email: true, image: true, bio: true, city: true,
+  instagramHandle: true, phone: true, notifyNewStores: true, preferredPlacaTemplate: true,
+};
+
 export async function GET() {
   const currentUser = await getCurrentUser();
   if (!currentUser) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const user = await prisma.user.findUnique({
     where: { id: currentUser.id },
-    select: { id: true, name: true, email: true, image: true, bio: true, city: true, instagramHandle: true, phone: true, notifyNewStores: true },
+    select: PROFILE_SELECT,
   });
   return NextResponse.json({ user });
 }
@@ -40,18 +47,26 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "URL de imagen inválida" }, { status: 400 });
   }
 
+  // Validar plantilla de placa
+  if (b.preferredPlacaTemplate != null && !PLACA_TEMPLATE_IDS.includes(b.preferredPlacaTemplate)) {
+    return NextResponse.json({ error: "Plantilla de placa inválida" }, { status: 400 });
+  }
+
+  // Solo se actualizan los campos presentes en el body — evita pisar con null
+  // el resto del perfil cuando se manda una actualización parcial (ej: solo la plantilla de placa).
   const user = await prisma.user.update({
     where: { id: currentUser.id },
     data: {
-      name:             b.name?.trim()            || null,
-      bio:              b.bio?.trim()             || null,
-      city:             b.city?.trim()            || null,
-      instagramHandle:  b.instagramHandle?.trim() || null,
-      phone:            b.phone?.trim()           || null,
-      image:            b.image?.trim()           || null,
+      ...(b.name !== undefined ? { name: b.name?.trim() || null } : {}),
+      ...(b.bio !== undefined ? { bio: b.bio?.trim() || null } : {}),
+      ...(b.city !== undefined ? { city: b.city?.trim() || null } : {}),
+      ...(b.instagramHandle !== undefined ? { instagramHandle: b.instagramHandle?.trim() || null } : {}),
+      ...(b.phone !== undefined ? { phone: b.phone?.trim() || null } : {}),
+      ...(b.image !== undefined ? { image: b.image?.trim() || null } : {}),
       ...(typeof b.notifyNewStores === "boolean" ? { notifyNewStores: b.notifyNewStores } : {}),
+      ...(b.preferredPlacaTemplate !== undefined ? { preferredPlacaTemplate: b.preferredPlacaTemplate } : {}),
     },
-    select: { id: true, name: true, email: true, image: true, bio: true, city: true, instagramHandle: true, phone: true, notifyNewStores: true },
+    select: PROFILE_SELECT,
   });
   return NextResponse.json({ user });
 }

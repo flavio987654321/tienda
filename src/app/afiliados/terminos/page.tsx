@@ -19,7 +19,7 @@ export default function TerminosAfiliados() {
           Términos y Condiciones del Programa de Afiliados
         </h1>
         <p className="text-gray-500 text-sm mb-6">
-          Versión 1.4 — Vigente desde junio de 2026
+          Versión 1.5 — Vigente desde junio de 2026
         </p>
 
         <div className="rounded-xl border border-white/10 bg-white/5 p-5 mb-10 text-sm text-gray-300 space-y-1">
@@ -77,7 +77,10 @@ export default function TerminosAfiliados() {
               </li>
               <li>
                 El porcentaje de comisión es el vigente al momento de la venta y puede ser
-                modificado por el/la Titular con aviso previo de al menos 7 días corridos.
+                modificado por el/la Titular en cualquier momento. El nuevo porcentaje aplica
+                desde la próxima venta confirmada en adelante — nunca de forma retroactiva
+                sobre comisiones ya generadas. Ante un cambio, se te notifica de inmediato
+                desde el panel de afiliados.
               </li>
             </ul>
 
@@ -269,7 +272,7 @@ export default function TerminosAfiliados() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/5 text-xs text-gray-600 text-center">
-          <p>TiendaApps — Programa de Afiliados · Versión 1.4</p>
+          <p>TiendaApps — Programa de Afiliados · Versión 1.5</p>
           <p className="mt-1">Para consultas escribí a soporte desde tu panel de afiliado/a.</p>
         </div>
       </div>

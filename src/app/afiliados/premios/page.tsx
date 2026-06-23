@@ -10,9 +10,8 @@ import NotificationBell from "@/components/NotificationBell";
 interface RewardCoupon {
   id: string;
   code: string;
-  type: "STORE" | "SUBSCRIPTION";
+  type: "STORE";
   level: string;
-  plan: string;
   discountValue: number;
   earnedMonth: string;
   status: "AVAILABLE" | "USED" | "EXPIRED";
@@ -27,7 +26,6 @@ interface PageData {
   nivelActual: string;
   nivelLabel: string;
   nivelColor: string;
-  plan: string;
   rachaDiamante: number;
   esMayorista: boolean;
   categoria: "RETAIL" | "MAYORISTA" | "ALTO_VALOR";
@@ -96,11 +94,7 @@ function CouponRow({ c }: { c: RewardCoupon }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-gray-900 dark:text-white">
-              {c.type === "STORE"
-                ? `${c.discountValue}% off en tiendas`
-                : c.discountValue === 100
-                ? "Mes de suscripción gratis"
-                : `${c.discountValue}% off en suscripción`}
+              {c.discountValue}% off en tiendas
             </span>
             <span
               className="text-xs px-2 py-0.5 rounded-full font-medium"
@@ -109,7 +103,7 @@ function CouponRow({ c }: { c: RewardCoupon }) {
               {levelMeta.label}
             </span>
             <span className="text-xs text-gray-500 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full">
-              {c.type === "STORE" ? "Tiendas" : "Suscripción"}
+              Tiendas
             </span>
           </div>
           <p className="text-xs text-gray-500 mt-1">{formatMonth(c.earnedMonth)}</p>
@@ -249,7 +243,7 @@ export default function PremiosPage() {
                 {/* Banda de color del nivel */}
                 <div className="h-1" style={{ backgroundColor: currentMeta.color }} />
                 <div className="p-6">
-                  <p className="text-xs text-gray-500 font-medium uppercase tracking-widest mb-4">Tu nivel · {data.plan === "ANNUAL" ? "Plan anual" : "Plan mensual"}</p>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-widest mb-4">Tu nivel</p>
 
                   <div className="flex items-end justify-between mb-4">
                     <div>
@@ -319,7 +313,6 @@ export default function PremiosPage() {
                 <div className="divide-y divide-gray-100 dark:divide-white/5">
                   {((): { level: string; range: string; premios: string[] }[] => {
                     const c = data.categoria;
-                    const isAnnual = data.plan === "ANNUAL";
                     return [
                       {
                         level: "BRONZE",
@@ -329,19 +322,17 @@ export default function PremiosPage() {
                       {
                         level: "SILVER",
                         range: c === "ALTO_VALOR" ? "$500.000 – $1.499.999" : c === "MAYORISTA" ? "$75.000 – $249.999" : "$15.000 – $49.999",
-                        premios: isAnnual ? ["15% off en tiendas"] : ["10% off en suscripción", "10% off en tiendas"],
+                        premios: ["15% off en tiendas"],
                       },
                       {
                         level: "GOLD",
                         range: c === "ALTO_VALOR" ? "$1.500.000 – $4.999.999" : c === "MAYORISTA" ? "$250.000 – $749.999" : "$50.000 – $149.999",
-                        premios: isAnnual ? ["20% off en tiendas"] : ["20% off en suscripción", "15% off en tiendas"],
+                        premios: ["20% off en tiendas"],
                       },
                       {
                         level: "DIAMOND",
                         range: c === "ALTO_VALOR" ? "$5.000.000+" : c === "MAYORISTA" ? "$750.000+" : "$150.000+",
-                        premios: isAnnual
-                          ? ["25% off en tiendas", "Bonus racha: +40% off"]
-                          : ["Mes de suscripción gratis", "20% off en tiendas", "Bonus racha: +30% off"],
+                        premios: ["25% off en tiendas", "Bonus racha: +40% off"],
                       },
                     ];
                   })().map((row) => {
