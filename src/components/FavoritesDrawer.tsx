@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Heart, Loader2, Package, X } from "lucide-react";
 
@@ -38,6 +39,12 @@ export default function FavoritesDrawer({ buttonClassName }: { buttonClassName: 
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- portal target only exists client-side, needed to avoid SSR mismatch
+    setMounted(true);
+  }, []);
 
   function openDrawer() {
     setOpen(true);
@@ -71,7 +78,7 @@ export default function FavoritesDrawer({ buttonClassName }: { buttonClassName: 
         <Heart className="h-4 w-4" />
       </button>
 
-      {open && (
+      {open && mounted && createPortal(
         <div className="fixed inset-0 z-[200] flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
           <div className="relative w-full max-w-sm h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
@@ -142,7 +149,8 @@ export default function FavoritesDrawer({ buttonClassName }: { buttonClassName: 
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

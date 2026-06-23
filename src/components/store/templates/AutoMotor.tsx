@@ -204,7 +204,7 @@ export default function AutoMotor() {
             <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
             <VerifiedIconButton isVerified={config?.isVerified} info={config?.verifiedInfo} color={navText} />
           </div>
-          <div className="am-nav-links" style={{ display:"flex", gap:32, alignItems:"center" }}>
+          <div className="am-nav-links" style={{ gap:32, alignItems:"center" }}>
             {[["Catálogo","catálogo"],["Servicios","servicios"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([lbl,id]) => (
               <button key={id} onClick={() => smoothScrollTo(id)}
                 style={{ background:"none", border:"none", cursor:"pointer", fontSize:11,
@@ -223,6 +223,9 @@ export default function AutoMotor() {
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity="1"; }}>
               Ver todos
             </Link>
+          </div>
+          {/* Grupo derecho — campanita + usuario + menú mobile */}
+          <div style={{ display:"flex", alignItems:"center", gap:14 }}>
             {pushBell && config?.showPushBell && !isPreview && (
               <StoreFollowButton storeSlug={config?.slug ?? ""} color={navTextMid} size={20} />
             )}
@@ -264,7 +267,6 @@ export default function AutoMotor() {
                 </button>
               </>
             ))}
-          </div>
           {/* User icon */}
           <div ref={userDropdownRef} style={{ position:"relative" }}>
             <button onClick={() => setUserDropdownOpen(o => !o)}
@@ -307,6 +309,7 @@ export default function AutoMotor() {
               color:navText, padding:"7px 11px", cursor:"pointer", fontSize:18 }}>
             {menuOpen ? "×" : "☰"}
           </button>
+          </div>
         </div>
         {menuOpen && (
           <div style={{ background:navBg, borderTop:`1px solid ${navBorderColor}`, padding:"8px 28px 20px" }}>
