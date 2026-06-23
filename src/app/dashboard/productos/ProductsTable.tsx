@@ -8,8 +8,10 @@ import {
   Trash2, Copy, LayoutGrid, List, ChevronLeft, ChevronRight, QrCode, Car,
 } from "lucide-react";
 import VehicleStatusModal, { VehicleStatusBadge, type VehicleStatus, type VehicleStatusData } from "./VehicleStatusModal";
+import StockAdjustModal from "./StockAdjustModal";
+import { Boxes } from "lucide-react";
 
-interface Variant { id: string; stock: number }
+interface Variant { id: string; name: string; value: string; stock: number; lowStockThreshold?: number | null }
 
 interface Product {
   id: string;
@@ -63,6 +65,14 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
   const [qrProduct,     setQrProduct]     = useState<{ id: string; name: string; price: number; year?: string; km?: string } | null>(null);
   const [qrLoading,     setQrLoading]     = useState(false);
   const [vehicleModal,  setVehicleModal]  = useState<{ id: string; name: string; status: VehicleStatus } | null>(null);
+  const [stockModal,    setStockModal]    = useState<Product | null>(null);
+  const [showBulkStock, setShowBulkStock] = useState(false);
+  const [bulkStockCategory, setBulkStockCategory] = useState("all");
+  const [bulkStockMode,     setBulkStockMode]     = useState<"add" | "subtract" | "set">("add");
+  const [bulkStockValue,    setBulkStockValue]    = useState("");
+  const [bulkStockLoading,  setBulkStockLoading]  = useState(false);
+  const [bulkStockError,    setBulkStockError]    = useState("");
+  const [bulkStockSuccess,  setBulkStockSuccess]  = useState("");
   const [toast,         setToast]         = useState<string | null>(null);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://tiendaapps.com";
@@ -339,6 +349,41 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
     }));
   }
 
+  function handleStockSaved(productId: string, updatedVariants: { id: string; stock: number }[]) {
+    const newStockById = new Map(updatedVariants.map(u => [u.id, u.stock]));
+    setProducts(prev => prev.map(p =>
+      p.id === productId
+        ? { ...p, variants: p.variants.map(v => ({ ...v, stock: newStockById.get(v.id) ?? v.stock })) }
+        : p
+    ));
+    setToast("Stock actualizado");
+    setTimeout(() => setToast(null), 3000);
+    setStockModal(null);
+  }
+
+  const bulkStockAffected = products.filter(p => bulkStockCategory === "all" || p.category === bulkStockCategory).length;
+
+  async function applyBulkStock() {
+    const value = parseInt(bulkStockValue);
+    if (isNaN(value) || value < 0) { setBulkStockError("Ingresá un número válido (>= 0)"); return; }
+    const modeLabel = bulkStockMode === "add" ? `sumar ${value}` : bulkStockMode === "subtract" ? `restar ${value}` : `fijar en ${value}`;
+    if (!confirm(`¿${modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1)} unidades de stock a ${bulkStockAffected} producto${bulkStockAffected !== 1 ? "s" : ""}?`)) return;
+    setBulkStockLoading(true); setBulkStockError(""); setBulkStockSuccess("");
+    const res = await fetch("/api/productos/bulk-stock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: bulkStockMode, value, category: bulkStockCategory }),
+    });
+    const data = await res.json();
+    setBulkStockLoading(false);
+    if (!res.ok) { setBulkStockError(data.error || "Error al actualizar"); return; }
+    setBulkStockSuccess(`${data.updated} producto${data.updated !== 1 ? "s" : ""} actualizados`);
+    setBulkStockValue("");
+    // Recargar para reflejar los nuevos valores de stock con precisión
+    const refreshed = await fetch("/api/productos").then(r => r.json()).catch(() => null);
+    if (refreshed?.products) setProducts(refreshed.products);
+  }
+
   const stockDot = (stock: number) =>
     stock === 0 ? "bg-red-500" : stock < 5 ? "bg-yellow-400" : "bg-green-500";
 
@@ -358,6 +403,15 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
             {toast}
           </div>
         </div>
+      )}
+
+      {/* Stock adjust modal */}
+      {stockModal && (
+        <StockAdjustModal
+          product={stockModal}
+          onSave={(updatedVariants) => handleStockSaved(stockModal.id, updatedVariants)}
+          onClose={() => setStockModal(null)}
+        />
       )}
 
       {/* Vehicle status modal */}
@@ -553,6 +607,53 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
         )}
       </div>
 
+      {/* Bulk stock update */}
+      {showStock && (
+        <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
+          <button type="button" onClick={() => { setShowBulkStock(v => !v); setBulkStockError(""); setBulkStockSuccess(""); }}
+            className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+            <Boxes className="h-4 w-4 text-emerald-500" />
+            Ajustar stock en masa
+            <ChevronDown className={`ml-auto h-4 w-4 text-gray-400 transition-transform ${showBulkStock ? "rotate-180" : ""}`} />
+          </button>
+          {showBulkStock && (
+            <div className="border-t border-gray-100 px-4 py-4 space-y-3">
+              <div className="flex flex-wrap gap-3 items-end">
+                <div className="flex-1 min-w-40">
+                  <label className="mb-1 block text-xs font-semibold text-gray-500">Categoría</label>
+                  <select value={bulkStockCategory} onChange={e => setBulkStockCategory(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="all">Todos los productos ({products.length})</option>
+                    {categories.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)} ({products.filter(p => p.category === c).length})</option>)}
+                  </select>
+                </div>
+                <div className="w-36">
+                  <label className="mb-1 block text-xs font-semibold text-gray-500">Acción</label>
+                  <select value={bulkStockMode} onChange={e => setBulkStockMode(e.target.value as "add" | "subtract" | "set")}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="add">Sumar</option>
+                    <option value="subtract">Restar</option>
+                    <option value="set">Fijar en</option>
+                  </select>
+                </div>
+                <div className="w-32">
+                  <label className="mb-1 block text-xs font-semibold text-gray-500">Cantidad</label>
+                  <input type="number" value={bulkStockValue} onChange={e => { setBulkStockValue(e.target.value); setBulkStockError(""); setBulkStockSuccess(""); }}
+                    placeholder="ej: 10" min={0}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+                <button type="button" onClick={applyBulkStock} disabled={bulkStockLoading || !bulkStockValue}
+                  className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
+                  {bulkStockLoading ? "Aplicando..." : `Aplicar a ${bulkStockAffected} producto${bulkStockAffected !== 1 ? "s" : ""}`}
+                </button>
+              </div>
+              {bulkStockError && <p className="text-xs text-red-500">{bulkStockError}</p>}
+              {bulkStockSuccess && <p className="text-xs text-green-600 font-semibold">{bulkStockSuccess}</p>}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Stock legend */}
       <div className="flex items-center gap-4 text-xs text-gray-400">
         {showStock && <>
@@ -621,6 +722,13 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                       className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
                       <Edit className="h-3 w-3" /> Editar
                     </Link>
+                    {showStock && (
+                      <button onClick={() => setStockModal(product)}
+                        className="flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-emerald-500 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
+                        title="Ajustar stock">
+                        <Boxes className="h-3 w-3" />
+                      </button>
+                    )}
                     <button onClick={() => openQr(product)} disabled={qrLoading}
                       className="flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-violet-500 bg-violet-50 rounded-lg hover:bg-violet-100 transition-colors disabled:opacity-40"
                       title="Código QR">
@@ -713,6 +821,12 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                           className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
                           <Edit className="h-3.5 w-3.5" /> Editar
                         </Link>
+                        {showStock && (
+                          <button onClick={() => setStockModal(product)}
+                            className="flex items-center gap-1.5 text-sm text-emerald-500 hover:text-emerald-700 font-medium" title="Ajustar stock">
+                            <Boxes className="h-3.5 w-3.5" /> Stock
+                          </button>
+                        )}
                         <button onClick={() => openQr(product)} disabled={qrLoading}
                           className="flex items-center gap-1.5 text-sm text-violet-500 hover:text-violet-700 font-medium disabled:opacity-40" title="Código QR">
                           <QrCode className="h-3.5 w-3.5" /> QR

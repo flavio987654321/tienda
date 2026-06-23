@@ -310,22 +310,45 @@ model Product {
   favorites     Favorite[]
   reviews       Review[]
   publicReviews PublicReview[]
+  stockMovements StockMovement[]
 
   @@index([deletedAt])
 }
 
 model ProductVariant {
-  id    String  @id @default(cuid())
-  name  String
-  value String
-  stock Int     @default(0)
-  price Float?
-  sku   String?
+  id                  String    @id @default(cuid())
+  name                String
+  value               String
+  stock               Int       @default(0)
+  price               Float?
+  sku                 String?
+  lowStockThreshold   Int?
+  lowStockAlertSentAt DateTime?
 
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  orderItems OrderItem[]
+  orderItems     OrderItem[]
+  stockMovements StockMovement[]
+}
+
+model StockMovement {
+  id          String   @id @default(cuid())
+  variantId   String
+  variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type        String   // MANUAL | SALE | CANCELLATION | BULK_ADJUST | PRODUCT_EDIT
+  delta       Int
+  stockBefore Int
+  stockAfter  Int
+  reason      String?
+  changedBy   String
+  createdAt   DateTime @default(now())
+
+  @@index([variantId])
+  @@index([productId])
+  @@index([createdAt])
 }
 
 model Order {

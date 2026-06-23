@@ -27,7 +27,7 @@ export default async function ProductosPage() {
           id: true, name: true, category: true, subcategory: true,
           price: true, comparePrice: true, images: true, isActive: true,
           vehicleStatus: true, soldAt: true, soldPrice: true, soldBuyerName: true,
-          variants: { select: { id: true, stock: true } },
+          variants: { select: { id: true, name: true, value: true, stock: true, lowStockThreshold: true } },
         },
         orderBy: { createdAt: "desc" },
         take: 200,
