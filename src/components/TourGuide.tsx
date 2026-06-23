@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { X, ChevronRight, ChevronLeft } from "lucide-react";
 
 type Step = {
@@ -102,7 +102,7 @@ function getSteps(storeType?: string | null): Step[] {
 export const TOUR_STORAGE_KEY = "tiendaapps_tour_done";
 
 export default function TourGuide({ onDone, storeType }: { onDone: () => void; storeType?: string | null }) {
-  const STEPS = getSteps(storeType);
+  const STEPS = useMemo(() => getSteps(storeType), [storeType]);
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -122,7 +122,7 @@ export default function TourGuide({ onDone, storeType }: { onDone: () => void; s
     }
     frameRef.current = requestAnimationFrame(track);
     return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); };
-  }, [step, isMobile]);
+  }, [step, isMobile, STEPS]);
 
   function next() {
     if (step < STEPS.length - 1) setStep(step + 1);

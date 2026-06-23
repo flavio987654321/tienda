@@ -13,13 +13,21 @@ export type FechaComercial = {
  * de medianoche Argentina eso da el día siguiente).
  */
 function getArgentinaToday(): Date {
-  const ymd = new Intl.DateTimeFormat("en-CA", {
+  return new Date(`${getArgentinaDayKey()}T00:00:00Z`);
+}
+
+/**
+ * Clave de "día" en formato YYYY-MM-DD según el calendario de Argentina, sin depender
+ * de la hora del servidor (UTC) ni del navegador del usuario. Se usa para resetear
+ * por día cosas como el historial de chat con Sacha.
+ */
+export function getArgentinaDayKey(): string {
+  return new Intl.DateTimeFormat("en-CA", {
     timeZone: AR_TZ,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-  return new Date(`${ymd}T00:00:00Z`);
 }
 
 function nthWeekday(year: number, monthIndex: number, weekday: number, nth: number): Date {

@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loadUser(!!session);
     });
     return () => data.subscription.unsubscribe();
-  }, []);
+  }, [signingOut, supabase]);
 
   return (
     <AuthContext.Provider value={{ user, status, refresh, signOut }}>

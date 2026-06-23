@@ -29,14 +29,17 @@ export default function AsistenteIA({ userId }: { userId: string }) {
   const [input, setInput] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [historialError, setHistorialError] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mensajesRef = useRef<HTMLDivElement>(null);
+  // El historial vive en el servidor (no en localStorage) para que sea el mismo en
+  // cualquier dispositivo. yaSaludoHoy evita saludar dos veces mientras carga.
+  const [yaSaludoHoy, setYaSaludoHoy] = useState(false);
+  const [historialListo, setHistorialListo] = useState(false);
 
   const visKey = `asistente_visto_${userId}_${hoyKey()}`;
-  const greetKey = `asistente_greet_${userId}_${hoyKey()}`;
-  const msgsKey = `asistente_msgs_${userId}_${hoyKey()}`;
   const introKey = `asistente_intro_${userId}`;
 
   useEffect(() => {
@@ -46,26 +49,38 @@ export default function AsistenteIA({ userId }: { userId: string }) {
       .catch(() => setNovedad({ disponible: false, tieneNovedad: false, tipo: null }));
   }, []);
 
-  // Restaurar la conversación de hoy (si existía) al recargar la página,
-  // y detectar si todavía no se mostró nunca la intro de Sacha.
+  // Traer del servidor la conversación de hoy (la misma en cualquier dispositivo),
+  // y detectar si todavía no se mostró nunca la intro de Sacha en este navegador.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const guardados = localStorage.getItem(msgsKey);
-    if (guardados) {
-      try {
-        setMensajes(JSON.parse(guardados));
-      } catch {
-        /* ignorar JSON corrupto */
-      }
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza con localStorage (sistema externo)
     setIntroVista(localStorage.getItem(introKey) === "1");
-  }, [msgsKey, introKey]);
+    fetch("/api/asistente/historial")
+      .then((r) => {
+        if (!r.ok) throw new Error("historial no disponible");
+        return r.json();
+      })
+      .then((d: { messages?: Mensaje[]; yaSaludoHoy?: boolean }) => {
+        if (d.messages) setMensajes(d.messages);
+        setYaSaludoHoy(!!d.yaSaludoHoy);
+      })
+      .catch(() => {
+        // Si no se pudo traer el historial, no sabemos si ya saludó hoy desde otro
+        // dispositivo: asumimos que sí para no arriesgar un saludo duplicado.
+        setHistorialError(true);
+        setYaSaludoHoy(true);
+      })
+      .finally(() => setHistorialListo(true));
+  }, [introKey]);
 
-  // Persistir la conversación de hoy en localStorage para que sobreviva un recargado.
+  // Saluda apenas se sabe que el chat está abierto, el historial ya cargó del server,
+  // todavía no se saludó hoy (en ningún dispositivo) y no hay mensajes previos.
   useEffect(() => {
-    if (typeof window === "undefined" || mensajes.length === 0) return;
-    localStorage.setItem(msgsKey, JSON.stringify(mensajes));
-  }, [mensajes, msgsKey]);
+    if (!abierto || !historialListo || yaSaludoHoy || mensajes.length > 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- guarda inmediata para no disparar el saludo dos veces
+    setYaSaludoHoy(true);
+    mandarRequest({ messages: [], greet: true });
+  }, [abierto, historialListo, yaSaludoHoy, mensajes.length]);
 
   useEffect(() => {
     if (!abierto) return;
@@ -140,11 +155,6 @@ export default function AsistenteIA({ userId }: { userId: string }) {
       setMostrarIntro(true);
       if (typeof window !== "undefined") localStorage.setItem(introKey, "1");
       setIntroVista(true);
-    }
-    const yaSaludoHoy = typeof window !== "undefined" && localStorage.getItem(greetKey) === "1";
-    if (!yaSaludoHoy && mensajes.length === 0) {
-      if (typeof window !== "undefined") localStorage.setItem(greetKey, "1");
-      mandarRequest({ messages: [], greet: true });
     }
   }
 
@@ -225,6 +235,11 @@ export default function AsistenteIA({ userId }: { userId: string }) {
               </div>
 
               <div ref={mensajesRef} className="flex-1 space-y-3 overflow-y-auto p-4">
+                {historialError && (
+                  <div className="rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
+                    No pudimos cargar tu conversación de hoy — puede estar incompleta. Probá recargar la página.
+                  </div>
+                )}
                 {mostrarIntro && (
                   <div className="flex justify-start">
                     <div className="max-w-[85%] rounded-2xl bg-gray-100 px-4 py-2.5 text-sm whitespace-pre-wrap text-gray-800">

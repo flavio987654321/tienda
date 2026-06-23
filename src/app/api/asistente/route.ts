@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getUserSubscription, getSubscriptionStatus } from "@/lib/subscription";
 import { getStoreSnapshot, getChecklistEstado } from "@/lib/asistente-insights";
-import { getUpcomingDates, getArgentinaAhora } from "@/lib/fechas-comerciales";
+import { getUpcomingDates, getArgentinaAhora, getArgentinaDayKey } from "@/lib/fechas-comerciales";
 import { buildSystemPrompt } from "@/lib/asistente-prompt";
 import { anthropic } from "@/lib/anthropic";
 
@@ -109,6 +109,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Body inválido" }, { status: 400 });
   }
 
+  const day = getArgentinaDayKey();
+
+  // Guarda el mensaje nuevo del usuario (el último del historial que mandó el cliente).
+  // El saludo automático ("greet") no genera un mensaje de usuario visible en el chat.
+  if (!greet) {
+    const ultimo = historial[historial.length - 1];
+    if (ultimo.role === "user") {
+      await prisma.asistenteMensaje.create({
+        data: { userId: user.id, role: "user", content: ultimo.content, day },
+      });
+    }
+  }
+
   let snapshot, upcomingDates;
   try {
     [snapshot, upcomingDates] = await Promise.all([
@@ -168,6 +181,16 @@ export async function POST(req: NextRequest) {
           input: final.usage.input_tokens,
           output: final.usage.output_tokens,
         });
+
+        const textoFinal = final.content
+          .filter((b) => b.type === "text")
+          .map((b) => (b as { text: string }).text)
+          .join("");
+        if (textoFinal) {
+          await prisma.asistenteMensaje.create({
+            data: { userId: user.id, role: "assistant", content: textoFinal, day },
+          });
+        }
       } catch (err) {
         console.error("[asistente] error llamando a Anthropic", err);
         controller.enqueue(encoder.encode("\n\nSacha no está disponible en este momento, probá de nuevo en un minuto."));

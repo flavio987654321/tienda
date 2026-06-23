@@ -46,6 +46,22 @@ model User {
   storeSubscriptions StoreSubscription[]
   storeFollows       StoreFollow[]
   donations          Donation[]
+  asistenteMensajes  AsistenteMensaje[]
+}
+
+// Historial de chat con Sacha (asistente IA del dashboard). Se guarda en la base
+// para que sea el mismo en cualquier dispositivo, y se filtra por `day` (zona Argentina)
+// para mantener el reseteo diario que ya tenía la versión basada en localStorage.
+model AsistenteMensaje {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   // user | assistant
+  content   String
+  day       String   // YYYY-MM-DD en zona Argentina
+  createdAt DateTime @default(now())
+
+  @@index([userId, day])
 }
 
 model PushSubscription {

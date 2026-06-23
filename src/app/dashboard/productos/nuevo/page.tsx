@@ -308,6 +308,9 @@ function ProductoFormPage() {
   const [services, setServices] = useState<Record<string, boolean>>({});
   const [isDirty, setIsDirty] = useState(false);
   const loadedRef = useRef(false);
+  // Guarda category/subcategory crudos del producto cargado, para poder re-clasificar
+  // la subcategoría si productSubcategories termina de llenarse después de este fetch
+  const loadedProductRef = useRef<{ category: string; subcategory: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/configuracion")
@@ -356,6 +359,7 @@ function ProductoFormPage() {
   }, [editingId]);
 
   useEffect(() => {
+    loadedProductRef.current = null;
     if (!editingId) return;
 
     setLoadingProduct(true);
@@ -368,6 +372,7 @@ function ProductoFormPage() {
       })
       .then((product) => {
         const knownCategory = productCategories.includes(product.category);
+        loadedProductRef.current = { category: product.category || "", subcategory: product.subcategory || "" };
         setForm({
           name: product.name || "",
           description: product.description || "",
@@ -429,7 +434,23 @@ function ProductoFormPage() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : "No se pudo cargar el producto"))
       .finally(() => { setLoadingProduct(false); loadedRef.current = true; });
+    // productSubcategories/store.tipoTienda se leen al vuelo; incluirlas reharía el fetch del producto
+    // en cada actualización. La reclasificación de subcategoría por carrera con esos datos la cubre
+    // el efecto de abajo, que sí depende de productSubcategories.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingId, productCategories]);
+
+  // Re-clasifica la subcategoría si productSubcategories termina de llenarse después
+  // de que el producto ya cargó (evita que quede mal clasificada como "otro" por una carrera
+  // entre este fetch y el de /api/configuracion + /api/productos)
+  useEffect(() => {
+    if (isDirty) return;
+    const loaded = loadedProductRef.current;
+    if (!loaded || !loaded.subcategory) return;
+    const known = (productSubcategories[loaded.category] || []).includes(loaded.subcategory);
+    setForm((p) => (p.subcategory === (known ? loaded.subcategory : "otro") ? p : { ...p, subcategory: known ? loaded.subcategory : "otro" }));
+    setCustomSubcategory(known ? "" : loaded.subcategory);
+  }, [productSubcategories, isDirty]);
 
   // For new products (no editingId), mark as loaded immediately after mount
   useEffect(() => { if (!editingId) loadedRef.current = true; }, [editingId]);

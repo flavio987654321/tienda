@@ -104,7 +104,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [userId]);
+  }, [userId, instanceId]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {

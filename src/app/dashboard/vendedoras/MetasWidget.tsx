@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Target, Loader2, Check, X, Trash2 } from "lucide-react";
 
 interface GoalData {
@@ -31,13 +31,13 @@ export default function MetasWidget() {
   const [error, setError] = useState("");
   const month = currentMonth();
 
-  function loadGoal() {
+  const loadGoal = useCallback(() => {
     fetch(`/api/vendedoras/metas?owner=1&month=${month}`)
       .then((r) => r.json())
       .then((d) => { setGoal(d.goal ?? null); setLoading(false); });
-  }
+  }, [month]);
 
-  useEffect(() => { loadGoal(); }, []);
+  useEffect(() => { loadGoal(); }, [loadGoal]);
 
   async function handleSave() {
     setError("");

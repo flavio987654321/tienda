@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -218,13 +218,13 @@ function VehiculosPageInner() {
     if (!loading) document.title = `${storeName} — Catálogo de vehículos`;
   }, [loading, storeName]);
 
-  const getAttr = (p: StorefrontProduct, ...keys: string[]) =>
+  const getAttr = useCallback((p: StorefrontProduct, ...keys: string[]) =>
     keys.reduce<string>((acc, key) =>
       acc || (p.attributes?.find(a => a.key.toLowerCase() === key.toLowerCase())?.value ?? "")
-    , "");
+    , ""), []);
 
-  const getCiudad = (p: StorefrontProduct) => getAttr(p, "Ciudad / Zona", "Ciudad", "Ubicación");
-  const getKm     = (p: StorefrontProduct) => getAttr(p, "Kilómetros", "Km");
+  const getCiudad = useCallback((p: StorefrontProduct) => getAttr(p, "Ciudad / Zona", "Ciudad", "Ubicación"), [getAttr]);
+  const getKm     = useCallback((p: StorefrontProduct) => getAttr(p, "Kilómetros", "Km"), [getAttr]);
 
   const categories = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
@@ -234,12 +234,12 @@ function VehiculosPageInner() {
   const marcas = useMemo(() => {
     const vals = [...new Set(products.map(p => getAttr(p, "Marca")).filter(Boolean))].sort();
     return vals;
-  }, [products]);
+  }, [products, getAttr]);
 
   const ciudades = useMemo(() => {
     const vals = [...new Set(products.map(getCiudad).filter(Boolean))].sort();
     return vals.length > 1 ? vals : [];
-  }, [products]);
+  }, [products, getCiudad]);
 
   const filtered = useMemo(() => {
     let r = products.filter(p => {
@@ -269,7 +269,7 @@ function VehiculosPageInner() {
       return yB - yA;
     });
     return r;
-  }, [products, activeCategory, activeMarca, activeCiudad, search, sortBy]);
+  }, [products, activeCategory, activeMarca, activeCiudad, search, sortBy, getAttr, getCiudad, getKm]);
 
   const hasActiveFilter = activeCategory !== "Todos" || activeMarca !== "Todas" || activeCiudad !== "Todas" || !!search;
 

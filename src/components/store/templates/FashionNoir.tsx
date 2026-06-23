@@ -1387,6 +1387,28 @@ export default function FashionNoir() {
                 )}
               </div>
             </div>
+            {(() => {
+              const others = products.filter(p => p.id !== modalProduct.id);
+              const sameSub = modalProduct.subcategory ? others.filter(p => p.subcategory === modalProduct.subcategory) : [];
+              const sameCat = others.filter(p => p.category === modalProduct.category && !sameSub.includes(p));
+              const rest = others.filter(p => !sameSub.includes(p) && !sameCat.includes(p));
+              const similar = [...sameSub, ...sameCat, ...rest].slice(0, 4);
+              if (similar.length === 0) return null;
+              return (
+                <div style={{ gridColumn: isMobile ? undefined : "1 / -1", padding: isMobile ? "20px 20px 28px" : "0 36px 36px", borderTop:"1px solid rgba(240,235,227,0.08)", paddingTop:24 }}>
+                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.5, margin:"0 0 16px" }}>Productos similares</p>
+                  <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
+                    {similar.map(p => (
+                      <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
+                        <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} onError={e => { e.currentTarget.style.opacity="0"; }} />
+                        <p style={{ margin:"8px 0 2px", fontSize:12, color:T, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
+                        <p style={{ margin:0, fontSize:13, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             </div>
           </div>
         </div>

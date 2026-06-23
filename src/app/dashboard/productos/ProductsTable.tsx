@@ -265,7 +265,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
       a.variants.reduce((s, v) => s + v.stock, 0) - b.variants.reduce((s, v) => s + v.stock, 0)
     );
     return result;
-  }, [products, search, categoryFilter, statusFilter, stockFilter, sortBy]);
+  }, [products, search, categoryFilter, statusFilter, stockFilter, sortBy, showStock]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
