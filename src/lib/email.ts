@@ -342,7 +342,6 @@ export async function sendCommissionEarnedEmail({
   affiliateEmail,
   affiliateName,
   storeName,
-  storeSlug,
   commissionAmount,
   orderTotal,
   commissionRate,
@@ -351,7 +350,6 @@ export async function sendCommissionEarnedEmail({
   affiliateEmail: string;
   affiliateName: string;
   storeName: string;
-  storeSlug: string;
   commissionAmount: number;
   orderTotal: number;
   commissionRate: number;
@@ -472,7 +470,6 @@ export async function sendOrderConfirmationEmail({
   buyerName,
   orderId,
   storeName,
-  storeSlug,
   items,
   subtotal,
   discountAmount,
@@ -488,7 +485,6 @@ export async function sendOrderConfirmationEmail({
   buyerName: string;
   orderId: string;
   storeName: string;
-  storeSlug: string;
   items: { name: string; variant?: string | null; quantity: number; price: number }[];
   subtotal: number;
   discountAmount: number;
@@ -630,7 +626,6 @@ export async function sendOrderConfirmationEmail({
 
 export async function sendNewOrderToOwnerEmail({
   ownerEmail,
-  ownerName,
   storeName,
   orderId,
   customer,
@@ -643,7 +638,6 @@ export async function sendNewOrderToOwnerEmail({
   paymentProvider,
 }: {
   ownerEmail: string;
-  ownerName: string;
   storeName: string;
   orderId: string;
   customer: {
@@ -875,7 +869,6 @@ export async function sendOrderShippedEmail({
   buyerName,
   orderId,
   storeName,
-  storeSlug,
   trackingCode,
   shippingMethod,
   items,
@@ -884,7 +877,6 @@ export async function sendOrderShippedEmail({
   buyerName: string;
   orderId: string;
   storeName: string;
-  storeSlug: string;
   trackingCode?: string | null;
   shippingMethod: string;
   items: { name: string; variant?: string | null; quantity: number }[];
@@ -1259,13 +1251,11 @@ export async function sendNewStorePublishedEmail({
   affiliateEmail,
   affiliateName,
   storeName,
-  storeSlug,
   commissionRate,
 }: {
   affiliateEmail: string;
   affiliateName: string;
   storeName: string;
-  storeSlug: string;
   commissionRate: number;
 }) {
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;

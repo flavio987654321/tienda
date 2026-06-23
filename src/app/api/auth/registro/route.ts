@@ -134,8 +134,8 @@ export async function POST(req: NextRequest) {
       }
       throw dbError;
     }
-  } catch (e: any) {
-    console.error("REGISTRO ERROR:", e?.message, e?.stack);
+  } catch (e) {
+    console.error("REGISTRO ERROR:", e instanceof Error ? e.message : e, e instanceof Error ? e.stack : undefined);
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }

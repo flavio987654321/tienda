@@ -38,7 +38,10 @@ function formatSnapshot(s: StoreSnapshot): string {
   if (!s.esTipoConsultas) {
     lineas.push(`- Pedidos pendientes de confirmar: ${s.pedidosPendientes}`);
   }
-  lineas.push(`- Productos con stock bajo (≤3 unidades en alguna variante): ${s.productosStockBajo}`);
+  lineas.push(`- Productos con stock bajo (por debajo del umbral de alerta configurado en cada variante, o de 5 unidades por defecto si no se configuró uno): ${s.productosStockBajo}`);
+  if (s.productosSinStock > 0) {
+    lineas.push(`- De esos, productos completamente sin stock (0 unidades en alguna variante): ${s.productosSinStock}`);
+  }
 
   if (s.ventasUltimos30Dias === 0 && s.ventasPrevios30Dias === 0) {
     lineas.push(`- Sin ventas registradas todavía (tienda nueva o sin movimiento reciente).`);
@@ -151,6 +154,13 @@ Sección "Perfil": campos Nombre, Email (solo lectura), Ciudad, Teléfono, y bot
 6. Videos ("Reels"): se puede subir un video propio (MP4, MOV, WEBM u OGG, hasta 50 MB) con el botón "Subir video", o en vez de subir el archivo, pegar directamente un link de Instagram, TikTok o YouTube con "Agregar URL" (más liviano y rápido que subir el archivo). Conviene que sea vertical, como un reel, y corto (no más de uno o dos minutos).
 7. Para subir muchos productos de una sola vez existe la importación por CSV (no es un producto por vez).
 8. Para editar uno ya creado: en la tabla de productos, link "Editar" en la fila correspondiente; "Eliminar" borra el producto (pide confirmación).
+
+### Gestión de stock — ajustar cantidades, ver historial, alertas de stock bajo
+1. Ajuste rápido sin entrar a editar el producto: en la tabla de "Productos", botón "Stock" en la fila de cada producto — abre una ventana chica donde se suma o resta con los botones + y -, o se escribe directamente la cantidad nueva, y opcionalmente se anota un motivo (ej. "conteo físico", "devolución"). Sirve para una corrección rápida de uno o pocos productos.
+2. Ajuste masivo: en la tabla de "Productos", el bloque desplegable "Ajustar stock en masa" (debajo de "Actualizar precios en masa") — se elige una categoría o todos los productos, la acción (sumar, restar o fijar en una cantidad) y se aplica a todos de una sola vez.
+3. Umbral de alerta por variante: dentro de "Editar" un producto, en la sección "Variantes y stock", cada fila (cada Talle/Color/combinación) tiene un campo "Alerta stock" — ahí se define a partir de cuántas unidades esa variante puntual se considera "stock bajo". Si se deja vacío, usa el valor por defecto de 5 unidades.
+4. Historial de movimientos: dentro de "Editar" un producto, debajo de "Variantes y stock", el bloque desplegable "Historial de movimientos de stock" — muestra cada cambio de stock de ese producto (venta, cancelación de pedido, ajuste manual, ajuste masivo, o edición del formulario), con fecha, quién lo hizo, cuánto cambió y el motivo si se anotó uno.
+5. Avisos automáticos de stock bajo: cuando una variante cae al o por debajo de su umbral (o llega a 0), el dueño recibe una notificación dentro del panel (campanita, arriba a la derecha) y un email con el detalle. No se repite el aviso por la misma variante hasta que el stock vuelva a subir por encima del umbral y vuelva a bajar — así no se llena de avisos repetidos.
 
 ### Afiliados — aprobar, pagar comisiones
 1. Ir a "Afiliados" en el menú de la izquierda.

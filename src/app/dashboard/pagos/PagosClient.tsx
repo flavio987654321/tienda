@@ -276,7 +276,7 @@ export default function PagosClient({ initial }: Props) {
         <div className="space-y-4">
           <div className="flex items-start gap-2.5 bg-sky-50 border border-sky-100 rounded-lg p-3.5 text-xs text-sky-700 leading-relaxed">
             <Truck className="h-3.5 w-3.5 shrink-0 mt-0.5 text-sky-400" />
-            Estas opciones aparecen en el checkout cuando el cliente elige cómo recibir su compra. Podés poner precio fijo o "A coordinar" para acordarlo por WhatsApp.
+            Estas opciones aparecen en el checkout cuando el cliente elige cómo recibir su compra. Podés poner precio fijo o &quot;A coordinar&quot; para acordarlo por WhatsApp.
           </div>
 
           {shippingMethods.map((method, idx) => {
@@ -349,7 +349,7 @@ export default function PagosClient({ initial }: Props) {
                         />
                       </div>
                     ) : (
-                      <p className="text-[11px] text-slate-400">El cliente ve "A coordinar" en el checkout. Acordás el costo por WhatsApp u otro medio.</p>
+                      <p className="text-[11px] text-slate-400">El cliente ve &quot;A coordinar&quot; en el checkout. Acordás el costo por WhatsApp u otro medio.</p>
                     )}
                   </div>
                 )}

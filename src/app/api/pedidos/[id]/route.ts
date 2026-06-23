@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { sendLowStockEmail, sendReviewRequestEmail, sendCommissionEarnedEmail, sendAffiliateOrderNotificationEmail, sendOrderShippedEmail, sendOrderPaymentConfirmedEmail, sendOrderCancelledEmail } from "@/lib/email";
+import { sendReviewRequestEmail, sendCommissionEarnedEmail, sendAffiliateOrderNotificationEmail, sendOrderShippedEmail, sendOrderPaymentConfirmedEmail, sendOrderCancelledEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
+import { recordStockMovement, wentBackAboveThreshold, dispatchLowStockAlerts, DEFAULT_LOW_STOCK_THRESHOLD, type LowStockItem } from "@/lib/stockMovements";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -15,6 +16,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   const { id } = await context.params;
   const { action, trackingCode } = await req.json();
   const ownerId = user.id;
+
+  // Se llenan dentro de la transacción y se despachan después de que comprometa —
+  // así un rollback posterior (ej. error en comisión) no deja un aviso ya enviado
+  // para un estado que en los hechos nunca se confirmó.
+  let pendingStoreId: string | null = null;
+  const pendingStockAlerts: LowStockItem[] = [];
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -51,32 +58,23 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       if (action === "confirmPayment") {
         // El stock ya fue decrementado al crear el pedido en checkout.
         // Aquí solo revisamos si alguna variante quedó con stock bajo para alertar.
-        const stockAlerts: { name: string; variant: string; stock: number }[] = [];
+        pendingStoreId = order.storeId;
 
         for (const item of order.items) {
           if (!item.variantId) continue;
           const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } });
-          if (variant && variant.stock <= 4) {
-            stockAlerts.push({
+          if (!variant) continue;
+          const threshold = variant.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
+          if (variant.stock <= threshold && !variant.lowStockAlertSentAt) {
+            pendingStockAlerts.push({
               name: item.product.name,
-              variant: `${variant.name}: ${variant.value}`,
+              variant: variant.value,
               stock: variant.stock,
             });
-          }
-        }
-
-        if (stockAlerts.length > 0) {
-          const owner = await tx.user.findUnique({
-            where: { id: ownerId },
-            select: { email: true, name: true },
-          });
-          if (owner?.email) {
-            sendLowStockEmail({
-              ownerEmail: owner.email,
-              ownerName: owner.name || "vendedora",
-              storeName: order.store.name,
-              products: stockAlerts,
-            }).catch((err) => console.error("[email] sendLowStockEmail failed:", err));
+            await tx.productVariant.update({
+              where: { id: variant.id },
+              data: { lowStockAlertSentAt: new Date() },
+            });
           }
         }
 
@@ -122,7 +120,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
               affiliateEmail: affiliateUser.email,
               affiliateName: affiliateUser.name || "afiliada",
               storeName: order.store.name,
-              storeSlug: order.store.slug,
               commissionAmount: amount,
               orderTotal: order.total,
               commissionRate: rate,
@@ -194,7 +191,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           buyerName: order.buyer.name || "",
           orderId: order.id,
           storeName: order.store.name,
-          storeSlug: order.store.slug,
           trackingCode: resolvedTracking ?? null,
           shippingMethod: order.shippingMethod ?? "Envío estándar",
           items: order.items.map((i) => ({
@@ -230,12 +226,54 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
 
       if (action === "cancel") {
+        // Devolver el uso del cupón (normal o de premio) consumido en el checkout
+        if (order.couponId) {
+          const freshCoupon = await tx.coupon.findUnique({
+            where: { id: order.couponId },
+            select: { usedCount: true },
+          });
+          if (freshCoupon) {
+            await tx.coupon.update({
+              where: { id: order.couponId },
+              data: { usedCount: Math.max(0, freshCoupon.usedCount - 1) },
+            });
+          }
+        }
+        const usedRewardCoupon = await tx.affiliateRewardCoupon.findFirst({
+          where: { usedOrderId: order.id, status: "USED" },
+        });
+        if (usedRewardCoupon) {
+          await tx.affiliateRewardCoupon.update({
+            where: { id: usedRewardCoupon.id },
+            data: { status: "AVAILABLE", usedAt: null, usedOrderId: null, usedStoreName: null },
+          });
+        }
+
         // Devolver stock reservado al momento del checkout
         for (const item of order.items) {
           if (!item.variantId) continue;
+          const before = await tx.productVariant.findUnique({
+            where: { id: item.variantId },
+            select: { stock: true, productId: true, lowStockThreshold: true },
+          });
+          if (!before) continue;
+          const afterStock = before.stock + item.quantity;
+          const threshold = before.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
           await tx.productVariant.update({
             where: { id: item.variantId },
-            data: { stock: { increment: item.quantity } },
+            data: {
+              stock: { increment: item.quantity },
+              ...(wentBackAboveThreshold(before.stock, afterStock, threshold) ? { lowStockAlertSentAt: null } : {}),
+            },
+          });
+          await recordStockMovement(tx, {
+            variantId: item.variantId,
+            productId: before.productId,
+            delta: item.quantity,
+            stockBefore: before.stock,
+            stockAfter: before.stock + item.quantity,
+            type: "CANCELLATION",
+            changedBy: "system",
           });
         }
 
@@ -381,6 +419,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           });
         }
       }
+    }
+
+    if (pendingStockAlerts.length > 0 && pendingStoreId) {
+      dispatchLowStockAlerts(ownerId, pendingStoreId, pendingStockAlerts).catch((err) =>
+        console.error("[stock] dispatchLowStockAlerts failed:", err)
+      );
     }
 
     return NextResponse.json({ order: result });

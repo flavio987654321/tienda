@@ -4,7 +4,7 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
@@ -78,7 +78,7 @@ export default function ChicParis() {
   const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
-  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
@@ -88,7 +88,7 @@ export default function ChicParis() {
       return false;
     };
     const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1 && !allowsPinch(e.target as Element)) e.preventDefault(); };
-    const preventGesture = (e: Event) => { if (!allowsPinch((e as any).target as Element)) e.preventDefault(); };
+    const preventGesture = (e: Event) => { if (!allowsPinch(e.target as Element)) e.preventDefault(); };
     document.addEventListener("touchmove", preventPinch, { passive: false });
     document.addEventListener("gesturestart", preventGesture as EventListener);
     document.addEventListener("gesturechange", preventGesture as EventListener);
@@ -118,7 +118,6 @@ export default function ChicParis() {
     const base = cats.length > 0 ? cats : defaultCategories.slice(0, 6);
     return featuredCategories.length > 0 ? base.filter(c => featuredCategories.includes(c)) : base;
   }, [products, defaultCategories, featuredCategories]);
-  const CATEGORIES = useMemo(() => ["Todos", ...categoryList], [categoryList]);
 
   const ACC   = storeConfig?.colors.accent ?? "#c0392b";
   const sc    = storeConfig?.sectionColors ?? {};
@@ -228,7 +227,7 @@ export default function ChicParis() {
     checkoutOpen, setCheckoutOpen, checkoutStatus, setCheckoutStatus, checkoutError,
     envioId, setEnvioId, pagoId, setPagoId,
     coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
-    notas, setNotas, rememberData, setRememberData,
+    notas, setNotas,
     buyerForm, setBuyerForm,
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
@@ -252,7 +251,7 @@ export default function ChicParis() {
       try {
         const a = JSON.parse(v.name);
         if (a && typeof a === "object") {
-          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          const vals = Object.values(a).map((x) => String(x).toLowerCase());
           const sizeOk  = !selectedSize  || vals.includes(selectedSize.toLowerCase());
           const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
           return sizeOk && colorOk;
@@ -306,14 +305,14 @@ export default function ChicParis() {
   useEffect(() => {
     if (!modalProduct || !selectedColor) return;
     const imgIdx = modalProduct.imageItems.findIndex(
-      (img: any) => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
+      (img) => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
     );
     if (imgIdx !== -1) setModalImg(imgIdx);
-    const colorVariants = modalProduct.variants.filter((v: any) => {
-      try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x: any) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
+    const colorVariants = modalProduct.variants.filter((v) => {
+      try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
     });
     if (!colorVariants.length) return;
-    const best = colorVariants.find((v: any) => v.stock > 0) ?? colorVariants[0];
+    const best = colorVariants.find((v) => v.stock > 0) ?? colorVariants[0];
     try {
       const a = JSON.parse(best.name);
       const sizeKey = Object.keys(a).find((k: string) => SIZE_ATTRS.includes(k.toLowerCase()));
@@ -326,25 +325,25 @@ export default function ChicParis() {
   useEffect(() => {
     if (!modalProduct || !selectedSize) return;
     if (selectedColor) {
-      const hasCombo = modalProduct.variants.some((v: any) => {
+      const hasCombo = modalProduct.variants.some((v) => {
         try {
           const a = JSON.parse(v.name);
           if (typeof a !== "object") return false;
-          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          const vals = Object.values(a).map((x) => String(x).toLowerCase());
           return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
         } catch { return false; }
       });
       if (hasCombo) return;
     }
-    const sizeVariants = modalProduct.variants.filter((v: any) => {
+    const sizeVariants = modalProduct.variants.filter((v) => {
       try {
         const a = JSON.parse(v.name);
         if (typeof a !== "object") return false;
-        return Object.entries(a).some(([k, val]: any) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
+        return Object.entries(a).some(([k, val]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
       } catch { return false; }
     });
     if (!sizeVariants.length) return;
-    const best = sizeVariants.find((v: any) => v.stock > 0) ?? sizeVariants[0];
+    const best = sizeVariants.find((v) => v.stock > 0) ?? sizeVariants[0];
     try {
       const a = JSON.parse(best.name);
       const colorKey = Object.keys(a).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
@@ -353,7 +352,7 @@ export default function ChicParis() {
         if (newColor !== selectedColor) {
           setSelectedColor(newColor);
           const imgIdx = modalProduct.imageItems.findIndex(
-            (img: any) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
+            (img) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
           );
           if (imgIdx !== -1) setModalImg(imgIdx);
         }
@@ -393,7 +392,6 @@ export default function ChicParis() {
     return map;
   }, [products]);
 
-  const changeCategory = (cat: string) => { setActiveCategory(cat); setVisibleCount(8); };
   const changeGender = (g: string | null) => { setActiveGender(g); setActiveCategory("Todos"); setVisibleCount(8); };
 
   const allFiltered = products.filter(p => {
@@ -402,7 +400,6 @@ export default function ChicParis() {
     return true;
   });
   const filtered    = allFiltered.slice(0, visibleCount);
-  const hasMore     = visibleCount < allFiltered.length;
 
   // Banner slide images
   const bannerImgs = Array.from({ length: BANNER_COUNT }, (_, i) =>
@@ -1135,7 +1132,7 @@ export default function ChicParis() {
                   </div>
                 </div>
               )) : searchQuery ? (
-                <p style={{ padding: "20px 8px", color: "#999", fontSize: 13 }}>No se encontraron resultados para "{searchQuery}"</p>
+                <p style={{ padding: "20px 8px", color: "#999", fontSize: 13 }}>No se encontraron resultados para &quot;{searchQuery}&quot;</p>
               ) : (
                 <p style={{ padding: "20px 8px", color: "#bbb", fontSize: 13 }}>Escribí para buscar...</p>
               )}

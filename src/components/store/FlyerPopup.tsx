@@ -56,7 +56,7 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
 
       <div
         style={{
-          position: "relative", width: "100%", maxWidth: 340,
+          position: "relative", width: "100%", maxWidth: 340, textAlign: "center",
           animation: "flyerSlideUp 0.4s cubic-bezier(0.22,1,0.36,1)",
         }}
         onClick={e => e.stopPropagation()}
@@ -79,14 +79,14 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
         </button>
 
         {/* Imagen con animación direccional */}
-        <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "0 32px 80px rgba(0,0,0,0.5)" }}>
+        <div style={{ display: "inline-block", borderRadius: 16, overflow: "hidden", boxShadow: "0 32px 80px rgba(0,0,0,0.5)" }}>
           <img
             key={index}
             src={images[index]}
             alt={`Flyer ${index + 1}`}
             style={{
-              width: "100%", display: "block",
-              objectFit: "contain", maxHeight: "80vh",
+              maxWidth: "100%", height: "auto", display: "block",
+              maxHeight: "80vh",
               animation: `${dir === "next" ? "flyerImgNext" : "flyerImgPrev"} 0.35s cubic-bezier(0.22,1,0.36,1)`,
             }}
           />

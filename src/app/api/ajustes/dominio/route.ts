@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   if (!user || user.role !== "OWNER") return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const sub = await getUserSubscription(user.id);
-  if (!sub || (sub as any).tier !== "PREMIUM") {
+  if (!sub || sub.tier !== "PREMIUM") {
     return NextResponse.json({ error: "Esta función requiere el plan Tienda Premium" }, { status: 403 });
   }
 
@@ -61,7 +61,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ success: true });
 }
 
-export async function DELETE(req: NextRequest) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- req required by Next.js route handler signature
+export async function DELETE(_req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || user.role !== "OWNER") return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 

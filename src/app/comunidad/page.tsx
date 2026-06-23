@@ -151,7 +151,7 @@ export default function ComunidadPage() {
           </div>
         ) : (
           <p className="relative text-amber-700 font-semibold text-sm bg-amber-100 inline-block px-4 py-2 rounded-full mt-2">
-            Hoy no hay ninguna campaña publicada. Cuando se publique una, va a funcionar de esta manera.
+            Hoy no hay ninguna campaña publicada. Cuando se publique una, la vas a ver en este mismo espacio.
           </p>
         )}
       </section>
@@ -161,9 +161,9 @@ export default function ComunidadPage() {
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-xl font-bold mb-4">¿Por qué existe este programa?</h2>
           <p className="text-gray-600 text-sm leading-relaxed">
-            Entendemos que ciertas necesidades —de alimentos, de salud, de un objetivo puntual— se
-            resuelven mejor cuando una comunidad las enfrenta en conjunto, con información clara,
-            que cuando una persona las enfrenta sola y sin un canal formal para pedir ayuda.
+            Hay necesidades —de alimentos, de salud, de un objetivo puntual— que son muy difíciles
+            de resolver solo. Por eso creamos este canal formal: para que cualquier persona con una
+            necesidad concreta pueda pedir ayuda a la comunidad, con información clara y verificable.
           </p>
         </div>
       </section>

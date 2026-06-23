@@ -42,7 +42,7 @@ function parseImages(images: string): string[] {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter(Boolean)
-      .map((item) => (typeof item === "string" ? item : (item as any)?.url ?? ""))
+      .map((item) => (typeof item === "string" ? item : (item as { url?: string })?.url ?? ""))
       .filter(Boolean);
   } catch {
     return [];
@@ -1061,7 +1061,7 @@ export default function VendedorasClient() {
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [stores, setStores] = useState<StoreItem[]>([]);
-  const [loadingStores, setLoadingStores] = useState(true);
+  const [, setLoadingStores] = useState(true);
   const [applyStore, setApplyStore] = useState<StoreItem | null>(null);
   const [applySuccessName, setApplySuccessName] = useState<string | null>(null);
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);

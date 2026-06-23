@@ -7,6 +7,7 @@ import { sendPushToUser } from "@/lib/push";
 import type { ShippingMethod } from "@/types/store-config";
 import { DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
 import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
+import { recordStockMovement } from "@/lib/stockMovements";
 
 type CheckoutItem = {
   productId: string;
@@ -149,11 +150,29 @@ export async function POST(req: NextRequest) {
               (fresh ? ` (disponible: ${fresh.stock}, pedido: ${item.quantity})` : "")
             );
           }
+
+          // Releemos el stock real ya decrementado (en vez de confiar en el valor
+          // leído antes del decremento atómico) para que el historial sea exacto
+          // incluso si otra venta concurrente tocó la misma variante mientras tanto.
+          const postDecrement = await tx.productVariant.findUnique({
+            where: { id: variant.id },
+            select: { stock: true },
+          });
+          const stockAfterDecrement = postDecrement?.stock ?? variant.stock - item.quantity;
+          await recordStockMovement(tx, {
+            variantId: variant.id,
+            productId: product.id,
+            delta: -item.quantity,
+            stockBefore: stockAfterDecrement + item.quantity,
+            stockAfter: stockAfterDecrement,
+            type: "SALE",
+            changedBy: "system",
+          });
         }
 
         const basePrice = variant?.price ?? product.price;
-        const wholesale = (product as any).precioMayorista as number | null;
-        const minQty = (product as any).cantMinMayorista as number | null;
+        const wholesale = product.precioMayorista;
+        const minQty = product.cantMinMayorista;
         if (minQty && item.quantity < minQty) {
           throw new Error(`${product.name} requiere un mínimo de ${minQty} unidades`);
         }
@@ -448,7 +467,6 @@ export async function POST(req: NextRequest) {
       if (ownerEmail) {
         sendNewOrderToOwnerEmail({
           ownerEmail,
-          ownerName: storeForEmail.owner?.name ?? "",
           customer: {
             name: customer.name,
             email: customer.email,

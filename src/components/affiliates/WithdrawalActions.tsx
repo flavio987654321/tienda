@@ -10,7 +10,7 @@ type Props = {
   bankInfo: string;
 };
 
-export default function WithdrawalActions({ withdrawalId, affiliateName, amount, bankInfo }: Props) {
+export default function WithdrawalActions({ withdrawalId }: Props) {
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [result, setResult] = useState<"APPROVED" | "REJECTED" | null>(null);
   const [errorMsg, setErrorMsg] = useState("");

@@ -1,12 +1,8 @@
 import { getCurrentUser } from "@/lib/auth-session";
-import { getUserSubscription, getSubscriptionStatus, daysRemaining, PRICES } from "@/lib/subscription";
+import { getUserSubscription } from "@/lib/subscription";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import MiPlanClient from "./MiPlanClient";
-
-function money(n: number) {
-  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
-}
 
 export default async function MiPlanPage() {
   const user = await getCurrentUser();

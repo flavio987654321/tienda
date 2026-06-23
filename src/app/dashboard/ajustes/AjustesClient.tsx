@@ -147,7 +147,7 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
                 <ol className="text-xs text-slate-500 space-y-1 list-decimal list-inside">
                   <li>Abrí tu tienda en Chrome</li>
                   <li>Tocá el menú (⋮)</li>
-                  <li>Seleccioná "Instalar app"</li>
+                  <li>Seleccioná &quot;Instalar app&quot;</li>
                 </ol>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5">
@@ -155,7 +155,7 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
                 <ol className="text-xs text-slate-500 space-y-1 list-decimal list-inside">
                   <li>Abrí tu tienda en Safari</li>
                   <li>Tocá el ícono compartir</li>
-                  <li>Seleccioná "Agregar a inicio"</li>
+                  <li>Seleccioná &quot;Agregar a inicio&quot;</li>
                 </ol>
               </div>
             </div>

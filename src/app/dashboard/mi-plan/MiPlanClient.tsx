@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, Clock, AlertTriangle, CreditCard, ArrowRight, RefreshCw, Zap, Crown, Star, Shield, TrendingUp, Users, Package, BarChart2 } from "lucide-react";
+import { CheckCircle, Clock, AlertTriangle, CreditCard, ArrowRight, RefreshCw, Zap, Crown, Star, TrendingUp } from "lucide-react";
 import { getSubscriptionStatus, daysRemaining, getPriceForRole } from "@/lib/subscription";
 import PaymentModal from "@/components/subscription/PaymentModal";
 
@@ -93,7 +93,7 @@ export default function MiPlanClient({ sub, userRole }: Props) {
     );
   }
 
-  const status = getSubscriptionStatus(sub as any);
+  const status = getSubscriptionStatus(sub);
   const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.EXPIRED;
   const StatusIcon = statusCfg.icon;
 

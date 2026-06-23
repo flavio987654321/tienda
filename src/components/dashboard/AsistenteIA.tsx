@@ -12,7 +12,7 @@ function hoyKey() {
   return new Date().toDateString();
 }
 
-const INTRO_TEXTO = `¡Hola! Soy Sacha, el asistente de tu panel.
+const INTRO_TEXTO = `¡Hola! Soy Sacha, el asistente con inteligencia artificial de tu panel.
 
 Te voy a ir contando cómo viene tu tienda —pedidos pendientes, stock bajo, cómo andan las ventas— y avisándote cuando se acerca alguna fecha que conviene aprovechar, con alguna idea para esa ocasión.
 
@@ -213,7 +213,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
                 <AsistentePersonaje estado={enviando ? "pensando" : "sonriente"} size={36} />
                 <div className="flex-1">
                   <p className="font-bold text-gray-950">Sacha</p>
-                  <p className="text-xs text-gray-400">Tu asistente de TiendaApps</p>
+                  <p className="text-xs text-gray-400">Asistente con IA de TiendaApps</p>
                 </div>
                 <button
                   onClick={() => setAbierto(false)}

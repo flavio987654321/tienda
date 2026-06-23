@@ -41,8 +41,9 @@ export default function PaymentModal({ plan, billing, amount, onClose, onSuccess
     fetch("/api/vendedoras/premios")
       .then((r) => r.json())
       .then((data) => {
+        type RawCoupon = SubscriptionCoupon & { type: string; status: string };
         const sub = (data.cupones ?? []).find(
-          (c: any) => c.type === "SUBSCRIPTION" && c.status === "AVAILABLE"
+          (c: RawCoupon) => c.type === "SUBSCRIPTION" && c.status === "AVAILABLE"
         );
         if (sub) setAvailableCoupon(sub);
       })

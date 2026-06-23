@@ -560,7 +560,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
         <div style={{ padding: "18px 24px 14px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a" }}>Configuración avanzada</h2>
-            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Usá "Guardar y cerrar" para que los cambios queden guardados</p>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Usá &quot;Guardar y cerrar&quot; para que los cambios queden guardados</p>
           </div>
           <button onClick={onClose} style={{ width: 32, height: 32, border: "1px solid #e2e8f0", borderRadius: 8, background: "white", cursor: "pointer", fontSize: 18, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
         </div>
@@ -786,14 +786,14 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Ocultar precios al público</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Muestra "Consultá precio" — clientes consultan antes de ver valores</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Muestra &quot;Consultá precio&quot; — clientes consultan antes de ver valores</p>
                   </div>
                   <Toggle value={config.ocultarPreciosPublico ?? false}
                     onChange={v => update("ocultarPreciosPublico", v)} />
                 </div>
                 {(config.ocultarPreciosPublico) && (
                   <div style={{ background: "#fef3c7", borderRadius: 8, padding: "8px 12px", fontSize: 11, color: "#92400e" }}>
-                    Los botones de carrito cambian a "Consultar precio" y los visitantes son dirigidos al formulario de contacto. Las vendedoras afiliadas siguen siendo acreditadas por cada consulta generada.
+                    Los botones de carrito cambian a &quot;Consultar precio&quot; y los visitantes son dirigidos al formulario de contacto. Las vendedoras afiliadas siguen siendo acreditadas por cada consulta generada.
                   </div>
                 )}
               </div>
@@ -1222,7 +1222,7 @@ function BgFieldEditor({ field, base, setActiveField }: {
 
 /* ── Floating editor (text + image) ─────────────────────────── */
 function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, string> }) {
-  const { activeField, setActiveField, overrides, setOverride, resetOverride, imageOverrides, setImageOverride, sectionColors, setSectionColor } = useEditContext();
+  const { activeField, setActiveField, overrides, setOverride, resetOverride, imageOverrides, setImageOverride } = useEditContext();
 
   if (!activeField) return null;
 
@@ -1404,8 +1404,8 @@ export default function ConfiguracionPage() {
   const [isPremium, setIsPremium] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [fetchError, setFetchError] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [, setDeleting] = useState(false);
+  const [, setConfirmDelete] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [pendingNavUrl, setPendingNavUrl] = useState<string | null>(null);
@@ -1539,9 +1539,6 @@ export default function ConfiguracionPage() {
     setIsDirty(false);
     setMode("editing");
   };
-
-  /* Step 3 → 2 */
-  const handleBackToPreview = () => { setMode("preview"); setActiveField(null); };
 
   const handlePreviewBellClick = () => {
     const dest = isPremium ? "/dashboard/notificaciones" : "/dashboard/mi-plan";

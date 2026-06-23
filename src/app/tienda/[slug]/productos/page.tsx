@@ -4,7 +4,7 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useCartLogic } from "@/hooks/useCartLogic";
-import type { StorefrontProduct, PlaceOrderParams } from "@/hooks/useStorefront";
+import type { StorefrontProduct, StorefrontVariant, PlaceOrderParams } from "@/hooks/useStorefront";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 
@@ -20,11 +20,27 @@ const SIZE_ATTRS  = [
 const COLOR_ATTRS = ["color","colour","colores","colors","tono"];
 const PAGE_SIZE   = 24;
 
-function mapProduct(raw: any): StorefrontProduct {
+type RawProduct = {
+  id: string;
+  name: string;
+  price: number;
+  comparePrice?: number | null;
+  precioMayorista?: number | null;
+  cantMinMayorista?: number | null;
+  category?: string;
+  subcategory?: string;
+  gender?: string;
+  description?: string | null;
+  images?: string;
+  reelUrls?: string;
+  variants?: StorefrontVariant[];
+};
+
+function mapProduct(raw: RawProduct): StorefrontProduct {
   const variants = raw.variants ?? [];
   const sizesSet  = new Set<string>();
   const colorsSet = new Set<string>();
-  variants.forEach((v: any) => {
+  variants.forEach((v) => {
     let attrs: Record<string, string> = {};
     try { const p = JSON.parse(v.name); if (p && typeof p === "object") attrs = p; } catch {}
     if (Object.keys(attrs).length > 0) {
@@ -44,9 +60,9 @@ function mapProduct(raw: any): StorefrontProduct {
   try {
     const parsed = JSON.parse(raw.images || "[]");
     imageItems = parsed
-      .map((img: any) => typeof img === "string" ? { url: img } : { url: img?.url ?? "", variantValue: img?.variantValue })
-      .filter((x: any) => x.url);
-    images = imageItems.map((x: any) => x.url);
+      .map((img: string | { url?: string; variantValue?: string }) => typeof img === "string" ? { url: img } : { url: img?.url ?? "", variantValue: img?.variantValue })
+      .filter((x: { url: string }) => x.url);
+    images = imageItems.map((x) => x.url);
   } catch {}
   let reelUrls: string[] = [];
   try {
@@ -138,7 +154,7 @@ function ProductosPageInner() {
   // ── Funciones estables para useCartLogic ──────────────────────────────────
   const resolveVariantId = useCallback((product: StorefrontProduct, sizeValue: string, colorValue: string): string | null => {
     if (!product.variants.length) return null;
-    const match = product.variants.find((v: any) => v.value === sizeValue || v.value === colorValue);
+    const match = product.variants.find((v) => v.value === sizeValue || v.value === colorValue);
     if (!match && product.variants.length === 1) return product.variants[0].id;
     return match?.id ?? product.variants[0]?.id ?? null;
   }, []);
@@ -272,11 +288,11 @@ function ProductosPageInner() {
   // ── Stock de la variante seleccionada en el modal ──────────────────────────
   const selectedVariantStock = useMemo(() => {
     if (!modalProduct || !modalProduct.variants.length) return null;
-    const match = modalProduct.variants.find((v: any) => {
+    const match = modalProduct.variants.find((v) => {
       try {
         const a = JSON.parse(v.name);
         if (a && typeof a === "object") {
-          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          const vals = Object.values(a).map((x) => String(x).toLowerCase());
           const sizeOk  = !selectedSize  || vals.includes(selectedSize.toLowerCase());
           const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
           return sizeOk && colorOk;
@@ -291,14 +307,14 @@ function ProductosPageInner() {
   useEffect(() => {
     if (!modalProduct || !selectedColor) return;
     const imgIdx = modalProduct.imageItems.findIndex(
-      (img: any) => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
+      (img) => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
     );
     if (imgIdx !== -1) setModalImg(imgIdx);
-    const colorVariants = modalProduct.variants.filter((v: any) => {
-      try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x: any) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
+    const colorVariants = modalProduct.variants.filter((v) => {
+      try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
     });
     if (!colorVariants.length) return;
-    const best = colorVariants.find((v: any) => v.stock > 0) ?? colorVariants[0];
+    const best = colorVariants.find((v) => v.stock > 0) ?? colorVariants[0];
     try {
       const a = JSON.parse(best.name);
       const sizeKey = Object.keys(a).find(k => SIZE_ATTRS.includes(k.toLowerCase()));
@@ -311,25 +327,25 @@ function ProductosPageInner() {
   useEffect(() => {
     if (!modalProduct || !selectedSize) return;
     if (selectedColor) {
-      const hasCombo = modalProduct.variants.some((v: any) => {
+      const hasCombo = modalProduct.variants.some((v) => {
         try {
           const a = JSON.parse(v.name);
           if (typeof a !== "object") return false;
-          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          const vals = Object.values(a).map((x) => String(x).toLowerCase());
           return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
         } catch { return false; }
       });
       if (hasCombo) return;
     }
-    const sizeVariants = modalProduct.variants.filter((v: any) => {
+    const sizeVariants = modalProduct.variants.filter((v) => {
       try {
         const a = JSON.parse(v.name);
         if (typeof a !== "object") return false;
-        return Object.entries(a).some(([k, val]: any) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
+        return Object.entries(a).some(([k, val]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
       } catch { return false; }
     });
     if (!sizeVariants.length) return;
-    const best = sizeVariants.find((v: any) => v.stock > 0) ?? sizeVariants[0];
+    const best = sizeVariants.find((v) => v.stock > 0) ?? sizeVariants[0];
     try {
       const a = JSON.parse(best.name);
       const colorKey = Object.keys(a).find((k: string) => COLOR_ATTRS.includes(k.toLowerCase()));
@@ -338,7 +354,7 @@ function ProductosPageInner() {
         if (newColor !== selectedColor) {
           setSelectedColor(newColor);
           const imgIdx = modalProduct.imageItems.findIndex(
-            (img: any) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
+            (img) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
           );
           if (imgIdx !== -1) setModalImg(imgIdx);
         }
@@ -361,7 +377,7 @@ function ProductosPageInner() {
       return false;
     };
     const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1 && !allowsPinch(e.target as Element)) e.preventDefault(); };
-    const preventGesture = (e: Event) => { if (!allowsPinch((e as any).target as Element)) e.preventDefault(); };
+    const preventGesture = (e: Event) => { if (!allowsPinch(e.target as Element)) e.preventDefault(); };
     document.addEventListener("touchmove", preventPinch, { passive: false });
     document.addEventListener("gesturestart", preventGesture as EventListener);
     document.addEventListener("gesturechange", preventGesture as EventListener);
@@ -538,7 +554,7 @@ function ProductosPageInner() {
         {hoveredCatMenu !== null && (
           <div style={{ position:"fixed", inset:0, zIndex:350 }} onClick={() => setHoveredCatMenu(null)} />
         )}
-        <div className="st-tabs" style={{ display:"flex", gap:8, flexWrap:"nowrap", overflowX:"auto", marginBottom:40, borderBottom:`1px solid ${borderFaint}`, paddingBottom:24, WebkitOverflowScrolling:"touch" as any }}>
+        <div className="st-tabs" style={{ display:"flex", gap:8, flexWrap:"nowrap", overflowX:"auto", marginBottom:40, borderBottom:`1px solid ${borderFaint}`, paddingBottom:24, WebkitOverflowScrolling:"touch" } as React.CSSProperties}>
           {CATEGORIES.map(cat => {
             const subcats = cat !== "Todos" ? (subcategoriesFor[cat] || []) : [];
             const isActive = activeCategory === cat;

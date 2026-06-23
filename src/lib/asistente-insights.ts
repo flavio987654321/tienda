@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_LOW_STOCK_THRESHOLD } from "@/lib/stockMovements";
 
 /**
  * Tipos de tienda "de consultas" (sin pedidos/carrito, ej. autos) — debe coincidir
@@ -6,12 +7,11 @@ import { prisma } from "@/lib/prisma";
  */
 const LEADS_STORE_TYPES = ["AUTOS"];
 
-const STOCK_BAJO_UMBRAL = 3;
-
 export type StoreSnapshot = {
   esTipoConsultas: boolean;
   pedidosPendientes: number;
   productosStockBajo: number;
+  productosSinStock: number;
   ventasUltimos30Dias: number;
   ventasPrevios30Dias: number;
   tendenciaVentas: "subiendo" | "bajando" | "estable" | "sin_datos";
@@ -76,14 +76,36 @@ export async function getStoreSnapshot(storeId: string, tipoTienda: string): Pro
   const hace30 = new Date(now.getTime() - 30 * 86_400_000);
   const hace60 = new Date(now.getTime() - 60 * 86_400_000);
 
-  const [pedidosPendientes, productosStockBajo, ventasRecientes, ventasAnteriores, ultimaVenta, itemsTop] =
-    await Promise.all([
+  const [
+    pedidosPendientes,
+    variantesConUmbralPropio,
+    variantesSinUmbral,
+    variantesSinStock,
+    ventasRecientes,
+    ventasAnteriores,
+    ultimaVenta,
+    itemsTop,
+  ] = await Promise.all([
       esTipoConsultas
         ? Promise.resolve(0)
         : prisma.order.count({ where: { storeId, status: "PENDING" } }),
 
+      // Variantes con umbral configurado: hay que comparar stock contra SU PROPIO umbral,
+      // Prisma no compara dos columnas entre sí, así que se filtra en JS más abajo.
       prisma.productVariant.findMany({
-        where: { stock: { lte: STOCK_BAJO_UMBRAL }, product: { storeId, deletedAt: null, isActive: true } },
+        where: { lowStockThreshold: { not: null }, product: { storeId, deletedAt: null, isActive: true } },
+        select: { productId: true, stock: true, lowStockThreshold: true },
+      }),
+
+      // Variantes sin umbral propio: usan el default global.
+      prisma.productVariant.findMany({
+        where: { lowStockThreshold: null, stock: { lte: DEFAULT_LOW_STOCK_THRESHOLD }, product: { storeId, deletedAt: null, isActive: true } },
+        select: { productId: true },
+        distinct: ["productId"],
+      }),
+
+      prisma.productVariant.findMany({
+        where: { stock: 0, product: { storeId, deletedAt: null, isActive: true } },
         select: { productId: true },
         distinct: ["productId"],
       }),
@@ -112,6 +134,11 @@ export async function getStoreSnapshot(storeId: string, tipoTienda: string): Pro
         take: 1,
       }),
     ]);
+
+  const productIdsStockBajo = new Set(variantesSinUmbral.map((v) => v.productId));
+  for (const v of variantesConUmbralPropio) {
+    if (v.stock <= (v.lowStockThreshold as number)) productIdsStockBajo.add(v.productId);
+  }
 
   const ventasUltimos30Dias = ventasRecientes._sum.total ?? 0;
   const ventasPrevios30Dias = ventasAnteriores._sum.total ?? 0;
@@ -143,7 +170,8 @@ export async function getStoreSnapshot(storeId: string, tipoTienda: string): Pro
   return {
     esTipoConsultas,
     pedidosPendientes,
-    productosStockBajo: productosStockBajo.length,
+    productosStockBajo: productIdsStockBajo.size,
+    productosSinStock: variantesSinStock.length,
     ventasUltimos30Dias,
     ventasPrevios30Dias,
     tendenciaVentas,

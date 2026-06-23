@@ -51,9 +51,10 @@ export default function RankingPage() {
     fetch("/api/vendedoras/wallet")
       .then((r) => r.json())
       .then((d) => {
+        type RawAffiliate = { id: string; isActive: boolean; status: string; store?: { id?: string; name: string; slug: string } };
         const active: AffStore[] = (d.affiliates ?? [])
-          .filter((a: any) => a.isActive && a.status === "APPROVED")
-          .map((a: any) => ({ id: a.id, storeId: a.store?.id ?? "", store: a.store }));
+          .filter((a: RawAffiliate) => a.isActive && a.status === "APPROVED")
+          .map((a: RawAffiliate) => ({ id: a.id, storeId: a.store?.id ?? "", store: a.store! }));
         setAffiliates(active);
         if (active[0]) setSelectedStoreId(active[0].storeId);
         setLoadingAff(false);

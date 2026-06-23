@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   ]);
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
-  if (!sub || (sub as any).tier !== "PREMIUM") {
+  if (!sub || sub.tier !== "PREMIUM") {
     const couponCount = await prisma.coupon.count({ where: { storeId: store.id } });
     if (couponCount >= 10) {
       return NextResponse.json(

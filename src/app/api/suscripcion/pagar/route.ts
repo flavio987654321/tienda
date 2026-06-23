@@ -142,8 +142,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Estado de pago desconocido. Contactá soporte." }, { status: 400 });
-  } catch (e: any) {
-    console.error("SUSCRIPCION PAGO ERROR:", e?.message);
+  } catch (e) {
+    console.error("SUSCRIPCION PAGO ERROR:", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "Error al procesar el pago" }, { status: 500 });
   }
 }

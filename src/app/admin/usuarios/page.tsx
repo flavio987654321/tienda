@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import UsuariosAdmin from "./UsuariosAdmin";
+import UsuariosAdmin, { type User } from "./UsuariosAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +35,7 @@ export default async function AdminUsuariosPage({
         <h1 className="text-3xl font-black text-white mb-1">Usuarios</h1>
         <p className="text-gray-400 text-sm">{users.length} usuarios registrados</p>
       </div>
-      <UsuariosAdmin users={serialized as any} filter={f} />
+      <UsuariosAdmin users={serialized as User[]} filter={f} />
     </div>
   );
 }

@@ -585,7 +585,7 @@ export default function AutoDrive() {
             <div ref={carouselRef} className="ad-carousel"
               style={{ display:"flex", gap:16, overflowX:"auto", overflowY:"hidden",
                 scrollSnapType:"x mandatory", padding:"4px 56px 16px",
-                WebkitOverflowScrolling:"touch" as any, overscrollBehaviorX:"contain" }}>
+                WebkitOverflowScrolling:"touch", overscrollBehaviorX:"contain" } as React.CSSProperties}>
               {showcased.map(p => (
                 <div key={p.id} className="ad-carousel-item" style={{ scrollSnapAlign:"start", flexShrink:0 }}>
                   <VehicleCard product={p} accent={accent} currency={currency}

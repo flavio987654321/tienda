@@ -11,6 +11,7 @@ export type NormalizedVariant = {
   stock: string;
   price: string;
   sku: string;
+  lowStockThreshold: string;
 };
 
 export function normalizeVariants(input: unknown): NormalizedVariant[] {
@@ -23,6 +24,8 @@ export function normalizeVariants(input: unknown): NormalizedVariant[] {
       stock: typeof variant?.stock === "string" ? variant.stock.trim() : String(variant?.stock ?? ""),
       price: typeof variant?.price === "string" ? variant.price.trim() : String(variant?.price ?? ""),
       sku:   typeof variant?.sku   === "string" ? variant.sku.trim()   : "",
+      lowStockThreshold:
+        typeof variant?.lowStockThreshold === "string" ? variant.lowStockThreshold.trim() : "",
     }))
     .filter((v) => v.name || v.value || v.stock || v.price || v.sku);
 
@@ -90,14 +93,21 @@ export function validateProductBody(
   const parsedCantMinMayorista = cantMinMayorista ? parseInt(cantMinMayorista as string) : null;
 
   const normalizedVariants = normalizeVariants(variants);
-  if (normalizedVariants.length > 0) {
-    for (const v of normalizedVariants) {
-      if (!v.name || !v.value) {
-        return { error: NextResponse.json({ error: "Cada variante debe tener nombre y valor" }, { status: 400 }) };
-      }
-      const stock = parseInt(v.stock);
-      if (isNaN(stock) || stock < 0) {
-        return { error: NextResponse.json({ error: "El stock de variantes debe ser un número >= 0" }, { status: 400 }) };
+  if (normalizedVariants.length === 0) {
+    return { error: NextResponse.json({ error: "El producto debe tener al menos una variante con stock" }, { status: 400 }) };
+  }
+  for (const v of normalizedVariants) {
+    if (!v.name || !v.value) {
+      return { error: NextResponse.json({ error: "Cada variante debe tener nombre y valor" }, { status: 400 }) };
+    }
+    const stock = parseInt(v.stock);
+    if (isNaN(stock) || stock < 0) {
+      return { error: NextResponse.json({ error: "El stock de variantes debe ser un número >= 0" }, { status: 400 }) };
+    }
+    if (v.lowStockThreshold) {
+      const threshold = parseInt(v.lowStockThreshold);
+      if (isNaN(threshold) || threshold < 0) {
+        return { error: NextResponse.json({ error: "La alerta de stock bajo debe ser un número >= 0" }, { status: 400 }) };
       }
     }
   }

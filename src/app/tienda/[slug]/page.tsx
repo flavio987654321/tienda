@@ -34,9 +34,6 @@ export async function generateMetadata({ params }: TiendaPageProps): Promise<Met
 
   if (!store) return {};
 
-  let config: Partial<StoreConfig> = {};
-  try { config = JSON.parse(store.storeConfig || "{}"); } catch { /* noop */ }
-
   const baseName = store.name ?? "Tienda";
   const title = store.isPublished ? baseName : `${baseName} — Próximamente`;
   const description = store.isPublished

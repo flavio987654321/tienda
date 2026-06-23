@@ -28,7 +28,7 @@ export default function AdminRetirosPage() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<Record<string, boolean>>({});
-  const [done, setDone] = useState<Record<string, "approved" | "rejected">>();
+  const [, setDone] = useState<Record<string, "approved" | "rejected">>();
   // Estado del form de rechazo por id
   const [rejectOpen, setRejectOpen] = useState<Record<string, boolean>>({});
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
@@ -84,8 +84,8 @@ export default function AdminRetirosPage() {
       }
       setDone((d) => ({ ...d, [id]: action === "APPROVE" ? "approved" : "rejected" }));
       setWithdrawals((prev) => prev.filter((w) => w.id !== id));
-    } catch (err: any) {
-      setRejectError((e) => ({ ...e, [id]: err.message ?? "Error" }));
+    } catch (err) {
+      setRejectError((e) => ({ ...e, [id]: err instanceof Error ? err.message : "Error" }));
     } finally {
       setProcessing((p) => ({ ...p, [id]: false }));
     }

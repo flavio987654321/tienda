@@ -17,6 +17,16 @@ export function statusClass(status: string) {
   return "bg-yellow-100 text-yellow-700";
 }
 
+// Borde lateral de la card de pedido en el dashboard — mismo color que el badge
+// de estado, para que cada pedido se distinga del resto de un vistazo.
+export function statusBorderClass(status: string) {
+  if (status === "CONFIRMED") return "border-l-4 border-l-green-400";
+  if (status === "SHIPPED")   return "border-l-4 border-l-blue-400";
+  if (status === "DELIVERED") return "border-l-4 border-l-gray-900";
+  if (status === "CANCELLED") return "border-l-4 border-l-red-300";
+  return "border-l-4 border-l-yellow-400";
+}
+
 export function parseAddress(value: string) {
   try {
     return JSON.parse(value) as {

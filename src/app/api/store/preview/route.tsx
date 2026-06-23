@@ -11,7 +11,8 @@ function darken(hex: string, amount = 60): string {
   return `rgb(${r},${g},${b})`;
 }
 
-export async function POST(req: NextRequest) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- req required by Next.js route handler signature
+export async function POST(_req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 

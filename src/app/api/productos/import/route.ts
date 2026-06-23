@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const images = row.imagenes
       ? row.imagenes.split("|").map(u => u.trim()).filter(Boolean)
       : [];
-    const status = (row.estado ?? "ACTIVO").toUpperCase() === "OCULTO" ? "OCULTO" : "ACTIVO";
+    const isActive = (row.estado ?? "ACTIVO").toUpperCase() !== "OCULTO";
 
     try {
       await prisma.product.create({
@@ -62,9 +62,9 @@ export async function POST(req: NextRequest) {
           images: JSON.stringify(images),
           reelUrls: "[]",
           attributes: "[]",
-          status,
+          isActive,
           storeId: store.id,
-        } as any,
+        },
       });
       created++;
     } catch {

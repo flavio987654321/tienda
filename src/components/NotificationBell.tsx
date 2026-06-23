@@ -37,6 +37,7 @@ const ICONS: Record<string, string> = {
   NEW_PRODUCT: "✨",
   PRICE_CHANGED: "🏷️",
   OUT_OF_STOCK: "⚠️",
+  LOW_STOCK: "⚠️",
   RESTOCK: "🟢",
   // Afiliados — programa / tienda
   STORE_PROGRAM_PAUSED: "⏸️",

@@ -75,9 +75,10 @@ export async function POST(req: NextRequest) {
           stock: parseInt(v.stock) || 0,
           price: v.price ? parseFloat(v.price) : null,
           sku: v.sku || null,
+          lowStockThreshold: v.lowStockThreshold ? parseInt(v.lowStockThreshold) : null,
         })),
       },
-    } as any,
+    },
     include: { variants: true },
   });
 

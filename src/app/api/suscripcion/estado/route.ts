@@ -20,7 +20,7 @@ export async function GET() {
       status,
       role: sub.role,
       plan: sub.plan,
-      tier: (sub as any).tier ?? "BASIC",
+      tier: sub.tier ?? "BASIC",
       daysLeft: daysRemaining(relevantDate),
       trialEndsAt: sub.trialEndsAt,
       currentPeriodEnd: sub.currentPeriodEnd,

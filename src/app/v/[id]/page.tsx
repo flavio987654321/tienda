@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import { MapPin, ExternalLink, ShoppingBag } from "lucide-react";
 
 export const dynamic = "force-dynamic";

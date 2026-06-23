@@ -113,7 +113,7 @@ function TestimonialCard({ t, loading, onApprove, onReject, isApproved = false }
           <div className="flex gap-0.5 mb-2">
               {[1,2,3,4,5].map((s) => <Star key={s} className={`h-3.5 w-3.5 ${s <= t.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-600"}`} />)}
             </div>
-          <p className="text-gray-300 text-sm leading-relaxed">"{t.text}"</p>
+          <p className="text-gray-300 text-sm leading-relaxed">&quot;{t.text}&quot;</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {!isApproved ? (

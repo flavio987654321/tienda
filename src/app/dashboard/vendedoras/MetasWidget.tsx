@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Target, Loader2, Check, X, Trash2, ChevronDown } from "lucide-react";
+import { Target, Loader2, Check, X, Trash2 } from "lucide-react";
 
 interface GoalData {
   id: string;

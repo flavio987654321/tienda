@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { AlertTriangle, Clock, CreditCard, X } from "lucide-react";
+import { AlertTriangle, Clock, CreditCard } from "lucide-react";
 import PaymentModal from "./PaymentModal";
 import { useAuth } from "@/components/AuthProvider";
 

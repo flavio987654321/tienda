@@ -112,9 +112,6 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   const rest      = others.filter(p => !sameBrand.includes(p) && !sameCat.includes(p));
   const similar   = [...sameBrand, ...sameCat, ...rest].slice(0, 4);
 
-  const headerLine = [año, km ? `${Number(km).toLocaleString("es-AR")} km` : null, condicion]
-    .filter(Boolean).join(" · ");
-
   const servicesRaw = attr(product, "Servicios");
   let servicesData: Record<string, boolean> = {};
   if (servicesRaw) { try { servicesData = JSON.parse(servicesRaw); } catch {} }

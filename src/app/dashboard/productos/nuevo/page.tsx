@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getStoreType } from "@/lib/storeTypes";
+import StockHistoryPanel from "../StockHistoryPanel";
 
 type ImageItem = { url: string; variantValue?: string };
 
@@ -46,6 +47,7 @@ interface Variant {
   stock: string;
   price: string;
   sku: string;
+  lowStockThreshold: string;
 }
 
 interface Attribute {
@@ -92,7 +94,7 @@ const MAX_PRODUCT_IMAGES = 5;
 function makeDefaultVariant(dimensions: string[]): Variant {
   const attrs: Record<string, string> = {};
   dimensions.forEach(d => { attrs[d] = ""; });
-  return { attrs, stock: "0", price: "", sku: "" };
+  return { attrs, stock: "0", price: "", sku: "", lowStockThreshold: "" };
 }
 const SINGLE_VARIANT_FALLBACK_VALUE = "Unico";
 
@@ -215,6 +217,7 @@ function prepareVariantsForSubmit(variants: Variant[]) {
         stock: v.stock.trim(),
         price: v.price.trim(),
         sku: v.sku.trim(),
+        lowStockThreshold: v.lowStockThreshold.trim(),
       };
     })
     .filter((v) => v.value || v.stock || v.price || v.sku);
@@ -289,7 +292,7 @@ function ProductoFormPage() {
   const [gender, setGender] = useState<"mujer" | "hombre" | "unisex">("unisex");
   const [customCategory, setCustomCategory] = useState("");
   const [customSubcategory, setCustomSubcategory] = useState("");
-  const [variants, setVariants] = useState<Variant[]>([{ attrs: { Talle: "" }, stock: "0", price: "", sku: "" }]);
+  const [variants, setVariants] = useState<Variant[]>([{ attrs: { Talle: "" }, stock: "0", price: "", sku: "", lowStockThreshold: "" }]);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [condicion, setCondicion] = useState<string>("Usado");
   const [precioMayorista, setPrecioMayorista] = useState("");
@@ -333,9 +336,10 @@ function ProductoFormPage() {
     fetch("/api/productos")
       .then((r) => r.json())
       .then((d) => {
-        const extraCats = (d.products || []).map((p: any) => p.category).filter(Boolean) as string[];
+        type RawCategoryProduct = { category?: string; subcategory?: string };
+        const extraCats = (d.products || []).map((p: RawCategoryProduct) => p.category).filter(Boolean) as string[];
         setProductCategories((prev) => Array.from(new Set([...prev, ...extraCats])));
-        const grouped = (d.products || []).reduce((acc: Record<string, string[]>, product: any) => {
+        const grouped = (d.products || []).reduce((acc: Record<string, string[]>, product: RawCategoryProduct) => {
           if (!product.category || !product.subcategory) return acc;
           acc[product.category] = Array.from(new Set([...(acc[product.category] || []), product.subcategory]));
           return acc;
@@ -378,16 +382,17 @@ function ProductoFormPage() {
         setCustomSubcategory(product.subcategory && !((productSubcategories[product.category] || []).includes(product.subcategory)) ? product.subcategory : "");
         setImages(
           safeJsonArray(product.images)
-            .map((item: any) =>
+            .map((item: string | { url?: string; variantValue?: string }) =>
               typeof item === "string" ? { url: item } : { url: item?.url || "", variantValue: item?.variantValue }
             )
             .filter((img: ImageItem) => img.url)
         );
         setReelUrls(safeJsonArray(product.reelUrls || "[]").filter((url) => typeof url === "string") as string[]);
         setCarouselIdx(0);
+        type RawVariant = { name: string; value: string; stock?: number; price?: number; sku?: string; lowStockThreshold?: number };
         setVariants(
           product.variants?.length
-            ? product.variants.map((v: any) => {
+            ? product.variants.map((v: RawVariant) => {
                 let attrs: Record<string, string> = {};
                 if (typeof v.name === "string" && v.name.startsWith("{")) {
                   try { attrs = JSON.parse(v.name); } catch {}
@@ -395,13 +400,20 @@ function ProductoFormPage() {
                 if (Object.keys(attrs).length === 0) {
                   attrs = { [v.name || "Variante"]: v.value || (product.variants.length === 1 ? SINGLE_VARIANT_FALLBACK_VALUE : "") };
                 }
-                return { attrs, stock: v.stock?.toString() || "0", price: v.price?.toString() || "", sku: v.sku || "" };
+                return {
+                  attrs,
+                  stock: v.stock?.toString() || "0",
+                  price: v.price?.toString() || "",
+                  sku: v.sku || "",
+                  lowStockThreshold: v.lowStockThreshold?.toString() || "",
+                };
               })
             : [makeDefaultVariant(getVariantOptions(store.tipoTienda || "ROPA").filter(o => o !== "Otro"))]
         );
         const allAttrs = safeJsonArray(product.attributes).filter(
-          (a: any) => a && typeof a.key === "string" && typeof a.value === "string"
-        ) as Attribute[];
+          (a: unknown): a is Attribute =>
+            !!a && typeof a === "object" && typeof (a as Attribute).key === "string" && typeof (a as Attribute).value === "string"
+        );
         const condAttr = allAttrs.find((a) => a.key === "Condición");
         if (condAttr) setCondicion(condAttr.value);
         const svcAttr = allAttrs.find((a) => a.key === "Servicios");
@@ -434,7 +446,7 @@ function ProductoFormPage() {
     markDirty();
   }
 
-  function updateVariantField(idx: number, field: "stock" | "price" | "sku", value: string) {
+  function updateVariantField(idx: number, field: "stock" | "price" | "sku" | "lowStockThreshold", value: string) {
     setVariants((p) => p.map((v, i) => (i === idx ? { ...v, [field]: value } : v)));
     markDirty();
   }
@@ -653,8 +665,6 @@ function ProductoFormPage() {
   const cardRadius = RADIUS_MAP[store.cardRadius] || "rounded-xl";
   const cardShadow = SHADOW_MAP[store.cardShadow] || "shadow-sm";
   const storeTypeConfig = getStoreType(store.tipoTienda || "ROPA");
-  const variantOptions = getVariantOptions(store.tipoTienda || "ROPA");
-  const variantDimensions = variantOptions.filter(o => o !== "Otro");
   const previewCategory = form.category === "otro" ? customCategory.trim() || "otro" : form.category;
   const previewSubcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
   const availableSubcategories = form.category === "otro" ? [] : productSubcategories[form.category] || [];
@@ -1218,6 +1228,20 @@ function ProductoFormPage() {
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
+                  <div className="w-24 shrink-0">
+                    <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center">
+                      Alerta stock
+                      <Tip text="Te avisamos por mail cuando el stock de esta variante baje a este número o menos. Dejalo vacío para usar el valor por defecto (5)." />
+                    </label>
+                    <input
+                      type="number"
+                      value={variant.lowStockThreshold}
+                      onChange={(e) => updateVariantField(idx, "lowStockThreshold", e.target.value)}
+                      min="0"
+                      placeholder="5"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
                   <div className="flex items-end pb-1 shrink-0">
                     {variants.length > 1 && (
                       <button
@@ -1240,6 +1264,8 @@ function ProductoFormPage() {
                 </div>
               )}
             </div>}
+
+            {isEditing && editingId && <StockHistoryPanel productId={editingId} />}
 
             {/* Ficha técnica / Atributos */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">

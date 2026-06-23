@@ -114,8 +114,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    console.error("VERIFICACION ERROR:", e?.message);
+  } catch (e) {
+    console.error("VERIFICACION ERROR:", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "No se pudo enviar la solicitud. Intentá de nuevo." }, { status: 500 });
   }
 }

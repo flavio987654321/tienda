@@ -265,18 +265,19 @@ export async function POST(req: NextRequest) {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
     );
-  } catch (e: any) {
-    if (e.message === "INSUFFICIENT_BALANCE" || e.message === "BALANCE_NEGATIVE") {
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "";
+    if (message === "INSUFFICIENT_BALANCE" || message === "BALANCE_NEGATIVE") {
       return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
     }
-    if (e.message === "PENDING_EXISTS") {
+    if (message === "PENDING_EXISTS") {
       return NextResponse.json(
         { error: "Ya tenés un retiro pendiente. Esperá que sea procesado antes de solicitar otro" },
         { status: 400 }
       );
     }
     // P2034 = serialization failure de Postgres (dos requests simultáneas a la misma wallet)
-    if (e.code === "P2034") {
+    if ((e as { code?: string })?.code === "P2034") {
       return NextResponse.json(
         { error: "Solicitud en conflicto. Intentá de nuevo en unos segundos." },
         { status: 409 }

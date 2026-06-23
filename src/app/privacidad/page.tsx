@@ -51,6 +51,17 @@ const CONTENT = {
           "Para enviarte alertas de pedidos, vencimientos y actividad de tu tienda.",
           "Para generar estadísticas de rendimiento de tu tienda.",
           "Para prevenir fraudes y actividades maliciosas.",
+          "Para que Sacha, nuestro asistente con inteligencia artificial, te dé recomendaciones sobre tu tienda (ver sección 2 ter).",
+        ],
+      },
+      {
+        title: "2 ter. Sacha, asistente con inteligencia artificial",
+        body: "Sacha es un asistente conversacional que te ayuda a entender cómo viene tu tienda y a usar el panel. Funciona con un modelo de inteligencia artificial de un tercero:",
+        list: [
+          "Qué le compartimos: datos agregados de tu tienda (nombre, tipo de rubro, cantidad de productos, ventas y pedidos de los últimos 30 días, estado de configuración del panel) y tu primer nombre. Nunca le compartimos datos personales de tus compradores (nombre, dirección, teléfono) ni datos bancarios (CBU/alias/CUIL) — solo si están configurados o no.",
+          "Quién lo procesa: Anthropic (proveedor del modelo Claude), bajo sus propios términos de procesamiento de datos. Política de privacidad: anthropic.com/privacy",
+          "Dónde queda la conversación: el historial del chat se guarda únicamente en tu navegador (localStorage) y se reinicia cada día. TiendaApps no guarda tus conversaciones con Sacha en su base de datos.",
+          "Es parte del servicio: a diferencia de la Verificación de identidad, el uso de Sacha no requiere un consentimiento separado, ya que no procesa datos sensibles ni datos personales de terceros — solo información agregada de tu propia tienda.",
         ],
       },
       {
@@ -75,7 +86,8 @@ const CONTENT = {
           "Supabase (supabase.com): gestión de autenticación, base de datos y almacenamiento de archivos (incluyendo documentos de verificación en bucket privado). Servidores en AWS us-east-1. Política de privacidad: supabase.com/privacy",
           "Vercel (vercel.com): hosting y ejecución de la plataforma. Servidores en AWS/Cloudflare. Política de privacidad: vercel.com/legal/privacy-policy",
           "Mercado Pago (mercadopago.com.ar): procesamiento de pagos de suscripción. Nunca almacenamos datos de tarjetas — Mercado Pago gestiona todo con cumplimiento PCI-DSS nivel 1. Política de privacidad: mercadopago.com.ar/privacidad",
-          "Nodemailer / SMTP: envío de emails transaccionales (confirmaciones, alertas). Solo se comparte el email necesario para cada mensaje.",
+          "Resend (resend.com): envío de emails transaccionales (confirmaciones, alertas). Solo se comparte el email necesario para cada mensaje. Política de privacidad: resend.com/legal/privacy-policy",
+          "Anthropic (anthropic.com): procesa los datos agregados de tu tienda para el funcionamiento de Sacha, nuestro asistente con IA. Ver sección 2 ter para el detalle de qué le compartimos. Política de privacidad: anthropic.com/privacy",
           "Autoridades competentes cuando sea requerido por ley.",
         ],
       },

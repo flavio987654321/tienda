@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  if (!(await checkRateLimit(`seguimiento:${ip}`, 30, 60_000))) {
+    return NextResponse.json({ error: "Demasiadas consultas. Esperá un momento." }, { status: 429 });
+  }
+
   const codigo = req.nextUrl.searchParams.get("codigo")?.trim().toUpperCase();
   if (!codigo || codigo.length < 6) {
     return NextResponse.json({ error: "Código inválido" }, { status: 400 });
@@ -20,7 +26,9 @@ export async function GET(req: NextRequest) {
       subtotal: true,
       discountAmount: true,
       shippingCost: true,
-      store: { select: { name: true, slug: true, logo: true } },
+      coupon: { select: { code: true } },
+      payment: { select: { provider: true, status: true } },
+      store: { select: { name: true, slug: true, logo: true, storeConfig: true } },
       items: {
         select: {
           quantity: true,
@@ -42,5 +50,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
   }
 
-  return NextResponse.json({ order });
+  let whatsapp: string | null = null;
+  try {
+    const cfg = JSON.parse(order.store.storeConfig || "{}");
+    if (cfg.whatsapp?.enabled && cfg.whatsapp?.number) whatsapp = cfg.whatsapp.number;
+  } catch { /* noop */ }
+
+  const { name, slug, logo } = order.store;
+  return NextResponse.json({ order: { ...order, store: { name, slug, logo, whatsapp } } });
 }

@@ -38,9 +38,9 @@ export default function TerminosAfiliados() {
             <h2 className="text-lg font-bold text-white mb-3">1. Partes del acuerdo</h2>
             <p>
               El presente acuerdo se celebra entre la persona que acepta estos términos
-              (en adelante <strong className="text-white">"el/la Afiliado/a"</strong>) y el/la titular de la tienda
-              a la cual el/la Afiliado/a se postula (en adelante <strong className="text-white">"el/la Titular"</strong>),
-              a través de la plataforma TiendaApps (en adelante <strong className="text-white">"la Plataforma"</strong>).
+              (en adelante <strong className="text-white">&quot;el/la Afiliado/a&quot;</strong>) y el/la titular de la tienda
+              a la cual el/la Afiliado/a se postula (en adelante <strong className="text-white">&quot;el/la Titular&quot;</strong>),
+              a través de la plataforma TiendaApps (en adelante <strong className="text-white">&quot;la Plataforma&quot;</strong>).
             </p>
             <p className="mt-3">
               Al marcar la casilla de aceptación al momento de postularse, el/la Afiliado/a declara haber
@@ -239,7 +239,7 @@ export default function TerminosAfiliados() {
               Ante un conflicto entre el/la Afiliado/a y el/la Titular (comisiones no pagadas, baja
               indebida, fraude u otros), cualquiera de las partes puede iniciar una disputa escribiendo
               a <strong className="text-white">marketplacemitienda@gmail.com</strong> con el asunto{" "}
-              <em>"Disputa de afiliado"</em>, detallando el reclamo y adjuntando evidencia relevante.
+              <em>&quot;Disputa de afiliado&quot;</em>, detallando el reclamo y adjuntando evidencia relevante.
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-400 mt-3">
               <li>TiendaApps revisará la disputa dentro de los <strong className="text-gray-300">5 días hábiles</strong> de recibida.</li>

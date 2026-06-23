@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
     const parsed = JSON.parse(product.images);
     images = Array.isArray(parsed)
       ? parsed
-          .map((i: any) => (typeof i === "string" ? i : i?.url ?? ""))
+          .map((i: unknown) => (typeof i === "string" ? i : (i as { url?: string })?.url ?? ""))
           .filter(Boolean)
       : [];
   } catch { /* empty */ }

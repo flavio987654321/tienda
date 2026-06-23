@@ -193,7 +193,6 @@ function PreciosContent() {
             { href: "/quienes-somos", label: "Quiénes somos" },
             { href: "/precios", label: "Precios" },
           ].map(({ href, label }) => {
-            const isActive = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href.replace("#", "").split("#")[0]) && href.includes("#") === false && href !== "/";
             const active = href === "/precios" ? pathname === "/precios" : href === "/quienes-somos" ? pathname === "/quienes-somos" : href === "/tiendas" ? pathname === "/tiendas" : false;
             return (
               <Link
@@ -321,7 +320,7 @@ function PreciosContent() {
                   { icon: Star, text: "Panel de ventas y estadísticas" },
                   { icon: Crown, text: "Premios por volumen de ventas" },
                   { icon: Mail, text: "Soporte por email" },
-                ].map(({ icon: Icon, text }) => (
+                ].map(({ text }) => (
                   <li key={text} className="flex items-start gap-2.5 text-sm text-gray-300">
                     <Check className="h-4 w-4 text-violet-400 shrink-0 mt-0.5" />
                     {text}

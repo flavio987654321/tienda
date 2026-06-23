@@ -14,8 +14,6 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { HandHeart } from "lucide-react";
 
-type Product = StorefrontProduct;
-
 const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
 
@@ -91,12 +89,11 @@ export default function FashionNoir() {
   const [announcementIdx,    setAnnouncementIdx]    = useState(0);
   const [openPolicyField,    setOpenPolicyField]    = useState<string | null>(null);
   const [activeSubcategory,  setActiveSubcategory]  = useState<string | null>(null);
-  const [hoveredCatMenu,     setHoveredCatMenu]     = useState<string | null>(null);
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
-  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
@@ -106,7 +103,7 @@ export default function FashionNoir() {
       return false;
     };
     const preventPinch = (e: TouchEvent) => { if (e.touches.length > 1 && !allowsPinch(e.target as Element)) e.preventDefault(); };
-    const preventGesture = (e: Event) => { if (!allowsPinch((e as any).target as Element)) e.preventDefault(); };
+    const preventGesture = (e: Event) => { if (!allowsPinch(e.target as Element)) e.preventDefault(); };
     document.addEventListener("touchmove", preventPinch, { passive: false });
     document.addEventListener("gesturestart", preventGesture as EventListener);
     document.addEventListener("gesturechange", preventGesture as EventListener);
@@ -135,8 +132,6 @@ export default function FashionNoir() {
     const base = cats.length > 0 ? cats : defaultCategories.slice(0, 6);
     return featuredCategories.length > 0 ? base.filter(c => featuredCategories.includes(c)) : base;
   }, [products, defaultCategories, featuredCategories]);
-
-  const CATEGORIES = useMemo(() => ["Todos", ...categoryList], [categoryList]);
 
   const subcategoriesFor = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -296,14 +291,14 @@ export default function FashionNoir() {
   useEffect(() => {
     if (!modalProduct || !selectedColor) return;
     const imgIdx = modalProduct.imageItems.findIndex(
-      (img: any) => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
+      (img) => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
     );
     if (imgIdx !== -1) setModalImg(imgIdx);
-    const colorVariants = modalProduct.variants.filter((v: any) => {
-      try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x: any) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
+    const colorVariants = modalProduct.variants.filter((v) => {
+      try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
     });
     if (!colorVariants.length) return;
-    const best = colorVariants.find((v: any) => v.stock > 0) ?? colorVariants[0];
+    const best = colorVariants.find((v) => v.stock > 0) ?? colorVariants[0];
     try {
       const a = JSON.parse(best.name);
       const sizeKey = Object.keys(a).find((k: string) => SIZE_ATTRS.includes(k.toLowerCase()));
@@ -316,25 +311,25 @@ export default function FashionNoir() {
   useEffect(() => {
     if (!modalProduct || !selectedSize) return;
     if (selectedColor) {
-      const hasCombo = modalProduct.variants.some((v: any) => {
+      const hasCombo = modalProduct.variants.some((v) => {
         try {
           const a = JSON.parse(v.name);
           if (typeof a !== "object") return false;
-          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          const vals = Object.values(a).map((x) => String(x).toLowerCase());
           return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
         } catch { return false; }
       });
       if (hasCombo) return;
     }
-    const sizeVariants = modalProduct.variants.filter((v: any) => {
+    const sizeVariants = modalProduct.variants.filter((v) => {
       try {
         const a = JSON.parse(v.name);
         if (typeof a !== "object") return false;
-        return Object.entries(a).some(([k, val]: any) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
+        return Object.entries(a).some(([k, val]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
       } catch { return false; }
     });
     if (!sizeVariants.length) return;
-    const best = sizeVariants.find((v: any) => v.stock > 0) ?? sizeVariants[0];
+    const best = sizeVariants.find((v) => v.stock > 0) ?? sizeVariants[0];
     try {
       const a = JSON.parse(best.name);
       const colorKey = Object.keys(a).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
@@ -343,7 +338,7 @@ export default function FashionNoir() {
         if (newColor !== selectedColor) {
           setSelectedColor(newColor);
           const imgIdx = modalProduct.imageItems.findIndex(
-            (img: any) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
+            (img) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
           );
           if (imgIdx !== -1) setModalImg(imgIdx);
         }
@@ -359,7 +354,7 @@ export default function FashionNoir() {
       try {
         const a = JSON.parse(v.name);
         if (a && typeof a === "object") {
-          const vals = Object.values(a).map((x: any) => String(x).toLowerCase());
+          const vals = Object.values(a).map((x) => String(x).toLowerCase());
           const sizeOk  = !selectedSize  || vals.includes(selectedSize.toLowerCase());
           const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
           return sizeOk && colorOk;
@@ -369,12 +364,6 @@ export default function FashionNoir() {
     }) ?? (modalProduct.variants.length === 1 ? modalProduct.variants[0] : null);
     return v?.stock ?? null;
   }, [modalProduct, selectedSize, selectedColor]);
-
-  const changeCategory = (cat: string, sub: string | null = null) => {
-    setActiveCategory(cat);
-    setActiveSubcategory(sub);
-    setVisibleCount(8);
-  };
 
   const changeGender = (g: string | null) => {
     setActiveGender(g);
@@ -390,7 +379,6 @@ export default function FashionNoir() {
     return true;
   });
   const filtered    = allFiltered.slice(0, visibleCount);
-  const hasMore     = visibleCount < allFiltered.length;
 
   /* ─ Colores base ─ */
   const G  = storeConfig?.colors.accent ?? "#c9a84c";  // gold / accent
@@ -514,7 +502,7 @@ export default function FashionNoir() {
             </div>
           )}
           {searchQuery.trim().length > 0 && searchResults.length === 0 && (
-            <p style={{ color:"rgba(240,235,227,0.4)", marginTop:32, fontSize:14 }}>Sin resultados para "{searchQuery}"</p>
+            <p style={{ color:"rgba(240,235,227,0.4)", marginTop:32, fontSize:14 }}>Sin resultados para &quot;{searchQuery}&quot;</p>
           )}
         </div>
       )}
@@ -866,7 +854,7 @@ export default function FashionNoir() {
         )}
         <div style={{ position:"relative", zIndex:1, padding:"72px 32px" }}>
           <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(20px,3.5vw,40px)", color:statementText, opacity:0.88, maxWidth:760, margin:"0 auto", lineHeight:1.5, fontStyle:"italic" }}>
-            <EditableZone field="quoteText" label="Frase destacada">"No compramos ropa. Compramos la versión de nosotros mismos que queremos ser."</EditableZone>
+            <EditableZone field="quoteText" label="Frase destacada">&quot;No compramos ropa. Compramos la versión de nosotros mismos que queremos ser.&quot;</EditableZone>
           </p>
           <div style={{ width:56, height:1, background:G, margin:"28px auto 0" }}/>
         </div>

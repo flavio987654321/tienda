@@ -264,7 +264,7 @@ export default function PolicyEditorModal({ field, onClose }: {
           flexShrink: 0,
         }}>
           <p style={{ margin: "0 0 12px", fontSize: 11, color: "rgba(248,250,252,0.26)", lineHeight: 1.5 }}>
-            Los cambios se guardan al presionar "Guardar cambios" en el editor de diseño.
+            Los cambios se guardan al presionar &quot;Guardar cambios&quot; en el editor de diseño.
           </p>
           <div style={{ display: "flex", gap: 8 }}>
             <button

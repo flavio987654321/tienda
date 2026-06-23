@@ -375,7 +375,7 @@ export default function QuienesSomosPage() {
               <Zap className="h-8 w-8 text-white" />
             </div>
             <h3 className="text-3xl font-black mb-4">
-              "El dueño genera empleo sin pagar sueldos.<br />El afiliado trabaja sin invertir capital."
+              &quot;El dueño genera empleo sin pagar sueldos.<br />El afiliado trabaja sin invertir capital.&quot;
             </h3>
             <p className="text-indigo-200 text-lg max-w-2xl mx-auto">
               Cuánto más tiempo le dedique el afiliado a compartir productos en sus redes,

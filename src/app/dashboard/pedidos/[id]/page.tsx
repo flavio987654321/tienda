@@ -5,7 +5,7 @@ import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
 import OrderActions from "@/components/orders/OrderActions";
 import { prisma } from "@/lib/prisma";
-import { ArrowLeft, Clock, Package, Truck, UserRound } from "lucide-react";
+import { ArrowLeft, Clock, MessageSquare, Package, Star, Truck, UserRound } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { money } from "@/lib/utils";
 import { statusLabel, statusClass, parseAddress } from "@/lib/orders";
@@ -34,6 +34,8 @@ export default async function PedidoDetailPage({ params }: Props) {
       shipping: true,
       affiliate: { include: { user: { select: { name: true, email: true } } } },
       commission: true,
+      coupon: { select: { code: true } },
+      reviews: { include: { product: { select: { name: true } } } },
       statusLogs: { orderBy: { changedAt: "asc" } },
     },
   });
@@ -102,6 +104,21 @@ export default async function PedidoDetailPage({ params }: Props) {
               </div>
             ))}
           </div>
+          {(order.discountAmount > 0 || order.shippingCost > 0) && (
+            <div className="mt-2 space-y-0.5 rounded-xl bg-gray-50 p-3 text-xs text-gray-500">
+              <p className="flex justify-between"><span>Subtotal</span><span>{money(order.subtotal)}</span></p>
+              {order.discountAmount > 0 && (
+                <p className="flex justify-between text-emerald-600">
+                  <span>Descuento{order.coupon ? ` (${order.coupon.code})` : ""}</span>
+                  <span>− {money(order.discountAmount)}</span>
+                </p>
+              )}
+              {order.shippingCost > 0 && (
+                <p className="flex justify-between"><span>Envío</span><span>{money(order.shippingCost)}</span></p>
+              )}
+              <p className="flex justify-between font-bold text-gray-800"><span>Total</span><span>{money(order.total)}</span></p>
+            </div>
+          )}
         </div>
 
         <div className="rounded-2xl border border-gray-100 bg-white p-5">
@@ -119,6 +136,15 @@ export default async function PedidoDetailPage({ params }: Props) {
               </p>
             )}
           </div>
+          {order.notes && (
+            <div className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
+              <p className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-amber-600">
+                <MessageSquare className="h-3.5 w-3.5" />
+                Nota del comprador
+              </p>
+              <p>{order.notes}</p>
+            </div>
+          )}
         </div>
 
         <div className="rounded-2xl border border-gray-100 bg-white p-5">
@@ -134,7 +160,13 @@ export default async function PedidoDetailPage({ params }: Props) {
               <div className="mt-3 rounded-lg bg-purple-50 p-2 text-purple-700">
                 <p className="font-semibold">Venta por afiliado</p>
                 <p>{order.affiliate.user.name || order.affiliate.user.email}</p>
-                <p>Comisión: {order.commission ? money(order.commission.amount) : "se genera al confirmar pago"}</p>
+                <p>
+                  Comisión: {order.commission
+                    ? `${money(order.commission.amount)} (${order.commission.rate}%)`
+                    : order.lockedCommissionRate !== null
+                      ? `se genera al confirmar pago (${order.lockedCommissionRate}%)`
+                      : "se genera al confirmar pago"}
+                </p>
               </div>
             ) : (
               <p className="mt-3 rounded-lg bg-gray-100 p-2 text-xs text-gray-500">Venta directa, sin comisión.</p>
@@ -142,6 +174,26 @@ export default async function PedidoDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {order.reviews.length > 0 && (
+        <div className="mt-5 rounded-2xl border border-gray-100 bg-white p-5">
+          <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400">
+            <Star className="h-3.5 w-3.5" />
+            Reseñas del comprador
+          </p>
+          <div className="space-y-2">
+            {order.reviews.map((review) => (
+              <div key={review.id} className="rounded-xl bg-gray-50 p-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-semibold text-gray-900">{review.product.name}</p>
+                  <span className="text-amber-500">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
+                </div>
+                {review.comment && <p className="mt-1 text-gray-600">{review.comment}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {order.statusLogs.length > 0 && (
         <div className="mt-5 rounded-2xl border border-gray-100 bg-white p-5">

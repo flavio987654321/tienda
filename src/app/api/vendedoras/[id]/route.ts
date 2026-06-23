@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
   if (action === "approve") {
     const sub = await prisma.subscription.findUnique({ where: { userId: ownerId }, select: { tier: true } });
-    if (!sub || (sub as any).tier !== "PREMIUM") {
+    if (!sub || sub.tier !== "PREMIUM") {
       const activeCount = await prisma.affiliate.count({
         where: { ownerId, status: "APPROVED", isActive: true },
       });
@@ -141,7 +141,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
   if (action === "reactivate") {
     const subR = await prisma.subscription.findUnique({ where: { userId: ownerId }, select: { tier: true } });
-    if (!subR || (subR as any).tier !== "PREMIUM") {
+    if (!subR || subR.tier !== "PREMIUM") {
       const activeCount = await prisma.affiliate.count({
         where: { ownerId, status: "APPROVED", isActive: true },
       });

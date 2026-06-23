@@ -10,8 +10,6 @@ import {
   Store, Star, BadgeCheck, CheckCircle2, Circle,
   AlertTriangle, Eye,
 } from "lucide-react";
-import { getUserSubscription } from "@/lib/subscription";
-
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -35,8 +33,6 @@ export default async function DashboardPage() {
     where: { id: store.id },
     select: { logo: true, isPublished: true, mpConnectedAt: true, storeConfig: true, description: true },
   });
-
-  const sub = await getUserSubscription(userId);
 
   const isAutos = store.tipoTienda === "AUTOS";
 

@@ -486,7 +486,7 @@ export default function PerfilPage() {
                 <div className="flex items-center justify-between py-1">
                   <div>
                     <p className="text-sm font-medium text-gray-700">Fecha de ingreso</p>
-                    <p className="text-xs text-gray-400">Ej: "Vendedor desde junio 2024"</p>
+                    <p className="text-xs text-gray-400">Ej: &quot;Vendedor desde junio 2024&quot;</p>
                   </div>
                   <Toggle checked={verifStore.verifiedShowSince} onChange={(v) => handleToggle("verifiedShowSince", v)} disabled={toggleDisabled} />
                 </div>
@@ -525,7 +525,7 @@ export default function PerfilPage() {
                     <BadgeCheck className="h-5 w-5 text-blue-600 shrink-0" />
                     <div>
                       <p className="text-sm font-semibold text-blue-800">Identidad verificada</p>
-                      <p className="text-xs text-blue-600">Tu tienda tiene el badge azul. Activá los toggles en "Datos personales" para elegir qué se muestra al público.</p>
+                      <p className="text-xs text-blue-600">Tu tienda tiene el badge azul. Activá los toggles en &quot;Datos personales&quot; para elegir qué se muestra al público.</p>
                     </div>
                   </div>
 

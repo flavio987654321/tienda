@@ -37,8 +37,8 @@ export default function SoportePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Error al enviar");
       setSent(true);
-    } catch (err: any) {
-      setError(err.message ?? "No se pudo enviar. Intentá de nuevo.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo enviar. Intentá de nuevo.");
     } finally {
       setSending(false);
     }

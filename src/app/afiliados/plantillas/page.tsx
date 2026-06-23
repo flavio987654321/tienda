@@ -83,7 +83,7 @@ const TEMPLATES: Template[] = [
     platform: "instagram",
     tone: "casual",
     label: "Caption para feed",
-    text: ({ storeName, link, productName }) =>
+    text: ({ storeName, productName }) =>
       `¿Buscando algo lindo? 😍\n\n${productName ? `${productName} de @${storeName.toLowerCase().replace(/\s+/g, "")}` : `La tienda de ${storeName}`} tiene exactamente lo que necesitás ✨\n\nLink en bio para ver todo 👆\n\n#moda #estilo #compraonline #${storeName.toLowerCase().replace(/\s+/g, "")}`,
   },
   {
@@ -99,7 +99,7 @@ const TEMPLATES: Template[] = [
     platform: "instagram",
     tone: "urgente",
     label: "Caption oferta",
-    text: ({ storeName, link, productName, productPrice }) =>
+    text: ({ storeName, productName, productPrice }) =>
       `🔥 PRECIO INCREÍBLE 🔥\n\n${productName ? `${productName}` : "Estos productos"} en ${storeName}\n${productPrice ? `Solo $${productPrice} 💸` : ""}\n\n⏰ Stock limitado — Link en bio!\n\n#oferta #descuento #${storeName.toLowerCase().replace(/\s+/g, "")} #moda`,
   },
   // Telegram
@@ -219,7 +219,8 @@ export default function PlantillasPage() {
     fetch("/api/vendedoras/wallet")
       .then((r) => r.json())
       .then((d) => {
-        const active = (d.affiliates ?? []).filter((a: any) => a.isActive && a.status === "APPROVED");
+        type RawAffiliate = AffiliateData & { isActive: boolean; status: string };
+        const active = (d.affiliates ?? []).filter((a: RawAffiliate) => a.isActive && a.status === "APPROVED");
         setAffiliates(active);
         setSelectedAffId(active[0]?.id ?? "");
         setLoading(false);

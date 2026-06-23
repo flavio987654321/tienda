@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { getNivelActual, getNivelLabel, getNivelColor, getCategoriaLabel, calcularRachaDiamante } from "@/lib/rewards";
+import { getNivelActual, getNivelLabel, getNivelColor, getCategoriaLabel, calcularRachaDiamante, type RewardLevel, type StoreCategoria } from "@/lib/rewards";
 
 export async function GET() {
   const currentUser = await getCurrentUser();
@@ -19,9 +19,9 @@ export async function GET() {
     select: { id: true },
   });
 
-  let nivelActual   = "BRONZE";
+  let nivelActual: RewardLevel = "BRONZE";
   let esMayorista   = false;
-  let categoria     = "RETAIL";
+  let categoria: StoreCategoria = "RETAIL";
   let rachaDiamante = 0;
 
   if (affiliates.length > 0) {
@@ -42,12 +42,12 @@ export async function GET() {
   return NextResponse.json({
     cupones,
     nivelActual,
-    nivelLabel:     getNivelLabel(nivelActual as any),
-    nivelColor:     getNivelColor(nivelActual as any),
+    nivelLabel:     getNivelLabel(nivelActual),
+    nivelColor:     getNivelColor(nivelActual),
     plan:           subscription?.plan ?? "MONTHLY",
     rachaDiamante,
     esMayorista,
     categoria,
-    categoriaLabel: getCategoriaLabel(categoria as any),
+    categoriaLabel: getCategoriaLabel(categoria),
   });
 }

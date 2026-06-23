@@ -128,8 +128,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    console.error("WEBHOOK ERROR:", e?.message);
+  } catch (e) {
+    console.error("WEBHOOK ERROR:", e instanceof Error ? e.message : e);
     return NextResponse.json({ ok: true }); // Siempre 200 para que MP no reintente
   }
 }

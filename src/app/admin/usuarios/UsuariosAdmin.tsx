@@ -18,7 +18,7 @@ function getTierLabel(sub: Sub): string {
   return "Tienda Pro";
 }
 
-type User = {
+export type User = {
   id: string;
   name: string | null;
   email: string;

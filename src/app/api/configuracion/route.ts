@@ -451,7 +451,6 @@ export async function PATCH(req: NextRequest) {
           affiliateEmail: affiliate.email,
           affiliateName: affiliate.name || "afiliada",
           storeName: prevStore.name,
-          storeSlug: prevStore.slug,
           commissionRate: prevStore.commissionRate,
         }).catch((err) => console.error("[email] sendNewStorePublishedEmail failed:", err));
       }

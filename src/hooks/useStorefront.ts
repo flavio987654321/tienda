@@ -106,7 +106,24 @@ const DEMO_PRODUCTS_AUTOS: StorefrontProduct[] = [
 function isSize (name: string) { return SIZE_ATTRS.includes(name.toLowerCase()); }
 function isColor(name: string) { return COLOR_ATTRS.includes(name.toLowerCase()); }
 
-function mapProduct(raw: any): StorefrontProduct {
+type RawProduct = {
+  id: string;
+  name: string;
+  price: number;
+  comparePrice?: number | null;
+  precioMayorista?: number | null;
+  cantMinMayorista?: number | null;
+  category?: string;
+  subcategory?: string;
+  gender?: string;
+  description?: string | null;
+  images?: string;
+  reelUrls?: string;
+  attributes?: string;
+  variants?: StorefrontVariant[];
+};
+
+function mapProduct(raw: RawProduct): StorefrontProduct {
   const variants: StorefrontVariant[] = (raw.variants ?? []);
   const sizesSet  = new Set<string>();
   const colorsSet = new Set<string>();

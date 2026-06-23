@@ -19,7 +19,6 @@ const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","
 const BG  = "#faf7f2";
 const S   = "#f0e9df";
 const T   = "#2c2218";
-const A   = "#b5652a";
 const MID = "#9a8070";
 
 type Product = StorefrontProduct;
@@ -38,7 +37,7 @@ export default function BohoTerra() {
   const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
-  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
 
   const storeConfig = useStoreConfig();
@@ -60,8 +59,6 @@ export default function BohoTerra() {
     const base = cats.length > 0 ? cats : defaultCategories.slice(0, 6);
     return featuredCategories.length > 0 ? base.filter(c => featuredCategories.includes(c)) : base;
   }, [products, defaultCategories, featuredCategories]);
-  const CATEGORIES = useMemo(() => ["Todos", ...categoryList], [categoryList]);
-
   // eslint-disable-next-line @typescript-eslint/no-shadow
   const A = storeConfig?.colors.accent ?? "#b5652a";
   const sc = storeConfig?.sectionColors ?? {};
@@ -363,7 +360,6 @@ export default function BohoTerra() {
     return map;
   }, [products]);
 
-  const changeCategory = (cat:string) => { setActiveCategory(cat); setCarouselIdx(0); };
   const changeGender = (g: string | null) => { setActiveGender(g); setActiveCategory("Todos"); setCarouselIdx(0); };
 
   const allFiltered = products.filter(p => {

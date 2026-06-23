@@ -107,7 +107,8 @@ export default function PedidosPage() {
     fetch("/api/vendedoras/wallet")
       .then((r) => r.json())
       .then((d) => {
-        const uniqueStores: StoreOption[] = (d.affiliates ?? []).map((a: any) => ({
+        type RawAffiliate = { store?: { id?: string; name?: string } };
+        const uniqueStores: StoreOption[] = (d.affiliates ?? []).map((a: RawAffiliate) => ({
           id: a.store?.id ?? "",
           name: a.store?.name ?? "",
         }));

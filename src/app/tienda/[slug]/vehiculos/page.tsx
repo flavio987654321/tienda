@@ -7,18 +7,32 @@ import { VehicleCard, VehicleModal, AM_MODAL_CSS } from "@/components/store/auto
 import { getContrastColor } from "@/contexts/EditContext";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 
-function mapVehicle(raw: any): StorefrontProduct {
+type RawVehicle = {
+  id: string;
+  name: string;
+  price: number;
+  comparePrice?: number | null;
+  category?: string;
+  description?: string | null;
+  images?: string;
+  attributes?: string;
+  reelUrls?: string;
+  variants?: StorefrontProduct["variants"];
+  badge?: string;
+};
+
+function mapVehicle(raw: RawVehicle): StorefrontProduct {
   let images: string[] = [];
   let imageItems: { url: string }[] = [];
   try {
     const parsed = JSON.parse(raw.images || "[]");
-    imageItems = parsed.map((img: any) => typeof img === "string" ? { url: img } : { url: img?.url ?? "" }).filter((x: any) => x.url);
+    imageItems = parsed.map((img: string | { url?: string }) => typeof img === "string" ? { url: img } : { url: img?.url ?? "" }).filter((x: { url: string }) => x.url);
     images = imageItems.map(x => x.url);
   } catch {}
   let attributes: { key: string; value: string }[] = [];
   try {
     const parsed = JSON.parse(raw.attributes || "[]");
-    attributes = Array.isArray(parsed) ? parsed.filter((a: any) => a?.key) : [];
+    attributes = Array.isArray(parsed) ? parsed.filter((a: { key?: string }) => a?.key) : [];
   } catch {}
   let reelUrls: string[] = [];
   try {
@@ -375,7 +389,7 @@ function VehiculosPageInner() {
             </p>
             <div className="st-scroll" style={{ display:"flex", gap:20, overflowX:"auto",
               paddingBottom:12, paddingTop:12, paddingLeft:4, paddingRight:4,
-              WebkitOverflowScrolling:"touch" as any, scrollSnapType:"x mandatory" }}>
+              WebkitOverflowScrolling:"touch", scrollSnapType:"x mandatory" } as React.CSSProperties}>
               {/* Chip "Todas" */}
               {/* Chip "Todas" — círculo de color con drop-shadow flotante */}
               {(() => {
@@ -467,7 +481,7 @@ function VehiculosPageInner() {
             {/* Tabs de categoría */}
             {categories.length > 0 && (
               <div className="st-scroll" style={{ display:"flex", gap:8, flexWrap:"nowrap", overflowX:"auto",
-                WebkitOverflowScrolling:"touch" as any }}>
+                WebkitOverflowScrolling:"touch" } as React.CSSProperties}>
                 {categories.map(cat => {
                   const isActive = activeCategory === cat;
                   return (
