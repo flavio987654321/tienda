@@ -1,1 +1,0 @@
-ALTER TABLE "DonationCampaign" ADD COLUMN IF NOT EXISTS "reminderSentAt" TIMESTAMP(3);

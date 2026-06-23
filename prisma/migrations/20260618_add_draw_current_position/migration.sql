@@ -1,2 +1,0 @@
-ALTER TABLE "DonationDraw"
-  ADD COLUMN IF NOT EXISTS "currentPosition" INTEGER NOT NULL DEFAULT 1;

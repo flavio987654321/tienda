@@ -1,1 +1,0 @@
-ALTER TABLE "Store" ADD COLUMN IF NOT EXISTS "previewImage" TEXT;
