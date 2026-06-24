@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
@@ -10,7 +11,7 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
-import { WaIcon, VehicleCard, VehicleModal, AM_MODAL_CSS } from "@/components/store/auto/AutoVehicleShared";
+import { WaIcon, VehicleCard, VehicleModal, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 
 function smoothScrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -98,7 +99,8 @@ export default function AutoMotor() {
   const navTextMid     = navDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.45)";
   const navBorderColor = navDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.12)";
 
-  const { user, signOut } = useAuth();
+  const { user, status, signOut } = useAuth();
+  const router = useRouter();
   const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
   const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const [menuOpen,         setMenuOpen]         = useState(false);
@@ -108,6 +110,10 @@ export default function AutoMotor() {
   const [showReport, setShowReport] = useState(false);
   const [annIdx,     setAnnIdx]     = useState(0);
   const [annVisible, setAnnVisible] = useState(true);
+  const [favorites,     setFavorites]     = useState<string[]>([]);
+  const [favoritesOpen, setFavoritesOpen] = useState(false);
+  const [searchOpen,    setSearchOpen]    = useState(false);
+  const [searchQuery,   setSearchQuery]   = useState("");
 
   const DEFAULTS = ["🚗 Financiación en cuotas", "🔧 Vehículos inspeccionados", "🚚 Entrega en todo el país"];
   const promoBannerEnabled = config?.promoBanner?.enabled !== false;
@@ -140,6 +146,50 @@ export default function AutoMotor() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Cargar favoritos: desde API si está logueado, desde localStorage si no
+  useEffect(() => {
+    if (status === "loading") return;
+    if (status === "authenticated") {
+      fetch("/api/favoritos")
+        .then(r => r.ok ? r.json() : [])
+        .then((data: { productId: string }[]) => setFavorites(data.map(f => f.productId)))
+        .catch(() => {});
+    } else {
+      try {
+        const savedFavs = localStorage.getItem("storefront_favorites");
+        if (savedFavs) setFavorites(JSON.parse(savedFavs));
+      } catch {}
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (status === "authenticated") return;
+    try { localStorage.setItem("storefront_favorites", JSON.stringify(favorites)); } catch {}
+  }, [favorites, status]);
+
+  async function toggleFavorite(id: string) {
+    if (status !== "authenticated") {
+      router.push(`/login?redirect=/tienda/${config?.slug}`);
+      return;
+    }
+    setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
+    try {
+      await fetch("/api/favoritos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: id }),
+      });
+    } catch {
+      setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
+    }
+  }
+
+  const favoriteProducts = products.filter(p => favorites.includes(p.id));
+  const searchResults = searchQuery.trim().length > 0
+    ? products.filter(p => p.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
+        || p.category?.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : [];
 
   const visible = products.slice(0, 8);
   const hasMore = products.length > 8;
@@ -224,8 +274,17 @@ export default function AutoMotor() {
               Ver todos
             </Link>
           </div>
-          {/* Grupo derecho — campanita + usuario + menú mobile */}
+          {/* Grupo derecho — búsqueda + favoritos + campanita + usuario + menú mobile */}
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+            <button onClick={() => setSearchOpen(true)}
+              style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <button onClick={() => setFavoritesOpen(true)}
+              style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              {favorites.length > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
+            </button>
             {pushBell && config?.showPushBell && !isPreview && (
               <StoreFollowButton storeSlug={config?.slug ?? ""} color={navTextMid} size={20} />
             )}
@@ -441,7 +500,8 @@ export default function AutoMotor() {
             <div className="am-grid">
               {visible.map(p => (
                 <VehicleCard key={p.id} product={p} accent={accent} currency={currency}
-                  theme={catTheme} onClick={() => setSelected(p)} />
+                  theme={catTheme} onClick={() => setSelected(p)}
+                  isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
               ))}
             </div>
           ) : (
@@ -627,10 +687,80 @@ export default function AutoMotor() {
 
       {showReport && <ReportStoreModal slug={config?.slug ?? ""} onClose={() => setShowReport(false)} />}
 
+      {/* ── SEARCH OVERLAY ── */}
+      {searchOpen && (
+        <div style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(255,255,255,0.97)", backdropFilter:"blur(8px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:120 }}>
+          <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
+            style={{ position:"absolute", top:24, right:32, background:"none", border:"none", color:"#111", fontSize:28, cursor:"pointer", lineHeight:1 }}>×</button>
+          <div style={{ width:"100%", maxWidth:640, padding:"0 24px" }}>
+            <input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Buscar vehículos..."
+              style={{ width:"100%", background:"transparent", border:"none", borderBottom:`2px solid ${accent}`, color:"#111", fontSize:24, padding:"12px 0", outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
+          </div>
+          {searchResults.length > 0 && (
+            <div style={{ width:"100%", maxWidth:880, padding:"24px 24px 0", overflowY:"auto", maxHeight:"calc(100vh - 260px)" }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:16 }}>
+                {searchResults.map(p => (
+                  <button key={p.id} onClick={() => { setSelected(p); setSearchOpen(false); setSearchQuery(""); }}
+                    style={{ background:"none", border:"1px solid #e0e0e0", borderRadius:6, cursor:"pointer", textAlign:"left", padding:0, color:"#111", overflow:"hidden" }}>
+                    <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover", display:"block", background:"#f5f5f5" }} />
+                    <div style={{ padding:"10px 12px" }}>
+                      <p style={{ fontSize:13, fontWeight:600, margin:"0 0 4px" }}>{p.name}</p>
+                      <p style={{ fontSize:13, color:accent, fontWeight:700, margin:0 }}>{fmtPrice(p.price, currency)}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {searchQuery.trim().length > 0 && searchResults.length === 0 && (
+            <p style={{ color:"#888", marginTop:32, fontSize:14 }}>Sin resultados para &ldquo;{searchQuery}&rdquo;</p>
+          )}
+        </div>
+      )}
+
+      {/* ── FAVORITOS DRAWER ── */}
+      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 205, pointerEvents: favoritesOpen ? "auto" : "none" }}>
+        <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.4)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }} />
+        <div style={{ position:"absolute", top:0, right:0, bottom:0, width:400, maxWidth:"100vw", background:"#fff", transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:"1px solid #e5e5e5" }}>
+          <div style={{ padding:"20px 24px 14px", borderBottom:"1px solid #f0f0f0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <p style={{ fontWeight:700, fontSize:16, margin:0, color:"#111" }}>Favoritos <span style={{ fontWeight:400, fontSize:13, color:"#888" }}>({favorites.length})</span></p>
+            <button onClick={() => setFavoritesOpen(false)} style={{ background:"none", border:"none", color:"#111", fontSize:22, cursor:"pointer" }}>×</button>
+          </div>
+          <div style={{ flex:1, overflowY:"auto", padding:"14px 24px" }}>
+            {favoriteProducts.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"52px 0", color:"#888" }}>
+                <p style={{ fontSize:32, marginBottom:12 }}>♡</p>
+                <p style={{ fontSize:13, lineHeight:1.8 }}>No tenés favoritos aún.<br/>Explorá el catálogo.</p>
+              </div>
+            ) : favoriteProducts.map(product => (
+              <div key={product.id} style={{ display:"flex", gap:14, padding:"14px 0", borderBottom:"1px solid #f5f5f5" }}>
+                <img src={product.images[0] ?? ""} alt="" style={{ width:80, height:60, objectFit:"cover", borderRadius:4, flexShrink:0, background:"#f5f5f5" }} />
+                <div style={{ flex:1 }}>
+                  <p style={{ fontSize:14, fontWeight:600, margin:"0 0 4px", color:"#111" }}>{product.name}</p>
+                  <p style={{ fontSize:13, color:accent, fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button onClick={() => { setFavoritesOpen(false); setSelected(product); }}
+                      style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111", border:"none", borderRadius:4, padding:"7px 14px", fontSize:11, fontWeight:600, cursor:"pointer" }}>
+                      Ver
+                    </button>
+                    <button onClick={() => toggleFavorite(product.id)}
+                      style={{ background:"transparent", color:"#888", border:"1px solid #ddd", borderRadius:4, padding:"7px 14px", fontSize:11, cursor:"pointer" }}>
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {selected && (
         <VehicleModal product={selected} accent={accent} currency={currency}
           whatsapp={whatsapp} products={products}
-          onClose={() => setSelected(null)} onSelect={p => setSelected(p)} />
+          onClose={() => setSelected(null)} onSelect={p => setSelected(p)}
+          isFavorite={favorites.includes(selected.id)} onToggleFavorite={() => toggleFavorite(selected.id)} />
       )}
 
       {!editMode && whatsapp.enabled && whatsapp.number && (

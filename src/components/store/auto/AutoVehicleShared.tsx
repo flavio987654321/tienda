@@ -65,12 +65,14 @@ export const AM_MODAL_CSS = `
   }
 `;
 
-export function VehicleModal({ product, accent, currency, whatsapp, products, onClose, onSelect }: {
+export function VehicleModal({ product, accent, currency, whatsapp, products, onClose, onSelect, isFavorite, onToggleFavorite }: {
   product: StorefrontProduct; accent: string; currency: string;
   whatsapp: { enabled: boolean; number: string };
   products: StorefrontProduct[];
   onClose: () => void;
   onSelect: (p: StorefrontProduct) => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }) {
   const [imgIdx, setImgIdx] = useState(0);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -164,12 +166,22 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
               <span style={{ fontSize: 12, color: "#bbb" }}>{product.category}</span>
             )}
           </div>
-          <button onClick={onClose}
-            style={{ background: "#f5f5f5", border: "none", cursor: "pointer",
-              width: 32, height: 32, borderRadius: "50%", fontSize: 18,
-              display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>
-            ×
-          </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+            {onToggleFavorite && (
+              <button onClick={onToggleFavorite}
+                style={{ background: "#f5f5f5", border: "none", cursor: "pointer",
+                  width: 32, height: 32, borderRadius: "50%",
+                  display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width={16} height={16} viewBox="0 0 24 24" fill={isFavorite ? accent : "none"} stroke={isFavorite ? accent : "#666"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              </button>
+            )}
+            <button onClick={onClose}
+              style={{ background: "#f5f5f5", border: "none", cursor: "pointer",
+                width: 32, height: 32, borderRadius: "50%", fontSize: 18,
+                display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>
+              ×
+            </button>
+          </div>
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
@@ -499,9 +511,10 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   );
 }
 
-export function VehicleCard({ product, accent, currency, theme = "light", onClick }: {
+export function VehicleCard({ product, accent, currency, theme = "light", onClick, isFavorite, onToggleFavorite }: {
   product: StorefrontProduct; accent: string; currency: string;
   theme?: "dark" | "light"; onClick: () => void;
+  isFavorite?: boolean; onToggleFavorite?: () => void;
 }) {
   const [hov, setHov] = useState(false);
   const img = product.images[0]
@@ -544,11 +557,19 @@ export function VehicleCard({ product, accent, currency, theme = "light", onClic
           </div>
         )}
         {condicion && (
-          <div style={{ position: "absolute", top: 10, right: 10,
+          <div style={{ position: "absolute", bottom: 10, right: 10,
             background: "rgba(0,0,0,0.55)", color: "#fff",
             fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 20 }}>
             {condicion}
           </div>
+        )}
+        {onToggleFavorite && (
+          <button onClick={e => { e.stopPropagation(); onToggleFavorite(); }}
+            style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.9)",
+              border: "none", cursor: "pointer", width: 30, height: 30, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width={15} height={15} viewBox="0 0 24 24" fill={isFavorite ? accent : "none"} stroke={isFavorite ? accent : "#666"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
         )}
       </div>
       <div style={{ padding: "14px 16px 16px", flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
