@@ -10,6 +10,7 @@ import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, get
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
+import ReportStoreModal from "@/components/store/ReportStoreModal";
 import type { ImageOverride } from "@/types/store-config";
 
 function smoothScrollTo(id: string) {
@@ -174,6 +175,7 @@ export default function CasaClara() {
 
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const NAV_H = 60;
 
   useEffect(() => {
@@ -336,7 +338,7 @@ export default function CasaClara() {
                   <select value={categoryId} onClick={e => e.stopPropagation()}
                     onChange={e => setOverride(catKey, { text: e.target.value })}
                     title="A qué categoría apunta este link"
-                    style={{ position:"absolute", top:-2, right:2, zIndex:2, fontSize:9, border:"1px solid #111", borderRadius:4, background:"#fff", color:"#111", cursor:"pointer", padding:"1px 2px" }}>
+                    style={{ position:"absolute", top:-2, right:2, zIndex:2, fontSize:10, border:"1px solid #111", borderRadius:4, background:"#fff", color:"#111", cursor:"pointer", padding:"2px 4px" }}>
                     {CATEGORY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                   </select>
                 )}
@@ -460,8 +462,18 @@ export default function CasaClara() {
           {[["Política de devoluciones","devoluciones"],["Política de envíos","envios"],["Términos y condiciones","terminos"]].map(([label, tipo]) => (
             <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:"#bbb", textDecoration:"none" }}>{label}</a>
           ))}
+          {!editMode && !isPreview && (
+            <button onClick={() => setShowReport(true)}
+              style={{ fontSize:10, color:"#bbb", background:"none", border:"none", cursor:"pointer", padding:0, textDecoration:"underline" }}>
+              Reportar tienda
+            </button>
+          )}
         </div>
       </footer>
+
+      {showReport && (
+        <ReportStoreModal slug={config?.slug ?? ""} onClose={() => setShowReport(false)} />
+      )}
 
       {/* ── FAVORITOS DRAWER ── */}
       <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 205, pointerEvents: favoritesOpen ? "auto" : "none" }}>

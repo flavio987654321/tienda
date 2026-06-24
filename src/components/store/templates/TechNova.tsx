@@ -10,6 +10,7 @@ import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, get
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
+import ReportStoreModal from "@/components/store/ReportStoreModal";
 import type { ImageOverride } from "@/types/store-config";
 
 function smoothScrollTo(id: string) {
@@ -117,10 +118,20 @@ function ProductCard({ product, href, currency, isFavorite, onToggleFavorite }: 
 }
 
 const CONFIANZA = [
-  { fv: "trust1Title", fl: "trust1Desc", icon: "💳", t: "Cuotas", d: "Con tu tarjeta de crédito" },
-  { fv: "trust2Title", fl: "trust2Desc", icon: "🛡️", t: "Garantía", d: "Oficial en todo el catálogo" },
-  { fv: "trust3Title", fl: "trust3Desc", icon: "⚡", t: "Stock real", d: "Lo que ves es lo que hay" },
-  { fv: "trust4Title", fl: "trust4Desc", icon: "🚚", t: "Envíos", d: "A todo el país" },
+  { fv: "trust1Title", fl: "trust1Desc", iconDefault: 0, t: "Cuotas", d: "Con tu tarjeta de crédito" },
+  { fv: "trust2Title", fl: "trust2Desc", iconDefault: 1, t: "Garantía", d: "Oficial en todo el catálogo" },
+  { fv: "trust3Title", fl: "trust3Desc", iconDefault: 4, t: "Stock real", d: "Lo que ves es lo que hay" },
+  { fv: "trust4Title", fl: "trust4Desc", iconDefault: 3, t: "Envíos", d: "A todo el país" },
+];
+
+// Íconos cambiables con el botón "↻" en modo edición (mismo patrón que FashionNoir/AutoDrive)
+const TRUST_ICONS: React.ReactNode[] = [
+  <svg key="card" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>,
+  <svg key="shield" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+  <svg key="store" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M3 9a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0"/><path d="M4 9v10h16V9"/></svg>,
+  <svg key="truck" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+  <svg key="bolt" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  <svg key="gift" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
 ];
 
 export default function TechNova() {
@@ -233,6 +244,7 @@ export default function TechNova() {
 
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [annIdx, setAnnIdx]     = useState(0);
   const [annVisible, setAnnVisible] = useState(true);
   const depScrollRef     = useRef<HTMLDivElement>(null);
@@ -509,13 +521,24 @@ export default function TechNova() {
         <SectionOverlay ov={trustImg} />
         <EditableSectionBg field="bgConfianza" label="Fondo confianza" />
         <div className="tn-trust-grid" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"grid", gap:14 }}>
-          {CONFIANZA.map((c, i) => (
-            <div key={i} style={{ textAlign:"center", padding:"28px 18px", borderRadius:16, border:`1.5px solid ${accent}25`, background: trustText==="#ffffff" ? "rgba(255,255,255,0.04)" : "#fff" }}>
-              <div style={{ fontSize:30, marginBottom:10 }}>{c.icon}</div>
-              <p style={{ margin:"0 0 4px", fontSize:13.5, fontWeight:700, color:trustText }}><EditableZone field={c.fv} label={`Sello ${i+1} título`}>{c.t}</EditableZone></p>
-              <p style={{ margin:0, fontSize:11.5, color:trustMid }}><EditableZone field={c.fl} label={`Sello ${i+1} descripción`}>{c.d}</EditableZone></p>
-            </div>
-          ))}
+          {CONFIANZA.map((c, i) => {
+            const iconIdx = Math.abs(parseInt(overrides[`trust${i+1}IconIdx`]?.text ?? String(c.iconDefault)) || 0) % TRUST_ICONS.length;
+            const nextIdx = (iconIdx + 1) % TRUST_ICONS.length;
+            return (
+              <div key={i} style={{ textAlign:"center", padding:"28px 18px", borderRadius:16, border:`1.5px solid ${accent}25`, background: trustText==="#ffffff" ? "rgba(255,255,255,0.04)" : "#fff" }}>
+                <div style={{ marginBottom:10, color:accent, position:"relative", display:"inline-flex" }}>
+                  {TRUST_ICONS[iconIdx]}
+                  {editMode && (
+                    <button onClick={() => setOverride(`trust${i+1}IconIdx`, { text: String(nextIdx) })} title="Cambiar ícono"
+                      style={{ position:"absolute", inset:-6, background:"rgba(124,58,237,0.9)", border:"none", borderRadius:4, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:11, opacity:0, transition:"opacity 0.15s" }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
+                  )}
+                </div>
+                <p style={{ margin:"0 0 4px", fontSize:13.5, fontWeight:700, color:trustText }}><EditableZone field={c.fv} label={`Sello ${i+1} título`}>{c.t}</EditableZone></p>
+                <p style={{ margin:0, fontSize:11.5, color:trustMid }}><EditableZone field={c.fl} label={`Sello ${i+1} descripción`}>{c.d}</EditableZone></p>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -690,8 +713,18 @@ export default function TechNova() {
           {[["Política de devoluciones","devoluciones"],["Política de envíos","envios"],["Términos y condiciones","terminos"]].map(([label, tipo]) => (
             <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:ftMid, opacity:0.6, textDecoration:"none" }}>{label}</a>
           ))}
+          {!editMode && !isPreview && (
+            <button onClick={() => setShowReport(true)}
+              style={{ fontSize:10, color:ftMid, opacity:0.6, background:"none", border:"none", cursor:"pointer", padding:0, textDecoration:"underline" }}>
+              Reportar tienda
+            </button>
+          )}
         </div>
       </footer>
+
+      {showReport && (
+        <ReportStoreModal slug={config?.slug ?? ""} onClose={() => setShowReport(false)} />
+      )}
 
       {/* ── FAVORITOS DRAWER ── */}
       <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 205, pointerEvents: favoritesOpen ? "auto" : "none" }}>

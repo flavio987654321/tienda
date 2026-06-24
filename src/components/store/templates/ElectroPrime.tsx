@@ -10,6 +10,7 @@ import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, get
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
+import ReportStoreModal from "@/components/store/ReportStoreModal";
 import type { ImageOverride } from "@/types/store-config";
 
 function smoothScrollTo(id: string) {
@@ -39,21 +40,53 @@ function fmtPrice(n: number, currency: string) {
 }
 
 const DEPARTAMENTOS_DEFAULT = [
-  { id: "electrodomesticos", label: "Electrodomésticos", icon: "🧊" },
-  { id: "pequenos-electrodomesticos", label: "Pequeños Electro", icon: "☕" },
-  { id: "celulares-y-accesorios", label: "Celulares", icon: "📱" },
-  { id: "informatica-y-gaming", label: "Informática y Gaming", icon: "💻" },
-  { id: "audio-imagen-y-video", label: "Audio y TV", icon: "📺" },
-  { id: "muebles-y-colchones", label: "Muebles y Colchones", icon: "🛋️" },
-  { id: "casa-y-jardin", label: "Casa y Jardín", icon: "🪴" },
+  { id: "electrodomesticos", label: "Electrodomésticos" },
+  { id: "pequenos-electrodomesticos", label: "Pequeños Electro" },
+  { id: "celulares-y-accesorios", label: "Celulares" },
+  { id: "informatica-y-gaming", label: "Informática y Gaming" },
+  { id: "audio-imagen-y-video", label: "Audio y TV" },
+  { id: "muebles-y-colchones", label: "Muebles y Colchones" },
+  { id: "casa-y-jardin", label: "Casa y Jardín" },
 ];
 const CATEGORY_OPTIONS = DEPARTAMENTOS_DEFAULT.map(d => ({ id: d.id, label: d.label }));
 
+function CategoryIcon({ id, color }: { id: string; color: string }) {
+  const common = { width: 30, height: 30, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  switch (id) {
+    case "electrodomesticos":
+      return <svg {...common}><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="5" y1="10" x2="19" y2="10"/><line x1="8.5" y1="6" x2="8.5" y2="6"/><line x1="8.5" y1="14" x2="8.5" y2="14"/></svg>;
+    case "pequenos-electrodomesticos":
+      return <svg {...common}><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"/><line x1="7" y1="3" x2="7" y2="6"/><line x1="11" y1="3" x2="11" y2="6"/></svg>;
+    case "celulares-y-accesorios":
+      return <svg {...common}><rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>;
+    case "informatica-y-gaming":
+      return <svg {...common}><rect x="3" y="4" width="18" height="12" rx="1.5"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/></svg>;
+    case "audio-imagen-y-video":
+      return <svg {...common}><rect x="3" y="5" width="18" height="13" rx="1.5"/><path d="M10 9l4 2.5-4 2.5V9z" fill={color} stroke="none"/><line x1="8" y1="21" x2="16" y2="21"/></svg>;
+    case "muebles-y-colchones":
+      return <svg {...common}><path d="M4 12V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M3 12h18v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5z"/><line x1="5" y1="18" x2="5" y2="20"/><line x1="19" y1="18" x2="19" y2="20"/></svg>;
+    case "casa-y-jardin":
+      return <svg {...common}><path d="M12 21c-4-2-7-6-7-10a7 7 0 0 1 14 0c0 4-3 8-7 10z"/><line x1="12" y1="21" x2="12" y2="11"/></svg>;
+    default:
+      return <svg {...common}><circle cx="12" cy="12" r="9"/></svg>;
+  }
+}
+
 const CONFIANZA = [
-  { fv: "trust1Title", fl: "trust1Desc", icon: "💳", t: "Cuotas con tarjeta",   d: "Pagá en cuotas con tu tarjeta de crédito" },
-  { fv: "trust2Title", fl: "trust2Desc", icon: "🛡️", t: "Garantía oficial",    d: "Todos los productos con garantía del vendedor" },
-  { fv: "trust3Title", fl: "trust3Desc", icon: "🏬", t: "Retiro en local",     d: "Coordiná el retiro sin costo de envío" },
-  { fv: "trust4Title", fl: "trust4Desc", icon: "🚚", t: "Envío a todo el país", d: "Recibí tu compra donde estés" },
+  { fv: "trust1Title", fl: "trust1Desc", t: "Cuotas con tarjeta",   d: "Pagá en cuotas con tu tarjeta de crédito" },
+  { fv: "trust2Title", fl: "trust2Desc", t: "Garantía oficial",    d: "Todos los productos con garantía del vendedor" },
+  { fv: "trust3Title", fl: "trust3Desc", t: "Retiro en local",     d: "Coordiná el retiro sin costo de envío" },
+  { fv: "trust4Title", fl: "trust4Desc", t: "Envío a todo el país", d: "Recibí tu compra donde estés" },
+];
+
+// Íconos cambiables con el botón "↻" en modo edición (mismo patrón que FashionNoir/AutoDrive)
+const TRUST_ICONS: React.ReactNode[] = [
+  <svg key="card" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>,
+  <svg key="shield" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+  <svg key="store" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M3 9a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0"/><path d="M4 9v10h16V9"/></svg>,
+  <svg key="truck" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+  <svg key="bolt" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  <svg key="gift" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
 ];
 
 function ProductCard({ product, href, currency, isFavorite, onToggleFavorite }: {
@@ -198,6 +231,7 @@ export default function ElectroPrime() {
 
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [annIdx, setAnnIdx]     = useState(0);
   const [annVisible, setAnnVisible] = useState(true);
   const ofertasScrollRef = useRef<HTMLDivElement>(null);
@@ -437,8 +471,8 @@ export default function ElectroPrime() {
                   <Link href={`/tienda/${config?.slug ?? ""}/productos?categoria=${categoryId}&t=electro-prime${isPreview ? "&from=editor" : ""}`}
                     style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, textDecoration:"none", flexShrink:0, width:96 }}>
                     <div style={{ width:72, height:72, borderRadius:"50%", background:`${accent}12`, border:`1.5px solid ${accent}30`,
-                      display:"flex", alignItems:"center", justifyContent:"center", fontSize:30 }}>
-                      {d.icon}
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <CategoryIcon id={d.id} color={accent} />
                     </div>
                     <span style={{ fontSize:11.5, fontWeight:600, color:depText, textAlign:"center", lineHeight:1.3 }}>
                       <EditableZone field={`dept${i}Label`} label={`Departamento ${i+1} — texto`}>{d.label}</EditableZone>
@@ -448,7 +482,7 @@ export default function ElectroPrime() {
                     <select value={categoryId} onClick={e => e.stopPropagation()}
                       onChange={e => setOverride(catKey, { text: e.target.value })}
                       title="A qué categoría apunta este botón"
-                      style={{ position:"absolute", top:-6, right:-6, fontSize:10, border:"1px solid #6366f1", borderRadius:6, background:"#eef2ff", color:"#4338ca", cursor:"pointer", maxWidth:90, padding:"2px 1px" }}>
+                      style={{ position:"absolute", top:-8, right:-30, fontSize:10.5, border:"1px solid #6366f1", borderRadius:6, background:"#eef2ff", color:"#4338ca", cursor:"pointer", maxWidth:150, padding:"3px 4px", zIndex:3 }}>
                       {CATEGORY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                     </select>
                   )}
@@ -465,15 +499,26 @@ export default function ElectroPrime() {
         <SectionOverlay ov={trustImg} />
         <EditableSectionBg field="bgConfianza" label="Fondo confianza" />
         <div className="ep-trust-grid" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"grid" }}>
-          {CONFIANZA.map((c, i) => (
-            <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"24px 20px", borderRight: i < 3 ? "1px solid rgba(0,0,0,0.06)" : "none" }}>
-              <span style={{ fontSize:24, flexShrink:0 }}>{c.icon}</span>
-              <div>
-                <p style={{ margin:"0 0 2px", fontSize:13, fontWeight:700, color:trustText }}><EditableZone field={c.fv} label={`Sello ${i+1} título`}>{c.t}</EditableZone></p>
-                <p style={{ margin:0, fontSize:11.5, color:trustMid, lineHeight:1.5 }}><EditableZone field={c.fl} label={`Sello ${i+1} descripción`}>{c.d}</EditableZone></p>
+          {CONFIANZA.map((c, i) => {
+            const iconIdx = Math.abs(parseInt(overrides[`trust${i+1}IconIdx`]?.text ?? String(i)) || 0) % TRUST_ICONS.length;
+            const nextIdx = (iconIdx + 1) % TRUST_ICONS.length;
+            return (
+              <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"24px 20px", borderRight: i < 3 ? "1px solid rgba(0,0,0,0.06)" : "none" }}>
+                <span style={{ color:accent, flexShrink:0, position:"relative", display:"flex" }}>
+                  {TRUST_ICONS[iconIdx]}
+                  {editMode && (
+                    <button onClick={() => setOverride(`trust${i+1}IconIdx`, { text: String(nextIdx) })} title="Cambiar ícono"
+                      style={{ position:"absolute", inset:-4, background:"rgba(99,102,241,0.9)", border:"none", borderRadius:4, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:11, opacity:0, transition:"opacity 0.15s" }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
+                  )}
+                </span>
+                <div>
+                  <p style={{ margin:"0 0 2px", fontSize:13, fontWeight:700, color:trustText }}><EditableZone field={c.fv} label={`Sello ${i+1} título`}>{c.t}</EditableZone></p>
+                  <p style={{ margin:0, fontSize:11.5, color:trustMid, lineHeight:1.5 }}><EditableZone field={c.fl} label={`Sello ${i+1} descripción`}>{c.d}</EditableZone></p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -625,9 +670,14 @@ export default function ElectroPrime() {
             <EditableImageButton field="contactImage" label="Imagen sección Contacto" />
             <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.55))" }} />
             <div style={{ position:"absolute", bottom:24, left:24, right:24 }}>
-              {CONFIANZA.slice(0,3).map((c,i) => (
-                <p key={i} style={{ margin:"0 0 8px", fontSize:13, color:"#fff", display:"flex", alignItems:"center", gap:8, fontWeight:600 }}>{c.icon} {c.t}</p>
-              ))}
+              {CONFIANZA.slice(0,3).map((c,i) => {
+                const iconIdx = Math.abs(parseInt(overrides[`trust${i+1}IconIdx`]?.text ?? String(i)) || 0) % TRUST_ICONS.length;
+                return (
+                  <p key={i} style={{ margin:"0 0 8px", fontSize:13, color:"#fff", display:"flex", alignItems:"center", gap:8, fontWeight:600 }}>
+                    <span style={{ display:"flex", transform:"scale(0.6)", transformOrigin:"center" }}>{TRUST_ICONS[iconIdx]}</span> {c.t}
+                  </p>
+                );
+              })}
             </div>
           </div>
           <div style={{ background:"#fff", padding:36 }}>
@@ -663,8 +713,18 @@ export default function ElectroPrime() {
           {[["Política de devoluciones","devoluciones"],["Política de envíos","envios"],["Términos y condiciones","terminos"]].map(([label, tipo]) => (
             <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:ftMid, opacity:0.6, textDecoration:"none" }}>{label}</a>
           ))}
+          {!editMode && !isPreview && (
+            <button onClick={() => setShowReport(true)}
+              style={{ fontSize:10, color:ftMid, opacity:0.6, background:"none", border:"none", cursor:"pointer", padding:0, textDecoration:"underline" }}>
+              Reportar tienda
+            </button>
+          )}
         </div>
       </footer>
+
+      {showReport && (
+        <ReportStoreModal slug={config?.slug ?? ""} onClose={() => setShowReport(false)} />
+      )}
 
       {/* ── FAVORITOS DRAWER ── */}
       <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 205, pointerEvents: favoritesOpen ? "auto" : "none" }}>

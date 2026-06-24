@@ -120,6 +120,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     condicionOptions: ["Nuevo", "Usado", "Reacondicionado"],
     hideVariants: false,
     hideTags: false,
+    hideGender: true,
     supportsFeatured: true,
     checkoutMode: "cart" as const,
     defaultVariantName: "Color",
