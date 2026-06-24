@@ -1,4 +1,4 @@
-export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse" | "chic-paris" | "auto-motor" | "auto-drive";
+export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse" | "chic-paris" | "auto-motor" | "auto-drive" | "electro-prime" | "tech-nova" | "home-studio" | "casa-clara";
 
 export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = ["chic-paris"];
 
@@ -149,15 +149,23 @@ export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: 
   "chic-paris":   { accent: "#c0392b", storeName: "CHIC PARIS"   },
   "auto-motor":   { accent: "#e8a020", storeName: "AUTO MOTOR"   },
   "auto-drive":   { accent: "#2563eb", storeName: "AUTO DRIVE"   },
+  "electro-prime": { accent: "#ea580c", storeName: "ELECTRO PRIME" },
+  "tech-nova":     { accent: "#7c3aed", storeName: "TECH NOVA"     },
+  "home-studio":   { accent: "#b5652a", storeName: "HOME STUDIO"   },
+  "casa-clara":    { accent: "#0f172a", storeName: "CASA CLARA"    },
 };
 
 export const TEMPLATE_TIPO_TIENDA: Record<TemplateId, string[]> = {
-  "fashion-noir": ["ROPA", "BELLEZA", "DEPORTE", "MASCOTAS", "LIBROS", "ALIMENTOS", "HOGAR", "GENERAL"],
+  "fashion-noir": ["ROPA", "BELLEZA", "DEPORTE", "MASCOTAS", "LIBROS", "ALIMENTOS", "GENERAL"],
   "boho-terra":   ["ROPA", "BELLEZA", "ALIMENTOS", "MASCOTAS", "LIBROS", "GENERAL"],
-  "urban-pulse":  ["ROPA", "DEPORTE", "TECH", "GENERAL"],
-  "chic-paris":   ["ROPA", "BELLEZA", "HOGAR", "GENERAL"],
+  "urban-pulse":  ["ROPA", "DEPORTE", "GENERAL"],
+  "chic-paris":   ["ROPA", "BELLEZA", "GENERAL"],
   "auto-motor":   ["AUTOS"],
   "auto-drive":   ["AUTOS"],
+  "electro-prime": ["HOGAR_TECH"],
+  "tech-nova":     ["HOGAR_TECH"],
+  "home-studio":   ["HOGAR_TECH"],
+  "casa-clara":    ["HOGAR_TECH"],
 };
 
 export const DEFAULT_CONFIG: StoreConfig = {

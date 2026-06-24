@@ -297,6 +297,7 @@ model Product {
   description      String?
   price            Float
   comparePrice     Float?
+  featured         Boolean   @default(false)
   images           String    @default("[]")
   category         String    @default("general")
   subcategory      String?
@@ -318,6 +319,12 @@ model Product {
   soldBuyerName  String?
   soldBuyerPhone String?
   soldNotes      String?
+
+  // Peso y dimensiones del paquete, usados para cotizar envío real (Envíopack)
+  weightKg Float?
+  widthCm  Float?
+  heightCm Float?
+  depthCm  Float?
 
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -447,7 +454,10 @@ model Shipping {
   id            String   @id @default(cuid())
   provider      String
   service       String?
+  externalId    String?
   trackingCode  String?
+  trackingUrl   String?
+  labelUrl      String?
   status        String   @default("PENDING")
   estimatedDays Int?
   cost          Float

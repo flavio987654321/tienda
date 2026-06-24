@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   BadgeCheck, Eye, Search, ChevronLeft, ChevronRight,
-  Package, ArrowLeft, LayoutGrid, Shirt, Car, Monitor,
+  Package, ArrowLeft, LayoutGrid, Shirt, Car,
   Home, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, Store,
 } from "lucide-react";
 import { STORE_TYPES } from "@/lib/storeTypes";
@@ -31,8 +31,7 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
   TODAS:     LayoutGrid,
   ROPA:      Shirt,
   AUTOS:     Car,
-  TECH:      Monitor,
-  HOGAR:     Home,
+  HOGAR_TECH: Home,
   ALIMENTOS: Utensils,
   BELLEZA:   Sparkles,
   DEPORTE:   Dumbbell,

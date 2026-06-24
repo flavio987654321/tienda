@@ -12,6 +12,10 @@ import UrbanPulse from "@/components/store/templates/UrbanPulse";
 import ChicParis from "@/components/store/templates/ChicParis";
 import AutoMotor from "@/components/store/templates/AutoMotor";
 import AutoDrive from "@/components/store/templates/AutoDrive";
+import ElectroPrime from "@/components/store/templates/ElectroPrime";
+import TechNova from "@/components/store/templates/TechNova";
+import HomeStudio from "@/components/store/templates/HomeStudio";
+import CasaClara from "@/components/store/templates/CasaClara";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import { TEMPLATE_TIPO_TIENDA } from "@/types/store-config";
 
@@ -47,6 +51,16 @@ const CATEGORIES: Category[] = [
     templates: [
       { id: "auto-motor", name: "Auto Motor", desc: "Oscuro · Premium · Concesionaria", palette: ["#0a0a0a", "#e8a020", "#1a1a1a"], component: AutoMotor, tipoTiendas: TEMPLATE_TIPO_TIENDA["auto-motor"] },
       { id: "auto-drive", name: "Auto Drive", desc: "Claro · Moderno · Marketplace",    palette: ["#f0f4f8", "#2563eb", "#0f172a"], component: AutoDrive,  tipoTiendas: TEMPLATE_TIPO_TIENDA["auto-drive"]  },
+    ],
+  },
+  {
+    id: "hogar-tech",
+    name: "Hogar & Tecnología",
+    templates: [
+      { id: "electro-prime", name: "Electro Prime", desc: "Claro · Confianza · Cuotas",   palette: ["#ffffff", "#ea580c", "#111827"], component: ElectroPrime, tipoTiendas: TEMPLATE_TIPO_TIENDA["electro-prime"] },
+      { id: "tech-nova",     name: "Tech Nova",     desc: "Claro · Tech · Vibrante",       palette: ["#fafaff", "#7c3aed", "#0f0f1a"], component: TechNova,    tipoTiendas: TEMPLATE_TIPO_TIENDA["tech-nova"]     },
+      { id: "home-studio",   name: "Home Studio",   desc: "Cálido · Lifestyle · Editorial", palette: ["#faf8f4", "#b5652a", "#2c2218"], component: HomeStudio,  tipoTiendas: TEMPLATE_TIPO_TIENDA["home-studio"]   },
+      { id: "casa-clara",    name: "Casa Clara",    desc: "Minimalista · Blanco · Simple", palette: ["#ffffff", "#0f172a", "#444444"], component: CasaClara,   tipoTiendas: TEMPLATE_TIPO_TIENDA["casa-clara"]    },
     ],
   },
 ];
@@ -585,19 +599,19 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
             <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>Afecta botones, precios y elementos destacados.</p>
           </div>
 
-          {/* Color nav — solo templates auto */}
-          {(config.template === "auto-motor" || config.template === "auto-drive") && (
+          {/* Color nav — solo templates auto y Hogar/Tecnología */}
+          {["auto-motor", "auto-drive", "electro-prime", "tech-nova", "home-studio", "casa-clara"].includes(config.template) && (
             <div style={sec}>
               <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
                 🧭 Color de la barra de navegación
               </p>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <input type="color"
-                  value={config.sectionColors?.["navBg"] ?? (config.template === "auto-motor" ? "#1b3f6e" : "#ffffff")}
+                  value={config.sectionColors?.["navBg"] ?? (config.template === "auto-motor" ? "#1b3f6e" : config.template === "home-studio" ? "#faf8f4" : "#ffffff")}
                   onChange={e => update("sectionColors", { ...config.sectionColors, navBg: e.target.value })}
                   style={{ width: 40, height: 38, padding: 2, border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", flexShrink: 0 }} />
                 <input style={{ ...inp, fontFamily: "monospace" }}
-                  value={config.sectionColors?.["navBg"] ?? (config.template === "auto-motor" ? "#1b3f6e" : "#ffffff")}
+                  value={config.sectionColors?.["navBg"] ?? (config.template === "auto-motor" ? "#1b3f6e" : config.template === "home-studio" ? "#faf8f4" : "#ffffff")}
                   onChange={e => update("sectionColors", { ...config.sectionColors, navBg: e.target.value })}
                   onFocus={e => (e.target.style.borderColor = "#6366f1")}
                   onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />

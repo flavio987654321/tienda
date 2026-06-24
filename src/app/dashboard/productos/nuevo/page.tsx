@@ -29,8 +29,7 @@ function getVariantOptions(storeType: string): string[] {
   const map: Record<string, string[]> = {
     ROPA:      ["Talle", "Color"],
     AUTOS:     ["Color", "Versión"],
-    TECH:      ["Almacenamiento", "Color", "RAM"],
-    HOGAR:     ["Tamaño", "Color", "Material"],
+    HOGAR_TECH: ["Color", "Tamaño"],
     ALIMENTOS: ["Peso/Tamaño", "Sabor"],
     BELLEZA:   ["Tono", "Tamaño"],
     DEPORTE:   ["Talle", "Color"],
@@ -127,9 +126,8 @@ function Tip({ text }: { text: string }) {
 function variantTip(tipoTienda: string): string {
   const tips: Record<string, string> = {
     ROPA:      "Una fila por combinación. Ej: Talle S + Color Negro → fila 1, Talle M + Color Blanco → fila 2. Cada fila tiene su propio stock.",
-    TECH:      "Una fila por combinación. Ej: 128GB + Azul → fila 1, 256GB + Negro → fila 2. Cada fila tiene su propio stock.",
     BELLEZA:   "Una fila por combinación. Ej: Tono Claro + Tamaño Grande → fila 1, Tono Oscuro + Tamaño Chico → fila 2.",
-    HOGAR:     "Una fila por combinación. Ej: Color Blanco + Material Madera → fila 1. Cada fila tiene su propio stock.",
+    HOGAR_TECH: "Una fila por combinación. Ej: Color Blanco + Almacenamiento 256GB → fila 1, Color Negro + 128GB → fila 2. Cada fila tiene su propio stock.",
     DEPORTE:   "Una fila por combinación. Ej: Talle S + Color Rojo → fila 1, Talle M + Color Azul → fila 2.",
     ALIMENTOS: "Una fila por combinación. Ej: 500g + Vainilla → fila 1, 1kg + Chocolate → fila 2.",
     MASCOTAS:  "Una fila por combinación. Ej: Tamaño Pequeño + Sabor Pollo → fila 1. Cada fila tiene su propio stock.",
@@ -142,9 +140,8 @@ function variantTip(tipoTienda: string): string {
 function tagsTip(tipoTienda: string): string {
   const tips: Record<string, string> = {
     ROPA:      "Palabras clave para búsqueda. Ej: negro, oversize, algodón. No afectan el precio ni el stock.",
-    TECH:      "Palabras clave para búsqueda. Ej: liberado, sin cargador, 5G.",
     BELLEZA:   "Palabras clave para búsqueda. Ej: vegano, sin parabenos, hidratante.",
-    HOGAR:     "Palabras clave para búsqueda. Ej: madera, escandinavo, minimalista.",
+    HOGAR_TECH: "Palabras clave para búsqueda. Ej: liberado, sin cargador, inverter, escandinavo.",
     ALIMENTOS: "Palabras clave para búsqueda. Ej: sin tacc, vegano, artesanal.",
     DEPORTE:   "Palabras clave para búsqueda. Ej: running, gym, impermeable.",
     MASCOTAS:  "Palabras clave para búsqueda. Ej: perro, gato, natural, sin conservantes.",
@@ -287,6 +284,7 @@ function ProductoFormPage() {
     subcategory: "",
     tags: "",
   });
+  const [featured, setFeatured] = useState(false);
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [productSubcategories, setProductSubcategories] = useState<Record<string, string[]>>({});
   const [gender, setGender] = useState<"mujer" | "hombre" | "unisex">("unisex");
@@ -297,6 +295,10 @@ function ProductoFormPage() {
   const [condicion, setCondicion] = useState<string>("Usado");
   const [precioMayorista, setPrecioMayorista] = useState("");
   const [cantMinMayorista, setCantMinMayorista] = useState("");
+  const [weightKg, setWeightKg] = useState("");
+  const [widthCm, setWidthCm] = useState("");
+  const [heightCm, setHeightCm] = useState("");
+  const [depthCm, setDepthCm] = useState("");
   const [publishAt, setPublishAt] = useState<string>("");
   const [images, setImages] = useState<ImageItem[]>([]);
   const [carouselIdx, setCarouselIdx] = useState(0);
@@ -383,6 +385,7 @@ function ProductoFormPage() {
           tags: safeJsonArray(product.tags).join(", "),
         });
         setGender((product.gender as "mujer" | "hombre" | "unisex") || "unisex");
+        setFeatured(Boolean(product.featured));
         setCustomCategory(knownCategory ? "" : product.category || "");
         setCustomSubcategory(product.subcategory && !((productSubcategories[product.category] || []).includes(product.subcategory)) ? product.subcategory : "");
         setImages(
@@ -426,6 +429,10 @@ function ProductoFormPage() {
         setAttributes(allAttrs.filter((a) => a.key !== "Condición" && a.key !== "Servicios"));
         setPrecioMayorista(product.precioMayorista?.toString() || "");
         setCantMinMayorista(product.cantMinMayorista?.toString() || "");
+        setWeightKg(product.weightKg?.toString() || "");
+        setWidthCm(product.widthCm?.toString() || "");
+        setHeightCm(product.heightCm?.toString() || "");
+        setDepthCm(product.depthCm?.toString() || "");
         if (product.publishAt) {
           const d = new Date(product.publishAt);
           const pad = (n: number) => String(n).padStart(2, "0");
@@ -658,6 +665,7 @@ function ProductoFormPage() {
         category,
         subcategory,
         gender,
+        featured: storeTypeConfig.supportsFeatured ? featured : false,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         images: images.map((img) => img.variantValue ? img : img.url),
         reelUrls,
@@ -666,6 +674,10 @@ function ProductoFormPage() {
         precioMayorista: precioMayorista || null,
         cantMinMayorista: cantMinMayorista || null,
         publishAt: publishAt || null,
+        weightKg: weightKg || null,
+        widthCm: widthCm || null,
+        heightCm: heightCm || null,
+        depthCm: depthCm || null,
       }),
     });
 
@@ -1033,7 +1045,7 @@ function ProductoFormPage() {
             {/* Condición — solo para tipos que lo soportan (AUTOS, TECH) */}
             {storeTypeConfig.supportsCondicion && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <h2 className="font-semibold text-gray-900 mb-3">Condición del vehículo</h2>
+                <h2 className="font-semibold text-gray-900 mb-3">{storeTypeConfig.hideVariants ? "Condición del vehículo" : "Condición del producto"}</h2>
                 <div className="flex flex-wrap gap-2">
                   {(storeTypeConfig.condicionOptions ?? ["Nuevo", "Usado"]).map((opt) => (
                     <button
@@ -1125,11 +1137,32 @@ function ProductoFormPage() {
                   </div>
                 </div>
               </div>
-              {discount > 0 && (
+              {discount > 0 ? (
                 <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-4 py-2 rounded-xl">
                   <Tag className="h-4 w-4" />
-                  El cliente vera un descuento del <strong>{discount}%</strong>
+                  El cliente vera un descuento del <strong>{discount}%</strong> y el producto va a aparecer automáticamente en los bloques de <strong>&quot;Ofertas destacadas&quot;</strong> de tu tienda.
                 </div>
+              ) : (
+                <p className="text-xs text-gray-400">
+                  Tip: completá el <strong>precio tachado</strong> con un valor mayor al precio de venta para que este producto aparezca solo, sin tocar nada más, en los bloques de &quot;Ofertas destacadas&quot; de tu tienda.
+                </p>
+              )}
+              {storeTypeConfig.supportsFeatured && (
+                <label className="flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all"
+                  style={{ borderColor: featured ? "#6366f1" : "#f3f4f6", background: featured ? "#eef2ff" : "#fafafa" }}>
+                  <input
+                    type="checkbox"
+                    checked={featured}
+                    onChange={(e) => { setFeatured(e.target.checked); markDirty(); }}
+                    className="mt-0.5 h-4 w-4 accent-indigo-600"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-gray-800">Destacar en &quot;Lo más buscado&quot;</span>
+                    <span className="block text-xs text-gray-400 mt-0.5">
+                      Mostrá este producto en el bloque &quot;Lo más buscado&quot; de tu tienda. Si no destacás ningún producto, ese bloque muestra los más recientes.
+                    </span>
+                  </span>
+                </label>
               )}
             </div>
 
@@ -1167,6 +1200,59 @@ function ProductoFormPage() {
                 </div>
               </div>
             )}
+
+            {/* Envío — peso y dimensiones, universal para todos los rubros */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+              <div>
+                <div className="flex items-center gap-1">
+                  <h2 className="font-semibold text-gray-900">Envío</h2>
+                  <Tip text="Usado para cotizar el costo de envío real con el correo. Si lo dejás vacío, el envío se coordina manualmente con el cliente." />
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">Peso y dimensiones del paquete (opcional)</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Peso (kg)</label>
+                  <input
+                    type="number"
+                    value={weightKg}
+                    onChange={(e) => { setWeightKg(e.target.value); markDirty(); }}
+                    min="0" step="0.01" placeholder="0"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Ancho (cm)</label>
+                  <input
+                    type="number"
+                    value={widthCm}
+                    onChange={(e) => { setWidthCm(e.target.value); markDirty(); }}
+                    min="0" step="0.1" placeholder="0"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Alto (cm)</label>
+                  <input
+                    type="number"
+                    value={heightCm}
+                    onChange={(e) => { setHeightCm(e.target.value); markDirty(); }}
+                    min="0" step="0.1" placeholder="0"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Profundidad (cm)</label>
+                  <input
+                    type="number"
+                    value={depthCm}
+                    onChange={(e) => { setDepthCm(e.target.value); markDirty(); }}
+                    min="0" step="0.1" placeholder="0"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+            </div>
 
             {/* Variantes — ocultas para tiendas como AUTOS donde no aplica */}
             {!storeTypeConfig.hideVariants && <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">

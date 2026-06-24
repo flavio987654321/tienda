@@ -1,8 +1,7 @@
 export type StoreType =
   | "ROPA"
   | "AUTOS"
-  | "TECH"
-  | "HOGAR"
+  | "HOGAR_TECH"
   | "ALIMENTOS"
   | "BELLEZA"
   | "DEPORTE"
@@ -28,6 +27,7 @@ export interface StoreTypeConfig {
   hideVariants: boolean;
   hideTags: boolean;
   hideGender?: boolean;
+  supportsFeatured?: boolean;
   condicionOptions?: string[];
   defaultVariantName: string;
   checkoutMode: "cart" | "inquiry";
@@ -112,62 +112,42 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     ],
   },
   {
-    id: "TECH",
-    label: "Tecnología",
-    emoji: "💻",
-    comingSoon: true,
-    supportsWholesale: false,
-    supportsCondicion: true,
-    hideVariants: false,
-    hideTags: false,
-    checkoutMode: "cart" as const,
-    defaultVariantName: "Almacenamiento",
-    variantValuePlaceholder: "128GB, 256GB, 512GB",
-    namePlaceholder: "Ej: iPhone 15 Pro 256GB",
-    tagsPlaceholder: "iphone, liberado, sin uso",
-    categorias: ["celulares", "laptops", "tablets", "audio", "gaming", "wearables", "fotografia", "accesorios"],
-    subcategorias: {
-      celulares: ["iphone", "samsung", "motorola", "xiaomi", "otro"],
-      laptops: ["gaming", "ultrabook", "chromebook", "workstation"],
-      tablets: ["ipad", "android", "windows"],
-      audio: ["auriculares", "parlantes", "soundbar", "micrófonos"],
-      gaming: ["consolas", "joysticks", "sillas", "monitores", "juegos"],
-      wearables: ["smartwatch", "pulsera", "auriculares-true-wireless"],
-      fotografia: ["cámaras", "lentes", "trípodes", "drones"],
-      accesorios: ["cables", "fundas", "cargadores", "hubs"],
-    },
-    extraFields: [
-      { key: "marca", label: "Marca", placeholder: "Apple, Samsung..." },
-      { key: "modelo", label: "Modelo", placeholder: "iPhone 15, Galaxy S24..." },
-    ],
-  },
-  {
-    id: "HOGAR",
-    label: "Hogar y muebles",
+    id: "HOGAR_TECH",
+    label: "Hogar y Tecnología",
     emoji: "🏠",
-    comingSoon: true,
     supportsWholesale: true,
-    supportsCondicion: false,
+    supportsCondicion: true,
+    condicionOptions: ["Nuevo", "Usado", "Reacondicionado"],
     hideVariants: false,
     hideTags: false,
+    supportsFeatured: true,
     checkoutMode: "cart" as const,
-    defaultVariantName: "Tamaño",
-    variantValuePlaceholder: "Chico, Mediano, Grande",
-    namePlaceholder: "Ej: Mesa de madera escandinava 120cm",
-    tagsPlaceholder: "madera, moderno, escandinavo",
-    categorias: ["muebles", "decoracion", "cocina", "baño", "jardin", "textiles", "iluminacion", "organizacion"],
+    defaultVariantName: "Color",
+    variantValuePlaceholder: "Negro, Blanco, Gris",
+    namePlaceholder: "Ej: Heladera Samsung No Frost 380L",
+    tagsPlaceholder: "samsung, inverter, no-frost",
+    categorias: [
+      "electrodomesticos",
+      "pequenos-electrodomesticos",
+      "celulares-y-accesorios",
+      "informatica-y-gaming",
+      "audio-imagen-y-video",
+      "muebles-y-colchones",
+      "casa-y-jardin",
+    ],
     subcategorias: {
-      muebles: ["sillas", "mesas", "camas", "sofás", "escritorios", "estantes"],
-      decoracion: ["cuadros", "plantas", "velas", "espejos", "marcos", "relojes"],
-      cocina: ["utensilios", "vajilla", "electrodomésticos", "almacenamiento"],
-      baño: ["accesorios", "toallas", "alfombras", "espejos"],
-      jardin: ["plantas", "macetas", "herramientas", "muebles-exterior"],
-      textiles: ["almohadas", "sábanas", "frazadas", "cortinas", "alfombras"],
-      iluminacion: ["lamparas", "veladores", "apliques", "tiras-led"],
-      organizacion: ["cajas", "perchas", "estantes", "cestos"],
+      electrodomesticos: ["climatizacion", "refrigeracion", "agua-caliente", "cocina", "lavado-y-secado", "repuestos-y-accesorios"],
+      "pequenos-electrodomesticos": ["desayuno", "ayudantes-de-cocina", "limpieza", "repuestos-y-accesorios"],
+      "celulares-y-accesorios": ["smartphones", "fundas", "cargadores", "auriculares-celular", "repuestos"],
+      "informatica-y-gaming": ["pc", "notebooks", "impresoras", "monitores", "perifericos", "consolas", "videojuegos", "accesorios-gaming"],
+      "audio-imagen-y-video": ["tvs", "camaras", "parlantes", "auriculares", "soundbars", "accesorios"],
+      "muebles-y-colchones": ["mesas", "sillas", "sillones", "escritorios", "estantes", "colchones", "sommiers"],
+      "casa-y-jardin": ["cuadros", "lamparas", "espejos", "plantas-deco", "muebles-de-jardin", "herramientas-de-jardin"],
     },
     extraFields: [
-      { key: "dimensiones", label: "Dimensiones", placeholder: "80x60x120 cm" },
+      { key: "marca", label: "Marca", placeholder: "Samsung, LG, Whirlpool, Drean..." },
+      { key: "modelo", label: "Modelo", placeholder: "RS27T5200S9, S4-W12JARPA..." },
+      { key: "garantia", label: "Garantía", placeholder: "6 meses, 12 meses, sin garantía..." },
     ],
   },
   {

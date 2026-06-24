@@ -25,6 +25,7 @@ type RawProduct = {
   name: string;
   price: number;
   comparePrice?: number | null;
+  featured?: boolean;
   precioMayorista?: number | null;
   cantMinMayorista?: number | null;
   category?: string;
@@ -34,6 +35,7 @@ type RawProduct = {
   images?: string;
   reelUrls?: string;
   variants?: StorefrontVariant[];
+  attributes?: string;
 };
 
 function mapProduct(raw: RawProduct): StorefrontProduct {
@@ -69,9 +71,15 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     const parsed = JSON.parse(raw.reelUrls || "[]");
     reelUrls = Array.isArray(parsed) ? parsed.filter((u: unknown) => typeof u === "string") : [];
   } catch {}
+  let attributes: { key: string; value: string }[] = [];
+  try {
+    const parsed = JSON.parse(raw.attributes || "[]");
+    attributes = Array.isArray(parsed) ? parsed.filter((a: unknown) => a && typeof a === "object") : [];
+  } catch {}
   return {
     id: raw.id, name: raw.name, price: raw.price,
     comparePrice: raw.comparePrice ?? null,
+    featured: raw.featured ?? false,
     precioMayorista: raw.precioMayorista ?? null,
     cantMinMayorista: raw.cantMinMayorista ?? null,
     category: raw.category ?? "general",
@@ -79,7 +87,7 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     gender: raw.gender ?? "unisex",
     description: raw.description ?? null,
     images, imageItems, reelUrls, sizes, colors, variants,
-    attributes: [],
+    attributes,
   };
 }
 
@@ -115,9 +123,37 @@ const THEMES: Record<string, Theme> = {
     inputBorder:"rgba(249,115,22,0.2)", inputBg:"#1e293b",
     serif:"Inter, system-ui, sans-serif", sans:"Inter, system-ui, sans-serif", dark:true,
   },
+  "electro-prime": {
+    BG:"#ffffff", S:"#f8fafc", T:"#111111", G:"#ea580c", MID:"#6b7280",
+    border:"rgba(234,88,12,0.2)", borderFaint:"rgba(0,0,0,0.06)",
+    inputBorder:"#e5e7eb", inputBg:"#fff",
+    serif:"'Inter','Segoe UI',system-ui,sans-serif", sans:"'Inter','Segoe UI',system-ui,sans-serif", dark:false,
+  },
+  "tech-nova": {
+    BG:"#ffffff", S:"#fafaff", T:"#0f0f1a", G:"#7c3aed", MID:"#6b6b80",
+    border:"rgba(124,58,237,0.2)", borderFaint:"rgba(15,15,26,0.06)",
+    inputBorder:"#ececf5", inputBg:"#fff",
+    serif:"'Inter','Segoe UI',system-ui,sans-serif", sans:"'Inter','Segoe UI',system-ui,sans-serif", dark:false,
+  },
+  "home-studio": {
+    BG:"#faf8f4", S:"#f0ebe2", T:"#2c2218", G:"#b5652a", MID:"#9a8a76",
+    border:"rgba(181,101,42,0.2)", borderFaint:"rgba(44,34,24,0.06)",
+    inputBorder:"rgba(181,101,42,0.25)", inputBg:"#fff",
+    serif:"Georgia, serif", sans:"Inter, system-ui, sans-serif", dark:false,
+  },
+  "casa-clara": {
+    BG:"#ffffff", S:"#fafafa", T:"#111111", G:"#0f172a", MID:"#888888",
+    border:"#ededed", borderFaint:"rgba(0,0,0,0.05)",
+    inputBorder:"#ededed", inputBg:"#fff",
+    serif:"Inter, system-ui, sans-serif", sans:"Inter, system-ui, sans-serif", dark:false,
+  },
 };
 
 const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
+
+// Los templates de Hogar y Tecnología tienen su propia página de detalle
+// (/producto/[id]) en vez del modal compartido que usan ROPA/AUTOS.
+const DETAIL_PAGE_TEMPLATES = ["electro-prime", "tech-nova", "home-studio", "casa-clara"];
 
 // ── Componente interno (necesita useSearchParams dentro de Suspense) ──────────
 function ProductosPageInner() {
@@ -243,9 +279,47 @@ function ProductosPageInner() {
   const [hoveredCatMenu,    setHoveredCatMenu]    = useState<string | null>(null);
   const [sortBy,            setSortBy]            = useState("newest");
   const [page,              setPage]              = useState(1);
+  const [activeAttrFilters, setActiveAttrFilters] = useState<Record<string, string[]>>({});
 
   const categoryList = useMemo(() => [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))], [products]);
   const CATEGORIES   = useMemo(() => ["Todos", ...categoryList], [categoryList]);
+
+  // ── Filtro dinámico por atributos: solo se muestran los que el dueño cargó de verdad,
+  // y solo si hay más de un valor distinto (sino el filtro no aporta nada) ──────
+  const productsInCategory = useMemo(
+    () => products.filter(p =>
+      (activeCategory === "Todos" || p.category === activeCategory) &&
+      (!activeSubcategory || p.subcategory === activeSubcategory)
+    ),
+    [products, activeCategory, activeSubcategory]
+  );
+
+  const availableAttrFilters = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    productsInCategory.forEach(p => {
+      p.attributes.forEach(({ key, value }) => {
+        if (!key || !value) return;
+        if (!map[key]) map[key] = new Set();
+        map[key].add(value);
+      });
+    });
+    return Object.entries(map)
+      .filter(([, values]) => values.size > 1)
+      .map(([key, values]) => ({ key, values: [...values].sort() }));
+  }, [productsInCategory]);
+
+  const toggleAttrFilter = (key: string, value: string) => {
+    setActiveAttrFilters(prev => {
+      const current = prev[key] ?? [];
+      const next = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+      const updated = { ...prev, [key]: next };
+      if (next.length === 0) delete updated[key];
+      return updated;
+    });
+    setPage(1);
+  };
+
+  const clearAttrFilters = () => setActiveAttrFilters({});
 
   const subcategoriesFor = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -259,12 +333,15 @@ function ProductosPageInner() {
   }, [products]);
 
   const filtered = useMemo(() => {
-    let r = products.filter(p => {
-      if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
-      if (activeSubcategory && p.subcategory !== activeSubcategory) return false;
+    let r = productsInCategory.filter(p => {
       if (search.trim() && !p.name.toLowerCase().includes(search.toLowerCase()) &&
           !(p.subcategory ?? "").toLowerCase().includes(search.toLowerCase()) &&
           !p.category.toLowerCase().includes(search.toLowerCase())) return false;
+      for (const [key, values] of Object.entries(activeAttrFilters)) {
+        if (values.length === 0) continue;
+        const productValue = p.attributes.find(a => a.key === key)?.value;
+        if (!productValue || !values.includes(productValue)) return false;
+      }
       return true;
     });
     if (sortBy === "price_asc")  r = [...r].sort((a, b) => a.price - b.price);
@@ -276,13 +353,13 @@ function ProductosPageInner() {
       return db - da;
     });
     return r;
-  }, [products, activeCategory, activeSubcategory, search, sortBy]);
+  }, [productsInCategory, activeAttrFilters, search, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const changeCategory = (cat: string, sub: string | null = null) => {
-    setActiveCategory(cat); setActiveSubcategory(sub); setPage(1);
+    setActiveCategory(cat); setActiveSubcategory(sub); setPage(1); setActiveAttrFilters({});
   };
 
   // ── Stock de la variante seleccionada en el modal ──────────────────────────
@@ -599,6 +676,42 @@ function ProductosPageInner() {
           )}
         </div>
 
+        {/* ── FILTROS DINÁMICOS POR ATRIBUTOS ───────────────────────────
+            Solo se muestran los atributos que el dueño realmente cargó en esta
+            categoría, y solo si tienen más de un valor distinto (sino no filtran nada) */}
+        {availableAttrFilters.length > 0 && (
+          <div style={{ display:"flex", flexWrap:"wrap", gap:24, marginBottom:32, paddingBottom:24, borderBottom:`1px solid ${borderFaint}` }}>
+            {availableAttrFilters.map(({ key, values }) => (
+              <div key={key} style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                <span style={{ fontSize:10, letterSpacing:2, textTransform:"uppercase", opacity:0.5 }}>{key}</span>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                  {values.map(value => {
+                    const isActive = (activeAttrFilters[key] ?? []).includes(value);
+                    return (
+                      <button key={value} onClick={() => toggleAttrFilter(key, value)}
+                        style={{
+                          background: isActive ? G : "transparent",
+                          color: isActive ? (dark ? "#000" : "#fff") : T,
+                          border: `1px solid ${isActive ? G : border}`,
+                          padding: "6px 14px", fontSize: 11, cursor: "pointer",
+                          letterSpacing: 0.5, transition: "all 0.2s",
+                        }}>
+                        {value}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            {Object.keys(activeAttrFilters).length > 0 && (
+              <button onClick={clearAttrFilters}
+                style={{ alignSelf:"flex-end", background:"none", border:"none", color:MID, fontSize:11, letterSpacing:1, cursor:"pointer", padding:"6px 0", textDecoration:"underline" }}>
+                Limpiar specs
+              </button>
+            )}
+          </div>
+        )}
+
         {/* ── GRILLA ─────────────────────────────────────────────────── */}
         {paginated.length === 0 ? (
           <div style={{ textAlign:"center", padding:"80px 0", opacity:0.4 }}>
@@ -609,8 +722,9 @@ function ProductosPageInner() {
           <div className="pc-grid">
             {paginated.map(product => {
               const isFav = favorites.includes(product.id);
-              return (
-                <div key={product.id} style={{ cursor:"pointer" }} onClick={() => openModal(product)}>
+              const useDetailPage = DETAIL_PAGE_TEMPLATES.includes(template);
+              const cardInner = (
+                <>
                   <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:14 }}>
                     {product.images[0] ? (
                       <img src={product.images[0]} alt={product.name}
@@ -652,6 +766,16 @@ function ProductosPageInner() {
                     <span style={{ fontSize:16, fontWeight:700, color:G }}>{fmt(product.price)}</span>
                     {product.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
                   </div>
+                </>
+              );
+              return useDetailPage ? (
+                <Link key={product.id} href={`/tienda/${slug}/producto/${product.id}${fromEditor ? "?from=editor" : ""}`}
+                  style={{ cursor:"pointer", textDecoration:"none", color:"inherit", display:"block" }}>
+                  {cardInner}
+                </Link>
+              ) : (
+                <div key={product.id} style={{ cursor:"pointer" }} onClick={() => openModal(product)}>
+                  {cardInner}
                 </div>
               );
             })}

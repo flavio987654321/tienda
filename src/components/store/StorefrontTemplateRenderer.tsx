@@ -8,6 +8,10 @@ import UrbanPulse from "./templates/UrbanPulse";
 import ChicParis from "./templates/ChicParis";
 import AutoMotor from "./templates/AutoMotor";
 import AutoDrive from "./templates/AutoDrive";
+import ElectroPrime from "./templates/ElectroPrime";
+import TechNova from "./templates/TechNova";
+import HomeStudio from "./templates/HomeStudio";
+import CasaClara from "./templates/CasaClara";
 import FlyerPopup from "./FlyerPopup";
 
 const TEMPLATES: Record<string, React.ComponentType> = {
@@ -17,6 +21,10 @@ const TEMPLATES: Record<string, React.ComponentType> = {
   "chic-paris":   ChicParis,
   "auto-motor":   AutoMotor,
   "auto-drive":   AutoDrive,
+  "electro-prime": ElectroPrime,
+  "tech-nova":     TechNova,
+  "home-studio":   HomeStudio,
+  "casa-clara":    CasaClara,
 };
 
 export default function StorefrontTemplateRenderer({ config }: { config: StoreConfig }) {

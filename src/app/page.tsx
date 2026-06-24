@@ -12,7 +12,7 @@ import {
   ArrowRight, X, Store, Users, TrendingUp, CheckCircle, Trophy,
   ShoppingBag, Star, Zap, Send, MessageCircle, Mail, HeartHandshake,
   Package, ShoppingCart, Eye, ChevronRight, Menu,
-  BadgeCheck, Shirt, Car, Monitor, Home as HomeIcon, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, LayoutGrid,
+  BadgeCheck, Shirt, Car, Home as HomeIcon, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, LayoutGrid,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -219,8 +219,7 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
   TODAS:     LayoutGrid,
   ROPA:      Shirt,
   AUTOS:     Car,
-  TECH:      Monitor,
-  HOGAR:     HomeIcon,
+  HOGAR_TECH: HomeIcon,
   ALIMENTOS: Utensils,
   BELLEZA:   Sparkles,
   DEPORTE:   Dumbbell,

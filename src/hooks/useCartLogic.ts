@@ -16,9 +16,14 @@ type StorefrontDeps = {
   isWholesale?: boolean;
   hasMercadoPago?: boolean;
   shippingMethods?: ShippingMethod[] | null;
+  // Las páginas de detalle de producto reusan `openModal` solo para cargar el producto
+  // en el estado del carrito (addToCart/selectedSize/etc.), sin mostrar ningún modal
+  // flotante encima — por eso no deben heredar el bloqueo de scroll del body pensado
+  // para el quick-view modal del catálogo.
+  lockScrollOnModal?: boolean;
 };
 
-export function useCartLogic({ products, storeId, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods }: StorefrontDeps) {
+export function useCartLogic({ products, storeId, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, lockScrollOnModal = true }: StorefrontDeps) {
   const [cartItems,      setCartItems]      = useState<CartItem[]>([]);
   const [cartOpen,       setCartOpen]       = useState(false);
   const [modalProduct,   setModalProduct]   = useState<StorefrontProduct | null>(null);
@@ -129,6 +134,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
 
   // Bloquear scroll del body cuando el modal está abierto (fix iOS Safari)
   useEffect(() => {
+    if (!lockScrollOnModal) return;
     if (modalProduct) {
       const scrollY = window.scrollY;
       document.body.style.overflow = "hidden";
@@ -149,7 +155,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
       document.body.style.top = "";
       document.body.style.width = "";
     };
-  }, [modalProduct]);
+  }, [modalProduct, lockScrollOnModal]);
 
   // Derived values
   const cartTotal      = cartItems.reduce((s, i) => {
@@ -187,8 +193,8 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
   const openModal = (p: StorefrontProduct) => {
     setModalProduct(p);
     setModalImg(0);
-    setSelectedSize(p.sizes[0]);
-    setSelectedColor(p.colors[0]);
+    setSelectedSize(p.sizes[0] ?? "");
+    setSelectedColor(p.colors[0] ?? "");
     setQty(1);
     setSearchOpen(false);
   };
@@ -338,7 +344,8 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
       return;
     }
     // Optimistic update
-    setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
+    const wasFavorite = favorites.includes(id);
+    setFavorites(prev => wasFavorite ? prev.filter(f => f !== id) : [...prev, id]);
     try {
       await fetch("/api/favoritos", {
         method: "POST",
@@ -347,7 +354,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
       });
     } catch {
       // Revert on error
-      setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
+      setFavorites(prev => wasFavorite ? [...prev, id] : prev.filter(f => f !== id));
     }
   };
 

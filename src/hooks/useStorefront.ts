@@ -17,6 +17,7 @@ export type StorefrontProduct = {
   name: string;
   price: number;
   comparePrice: number | null;
+  featured?: boolean;
   precioMayorista: number | null;
   cantMinMayorista: number | null;
   category: string;
@@ -103,6 +104,21 @@ const DEMO_PRODUCTS_AUTOS: StorefrontProduct[] = [
   { id: "auto-12", name: "Jeep Compass Trailhawk", price: 58000000, comparePrice: null, category: "SUVs", description: "SUV aventurero con capacidad offroad real. Motor 2.0 diesel, tracción 4WD con modos.", images: ["https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=800&q=75","https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=75"], imageItems: [{ url: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=800&q=75" },{ url: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=75" }], sizes: [], colors: [], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "FINANCIADO", attributes: [{ key: "Marca", value: "Jeep" }, { key: "Modelo", value: "Compass" }, { key: "Versión", value: "Trailhawk" }, { key: "Año", value: "2023" }, { key: "Km", value: "9.000" }, { key: "Motor", value: "2.0 Diesel" }, { key: "Transmisión", value: "Automática 9v" }, { key: "Combustible", value: "Diesel" }, { key: "Tracción", value: "4WD" }, { key: "Carrocería", value: "SUV" }, { key: "Color", value: "Negro" }, { key: "Puertas", value: "5" }] },
 ];
 
+const DEMO_PRODUCTS_HOGAR_TECH: StorefrontProduct[] = [
+  { id: "hogar-1", name: "Heladera Samsung No Frost 380L", price: 899999, comparePrice: 1099999, category: "electrodomesticos", subcategory: "refrigeracion", description: "No Frost, dispenser de agua, eficiencia A+++.", images: ["https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=700&q=75"], imageItems: [{ url: "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=700&q=75" }], sizes: [], colors: ["Gris","Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "OFERTA", attributes: [{ key:"Marca", value:"Samsung" },{ key:"Modelo", value:"RT38" },{ key:"Garantía", value:"12 meses" }] },
+  { id: "hogar-2", name: "Cafetera Espresso Automática", price: 145000, comparePrice: 189000, category: "pequenos-electrodomesticos", subcategory: "desayuno", description: "Molienda integrada, 15 bares de presión.", images: ["https://images.unsplash.com/photo-1666950030199-d68343ea5a9a?auto=format&fit=crop&w=700&q=75"], imageItems: [{ url: "https://images.unsplash.com/photo-1666950030199-d68343ea5a9a?auto=format&fit=crop&w=700&q=75" }], sizes: [], colors: ["Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "OFERTA", attributes: [{ key:"Marca", value:"Philips" },{ key:"Garantía", value:"6 meses" }] },
+  { id: "hogar-3", name: "Smartphone Xiaomi Redmi Note 13", price: 389999, comparePrice: null, featured: true, category: "celulares-y-accesorios", subcategory: "smartphones", description: "128GB, cámara 108MP, batería 5000mAh.", images: ["https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=700&q=75"], imageItems: [{ url: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=700&q=75" }], sizes: [], colors: ["Negro","Verde","Azul"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "NUEVO", attributes: [{ key:"Marca", value:"Xiaomi" },{ key:"Modelo", value:"Redmi Note 13" },{ key:"Garantía", value:"12 meses" }] },
+  { id: "hogar-4", name: "Notebook Lenovo IdeaPad 15.6\"", price: 1250000, comparePrice: 1480000, category: "informatica-y-gaming", subcategory: "notebooks", description: "Ryzen 5, 16GB RAM, SSD 512GB.", images: ["https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=700&q=75"], imageItems: [{ url: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=700&q=75" }], sizes: [], colors: ["Gris"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "OFERTA", attributes: [{ key:"Marca", value:"Lenovo" },{ key:"Modelo", value:"IdeaPad 3" },{ key:"Garantía", value:"12 meses" }] },
+  { id: "hogar-5", name: "Smart TV LED 55\" 4K", price: 699999, comparePrice: 849999, category: "audio-imagen-y-video", subcategory: "tvs", description: "4K UHD, Android TV, HDR10.", images: ["https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=700&q=75"], imageItems: [{ url: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=700&q=75" }], sizes: [], colors: ["Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "OFERTA", attributes: [{ key:"Marca", value:"LG" },{ key:"Garantía", value:"12 meses" }] },
+  { id: "hogar-6", name: "Sillón Reclinable de Living", price: 320000, comparePrice: null, featured: true, category: "muebles-y-colchones", subcategory: "sillones", description: "Tapizado en símil cuero, mecanismo reclinable.", images: ["https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&w=700&q=75"], imageItems: [{ url: "https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&w=700&q=75" }], sizes: [], colors: ["Marrón","Gris"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", attributes: [{ key:"Garantía", value:"6 meses" }] },
+  { id: "hogar-7", name: "Set de Macetas Decorativas", price: 28500, comparePrice: 36000, category: "casa-y-jardin", subcategory: "plantas-deco", description: "Set de 3 macetas de cerámica con plato.", images: ["https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=700&q=75"], imageItems: [{ url: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=700&q=75" }], sizes: [], colors: ["Blanco","Terracota"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "OFERTA", attributes: [] },
+  { id: "hogar-8", name: "Auriculares Bluetooth Inalámbricos", price: 65000, comparePrice: null, featured: true, category: "audio-imagen-y-video", subcategory: "auriculares", description: "Cancelación de ruido activa, 30hs de batería.", images: ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=700&q=75"], imageItems: [{ url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=700&q=75" }], sizes: [], colors: ["Negro","Blanco"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "NUEVO", attributes: [{ key:"Marca", value:"JBL" },{ key:"Garantía", value:"6 meses" }] },
+  { id: "hogar-9", name: "Microondas Digital 28L", price: 175000, comparePrice: 210000, category: "electrodomesticos", subcategory: "cocina", description: "Grill, 10 niveles de potencia, panel digital.", images: ["https://images.unsplash.com/photo-1585659722983-3a675dabf23d?auto=format&fit=crop&w=700&q=75"], imageItems: [{ url: "https://images.unsplash.com/photo-1585659722983-3a675dabf23d?auto=format&fit=crop&w=700&q=75" }], sizes: [], colors: ["Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "OFERTA", attributes: [{ key:"Marca", value:"Whirlpool" },{ key:"Garantía", value:"12 meses" }] },
+  { id: "hogar-10", name: "Monitor Gamer 27\" 144Hz", price: 420000, comparePrice: null, featured: true, category: "informatica-y-gaming", subcategory: "monitores", description: "Full HD, panel IPS, 1ms de respuesta.", images: ["https://images.unsplash.com/photo-1547082299-de196ea013d6?auto=format&fit=crop&w=700&q=75"], imageItems: [{ url: "https://images.unsplash.com/photo-1547082299-de196ea013d6?auto=format&fit=crop&w=700&q=75" }], sizes: [], colors: ["Negro"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", attributes: [{ key:"Marca", value:"Samsung" },{ key:"Garantía", value:"12 meses" }] },
+  { id: "hogar-11", name: "Mesa Ratona de Madera y Hierro", price: 98000, comparePrice: null, featured: true, category: "muebles-y-colchones", subcategory: "mesas", description: "Estructura de hierro, tapa de madera maciza.", images: ["https://images.unsplash.com/photo-1499933374294-4584851497cc?auto=format&fit=crop&w=700&q=75"], imageItems: [{ url: "https://images.unsplash.com/photo-1499933374294-4584851497cc?auto=format&fit=crop&w=700&q=75" }], sizes: [], colors: ["Marrón"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", attributes: [] },
+  { id: "hogar-12", name: "Plancha de Vapor Cerámica", price: 42000, comparePrice: 54000, category: "pequenos-electrodomesticos", subcategory: "limpieza", description: "Suela cerámica antiadherente, vapor continuo.", images: ["https://images.unsplash.com/photo-1742344334557-f37e92d9ca87?auto=format&fit=crop&w=700&q=75"], imageItems: [{ url: "https://images.unsplash.com/photo-1742344334557-f37e92d9ca87?auto=format&fit=crop&w=700&q=75" }], sizes: [], colors: ["Blanco"], variants: [], reelUrls: [], precioMayorista: null, cantMinMayorista: null, gender: "unisex", badge: "OFERTA", attributes: [{ key:"Marca", value:"Philco" },{ key:"Garantía", value:"6 meses" }] },
+];
+
 function isSize (name: string) { return SIZE_ATTRS.includes(name.toLowerCase()); }
 function isColor(name: string) { return COLOR_ATTRS.includes(name.toLowerCase()); }
 
@@ -111,6 +127,7 @@ type RawProduct = {
   name: string;
   price: number;
   comparePrice?: number | null;
+  featured?: boolean;
   precioMayorista?: number | null;
   cantMinMayorista?: number | null;
   category?: string;
@@ -171,6 +188,7 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     name: raw.name,
     price: raw.price,
     comparePrice: raw.comparePrice ?? null,
+    featured: raw.featured ?? false,
     precioMayorista: raw.precioMayorista ?? null,
     cantMinMayorista: raw.cantMinMayorista ?? null,
     category: raw.category ?? "general",
@@ -185,6 +203,12 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     variants,
     attributes,
   };
+}
+
+export { isDemoProductId } from "@/lib/demoProducts";
+
+export function getDemoPool(tipoTienda?: string | null): StorefrontProduct[] {
+  return tipoTienda === "AUTOS" ? DEMO_PRODUCTS_AUTOS : tipoTienda === "HOGAR_TECH" ? DEMO_PRODUCTS_HOGAR_TECH : DEMO_PRODUCTS;
 }
 
 export function useStorefront() {
@@ -220,10 +244,12 @@ export function useStorefront() {
 
   // Carga productos reales; usa demo cuando no hay slug (preview del dashboard)
   useEffect(() => {
+    const fillTargetFor = (tipoTienda: string) => (tipoTienda === "AUTOS" || tipoTienda === "HOGAR_TECH" ? 12 : 8);
+
     if (!slug) {
       const tipoTienda = config?.tipoTienda ?? "ROPA";
       // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza el preview demo con el tipo de tienda elegido en el editor
-      setProducts(tipoTienda === "AUTOS" ? DEMO_PRODUCTS_AUTOS : DEMO_PRODUCTS);
+      setProducts(getDemoPool(tipoTienda));
       setLoadingProducts(false);
       return;
     }
@@ -234,10 +260,10 @@ export function useStorefront() {
           ? data.store.products.map(mapProduct)
           : [];
         if (previewFill) {
-          // En el editor: productos reales primero, demos para completar hasta 8 (12 para AUTOS)
+          // En el editor: productos reales primero, demos para completar hasta el objetivo (8, o 12 para AUTOS/HOGAR_TECH)
           const tipoTienda = config?.tipoTienda ?? "ROPA";
-          const demoPool = tipoTienda === "AUTOS" ? DEMO_PRODUCTS_AUTOS : DEMO_PRODUCTS;
-          const fillTarget = tipoTienda === "AUTOS" ? 12 : 8;
+          const demoPool = getDemoPool(tipoTienda);
+          const fillTarget = fillTargetFor(tipoTienda);
           const needed = Math.max(0, fillTarget - real.length);
           setProducts([...real, ...demoPool.slice(0, needed)]);
         } else {

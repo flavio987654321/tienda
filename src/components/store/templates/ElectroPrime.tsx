@@ -1,0 +1,717 @@
+"use client";
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import { usePushBell } from "@/contexts/PushBellContext";
+import { useAuth } from "@/components/AuthProvider";
+import StoreFollowButton from "@/components/store/StoreFollowButton";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
+import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { ContactForm } from "@/components/store/templates/shared/ContactForm";
+import type { ImageOverride } from "@/types/store-config";
+
+function smoothScrollTo(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+}
+function secBg(ov: ImageOverride | undefined, fallback: string): React.CSSProperties {
+  if (ov?.url) return { backgroundImage: `url(${ov.url})`, backgroundSize: "cover", backgroundPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` };
+  return { background: fallback };
+}
+function secText(ov: ImageOverride | undefined, bg: string): string {
+  if (ov?.url) return ov.overlayType === "light" ? "#111111" : "#ffffff";
+  return getContrastColor(bg) === "light" ? "#ffffff" : "#111111";
+}
+function secMid(ov: ImageOverride | undefined, bg: string): string {
+  if (ov?.url) return ov.overlayType === "light" ? "#555555" : "rgba(255,255,255,0.6)";
+  return getContrastColor(bg) === "light" ? "rgba(255,255,255,0.6)" : "#6b7280";
+}
+function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
+  if (!ov?.url || ov.overlayType === "none") return null;
+  return (
+    <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none",
+      background: ov.overlayType==="light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.55})` }} />
+  );
+}
+function fmtPrice(n: number, currency: string) {
+  return `${currency === "ARS" ? "$" : currency} ${n.toLocaleString("es-AR")}`;
+}
+
+const DEPARTAMENTOS_DEFAULT = [
+  { id: "electrodomesticos", label: "Electrodomésticos", icon: "🧊" },
+  { id: "pequenos-electrodomesticos", label: "Pequeños Electro", icon: "☕" },
+  { id: "celulares-y-accesorios", label: "Celulares", icon: "📱" },
+  { id: "informatica-y-gaming", label: "Informática y Gaming", icon: "💻" },
+  { id: "audio-imagen-y-video", label: "Audio y TV", icon: "📺" },
+  { id: "muebles-y-colchones", label: "Muebles y Colchones", icon: "🛋️" },
+  { id: "casa-y-jardin", label: "Casa y Jardín", icon: "🪴" },
+];
+const CATEGORY_OPTIONS = DEPARTAMENTOS_DEFAULT.map(d => ({ id: d.id, label: d.label }));
+
+const CONFIANZA = [
+  { fv: "trust1Title", fl: "trust1Desc", icon: "💳", t: "Cuotas con tarjeta",   d: "Pagá en cuotas con tu tarjeta de crédito" },
+  { fv: "trust2Title", fl: "trust2Desc", icon: "🛡️", t: "Garantía oficial",    d: "Todos los productos con garantía del vendedor" },
+  { fv: "trust3Title", fl: "trust3Desc", icon: "🏬", t: "Retiro en local",     d: "Coordiná el retiro sin costo de envío" },
+  { fv: "trust4Title", fl: "trust4Desc", icon: "🚚", t: "Envío a todo el país", d: "Recibí tu compra donde estés" },
+];
+
+function ProductCard({ product, href, currency, isFavorite, onToggleFavorite }: {
+  product: StorefrontProduct; href: string; currency: string; isFavorite: boolean; onToggleFavorite: () => void;
+}) {
+  const discount = product.comparePrice && product.comparePrice > product.price ? Math.round((1 - product.price / product.comparePrice) * 100) : null;
+  return (
+    <Link href={href} className="ep-card" style={{ textDecoration:"none", color:"inherit", background:"#fff", borderRadius:14, border:"1px solid #f0f0f0", overflow:"hidden", display:"block" }}>
+      <div style={{ aspectRatio:"1/1", background:"#f8fafc", position:"relative" }}>
+        {discount && (
+          <div style={{ position:"absolute", top:10, left:10, zIndex:1, background:"#dc2626", color:"#fff", fontSize:11, fontWeight:800, padding:"4px 9px", borderRadius:100 }}>{discount}% OFF</div>
+        )}
+        <button onClick={e => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(); }}
+          aria-label="Favorito"
+          style={{ position:"absolute", top:8, right:8, zIndex:1, width:30, height:30, borderRadius:"50%", background:"rgba(255,255,255,0.9)", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <svg width={15} height={15} viewBox="0 0 24 24" fill={isFavorite ? "#dc2626" : "none"} stroke={isFavorite ? "#dc2626" : "#6b7280"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </button>
+        {product.images[0] ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={product.images[0]} alt={product.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+        ) : (
+          <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:13 }}>Sin imagen</div>
+        )}
+      </div>
+      <div style={{ padding:"14px 16px" }}>
+        <p style={{ margin:"0 0 6px", fontSize:13, fontWeight:600, color:"#111827", lineHeight:1.4, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{product.name}</p>
+        <p style={{ margin:0, fontSize:16, fontWeight:800, color:"#111827" }}>{fmtPrice(product.price, currency)}</p>
+        {product.comparePrice && product.comparePrice > product.price && (
+          <p style={{ margin:"2px 0 0", fontSize:12, color:"#9ca3af", textDecoration:"line-through" }}>{fmtPrice(product.comparePrice, currency)}</p>
+        )}
+        <p style={{ margin:"6px 0 0", fontSize:10.5, color:"#ea580c", fontWeight:600 }}>Pagá en cuotas con tarjeta</p>
+      </div>
+    </Link>
+  );
+}
+
+export default function ElectroPrime() {
+  const config    = useStoreConfig();
+  const pushBell  = usePushBell();
+  const { products, loadingProducts, isWholesale } = useStorefront();
+  const { editMode, overrides, setOverride } = useEditContext();
+  useScrollReveal();
+  const isPreview = !!config?.previewFill;
+  const accent    = config?.colors.accent ?? "#ea580c";
+  const currency  = config?.currency ?? "ARS";
+  const storeName = config?.storeName ?? "ELECTRO PRIME";
+  const whatsapp  = config?.whatsapp ?? { enabled:false, number:"", message:"" };
+
+  const { user, status, signOut } = useAuth();
+  const router = useRouter();
+  const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
+  const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
+  const [favorites,        setFavorites]        = useState<string[]>([]);
+  const [favoritesOpen,    setFavoritesOpen]    = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (status === "loading") return;
+    if (status === "authenticated") {
+      fetch("/api/favoritos")
+        .then(r => r.ok ? r.json() : [])
+        .then((data: { productId: string }[]) => setFavorites(data.map(f => f.productId)))
+        .catch(() => {});
+    } else {
+      try {
+        const savedFavs = localStorage.getItem("storefront_favorites");
+        if (savedFavs) setFavorites(JSON.parse(savedFavs));
+      } catch {}
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (status === "authenticated") return;
+    try { localStorage.setItem("storefront_favorites", JSON.stringify(favorites)); } catch {}
+  }, [favorites, status]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) setUserDropdownOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  async function toggleFavorite(id: string) {
+    if (status !== "authenticated") { router.push(`/login?redirect=/tienda/${config?.slug}`); return; }
+    const wasFavorite = favorites.includes(id);
+    setFavorites(prev => wasFavorite ? prev.filter(f => f !== id) : [...prev, id]);
+    try {
+      await fetch("/api/favoritos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: id }) });
+    } catch {
+      setFavorites(prev => wasFavorite ? [...prev, id] : prev.filter(f => f !== id));
+    }
+  }
+  const favoriteProducts = products.filter(p => favorites.includes(p.id));
+
+  const iovr = config?.imageOverrides ?? {};
+  const sc   = config?.sectionColors  ?? {};
+
+  const heroBg      = sc["bgHero"] ?? "#111827";
+  const heroImg     = iovr["sectionbg_bgHero"];
+  const heroText    = secText(heroImg, heroBg);
+  const heroMid     = secMid(heroImg, heroBg);
+  const heroImgUrl  = iovr["heroImage"]?.url ?? "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=1200&q=80";
+
+  const depBg       = sc["bgDepartamentos"] ?? "#ffffff";
+  const depImg      = iovr["sectionbg_bgDepartamentos"];
+  const depText     = secText(depImg, depBg);
+
+  const trustBg     = sc["bgConfianza"] ?? "#f8fafc";
+  const trustImg    = iovr["sectionbg_bgConfianza"];
+  const trustText   = secText(trustImg, trustBg);
+  const trustMid    = secMid(trustImg, trustBg);
+
+  const ofertasBg   = sc["bgOfertas"] ?? "#fff7ed";
+  const ofertasImg  = iovr["sectionbg_bgOfertas"];
+  const ofertasText = secText(ofertasImg, ofertasBg);
+
+  const prodBg      = sc["bgProductos"] ?? "#ffffff";
+  const prodImg     = iovr["sectionbg_bgProductos"];
+  const prodText    = secText(prodImg, prodBg);
+
+  const nosotrosBg  = sc["bgNosotros"] ?? "#f8fafc";
+  const nosotrosImg = iovr["sectionbg_bgNosotros"];
+  const nosText     = secText(nosotrosImg, nosotrosBg);
+  const nosMid      = secMid(nosotrosImg, nosotrosBg);
+  const nosotrosUrl = iovr["nosotrosImage"]?.url ?? "https://images.unsplash.com/photo-1556911073-38141963c9e0?auto=format&fit=crop&w=900&q=80";
+
+  const contactImgUrl = iovr["contactImage"]?.url ?? "https://images.unsplash.com/photo-1556909114-44e3e70034e2?auto=format&fit=crop&w=900&q=80";
+  const contactoBg  = sc["bgContacto"] ?? "#111827";
+  const contactoImg = iovr["sectionbg_bgContacto"];
+
+  const footerBg    = sc["bgFooter"] ?? "#0a0a0a";
+  const ftMid       = "rgba(255,255,255,0.5)";
+
+  const navBg       = sc["navBg"] ?? "#ffffff";
+  const navDark     = getContrastColor(navBg) === "light";
+  const navText     = navDark ? "#ffffff" : "#111827";
+  const navTextMid  = navDark ? "rgba(255,255,255,0.7)" : "#6b7280";
+  const navBorder   = navDark ? "rgba(255,255,255,0.15)" : "#e5e7eb";
+
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [annIdx, setAnnIdx]     = useState(0);
+  const [annVisible, setAnnVisible] = useState(true);
+  const ofertasScrollRef = useRef<HTMLDivElement>(null);
+  function scrollOfertas(dir: 1 | -1) {
+    const el = ofertasScrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.85, behavior: "smooth" });
+  }
+
+  const DEFAULTS = ["💳 Hasta 12 cuotas con tarjeta", "🛡️ Garantía oficial en todos los productos", "🚚 Envío a todo el país"];
+  const promoBannerEnabled = config?.promoBanner?.enabled !== false;
+  const annMessages = (config?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
+    ? config!.promoBanner!.messages!.filter(m => m.trim())
+    : DEFAULTS;
+  const showAnn = promoBannerEnabled && annVisible;
+  const PROMO_H = 36;
+  const NAV_H   = 64;
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!showAnn || annMessages.length <= 1) return;
+    const id = setInterval(() => setAnnIdx(i => (i + 1) % annMessages.length), 3500);
+    return () => clearInterval(id);
+  }, [showAnn, annMessages.length]);
+
+  const featuredProducts = products.filter(p => p.featured);
+  const showcased = (featuredProducts.length > 0 ? featuredProducts : products).slice(0, 8);
+  const hasMore   = (featuredProducts.length > 0 ? featuredProducts : products).length > 8;
+  const ofertas   = products.filter(p => p.comparePrice && p.comparePrice > p.price).slice(0, 8);
+  const catalogHref = `/tienda/${config?.slug ?? ""}/productos?t=electro-prime${isPreview ? "&from=editor" : ""}`;
+
+  return (
+    <div style={{ background:"#ffffff", color:"#111111", fontFamily:"'Inter','Segoe UI',system-ui,sans-serif", minHeight:"100vh" }}>
+      <style>{`
+        .ep-nav-links { display:none }
+        @media(min-width:768px){ .ep-nav-links { display:flex } .ep-burger { display:none } }
+        .ep-dep-grid { display:flex; gap:14px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; justify-content:center; flex-wrap:wrap }
+        .ep-dep-grid::-webkit-scrollbar { display:none }
+        .ep-ofertas-row { scrollbar-width:none }
+        .ep-ofertas-row::-webkit-scrollbar { display:none }
+        .ep-carousel-arrow { opacity:0; transition:opacity 0.2s }
+        section:hover .ep-carousel-arrow { opacity:1 }
+        @media(max-width:640px){ .ep-carousel-arrow { opacity:1 } }
+        .ep-trust-grid { grid-template-columns:repeat(2,1fr) }
+        @media(min-width:768px){ .ep-trust-grid { grid-template-columns:repeat(4,1fr) } }
+        .ep-prod-grid { grid-template-columns:repeat(2,1fr) }
+        @media(min-width:640px){ .ep-prod-grid { grid-template-columns:repeat(3,1fr) } }
+        @media(min-width:1024px){ .ep-prod-grid { grid-template-columns:repeat(4,1fr) } }
+        .ep-about { grid-template-columns:1fr }
+        @media(min-width:768px){ .ep-about { grid-template-columns:1fr 1fr } }
+        .ep-card { transition:box-shadow 0.2s, transform 0.2s }
+        .ep-card:hover { box-shadow:0 10px 30px rgba(0,0,0,0.1); transform:translateY(-3px) }
+        @keyframes ep-spin { to { transform:rotate(360deg) } }
+        .ep-megamenu { opacity:0; visibility:hidden; transform:translateY(-6px); transition:all 0.18s; }
+        .ep-mega-wrap:hover .ep-megamenu, .ep-megamenu:hover { opacity:1; visibility:visible; transform:translateY(0); }
+      `}</style>
+
+      {/* ── PROMO BAR ── */}
+      {showAnn && (
+        <div style={{ position: isPreview ? "sticky" : "fixed", top:0,
+          left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
+          zIndex: isPreview ? 10001 : 110, height:PROMO_H, background:accent,
+          display:"flex", alignItems:"center", justifyContent:"center" }}>
+          {(() => {
+            const bannerText = getContrastColor(accent) === "light" ? "#ffffff" : "#111111";
+            return (
+              <>
+                <span style={{ fontSize:11, fontWeight:600, color:bannerText, letterSpacing:0.5 }}>{annMessages[annIdx]}</span>
+                <button onClick={() => setAnnVisible(false)}
+                  style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:bannerText, cursor:"pointer", fontSize:16, opacity:0.7 }}>×</button>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ── NAV ── */}
+      <nav style={{ position: isPreview ? "sticky" : "fixed", top: showAnn ? PROMO_H : 0,
+        left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10000 : 100,
+        background:navBg, borderBottom: scrolled ? `1px solid ${navBorder}` : "1px solid transparent",
+        boxShadow: scrolled ? "0 2px 16px rgba(0,0,0,0.06)" : "none", transition:"all 0.3s", padding:"0 24px" }}>
+        <div style={{ maxWidth:1240, margin:"0 auto", height:NAV_H, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div style={{ fontWeight:900, fontSize:18, color:navText, letterSpacing:-0.5 }}>
+            <EditableZone field="storeName" label="Nombre de la tienda">{storeName}</EditableZone>
+          </div>
+          <div className="ep-nav-links" style={{ gap:30, alignItems:"center" }}>
+            <div className="ep-mega-wrap" style={{ position:"relative" }}>
+              <button onClick={() => smoothScrollTo("departamentos")}
+                style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", fontSize:13, fontWeight:500, display:"flex", alignItems:"center", gap:4 }}>
+                Departamentos <span style={{ fontSize:9 }}>▾</span>
+              </button>
+              <div className="ep-megamenu" style={{ position:"absolute", top:"calc(100% + 12px)", left:"50%", transform:"translateX(-50%)",
+                background:"#fff", borderRadius:12, boxShadow:"0 16px 40px rgba(0,0,0,0.14)", padding:"14px", display:"grid",
+                gridTemplateColumns:"repeat(2, 160px)", gap:"4px 18px", zIndex:200 }}>
+                {CATEGORY_OPTIONS.map(c => (
+                  <Link key={c.id} href={`/tienda/${config?.slug ?? ""}/productos?categoria=${c.id}&t=electro-prime${isPreview ? "&from=editor" : ""}`}
+                    style={{ padding:"8px 10px", borderRadius:8, fontSize:12.5, color:"#374151", textDecoration:"none", whiteSpace:"nowrap" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                    {c.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            {[["Productos","productos"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([lbl,id]) => (
+              <button key={id} onClick={() => smoothScrollTo(id)}
+                style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", fontSize:13, fontWeight:500 }}>
+                {lbl}
+              </button>
+            ))}
+            <Link href={catalogHref} style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111",
+              padding:"9px 20px", fontSize:12, fontWeight:700, textDecoration:"none", borderRadius:8 }}>
+              Ver catálogo
+            </Link>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+            <button onClick={() => setFavoritesOpen(true)}
+              style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              {favorites.length > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
+            </button>
+            {pushBell && config?.showPushBell && !isPreview && (
+              <StoreFollowButton storeSlug={config?.slug ?? ""} color={navTextMid} size={20} />
+            )}
+            {pushBell && config?.showPushBell && !isPreview && (
+              <button onClick={pushBell.openDrawer}
+                style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+                <svg width={20} height={20} viewBox="0 0 24 24" fill={pushBell.followState==="following"?"currentColor":"none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                {pushBell.hasNew && <span style={{ position:"absolute", top:2, right:2, width:10, height:10, background:"#ef4444", borderRadius:"50%", border:`2px solid ${navBg}` }} />}
+              </button>
+            )}
+            <div ref={userDropdownRef} style={{ position:"relative" }}>
+              <button onClick={() => setUserDropdownOpen(o => !o)}
+                style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+                <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </button>
+              {userDropdownOpen && (
+                <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#fff", border:`1px solid ${navBorder}`, minWidth:190, zIndex:300, boxShadow:"0 8px 28px rgba(0,0,0,0.18)", borderRadius:10, overflow:"hidden" }}>
+                  {user ? (
+                    <>
+                      <p style={{ padding:"10px 16px 4px", fontSize:11, color:"#9ca3af", margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{user.name || user.email.split("@")[0]}</p>
+                      <a href={panelHref} onClick={() => setUserDropdownOpen(false)} style={{ display:"block", padding:"10px 16px", fontSize:13, color:"#111827", textDecoration:"none", borderBottom:"1px solid #f1f1f1" }}>{panelLabel}</a>
+                      <button onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
+                        style={{ display:"block", width:"100%", padding:"10px 16px", fontSize:13, color:"#dc2626", background:"none", border:"none", textAlign:"left", cursor: isPreview ? "default" : "pointer" }}>Cerrar sesión</button>
+                    </>
+                  ) : (
+                    <>
+                      <a href={isPreview ? undefined : `/login?redirect=/tienda/${config?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)} style={{ display:"block", padding:"12px 16px", fontSize:13, color:"#111827", textDecoration:"none", borderBottom:"1px solid #f1f1f1" }}>Iniciar sesión</a>
+                      <a href={isPreview ? undefined : `/registro?plan=buyer&redirect=/tienda/${config?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)} style={{ display:"block", padding:"12px 16px", fontSize:13, color:"#111827", textDecoration:"none" }}>Registrarse</a>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            <Link href={catalogHref} aria-label="Carrito" style={{ color:navTextMid, display:"flex", alignItems:"center" }}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            </Link>
+            <button className="ep-burger" onClick={() => setMenuOpen(m => !m)}
+              style={{ background:"none", border:`1px solid ${navBorder}`, color:navText, padding:"7px 11px", cursor:"pointer", fontSize:18 }}>
+              {menuOpen ? "×" : "☰"}
+            </button>
+          </div>
+        </div>
+        {menuOpen && (
+          <div style={{ background:navBg, borderTop:`1px solid ${navBorder}`, padding:"8px 24px 18px" }}>
+            {[["Departamentos","departamentos"],["Productos","productos"],["Nosotros","nosotros"],["Contacto","contacto"]].map(([lbl,id]) => (
+              <button key={id} onClick={() => { smoothScrollTo(id); setMenuOpen(false); }}
+                style={{ display:"block", width:"100%", background:"none", border:"none", color:navTextMid, textAlign:"left", padding:"11px 0", fontSize:13, fontWeight:500, borderBottom:`1px solid ${navBorder}` }}>
+                {lbl}
+              </button>
+            ))}
+            <Link href={catalogHref} style={{ display:"block", color:accent, padding:"14px 0", fontSize:13, fontWeight:700, textDecoration:"none" }} onClick={() => setMenuOpen(false)}>
+              Ver catálogo completo →
+            </Link>
+          </div>
+        )}
+      </nav>
+
+      {/* ── HERO ── */}
+      <section style={{ paddingTop: isPreview ? 0 : (showAnn ? PROMO_H + NAV_H : NAV_H), position:"relative", ...secBg(heroImg, heroBg), minHeight: isPreview ? undefined : "70vh" }}>
+        <BgDragHandle imgKey="sectionbg_bgHero" />
+        <SectionOverlay ov={heroImg} />
+        <EditableSectionBg field="bgHero" label="Fondo hero" />
+        <div style={{ position:"relative", zIndex:1, display:"flex", minHeight: isPreview ? 480 : "calc(70vh - 64px)" }}>
+          <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"56px 28px", maxWidth:540 }}>
+            <span style={{ display:"inline-flex", alignItems:"center", gap:8, background:`${accent}25`, border:`1px solid ${accent}`, color:accent, borderRadius:100, padding:"6px 16px", fontSize:12, fontWeight:700, marginBottom:24, width:"fit-content" }}>
+              💳 <EditableZone field="heroBadge" label="Badge del hero">Hasta 12 cuotas sin recargo*</EditableZone>
+            </span>
+            <h1 style={{ margin:"0 0 18px", fontSize:"clamp(32px,5vw,56px)", fontWeight:900, color:heroText, letterSpacing:-1.5, lineHeight:1.05 }}>
+              <EditableZone field="heroHeading" label="Título hero">Lo último en hogar y tecnología</EditableZone>
+            </h1>
+            <p style={{ margin:"0 0 32px", fontSize:15, color:heroMid, lineHeight:1.8, maxWidth:420 }}>
+              <EditableZone field="heroSubtext" label="Subtítulo hero">Electrodomésticos, celulares, informática y muebles con garantía oficial y financiación en cuotas.</EditableZone>
+            </p>
+            <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+              <Link href={catalogHref} style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111",
+                padding:"15px 32px", fontWeight:700, fontSize:13, borderRadius:10, textDecoration:"none" }}>
+                Ver catálogo
+              </Link>
+              {whatsapp.enabled && whatsapp.number && (
+                <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ display:"flex", alignItems:"center", gap:8, background:"none", border:`1.5px solid ${heroText==="#ffffff"?"rgba(255,255,255,0.35)":"#d1d5db"}`, color:heroText, textDecoration:"none", padding:"15px 24px", fontWeight:600, fontSize:13, borderRadius:10 }}>
+                  Consultar
+                </a>
+              )}
+            </div>
+          </div>
+          <div style={{ flex:1, position:"relative", overflow:"hidden", minHeight:320 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={heroImgUrl} alt="Producto destacado" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+            <EditableImageButton field="heroImage" label="Imagen del hero" />
+          </div>
+        </div>
+      </section>
+
+      {/* ── DEPARTAMENTOS (editables: categoría + imagen + texto por botón) ── */}
+      <section id="departamentos" data-reveal style={{ position:"relative", ...secBg(depImg, depBg), padding:"56px 24px" }}>
+        <BgDragHandle imgKey="sectionbg_bgDepartamentos" />
+        <SectionOverlay ov={depImg} />
+        <EditableSectionBg field="bgDepartamentos" label="Fondo departamentos" />
+        <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
+          <h2 style={{ margin:"0 0 24px", fontSize:"clamp(20px,3vw,28px)", fontWeight:800, color:depText, letterSpacing:-0.5, textAlign:"center" }}>
+            <EditableZone field="depHeading" label="Título departamentos">Comprá por departamento</EditableZone>
+          </h2>
+          <div className="ep-dep-grid">
+            {DEPARTAMENTOS_DEFAULT.map((d, i) => {
+              const catKey = `dept${i}Cat`;
+              const categoryId = overrides[catKey]?.text ?? d.id;
+              return (
+                <div key={i} style={{ position:"relative" }}>
+                  <Link href={`/tienda/${config?.slug ?? ""}/productos?categoria=${categoryId}&t=electro-prime${isPreview ? "&from=editor" : ""}`}
+                    style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, textDecoration:"none", flexShrink:0, width:96 }}>
+                    <div style={{ width:72, height:72, borderRadius:"50%", background:`${accent}12`, border:`1.5px solid ${accent}30`,
+                      display:"flex", alignItems:"center", justifyContent:"center", fontSize:30 }}>
+                      {d.icon}
+                    </div>
+                    <span style={{ fontSize:11.5, fontWeight:600, color:depText, textAlign:"center", lineHeight:1.3 }}>
+                      <EditableZone field={`dept${i}Label`} label={`Departamento ${i+1} — texto`}>{d.label}</EditableZone>
+                    </span>
+                  </Link>
+                  {editMode && (
+                    <select value={categoryId} onClick={e => e.stopPropagation()}
+                      onChange={e => setOverride(catKey, { text: e.target.value })}
+                      title="A qué categoría apunta este botón"
+                      style={{ position:"absolute", top:-6, right:-6, fontSize:10, border:"1px solid #6366f1", borderRadius:6, background:"#eef2ff", color:"#4338ca", cursor:"pointer", maxWidth:90, padding:"2px 1px" }}>
+                      {CATEGORY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                    </select>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CONFIANZA ── */}
+      <section data-reveal style={{ position:"relative", ...secBg(trustImg, trustBg), borderTop:"1px solid rgba(0,0,0,0.06)", borderBottom:"1px solid rgba(0,0,0,0.06)" }}>
+        <BgDragHandle imgKey="sectionbg_bgConfianza" />
+        <SectionOverlay ov={trustImg} />
+        <EditableSectionBg field="bgConfianza" label="Fondo confianza" />
+        <div className="ep-trust-grid" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"grid" }}>
+          {CONFIANZA.map((c, i) => (
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"24px 20px", borderRight: i < 3 ? "1px solid rgba(0,0,0,0.06)" : "none" }}>
+              <span style={{ fontSize:24, flexShrink:0 }}>{c.icon}</span>
+              <div>
+                <p style={{ margin:"0 0 2px", fontSize:13, fontWeight:700, color:trustText }}><EditableZone field={c.fv} label={`Sello ${i+1} título`}>{c.t}</EditableZone></p>
+                <p style={{ margin:0, fontSize:11.5, color:trustMid, lineHeight:1.5 }}><EditableZone field={c.fl} label={`Sello ${i+1} descripción`}>{c.d}</EditableZone></p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── OFERTAS — carrusel con flechas ── */}
+      {ofertas.length > 0 && (
+        <section data-reveal style={{ position:"relative", ...secBg(ofertasImg, ofertasBg), padding:"56px 24px" }}>
+          <BgDragHandle imgKey="sectionbg_bgOfertas" />
+          <SectionOverlay ov={ofertasImg} />
+          <EditableSectionBg field="bgOfertas" label="Fondo ofertas" />
+          <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
+            <h2 style={{ margin:"0 0 24px", fontSize:"clamp(20px,3vw,28px)", fontWeight:800, color:ofertasText, letterSpacing:-0.5 }}>
+              🔥 <EditableZone field="ofertasHeading" label="Título ofertas">Ofertas destacadas</EditableZone>
+            </h2>
+            <div style={{ position:"relative" }}>
+              {ofertas.length > 4 && (
+                <>
+                  <button onClick={() => scrollOfertas(-1)} aria-label="Anterior" className="ep-carousel-arrow ep-carousel-arrow-l"
+                    style={{ position:"absolute", left:-18, top:"38%", transform:"translateY(-50%)", width:42, height:42, borderRadius:"50%",
+                      border:"none", background:"#fff", color:"#111", fontSize:20, cursor:"pointer", zIndex:2, boxShadow:"0 6px 20px rgba(0,0,0,0.18)",
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+                  <button onClick={() => scrollOfertas(1)} aria-label="Siguiente" className="ep-carousel-arrow ep-carousel-arrow-r"
+                    style={{ position:"absolute", right:-18, top:"38%", transform:"translateY(-50%)", width:42, height:42, borderRadius:"50%",
+                      border:"none", background:"#fff", color:"#111", fontSize:20, cursor:"pointer", zIndex:2, boxShadow:"0 6px 20px rgba(0,0,0,0.18)",
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+                </>
+              )}
+              <div ref={ofertasScrollRef} className="ep-ofertas-row" style={{ display:"flex", gap:18, overflowX:"auto", scrollSnapType:"x mandatory", paddingBottom:4 }}>
+                {ofertas.map(p => (
+                  <div key={p.id} style={{ flex:"0 0 240px", scrollSnapAlign:"start" }}>
+                    <ProductCard product={p} currency={currency}
+                      href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
+                      isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── PRODUCTOS ── */}
+      <section id="productos" data-reveal style={{ position:"relative", ...secBg(prodImg, prodBg), padding:"64px 24px" }}>
+        <BgDragHandle imgKey="sectionbg_bgProductos" />
+        <SectionOverlay ov={prodImg} />
+        <EditableSectionBg field="bgProductos" label="Fondo productos" />
+        <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:28, flexWrap:"wrap", gap:12 }}>
+            <h2 style={{ margin:0, fontSize:"clamp(20px,3vw,28px)", fontWeight:800, color:prodText, letterSpacing:-0.5 }}>
+              <EditableZone field="prodHeading" label="Título productos">Catálogo</EditableZone>
+            </h2>
+            {hasMore && (
+              <Link href={catalogHref} style={{ fontSize:13, fontWeight:700, color:accent, textDecoration:"none" }}>Ver todo →</Link>
+            )}
+          </div>
+
+          {loadingProducts ? (
+            <div style={{ textAlign:"center", padding:"60px 0" }}>
+              <div style={{ width:36, height:36, border:`3px solid ${accent}`, borderTopColor:"transparent", borderRadius:"50%", animation:"ep-spin 0.8s linear infinite", margin:"0 auto" }} />
+            </div>
+          ) : showcased.length > 0 ? (
+            <div className="ep-prod-grid" style={{ display:"grid", gap:18 }}>
+              {showcased.map(p => (
+                <ProductCard key={p.id} product={p} currency={currency}
+                  href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
+                  isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign:"center", padding:"60px 24px", border:"1px dashed #e5e7eb", borderRadius:12 }}>
+              <p style={{ margin:0, color:"#9ca3af", fontSize:14 }}>Aún no hay productos publicados.</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── MAYORISTA ── */}
+      {isWholesale && (
+        <section data-reveal style={{ background:"#f8fafc", borderTop:"1px solid #f0f0f0", borderBottom:"1px solid #f0f0f0" }}>
+          <div style={{ maxWidth:1240, margin:"0 auto", padding:"48px 24px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:16 }}>
+            <span style={{ fontSize:11, letterSpacing:2, color:accent, textTransform:"uppercase", fontWeight:700 }}>
+              <EditableZone field="mayoristaKicker" label="Kicker mayorista">Venta mayorista</EditableZone>
+            </span>
+            <h2 style={{ fontSize:"clamp(22px,3.5vw,34px)", fontWeight:800, color:"#111827", margin:0 }}>
+              <EditableZone field="mayoristaHeading" label="Título mayorista">¿Comprás para revender?</EditableZone>
+            </h2>
+            <p style={{ fontSize:14, color:"#6b7280", maxWidth:460, margin:0, lineHeight:1.7 }}>
+              <EditableZone field="mayoristaSubtext" label="Subtítulo mayorista">Pedí precios especiales por cantidad para revendedores y distribuidores.</EditableZone>
+            </p>
+            <button onClick={() => smoothScrollTo("contacto")} style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111", border:"none", padding:"13px 32px", fontSize:13, fontWeight:700, borderRadius:10, cursor:"pointer" }}>
+              <EditableZone field="mayoristaCta" label="Texto botón mayorista">Consultar precios →</EditableZone>
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* ── NOSOTROS ── */}
+      <section id="nosotros" data-reveal style={{ position:"relative", ...secBg(nosotrosImg, nosotrosBg), padding:"72px 24px" }}>
+        <BgDragHandle imgKey="sectionbg_bgNosotros" />
+        <SectionOverlay ov={nosotrosImg} />
+        <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
+        <div className="ep-about" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"grid", gap:48, alignItems:"center" }}>
+          <div style={{ position:"relative" }}>
+            <div style={{ borderRadius:18, overflow:"hidden", aspectRatio:"4/3", position:"relative" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={nosotrosUrl} alt="Nuestro local" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
+            </div>
+            <div style={{ position:"absolute", bottom:-18, right:-14, background:"#fff", borderRadius:14, padding:"14px 20px", boxShadow:"0 8px 30px rgba(0,0,0,0.12)", textAlign:"center", border:`2px solid ${accent}` }}>
+              <p style={{ margin:0, fontSize:26, fontWeight:900, color:accent, lineHeight:1 }}>
+                <EditableZone field="nosotrosAnios" label="Años de trayectoria">10+</EditableZone>
+              </p>
+              <p style={{ margin:"4px 0 0", fontSize:10.5, color:"#6b7280", whiteSpace:"nowrap" }}>años de trayectoria</p>
+            </div>
+          </div>
+          <div>
+            <p style={{ margin:"0 0 8px", fontSize:11, color:accent, textTransform:"uppercase", letterSpacing:2, fontWeight:700 }}>
+              <EditableZone field="nosotrosKicker" label="Kicker nosotros">Nuestra tienda</EditableZone>
+            </p>
+            <h2 style={{ margin:"0 0 18px", fontSize:"clamp(22px,4vw,34px)", fontWeight:800, color:nosText, letterSpacing:-0.5 }}>
+              <EditableZone field="nosotrosHeading" label="Título nosotros">Confianza en cada compra</EditableZone>
+            </h2>
+            <p style={{ margin:"0 0 14px", fontSize:14.5, color:nosMid, lineHeight:1.85 }}>
+              <EditableZone field="nosotrosP1" label="Párrafo 1">Somos una tienda especializada en electrodomésticos, tecnología y hogar, con productos nuevos y garantía oficial en todo lo que vendemos.</EditableZone>
+            </p>
+            <p style={{ margin:"0 0 26px", fontSize:14.5, color:nosMid, lineHeight:1.85 }}>
+              <EditableZone field="nosotrosP2" label="Párrafo 2">Te asesoramos para que encuentres el producto justo para tu casa, con financiación en cuotas y la mejor atención.</EditableZone>
+            </p>
+            {whatsapp.enabled && whatsapp.number && (
+              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
+                target="_blank" rel="noopener noreferrer"
+                style={{ display:"inline-flex", alignItems:"center", gap:8, background:"#25d366", color:"white", textDecoration:"none", padding:"13px 28px", borderRadius:10, fontWeight:700, fontSize:14 }}>
+                Contactanos
+              </a>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CONTACTO — imagen + formulario ── */}
+      <section id="contacto" data-reveal style={{ position:"relative", ...secBg(contactoImg, contactoBg), padding:"64px 24px" }}>
+        <BgDragHandle imgKey="sectionbg_bgContacto" />
+        <SectionOverlay ov={contactoImg} />
+        <EditableSectionBg field="bgContacto" label="Fondo contacto" />
+        <div className="ep-contact-grid" style={{ position:"relative", zIndex:1, maxWidth:1080, margin:"0 auto", display:"grid", gap:0, borderRadius:20, overflow:"hidden", boxShadow:"0 24px 60px rgba(0,0,0,0.3)" }}>
+          <style>{`.ep-contact-grid{grid-template-columns:1fr} @media(min-width:768px){.ep-contact-grid{grid-template-columns:1fr 1fr}}`}</style>
+          <div style={{ position:"relative", minHeight:280 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={contactImgUrl} alt="Atención al cliente" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", position:"absolute", inset:0 }} />
+            <EditableImageButton field="contactImage" label="Imagen sección Contacto" />
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.55))" }} />
+            <div style={{ position:"absolute", bottom:24, left:24, right:24 }}>
+              {CONFIANZA.slice(0,3).map((c,i) => (
+                <p key={i} style={{ margin:"0 0 8px", fontSize:13, color:"#fff", display:"flex", alignItems:"center", gap:8, fontWeight:600 }}>{c.icon} {c.t}</p>
+              ))}
+            </div>
+          </div>
+          <div style={{ background:"#fff", padding:36 }}>
+            <p style={{ margin:"0 0 10px", fontSize:11, color:accent, textTransform:"uppercase", letterSpacing:2, fontWeight:700 }}>Contacto</p>
+            <h2 style={{ margin:"0 0 12px", fontSize:"clamp(20px,3vw,26px)", fontWeight:800, color:"#111", letterSpacing:-0.5 }}>
+              <EditableZone field="contactHeading" label="Título contacto">¿Tenés dudas sobre algún producto?</EditableZone>
+            </h2>
+            <p style={{ margin:"0 0 22px", fontSize:13.5, color:"#6b7280", lineHeight:1.8 }}>
+              <EditableZone field="contactSubtext" label="Subtítulo contacto">Escribinos y te asesoramos antes de tu compra.</EditableZone>
+            </p>
+            <ContactForm storeId={config?.storeId} accent={accent} textColor="#111111" mutedColor="#6b7280" radius={10} />
+          </div>
+        </div>
+        <div style={{ position:"relative", zIndex:1, maxWidth:1080, margin:"18px auto 0", display:"flex", justifyContent:"center", gap:20, flexWrap:"wrap" }}>
+            <Link href={catalogHref} style={{ color:accent, fontWeight:700, fontSize:13, textDecoration:"none" }}>Ver catálogo completo →</Link>
+            {whatsapp.enabled && whatsapp.number && (
+              <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
+                target="_blank" rel="noopener noreferrer"
+                style={{ color:"#25d366", textDecoration:"none", fontWeight:600, fontSize:13 }}>
+                <EditableZone field="contactWhatsApp" label="Texto link WhatsApp">o escribinos por WhatsApp</EditableZone>
+              </a>
+            )}
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer style={{ background:footerBg, padding:"32px 24px", textAlign:"center" }}>
+        <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:14, color:accent }}>{storeName}</p>
+        <p style={{ margin:"0 0 12px", fontSize:11, color:ftMid }}>
+          © {new Date().getFullYear()} {storeName}. Todos los derechos reservados.
+        </p>
+        <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
+          {[["Política de devoluciones","devoluciones"],["Política de envíos","envios"],["Términos y condiciones","terminos"]].map(([label, tipo]) => (
+            <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:ftMid, opacity:0.6, textDecoration:"none" }}>{label}</a>
+          ))}
+        </div>
+      </footer>
+
+      {/* ── FAVORITOS DRAWER ── */}
+      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 205, pointerEvents: favoritesOpen ? "auto" : "none" }}>
+        <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.4)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }} />
+        <div style={{ position:"absolute", top:0, right:0, bottom:0, width:400, maxWidth:"100vw", background:"#fff", transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:"1px solid #e5e5e5" }}>
+          <div style={{ padding:"20px 24px 14px", borderBottom:"1px solid #f0f0f0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <p style={{ fontWeight:700, fontSize:16, margin:0, color:"#111" }}>Favoritos <span style={{ fontWeight:400, fontSize:13, color:"#888" }}>({favorites.length})</span></p>
+            <button onClick={() => setFavoritesOpen(false)} style={{ background:"none", border:"none", color:"#111", fontSize:22, cursor:"pointer" }}>×</button>
+          </div>
+          <div style={{ flex:1, overflowY:"auto", padding:"14px 24px" }}>
+            {favoriteProducts.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"52px 0", color:"#888" }}>
+                <p style={{ fontSize:32, marginBottom:12 }}>♡</p>
+                <p style={{ fontSize:13, lineHeight:1.8 }}>No tenés favoritos aún.<br/>Explorá el catálogo.</p>
+              </div>
+            ) : favoriteProducts.map(product => (
+              <div key={product.id} style={{ display:"flex", gap:14, padding:"14px 0", borderBottom:"1px solid #f5f5f5" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={product.images[0] ?? ""} alt="" style={{ width:80, height:60, objectFit:"cover", borderRadius:4, flexShrink:0, background:"#f5f5f5" }} />
+                <div style={{ flex:1 }}>
+                  <p style={{ fontSize:14, fontWeight:600, margin:"0 0 4px", color:"#111" }}>{product.name}</p>
+                  <p style={{ fontSize:13, color:accent, fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <Link href={`/tienda/${config?.slug ?? ""}/producto/${product.id}${isPreview ? "?from=editor" : ""}`} onClick={() => setFavoritesOpen(false)}
+                      style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111", border:"none", borderRadius:4, padding:"7px 14px", fontSize:11, fontWeight:600, cursor:"pointer", textDecoration:"none" }}>
+                      Ver
+                    </Link>
+                    <button onClick={() => toggleFavorite(product.id)}
+                      style={{ background:"transparent", color:"#888", border:"1px solid #ddd", borderRadius:4, padding:"7px 14px", fontSize:11, cursor:"pointer" }}>
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {!editMode && whatsapp.enabled && whatsapp.number && (
+        <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
+          target="_blank" rel="noopener noreferrer"
+          style={{ position:"fixed", bottom:24, right:24, zIndex:500, background:"#25d366", color:"white", width:56, height:56,
+            borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 24px rgba(37,211,102,0.45)", textDecoration:"none" }}>
+          <svg width={24} height={24} viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A8.86 8.86 0 0 0 12.07 3a8.86 8.86 0 0 0-7.65 13.43L3 21l4.74-1.24a8.86 8.86 0 0 0 4.33 1.1h.01c4.9 0 8.87-3.97 8.87-8.86 0-2.37-.92-4.6-2.35-6.68zm-5.53 13.63a7.37 7.37 0 0 1-3.76-1.03l-.27-.16-2.8.73.75-2.73-.18-.28a7.36 7.36 0 0 1-1.13-3.93c0-4.07 3.31-7.38 7.39-7.38a7.34 7.34 0 0 1 5.22 2.17 7.34 7.34 0 0 1 2.16 5.22c0 4.07-3.31 7.39-7.38 7.39zm4.04-5.53c-.22-.11-1.3-.64-1.5-.71-.2-.08-.35-.11-.5.11-.15.22-.57.71-.7.86-.13.15-.26.16-.48.06-.22-.11-.93-.34-1.77-1.09-.65-.58-1.09-1.3-1.22-1.52-.13-.22-.01-.34.1-.45.1-.11.22-.28.33-.42.11-.14.15-.24.22-.4.08-.16.04-.3-.04-.42-.08-.11-.5-1.2-.69-1.65-.18-.43-.37-.37-.51-.38-.13-.01-.28-.01-.43-.01-.15 0-.39.06-.6.28-.21.22-.8.78-.8 1.9 0 1.12.81 2.2.93 2.35.11.15 1.55 2.37 3.76 3.23 1.87.73 2.25.59 2.66.55.41-.04 1.3-.53 1.49-1.04.18-.51.18-.94.13-1.04-.06-.1-.22-.16-.44-.27z"/></svg>
+        </a>
+      )}
+    </div>
+  );
+}

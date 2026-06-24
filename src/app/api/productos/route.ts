@@ -45,7 +45,10 @@ export async function POST(req: NextRequest) {
 
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;
-  const { name, parsedPrice, parsedComparePrice, parsedPrecioMayorista, parsedCantMinMayorista, normalizedVariants } = validated;
+  const {
+    name, parsedPrice, parsedComparePrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista, normalizedVariants,
+    parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
+  } = validated;
 
   const parsedPublishAt = publishAt ? new Date(publishAt) : null;
   const scheduledInFuture = parsedPublishAt && parsedPublishAt > new Date();
@@ -56,6 +59,7 @@ export async function POST(req: NextRequest) {
       description,
       price: parsedPrice,
       comparePrice: parsedComparePrice,
+      featured: parsedFeatured,
       category: category || "general",
       subcategory: subcategory || null,
       gender: gender || "unisex",
@@ -65,6 +69,10 @@ export async function POST(req: NextRequest) {
       attributes: JSON.stringify(Array.isArray(attributes) ? attributes : []),
       precioMayorista: parsedPrecioMayorista,
       cantMinMayorista: parsedCantMinMayorista,
+      weightKg: parsedWeightKg,
+      widthCm: parsedWidthCm,
+      heightCm: parsedHeightCm,
+      depthCm: parsedDepthCm,
       publishAt: parsedPublishAt,
       isActive: scheduledInFuture ? false : true,
       storeId: store.id,

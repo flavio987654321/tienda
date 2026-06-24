@@ -44,7 +44,10 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
 
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;
-  const { name, parsedPrice, parsedComparePrice, parsedPrecioMayorista, parsedCantMinMayorista, normalizedVariants } = validated;
+  const {
+    name, parsedPrice, parsedComparePrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista, normalizedVariants,
+    parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
+  } = validated;
 
   const parsedPublishAt = publishAt !== undefined ? (publishAt ? new Date(publishAt) : null) : undefined;
   const scheduledInFuture = parsedPublishAt && parsedPublishAt > new Date();
@@ -176,6 +179,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         description,
         price: parsedPrice,
         comparePrice: parsedComparePrice,
+        featured: parsedFeatured,
         category: category || "general",
         subcategory: subcategory || null,
         gender: gender || "unisex",
@@ -185,6 +189,10 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         attributes: JSON.stringify(Array.isArray(attributes) ? attributes : []),
         precioMayorista: parsedPrecioMayorista,
         cantMinMayorista: parsedCantMinMayorista,
+        weightKg: parsedWeightKg,
+        widthCm: parsedWidthCm,
+        heightCm: parsedHeightCm,
+        depthCm: parsedDepthCm,
         ...(parsedPublishAt !== undefined
           ? { publishAt: parsedPublishAt, ...(scheduledInFuture ? { isActive: false } : {}) }
           : {}),

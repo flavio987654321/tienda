@@ -24,6 +24,7 @@ export default function StoreTypeModal({
   const [confirmStep, setConfirmStep] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+  const [error, setError] = useState("");
 
   const selectedConfig = STORE_TYPES.find((t) => t.id === selected);
   const isChangingType = isEditing && selected !== null && selected !== currentType;
@@ -61,31 +62,47 @@ export default function StoreTypeModal({
   async function save() {
     if (!selected) return;
     setSaving(true);
+    setError("");
 
-    if (isChangingType) {
-      // Reset completo + cambio de tipo
-      await fetch("/api/store/reset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newType: selected }),
-      });
-      // Resetear tour para que aparezca de nuevo con el nuevo tipo
-      localStorage.removeItem(TOUR_STORAGE_KEY);
-    } else {
-      // Primera configuración o mismo tipo
-      const configRes = await fetch("/api/configuracion");
-      const { store: current } = await configRes.json();
-      await fetch("/api/configuracion", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...current,
-          name: current.name || "Mi Tienda",
-          tipoTienda: selected,
-          tipoTiendaConfigurado: true,
-          tieneVentaMayorista: isEditing ? (current.tieneVentaMayorista ?? false) : wholesale,
-        }),
-      });
+    try {
+      if (isChangingType) {
+        // Reset completo + cambio de tipo
+        const res = await fetch("/api/store/reset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ newType: selected }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error || "No se pudo cambiar el tipo de tienda. Probá de nuevo.");
+        }
+        // Resetear tour para que aparezca de nuevo con el nuevo tipo
+        localStorage.removeItem(TOUR_STORAGE_KEY);
+      } else {
+        // Primera configuración o mismo tipo
+        const configRes = await fetch("/api/configuracion");
+        const { store: current } = await configRes.json();
+        const res = await fetch("/api/configuracion", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...current,
+            name: current.name || "Mi Tienda",
+            tipoTienda: selected,
+            tipoTiendaConfigurado: true,
+            tieneVentaMayorista: isEditing ? (current.tieneVentaMayorista ?? false) : wholesale,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error || "No se pudo guardar el tipo de tienda. Probá de nuevo.");
+        }
+      }
+    } catch (err) {
+      setSaving(false);
+      setConfirmStep(false);
+      setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
+      return;
     }
 
     setSaving(false);
@@ -281,6 +298,13 @@ export default function StoreTypeModal({
           {selectedConfig && (
             <div key={selectedConfig.id} className="animate-fade-slide bg-indigo-50 rounded-2xl px-4 py-3 text-sm text-indigo-700">
               Categorías: {selectedConfig.categorias.slice(0, 4).join(", ")}...
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-sm text-red-700 animate-fade-slide">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
           )}
 

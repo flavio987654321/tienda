@@ -77,7 +77,7 @@ export async function POST(req: Request) {
         isPublished: false,
       },
     });
-  });
+  }, { timeout: 20000 });
 
   if (activeAffiliates.length > 0) {
     await createNotificationMany(
