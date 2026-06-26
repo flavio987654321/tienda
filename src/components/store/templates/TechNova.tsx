@@ -6,8 +6,8 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
-import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, useEditContext } from "@/contexts/EditContext";
+import { useStorefront, isDemoProductId, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
@@ -90,13 +90,17 @@ function CategoryIcon({ id, color }: { id: string; color: string }) {
   }
 }
 
-function ProductCard({ product, href, currency, isFavorite, onToggleFavorite }: {
-  product: StorefrontProduct; href: string; currency: string; isFavorite: boolean; onToggleFavorite: () => void;
+function ProductCard({ product, href, currency, isFavorite, onToggleFavorite, editMode }: {
+  product: StorefrontProduct; href: string; currency: string; isFavorite: boolean; onToggleFavorite: () => void; editMode?: boolean;
 }) {
   const discount = product.comparePrice && product.comparePrice > product.price ? Math.round((1 - product.price / product.comparePrice) * 100) : null;
   const specs = product.attributes.slice(0, 2);
+  // Los demos de relleno no existen en la base: antes de guardar el template, la tienda
+  // pública todavía resuelve con el tipoTienda viejo y el detalle da "no disponible".
+  const isUnclickableDemo = !editMode && isDemoProductId(product.id);
   return (
-    <Link href={href} className="tn-card" style={{ textDecoration:"none", color:"inherit", background:"#fff", borderRadius:16, border:"1px solid #ececf5", overflow:"hidden", display:"block" }}>
+    <Link href={href} className="tn-card" onClick={e => { if (isUnclickableDemo) e.preventDefault(); }}
+      style={{ textDecoration:"none", color:"inherit", background:"#fff", borderRadius:16, border:"1px solid #ececf5", overflow:"hidden", display:"block", cursor: isUnclickableDemo ? "default" : "pointer" }}>
       <div style={{ aspectRatio:"1/1", background:"#fafaff", position:"relative", overflow:"hidden" }}>
         {discount && <div style={{ position:"absolute", top:10, left:10, zIndex:1, background:"#7c3aed", color:"#fff", fontSize:11, fontWeight:800, padding:"4px 9px", borderRadius:100 }}>{discount}% OFF</div>}
         <button onClick={e => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(); }}
@@ -179,9 +183,17 @@ export default function TechNova() {
   const { editMode, overrides, setOverride } = useEditContext();
   useScrollReveal();
   const isPreview = !!config?.previewFill;
+  // editMode se activa apenas se entra a "Editando" un diseño, pero el tipoTienda
+  // real recién queda persistido en la base cuando se aprieta "Guardar cambios".
+  // Hasta entonces, la tienda pública no resuelve los productos demo de relleno.
+  const canOpenDemo = editMode && !!config?.templateSaved;
   const isOwner   = !!config?.isOwner;
   const accent    = config?.colors.accent ?? "#7c3aed";
   const accentText = getContrastColor(accent) === "light" ? "#111" : "#fff";
+  // El acento se usa como color de TEXTO en varias secciones (no como fondo de
+  // botón, eso ya lo resuelve accentText) — cada sección puede tener su propio
+  // fondo personalizado, así que validamos contra el de cada una puntualmente.
+  const accentOn = (bg: string, fallback: string) => getReadableAccentText(accent, bg, fallback);
   const cartTheme: CartTheme = { BG:"#ffffff", S:"#fafafa", T:"#111111", MID:"#6b6b80", border:"#e5e5e5", accent, accentText };
   const currency  = config?.currency ?? "ARS";
   const storeName = config?.storeName ?? "TECH NOVA";
@@ -428,7 +440,7 @@ export default function TechNova() {
               <button key={id} onClick={() => { smoothScrollTo(id); setMenuOpen(false); }}
                 style={{ display:"block", width:"100%", background:"none", border:"none", color:navTextMid, textAlign:"left", padding:"11px 0", fontSize:13, fontWeight:500, borderBottom:`1px solid ${navBorder}` }}>{lbl}</button>
             ))}
-            <Link href={catalogHref} style={{ display:"block", color:accent, padding:"14px 0", fontSize:13, fontWeight:700, textDecoration:"none" }} onClick={() => setMenuOpen(false)}>Ver catálogo completo →</Link>
+            <Link href={catalogHref} style={{ display:"block", color:accentOn(navBg, navText), padding:"14px 0", fontSize:13, fontWeight:700, textDecoration:"none" }} onClick={() => setMenuOpen(false)}>Ver catálogo completo →</Link>
           </div>
         )}
       </nav>
@@ -440,7 +452,7 @@ export default function TechNova() {
         <EditableSectionBg field="bgHero" label="Fondo hero" />
         <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"flex", flexWrap:"wrap", alignItems:"center", minHeight: isPreview ? 460 : "calc(80vh - 64px)" }}>
           <div style={{ flex:"1 1 380px", padding:"56px 24px" }}>
-            <p style={{ margin:"0 0 16px", fontSize:11, color:accent, textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>
+            <p style={{ margin:"0 0 16px", fontSize:11, color:accentOn(heroBg, heroText), textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>
               <EditableZone field="heroKicker" label="Etiqueta hero">Tecnología que conecta tu vida</EditableZone>
             </p>
             <h1 style={{ margin:"0 0 20px", fontSize:"clamp(32px,5vw,54px)", fontWeight:900, color:heroText, letterSpacing:-1.5, lineHeight:1.05 }}>
@@ -482,21 +494,9 @@ export default function TechNova() {
           <h2 style={{ margin:"0 0 28px", fontSize:"clamp(22px,3.5vw,32px)", fontWeight:800, color:depText, letterSpacing:-0.5 }}>
             <EditableZone field="depHeading" label="Título departamentos">Explorá por categoría</EditableZone>
           </h2>
-          <div style={{ position:"relative" }}>
-            {DEPARTAMENTOS.length > 3 && (
-              <>
-                <button onClick={() => scrollRow(depScrollRef, -1)} aria-label="Anterior"
-                  style={{ position:"absolute", left:-36, top:"42%", transform:"translateY(-50%)", width:36,
-                    border:"none", background:"none", color:depText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
-                    display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-                <button onClick={() => scrollRow(depScrollRef, 1)} aria-label="Siguiente"
-                  style={{ position:"absolute", right:-36, top:"42%", transform:"translateY(-50%)", width:36,
-                    border:"none", background:"none", color:depText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
-                    display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
-              </>
-            )}
-            <div ref={depScrollRef} className="tn-dep-row" style={{ display:"flex", gap:16, overflowX:"auto", scrollSnapType:"x mandatory", paddingBottom:4 }}>
-              {DEPARTAMENTOS.map((d, i) => {
+          {(() => {
+            const usedCategoryIds = DEPARTAMENTOS.map((dd, j) => overrides[`dept${j}Cat`]?.text ?? dd.id);
+            const items = DEPARTAMENTOS.map((d, i) => {
                 const catKey = `dept${i}Cat`;
                 const categoryId = overrides[catKey]?.text ?? d.id;
                 // Si no es el dueño editando, ocultamos los departamentos sin productos
@@ -521,7 +521,12 @@ export default function TechNova() {
                     </Link>
                     {editMode && (
                       <select value={categoryId} onClick={e => e.stopPropagation()}
-                        onChange={e => setOverride(catKey, { text: e.target.value })}
+                        onChange={e => {
+                          const newCat = e.target.value;
+                          const conflictIdx = DEPARTAMENTOS.findIndex((dd, j) => j !== i && usedCategoryIds[j] === newCat);
+                          if (conflictIdx !== -1) setOverride(`dept${conflictIdx}Cat`, { text: categoryId });
+                          setOverride(catKey, { text: newCat });
+                        }}
                         title="A qué categoría apunta esta tarjeta"
                         style={{ position:"absolute", top:8, left:8, zIndex:2, maxWidth:120, fontSize:11, border:"1px solid #7c3aed", borderRadius:8, background:"#fff", color:"#4c1d95", cursor:"pointer", padding:"3px 6px" }}>
                         {CATEGORY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -529,9 +534,30 @@ export default function TechNova() {
                     )}
                   </div>
                 );
-              })}
-            </div>
-          </div>
+              }).filter(Boolean);
+            if (!editMode && items.length === 0) {
+              return <p style={{ margin:0, color:"#9a9ab0", fontSize:14, textAlign:"center" }}>Todavía no hay categorías con productos cargados.</p>;
+            }
+            return (
+              <div style={{ position:"relative" }}>
+                {DEPARTAMENTOS.length > 3 && items.length > 3 && (
+                  <>
+                    <button onClick={() => scrollRow(depScrollRef, -1)} aria-label="Anterior"
+                      style={{ position:"absolute", left:-36, top:"42%", transform:"translateY(-50%)", width:36,
+                        border:"none", background:"none", color:depText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
+                        display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+                    <button onClick={() => scrollRow(depScrollRef, 1)} aria-label="Siguiente"
+                      style={{ position:"absolute", right:-36, top:"42%", transform:"translateY(-50%)", width:36,
+                        border:"none", background:"none", color:depText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
+                        display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+                  </>
+                )}
+                <div ref={depScrollRef} className="tn-dep-row" style={{ display:"flex", gap:16, overflowX:"auto", scrollSnapType:"x mandatory", paddingBottom:4 }}>
+                  {items}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </section>
 
@@ -546,7 +572,7 @@ export default function TechNova() {
             const nextIdx = (iconIdx + 1) % TRUST_ICONS.length;
             return (
               <div key={i} style={{ textAlign:"center", padding:"28px 18px", borderRadius:16, border:`1.5px solid ${accent}25`, background: trustText==="#ffffff" ? "rgba(255,255,255,0.04)" : "#fff" }}>
-                <div style={{ marginBottom:10, color:accent, position:"relative", display:"inline-flex" }}>
+                <div style={{ marginBottom:10, color:accentOn(trustText==="#ffffff" ? trustBg : "#ffffff", trustText), position:"relative", display:"inline-flex" }}>
                   {TRUST_ICONS[iconIdx]}
                   {editMode && (
                     <button onClick={() => setOverride(`trust${i+1}IconIdx`, { text: String(nextIdx) })} title="Cambiar ícono"
@@ -573,7 +599,7 @@ export default function TechNova() {
               <h2 style={{ margin:0, fontSize:"clamp(20px,3vw,28px)", fontWeight:800, color:ofertasText, letterSpacing:-0.5 }}>
                 🔥 <EditableZone field="ofertasHeading" label="Título ofertas">Ofertas destacadas</EditableZone>
               </h2>
-              {hasMoreOfertas && <Link href={`${catalogHref}&oferta=true`} style={{ fontSize:13, fontWeight:700, color:accent, textDecoration:"none" }}>Ver todas las ofertas →</Link>}
+              {hasMoreOfertas && <Link href={`${catalogHref}&oferta=true`} style={{ fontSize:13, fontWeight:700, color:accentOn(ofertasBg, ofertasText), textDecoration:"none" }}>Ver todas las ofertas →</Link>}
             </div>
             <div style={{ position:"relative" }}>
               {ofertas.length > 4 && (
@@ -591,7 +617,7 @@ export default function TechNova() {
               <div ref={ofertasScrollRef} className="tn-prod-row" style={{ display:"flex", gap:18, overflowX:"auto", scrollSnapType:"x mandatory", paddingBottom:4 }}>
                 {ofertas.map(p => (
                   <div key={p.id} className="tn-prod-item" style={{ scrollSnapAlign:"start" }}>
-                    <ProductCard product={p} currency={currency}
+                    <ProductCard product={p} currency={currency} editMode={canOpenDemo}
                       href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
                       isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
                   </div>
@@ -612,7 +638,7 @@ export default function TechNova() {
             <h2 style={{ margin:0, fontSize:"clamp(20px,3vw,28px)", fontWeight:800, color:prodText, letterSpacing:-0.5 }}>
               <EditableZone field="prodHeading" label="Título productos">Lo más buscado</EditableZone>
             </h2>
-            {hasMore && <Link href={catalogHref} style={{ fontSize:13, fontWeight:700, color:accent, textDecoration:"none" }}>Ver todo →</Link>}
+            {hasMore && <Link href={catalogHref} style={{ fontSize:13, fontWeight:700, color:accentOn(prodBg, prodText), textDecoration:"none" }}>Ver todo →</Link>}
           </div>
 
           {loadingProducts ? (
@@ -636,7 +662,7 @@ export default function TechNova() {
               <div ref={prodScrollRef} className="tn-prod-row" style={{ display:"flex", gap:18, overflowX:"auto", scrollSnapType:"x mandatory", paddingBottom:4 }}>
                 {showcased.map(p => (
                   <div key={p.id} className="tn-prod-item" style={{ scrollSnapAlign:"start" }}>
-                    <ProductCard product={p} currency={currency}
+                    <ProductCard product={p} currency={currency} editMode={canOpenDemo}
                       href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
                       isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
                   </div>
@@ -672,7 +698,7 @@ export default function TechNova() {
         <SectionOverlay ov={benefImg} />
         <EditableSectionBg field="bgNosotros" label="Fondo beneficios" />
         <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
-          <p style={{ margin:"0 0 8px", fontSize:11, color:accent, textTransform:"uppercase", letterSpacing:2, fontWeight:700 }}>
+          <p style={{ margin:"0 0 8px", fontSize:11, color:accentOn(benefBg, benefText), textTransform:"uppercase", letterSpacing:2, fontWeight:700 }}>
             <EditableZone field="benefKicker" label="Kicker beneficios">Por qué elegirnos</EditableZone>
           </p>
           <h2 style={{ margin:"0 0 32px", fontSize:"clamp(22px,4vw,32px)", fontWeight:800, color:benefText, letterSpacing:-0.5 }}>
@@ -724,7 +750,7 @@ export default function TechNova() {
         <EditableImageButton field="contactoImage" label="Imagen de fondo (contacto)" />
         <div style={{ position:"absolute", width:380, height:380, borderRadius:"50%", background:`${accent}40`, filter:"blur(60px)", zIndex:0 }} />
         <div style={{ position:"relative", zIndex:1, maxWidth:480, width:"100%", textAlign:"center" }}>
-          <p style={{ margin:"0 0 10px", fontSize:11, color:accent, textTransform:"uppercase", letterSpacing:2, fontWeight:700 }}>Contacto</p>
+          <p style={{ margin:"0 0 10px", fontSize:11, color:accentOn("#0f0f1a", conText), textTransform:"uppercase", letterSpacing:2, fontWeight:700 }}>Contacto</p>
           <h2 style={{ margin:"0 0 14px", fontSize:"clamp(24px,4vw,32px)", fontWeight:800, color:conText, letterSpacing:-0.5 }}>
             <EditableZone field="contactHeading" label="Título contacto">Hablemos</EditableZone>
           </h2>
@@ -736,7 +762,7 @@ export default function TechNova() {
             <ContactForm storeId={config?.storeId} accent={accent} textColor="#0f0f1a" mutedColor="#6b6b80" radius={10} isPreview={isPreview} />
           </div>
           <div style={{ display:"flex", justifyContent:"center", gap:20, marginTop:24, flexWrap:"wrap" }}>
-            <Link href={catalogHref} style={{ color:accent, fontWeight:700, fontSize:13, textDecoration:"none" }}>Ver catálogo completo →</Link>
+            <Link href={catalogHref} style={{ color:accentOn("#0f0f1a", conText), fontWeight:700, fontSize:13, textDecoration:"none" }}>Ver catálogo completo →</Link>
             {showWA && (
               <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
                 target="_blank" rel="noopener noreferrer"
@@ -745,11 +771,11 @@ export default function TechNova() {
               </a>
             )}
           </div>
-          {(editMode || socialNets.some(([key]) => social?.[key])) && (
+          {(editMode || isPreview || socialNets.some(([key]) => social?.[key])) && (
             <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:10, marginTop:20 }}>
               {socialNets.map(([key, label]) => {
                 const url = social?.[key];
-                if (!editMode && !url) return null;
+                if (!editMode && !isPreview && !url) return null;
                 return (
                   <a key={key} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener noreferrer"
                     onClick={e => { if (!url) e.preventDefault(); }}
@@ -768,7 +794,7 @@ export default function TechNova() {
         <SectionOverlay ov={footerImg} />
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
         <div style={{ position:"relative", zIndex:1 }}>
-        <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:14, color:accent }}>{storeName}</p>
+        <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:14, color:accentOn(footerBg, ftText) }}>{storeName}</p>
         <p style={{ margin:"0 0 12px", fontSize:11, color:ftMid }}>© {new Date().getFullYear()} {storeName}. Todos los derechos reservados.</p>
         <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
           {[["Política de devoluciones","devoluciones"],["Política de envíos","envios"],["Términos y condiciones","terminos"]].map(([label, tipo]) => (
@@ -811,9 +837,10 @@ export default function TechNova() {
                 )}
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:14, fontWeight:600, margin:"0 0 4px", color:"#0f0f1a" }}>{product.name}</p>
-                  <p style={{ fontSize:13, color:accent, fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>
+                  <p style={{ fontSize:13, color:accentOn("#ffffff", "#0f0f1a"), fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>
                   <div style={{ display:"flex", gap:8 }}>
-                    <Link href={`/tienda/${config?.slug ?? ""}/producto/${product.id}${isPreview ? "?from=editor" : ""}`} onClick={() => setFavoritesOpen(false)}
+                    <Link href={`/tienda/${config?.slug ?? ""}/producto/${product.id}${isPreview ? "?from=editor" : ""}`}
+                      onClick={e => { if (!canOpenDemo && isDemoProductId(product.id)) e.preventDefault(); else setFavoritesOpen(false); }}
                       style={{ background:accent, color:"#fff", border:"none", borderRadius:100, padding:"7px 14px", fontSize:11, fontWeight:600, cursor:"pointer", textDecoration:"none" }}>
                       Ver
                     </Link>

@@ -5,7 +5,7 @@ import { ProductDetailBody, ProductDetailFooter, ProductDetailOverlays, resolveD
 
 const themeBase: DetailTheme = {
   pageBg: "#ffffff", text: "#111111", muted: "#6b7280",
-  accent: "#0f172a", accentText: "#ffffff",
+  accent: "#0f172a", accentText: "#ffffff", accentReadable: "#0f172a",
   cardBorder: "#e5e7eb", font: "Inter, system-ui, sans-serif", headingFont: "inherit", radius: 4,
 };
 
@@ -37,7 +37,7 @@ export default function CasaClaraDetail({ view }: { view: ProductDetailViewProps
 
       <ProductDetailBody theme={theme} view={view} />
 
-      <ProductDetailFooter theme={theme} bg="#0f172a" view={view} />
+      <ProductDetailFooter theme={theme} bg="#ffffff" view={view} />
 
       {whatsapp && (
         <a href={`https://wa.me/${whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola! Te consulto sobre ${product.name}`)}`}

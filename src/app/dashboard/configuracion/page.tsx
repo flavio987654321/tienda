@@ -1907,7 +1907,7 @@ export default function ConfiguracionPage() {
             <div style={{ flex: 1, borderRadius: 10, overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column",
               transform: "translateZ(0)" }}>
-              <StoreConfigContext.Provider value={{ ...config, previewFill: true, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
+              <StoreConfigContext.Provider value={{ ...config, previewFill: true, templateSaved: savedTemplateId === selected?.id, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>
@@ -2038,7 +2038,7 @@ export default function ConfiguracionPage() {
             <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
               transform: "translateZ(0)" }}>
-              <StoreConfigContext.Provider value={{ ...config, previewFill: true, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
+              <StoreConfigContext.Provider value={{ ...config, previewFill: true, templateSaved: savedTemplateId === selected?.id, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>

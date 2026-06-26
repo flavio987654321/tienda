@@ -6,8 +6,8 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
-import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, useEditContext } from "@/contexts/EditContext";
+import { useStorefront, isDemoProductId, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
@@ -120,12 +120,16 @@ const TRUST_ICONS: React.ReactNode[] = [
   <svg key="gift" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
 ];
 
-function ProductCard({ product, href, currency, isFavorite, onToggleFavorite }: {
-  product: StorefrontProduct; href: string; currency: string; isFavorite: boolean; onToggleFavorite: () => void;
+function ProductCard({ product, href, currency, isFavorite, onToggleFavorite, editMode }: {
+  product: StorefrontProduct; href: string; currency: string; isFavorite: boolean; onToggleFavorite: () => void; editMode?: boolean;
 }) {
   const discount = product.comparePrice && product.comparePrice > product.price ? Math.round((1 - product.price / product.comparePrice) * 100) : null;
+  // Los demos de relleno no existen en la base: antes de guardar el template, la tienda
+  // pública todavía resuelve con el tipoTienda viejo y el detalle da "no disponible".
+  const isUnclickableDemo = !editMode && isDemoProductId(product.id);
   return (
-    <Link href={href} className="ep-card" style={{ textDecoration:"none", color:"inherit", background:"#fff", borderRadius:14, border:"1px solid #f0f0f0", overflow:"hidden", display:"block" }}>
+    <Link href={href} className="ep-card" onClick={e => { if (isUnclickableDemo) e.preventDefault(); }}
+      style={{ textDecoration:"none", color:"inherit", background:"#fff", borderRadius:14, border:"1px solid #f0f0f0", overflow:"hidden", display:"block", cursor: isUnclickableDemo ? "default" : "pointer" }}>
       <div style={{ aspectRatio:"1/1", background:"#f8fafc", position:"relative" }}>
         {discount && (
           <div style={{ position:"absolute", top:10, left:10, zIndex:1, background:"#dc2626", color:"#fff", fontSize:11, fontWeight:800, padding:"4px 9px", borderRadius:100 }}>{discount}% OFF</div>
@@ -165,10 +169,18 @@ export default function ElectroPrime() {
   } = cart;
   const { editMode, overrides, setOverride } = useEditContext();
   useScrollReveal();
+  // editMode se activa apenas se entra a "Editando" un diseño, pero el tipoTienda
+  // real recién queda persistido en la base cuando se aprieta "Guardar cambios".
+  // Hasta entonces, la tienda pública no resuelve los productos demo de relleno.
+  const canOpenDemo = editMode && !!config?.templateSaved;
   const isPreview = !!config?.previewFill;
   const isOwner   = !!config?.isOwner;
   const accent    = config?.colors.accent ?? "#ea580c";
   const accentText = getContrastColor(accent) === "light" ? "#111" : "#fff";
+  // El acento se usa como color de TEXTO en varias secciones (no como fondo de
+  // botón, eso ya lo resuelve accentText) — cada sección puede tener su propio
+  // fondo personalizado, así que validamos contra el de cada una puntualmente.
+  const accentOn = (bg: string, fallback: string) => getReadableAccentText(accent, bg, fallback);
   const cartTheme: CartTheme = { BG:"#ffffff", S:"#fafafa", T:"#111111", MID:"#6b7280", border:"#e5e5e5", accent, accentText };
   const currency  = config?.currency ?? "ARS";
   const storeName = config?.storeName ?? "ELECTRO PRIME";
@@ -226,6 +238,7 @@ export default function ElectroPrime() {
   const contactImgUrl = iovr["contactImage"]?.url ?? "https://images.unsplash.com/photo-1556909114-44e3e70034e2?auto=format&fit=crop&w=900&q=80";
   const contactoBg  = sc["bgContacto"] ?? "#111827";
   const contactoImg = iovr["sectionbg_bgContacto"];
+  const contactoText = secText(contactoImg, contactoBg);
 
   const footerBg    = sc["bgFooter"] ?? "#0a0a0a";
   const footerImg   = iovr["sectionbg_bgFooter"];
@@ -418,7 +431,7 @@ export default function ElectroPrime() {
                 {lbl}
               </button>
             ))}
-            <Link href={catalogHref} style={{ display:"block", color:accent, padding:"14px 0", fontSize:13, fontWeight:700, textDecoration:"none" }} onClick={() => setMenuOpen(false)}>
+            <Link href={catalogHref} style={{ display:"block", color:accentOn(navBg, navText), padding:"14px 0", fontSize:13, fontWeight:700, textDecoration:"none" }} onClick={() => setMenuOpen(false)}>
               Ver catálogo completo →
             </Link>
           </div>
@@ -477,7 +490,8 @@ export default function ElectroPrime() {
           <div className="ep-dep-grid">
             {(() => {
               const CATEGORY_ICON_LIST = makeCategoryIcons(accent);
-              return DEPARTAMENTOS_DEFAULT.map((d, i) => {
+              const usedCategoryIds = DEPARTAMENTOS_DEFAULT.map((dd, j) => overrides[`dept${j}Cat`]?.text ?? dd.id);
+              const items = DEPARTAMENTOS_DEFAULT.map((d, i) => {
                 const catKey = `dept${i}Cat`;
                 const categoryId = overrides[catKey]?.text ?? d.id;
                 // Si no es el dueño editando, ocultamos los departamentos sin productos
@@ -507,7 +521,12 @@ export default function ElectroPrime() {
                     </Link>
                     {editMode && (
                       <select value={categoryId} onClick={e => e.stopPropagation()}
-                        onChange={e => setOverride(catKey, { text: e.target.value })}
+                        onChange={e => {
+                          const newCat = e.target.value;
+                          const conflictIdx = DEPARTAMENTOS_DEFAULT.findIndex((dd, j) => j !== i && usedCategoryIds[j] === newCat);
+                          if (conflictIdx !== -1) setOverride(`dept${conflictIdx}Cat`, { text: categoryId });
+                          setOverride(catKey, { text: newCat });
+                        }}
                         title="A qué categoría apunta este botón"
                         style={{ marginTop:6, maxWidth:170, fontSize:10, border:"1px solid #6366f1", borderRadius:6, background:"#eef2ff", color:"#4338ca", cursor:"pointer", padding:"3px 4px" }}>
                         {CATEGORY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -515,7 +534,11 @@ export default function ElectroPrime() {
                     )}
                   </div>
                 );
-              });
+              }).filter(Boolean);
+              if (!editMode && items.length === 0) {
+                return <p style={{ margin:0, color:"#9ca3af", fontSize:14, textAlign:"center" }}>Todavía no hay categorías con productos cargados.</p>;
+              }
+              return items;
             })()}
           </div>
         </div>
@@ -532,7 +555,7 @@ export default function ElectroPrime() {
             const nextIdx = (iconIdx + 1) % TRUST_ICONS.length;
             return (
               <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"24px 20px", borderRight: i < 3 ? "1px solid rgba(0,0,0,0.06)" : "none" }}>
-                <span style={{ color:accent, flexShrink:0, position:"relative", display:"flex" }}>
+                <span style={{ color:accentOn(trustBg, trustText), flexShrink:0, position:"relative", display:"flex" }}>
                   {TRUST_ICONS[iconIdx]}
                   {editMode && (
                     <button onClick={() => setOverride(`trust${i+1}IconIdx`, { text: String(nextIdx) })} title="Cambiar ícono"
@@ -561,7 +584,7 @@ export default function ElectroPrime() {
               <h2 style={{ margin:0, fontSize:"clamp(20px,3vw,28px)", fontWeight:800, color:ofertasText, letterSpacing:-0.5 }}>
                 🔥 <EditableZone field="ofertasHeading" label="Título ofertas">Ofertas destacadas</EditableZone>
               </h2>
-              {hasMoreOfertas && <Link href={`${catalogHref}&oferta=true`} style={{ fontSize:13, fontWeight:700, color:accent, textDecoration:"none" }}>Ver todas las ofertas →</Link>}
+              {hasMoreOfertas && <Link href={`${catalogHref}&oferta=true`} style={{ fontSize:13, fontWeight:700, color:accentOn(ofertasBg, ofertasText), textDecoration:"none" }}>Ver todas las ofertas →</Link>}
             </div>
             <div style={{ position:"relative" }}>
               {ofertas.length > 4 && (
@@ -579,7 +602,7 @@ export default function ElectroPrime() {
               <div ref={ofertasScrollRef} className="ep-ofertas-row" style={{ display:"flex", gap:18, overflowX:"auto", scrollSnapType:"x mandatory", paddingBottom:4 }}>
                 {ofertas.map(p => (
                   <div key={p.id} style={{ flex:"0 0 240px", scrollSnapAlign:"start" }}>
-                    <ProductCard product={p} currency={currency}
+                    <ProductCard product={p} currency={currency} editMode={canOpenDemo}
                       href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
                       isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
                   </div>
@@ -601,7 +624,7 @@ export default function ElectroPrime() {
               <EditableZone field="prodHeading" label="Título productos">Catálogo</EditableZone>
             </h2>
             {hasMore && (
-              <Link href={catalogHref} style={{ fontSize:13, fontWeight:700, color:accent, textDecoration:"none" }}>Ver todo →</Link>
+              <Link href={catalogHref} style={{ fontSize:13, fontWeight:700, color:accentOn(prodBg, prodText), textDecoration:"none" }}>Ver todo →</Link>
             )}
           </div>
 
@@ -612,7 +635,7 @@ export default function ElectroPrime() {
           ) : showcased.length > 0 ? (
             <div className="ep-prod-grid" style={{ display:"grid", gap:18 }}>
               {showcased.map(p => (
-                <ProductCard key={p.id} product={p} currency={currency}
+                <ProductCard key={p.id} product={p} currency={currency} editMode={canOpenDemo}
                   href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
                   isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
               ))}
@@ -644,7 +667,7 @@ export default function ElectroPrime() {
       {isWholesale && (
         <section data-reveal style={{ background:"#f8fafc", borderTop:"1px solid #f0f0f0", borderBottom:"1px solid #f0f0f0" }}>
           <div style={{ maxWidth:1240, margin:"0 auto", padding:"48px 24px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:16 }}>
-            <span style={{ fontSize:11, letterSpacing:2, color:accent, textTransform:"uppercase", fontWeight:700 }}>
+            <span style={{ fontSize:11, letterSpacing:2, color:accentOn("#f8fafc", "#111827"), textTransform:"uppercase", fontWeight:700 }}>
               <EditableZone field="mayoristaKicker" label="Kicker mayorista">Venta mayorista</EditableZone>
             </span>
             <h2 style={{ fontSize:"clamp(22px,3.5vw,34px)", fontWeight:800, color:"#111827", margin:0 }}>
@@ -675,14 +698,14 @@ export default function ElectroPrime() {
               <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
             </div>
             <div style={{ position:"absolute", bottom:-18, right:-14, background:"#fff", borderRadius:14, padding:"14px 20px", boxShadow:"0 8px 30px rgba(0,0,0,0.12)", textAlign:"center", border:`2px solid ${accent}` }}>
-              <p style={{ margin:0, fontSize:26, fontWeight:900, color:accent, lineHeight:1 }}>
+              <p style={{ margin:0, fontSize:26, fontWeight:900, color:accentOn("#ffffff", "#111827"), lineHeight:1 }}>
                 <EditableZone field="nosotrosAnios" label="Años de trayectoria">10+</EditableZone>
               </p>
               <p style={{ margin:"4px 0 0", fontSize:10.5, color:"#6b7280", whiteSpace:"nowrap" }}>años de trayectoria</p>
             </div>
           </div>
           <div>
-            <p style={{ margin:"0 0 8px", fontSize:11, color:accent, textTransform:"uppercase", letterSpacing:2, fontWeight:700 }}>
+            <p style={{ margin:"0 0 8px", fontSize:11, color:accentOn(nosotrosBg, nosText), textTransform:"uppercase", letterSpacing:2, fontWeight:700 }}>
               <EditableZone field="nosotrosKicker" label="Kicker nosotros">Nuestra tienda</EditableZone>
             </p>
             <h2 style={{ margin:"0 0 18px", fontSize:"clamp(22px,4vw,34px)", fontWeight:800, color:nosText, letterSpacing:-0.5 }}>
@@ -720,7 +743,7 @@ export default function ElectroPrime() {
             <EditableImageButton field="contactImage" label="Imagen sección Contacto" />
           </div>
           <div style={{ background:"#fff", padding:36 }}>
-            <p style={{ margin:"0 0 10px", fontSize:11, color:accent, textTransform:"uppercase", letterSpacing:2, fontWeight:700 }}>Contacto</p>
+            <p style={{ margin:"0 0 10px", fontSize:11, color:accentOn("#ffffff", "#111111"), textTransform:"uppercase", letterSpacing:2, fontWeight:700 }}>Contacto</p>
             <h2 style={{ margin:"0 0 12px", fontSize:"clamp(20px,3vw,26px)", fontWeight:800, color:"#111", letterSpacing:-0.5 }}>
               <EditableZone field="contactHeading" label="Título contacto">¿Tenés dudas sobre algún producto?</EditableZone>
             </h2>
@@ -731,7 +754,7 @@ export default function ElectroPrime() {
           </div>
         </div>
         <div style={{ position:"relative", zIndex:1, maxWidth:1080, margin:"18px auto 0", display:"flex", justifyContent:"center", gap:20, flexWrap:"wrap" }}>
-            <Link href={catalogHref} style={{ color:accent, fontWeight:700, fontSize:13, textDecoration:"none" }}>Ver catálogo completo →</Link>
+            <Link href={catalogHref} style={{ color:accentOn(contactoBg, contactoText), fontWeight:700, fontSize:13, textDecoration:"none" }}>Ver catálogo completo →</Link>
             {showWA && (
               <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
                 target="_blank" rel="noopener noreferrer"
@@ -748,15 +771,15 @@ export default function ElectroPrime() {
         <SectionOverlay ov={footerImg} />
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
         <div style={{ position:"relative", zIndex:1 }}>
-        <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:14, color:accent }}>{storeName}</p>
+        <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:14, color:accentOn(footerBg, ftText) }}>{storeName}</p>
         <p style={{ margin:"0 0 12px", fontSize:11, color:ftMid }}>
           © {new Date().getFullYear()} {storeName}. Todos los derechos reservados.
         </p>
-        {(editMode || SOCIAL_NETWORKS.some(([key]) => config?.socialLinks?.[key])) && (
+        {(editMode || isPreview || SOCIAL_NETWORKS.some(([key]) => config?.socialLinks?.[key])) && (
           <div style={{ display:"flex", justifyContent:"center", gap:10, marginBottom:14 }}>
             {SOCIAL_NETWORKS.map(([key, label]) => {
               const url = config?.socialLinks?.[key];
-              if (!editMode && !url) return null;
+              if (!editMode && !isPreview && !url) return null;
               return (
                 <a key={key} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener noreferrer" aria-label={label}
                   onClick={e => { if (!url) e.preventDefault(); }}
@@ -808,9 +831,10 @@ export default function ElectroPrime() {
                 )}
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:14, fontWeight:600, margin:"0 0 4px", color:"#111" }}>{product.name}</p>
-                  <p style={{ fontSize:13, color:accent, fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>
+                  <p style={{ fontSize:13, color:accentOn("#ffffff", "#111111"), fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>
                   <div style={{ display:"flex", gap:8 }}>
-                    <Link href={`/tienda/${config?.slug ?? ""}/producto/${product.id}${isPreview ? "?from=editor" : ""}`} onClick={() => setFavoritesOpen(false)}
+                    <Link href={`/tienda/${config?.slug ?? ""}/producto/${product.id}${isPreview ? "?from=editor" : ""}`}
+                      onClick={e => { if (!canOpenDemo && isDemoProductId(product.id)) e.preventDefault(); else setFavoritesOpen(false); }}
                       style={{ background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111", border:"none", borderRadius:4, padding:"7px 14px", fontSize:11, fontWeight:600, cursor:"pointer", textDecoration:"none" }}>
                       Ver
                     </Link>

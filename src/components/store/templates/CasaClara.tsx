@@ -6,8 +6,8 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
-import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, useEditContext } from "@/contexts/EditContext";
+import { useStorefront, isDemoProductId, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
@@ -60,11 +60,15 @@ const DEPARTAMENTOS = [
 ];
 const CATEGORY_OPTIONS = DEPARTAMENTOS;
 
-function ProductCard({ product, href, currency, accent, isFavorite, onToggleFavorite }: {
-  product: StorefrontProduct; href: string; currency: string; accent: string; isFavorite: boolean; onToggleFavorite: () => void;
+function ProductCard({ product, href, currency, accent, bg, text, isFavorite, onToggleFavorite, editMode }: {
+  product: StorefrontProduct; href: string; currency: string; accent: string; bg: string; text: string; isFavorite: boolean; onToggleFavorite: () => void; editMode?: boolean;
 }) {
+  // Los demos de relleno no existen en la base: antes de guardar el template, la tienda
+  // pública todavía resuelve con el tipoTienda viejo y el detalle da "no disponible".
+  const isUnclickableDemo = !editMode && isDemoProductId(product.id);
   return (
-    <Link href={href} className="cc-prod-link" style={{ textDecoration:"none", color:"inherit", display:"block" }}>
+    <Link href={href} className="cc-prod-link" onClick={e => { if (isUnclickableDemo) e.preventDefault(); }}
+      style={{ textDecoration:"none", color:"inherit", display:"block", cursor: isUnclickableDemo ? "default" : "pointer" }}>
       <div style={{ aspectRatio:"1/1", background:"#fafafa", marginBottom:14, overflow:"hidden", position:"relative" }}>
         <button onClick={e => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(); }}
           aria-label="Favorito"
@@ -78,7 +82,7 @@ function ProductCard({ product, href, currency, accent, isFavorite, onToggleFavo
         )}
       </div>
       <p style={{ margin:"0 0 4px", fontSize:13, color:"#222", lineHeight:1.4 }}>{product.name}</p>
-      <p style={{ margin:0, fontSize:13, color:accent, fontWeight:600 }}>
+      <p style={{ margin:0, fontSize:13, color:getReadableAccentText(accent, bg, text), fontWeight:600 }}>
         {fmtPrice(product.price, currency)}
         {product.comparePrice && product.comparePrice > product.price && (
           <span style={{ marginLeft:8, textDecoration:"line-through", color:"#ccc" }}>{fmtPrice(product.comparePrice, currency)}</span>
@@ -122,6 +126,10 @@ export default function CasaClara() {
   const { editMode, overrides, setOverride } = useEditContext();
   useScrollReveal();
   const isPreview = !!config?.previewFill;
+  // editMode se activa apenas se entra a "Editando" un diseño, pero el tipoTienda
+  // real recién queda persistido en la base cuando se aprieta "Guardar cambios".
+  // Hasta entonces, la tienda pública no resuelve los productos demo de relleno.
+  const canOpenDemo = editMode && !!config?.templateSaved;
   const isOwner   = !!config?.isOwner;
   const accent    = config?.colors.accent ?? "#0f172a";
   const accentText = getContrastColor(accent) === "light" ? "#111" : "#fff";
@@ -351,7 +359,9 @@ export default function CasaClara() {
       {/* ── DEPARTAMENTOS — lista editorial en una fila ── */}
       <section id="departamentos" data-reveal style={{ borderTop:"1px solid #f0f0f0", borderBottom:"1px solid #f0f0f0" }}>
         <div className="cc-dep-row" style={{ maxWidth:1100, margin:"0 auto" }}>
-          {DEPARTAMENTOS.map((d, i) => {
+          {(() => {
+          const usedCategoryIds = DEPARTAMENTOS.map((dd, j) => overrides[`dept${j}Cat`]?.text ?? dd.id);
+          const items = DEPARTAMENTOS.map((d, i) => {
             const catKey = `dept${i}Cat`;
             const categoryId = overrides[catKey]?.text ?? d.id;
             // Si no es el dueño editando, ocultamos los departamentos sin productos
@@ -368,7 +378,12 @@ export default function CasaClara() {
                 </Link>
                 {editMode && (
                   <select value={categoryId} onClick={e => e.stopPropagation()}
-                    onChange={e => setOverride(catKey, { text: e.target.value })}
+                    onChange={e => {
+                      const newCat = e.target.value;
+                      const conflictIdx = DEPARTAMENTOS.findIndex((dd, j) => j !== i && usedCategoryIds[j] === newCat);
+                      if (conflictIdx !== -1) setOverride(`dept${conflictIdx}Cat`, { text: categoryId });
+                      setOverride(catKey, { text: newCat });
+                    }}
                     title="A qué categoría apunta este link"
                     style={{ marginBottom:6, maxWidth:140, fontSize:10, border:"1px solid #111", borderRadius:4, background:"#fff", color:"#111", cursor:"pointer", padding:"2px 4px" }}>
                     {CATEGORY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -376,7 +391,12 @@ export default function CasaClara() {
                 )}
               </div>
             );
-          })}
+          }).filter(Boolean);
+          if (!editMode && items.length === 0) {
+            return <p style={{ margin:"40px auto", color:prodMid, fontSize:13, textAlign:"center" }}>Todavía no hay categorías con productos cargados.</p>;
+          }
+          return items;
+          })()}
         </div>
       </section>
 
@@ -409,7 +429,7 @@ export default function CasaClara() {
               <div ref={ofertasScrollRef} className="cc-ofertas-row" style={{ display:"flex", gap:28, overflowX:"auto", scrollSnapType:"x mandatory", paddingBottom:4 }}>
                 {ofertas.map(p => (
                   <div key={p.id} style={{ flex:"0 0 220px", scrollSnapAlign:"start" }}>
-                    <ProductCard product={p} currency={currency} accent={accent}
+                    <ProductCard product={p} currency={currency} accent={accent} bg={ofertasBg} text={ofertasText} editMode={canOpenDemo}
                       href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
                       isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
                   </div>
@@ -438,7 +458,7 @@ export default function CasaClara() {
           ) : showcased.length > 0 ? (
             <div className="cc-prod-grid" style={{ display:"grid", gap:"48px 28px" }}>
               {showcased.map(p => (
-                <ProductCard key={p.id} product={p} currency={currency} accent={accent}
+                <ProductCard key={p.id} product={p} currency={currency} accent={accent} bg={prodBg} text={prodText} editMode={canOpenDemo}
                   href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
                   isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
               ))}
@@ -530,11 +550,11 @@ export default function CasaClara() {
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
         <div style={{ position:"relative", zIndex:1 }}>
         <p style={{ margin:"0 0 10px", fontSize:11, color:ftMid }}>© {new Date().getFullYear()} {storeName}</p>
-        {(editMode || SOCIAL_NETWORKS.some(([key]) => config?.socialLinks?.[key])) && (
+        {(editMode || isPreview || SOCIAL_NETWORKS.some(([key]) => config?.socialLinks?.[key])) && (
           <div style={{ display:"flex", justifyContent:"center", gap:10, marginBottom:12 }}>
             {SOCIAL_NETWORKS.map(([key, label]) => {
               const url = config?.socialLinks?.[key];
-              if (!editMode && !url) return null;
+              if (!editMode && !isPreview && !url) return null;
               return (
                 <a key={key} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener noreferrer" aria-label={label}
                   onClick={e => { if (!url) e.preventDefault(); }}
@@ -586,9 +606,10 @@ export default function CasaClara() {
                 )}
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:13, margin:"0 0 4px", color:"#111" }}>{product.name}</p>
-                  <p style={{ fontSize:12.5, color:accent, fontWeight:600, margin:"0 0 8px" }}>{fmtPrice(product.price, currency)}</p>
+                  <p style={{ fontSize:12.5, color:getReadableAccentText(accent, "#ffffff", "#111111"), fontWeight:600, margin:"0 0 8px" }}>{fmtPrice(product.price, currency)}</p>
                   <div style={{ display:"flex", gap:8 }}>
-                    <Link href={`/tienda/${config?.slug ?? ""}/producto/${product.id}${isPreview ? "?from=editor" : ""}`} onClick={() => setFavoritesOpen(false)}
+                    <Link href={`/tienda/${config?.slug ?? ""}/producto/${product.id}${isPreview ? "?from=editor" : ""}`}
+                      onClick={e => { if (!canOpenDemo && isDemoProductId(product.id)) e.preventDefault(); else setFavoritesOpen(false); }}
                       style={{ fontSize:11, color:"#111", textDecoration:"underline" }}>
                       Ver
                     </Link>

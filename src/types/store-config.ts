@@ -117,6 +117,11 @@ export type StoreConfig = {
     messages?: string[];
   };
   previewFill?: boolean;
+  // True solo cuando el template actualmente mostrado ya fue persistido con
+  // "Guardar cambios" — recién ahí el tipoTienda real en la base coincide con
+  // el del editor, y los productos demo de relleno resuelven su página de
+  // detalle sin romperse en la tienda pública.
+  templateSaved?: boolean;
   isOwner?: boolean;
   isVerified?: boolean;
   verifiedInfo?: {

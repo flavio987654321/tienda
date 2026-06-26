@@ -6,8 +6,8 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
-import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, useEditContext } from "@/contexts/EditContext";
+import { useStorefront, isDemoProductId, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
@@ -67,11 +67,15 @@ const CATEGORY_OPTIONS = [
   { id: "casa-y-jardin", label: "Casa y Jardín" },
 ];
 
-function ProductCard({ product, href, currency, accent, isFavorite, onToggleFavorite }: {
-  product: StorefrontProduct; href: string; currency: string; accent: string; isFavorite: boolean; onToggleFavorite: () => void;
+function ProductCard({ product, href, currency, accent, bg, text, isFavorite, onToggleFavorite, editMode }: {
+  product: StorefrontProduct; href: string; currency: string; accent: string; bg: string; text: string; isFavorite: boolean; onToggleFavorite: () => void; editMode?: boolean;
 }) {
+  // Los demos de relleno no existen en la base: antes de guardar el template, la tienda
+  // pública todavía resuelve con el tipoTienda viejo y el detalle da "no disponible".
+  const isUnclickableDemo = !editMode && isDemoProductId(product.id);
   return (
-    <Link href={href} style={{ textDecoration:"none", color:"inherit", display:"block" }}>
+    <Link href={href} onClick={e => { if (isUnclickableDemo) e.preventDefault(); }}
+      style={{ textDecoration:"none", color:"inherit", display:"block", cursor: isUnclickableDemo ? "default" : "pointer" }}>
       <div style={{ aspectRatio:"4/5", background:"#f0ebe2", marginBottom:16, overflow:"hidden", position:"relative" }}>
         <button onClick={e => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(); }}
           aria-label="Favorito"
@@ -85,7 +89,7 @@ function ProductCard({ product, href, currency, accent, isFavorite, onToggleFavo
         )}
       </div>
       <p style={{ margin:"0 0 6px", fontSize:14, fontWeight:500, color:"#2c2218" }}>{product.name}</p>
-      <p style={{ margin:0, fontSize:15, fontWeight:600, color:accent }}>
+      <p style={{ margin:0, fontSize:15, fontWeight:600, color:getReadableAccentText(accent, bg, text) }}>
         {fmtPrice(product.price, currency)}
         {product.comparePrice && product.comparePrice > product.price && (
           <span style={{ marginLeft:8, fontSize:13, color:"#c9bba9", textDecoration:"line-through" }}>{fmtPrice(product.comparePrice, currency)}</span>
@@ -129,9 +133,17 @@ export default function HomeStudio() {
   const { editMode, overrides, setOverride } = useEditContext();
   useScrollReveal();
   const isPreview = !!config?.previewFill;
+  // editMode se activa apenas se entra a "Editando" un diseño, pero el tipoTienda
+  // real recién queda persistido en la base cuando se aprieta "Guardar cambios".
+  // Hasta entonces, la tienda pública no resuelve los productos demo de relleno.
+  const canOpenDemo = editMode && !!config?.templateSaved;
   const isOwner   = !!config?.isOwner;
   const accent    = config?.colors.accent ?? "#b5652a";
   const accentText = getContrastColor(accent) === "light" ? "#111" : "#fff";
+  // El acento se usa como color de TEXTO en varias secciones (no como fondo de
+  // botón, eso ya lo resuelve accentText) — cada sección puede tener su propio
+  // fondo personalizado, así que validamos contra el de cada una puntualmente.
+  const accentOn = (bg: string, fallback: string) => getReadableAccentText(accent, bg, fallback);
   const cartTheme: CartTheme = { BG:"#faf8f4", S:"#fff", T:"#2c2218", MID:"#9a8a76", border:"#f1ece4", accent, accentText, serif:"Georgia, serif" };
   const currency  = config?.currency ?? "ARS";
   const storeName = config?.storeName ?? "HOME STUDIO";
@@ -362,7 +374,7 @@ export default function HomeStudio() {
               <button key={id} onClick={() => { smoothScrollTo(id); setMenuOpen(false); }}
                 style={{ display:"block", width:"100%", background:"none", border:"none", color:navTextMid, textAlign:"left", padding:"11px 0", fontSize:13, fontWeight:500, borderBottom:`1px solid ${navBorder}` }}>{lbl}</button>
             ))}
-            <Link href={catalogHref} style={{ display:"block", color:accent, padding:"14px 0", fontSize:13, fontWeight:700, textDecoration:"none" }} onClick={() => setMenuOpen(false)}>Ver catálogo completo →</Link>
+            <Link href={catalogHref} style={{ display:"block", color:accentOn(navBg, navText), padding:"14px 0", fontSize:13, fontWeight:700, textDecoration:"none" }} onClick={() => setMenuOpen(false)}>Ver catálogo completo →</Link>
           </div>
         )}
       </nav>
@@ -419,7 +431,11 @@ export default function HomeStudio() {
                 const categoryId = overrides[catKey]?.text ?? d.id;
                 return { d, i, catKey, categoryId };
               }).filter(({ categoryId }) => editMode || products.some(p => p.category === categoryId));
+              if (!editMode && visible.length === 0) {
+                return <p style={{ margin:0, color:"#9a8a76", fontSize:14 }}>Todavía no hay categorías con productos cargados.</p>;
+              }
               const hasBigVisible = visible.some(({ d }) => d.big);
+              const usedCategoryIds = DEPARTAMENTOS.map((dd, j) => overrides[`dept${j}Cat`]?.text ?? dd.id);
               return visible.map(({ d, i, catKey, categoryId }, idx) => {
                 const isBig = d.big || (!hasBigVisible && idx === 0);
                 return (
@@ -442,7 +458,12 @@ export default function HomeStudio() {
                     </Link>
                     {editMode && (
                       <select value={categoryId} onClick={e => e.stopPropagation()}
-                        onChange={e => setOverride(catKey, { text: e.target.value })}
+                        onChange={e => {
+                          const newCat = e.target.value;
+                          const conflictIdx = DEPARTAMENTOS.findIndex((dd, j) => j !== i && usedCategoryIds[j] === newCat);
+                          if (conflictIdx !== -1) setOverride(`dept${conflictIdx}Cat`, { text: categoryId });
+                          setOverride(catKey, { text: newCat });
+                        }}
                         title="A qué categoría apunta esta tarjeta"
                         style={{ position:"absolute", top:8, left:8, zIndex:2, maxWidth:120, fontSize:11, border:`1px solid ${accent}`, borderRadius:6, background:"#fff", color:"#5c4a36", cursor:"pointer", padding:"3px 6px" }}>
                         {CATEGORY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -487,11 +508,11 @@ export default function HomeStudio() {
               <h2 style={{ margin:0, fontSize:"clamp(20px,3vw,26px)", fontWeight:600, color:ofertasText, fontFamily:"Georgia, serif" }}>
                 🌿 <EditableZone field="ofertasHeading" label="Título ofertas">Ofertas de temporada</EditableZone>
               </h2>
-              {hasMoreOfertas && <Link href={`${catalogHref}&oferta=true`} style={{ fontSize:13, fontWeight:600, color:accent, textDecoration:"none" }}>Ver todas las ofertas →</Link>}
+              {hasMoreOfertas && <Link href={`${catalogHref}&oferta=true`} style={{ fontSize:13, fontWeight:600, color:accentOn(ofertasBg, ofertasText), textDecoration:"none" }}>Ver todas las ofertas →</Link>}
             </div>
             <div className="hs-prod-grid" style={{ display:"grid", gap:32 }}>
               {ofertas.map(p => (
-                <ProductCard key={p.id} product={p} currency={currency} accent={accent}
+                <ProductCard key={p.id} product={p} currency={currency} accent={accent} bg={ofertasBg} text={ofertasText} editMode={canOpenDemo}
                   href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
                   isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
               ))}
@@ -510,7 +531,7 @@ export default function HomeStudio() {
             <h2 style={{ margin:0, fontSize:"clamp(22px,3.5vw,30px)", fontWeight:600, color:prodText, fontFamily:"Georgia, serif" }}>
               <EditableZone field="prodHeading" label="Título productos">Seleccionados para vos</EditableZone>
             </h2>
-            {hasMore && <Link href={catalogHref} style={{ fontSize:13, fontWeight:600, color:accent, textDecoration:"none" }}>Ver todo →</Link>}
+            {hasMore && <Link href={catalogHref} style={{ fontSize:13, fontWeight:600, color:accentOn(prodBg, prodText), textDecoration:"none" }}>Ver todo →</Link>}
           </div>
 
           {loadingProducts ? (
@@ -520,7 +541,7 @@ export default function HomeStudio() {
           ) : showcased.length > 0 ? (
             <div className="hs-prod-grid" style={{ display:"grid", gap:40 }}>
               {showcased.map(p => (
-                <ProductCard key={p.id} product={p} currency={currency} accent={accent}
+                <ProductCard key={p.id} product={p} currency={currency} accent={accent} bg={prodBg} text={prodText} editMode={canOpenDemo}
                   href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
                   isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
               ))}
@@ -552,7 +573,7 @@ export default function HomeStudio() {
       {isWholesale && (
         <section data-reveal style={{ background:"#f0ebe2", borderTop:"1px solid rgba(181,101,41,0.15)", borderBottom:"1px solid rgba(181,101,41,0.15)" }}>
           <div style={{ maxWidth:1240, margin:"0 auto", padding:"48px 24px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:16 }}>
-            <span style={{ fontSize:11, letterSpacing:2, color:accent, textTransform:"uppercase", fontWeight:700 }}>
+            <span style={{ fontSize:11, letterSpacing:2, color:accentOn("#f0ebe2", "#2c2218"), textTransform:"uppercase", fontWeight:700 }}>
               <EditableZone field="mayoristaKicker" label="Kicker mayorista">Venta mayorista</EditableZone>
             </span>
             <h2 style={{ fontSize:"clamp(22px,3.5vw,32px)", fontWeight:600, color:"#2c2218", margin:0, fontFamily:"Georgia, serif" }}>
@@ -579,7 +600,7 @@ export default function HomeStudio() {
             <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
           </div>
           <div>
-            <p style={{ margin:"0 0 10px", fontSize:11, color:accent, textTransform:"uppercase", letterSpacing:2, fontWeight:700 }}>
+            <p style={{ margin:"0 0 10px", fontSize:11, color:accentOn(nosotrosBg, nosText), textTransform:"uppercase", letterSpacing:2, fontWeight:700 }}>
               <EditableZone field="nosotrosKicker" label="Kicker nosotros">Nuestra historia</EditableZone>
             </p>
             <h2 style={{ margin:"0 0 20px", fontSize:"clamp(22px,4vw,32px)", fontWeight:600, color:nosText, fontFamily:"Georgia, serif" }}>
@@ -647,13 +668,13 @@ export default function HomeStudio() {
         <SectionOverlay ov={footerImg} />
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
         <div style={{ position:"relative", zIndex:1 }}>
-        <p style={{ margin:"0 0 6px", fontWeight:600, fontSize:15, color:accent, fontFamily:"Georgia, serif" }}>{storeName}</p>
+        <p style={{ margin:"0 0 6px", fontWeight:600, fontSize:15, color:accentOn(footerBg, ftText), fontFamily:"Georgia, serif" }}>{storeName}</p>
         <p style={{ margin:"0 0 12px", fontSize:11, color:ftMid }}>© {new Date().getFullYear()} {storeName}. Todos los derechos reservados.</p>
-        {(editMode || SOCIAL_NETWORKS.some(([key]) => config?.socialLinks?.[key])) && (
+        {(editMode || isPreview || SOCIAL_NETWORKS.some(([key]) => config?.socialLinks?.[key])) && (
           <div style={{ display:"flex", justifyContent:"center", gap:10, marginBottom:14 }}>
             {SOCIAL_NETWORKS.map(([key, label]) => {
               const url = config?.socialLinks?.[key];
-              if (!editMode && !url) return null;
+              if (!editMode && !isPreview && !url) return null;
               return (
                 <a key={key} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener noreferrer" aria-label={label}
                   onClick={e => { if (!url) e.preventDefault(); }}
@@ -705,9 +726,10 @@ export default function HomeStudio() {
                 )}
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:14, fontWeight:500, margin:"0 0 4px", color:"#2c2218" }}>{product.name}</p>
-                  <p style={{ fontSize:13, color:accent, fontWeight:600, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>
+                  <p style={{ fontSize:13, color:accentOn("#ffffff", "#2c2218"), fontWeight:600, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>
                   <div style={{ display:"flex", gap:8 }}>
-                    <Link href={`/tienda/${config?.slug ?? ""}/producto/${product.id}${isPreview ? "?from=editor" : ""}`} onClick={() => setFavoritesOpen(false)}
+                    <Link href={`/tienda/${config?.slug ?? ""}/producto/${product.id}${isPreview ? "?from=editor" : ""}`}
+                      onClick={e => { if (!canOpenDemo && isDemoProductId(product.id)) e.preventDefault(); else setFavoritesOpen(false); }}
                       style={{ background:accent, color:"#fff", border:"none", borderRadius:4, padding:"7px 14px", fontSize:11, fontWeight:600, cursor:"pointer", textDecoration:"none" }}>
                       Ver
                     </Link>

@@ -5,7 +5,7 @@ import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
-import { getContrastColor } from "@/contexts/EditContext";
+import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
@@ -51,6 +51,9 @@ export interface DetailTheme {
   muted: string;
   accent: string;
   accentText: string;
+  // Para pintar texto (no fondos de botón) con el color de acento sin que se
+  // vuelva invisible si el dueño elige un acento muy claro — ver resolveDetailTheme.
+  accentReadable: string;
   cardBorder: string;
   font: string;
   headingFont: string;
@@ -69,6 +72,7 @@ export interface ProductDetailViewProps {
   isOwner: boolean;
   socialLinks: Record<string, string> | undefined;
   accentOverride: string | undefined;
+  footerBg: string | undefined;
   cart: ReturnType<typeof useCartLogic>;
   activeImg: number;
   setActiveImg: (i: number) => void;
@@ -175,8 +179,13 @@ export function editorParam(isPreview: boolean, joiner: "?" | "&" = "?"): string
 }
 
 export function resolveDetailTheme(theme: DetailTheme, accentOverride: string | undefined): DetailTheme {
-  if (!accentOverride) return theme;
-  return { ...theme, accent: accentOverride, accentText: getContrastColor(accentOverride) === "light" ? "#111111" : "#ffffff" };
+  const accent = accentOverride ?? theme.accent;
+  return {
+    ...theme,
+    accent,
+    accentText: getContrastColor(accent) === "light" ? "#ffffff" : "#111111",
+    accentReadable: getReadableAccentText(accent, theme.pageBg, theme.text),
+  };
 }
 
 export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: ProductDetailViewProps }) {
@@ -282,7 +291,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
 
         {/* Info */}
         <div>
-          <p style={{ margin: "0 0 6px", fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: theme.accent }}>
+          <p style={{ margin: "0 0 6px", fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: theme.accentReadable }}>
             {product.attributes.find(a => a.key.toLowerCase() === "marca")?.value ?? catLabel}
           </p>
           <h1 style={{ margin: "0 0 16px", fontSize: "clamp(22px,3vw,30px)", fontWeight: 700, color: theme.text, fontFamily: theme.headingFont, lineHeight: 1.2 }}>
@@ -414,7 +423,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
           <div style={{ borderRadius: theme.radius, overflow: "hidden" }}>
             {product.attributes.map((a, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "14px 18px", fontSize: 13.5, background: i % 2 === 0 ? `${theme.accent}0a` : "transparent" }}>
-                <span style={{ color: theme.accent, fontWeight: 600 }}>{a.key.toUpperCase()}</span>
+                <span style={{ color: theme.accentReadable, fontWeight: 600 }}>{a.key.toUpperCase()}</span>
                 <span style={{ color: theme.muted }}>{a.value}</span>
               </div>
             ))}
@@ -477,24 +486,35 @@ function detailCartTheme(theme: DetailTheme): CartTheme {
 // Footer "completo" igual al de la página de inicio del template (nombre,
 // copyright, redes sociales, políticas, reportar tienda) — un solo lugar
 // para los 4 templates en vez de un footer simplificado por archivo.
-export function ProductDetailFooter({ theme, bg = "#0a0a0a", view }: { theme: DetailTheme; bg?: string; view: ProductDetailViewProps }) {
-  const { slug, storeName, socialLinks, isPreview } = view;
+export function ProductDetailFooter({ theme, bg: defaultBg = "#0a0a0a", view }: { theme: DetailTheme; bg?: string; view: ProductDetailViewProps }) {
+  const { slug, storeName, socialLinks, isPreview, footerBg } = view;
   const [showReport, setShowReport] = useState(false);
+  // El color de fondo lo elige el dueño en el editor (mismo campo que el footer
+  // del home); si todavía no lo tocó, usamos el default propio del template.
+  // El texto/iconos se recalculan según ese fondo para que siempre sean legibles.
+  const bg = footerBg ?? defaultBg;
+  const fg = getContrastColor(bg) === "dark" ? "#111111" : "#f5f5f5";
+  // El acento puede no leerse sobre ESTE fondo (que es independiente del fondo
+  // de la página) — si no se distingue, usamos el mismo color de texto que ya
+  // elegimos para el resto del footer en vez de theme.accentReadable (pensado
+  // para el fondo claro de la página, no para este).
+  const brandColor = getReadableAccentText(theme.accent, bg, fg);
 
   return (
     <footer style={{ background: bg, padding: "32px 24px", textAlign: "center" }}>
-      <p style={{ margin: "0 0 6px", fontWeight: 900, fontSize: 14, color: theme.accent }}>{storeName}</p>
-      <p style={{ margin: "0 0 12px", fontSize: 11, color: theme.pageBg, opacity: 0.6 }}>
+      <p style={{ margin: "0 0 6px", fontWeight: 900, fontSize: 14, color: brandColor }}>{storeName}</p>
+      <p style={{ margin: "0 0 12px", fontSize: 11, color: fg, opacity: 0.6 }}>
         © {new Date().getFullYear()} {storeName}. Todos los derechos reservados.
       </p>
-      {SOCIAL_NETWORKS.some(([key]) => socialLinks?.[key]) && (
+      {(isPreview || SOCIAL_NETWORKS.some(([key]) => socialLinks?.[key])) && (
         <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 14 }}>
           {SOCIAL_NETWORKS.map(([key, label]) => {
             const url = socialLinks?.[key];
-            if (!url) return null;
+            if (!isPreview && !url) return null;
             return (
-              <a key={key} href={url} target="_blank" rel="noopener noreferrer" aria-label={label}
-                style={{ width: 30, height: 30, borderRadius: "50%", border: `1px solid ${theme.pageBg}`, color: theme.pageBg, opacity: 0.7, display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
+              <a key={key} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener noreferrer" aria-label={label}
+                onClick={e => { if (!url) e.preventDefault(); }}
+                style={{ width: 30, height: 30, borderRadius: "50%", border: `1px solid ${fg}`, color: fg, opacity: url ? 0.7 : 0.3, display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
                 <SocialIcon network={key} />
               </a>
             );
@@ -503,11 +523,11 @@ export function ProductDetailFooter({ theme, bg = "#0a0a0a", view }: { theme: De
       )}
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 16px" }}>
         {[["Política de devoluciones", "devoluciones"], ["Política de envíos", "envios"], ["Términos y condiciones", "terminos"]].map(([label, tipo]) => (
-          <a key={tipo} href={`/tienda/${slug}/politicas?tipo=${tipo}`} style={{ fontSize: 10, color: theme.pageBg, opacity: 0.55, textDecoration: "none" }}>{label}</a>
+          <a key={tipo} href={`/tienda/${slug}/politicas?tipo=${tipo}`} style={{ fontSize: 10, color: fg, opacity: 0.55, textDecoration: "none" }}>{label}</a>
         ))}
         {!isPreview && (
           <button onClick={() => setShowReport(true)}
-            style={{ fontSize: 10, color: theme.pageBg, opacity: 0.55, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
+            style={{ fontSize: 10, color: fg, opacity: 0.55, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
             Reportar tienda
           </button>
         )}
@@ -553,7 +573,7 @@ export function ProductDetailOverlays({ theme, view }: { theme: DetailTheme; vie
                 )}
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 4px", color: theme.text }}>{product.name}</p>
-                  <p style={{ fontSize: 13, color: theme.accent, fontWeight: 700, margin: "0 0 10px" }}>{fmtPrice(product.price, "ARS")}</p>
+                  <p style={{ fontSize: 13, color: theme.accentReadable, fontWeight: 700, margin: "0 0 10px" }}>{fmtPrice(product.price, "ARS")}</p>
                   <div style={{ display: "flex", gap: 8 }}>
                     <Link href={`/tienda/${view.slug}/producto/${product.id}${editorParam(isPreview)}`} onClick={() => setFavoritesOpen(false)}
                       style={{ background: theme.accent, color: theme.accentText, border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", textDecoration: "none" }}>

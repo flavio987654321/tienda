@@ -5,7 +5,7 @@ import { ProductDetailBody, ProductDetailFooter, ProductDetailOverlays, resolveD
 
 const themeBase: DetailTheme = {
   pageBg: "#ffffff", text: "#0f0f1a", muted: "#6b6b80",
-  accent: "#7c3aed", accentText: "#ffffff",
+  accent: "#7c3aed", accentText: "#ffffff", accentReadable: "#7c3aed",
   cardBorder: "#ececf5", font: "'Inter','Segoe UI',system-ui,sans-serif", headingFont: "inherit", radius: 14,
 };
 
@@ -37,7 +37,7 @@ export default function TechNovaDetail({ view }: { view: ProductDetailViewProps 
 
       <ProductDetailBody theme={theme} view={view} />
 
-      <ProductDetailFooter theme={theme} bg="#0f0f1a" view={view} />
+      <ProductDetailFooter theme={theme} bg="#0a0a12" view={view} />
 
       {whatsapp && (
         <a href={`https://wa.me/${whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola! Te consulto sobre ${product.name}`)}`}

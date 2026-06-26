@@ -45,6 +45,16 @@ export function getContrastColor(hex: string): "light" | "dark" {
   return lum > 0.5 ? "dark" : "light";
 }
 
+// Para usar el acento como color de TEXTO sobre un fondo (precio, nombre de
+// marca, etc.) — no como fondo de botón, eso ya lo resuelve getContrastColor
+// del otro lado. Si el acento elegido casi no se distingue de ese fondo (ej.
+// blanco sobre una página clara, o negro sobre un footer oscuro), usarlo tal
+// cual como texto lo volvería casi invisible, así que caemos al color de
+// texto "seguro" del propio tema en vez del acento.
+export function getReadableAccentText(accent: string, bg: string, fallback: string): string {
+  return getContrastColor(accent) !== getContrastColor(bg) ? accent : fallback;
+}
+
 export function useEditContext() { return useContext(EditContext); }
 
 /* ── EditableZone ─────────────────────────────────────────────

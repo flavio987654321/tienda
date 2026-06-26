@@ -8,7 +8,7 @@ import type { StorefrontProduct, StorefrontVariant, PlaceOrderParams } from "@/h
 import { getDemoPool, fillTargetFor } from "@/hooks/useStorefront";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import { getContrastColor } from "@/contexts/EditContext";
+import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 
 const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
@@ -179,6 +179,17 @@ const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 // (/producto/[id]) en vez del modal compartido que usan ROPA/AUTOS.
 const DETAIL_PAGE_TEMPLATES = ["electro-prime", "tech-nova", "home-studio", "casa-clara"];
 
+// Mismo default que usa el footer del home de cada uno de esos templates
+// (sc["bgFooter"] ?? ... en el componente del template) — así el catálogo
+// y el detalle de producto arrancan con el mismo color sin que el dueño
+// tenga que tocar nada, y se sincronizan solos si lo cambia en el editor.
+const FOOTER_BG_DEFAULTS: Record<string, string> = {
+  "electro-prime": "#0a0a0a",
+  "tech-nova": "#0a0a12",
+  "home-studio": "#2c2218",
+  "casa-clara": "#ffffff",
+};
+
 // ── Componente interno (necesita useSearchParams dentro de Suspense) ──────────
 function ProductosPageInner() {
   const params       = useParams();
@@ -200,6 +211,7 @@ function ProductosPageInner() {
   const [accentOverride, setAccentOverride] = useState<string | null>(null);
   const [isOwner,    setIsOwner]    = useState(false);
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
+  const [footerBg, setFooterBg] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
 
   const storeIdRef  = useRef<string | null>(null);
@@ -294,6 +306,7 @@ function ProductosPageInner() {
           if (cfg.template && !tParam) setTemplate(cfg.template);
           if (cfg.colors?.accent) setAccentOverride(cfg.colors.accent);
           if (cfg.socialLinks) setSocialLinks(cfg.socialLinks);
+          if (cfg.sectionColors?.bgFooter) setFooterBg(cfg.sectionColors.bgFooter);
         } catch {}
         const real: StorefrontProduct[] = (data.store.products ?? []).map(mapProduct);
         if (fromEditor) {
@@ -617,6 +630,19 @@ function ProductosPageInner() {
   // el color real elegido, no según si el template en sí es claro u oscuro —
   // así un acento muy claro en un template claro sigue siendo legible.
   const accentDark = getContrastColor(G) === "dark";
+  // Para usar G como color de TEXTO (precio, marca, etc.) en vez de fondo de
+  // botón: si el acento elegido casi no se distingue del fondo de la página,
+  // caemos al color de texto normal del tema en vez de dejarlo invisible.
+  const GT = getReadableAccentText(G, BG, T);
+
+  // Footer: mismo color que el dueño eligió para el footer del home (o el
+  // default propio del template si no lo tocó), con texto/iconos recalculados
+  // para que siempre se lean bien sobre ese fondo.
+  const resolvedFooterBg = footerBg ?? (DETAIL_PAGE_TEMPLATES.includes(template) ? FOOTER_BG_DEFAULTS[template] : null);
+  const footerFg = resolvedFooterBg ? (getContrastColor(resolvedFooterBg) === "dark" ? "#111111" : "#f5f5f5") : MID;
+  // El footer puede tener un fondo distinto al de la página (el que el dueño
+  // elige en el editor) — el acento se valida contra ESE fondo, no contra BG.
+  const footerBrandColor = resolvedFooterBg ? getReadableAccentText(G, resolvedFooterBg, footerFg) : GT;
 
   // ── Enviar reseña ──────────────────────────────────────────────────────────
   const submitReview = async (e: React.FormEvent) => {
@@ -646,7 +672,7 @@ function ProductosPageInner() {
   // ── Estados de carga y error ─────────────────────────────────────────────────
   if (loading) return (
     <div style={{ background:BG, minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:sans }}>
-      <p style={{ color:G, fontSize:12, letterSpacing:4, textTransform:"uppercase" }}>Cargando...</p>
+      <p style={{ color:GT, fontSize:12, letterSpacing:4, textTransform:"uppercase" }}>Cargando...</p>
     </div>
   );
 
@@ -714,7 +740,7 @@ function ProductosPageInner() {
                 <p style={{ fontSize:10, color:MID, letterSpacing:2, textTransform:"uppercase", margin:"0 0 4px" }}>{product.category}</p>
                 <p style={{ fontSize:15, color:T, margin:"0 0 7px", fontWeight:500, lineHeight:1.3 }}>{product.name}</p>
                 <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                  <span style={{ fontSize:16, fontWeight:700, color:G }}>{fmt(product.price)}</span>
+                  <span style={{ fontSize:16, fontWeight:700, color:GT }}>{fmt(product.price)}</span>
                   {product.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
                 </div>
               </>
@@ -858,7 +884,7 @@ function ProductosPageInner() {
             <button onClick={() => toggleGroup(`attr:${key}`)}
               style={{ width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center", background:"none", border:"none", margin:0, padding:"0 6px 0 0", textAlign:"left" }}>
               <span style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:T }}>
-                {key}{activeCount > 0 && <span style={{ color:G }}> ({activeCount})</span>}
+                {key}{activeCount > 0 && <span style={{ color:GT }}> ({activeCount})</span>}
               </span>
               <span style={{ color:T, fontSize:19, fontWeight:700, lineHeight:1 }}>{isOpen ? "▴" : "▾"}</span>
             </button>
@@ -990,7 +1016,7 @@ function ProductosPageInner() {
             </Link>
           )}
           </div>
-          <span style={{ fontFamily:serif, fontSize:20, fontWeight:700, letterSpacing:5, color:G }}>{storeName}</span>
+          <span style={{ fontFamily:serif, fontSize:20, fontWeight:700, letterSpacing:5, color:GT }}>{storeName}</span>
           <button onClick={() => setCartOpen(true)} style={{ position:"relative", background:"none", border:`1px solid ${border}`, color:T, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"border-color 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.borderColor=G)}
             onMouseLeave={e => (e.currentTarget.style.borderColor=border)}>
@@ -1009,7 +1035,7 @@ function ProductosPageInner() {
         {/* ── TÍTULO + BÚSQUEDA ──────────────────────────────────────── */}
         <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", marginBottom:40, flexWrap:"wrap", gap:16 }}>
           <div>
-            <p style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", margin:"0 0 12px" }}>
+            <p style={{ fontSize:10, letterSpacing:5, color:GT, textTransform:"uppercase", margin:"0 0 12px" }}>
               {onlyOfertas ? "Promociones" : "Colección completa"}
             </p>
             <h1 style={{ fontFamily:serif, fontSize:"clamp(28px,4vw,42px)", margin:"0 0 8px", color:T, lineHeight:1.1 }}>
@@ -1330,19 +1356,20 @@ function ProductosPageInner() {
 
       {/* ── FOOTER — misma info que el footer del home de cada template
           (nombre, redes, políticas, reportar tienda), con la paleta del tema activo ── */}
-      <footer style={{ borderTop:`1px solid ${borderFaint}`, padding:"32px 24px", textAlign:"center" }}>
-        <p style={{ margin:"0 0 6px", fontWeight:700, fontSize:14, color:G, fontFamily:serif }}>{storeName}</p>
-        <p style={{ margin:"0 0 12px", fontSize:11, color:MID }}>
+      <footer style={{ background: resolvedFooterBg ?? undefined, borderTop: resolvedFooterBg ? undefined : `1px solid ${borderFaint}`, padding:"32px 24px", textAlign:"center" }}>
+        <p style={{ margin:"0 0 6px", fontWeight:700, fontSize:14, color:footerBrandColor, fontFamily:serif }}>{storeName}</p>
+        <p style={{ margin:"0 0 12px", fontSize:11, color:footerFg, opacity:0.6 }}>
           © {new Date().getFullYear()} {storeName}. Todos los derechos reservados.
         </p>
-        {SOCIAL_NETWORKS.some(([key]) => socialLinks[key]) && (
+        {(fromEditor || SOCIAL_NETWORKS.some(([key]) => socialLinks[key])) && (
           <div style={{ display:"flex", justifyContent:"center", gap:10, marginBottom:14 }}>
             {SOCIAL_NETWORKS.map(([key, label]) => {
               const url = socialLinks[key];
-              if (!url) return null;
+              if (!fromEditor && !url) return null;
               return (
-                <a key={key} href={url} target="_blank" rel="noopener noreferrer" aria-label={label}
-                  style={{ width:30, height:30, borderRadius:"50%", border:`1px solid ${MID}`, color:MID, display:"flex", alignItems:"center", justifyContent:"center", textDecoration:"none" }}>
+                <a key={key} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener noreferrer" aria-label={label}
+                  onClick={e => { if (!url) e.preventDefault(); }}
+                  style={{ width:30, height:30, borderRadius:"50%", border:`1px solid ${footerFg}`, color:footerFg, display:"flex", alignItems:"center", justifyContent:"center", textDecoration:"none", opacity: url ? 0.85 : 0.4 }}>
                   <SocialIcon network={key} />
                 </a>
               );
@@ -1351,10 +1378,10 @@ function ProductosPageInner() {
         )}
         <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
           {[["Política de devoluciones","devoluciones"],["Política de envíos","envios"],["Términos y condiciones","terminos"]].map(([label, tipo]) => (
-            <a key={tipo} href={`/tienda/${slug}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:MID, opacity:0.6, textDecoration:"none" }}>{label}</a>
+            <a key={tipo} href={`/tienda/${slug}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:footerFg, opacity:0.6, textDecoration:"none" }}>{label}</a>
           ))}
           <button onClick={() => setShowReport(true)}
-            style={{ fontSize:10, color:MID, opacity:0.6, background:"none", border:"none", cursor:"pointer", padding:0, textDecoration:"underline" }}>
+            style={{ fontSize:10, color:footerFg, opacity:0.6, background:"none", border:"none", cursor:"pointer", padding:0, textDecoration:"underline" }}>
             Reportar tienda
           </button>
         </div>
@@ -1400,13 +1427,13 @@ function ProductosPageInner() {
             {/* Detalle */}
             <div style={{ padding:"clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)", display:"flex", flexDirection:"column", gap:18, overflowY: isMobile ? "visible" : "auto" }}>
               <div>
-                <p style={{ fontSize:10, letterSpacing:3, color:G, textTransform:"uppercase", marginBottom:6 }}>
+                <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:6 }}>
                   {modalProduct.category}{modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
                 </p>
                 <h2 style={{ fontFamily:serif, fontSize:24, margin:0, lineHeight:1.2, color:T }}>{modalProduct.name}</h2>
               </div>
               <div style={{ display:"flex", gap:10, alignItems:"baseline" }}>
-                <span style={{ fontSize:22, fontWeight:700, color:G }}>{fmt(modalProduct.price)}</span>
+                <span style={{ fontSize:22, fontWeight:700, color:GT }}>{fmt(modalProduct.price)}</span>
                 {modalProduct.comparePrice && <span style={{ fontSize:14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
               </div>
               {modalProduct.description && (
@@ -1518,7 +1545,7 @@ function ProductosPageInner() {
                       <div key={r.id} style={{ borderBottom:`1px solid ${borderFaint}`, paddingBottom:14 }}>
                         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
                           <span style={{ fontSize:12, fontWeight:600, color:T }}>{r.reviewer}</span>
-                          <span style={{ fontSize:13, color:G }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
+                          <span style={{ fontSize:13, color:GT }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
                         </div>
                         {r.comment && <p style={{ fontSize:12, opacity:0.6, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
                       </div>
@@ -1530,7 +1557,7 @@ function ProductosPageInner() {
                 {!fromEditor && isOwner ? (
                   <p style={{ fontSize:11, opacity:0.4, fontStyle:"italic" }}>El dueño no puede dejar reseñas en su propia tienda.</p>
                 ) : reviewDone ? (
-                  <p style={{ fontSize:12, color:G, fontWeight:600 }}>¡Gracias por tu reseña!</p>
+                  <p style={{ fontSize:12, color:GT, fontWeight:600 }}>¡Gracias por tu reseña!</p>
                 ) : (
                   <div style={{ position:"relative" }}>
                     {fromEditor && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
@@ -1567,13 +1594,13 @@ function ProductosPageInner() {
                 if (similar.length === 0) return null;
                 return (
                   <div style={{ gridColumn: isMobile ? undefined : "1 / -1", padding: isMobile ? "0 16px 24px" : "0 32px 32px", borderTop:`1px solid ${border}`, paddingTop:20 }}>
-                    <p style={{ fontSize:10, letterSpacing:3, color:G, textTransform:"uppercase", marginBottom:14 }}>Productos similares</p>
+                    <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:14 }}>Productos similares</p>
                     <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
                       {similar.map(p => (
                         <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
                           <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} onError={e => { e.currentTarget.style.opacity="0"; }} />
                           <p style={{ margin:"8px 0 2px", fontSize:12, color:T, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                          <p style={{ margin:0, fontSize:13, fontWeight:700, color:G }}>{fmt(p.price)}</p>
+                          <p style={{ margin:0, fontSize:13, fontWeight:700, color:GT }}>{fmt(p.price)}</p>
                         </div>
                       ))}
                     </div>
@@ -1621,7 +1648,7 @@ function ProductosPageInner() {
                         <span style={{ width:22, textAlign:"center", fontSize:12, color:T }}>{item.qty}</span>
                         <button onClick={() => updateQty(idx,1)} style={{ width:26, height:26, background:"none", border:"none", color:T, cursor:"pointer", fontSize:15 }}>+</button>
                       </div>
-                      <span style={{ color:G, fontWeight:700, fontSize:14 }}>{fmt(item.product.price * item.qty)}</span>
+                      <span style={{ color:GT, fontWeight:700, fontSize:14 }}>{fmt(item.product.price * item.qty)}</span>
                     </div>
                   </div>
                   <button onClick={() => removeFromCart(idx)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:18, alignSelf:"flex-start", transition:"color 0.2s" }}
@@ -1635,7 +1662,7 @@ function ProductosPageInner() {
             <div style={{ padding:"14px 22px 28px", borderTop:`1px solid ${borderFaint}` }}>
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:20 }}>
                 <span style={{ fontSize:13, opacity:0.6, color:T }}>Total</span>
-                <span style={{ fontSize:20, fontWeight:700, color:G }}>{fmt(cartTotal)}</span>
+                <span style={{ fontSize:20, fontWeight:700, color:GT }}>{fmt(cartTotal)}</span>
               </div>
               <button onClick={isOwner ? undefined : openCheckout} disabled={isOwner} title={isOwner ? "No podés comprar en tu propia tienda" : undefined}
                 style={{ width:"100%", background: isOwner ? "rgba(128,128,128,0.15)" : G, color: isOwner ? "rgba(128,128,128,0.5)" : accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isOwner ? "not-allowed" : "pointer", marginBottom:10 }}>
@@ -1683,7 +1710,7 @@ function ProductosPageInner() {
                         <div style={{ flex:1 }}>
                           <p style={{ fontSize:13, margin:"0 0 2px", fontWeight:500, color:T }}>{item.product.name}</p>
                           <p style={{ fontSize:11, opacity:0.4, margin:"0 0 4px" }}>{[item.color, item.size && `Talle ${item.size}`].filter(Boolean).join(" · ")}</p>
-                          <p style={{ fontSize:13, color:G, fontWeight:700, margin:0 }}>{fmt(item.product.price)} × {item.qty}</p>
+                          <p style={{ fontSize:13, color:GT, fontWeight:700, margin:0 }}>{fmt(item.product.price)} × {item.qty}</p>
                         </div>
                       </div>
                     ))}
@@ -1749,12 +1776,12 @@ function ProductosPageInner() {
                       style={{ flex:1, background:inputBg, border:`1px solid ${inputBorder}`, borderRight:"none", color:T, padding:"10px 13px", fontSize:11, letterSpacing:2, outline:"none" }}
                       onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)}/>
                     <button type="button" onClick={handleApplyCoupon}
-                      style={{ background:"transparent", border:`1px solid ${inputBorder}`, color:G, padding:"10px 16px", fontSize:11, letterSpacing:2, cursor:"pointer" }}>Aplicar</button>
+                      style={{ background:"transparent", border:`1px solid ${inputBorder}`, color:GT, padding:"10px 16px", fontSize:11, letterSpacing:2, cursor:"pointer" }}>Aplicar</button>
                   </div>
                   {couponError && <p style={{ fontSize:11, color:"#f87171", marginBottom:8 }}>{couponError}</p>}
                   {appliedCoupon && (
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"8px 12px", background:`${G}15`, border:`1px solid ${G}40` }}>
-                      <span style={{ fontSize:12, color:G }}>Cupón {appliedCoupon.code} aplicado</span>
+                      <span style={{ fontSize:12, color:GT }}>Cupón {appliedCoupon.code} aplicado</span>
                       <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background:"none", border:"none", color:MID, cursor:"pointer" }}>✕</button>
                     </div>
                   )}
@@ -1767,8 +1794,8 @@ function ProductosPageInner() {
                     </div>
                     {couponDiscount > 0 && (
                       <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                        <span style={{ fontSize:13, color:G }}>Descuento</span>
-                        <span style={{ fontSize:13, color:G }}>-{fmt(couponDiscount)}</span>
+                        <span style={{ fontSize:13, color:GT }}>Descuento</span>
+                        <span style={{ fontSize:13, color:GT }}>-{fmt(couponDiscount)}</span>
                       </div>
                     )}
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14 }}>
@@ -1777,7 +1804,7 @@ function ProductosPageInner() {
                     </div>
                     <div style={{ display:"flex", justifyContent:"space-between" }}>
                       <span style={{ fontSize:15, fontWeight:700, color:T }}>Total</span>
-                      <span style={{ fontSize:20, fontWeight:800, color:G }}>{fmt(orderTotal)}</span>
+                      <span style={{ fontSize:20, fontWeight:800, color:GT }}>{fmt(orderTotal)}</span>
                     </div>
                   </div>
                   {checkoutError && <p style={{ fontSize:12, color:"#f87171", marginTop:10 }}>{checkoutError}</p>}

@@ -5,7 +5,7 @@ import { ProductDetailBody, ProductDetailFooter, ProductDetailOverlays, resolveD
 
 const themeBase: DetailTheme = {
   pageBg: "#ffffff", text: "#111111", muted: "#6b7280",
-  accent: "#ea580c", accentText: "#ffffff",
+  accent: "#ea580c", accentText: "#ffffff", accentReadable: "#ea580c",
   cardBorder: "#e5e7eb", font: "'Inter','Segoe UI',system-ui,sans-serif", headingFont: "inherit", radius: 12,
 };
 

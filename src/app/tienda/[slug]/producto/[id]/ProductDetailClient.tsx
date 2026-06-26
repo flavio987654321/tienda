@@ -107,6 +107,7 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
   const [isOwner, setIsOwner] = useState(false);
   const [socialLinks, setSocialLinks] = useState<Record<string, string> | undefined>(undefined);
   const [accentOverride, setAccentOverride] = useState<string | undefined>(undefined);
+  const [footerBg, setFooterBg] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [notFoundLocal, setNotFoundLocal] = useState(false);
   const [activeImg, setActiveImg] = useState(0);
@@ -129,6 +130,7 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
           if (cfg.currency) setCurrency(cfg.currency);
           if (cfg.colors?.accent) setAccentOverride(cfg.colors.accent);
           if (cfg.socialLinks) setSocialLinks(cfg.socialLinks);
+          if (cfg.sectionColors?.bgFooter) setFooterBg(cfg.sectionColors.bgFooter);
         } catch {}
         const real = (data.store.products ?? []).map(mapProduct);
         // Productos demo del editor (ej. "hogar-2"): no existen en la base,
@@ -227,7 +229,7 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
   if (ThemedDetail) {
     const view: ProductDetailViewProps = {
       slug, storeName, currency, whatsapp, product, related, hasMercadoPago,
-      isPreview, isOwner, socialLinks, accentOverride, cart,
+      isPreview, isOwner, socialLinks, accentOverride, footerBg, cart,
       activeImg, setActiveImg, selectedSize, setSelectedSize, selectedColor, setSelectedColor,
       needsSize, needsColor, canAdd, qty, setQty, addToCart, cartCount, toastMsg, discount, catalogHref,
     };
