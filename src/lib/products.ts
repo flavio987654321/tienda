@@ -43,6 +43,7 @@ type ProductBodyRaw = {
   featured?: unknown;
   precioMayorista?: unknown;
   cantMinMayorista?: unknown;
+  cuotas?: unknown;
   variants?: unknown;
   reelUrls?: unknown;
   weightKg?: unknown;
@@ -58,6 +59,7 @@ type ValidatedProductBody = {
   parsedFeatured: boolean;
   parsedPrecioMayorista: number | null;
   parsedCantMinMayorista: number | null;
+  parsedCuotas: number;
   normalizedVariants: NormalizedVariant[];
   parsedWeightKg: number | null;
   parsedWidthCm: number | null;
@@ -68,7 +70,7 @@ type ValidatedProductBody = {
 export function validateProductBody(
   body: ProductBodyRaw
 ): { error: NextResponse } | ValidatedProductBody {
-  const { name, price, comparePrice, featured, precioMayorista, cantMinMayorista, variants, reelUrls, weightKg, widthCm, heightCm, depthCm } = body;
+  const { name, price, comparePrice, featured, precioMayorista, cantMinMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm } = body;
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     return { error: NextResponse.json({ error: "Nombre requerido (mínimo 2 caracteres)" }, { status: 400 }) };
@@ -143,6 +145,12 @@ export function validateProductBody(
     return { error: NextResponse.json({ error: "Si completás la cantidad mínima mayorista, también tenés que indicar el precio mayorista" }, { status: 400 }) };
   }
 
+  const CUOTAS_OPTIONS = [0, 3, 6, 12];
+  const parsedCuotas = typeof cuotas === "number" ? cuotas : parseInt((cuotas as string) ?? "0") || 0;
+  if (!CUOTAS_OPTIONS.includes(parsedCuotas)) {
+    return { error: NextResponse.json({ error: "Las cuotas deben ser 0 (sin cuotas), 3, 6 o 12" }, { status: 400 }) };
+  }
+
   function parsePositiveDimension(value: unknown, label: string): { error: NextResponse } | { value: number | null } {
     if (!value) return { value: null };
     const parsed = parseFloat(value as string);
@@ -192,6 +200,7 @@ export function validateProductBody(
     parsedFeatured: featured === true,
     parsedPrecioMayorista,
     parsedCantMinMayorista,
+    parsedCuotas,
     normalizedVariants,
     parsedWeightKg: weightResult.value,
     parsedHeightCm: heightResult.value,

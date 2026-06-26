@@ -22,6 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
             featured: true,
             precioMayorista: true,
             cantMinMayorista: true,
+            cuotas: true,
             images: true,
             category: true,
             subcategory: true,
@@ -42,10 +43,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   ]);
   if (!store) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
   const isOwner = !!currentUser && currentUser.id === store.ownerId;
+  const hasMercadoPago = !!store.mpAccessToken;
+  // El access/refresh token de Mercado Pago nunca debe llegar al navegador del
+  // visitante (este endpoint es público) — se manda solo `hasMercadoPago`.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { mpAccessToken, mpRefreshToken, ...safeStore } = store;
 
   // Ranking de ventas — solo se calcula cuando se pide explícitamente (ej: panel de afiliadas)
   // para no sumar una consulta extra en cada visita normal de un comprador a la tienda.
-  if (!withSales) return NextResponse.json({ store, isOwner });
+  if (!withSales) return NextResponse.json({ store: safeStore, isOwner, hasMercadoPago });
 
   const salesAgg = await prisma.orderItem.groupBy({
     by: ["productId"],
@@ -54,11 +60,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   });
   const salesMap = Object.fromEntries(salesAgg.map((s) => [s.productId, s._sum.quantity ?? 0]));
   const storeWithSales = {
-    ...store,
+    ...safeStore,
     products: store.products
       .map((p) => ({ ...p, salesCount: salesMap[p.id] ?? 0 }))
       .sort((a, b) => b.salesCount - a.salesCount),
   };
 
-  return NextResponse.json({ store: storeWithSales, isOwner });
+  return NextResponse.json({ store: storeWithSales, isOwner, hasMercadoPago });
 }

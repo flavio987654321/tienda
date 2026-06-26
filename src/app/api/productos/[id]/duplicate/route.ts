@@ -32,6 +32,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
       reelUrls:         source.reelUrls,
       precioMayorista:  source.precioMayorista,
       cantMinMayorista: source.cantMinMayorista,
+      cuotas:           source.cuotas,
       isActive:         false,
       variants: {
         create: source.variants.map(v => ({

@@ -1,28 +1,30 @@
 "use client";
 import Link from "next/link";
 import { ChevronLeft, Heart, ShoppingBag, User } from "lucide-react";
-import { ProductDetailBody, type DetailTheme, type ProductDetailViewProps } from "./shared";
+import { ProductDetailBody, ProductDetailFooter, ProductDetailOverlays, resolveDetailTheme, editorParam, type DetailTheme, type ProductDetailViewProps } from "./shared";
 
-const theme: DetailTheme = {
+const themeBase: DetailTheme = {
   pageBg: "#ffffff", text: "#111111", muted: "#6b7280",
   accent: "#ea580c", accentText: "#ffffff",
   cardBorder: "#e5e7eb", font: "'Inter','Segoe UI',system-ui,sans-serif", headingFont: "inherit", radius: 12,
 };
 
 export default function ElectroPrimeDetail({ view }: { view: ProductDetailViewProps }) {
-  const { slug, storeName, cartCount, toastMsg, catalogHref, whatsapp, product } = view;
+  const { slug, storeName, cartCount, catalogHref, whatsapp, product, cart, isPreview, accentOverride } = view;
+  const theme = resolveDetailTheme(themeBase, accentOverride);
+  const homeHref = `/tienda/${slug}${editorParam(isPreview)}`;
   return (
     <div style={{ minHeight: "100vh", background: theme.pageBg, fontFamily: theme.font, color: theme.text }}>
       <nav style={{ borderBottom: `1px solid ${theme.cardBorder}`, padding: "0 24px", position: "sticky", top: 0, background: theme.pageBg, zIndex: 50 }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href={`/tienda/${slug}`} style={{ fontWeight: 900, fontSize: 18, color: theme.text, textDecoration: "none", letterSpacing: -0.5 }}>{storeName}</Link>
+          <Link href={homeHref} style={{ fontWeight: 900, fontSize: 18, color: theme.text, textDecoration: "none", letterSpacing: -0.5 }}>{storeName}</Link>
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-            <Link href={catalogHref} style={{ color: theme.muted, display: "flex" }} aria-label="Favoritos"><Heart size={20} /></Link>
-            <Link href={`/tienda/${slug}`} style={{ color: theme.muted, display: "flex" }} aria-label="Mi cuenta"><User size={20} /></Link>
-            <Link href={catalogHref} style={{ color: theme.muted, display: "flex", position: "relative" }} aria-label="Carrito">
+            <button onClick={() => { cart.setFavoritesOpen(true); cart.setCartOpen(false); }} style={{ color: theme.muted, display: "flex", background: "none", border: "none", cursor: "pointer", padding: 0 }} aria-label="Favoritos"><Heart size={20} /></button>
+            <Link href={homeHref} style={{ color: theme.muted, display: "flex" }} aria-label="Mi cuenta"><User size={20} /></Link>
+            <button onClick={() => { cart.setCartOpen(true); cart.setFavoritesOpen(false); }} style={{ color: theme.muted, display: "flex", position: "relative", background: "none", border: "none", cursor: "pointer", padding: 0 }} aria-label="Carrito">
               <ShoppingBag size={20} />
               {cartCount > 0 && <span style={{ position: "absolute", top: -6, right: -6, background: theme.accent, color: "#fff", borderRadius: "50%", width: 16, height: 16, fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{cartCount}</span>}
-            </Link>
+            </button>
           </div>
         </div>
       </nav>
@@ -35,9 +37,7 @@ export default function ElectroPrimeDetail({ view }: { view: ProductDetailViewPr
 
       <ProductDetailBody theme={theme} view={view} />
 
-      <footer style={{ background: "#0a0a0a", padding: "28px 24px", textAlign: "center" }}>
-        <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.5)" }}>© {new Date().getFullYear()} {storeName}. Todos los derechos reservados.</p>
-      </footer>
+      <ProductDetailFooter theme={theme} bg="#0a0a0a" view={view} />
 
       {whatsapp && (
         <a href={`https://wa.me/${whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola! Te consulto sobre ${product.name}`)}`}
@@ -48,11 +48,7 @@ export default function ElectroPrimeDetail({ view }: { view: ProductDetailViewPr
         </a>
       )}
 
-      {toastMsg && (
-        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#111", color: "#fff", fontSize: 13, padding: "10px 18px", borderRadius: 100, zIndex: 60 }}>
-          {toastMsg}
-        </div>
-      )}
+      <ProductDetailOverlays theme={theme} view={view} />
     </div>
   );
 }

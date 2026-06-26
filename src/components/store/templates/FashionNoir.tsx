@@ -622,7 +622,7 @@ export default function FashionNoir() {
               </>
             )}
             {/* Favorites icon */}
-            {!isMobile && <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); }} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
+            {!isMobile && <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); setCartOpen(false); }} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? G : "none"} stroke={favorites.length > 0 ? G : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {favorites.length > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:G, color:BG, borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
             </button>}
@@ -722,7 +722,7 @@ export default function FashionNoir() {
               {label}
             </button>
           ))}
-          <button onClick={() => { setFavoritesOpen(true); setMobileMenuOpen(false); setUserDropdownOpen(false); }}
+          <button onClick={() => { setFavoritesOpen(true); setMobileMenuOpen(false); setUserDropdownOpen(false); setCartOpen(false); }}
             style={{ display:"block", width:"100%", background:"none", border:"none", color:"rgba(240,235,227,0.6)", padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
             Favoritos {favorites.length > 0 && `(${favorites.length})`}
           </button>
@@ -1416,7 +1416,7 @@ export default function FashionNoir() {
 
       {/* ── CHECKOUT ───────────────────────────────────────── */}
       {checkoutOpen && (
-        <div style={{ position:"fixed", inset:0, zIndex:300, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
+        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20010 : 300, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
           <div onClick={() => setCheckoutOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.72)", backdropFilter:"blur(6px)" }}/>
           <div style={{ position:"relative", width:480, maxWidth:"100vw", height:"100vh", background:"#0e0e0e", display:"flex", flexDirection:"column", overflowY:"auto", borderLeft:`1px solid rgba(201,168,76,0.12)` }}>
 
@@ -1615,7 +1615,7 @@ export default function FashionNoir() {
       )}
 
       {/* ── CARRITO ────────────────────────────────────────── */}
-      <div style={{ position:"fixed", inset:0, zIndex:150, pointerEvents: cartOpen ? "auto" : "none", overflow:"hidden" }}>
+      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 150, pointerEvents: cartOpen ? "auto" : "none", overflow:"hidden" }}>
         <div onClick={() => setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.6)", opacity: cartOpen ? 1 : 0, transition:"opacity 0.3s" }}/>
         <div style={{ position:"absolute", top:0, right:0, bottom:0, left: isMobile ? 0 : "auto", width: isMobile ? "auto" : 420, background:S, transform: cartOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
           <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid rgba(240,235,227,0.07)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -1743,7 +1743,7 @@ export default function FashionNoir() {
       )}
 
       {/* ── FLOATING CART BUTTON ────────────────────────────── */}
-      <button onClick={() => setCartOpen(true)}
+      <button onClick={() => { setCartOpen(true); setFavoritesOpen(false); }}
         style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:500, width:52, height:52, borderRadius:"50%", background:G, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(0,0,0,0.3)", transition:"transform 0.2s" }}
         onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
         onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>

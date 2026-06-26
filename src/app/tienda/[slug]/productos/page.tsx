@@ -5,8 +5,32 @@ import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "rea
 import Link from "next/link";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct, StorefrontVariant, PlaceOrderParams } from "@/hooks/useStorefront";
+import { getDemoPool, fillTargetFor } from "@/hooks/useStorefront";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
+import { getContrastColor } from "@/contexts/EditContext";
+import ReportStoreModal from "@/components/store/ReportStoreModal";
+
+const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
+  ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["pinterest", "Pinterest"],
+];
+function SocialIcon({ network }: { network: string }) {
+  const common = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  switch (network) {
+    case "instagram":
+      return <svg {...common}><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>;
+    case "facebook":
+      return <svg {...common}><path d="M16 3h-2a5 5 0 0 0-5 5v3H6v4h3v8h4v-8h3l1-4h-4V8a1 1 0 0 1 1-1h3z"/></svg>;
+    case "tiktok":
+      return <svg {...common}><path d="M9 12a4 4 0 1 0 4 4V3a5 5 0 0 0 5 5"/></svg>;
+    case "youtube":
+      return <svg {...common}><rect x="2" y="5" width="20" height="14" rx="4"/><polygon points="10 9 16 12 10 15" fill="currentColor" stroke="none"/></svg>;
+    case "pinterest":
+      return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M9 18l2-7"/><path d="M8 11a4 4 0 1 1 7 2c-1 1.5-3 1-3-1"/></svg>;
+    default:
+      return null;
+  }
+}
 
 // ── Tipos extra ──────────────────────────────────────────────────────────────
 const SIZE_ATTRS  = [
@@ -165,6 +189,8 @@ function ProductosPageInner() {
   const fromEditor   = searchParams?.get("from") === "editor";
   const catParam     = searchParams?.get("categoria") ?? null;
   const subCatParam  = searchParams?.get("subcategoria") ?? null;
+  const ofertaParam  = searchParams?.get("oferta") === "true";
+  const [onlyOfertas, setOnlyOfertas] = useState(ofertaParam);
 
   const [products,   setProducts]   = useState<StorefrontProduct[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -173,9 +199,17 @@ function ProductosPageInner() {
   const [template,   setTemplate]   = useState(tParam && THEMES[tParam] ? tParam : "fashion-noir");
   const [accentOverride, setAccentOverride] = useState<string | null>(null);
   const [isOwner,    setIsOwner]    = useState(false);
+  const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
+  const [showReport, setShowReport] = useState(false);
 
   const storeIdRef  = useRef<string | null>(null);
   const dbNameRef   = useRef<string>("Tienda");
+  const catScrollRef = useRef<HTMLDivElement>(null);
+  function scrollCats(dir: 1 | -1) {
+    const el = catScrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.6, behavior: "smooth" });
+  }
 
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews,          setReviews]          = useState<PReview[]>([]);
@@ -259,8 +293,19 @@ function ProductosPageInner() {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.template && !tParam) setTemplate(cfg.template);
           if (cfg.colors?.accent) setAccentOverride(cfg.colors.accent);
+          if (cfg.socialLinks) setSocialLinks(cfg.socialLinks);
         } catch {}
-        setProducts((data.store.products ?? []).map(mapProduct));
+        const real: StorefrontProduct[] = (data.store.products ?? []).map(mapProduct);
+        if (fromEditor) {
+          // En el editor: productos reales primero, demos para completar y poder
+          // probar el catálogo/categorías aunque la tienda todavía no tenga stock cargado.
+          const tipoTienda = data.store.tipoTienda ?? "ROPA";
+          const demoPool = getDemoPool(tipoTienda);
+          const needed = Math.max(0, fillTargetFor(tipoTienda) - real.length);
+          setProducts([...real, ...demoPool.slice(0, needed)]);
+        } else {
+          setProducts(real);
+        }
       })
       .catch(() => setError("No se pudo cargar la tienda. Intentá de nuevo."))
       .finally(() => setLoading(false));
@@ -277,9 +322,46 @@ function ProductosPageInner() {
   const [activeCategory,    setActiveCategory]    = useState(catParam ?? "Todos");
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(subCatParam);
   const [hoveredCatMenu,    setHoveredCatMenu]    = useState<string | null>(null);
+  // Posición del desplegable de subcategorías, calculada en pantalla (no relativa al
+  // contenedor con scroll horizontal de las pestañas) para que no quede recortado por
+  // su overflow-x. Se guarda al abrir, leyendo el tab que se clickeó.
+  const [catMenuPos, setCatMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const catTabRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [sortBy,            setSortBy]            = useState("newest");
   const [page,              setPage]              = useState(1);
   const [activeAttrFilters, setActiveAttrFilters] = useState<Record<string, string[]>>({});
+  const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
+  // Tech Nova usa una barra lateral de filtros tipo "ficha técnica" en vez de
+  // las pestañas horizontales que usan los demás templates.
+  const isSidebarLayout = template === "tech-nova";
+  // Home Studio usa categorías como tarjetas con foto (estilo boutique/editorial)
+  // y un botón "Filtrar y ordenar" que abre un panel lateral, en vez de la fila
+  // de pestañas + filtros siempre visible de los demás templates.
+  const isCardLayout = template === "home-studio";
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  useEffect(() => {
+    if (!filterDrawerOpen) return;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, [filterDrawerOpen]);
+  const cardScrollRef = useRef<HTMLDivElement>(null);
+  function scrollCards(dir: 1 | -1) {
+    const el = cardScrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.6, behavior: "smooth" });
+  }
+  // Casa Clara usa una navegación tipo "breadcrumb" minimalista (todo texto,
+  // sin pills ni cajas) con los filtros escondidos detrás de un link "+ Filtros".
+  const isMinimalLayout = template === "casa-clara";
+  const [catDropdownOpen, setCatDropdownOpen] = useState(false);
+  const [subDropdownOpen, setSubDropdownOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(["cat:Todos"]));
+  const toggleGroup = (key: string) => setOpenGroups(prev => {
+    const next = new Set(prev);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
 
   const categoryList = useMemo(() => [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))], [products]);
   const CATEGORIES   = useMemo(() => ["Todos", ...categoryList], [categoryList]);
@@ -295,6 +377,10 @@ function ProductosPageInner() {
   );
 
   const availableAttrFilters = useMemo(() => {
+    // En "Todos" se mezclan productos de rubros muy distintos (heladeras, sillones,
+    // celulares...) y mostrar specs como Pulgadas o Potencia ahí no tiene sentido —
+    // recién aparecen cuando el usuario elige una categoría puntual.
+    if (activeCategory === "Todos") return [];
     const map: Record<string, Set<string>> = {};
     productsInCategory.forEach(p => {
       p.attributes.forEach(({ key, value }) => {
@@ -303,10 +389,22 @@ function ProductosPageInner() {
         map[key].add(value);
       });
     });
+    // Orden fijo: Marca y Modelo primero (lo que más ayuda a decidir),
+    // el resto de specs en el medio, y Garantía al final (es un dato de
+    // confianza, no algo por lo que normalmente se filtra primero).
+    const PRIORITY = ["marca", "modelo"];
+    const LAST = ["garantia", "garantía"];
+    const rank = (key: string) => {
+      const k = key.toLowerCase();
+      if (PRIORITY.includes(k)) return PRIORITY.indexOf(k);
+      if (LAST.includes(k)) return 100;
+      return 10;
+    };
     return Object.entries(map)
       .filter(([, values]) => values.size > 1)
-      .map(([key, values]) => ({ key, values: [...values].sort() }));
-  }, [productsInCategory]);
+      .map(([key, values]) => ({ key, values: [...values].sort() }))
+      .sort((a, b) => rank(a.key) - rank(b.key) || a.key.localeCompare(b.key));
+  }, [productsInCategory, activeCategory]);
 
   const toggleAttrFilter = (key: string, value: string) => {
     setActiveAttrFilters(prev => {
@@ -320,6 +418,26 @@ function ProductosPageInner() {
   };
 
   const clearAttrFilters = () => setActiveAttrFilters({});
+
+  // Tope real de precios para la categoría actual — se recalcula cuando cambiás
+  // de categoría, y reseteamos la selección manual para no dejar un rango viejo
+  // que ya no tiene sentido con los productos nuevos.
+  const priceBounds = useMemo<[number, number]>(() => {
+    if (productsInCategory.length === 0) return [0, 0];
+    const prices = productsInCategory.map(p => p.price);
+    return [Math.min(...prices), Math.max(...prices)];
+  }, [productsInCategory]);
+
+  // Si cambiás de categoría, el rango de precio anterior ya no tiene sentido —
+  // lo reseteamos durante el render (no en un efecto) para evitar un re-render extra.
+  const catKey = `${activeCategory}|${activeSubcategory ?? ""}`;
+  const [prevCatKey, setPrevCatKey] = useState(catKey);
+  if (catKey !== prevCatKey) {
+    setPrevCatKey(catKey);
+    setPriceRange(null);
+  }
+
+  const effectivePriceRange = priceRange ?? priceBounds;
 
   const subcategoriesFor = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -342,6 +460,8 @@ function ProductosPageInner() {
         const productValue = p.attributes.find(a => a.key === key)?.value;
         if (!productValue || !values.includes(productValue)) return false;
       }
+      if (priceRange && (p.price < priceRange[0] || p.price > priceRange[1])) return false;
+      if (onlyOfertas && !(p.comparePrice && p.comparePrice > p.price)) return false;
       return true;
     });
     if (sortBy === "price_asc")  r = [...r].sort((a, b) => a.price - b.price);
@@ -353,13 +473,17 @@ function ProductosPageInner() {
       return db - da;
     });
     return r;
-  }, [productsInCategory, activeAttrFilters, search, sortBy]);
+  }, [productsInCategory, activeAttrFilters, priceRange, search, sortBy, onlyOfertas]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const changeCategory = (cat: string, sub: string | null = null) => {
     setActiveCategory(cat); setActiveSubcategory(sub); setPage(1); setActiveAttrFilters({});
+    // Los acordeones de specs (Marca, Modelo, etc.) son específicos de cada categoría —
+    // si quedan "abiertos" al cambiar de rubro, dan la falsa sensación de que el filtro
+    // sigue activo aunque ya se haya limpiado arriba (activeAttrFilters).
+    setOpenGroups(prev => new Set([...prev].filter(k => !k.startsWith("attr:"))));
   };
 
   // ── Stock de la variante seleccionada en el modal ──────────────────────────
@@ -489,6 +613,10 @@ function ProductosPageInner() {
   const th: Theme = THEMES[template] ?? THEMES["fashion-noir"];
   const G = accentOverride ?? th.G;
   const { BG, S, T, MID, border, borderFaint, inputBorder, inputBg, serif, sans, dark } = th;
+  // Texto blanco/negro sobre fondos pintados con el acento (G): se calcula según
+  // el color real elegido, no según si el template en sí es claro u oscuro —
+  // así un acento muy claro en un template claro sigue siendo legible.
+  const accentDark = getContrastColor(G) === "dark";
 
   // ── Enviar reseña ──────────────────────────────────────────────────────────
   const submitReview = async (e: React.FormEvent) => {
@@ -526,9 +654,295 @@ function ProductosPageInner() {
     <div style={{ background:BG, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, fontFamily:sans, color:T }}>
       <p style={{ fontSize:18, fontWeight:600 }}>Algo salió mal</p>
       <p style={{ fontSize:13, opacity:0.5 }}>{error}</p>
-      <button onClick={() => window.location.reload()} style={{ background:G, color:dark?"#000":"#fff", border:"none", padding:"10px 24px", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+      <button onClick={() => window.location.reload()} style={{ background:G, color:accentDark?"#000":"#fff", border:"none", padding:"10px 24px", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
         Reintentar
       </button>
+    </div>
+  );
+
+  // ── Grilla + paginación (se comparte entre el layout de pestañas y el de sidebar) ──
+  const gridAndPagination = (
+    <>
+      {/* ── GRILLA ─────────────────────────────────────────────────── */}
+      {paginated.length === 0 ? (
+        <div style={{ textAlign:"center", padding:"80px 0", opacity:0.4 }}>
+          <p style={{ fontFamily:serif, fontSize:22, marginBottom:8 }}>Sin resultados</p>
+          <p style={{ fontSize:13 }}>Probá con otra búsqueda o categoría</p>
+        </div>
+      ) : (
+        <div className="pc-grid">
+          {paginated.map(product => {
+            const isFav = favorites.includes(product.id);
+            const useDetailPage = DETAIL_PAGE_TEMPLATES.includes(template);
+            const cardInner = (
+              <>
+                <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:14 }}>
+                  {product.images[0] ? (
+                    <img src={product.images[0]} alt={product.name}
+                      className="pc-img"
+                      style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
+                      onError={e => { e.currentTarget.style.opacity="0"; }}/>
+                  ) : (
+                    <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", opacity:0.15 }}>
+                      <svg width={48} height={48} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={0.8}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    </div>
+                  )}
+                  {product.comparePrice && (
+                    <div style={{ position:"absolute", top:10, left:10, background:G, color:accentDark?"#000":"#fff", fontSize:9, fontWeight:800, letterSpacing:2, padding:"3px 8px", textTransform:"uppercase" }}>Oferta</div>
+                  )}
+                  {(product.subcategory || product.category !== "general") && (
+                    <div style={{ position:"absolute", top:10, right:10, background: dark ? "rgba(10,10,10,0.7)" : "rgba(255,255,255,0.85)", color:T, fontSize:9, letterSpacing:2, padding:"3px 8px", textTransform:"uppercase" }}>
+                      {product.subcategory ?? product.category}
+                    </div>
+                  )}
+                  {/* Botón favorito */}
+                  <button onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
+                    style={{ position:"absolute", bottom:10, right:10, background: dark ? "rgba(10,10,10,0.65)" : "rgba(255,255,255,0.9)", border:"none", borderRadius:"50%", width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"transform 0.2s" }}
+                    onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
+                    onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
+                    <svg width={14} height={14} viewBox="0 0 24 24" fill={isFav ? G : "none"} stroke={isFav ? G : MID} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                  </button>
+                  {/* Overlay "Ver detalle" */}
+                  <div className="product-overlay" style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.3)", display:"flex", alignItems:"center", justifyContent:"center", opacity:0, transition:"opacity 0.3s" }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity="1")}
+                    onMouseLeave={e => (e.currentTarget.style.opacity="0")}>
+                    <span style={{ background:G, color:accentDark?"#000":"#fff", fontSize:10, fontWeight:800, letterSpacing:3, padding:"9px 20px", textTransform:"uppercase" }}>Ver detalle</span>
+                  </div>
+                </div>
+                <p style={{ fontSize:10, color:MID, letterSpacing:2, textTransform:"uppercase", margin:"0 0 4px" }}>{product.category}</p>
+                <p style={{ fontSize:15, color:T, margin:"0 0 7px", fontWeight:500, lineHeight:1.3 }}>{product.name}</p>
+                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <span style={{ fontSize:16, fontWeight:700, color:G }}>{fmt(product.price)}</span>
+                  {product.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
+                </div>
+              </>
+            );
+            return useDetailPage ? (
+              <Link key={product.id} href={`/tienda/${slug}/producto/${product.id}${fromEditor ? "?from=editor" : ""}`}
+                style={{ cursor:"pointer", textDecoration:"none", color:"inherit", display:"block" }}>
+                {cardInner}
+              </Link>
+            ) : (
+              <div key={product.id} style={{ cursor:"pointer" }} onClick={() => openModal(product)}>
+                {cardInner}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── PAGINACIÓN ─────────────────────────────────────────────── */}
+      {totalPages > 1 && (
+        <div style={{ display:"flex", gap:8, justifyContent:"center", alignItems:"center", flexWrap:"wrap" }}>
+          <button onClick={() => { setPage(p => Math.max(1,p-1)); window.scrollTo({top:0,behavior:"smooth"}); }}
+            disabled={page===1}
+            style={{ background:"transparent", color: page===1?MID:T, border:`1px solid ${page===1?borderFaint:border}`, padding:"10px 22px", fontSize:11, letterSpacing:2, cursor: page===1?"default":"pointer", textTransform:"uppercase" }}>
+            ← Anterior
+          </button>
+          {Array.from({length:totalPages},(_,i)=>i+1).map(n => {
+            if (n!==1 && n!==totalPages && Math.abs(n-page)>2) return null;
+            return (
+              <button key={n} onClick={() => { setPage(n); window.scrollTo({top:0,behavior:"smooth"}); }}
+                style={{ background: page===n?G:"transparent", color: page===n?(accentDark?"#000":"#fff"):T, border:`1px solid ${page===n?G:border}`, width:40, height:40, fontSize:13, fontWeight:700, cursor:"pointer", transition:"all 0.2s" }}>
+                {n}
+              </button>
+            );
+          })}
+          <button onClick={() => { setPage(p => Math.min(totalPages,p+1)); window.scrollTo({top:0,behavior:"smooth"}); }}
+            disabled={page===totalPages}
+            style={{ background:"transparent", color: page===totalPages?MID:T, border:`1px solid ${page===totalPages?borderFaint:border}`, padding:"10px 22px", fontSize:11, letterSpacing:2, cursor: page===totalPages?"default":"pointer", textTransform:"uppercase" }}>
+            Siguiente →
+          </button>
+        </div>
+      )}
+    </>
+  );
+
+  // ── Sidebar de filtros tipo "ficha técnica" (solo Tech Nova) ──────────────
+  const filterSidebar = (
+    <aside style={{ width:230, flexShrink:0 }}>
+      {/* Categorías */}
+      <div style={{ marginBottom:28 }}>
+        <p style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:T, margin:"0 0 14px" }}>Categorías</p>
+        <div style={{ display:"flex", flexDirection:"column", gap:1 }}>
+          {CATEGORIES.map(cat => {
+            const subcats = cat !== "Todos" ? (subcategoriesFor[cat] || []) : [];
+            const isActive = activeCategory === cat;
+            const isOpen = openGroups.has(`cat:${cat}`);
+            return (
+              <div key={cat}>
+                <div style={{ display:"flex", alignItems:"center" }}>
+                  <button onClick={() => changeCategory(cat)}
+                    style={{ flex:1, textAlign:"left", background:"none", border:"none", margin:0, padding:"7px 0", fontSize:12.5,
+                      fontWeight: isActive ? 700 : 500, color: isActive ? G : T, cursor:"pointer", letterSpacing:0.2 }}>
+                    {cat}
+                  </button>
+                  {subcats.length > 0 && (
+                    <button onClick={() => toggleGroup(`cat:${cat}`)} aria-label={`Subcategorías de ${cat}`}
+                      style={{ background:"none", border:"none", cursor:"pointer", color:T, fontSize:19, fontWeight:700, lineHeight:1, padding:"4px 6px", margin:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      {isOpen ? "▴" : "▾"}
+                    </button>
+                  )}
+                </div>
+                {subcats.length > 0 && isOpen && (
+                  <div style={{ display:"flex", flexDirection:"column", gap:1, paddingLeft:14, marginBottom:4 }}>
+                    <button onClick={() => changeCategory(cat)}
+                      style={{ textAlign:"left", background:"none", border:"none", padding:"5px 0", fontSize:11.5,
+                        color: !activeSubcategory && isActive ? G : MID, cursor:"pointer" }}>
+                      Todos en {cat}
+                    </button>
+                    {subcats.map(sub => (
+                      <button key={sub} onClick={() => changeCategory(cat, sub)}
+                        style={{ textAlign:"left", background:"none", border:"none", padding:"5px 0", fontSize:11.5,
+                          color: activeSubcategory===sub ? G : MID, fontWeight: activeSubcategory===sub ? 700 : 400, cursor:"pointer" }}>
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas) && (
+          <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); }}
+            style={{ marginTop:10, background:"none", border:"none", color:MID, fontSize:11, letterSpacing:0.5, textDecoration:"underline", cursor:"pointer", padding:0 }}>
+            Limpiar filtros
+          </button>
+        )}
+      </div>
+
+      {/* Precio */}
+      {priceBounds[1] > priceBounds[0] && (
+        <div style={{ borderTop:`1px solid ${borderFaint}`, padding:"16px 0" }}>
+          <button onClick={() => toggleGroup("precio")}
+            style={{ width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center", background:"none", border:"none", margin:0, padding:"0 6px 0 0", textAlign:"left" }}>
+            <span style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:T }}>Precio</span>
+            <span style={{ color:T, fontSize:19, fontWeight:700, lineHeight:1 }}>{openGroups.has("precio") ? "▴" : "▾"}</span>
+          </button>
+          {openGroups.has("precio") && (
+            <div style={{ marginTop:14 }}>
+              <div style={{ position:"relative", width:"100%", height:14 }}>
+                <div style={{ position:"absolute", top:6, left:0, right:0, height:2, background:border }} />
+                <div style={{ position:"absolute", top:6, height:2, background:G,
+                  left:`${((effectivePriceRange[0]-priceBounds[0])/(priceBounds[1]-priceBounds[0]))*100}%`,
+                  right:`${100-((effectivePriceRange[1]-priceBounds[0])/(priceBounds[1]-priceBounds[0]))*100}%` }} />
+                <input type="range" className="pr-range" min={priceBounds[0]} max={priceBounds[1]} value={effectivePriceRange[0]}
+                  onChange={e => setPriceRange([Math.min(Number(e.target.value), effectivePriceRange[1]), effectivePriceRange[1]])} />
+                <input type="range" className="pr-range" min={priceBounds[0]} max={priceBounds[1]} value={effectivePriceRange[1]}
+                  onChange={e => setPriceRange([effectivePriceRange[0], Math.max(Number(e.target.value), effectivePriceRange[0])])} />
+              </div>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:MID, marginTop:4 }}>
+                <span>{fmt(effectivePriceRange[0])}</span>
+                <span>{fmt(effectivePriceRange[1])}</span>
+              </div>
+              {priceRange && (
+                <button onClick={() => setPriceRange(null)}
+                  style={{ marginTop:8, background:"none", border:"none", color:MID, fontSize:10.5, textDecoration:"underline", cursor:"pointer", padding:0 }}>
+                  Borrar
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Specs (Marca, Modelo, Garantía, etc.) */}
+      {availableAttrFilters.map(({ key, values }) => {
+        const isOpen = openGroups.has(`attr:${key}`);
+        const activeCount = (activeAttrFilters[key] ?? []).length;
+        return (
+          <div key={key} style={{ borderTop:`1px solid ${borderFaint}`, padding:"16px 0" }}>
+            <button onClick={() => toggleGroup(`attr:${key}`)}
+              style={{ width:"100%", display:"flex", justifyContent:"space-between", alignItems:"center", background:"none", border:"none", margin:0, padding:"0 6px 0 0", textAlign:"left" }}>
+              <span style={{ fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:T }}>
+                {key}{activeCount > 0 && <span style={{ color:G }}> ({activeCount})</span>}
+              </span>
+              <span style={{ color:T, fontSize:19, fontWeight:700, lineHeight:1 }}>{isOpen ? "▴" : "▾"}</span>
+            </button>
+            {isOpen && (
+              <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:12 }}>
+                {values.map(value => {
+                  const isActive = (activeAttrFilters[key] ?? []).includes(value);
+                  return (
+                    <label key={value} style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:T, cursor:"pointer" }}>
+                      <input type="checkbox" checked={isActive} onChange={() => toggleAttrFilter(key, value)}
+                        style={{ accentColor:G, width:14, height:14, cursor:"pointer", flexShrink:0 }} />
+                      {value}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {(Object.keys(activeAttrFilters).length > 0 || priceRange) && (
+        <button onClick={() => { clearAttrFilters(); setPriceRange(null); }}
+          style={{ marginTop:8, background:"none", border:"none", color:MID, fontSize:11, letterSpacing:0.5, textDecoration:"underline", cursor:"pointer", padding:0 }}>
+          Limpiar specs
+        </button>
+      )}
+    </aside>
+  );
+
+  // Contenido de Precio + specs reutilizado tanto en la fila siempre-visible
+  // (Electro Prime, Tech Nova horizontal, Casa Clara) como dentro del panel
+  // "Filtrar y ordenar" de Home Studio.
+  const dynamicFiltersContent = (priceBounds[1] > priceBounds[0] || availableAttrFilters.length > 0) && (
+    <div style={{ display:"flex", flexWrap: isCardLayout ? "wrap" : "wrap", flexDirection: isCardLayout ? "column" : "row", gap:24, marginBottom: isCardLayout ? 0 : 32, paddingBottom: isCardLayout ? 0 : 24, borderBottom: isCardLayout ? "none" : `1px solid ${borderFaint}` }}>
+      {priceBounds[1] > priceBounds[0] && (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          <span style={{ fontSize:10, letterSpacing:2, textTransform:"uppercase", opacity:0.5 }}>Precio</span>
+          <div style={{ position:"relative", width: isCardLayout ? "100%" : 170, height:14 }}>
+            <div style={{ position:"absolute", top:6, left:0, right:0, height:2, background:border }} />
+            <div style={{ position:"absolute", top:6, height:2, background:G,
+              left:`${((effectivePriceRange[0]-priceBounds[0])/(priceBounds[1]-priceBounds[0]))*100}%`,
+              right:`${100-((effectivePriceRange[1]-priceBounds[0])/(priceBounds[1]-priceBounds[0]))*100}%` }} />
+            <input type="range" className="pr-range" min={priceBounds[0]} max={priceBounds[1]} value={effectivePriceRange[0]}
+              onChange={e => setPriceRange([Math.min(Number(e.target.value), effectivePriceRange[1]), effectivePriceRange[1]])} />
+            <input type="range" className="pr-range" min={priceBounds[0]} max={priceBounds[1]} value={effectivePriceRange[1]}
+              onChange={e => setPriceRange([effectivePriceRange[0], Math.max(Number(e.target.value), effectivePriceRange[0])])} />
+          </div>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:MID }}>
+            <span>{fmt(effectivePriceRange[0])}</span>
+            <span>{fmt(effectivePriceRange[1])}</span>
+          </div>
+        </div>
+      )}
+      {availableAttrFilters.length > 0 && availableAttrFilters.map(({ key, values }) => (
+        <div key={key} style={{ display:"flex", flexDirection:"column", gap:8,
+          paddingLeft: isCardLayout ? 0 : 24, borderLeft: isCardLayout ? "none" : `1px solid ${borderFaint}`,
+          paddingTop: isCardLayout ? 16 : 0, borderTop: isCardLayout ? `1px solid ${borderFaint}` : "none" }}>
+          <span style={{ fontSize:10, letterSpacing:2, textTransform:"uppercase", opacity:0.5 }}>{key}</span>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+            {values.map(value => {
+              const isActive = (activeAttrFilters[key] ?? []).includes(value);
+              return (
+                <button key={value} onClick={() => toggleAttrFilter(key, value)}
+                  style={{
+                    background: isActive ? G : "transparent",
+                    color: isActive ? (accentDark ? "#000" : "#fff") : T,
+                    border: `1px solid ${isActive ? G : border}`,
+                    padding: "6px 14px", fontSize: 11, cursor: "pointer",
+                    letterSpacing: 0.5, transition: "all 0.2s",
+                  }}>
+                  {value}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      {(Object.keys(activeAttrFilters).length > 0 || priceRange) && (
+        <button onClick={() => { clearAttrFilters(); setPriceRange(null); }}
+          style={{ alignSelf: isCardLayout ? "flex-start" : "flex-end", background:"none", border:"none", color:MID, fontSize:11, letterSpacing:1, cursor:"pointer", padding:"6px 0", textDecoration:"underline" }}>
+          Limpiar specs
+        </button>
+      )}
     </div>
   );
 
@@ -537,10 +951,16 @@ function ProductosPageInner() {
     <div style={{ background:BG, color:T, minHeight:"100vh", fontFamily:sans }}>
       <style>{`
   .st-tabs::-webkit-scrollbar{display:none}.st-tabs{scrollbar-width:none;-ms-overflow-style:none}
+  .pr-range{position:absolute;top:0;left:0;width:100%;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
+  .pr-range::-webkit-slider-runnable-track{background:none}
+  .pr-range::-moz-range-track{background:none}
+  .pr-range::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:all;width:14px;height:14px;border-radius:50%;background:${G};border:2px solid ${BG};box-shadow:0 0 0 1px ${G};cursor:pointer;margin-top:0}
+  .pr-range::-moz-range-thumb{pointer-events:all;width:14px;height:14px;border-radius:50%;background:${G};border:2px solid ${BG};box-shadow:0 0 0 1px ${G};cursor:pointer}
   @media(hover:hover) and (pointer:fine){.pc-img:hover{transform:scale(1.05)}}.pc-img{transition:transform 0.5s ease}
   .pc-grid{display:grid;gap:16px;grid-template-columns:repeat(2,1fr);margin-bottom:56px}
   @media(min-width:560px){.pc-grid{gap:20px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}}
   @media(min-width:900px){.pc-grid{gap:24px}}
+  @media(hover:hover) and (pointer:fine){.cc-dropdown-item:hover{background:${G}1a !important}}
 `}</style>
 
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
@@ -578,7 +998,7 @@ function ProductosPageInner() {
               <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
             </svg>
             {cartCount > 0 && (
-              <span style={{ position:"absolute", top:-6, right:-6, background:G, color:dark?"#000":"#fff", borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>
+              <span style={{ position:"absolute", top:-6, right:-6, background:G, color:accentDark?"#000":"#fff", borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>
             )}
           </button>
         </div>
@@ -589,9 +1009,11 @@ function ProductosPageInner() {
         {/* ── TÍTULO + BÚSQUEDA ──────────────────────────────────────── */}
         <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", marginBottom:40, flexWrap:"wrap", gap:16 }}>
           <div>
-            <p style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", margin:"0 0 12px" }}>Colección completa</p>
+            <p style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", margin:"0 0 12px" }}>
+              {onlyOfertas ? "Promociones" : "Colección completa"}
+            </p>
             <h1 style={{ fontFamily:serif, fontSize:"clamp(28px,4vw,42px)", margin:"0 0 8px", color:T, lineHeight:1.1 }}>
-              {activeCategory === "Todos" ? "Todos los productos" : activeCategory}
+              {onlyOfertas ? "Ofertas" : activeCategory === "Todos" ? "Todos los productos" : activeCategory}
               {activeSubcategory && <span style={{ fontStyle:"italic", opacity:0.55 }}> › {activeSubcategory}</span>}
             </h1>
             <p style={{ fontSize:12, opacity:0.35, margin:0, letterSpacing:2 }}>
@@ -599,6 +1021,12 @@ function ProductosPageInner() {
             </p>
           </div>
           <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
+            <button onClick={() => { setOnlyOfertas(o => !o); setPage(1); }}
+              style={{ background: onlyOfertas ? G : "none", color: onlyOfertas ? (accentDark?"#000":"#fff") : T,
+                border:`1px solid ${onlyOfertas ? G : border}`, padding:"10px 16px", fontSize:12, fontWeight:600,
+                cursor:"pointer", whiteSpace:"nowrap" }}>
+              🔥 En oferta
+            </button>
             <div style={{ position:"relative" }}>
               <input
                 value={search}
@@ -627,187 +1055,312 @@ function ProductosPageInner() {
           </div>
         </div>
 
-        {/* ── FILTROS DE CATEGORÍA ───────────────────────────────────── */}
-        {hoveredCatMenu !== null && (
-          <div style={{ position:"fixed", inset:0, zIndex:350 }} onClick={() => setHoveredCatMenu(null)} />
-        )}
-        <div className="st-tabs" style={{ display:"flex", gap:8, flexWrap:"nowrap", overflowX:"auto", marginBottom:40, borderBottom:`1px solid ${borderFaint}`, paddingBottom:24, WebkitOverflowScrolling:"touch" } as React.CSSProperties}>
-          {CATEGORIES.map(cat => {
-            const subcats = cat !== "Todos" ? (subcategoriesFor[cat] || []) : [];
-            const isActive = activeCategory === cat;
-            return (
-              <div key={cat} style={{ position:"relative" }}
-                onMouseEnter={() => subcats.length > 0 && setHoveredCatMenu(cat)}
-                onMouseLeave={() => setHoveredCatMenu(null)}>
-                <button onClick={() => {
-                  if (subcats.length > 0) {
-                    setHoveredCatMenu(hoveredCatMenu === cat ? null : cat);
-                  } else {
-                    changeCategory(cat);
-                  }
-                }}
-                  style={{ background: isActive ? G : "transparent", color: isActive ? (dark?"#000":"#fff") : T, border:`1px solid ${isActive ? G : border}`, padding:"9px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", transition:"all 0.2s", display:"flex", alignItems:"center", gap:5 }}>
-                  {cat}
-                  {subcats.length > 0 && <span style={{ opacity:0.55, fontSize:9 }}>▾</span>}
-                </button>
-                {subcats.length > 0 && hoveredCatMenu === cat && (
-                  <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:S, border:`1px solid ${border}`, minWidth:180, zIndex:400, padding:"4px 0", boxShadow:"0 8px 24px rgba(0,0,0,0.25)" }}>
-                    <button onClick={() => { changeCategory(cat); setHoveredCatMenu(null); }}
-                      style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"9px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase" }}>
-                      Todos en {cat}
+        {isSidebarLayout ? (
+          <div style={{ display:"flex", gap:36, alignItems:"flex-start" }}>
+            {filterSidebar}
+            <div style={{ flex:1, minWidth:0 }}>
+              {gridAndPagination}
+            </div>
+          </div>
+        ) : isCardLayout ? (
+          <>
+            {/* ── CATEGORÍAS COMO TARJETAS CON FOTO (Home Studio) ───────────── */}
+            <div style={{ position:"relative", marginBottom:28, padding: CATEGORIES.length > 6 ? "0 34px" : 0 }}>
+              {CATEGORIES.length > 6 && (
+                <>
+                  <button onClick={() => scrollCards(-1)} aria-label="Anterior"
+                    style={{ position:"absolute", left:0, top:0, bottom:0, zIndex:2, width:30,
+                      border:"none", background:"none", color:T, opacity:0.45, fontSize:38, lineHeight:1, cursor:"pointer",
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+                  <button onClick={() => scrollCards(1)} aria-label="Siguiente"
+                    style={{ position:"absolute", right:0, top:0, bottom:0, zIndex:2, width:30,
+                      border:"none", background:"none", color:T, opacity:0.45, fontSize:38, lineHeight:1, cursor:"pointer",
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+                </>
+              )}
+              <div ref={cardScrollRef} className="st-tabs" style={{ display:"flex", gap:14, overflowX:"auto", WebkitOverflowScrolling:"touch" } as React.CSSProperties}>
+                {CATEGORIES.map(cat => {
+                  const isActive = activeCategory === cat;
+                  const img = cat !== "Todos" ? products.find(p => p.category === cat && p.images[0])?.images[0] : null;
+                  return (
+                    <button key={cat} onClick={() => changeCategory(cat)}
+                      style={{ position:"relative", flexShrink:0, width:118, height:140, border:`1px solid ${isActive ? G : border}`,
+                        borderRadius:14, overflow:"hidden", cursor:"pointer", padding:0, background: img ? "#00000010" : (isActive ? G : "transparent") }}>
+                      {img && (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={img} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+                          <div style={{ position:"absolute", inset:0, background: isActive ? `${G}55` : "linear-gradient(to top, rgba(0,0,0,0.55), transparent 60%)" }} />
+                        </>
+                      )}
+                      <span style={{ position:"absolute", bottom:10, left:10, right:10, fontSize:11, fontWeight:700, letterSpacing:0.5, textTransform:"uppercase",
+                        color: img ? "#fff" : (isActive ? (accentDark?"#000":"#fff") : T), textAlign:"left", lineHeight:1.25 }}>
+                        {cat}
+                      </span>
                     </button>
-                    <div style={{ borderTop:`1px solid ${borderFaint}`, margin:"2px 0" }}/>
-                    {subcats.map(sub => (
-                      <button key={sub} onClick={() => { changeCategory(cat, sub); setHoveredCatMenu(null); }}
-                        style={{ display:"block", width:"100%", background: activeSubcategory===sub ? `${G}18` : "none", border:"none", color: activeSubcategory===sub ? G : T, padding:"8px 16px 8px 24px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", opacity: activeSubcategory===sub ? 1 : 0.7 }}>
-                        {sub}
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Subcategorías de la categoría activa, como chips simples */}
+            {activeCategory !== "Todos" && (subcategoriesFor[activeCategory] || []).length > 0 && (
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:28 }}>
+                <button onClick={() => changeCategory(activeCategory)}
+                  style={{ background: !activeSubcategory ? G : "transparent", color: !activeSubcategory ? (accentDark?"#000":"#fff") : T,
+                    border:`1px solid ${!activeSubcategory ? G : border}`, padding:"7px 16px", fontSize:11, letterSpacing:1, textTransform:"uppercase", cursor:"pointer" }}>
+                  Todos
+                </button>
+                {(subcategoriesFor[activeCategory] || []).map(sub => (
+                  <button key={sub} onClick={() => changeCategory(activeCategory, sub)}
+                    style={{ background: activeSubcategory===sub ? G : "transparent", color: activeSubcategory===sub ? (accentDark?"#000":"#fff") : T,
+                      border:`1px solid ${activeSubcategory===sub ? G : border}`, padding:"7px 16px", fontSize:11, letterSpacing:1, textTransform:"uppercase", cursor:"pointer" }}>
+                    {sub}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── BOTÓN "FILTRAR Y ORDENAR" + LIMPIAR ───────────────────────── */}
+            <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:32, paddingBottom:24, borderBottom:`1px solid ${borderFaint}` }}>
+              {(priceBounds[1] > priceBounds[0] || availableAttrFilters.length > 0) && (
+                <button onClick={() => setFilterDrawerOpen(true)}
+                  style={{ display:"flex", alignItems:"center", gap:8, background:"none", border:`1px solid ${border}`, color:T, padding:"10px 18px", fontSize:11.5, letterSpacing:1, textTransform:"uppercase", cursor:"pointer" }}>
+                  Filtrar y ordenar
+                  {(Object.keys(activeAttrFilters).length > 0 || priceRange) && (
+                    <span style={{ background:G, color: accentDark?"#000":"#fff", borderRadius:"50%", width:18, height:18, fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700 }}>
+                      {Object.values(activeAttrFilters).filter(v => v.length > 0).length + (priceRange ? 1 : 0)}
+                    </span>
+                  )}
+                </button>
+              )}
+              {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || Object.keys(activeAttrFilters).length > 0 || priceRange) && (
+                <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); clearAttrFilters(); setPriceRange(null); }}
+                  style={{ background:"none", border:"none", color:MID, fontSize:11, letterSpacing:1, cursor:"pointer", padding:0, textDecoration:"underline" }}>
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+
+            {/* ── PANEL "FILTRAR Y ORDENAR" ──────────────────────────────────── */}
+            {filterDrawerOpen && (
+              <>
+                <div style={{ position:"fixed", inset:0, background:overlayBg, zIndex:350 }} onClick={() => setFilterDrawerOpen(false)} />
+                <div style={{ position:"fixed", top:0, right:0, bottom:0, width:"min(360px, 92vw)", background:BG, zIndex:351,
+                  overflowY:"auto", padding:"28px 28px 40px", boxShadow:"-12px 0 32px rgba(0,0,0,0.25)" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:28 }}>
+                    <h3 style={{ margin:0, fontFamily:serif, fontSize:20, color:T }}>Filtrar y ordenar</h3>
+                    <button onClick={() => setFilterDrawerOpen(false)}
+                      style={{ background:"none", border:"none", color:T, fontSize:22, cursor:"pointer", padding:0, lineHeight:1 }}>×</button>
+                  </div>
+                  {dynamicFiltersContent}
+                </div>
+              </>
+            )}
+
+            {gridAndPagination}
+          </>
+        ) : isMinimalLayout ? (
+          <>
+            {/* ── NAVEGACIÓN TIPO BREADCRUMB (Casa Clara) ───────────────────── */}
+            {(catDropdownOpen || subDropdownOpen) && (
+              <div style={{ position:"fixed", inset:0, zIndex:40 }} onClick={() => { setCatDropdownOpen(false); setSubDropdownOpen(false); }} />
+            )}
+            <div style={{ display:"flex", alignItems:"center", gap:24, flexWrap:"wrap", marginBottom:28, paddingBottom:20, borderBottom:`1px solid ${borderFaint}`, fontSize:12.5 }}>
+              {/* Categoría */}
+              <div style={{ position:"relative", zIndex:41 }}>
+                <button onClick={() => { setCatDropdownOpen(o => !o); setSubDropdownOpen(false); }}
+                  style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}>
+                  <span style={{ opacity:0.5 }}>Categoría:</span>
+                  <span style={{ fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>{activeCategory}</span>
+                  <span style={{ fontSize:10 }}>{catDropdownOpen ? "▴" : "▾"}</span>
+                </button>
+                {catDropdownOpen && (
+                  <div style={{ position:"absolute", top:"100%", left:0, marginTop:8, background:S, border:`1px solid ${border}`, minWidth:170, zIndex:42, padding:"4px 0", boxShadow:"0 8px 24px rgba(0,0,0,0.12)" }}>
+                    {CATEGORIES.map(cat => (
+                      <button key={cat} className="cc-dropdown-item" onClick={() => { changeCategory(cat); setCatDropdownOpen(false); }}
+                        style={{ display:"block", width:"100%", textAlign:"left", background: activeCategory===cat ? `${G}12` : "none", borderLeft: activeCategory===cat ? `3px solid ${G}` : "3px solid transparent", borderTop:"none", borderRight:"none", borderBottom:"none", padding:"8px 16px 8px 13px", fontSize:12, color:T, fontWeight: activeCategory===cat ? 700 : 400, cursor:"pointer", textTransform:"uppercase", letterSpacing:0.5, transition:"background 0.15s" }}>
+                        {cat}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-            );
-          })}
-          {(activeCategory !== "Todos" || activeSubcategory || search) && (
-            <button onClick={() => { changeCategory("Todos"); setSearch(""); }}
-              style={{ background:"none", border:"none", color:MID, fontSize:11, letterSpacing:1, cursor:"pointer", padding:"9px 8px", textDecoration:"underline" }}>
-              Limpiar filtros
-            </button>
-          )}
-        </div>
 
-        {/* ── FILTROS DINÁMICOS POR ATRIBUTOS ───────────────────────────
-            Solo se muestran los atributos que el dueño realmente cargó en esta
-            categoría, y solo si tienen más de un valor distinto (sino no filtran nada) */}
-        {availableAttrFilters.length > 0 && (
-          <div style={{ display:"flex", flexWrap:"wrap", gap:24, marginBottom:32, paddingBottom:24, borderBottom:`1px solid ${borderFaint}` }}>
-            {availableAttrFilters.map(({ key, values }) => (
-              <div key={key} style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                <span style={{ fontSize:10, letterSpacing:2, textTransform:"uppercase", opacity:0.5 }}>{key}</span>
-                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                  {values.map(value => {
-                    const isActive = (activeAttrFilters[key] ?? []).includes(value);
-                    return (
-                      <button key={value} onClick={() => toggleAttrFilter(key, value)}
-                        style={{
-                          background: isActive ? G : "transparent",
-                          color: isActive ? (dark ? "#000" : "#fff") : T,
-                          border: `1px solid ${isActive ? G : border}`,
-                          padding: "6px 14px", fontSize: 11, cursor: "pointer",
-                          letterSpacing: 0.5, transition: "all 0.2s",
-                        }}>
-                        {value}
+              {/* Subcategoría — solo si la categoría activa tiene */}
+              {activeCategory !== "Todos" && (subcategoriesFor[activeCategory] || []).length > 0 && (
+                <div style={{ position:"relative", zIndex:41 }}>
+                  <button onClick={() => { setSubDropdownOpen(o => !o); setCatDropdownOpen(false); }}
+                    style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}>
+                    <span style={{ opacity:0.5 }}>Subcategoría:</span>
+                    <span style={{ fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>{activeSubcategory ?? "Todas"}</span>
+                    <span style={{ fontSize:10 }}>{subDropdownOpen ? "▴" : "▾"}</span>
+                  </button>
+                  {subDropdownOpen && (
+                    <div style={{ position:"absolute", top:"100%", left:0, marginTop:8, background:S, border:`1px solid ${border}`, minWidth:170, zIndex:42, padding:"4px 0", boxShadow:"0 8px 24px rgba(0,0,0,0.12)" }}>
+                      <button className="cc-dropdown-item" onClick={() => { changeCategory(activeCategory); setSubDropdownOpen(false); }}
+                        style={{ display:"block", width:"100%", textAlign:"left", background: !activeSubcategory ? `${G}12` : "none", borderLeft: !activeSubcategory ? `3px solid ${G}` : "3px solid transparent", borderTop:"none", borderRight:"none", borderBottom:"none", padding:"8px 16px 8px 13px", fontSize:12, color:T, fontWeight: !activeSubcategory ? 700 : 400, cursor:"pointer", textTransform:"uppercase", letterSpacing:0.5, transition:"background 0.15s" }}>
+                        Todas
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-            {Object.keys(activeAttrFilters).length > 0 && (
-              <button onClick={clearAttrFilters}
-                style={{ alignSelf:"flex-end", background:"none", border:"none", color:MID, fontSize:11, letterSpacing:1, cursor:"pointer", padding:"6px 0", textDecoration:"underline" }}>
-                Limpiar specs
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* ── GRILLA ─────────────────────────────────────────────────── */}
-        {paginated.length === 0 ? (
-          <div style={{ textAlign:"center", padding:"80px 0", opacity:0.4 }}>
-            <p style={{ fontFamily:serif, fontSize:22, marginBottom:8 }}>Sin resultados</p>
-            <p style={{ fontSize:13 }}>Probá con otra búsqueda o categoría</p>
-          </div>
-        ) : (
-          <div className="pc-grid">
-            {paginated.map(product => {
-              const isFav = favorites.includes(product.id);
-              const useDetailPage = DETAIL_PAGE_TEMPLATES.includes(template);
-              const cardInner = (
-                <>
-                  <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:14 }}>
-                    {product.images[0] ? (
-                      <img src={product.images[0]} alt={product.name}
-                        className="pc-img"
-                        style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
-                        onError={e => { e.currentTarget.style.opacity="0"; }}/>
-                    ) : (
-                      <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", opacity:0.15 }}>
-                        <svg width={48} height={48} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={0.8}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                      </div>
-                    )}
-                    {product.comparePrice && (
-                      <div style={{ position:"absolute", top:10, left:10, background:G, color:dark?"#000":"#fff", fontSize:9, fontWeight:800, letterSpacing:2, padding:"3px 8px", textTransform:"uppercase" }}>Oferta</div>
-                    )}
-                    {(product.subcategory || product.category !== "general") && (
-                      <div style={{ position:"absolute", top:10, right:10, background: dark ? "rgba(10,10,10,0.7)" : "rgba(255,255,255,0.85)", color:T, fontSize:9, letterSpacing:2, padding:"3px 8px", textTransform:"uppercase" }}>
-                        {product.subcategory ?? product.category}
-                      </div>
-                    )}
-                    {/* Botón favorito */}
-                    <button onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
-                      style={{ position:"absolute", bottom:10, right:10, background: dark ? "rgba(10,10,10,0.65)" : "rgba(255,255,255,0.9)", border:"none", borderRadius:"50%", width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"transform 0.2s" }}
-                      onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
-                      onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
-                      <svg width={14} height={14} viewBox="0 0 24 24" fill={isFav ? G : "none"} stroke={isFav ? G : MID} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                      </svg>
-                    </button>
-                    {/* Overlay "Ver detalle" */}
-                    <div className="product-overlay" style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.3)", display:"flex", alignItems:"center", justifyContent:"center", opacity:0, transition:"opacity 0.3s" }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity="1")}
-                      onMouseLeave={e => (e.currentTarget.style.opacity="0")}>
-                      <span style={{ background:G, color:dark?"#000":"#fff", fontSize:10, fontWeight:800, letterSpacing:3, padding:"9px 20px", textTransform:"uppercase" }}>Ver detalle</span>
+                      {(subcategoriesFor[activeCategory] || []).map(sub => (
+                        <button key={sub} className="cc-dropdown-item" onClick={() => { changeCategory(activeCategory, sub); setSubDropdownOpen(false); }}
+                          style={{ display:"block", width:"100%", textAlign:"left", background: activeSubcategory===sub ? `${G}12` : "none", borderLeft: activeSubcategory===sub ? `3px solid ${G}` : "3px solid transparent", borderTop:"none", borderRight:"none", borderBottom:"none", padding:"8px 16px 8px 13px", fontSize:12, color:T, fontWeight: activeSubcategory===sub ? 700 : 400, cursor:"pointer", textTransform:"uppercase", letterSpacing:0.5, transition:"background 0.15s" }}>
+                          {sub}
+                        </button>
+                      ))}
                     </div>
-                  </div>
-                  <p style={{ fontSize:10, color:MID, letterSpacing:2, textTransform:"uppercase", margin:"0 0 4px" }}>{product.category}</p>
-                  <p style={{ fontSize:15, color:T, margin:"0 0 7px", fontWeight:500, lineHeight:1.3 }}>{product.name}</p>
-                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                    <span style={{ fontSize:16, fontWeight:700, color:G }}>{fmt(product.price)}</span>
-                    {product.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
-                  </div>
-                </>
-              );
-              return useDetailPage ? (
-                <Link key={product.id} href={`/tienda/${slug}/producto/${product.id}${fromEditor ? "?from=editor" : ""}`}
-                  style={{ cursor:"pointer", textDecoration:"none", color:"inherit", display:"block" }}>
-                  {cardInner}
-                </Link>
-              ) : (
-                <div key={product.id} style={{ cursor:"pointer" }} onClick={() => openModal(product)}>
-                  {cardInner}
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        )}
+              )}
 
-        {/* ── PAGINACIÓN ─────────────────────────────────────────────── */}
-        {totalPages > 1 && (
-          <div style={{ display:"flex", gap:8, justifyContent:"center", alignItems:"center", flexWrap:"wrap" }}>
-            <button onClick={() => { setPage(p => Math.max(1,p-1)); window.scrollTo({top:0,behavior:"smooth"}); }}
-              disabled={page===1}
-              style={{ background:"transparent", color: page===1?MID:T, border:`1px solid ${page===1?borderFaint:border}`, padding:"10px 22px", fontSize:11, letterSpacing:2, cursor: page===1?"default":"pointer", textTransform:"uppercase" }}>
-              ← Anterior
-            </button>
-            {Array.from({length:totalPages},(_,i)=>i+1).map(n => {
-              if (n!==1 && n!==totalPages && Math.abs(n-page)>2) return null;
-              return (
-                <button key={n} onClick={() => { setPage(n); window.scrollTo({top:0,behavior:"smooth"}); }}
-                  style={{ background: page===n?G:"transparent", color: page===n?(dark?"#000":"#fff"):T, border:`1px solid ${page===n?G:border}`, width:40, height:40, fontSize:13, fontWeight:700, cursor:"pointer", transition:"all 0.2s" }}>
-                  {n}
+              {/* Toggle de filtros — el texto se adapta a lo que realmente hay para mostrar:
+                  si solo hay Precio (ej. en "Todos", donde las specs se ocultan a propósito),
+                  dice "+ Precio" en vez de "+ Filtros" para no prometer más de lo que abre */}
+              {(priceBounds[1] > priceBounds[0] || availableAttrFilters.length > 0) && (
+                <button onClick={() => setFiltersOpen(o => !o)}
+                  style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:0, textDecoration:"underline", fontSize:12.5 }}>
+                  {filtersOpen
+                    ? `− Ocultar ${availableAttrFilters.length > 0 ? "filtros" : "precio"}`
+                    : `+ ${availableAttrFilters.length > 0 ? "Filtros" : "Precio"}`}
+                  {(Object.keys(activeAttrFilters).length > 0 || priceRange) &&
+                    ` (${Object.values(activeAttrFilters).filter(v => v.length > 0).length + (priceRange ? 1 : 0)})`}
                 </button>
-              );
-            })}
-            <button onClick={() => { setPage(p => Math.min(totalPages,p+1)); window.scrollTo({top:0,behavior:"smooth"}); }}
-              disabled={page===totalPages}
-              style={{ background:"transparent", color: page===totalPages?MID:T, border:`1px solid ${page===totalPages?borderFaint:border}`, padding:"10px 22px", fontSize:11, letterSpacing:2, cursor: page===totalPages?"default":"pointer", textTransform:"uppercase" }}>
-              Siguiente →
-            </button>
-          </div>
+              )}
+
+              {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || Object.keys(activeAttrFilters).length > 0 || priceRange) && (
+                <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); clearAttrFilters(); setPriceRange(null); }}
+                  style={{ background:"none", border:"none", color:MID, fontSize:11.5, cursor:"pointer", padding:0, textDecoration:"underline" }}>
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+
+            {filtersOpen && (
+              <div style={{ marginBottom:28 }}>
+                {dynamicFiltersContent}
+              </div>
+            )}
+
+            {gridAndPagination}
+          </>
+        ) : (
+          <>
+            {/* ── FILTROS DE CATEGORÍA ───────────────────────────────────── */}
+            {hoveredCatMenu !== null && (
+              <div style={{ position:"fixed", inset:0, zIndex:350 }} onClick={() => setHoveredCatMenu(null)} />
+            )}
+            <div style={{ position:"relative", marginBottom:40, borderBottom:`1px solid ${borderFaint}`, padding:"0 46px 24px" }}>
+              {CATEGORIES.length > 5 && (
+                <>
+                  <button onClick={() => scrollCats(-1)} aria-label="Anterior"
+                    style={{ position:"absolute", left:0, top:0, bottom:24, zIndex:2, width:36, margin:"auto 0", padding:0,
+                      border:"none", background:"none", color:T, opacity:0.45, fontSize:44, lineHeight:1, cursor:"pointer",
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+                  <button onClick={() => scrollCats(1)} aria-label="Siguiente"
+                    style={{ position:"absolute", right:0, top:0, bottom:24, zIndex:2, width:36, margin:"auto 0", padding:0,
+                      border:"none", background:"none", color:T, opacity:0.45, fontSize:44, lineHeight:1, cursor:"pointer",
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+                </>
+              )}
+              <div ref={catScrollRef} className="st-tabs" style={{ display:"flex", gap:8, flexWrap:"nowrap", overflowX:"auto", WebkitOverflowScrolling:"touch" } as React.CSSProperties}>
+                {CATEGORIES.map(cat => {
+                  const subcats = cat !== "Todos" ? (subcategoriesFor[cat] || []) : [];
+                  const isActive = activeCategory === cat;
+                  return (
+                    <div key={cat} ref={(el) => { catTabRefs.current[cat] = el; }} style={{ position:"relative", flexShrink:0 }}>
+                      <div style={{ display:"flex", alignItems:"stretch", border:`1px solid ${isActive ? G : border}` }}>
+                        <button onClick={() => changeCategory(cat)}
+                          style={{ background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"9px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", whiteSpace:"nowrap", transition:"all 0.2s" }}>
+                          {cat}
+                        </button>
+                        {subcats.length > 0 && (
+                          <button onClick={() => {
+                              if (hoveredCatMenu === cat) { setHoveredCatMenu(null); return; }
+                              const rect = catTabRefs.current[cat]?.getBoundingClientRect();
+                              if (rect) setCatMenuPos({ top: rect.bottom + 4, left: rect.left });
+                              setHoveredCatMenu(cat);
+                            }}
+                            aria-label={`Subcategorías de ${cat}`}
+                            style={{ background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", borderLeft:`1px solid ${isActive ? (dark?"rgba(0,0,0,0.25)":"rgba(255,255,255,0.3)") : border}`, padding:"9px 14px", fontSize:14, fontWeight:700, lineHeight:1, opacity:1, cursor:"pointer", display:"flex", alignItems:"center" }}>
+                            {hoveredCatMenu === cat ? "▴" : "▾"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas) && (
+                  <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); }}
+                    style={{ flexShrink:0, background:"none", border:"none", color:MID, fontSize:11, letterSpacing:1, cursor:"pointer", padding:"9px 8px", textDecoration:"underline", whiteSpace:"nowrap" }}>
+                    Limpiar filtros
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Desplegable de subcategorías: posicionado "fixed" en base a catMenuPos,
+                fuera del contenedor con scroll horizontal de las pestañas (si quedara
+                anidado ahí, el overflow-x lo recorta y nunca se llega a ver). */}
+            {hoveredCatMenu !== null && catMenuPos && (subcategoriesFor[hoveredCatMenu] || []).length > 0 && (
+              <div style={{ position:"fixed", top:catMenuPos.top, left:catMenuPos.left, background:S, border:`1px solid ${border}`, minWidth:180, zIndex:400, padding:"4px 0", boxShadow:"0 8px 24px rgba(0,0,0,0.25)" }}>
+                <button onClick={() => { changeCategory(hoveredCatMenu); setHoveredCatMenu(null); }}
+                  style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"9px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", whiteSpace:"nowrap" }}>
+                  Todos en {hoveredCatMenu}
+                </button>
+                <div style={{ borderTop:`1px solid ${borderFaint}`, margin:"2px 0" }}/>
+                {(subcategoriesFor[hoveredCatMenu] || []).map(sub => (
+                  <button key={sub} onClick={() => { changeCategory(hoveredCatMenu, sub); setHoveredCatMenu(null); }}
+                    style={{ display:"block", width:"100%", background: activeSubcategory===sub ? `${G}18` : "none", border:"none", color: activeSubcategory===sub ? G : T, padding:"8px 16px 8px 24px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", whiteSpace:"nowrap", opacity: activeSubcategory===sub ? 1 : 0.7 }}>
+                    {sub}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── FILTROS DINÁMICOS POR ATRIBUTOS ───────────────────────────
+                Solo se muestran los atributos que el dueño realmente cargó en esta
+                categoría, y solo si tienen más de un valor distinto (sino no filtran nada) */}
+            {dynamicFiltersContent}
+
+            {gridAndPagination}
+          </>
         )}
 
       </div>
+
+      {/* ── FOOTER — misma info que el footer del home de cada template
+          (nombre, redes, políticas, reportar tienda), con la paleta del tema activo ── */}
+      <footer style={{ borderTop:`1px solid ${borderFaint}`, padding:"32px 24px", textAlign:"center" }}>
+        <p style={{ margin:"0 0 6px", fontWeight:700, fontSize:14, color:G, fontFamily:serif }}>{storeName}</p>
+        <p style={{ margin:"0 0 12px", fontSize:11, color:MID }}>
+          © {new Date().getFullYear()} {storeName}. Todos los derechos reservados.
+        </p>
+        {SOCIAL_NETWORKS.some(([key]) => socialLinks[key]) && (
+          <div style={{ display:"flex", justifyContent:"center", gap:10, marginBottom:14 }}>
+            {SOCIAL_NETWORKS.map(([key, label]) => {
+              const url = socialLinks[key];
+              if (!url) return null;
+              return (
+                <a key={key} href={url} target="_blank" rel="noopener noreferrer" aria-label={label}
+                  style={{ width:30, height:30, borderRadius:"50%", border:`1px solid ${MID}`, color:MID, display:"flex", alignItems:"center", justifyContent:"center", textDecoration:"none" }}>
+                  <SocialIcon network={key} />
+                </a>
+              );
+            })}
+          </div>
+        )}
+        <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
+          {[["Política de devoluciones","devoluciones"],["Política de envíos","envios"],["Términos y condiciones","terminos"]].map(([label, tipo]) => (
+            <a key={tipo} href={`/tienda/${slug}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:MID, opacity:0.6, textDecoration:"none" }}>{label}</a>
+          ))}
+          <button onClick={() => setShowReport(true)}
+            style={{ fontSize:10, color:MID, opacity:0.6, background:"none", border:"none", cursor:"pointer", padding:0, textDecoration:"underline" }}>
+            Reportar tienda
+          </button>
+        </div>
+      </footer>
+
+      {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
 
       {/* ── MODAL PRODUCTO ─────────────────────────────────────────────── */}
       {modalProduct && (
@@ -906,7 +1459,7 @@ function ProductosPageInner() {
 
               <button onClick={addToCart}
                 disabled={selectedVariantStock === 0}
-                style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:dark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
+                style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
                 {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(modalProduct.price * qty)}`}
               </button>
 
@@ -997,7 +1550,7 @@ function ProductosPageInner() {
                         style={{ background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none", fontFamily:sans }}
                         onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
                       <button type="submit" disabled={fromEditor || reviewSubmitting || !reviewForm.reviewer.trim()}
-                        style={{ background: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? `${G}40` : G, color:dark?"#000":"#fff", border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>
+                        style={{ background: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>
                         {reviewSubmitting ? "Enviando..." : "Publicar reseña"}
                       </button>
                     </form>
@@ -1085,7 +1638,7 @@ function ProductosPageInner() {
                 <span style={{ fontSize:20, fontWeight:700, color:G }}>{fmt(cartTotal)}</span>
               </div>
               <button onClick={isOwner ? undefined : openCheckout} disabled={isOwner} title={isOwner ? "No podés comprar en tu propia tienda" : undefined}
-                style={{ width:"100%", background: isOwner ? "rgba(128,128,128,0.15)" : G, color: isOwner ? "rgba(128,128,128,0.5)" : dark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isOwner ? "not-allowed" : "pointer", marginBottom:10 }}>
+                style={{ width:"100%", background: isOwner ? "rgba(128,128,128,0.15)" : G, color: isOwner ? "rgba(128,128,128,0.5)" : accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isOwner ? "not-allowed" : "pointer", marginBottom:10 }}>
                 {isOwner ? "No disponible para el dueño" : "Finalizar compra"}
               </button>
               <button onClick={() => setCartOpen(false)}
@@ -1115,7 +1668,7 @@ function ProductosPageInner() {
                 <p style={{ fontFamily:serif, fontSize:22, color:T, marginBottom:10 }}>¡Pedido recibido!</p>
                 <p style={{ fontSize:13, opacity:0.5, lineHeight:1.8, marginBottom:28 }}>Te contactamos a la brevedad para confirmar el envío o retiro.</p>
                 <button onClick={() => { setCheckoutOpen(false); }}
-                  style={{ background:G, color:dark?"#000":"#fff", border:"none", padding:"13px 32px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                  style={{ background:G, color:accentDark?"#000":"#fff", border:"none", padding:"13px 32px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
                   Seguir comprando
                 </button>
               </div>
@@ -1232,7 +1785,7 @@ function ProductosPageInner() {
 
                 <div style={{ padding:"14px 26px 26px", borderTop:`1px solid ${borderFaint}`, flexShrink:0 }}>
                   <button type="submit" disabled={checkoutStatus==="placing"}
-                    style={{ width:"100%", background:G, color:dark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", opacity:checkoutStatus==="placing"?0.7:1 }}>
+                    style={{ width:"100%", background:G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", opacity:checkoutStatus==="placing"?0.7:1 }}>
                     {checkoutStatus==="placing" ? "Procesando..." : "Crear pedido"}
                   </button>
                 </div>
@@ -1244,7 +1797,7 @@ function ProductosPageInner() {
 
       {/* ── TOAST ──────────────────────────────────────────────────────── */}
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:G, color:dark?"#000":"#fff", padding:"12px 24px", fontSize:13, fontWeight:700, zIndex:500, boxShadow:"0 4px 20px rgba(0,0,0,0.3)", whiteSpace:"nowrap" }}>
+        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:G, color:accentDark?"#000":"#fff", padding:"12px 24px", fontSize:13, fontWeight:700, zIndex:500, boxShadow:"0 4px 20px rgba(0,0,0,0.3)", whiteSpace:"nowrap" }}>
           {toastMsg}
         </div>
       )}

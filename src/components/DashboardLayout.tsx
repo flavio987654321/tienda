@@ -105,7 +105,11 @@ export default function DashboardLayout({
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [pendingLeadsCount, setPendingLeadsCount] = useState(0);
   const [storeType, setStoreType] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== "undefined" ? navigator.onLine : true));
+  // Arranca asumiendo "online" tanto en servidor como en cliente: leer
+  // navigator.onLine en el render inicial puede diferir del render del
+  // servidor y rompe la hidratación. El valor real se sincroniza en el
+  // efecto de abajo, una vez montado.
+  const [isOnline, setIsOnline] = useState(true);
   const [showTour, setShowTour] = useState(false);
   const [warnings, setWarnings] = useState<Warnings | null>(null);
 
@@ -155,6 +159,7 @@ export default function DashboardLayout({
   }, [storeType]);
 
   useEffect(() => {
+    setIsOnline(navigator.onLine);
     const up = () => setIsOnline(true);
     const dn = () => setIsOnline(false);
     window.addEventListener("online", up);

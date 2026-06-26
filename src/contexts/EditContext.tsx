@@ -192,9 +192,13 @@ export function EditableZone({
 export function EditableImageButton({
   field,
   label,
+  compact = false,
 }: {
   field: string;
   label: string;
+  /** Solo el ícono de cámara, sin el texto — para tarjetas chicas donde el
+   *  botón completo choca con otros controles (ej: el selector de categoría). */
+  compact?: boolean;
 }) {
   const { editMode, activeField, setActiveField, imageLoading } = useEditContext();
   const [hovered, setHovered] = useState(false);
@@ -235,7 +239,17 @@ export function EditableImageButton({
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onClick={(e) => { e.stopPropagation(); setActiveField(isActive ? null : imageKey); }}
-        style={{
+        title={compact ? label : undefined}
+        style={compact ? {
+          position: "absolute", top: 8, right: 8, zIndex: 9998,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          width: 28, height: 28, borderRadius: "50%", cursor: "pointer",
+          background: isActive ? "#6366f1" : hovered ? "rgba(20,20,20,0.9)" : "rgba(20,20,20,0.65)",
+          color: "white",
+          border: isActive ? "2px solid #6366f1" : "1.5px solid rgba(255,255,255,0.25)",
+          backdropFilter: "blur(6px)",
+          transition: "all 0.15s",
+        } : {
           position: "absolute", top: 16, right: 16, zIndex: 9998,
           display: "flex", alignItems: "center", gap: 6,
           padding: "7px 14px", borderRadius: 9, cursor: "pointer",
@@ -248,10 +262,10 @@ export function EditableImageButton({
           fontFamily: "system-ui, -apple-system, sans-serif",
         }}
       >
-        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <svg width={compact ? 13 : 14} height={compact ? 13 : 14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
           <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
         </svg>
-        {label}
+        {!compact && label}
       </button>
     </>
   );

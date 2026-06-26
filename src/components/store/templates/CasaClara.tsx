@@ -1,15 +1,19 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import { useCartLogic } from "@/hooks/useCartLogic";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
+import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
+import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
+import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import type { ImageOverride } from "@/types/store-config";
 
@@ -30,6 +34,14 @@ function secMid(ov: ImageOverride | undefined, bg: string): string {
 }
 function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
   if (!ov?.url || ov.overlayType === "none") return null;
+  return <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none",
+    background: ov.overlayType==="light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.5})` }} />;
+}
+// Para fotos simples (hero, nosotros) que siempre muestran una imagen (de
+// stock o subida) — la capa se aplica en cuanto el dueño la elige, aunque
+// todavía no haya subido una foto propia.
+function PhotoOverlay({ ov }: { ov: ImageOverride | undefined }) {
+  if (!ov?.overlayType || ov.overlayType === "none") return null;
   return <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none",
     background: ov.overlayType==="light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.5})` }} />;
 }
@@ -60,8 +72,7 @@ function ProductCard({ product, href, currency, accent, isFavorite, onToggleFavo
           <svg width={13} height={13} viewBox="0 0 24 24" fill={isFavorite ? accent : "none"} stroke={isFavorite ? accent : "#999"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>
         {product.images[0] ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.images[0]} alt={product.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+          <FadeImage src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} />
         ) : (
           <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#d4d4d4", fontSize:12 }}>Sin imagen</div>
         )}
@@ -77,46 +88,62 @@ function ProductCard({ product, href, currency, accent, isFavorite, onToggleFavo
   );
 }
 
+const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
+  ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["pinterest", "Pinterest"],
+];
+function SocialIcon({ network }: { network: string }) {
+  const common = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  switch (network) {
+    case "instagram":
+      return <svg {...common}><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>;
+    case "facebook":
+      return <svg {...common}><path d="M16 3h-2a5 5 0 0 0-5 5v3H6v4h3v8h4v-8h3l1-4h-4V8a1 1 0 0 1 1-1h3z"/></svg>;
+    case "tiktok":
+      return <svg {...common}><path d="M9 12a4 4 0 1 0 4 4V3a5 5 0 0 0 5 5"/></svg>;
+    case "youtube":
+      return <svg {...common}><rect x="2" y="5" width="20" height="14" rx="4"/><polygon points="10 9 16 12 10 15" fill="currentColor" stroke="none"/></svg>;
+    case "pinterest":
+      return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M9 18l2-7"/><path d="M8 11a4 4 0 1 1 7 2c-1 1.5-3 1-3-1"/></svg>;
+    default:
+      return null;
+  }
+}
+
 export default function CasaClara() {
   const config    = useStoreConfig();
   const pushBell  = usePushBell();
-  const { products, loadingProducts } = useStorefront();
+  const storefront = useStorefront();
+  const { products, loadingProducts } = storefront;
+  const cart = useCartLogic(storefront);
+  const {
+    favorites, favoritesOpen, setFavoritesOpen, favoriteProducts, toggleFavorite,
+    cartCount, setCartOpen, toastMsg,
+  } = cart;
   const { editMode, overrides, setOverride } = useEditContext();
   useScrollReveal();
   const isPreview = !!config?.previewFill;
+  const isOwner   = !!config?.isOwner;
   const accent    = config?.colors.accent ?? "#0f172a";
+  const accentText = getContrastColor(accent) === "light" ? "#111" : "#fff";
+  const cartTheme: CartTheme = { BG:"#ffffff", S:"#fafafa", T:"#111111", MID:"#888888", border:"#ededed", accent, accentText };
   const currency  = config?.currency ?? "ARS";
   const storeName = config?.storeName ?? "CASA CLARA";
   const whatsapp  = config?.whatsapp ?? { enabled:false, number:"", message:"" };
+  // En modo edición lo mostramos con solo activarlo, para que se pueda previsualizar
+  // antes de completar el número; en la tienda real hace falta el número sí o sí.
+  const showWA    = whatsapp.enabled && (editMode || !!whatsapp.number);
 
-  const { user, status, signOut } = useAuth();
-  const router = useRouter();
+  const { user, signOut } = useAuth();
   const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
   const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
-  const [favorites,        setFavorites]        = useState<string[]>([]);
-  const [favoritesOpen,    setFavoritesOpen]    = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (status === "loading") return;
-    if (status === "authenticated") {
-      fetch("/api/favoritos")
-        .then(r => r.ok ? r.json() : [])
-        .then((data: { productId: string }[]) => setFavorites(data.map(f => f.productId)))
-        .catch(() => {});
-    } else {
-      try {
-        const savedFavs = localStorage.getItem("storefront_favorites");
-        if (savedFavs) setFavorites(JSON.parse(savedFavs));
-      } catch {}
-    }
-  }, [status]);
-
-  useEffect(() => {
-    if (status === "authenticated") return;
-    try { localStorage.setItem("storefront_favorites", JSON.stringify(favorites)); } catch {}
-  }, [favorites, status]);
+  const ofertasScrollRef = useRef<HTMLDivElement>(null);
+  function scrollOfertas(dir: 1 | -1) {
+    const el = ofertasScrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.85, behavior: "smooth" });
+  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -126,20 +153,13 @@ export default function CasaClara() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  async function toggleFavorite(id: string) {
-    if (status !== "authenticated") { router.push(`/login?redirect=/tienda/${config?.slug}`); return; }
-    const wasFavorite = favorites.includes(id);
-    setFavorites(prev => wasFavorite ? prev.filter(f => f !== id) : [...prev, id]);
-    try {
-      await fetch("/api/favoritos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: id }) });
-    } catch {
-      setFavorites(prev => wasFavorite ? [...prev, id] : prev.filter(f => f !== id));
-    }
-  }
-  const favoriteProducts = products.filter(p => favorites.includes(p.id));
-
   const iovr = config?.imageOverrides ?? {};
   const sc   = config?.sectionColors  ?? {};
+
+  const footerBg    = sc["bgFooter"] ?? "#ffffff";
+  const footerImg   = iovr["sectionbg_bgFooter"];
+  const ftText      = secText(footerImg, footerBg);
+  const ftMid       = secMid(footerImg, footerBg);
 
   const heroBg      = sc["bgHero"] ?? "#ffffff";
   const heroImg     = iovr["sectionbg_bgHero"];
@@ -187,7 +207,9 @@ export default function CasaClara() {
   const featuredProducts = products.filter(p => p.featured);
   const showcased = (featuredProducts.length > 0 ? featuredProducts : products).slice(0, 9);
   const hasMore   = (featuredProducts.length > 0 ? featuredProducts : products).length > 9;
-  const ofertas   = products.filter(p => p.comparePrice && p.comparePrice > p.price).slice(0, 6);
+  const allOfertas = products.filter(p => p.comparePrice && p.comparePrice > p.price);
+  const ofertas    = allOfertas.slice(0, 6);
+  const hasMoreOfertas = allOfertas.length > 6;
   const catalogHref = `/tienda/${config?.slug ?? ""}/productos?t=casa-clara${isPreview ? "&from=editor" : ""}`;
 
   return (
@@ -197,6 +219,8 @@ export default function CasaClara() {
         @media(min-width:768px){ .cc-nav-links { display:flex } .cc-burger { display:none } }
         .cc-dep-row { display:flex; gap:0; overflow-x:auto; scrollbar-width:none; justify-content:center; flex-wrap:wrap }
         .cc-dep-row::-webkit-scrollbar { display:none }
+        .cc-ofertas-row { scrollbar-width:none }
+        .cc-ofertas-row::-webkit-scrollbar { display:none }
         .cc-prod-grid { grid-template-columns:repeat(2,1fr) }
         @media(min-width:640px){ .cc-prod-grid { grid-template-columns:repeat(3,1fr) } }
         .cc-prod-link { transition:opacity 0.2s }
@@ -235,7 +259,7 @@ export default function CasaClara() {
             <Link href={catalogHref} style={{ color:navText, fontSize:12, textDecoration:"underline", textUnderlineOffset:3 }}>Ver catálogo</Link>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            <button onClick={() => setFavoritesOpen(true)}
+            <button onClick={() => { setFavoritesOpen(true); setCartOpen(false); }}
               style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {favorites.length > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color:"#fff", borderRadius:"50%", width:14, height:14, fontSize:8, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
@@ -273,9 +297,10 @@ export default function CasaClara() {
                 </div>
               )}
             </div>
-            <Link href={catalogHref} aria-label="Carrito" style={{ color:navTextMid, display:"flex", alignItems:"center" }}>
+            <button onClick={() => { setCartOpen(true); setFavoritesOpen(false); }} aria-label="Carrito" style={{ position:"relative", background:"none", border:"none", color:navTextMid, display:"flex", alignItems:"center", cursor:"pointer", padding:0 }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-            </Link>
+              {cartCount > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color:accentText, borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
+            </button>
             <button className="cc-burger" onClick={() => setMenuOpen(m => !m)}
               style={{ background:"none", border:"none", color:navText, padding:4, cursor:"pointer", fontSize:18 }}>{menuOpen ? "×" : "☰"}</button>
           </div>
@@ -304,8 +329,10 @@ export default function CasaClara() {
             <EditableZone field="heroHeading" label="Título hero">Lo esencial, bien elegido</EditableZone>
           </h1>
           <div style={{ maxWidth:420, margin:"0 auto", aspectRatio:"1/1", background:"#fafafa", position:"relative" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={heroImgUrl} alt="Producto destacado" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+            <FadeImage src={heroImgUrl} alt="Producto destacado" fill sizes="420px" priority
+              style={{ objectFit:"cover", objectPosition:`${iovr["heroImage"]?.posX ?? 50}% ${iovr["heroImage"]?.posY ?? 50}%` }} />
+            <PhotoOverlay ov={iovr["heroImage"]} />
+            <BgDragHandle imgKey="heroImage" />
             <EditableImageButton field="heroImage" label="Imagen del hero" />
           </div>
           <Link href={catalogHref} style={{ display:"inline-block", marginTop:28, fontSize:12.5, color:heroText, textDecoration:"underline", textUnderlineOffset:3, letterSpacing:0.3 }}>
@@ -327,18 +354,23 @@ export default function CasaClara() {
           {DEPARTAMENTOS.map((d, i) => {
             const catKey = `dept${i}Cat`;
             const categoryId = overrides[catKey]?.text ?? d.id;
+            // Si no es el dueño editando, ocultamos los departamentos sin productos
+            // para no mandar al cliente a un catálogo vacío.
+            if (!editMode && !products.some(p => p.category === categoryId)) return null;
             return (
-              <div key={i} style={{ position:"relative", flexShrink:0 }}>
+              <div key={i} style={{ position:"relative", flexShrink:0, display:"flex", flexDirection:"column", alignItems:"center",
+                borderRight: i < DEPARTAMENTOS.length - 1 ? "1px solid #f0f0f0" : "none" }}>
                 <Link href={`/tienda/${config?.slug ?? ""}/productos?categoria=${categoryId}&t=casa-clara${isPreview ? "&from=editor" : ""}`}
-                  style={{ display:"block", padding:"16px 22px", fontSize:12.5, color:"#444", textDecoration:"none", whiteSpace:"nowrap",
-                    borderRight: i < DEPARTAMENTOS.length - 1 ? "1px solid #f0f0f0" : "none" }}>
+                  data-no-unsaved-guard={editMode ? "true" : undefined}
+                  onClick={e => { if (editMode) e.preventDefault(); }}
+                  style={{ display:"block", padding:"16px 22px", fontSize:12.5, color:"#444", textDecoration:"none", whiteSpace:"nowrap" }}>
                   <EditableZone field={`dept${i}Label`} label={`Departamento ${i+1} — texto`}>{d.label}</EditableZone>
                 </Link>
                 {editMode && (
                   <select value={categoryId} onClick={e => e.stopPropagation()}
                     onChange={e => setOverride(catKey, { text: e.target.value })}
                     title="A qué categoría apunta este link"
-                    style={{ position:"absolute", top:-2, right:2, zIndex:2, fontSize:10, border:"1px solid #111", borderRadius:4, background:"#fff", color:"#111", cursor:"pointer", padding:"2px 4px" }}>
+                    style={{ marginBottom:6, maxWidth:140, fontSize:10, border:"1px solid #111", borderRadius:4, background:"#fff", color:"#111", cursor:"pointer", padding:"2px 4px" }}>
                     {CATEGORY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                   </select>
                 )}
@@ -355,15 +387,34 @@ export default function CasaClara() {
           <SectionOverlay ov={ofertasImg} />
           <EditableSectionBg field="bgOfertas" label="Fondo ofertas" />
           <div style={{ position:"relative", zIndex:1, maxWidth:1100, margin:"0 auto" }}>
-            <h2 style={{ margin:"0 0 28px", fontSize:"clamp(18px,2.5vw,22px)", fontWeight:500, color:ofertasText, letterSpacing:0.3 }}>
-              <EditableZone field="ofertasHeading" label="Título ofertas">Ofertas</EditableZone>
-            </h2>
-            <div className="cc-prod-grid" style={{ display:"grid", gap:"40px 28px" }}>
-              {ofertas.map(p => (
-                <ProductCard key={p.id} product={p} currency={currency} accent={accent}
-                  href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
-                  isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
-              ))}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:28, flexWrap:"wrap", gap:12 }}>
+              <h2 style={{ margin:0, fontSize:"clamp(18px,2.5vw,22px)", fontWeight:500, color:ofertasText, letterSpacing:0.3 }}>
+                <EditableZone field="ofertasHeading" label="Título ofertas">Ofertas</EditableZone>
+              </h2>
+              {hasMoreOfertas && <Link href={`${catalogHref}&oferta=true`} style={{ fontSize:12, color:prodMid, textDecoration:"underline" }}>Ver todas las ofertas</Link>}
+            </div>
+            <div style={{ position:"relative" }}>
+              {ofertas.length > 4 && (
+                <>
+                  <button onClick={() => scrollOfertas(-1)} aria-label="Anterior"
+                    style={{ position:"absolute", left:-36, top:"38%", transform:"translateY(-50%)", width:36,
+                      border:"none", background:"none", color:ofertasText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+                  <button onClick={() => scrollOfertas(1)} aria-label="Siguiente"
+                    style={{ position:"absolute", right:-36, top:"38%", transform:"translateY(-50%)", width:36,
+                      border:"none", background:"none", color:ofertasText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+                </>
+              )}
+              <div ref={ofertasScrollRef} className="cc-ofertas-row" style={{ display:"flex", gap:28, overflowX:"auto", scrollSnapType:"x mandatory", paddingBottom:4 }}>
+                {ofertas.map(p => (
+                  <div key={p.id} style={{ flex:"0 0 220px", scrollSnapAlign:"start" }}>
+                    <ProductCard product={p} currency={currency} accent={accent}
+                      href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
+                      isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -398,6 +449,21 @@ export default function CasaClara() {
         </div>
       </section>
 
+      {/* ── BANNER PROMOCIONAL ── */}
+      <PromoBannerCarousel
+        images={[config?.imageOverrides?.["promoBanner1"], config?.imageOverrides?.["promoBanner2"], config?.imageOverrides?.["promoBanner3"]]}
+        demoImages={[
+          "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=1920&q=80",
+          "https://images.unsplash.com/photo-1556911073-38141963c9e0?auto=format&fit=crop&w=1920&q=80",
+          "https://images.unsplash.com/photo-1556909114-44e3e70034e2?auto=format&fit=crop&w=1920&q=80",
+        ]}
+        intervalMs={config?.bannerInterval ?? 4000}
+        editMode={editMode}
+        isPreview={isPreview}
+        accent={accent}
+        bg="#0f172a"
+      />
+
       {/* ── NOSOTROS — imagen + texto ── */}
       <section id="nosotros" data-reveal style={{ position:"relative", ...secBg(nosotrosImg, nosotrosBg), padding:"72px 24px", borderTop:"1px solid #f0f0f0" }}>
         <BgDragHandle imgKey="sectionbg_bgNosotros" />
@@ -406,8 +472,10 @@ export default function CasaClara() {
         <div className="cc-nos-grid" style={{ position:"relative", zIndex:1, maxWidth:1000, margin:"0 auto", display:"grid", gap:48, alignItems:"center" }}>
           <style>{`.cc-nos-grid{grid-template-columns:1fr} @media(min-width:768px){.cc-nos-grid{grid-template-columns:1fr 1fr}}`}</style>
           <div style={{ aspectRatio:"4/3", background:"#fafafa", position:"relative", overflow:"hidden" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={nosotrosImgUrl} alt="Nuestra selección" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+            <FadeImage src={nosotrosImgUrl} alt="Nuestra selección" fill sizes="(max-width: 768px) 100vw, 500px"
+              style={{ objectFit:"cover", objectPosition:`${iovr["nosotrosImage"]?.posX ?? 50}% ${iovr["nosotrosImage"]?.posY ?? 50}%` }} />
+            <PhotoOverlay ov={iovr["nosotrosImage"]} />
+            <BgDragHandle imgKey="nosotrosImage" />
             <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
           </div>
           <div>
@@ -440,7 +508,7 @@ export default function CasaClara() {
               <EditableZone field="contactSubtext" label="Subtítulo contacto">Escribinos y te respondemos a la brevedad.</EditableZone>
             </p>
             <Link href={catalogHref} style={{ display:"inline-flex", color:"#111", fontSize:12.5, textDecoration:"underline", textUnderlineOffset:3 }}>Ver catálogo completo</Link>
-            {whatsapp.enabled && whatsapp.number && (
+            {showWA && (
               <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, marginTop:14, color:"#1a9e4f", textDecoration:"none", fontWeight:600, fontSize:12.5 }}>
@@ -450,24 +518,44 @@ export default function CasaClara() {
           </div>
           <div className="cc-contact-divider" style={{ display:"none", background:"#ececec" }} />
           <div style={{ paddingTop:24 }}>
-            <ContactForm storeId={config?.storeId} accent="#111111" textColor="#111111" mutedColor="#999999" variant="underline" />
+            <ContactForm storeId={config?.storeId} accent="#111111" textColor="#111111" mutedColor="#999999" variant="underline" isPreview={isPreview} />
           </div>
         </div>
         <style>{`@media(min-width:768px){.cc-contact-divider{display:block!important}}`}</style>
       </section>
 
-      <footer style={{ padding:"28px 24px", textAlign:"center", borderTop:"1px solid #f0f0f0" }}>
-        <p style={{ margin:"0 0 10px", fontSize:11, color:"#aaa" }}>© {new Date().getFullYear()} {storeName}</p>
+      <footer style={{ position:"relative", ...secBg(footerImg, footerBg), color:ftText, padding:"28px 24px", textAlign:"center", borderTop: footerImg?.url ? "none" : "1px solid #f0f0f0" }}>
+        <BgDragHandle imgKey="sectionbg_bgFooter" />
+        <SectionOverlay ov={footerImg} />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <div style={{ position:"relative", zIndex:1 }}>
+        <p style={{ margin:"0 0 10px", fontSize:11, color:ftMid }}>© {new Date().getFullYear()} {storeName}</p>
+        {(editMode || SOCIAL_NETWORKS.some(([key]) => config?.socialLinks?.[key])) && (
+          <div style={{ display:"flex", justifyContent:"center", gap:10, marginBottom:12 }}>
+            {SOCIAL_NETWORKS.map(([key, label]) => {
+              const url = config?.socialLinks?.[key];
+              if (!editMode && !url) return null;
+              return (
+                <a key={key} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener noreferrer" aria-label={label}
+                  onClick={e => { if (!url) e.preventDefault(); }}
+                  style={{ width:30, height:30, borderRadius:"50%", border:`1px solid ${ftMid}`, color:ftMid, display:"flex", alignItems:"center", justifyContent:"center", textDecoration:"none", opacity: url ? 1 : 0.35 }}>
+                  <SocialIcon network={key} />
+                </a>
+              );
+            })}
+          </div>
+        )}
         <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 14px" }}>
           {[["Política de devoluciones","devoluciones"],["Política de envíos","envios"],["Términos y condiciones","terminos"]].map(([label, tipo]) => (
-            <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:"#bbb", textDecoration:"none" }}>{label}</a>
+            <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:ftMid, opacity:0.7, textDecoration:"none" }}>{label}</a>
           ))}
-          {!editMode && !isPreview && (
+          {!editMode && (
             <button onClick={() => setShowReport(true)}
-              style={{ fontSize:10, color:"#bbb", background:"none", border:"none", cursor:"pointer", padding:0, textDecoration:"underline" }}>
+              style={{ fontSize:10, color:ftMid, opacity:0.7, background:"none", border:"none", cursor:"pointer", padding:0, textDecoration:"underline" }}>
               Reportar tienda
             </button>
           )}
+        </div>
         </div>
       </footer>
 
@@ -491,8 +579,11 @@ export default function CasaClara() {
               </div>
             ) : favoriteProducts.map(product => (
               <div key={product.id} style={{ display:"flex", gap:12, padding:"12px 0", borderBottom:"1px solid #f5f5f5" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={product.images[0] ?? ""} alt="" style={{ width:72, height:54, objectFit:"cover", flexShrink:0, background:"#fafafa" }} />
+                {product.images[0] ? (
+                  <FadeImage src={product.images[0]} alt="" width={72} height={54} style={{ objectFit:"cover", flexShrink:0, background:"#fafafa" }} />
+                ) : (
+                  <div style={{ width:72, height:54, flexShrink:0, background:"#fafafa" }} />
+                )}
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:13, margin:"0 0 4px", color:"#111" }}>{product.name}</p>
                   <p style={{ fontSize:12.5, color:accent, fontWeight:600, margin:"0 0 8px" }}>{fmtPrice(product.price, currency)}</p>
@@ -513,7 +604,16 @@ export default function CasaClara() {
         </div>
       </div>
 
-      {!editMode && whatsapp.enabled && whatsapp.number && (
+      <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={whatsapp} />
+      <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} />
+
+      {toastMsg && (
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#111", color:"#fff", padding:"12px 20px", fontSize:13, fontWeight:600, zIndex:600, boxShadow:"0 4px 20px rgba(0,0,0,0.35)", whiteSpace:"nowrap" }}>
+          {toastMsg}
+        </div>
+      )}
+
+      {showWA && (
         <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
           target="_blank" rel="noopener noreferrer"
           style={{ position:"fixed", bottom:24, right:24, zIndex:500, background:"#25d366", color:"white", width:52, height:52,

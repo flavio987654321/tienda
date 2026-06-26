@@ -59,7 +59,7 @@ export default async function ProductosPage() {
               />
             ) : null;
           })()}
-          <CsvImportButton />
+          <CsvImportButton tipoTienda={store?.tipoTienda ?? "ROPA"} />
           <Link
             href="/dashboard/productos/nuevo"
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 whitespace-nowrap"

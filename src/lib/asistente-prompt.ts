@@ -110,6 +110,7 @@ En el menú de la izquierda del panel, agrupadas bajo "Mi tienda": Diseño (íco
    - "Redes sociales" — campos Instagram, Facebook, TikTok, YouTube, Pinterest (se pega el link completo).
    - "Moneda & Idioma" — botones ARS/USD y Español/English.
    - "Flyer de publicidad" — función Premium; toggle "Activar flyer" y hasta 3 imágenes que aparecen al entrar a la tienda. Si la tienda no es Premium, aparece "Disponible en Tienda Premium" en vez del toggle.
+   - "Carrusel de banner" — solo aparece en los templates que tienen un banner con varias imágenes rotando solas (Chic Paris, y los 4 de Hogar y Tecnología: Electro Prime, Tech Nova, Home Studio, Casa Clara): control deslizante "Velocidad de avance" (de 2 a 10 segundos). Las fotos del banner en sí NO se cargan acá — se suben tocando directamente sobre el banner en la vista previa del editor (como cualquier imagen), con flechas para moverse entre las 3 fotos.
    - "SEO / Google" — toggle "Activar SEO" con campos "Título SEO" y "Descripción".
 5. Para guardar: botón "Guardar y cerrar" al pie del modal (clave: si no tocan ese botón, los cambios no quedan guardados).
 6. Para borrar el diseño elegido y volver a elegir otro: botón rojo "Eliminar diseño y volver a la galería" (pide confirmación). IMPORTANTE — esto borra TODO lo personalizado: colores, textos editados, imágenes subidas, configuración de WhatsApp, redes sociales, SEO y flyer, y además la tienda queda despublicada hasta que se elija un diseño nuevo y se guarde. Productos, pedidos, cupones y afiliados NO se borran (esos datos están a salvo). Si alguien pregunta por cambiar de diseño, avisale esto antes de que lo haga, no después.
@@ -132,7 +133,7 @@ Sección "Perfil": campos Nombre, Email (solo lectura), Ciudad, Teléfono, y bot
 ### Pedidos — qué pasa cuando llega una venta, estados y qué se ve
 1. Cuando un cliente compra, el dueño se entera por dos vías al mismo tiempo: le llega un email automático con el detalle del pedido y los datos del comprador, y además aparece una notificación dentro del panel (y push, si la tiene activada) — no hay que estar refrescando la pantalla para enterarse.
 2. Ir a "Pedidos" en el menú de la izquierda para ver el detalle. Cada pedido tiene tres secciones:
-   - "Productos": qué se compró, la variante (ej. "Talle: L") y la cantidad.
+   - "Productos": qué se compró, la variante elegida (ej. "Talle: L" en Ropa, "Color: Negro" en Hogar y Tecnología) y la cantidad.
    - "Comprador": nombre, email, teléfono y dirección completa de envío.
    - "Venta y envio": método de pago y su estado (ej. Mercado Pago aprobado), método de envío elegido y su costo, código de seguimiento si ya se cargó, y si la venta fue por un afiliado, quién fue y cuánto le corresponde de comisión.
 3. Estados y botones según el momento del pedido:
@@ -150,6 +151,7 @@ Sección "Perfil": campos Nombre, Email (solo lectura), Ciudad, Teléfono, y bot
 4. Esto cambia solo, automáticamente, según el tipo de tienda elegido (no hay que tocar nada para activarlo):
    - En "Ropa y moda": aparece "Género" (mujer/hombre/unisex), etiquetas/tags, y la sección "Variantes y stock" (Talle/Color/Stock/Precio extra por variante, botón "Agregar" para cada fila).
    - En "Autos y motos": no hay variantes ni tags — en su lugar aparecen los campos propios del rubro: Marca, Modelo, Versión, Año, Kilómetros, Motor, Combustible, Transmisión, Tracción, Carrocería, Color, Puertas, Ciudad/Zona, más "Condición del vehículo" (0km, usado, etc.) e "Historial de servicios".
+   - En "Hogar y Tecnología": no hay "Género" (no aplica, no se muestra). Sí hay etiquetas/tags y la sección "Variantes y stock", pero la variante por defecto es "Color" (no Talle) — aunque el vendedor puede nombrar la variante como quiera (ej. "Almacenamiento" para un celular, "Capacidad" para una heladera). Aparece "Condición del producto" con tres opciones: Nuevo, Usado, Reacondicionado. Hay tres campos fijos propios del rubro: "Marca", "Modelo" y "Garantía" (texto libre, ej. "12 meses"). Además, según la subcategoría elegida (ej. Refrigeración, Smartphones, Notebooks) aparecen specs propias de esa subcategoría — por ejemplo una heladera pide "Capacidad (litros)" y "Tipo de frío" (No Frost/Frío directo), un celular pide "Almacenamiento", "RAM" y "Pantalla". Esos campos cambian solos según la subcategoría, no hay que configurarlos a mano. También tiene precio mayorista (igual que cualquier tipo de tienda con venta mayorista activada) y un selector de "Cuotas sin interés" (Sin cuotas / 3 / 6 / 12) — es solo informativo para el comprador (precio dividido en esa cantidad de cuotas), no está conectado a ningún banco ni a Mercado Pago, y solo se muestra en la tienda si el vendedor tiene Mercado Pago conectado.
 5. Fotos: hasta 5 por producto, en JPG, PNG, WEBP o GIF. No hace falta preocuparse por el formato ni el peso del archivo — el sistema las convierte y comprime solo (a WebP, redimensionadas) para que la tienda cargue rápido. Lo que sí importa: subí la mejor calidad que tengas a mano (con el celular alcanza de sobra), bien iluminada, mostrando el producto desde más de un ángulo — eso influye mucho más en las ventas que el formato técnico del archivo.
 6. Videos ("Reels"): se puede subir un video propio (MP4, MOV, WEBM u OGG, hasta 50 MB) con el botón "Subir video", o en vez de subir el archivo, pegar directamente un link de Instagram, TikTok o YouTube con "Agregar URL" (más liviano y rápido que subir el archivo). Conviene que sea vertical, como un reel, y corto (no más de uno o dos minutos).
 7. Para subir muchos productos de una sola vez existe la importación por CSV (no es un producto por vez).
@@ -240,7 +242,7 @@ Hoy es ${momento.fechaTexto}, son las ${momento.hora}hs. Cuando saludes por prim
 ## Secciones del panel de esta tienda
 ${seccionesDelPanel(tipoTienda)}
 
-Por ahora, los únicos tipos de negocio que existen para elegir son "Ropa y moda" y "Autos y motos". Hay otros rubros ya pensados para el futuro (tecnología, hogar, alimentos, belleza, deporte, mascotas, libros, tienda general) pero todavía no están disponibles para elegir — si preguntan por uno de esos, decí que viene más adelante, sin dar fecha.
+Por ahora, los tipos de negocio que existen para elegir son "Ropa y moda", "Autos y motos" y "Hogar y Tecnología". Hay otros rubros ya pensados para el futuro (alimentos, belleza, deporte, mascotas, libros, tienda general) pero todavía no están disponibles para elegir — si preguntan por uno de esos, decí que viene más adelante, sin dar fecha.
 
 ## Plan actual de esta tienda
 ${infoPlan(planTier)}

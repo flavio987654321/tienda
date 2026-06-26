@@ -106,6 +106,7 @@ export default function StoreTypeModal({
     }
 
     setSaving(false);
+    setConfirmStep(false);
     setSaved(true);
     window.dispatchEvent(new CustomEvent("store-type-changed", { detail: { newType: selected } }));
     await new Promise((r) => setTimeout(r, 700));
@@ -296,8 +297,11 @@ export default function StoreTypeModal({
 
           {/* Info del tipo seleccionado */}
           {selectedConfig && (
-            <div key={selectedConfig.id} className="animate-fade-slide bg-indigo-50 rounded-2xl px-4 py-3 text-sm text-indigo-700">
-              Categorías: {selectedConfig.categorias.slice(0, 4).join(", ")}...
+            <div key={selectedConfig.id} className="animate-fade-slide bg-indigo-50 rounded-2xl px-4 py-3 text-sm text-indigo-700 space-y-1.5">
+              <p className="font-medium">{selectedConfig.description}</p>
+              <p className="text-indigo-500 text-xs">
+                Ejemplos de categorías: {selectedConfig.categorias.slice(0, 4).join(", ")}...
+              </p>
             </div>
           )}
 

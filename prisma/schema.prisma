@@ -307,6 +307,10 @@ model Product {
   reelUrls         String    @default("[]")
   precioMayorista  Float?
   cantMinMayorista Int?
+  // Cuotas sin interés informativas (no conectado a ninguna API bancaria ni
+  // de Mercado Pago): 0 = no mostrar, o 3/6/12. Solo se muestra en la tienda
+  // si además la tienda tiene Mercado Pago conectado.
+  cuotas           Int       @default(0)
   isActive         Boolean   @default(true)
   deletedAt        DateTime?
   publishAt        DateTime?

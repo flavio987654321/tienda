@@ -9,7 +9,7 @@ import { z } from "zod";
 
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 const storeConfigSchema = z.object({
-  template: z.enum(["fashion-noir", "boho-terra", "urban-pulse", "chic-paris", "auto-motor", "auto-drive"]),
+  template: z.enum(["fashion-noir", "boho-terra", "urban-pulse", "chic-paris", "auto-motor", "auto-drive", "electro-prime", "tech-nova", "home-studio", "casa-clara"]),
   storeName: z.string().max(120),
   storeTagline: z.string().max(200),
   colors: z.object({ accent: z.string().regex(HEX_RE) }),

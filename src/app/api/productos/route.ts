@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;
   const {
-    name, parsedPrice, parsedComparePrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista, normalizedVariants,
+    name, parsedPrice, parsedComparePrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista, parsedCuotas, normalizedVariants,
     parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
   } = validated;
 
@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
       attributes: JSON.stringify(Array.isArray(attributes) ? attributes : []),
       precioMayorista: parsedPrecioMayorista,
       cantMinMayorista: parsedCantMinMayorista,
+      cuotas: parsedCuotas,
       weightKg: parsedWeightKg,
       widthCm: parsedWidthCm,
       heightCm: parsedHeightCm,

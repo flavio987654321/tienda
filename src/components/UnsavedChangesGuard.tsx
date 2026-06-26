@@ -29,6 +29,9 @@ export function UnsavedChangesGuard({ isDirty }: Props) {
       if (!isDirty) return;
       const anchor = (e.target as Element).closest("a");
       if (!anchor) return;
+      // Links que manejan su propio click en modo edición (ej: cambiar ícono)
+      // ya hacen preventDefault ellos mismos; no los interceptemos.
+      if (anchor.closest("[data-no-unsaved-guard]")) return;
       const href = anchor.getAttribute("href");
       if (!href) return;
       // Ignore external, hash-only, and new-tab links

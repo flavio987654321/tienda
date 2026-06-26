@@ -134,6 +134,7 @@ export default function AutoMotor() {
   useEffect(() => {
     if (!products.length) return;
     const id = new URLSearchParams(window.location.search).get("producto");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- abre el modal del producto indicado en la URL al cargar la lista, no se puede calcular durante el render
     if (id) { const p = products.find(pr => pr.id === id); if (p) setSelected(p); }
   }, [products]);
 
@@ -158,6 +159,7 @@ export default function AutoMotor() {
     } else {
       try {
         const savedFavs = localStorage.getItem("storefront_favorites");
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza favoritos guardados en localStorage al cargar, no se puede calcular durante el render
         if (savedFavs) setFavorites(JSON.parse(savedFavs));
       } catch {}
     }

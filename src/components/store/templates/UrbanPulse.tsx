@@ -542,7 +542,7 @@ export default function UrbanPulse() {
               )}
             </>
           )}
-          <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); }} style={{ ...iconBtn, position:"relative" }}>
+          <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); setCartOpen(false); }} style={{ ...iconBtn, position:"relative" }}>
             <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? DARK : "none"} stroke={DARK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
             {favorites.length > 0 && <span style={{ position:"absolute", top:4, right:4, width:8, height:8, background:ACC, border:`2px solid ${DARK}`, borderRadius:"50%" }} />}
           </button>
@@ -1120,7 +1120,7 @@ export default function UrbanPulse() {
       )}
 
       {/* ── FLOATING CART BUTTON ────────────────────────────── */}
-      <button onClick={() => setCartOpen(true)}
+      <button onClick={() => { setCartOpen(true); setFavoritesOpen(false); }}
         style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:500, width:52, height:52, borderRadius:"50%", background:ACC, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(0,0,0,0.25)", transition:"transform 0.2s" }}
         onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
         onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
@@ -1422,7 +1422,7 @@ export default function UrbanPulse() {
 
       {/* CART DRAWER */}
       {cartOpen && (
-        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex:700, overflow:"hidden" }}>
+        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 700, overflow:"hidden" }}>
           <div onClick={() => setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.5)" }} />
           <div style={{ position:"absolute", right:0, top:0, bottom:0, left: isMobile ? 0 : "auto", width: isMobile ? "auto" : 440, background:WHITE, display:"flex", flexDirection:"column" }}>
             <div style={{ padding:"20px 24px", borderBottom:`3px solid ${DARK}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -1492,7 +1492,7 @@ export default function UrbanPulse() {
 
       {/* CHECKOUT DRAWER */}
       {checkoutOpen && (
-        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex:800 }}>
+        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex: isPreview ? 20010 : 800 }}>
           <div onClick={() => { if (checkoutStatus !== "placing") setCheckoutOpen(false); }} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.6)" }} />
           <div style={{ position:"absolute", right:0, top:0, bottom:0, width:520, background:WHITE, display:"flex", flexDirection:"column", overflowY:"auto" }}>
             {checkoutStatus === "done" ? (

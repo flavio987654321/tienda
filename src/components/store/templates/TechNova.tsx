@@ -1,15 +1,19 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import { useCartLogic } from "@/hooks/useCartLogic";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
+import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
+import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
+import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import type { ImageOverride } from "@/types/store-config";
 
@@ -30,6 +34,14 @@ function secMid(ov: ImageOverride | undefined, bg: string): string {
 }
 function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
   if (!ov?.url || ov.overlayType === "none") return null;
+  return <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none",
+    background: ov.overlayType==="light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.55})` }} />;
+}
+// Para fotos simples (hero, departamentos, contacto) que siempre muestran una
+// imagen (de stock o subida) — la capa se aplica en cuanto el dueño la elige,
+// aunque todavía no haya subido una foto propia.
+function PhotoOverlay({ ov }: { ov: ImageOverride | undefined }) {
+  if (!ov?.overlayType || ov.overlayType === "none") return null;
   return <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none",
     background: ov.overlayType==="light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.55})` }} />;
 }
@@ -93,8 +105,7 @@ function ProductCard({ product, href, currency, isFavorite, onToggleFavorite }: 
           <svg width={15} height={15} viewBox="0 0 24 24" fill={isFavorite ? "#7c3aed" : "none"} stroke={isFavorite ? "#7c3aed" : "#6b6b80"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>
         {product.images[0] ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.images[0]} alt={product.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+          <FadeImage src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} />
         ) : (
           <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#c4c4d8", fontSize:13 }}>Sin imagen</div>
         )}
@@ -132,49 +143,59 @@ const TRUST_ICONS: React.ReactNode[] = [
   <svg key="truck" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
   <svg key="bolt" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
   <svg key="gift" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
+  <svg key="swap" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>,
+  <svg key="chat" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>,
 ];
+const BENEF_ICON_DEFAULTS = [4, 6, 7, 1]; // bolt, swap, chat, shield
+
+function SocialIcon({ network }: { network: string }) {
+  const common = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  switch (network) {
+    case "instagram":
+      return <svg {...common}><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>;
+    case "facebook":
+      return <svg {...common}><path d="M16 3h-2a5 5 0 0 0-5 5v3H6v4h3v8h4v-8h3l1-4h-4V8a1 1 0 0 1 1-1h3z"/></svg>;
+    case "tiktok":
+      return <svg {...common}><path d="M9 12a4 4 0 1 0 4 4V3a5 5 0 0 0 5 5"/></svg>;
+    case "youtube":
+      return <svg {...common}><rect x="2" y="5" width="20" height="14" rx="4"/><polygon points="10 9 16 12 10 15" fill="currentColor" stroke="none"/></svg>;
+    case "pinterest":
+      return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M9 18l2-7"/><path d="M8 11a4 4 0 1 1 7 2c-1 1.5-3 1-3-1"/></svg>;
+    default:
+      return null;
+  }
+}
 
 export default function TechNova() {
   const config    = useStoreConfig();
   const pushBell  = usePushBell();
-  const { products, loadingProducts } = useStorefront();
+  const storefront = useStorefront();
+  const { products, loadingProducts } = storefront;
+  const cart = useCartLogic(storefront);
+  const {
+    favorites, favoritesOpen, setFavoritesOpen, favoriteProducts, toggleFavorite,
+    cartCount, setCartOpen, toastMsg,
+  } = cart;
   const { editMode, overrides, setOverride } = useEditContext();
   useScrollReveal();
   const isPreview = !!config?.previewFill;
+  const isOwner   = !!config?.isOwner;
   const accent    = config?.colors.accent ?? "#7c3aed";
+  const accentText = getContrastColor(accent) === "light" ? "#111" : "#fff";
+  const cartTheme: CartTheme = { BG:"#ffffff", S:"#fafafa", T:"#111111", MID:"#6b6b80", border:"#e5e5e5", accent, accentText };
   const currency  = config?.currency ?? "ARS";
   const storeName = config?.storeName ?? "TECH NOVA";
   const whatsapp  = config?.whatsapp ?? { enabled:false, number:"", message:"" };
+  // En modo edición lo mostramos con solo activarlo, para que se pueda previsualizar
+  // antes de completar el número; en la tienda real hace falta el número sí o sí.
+  const showWA    = whatsapp.enabled && (editMode || !!whatsapp.number);
   const social    = config?.socialLinks;
 
-  const { user, status, signOut } = useAuth();
-  const router = useRouter();
+  const { user, signOut } = useAuth();
   const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
   const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
-  const [favorites,        setFavorites]        = useState<string[]>([]);
-  const [favoritesOpen,    setFavoritesOpen]    = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (status === "loading") return;
-    if (status === "authenticated") {
-      fetch("/api/favoritos")
-        .then(r => r.ok ? r.json() : [])
-        .then((data: { productId: string }[]) => setFavorites(data.map(f => f.productId)))
-        .catch(() => {});
-    } else {
-      try {
-        const savedFavs = localStorage.getItem("storefront_favorites");
-        if (savedFavs) setFavorites(JSON.parse(savedFavs));
-      } catch {}
-    }
-  }, [status]);
-
-  useEffect(() => {
-    if (status === "authenticated") return;
-    try { localStorage.setItem("storefront_favorites", JSON.stringify(favorites)); } catch {}
-  }, [favorites, status]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -183,18 +204,6 @@ export default function TechNova() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  async function toggleFavorite(id: string) {
-    if (status !== "authenticated") { router.push(`/login?redirect=/tienda/${config?.slug}`); return; }
-    const wasFavorite = favorites.includes(id);
-    setFavorites(prev => wasFavorite ? prev.filter(f => f !== id) : [...prev, id]);
-    try {
-      await fetch("/api/favoritos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: id }) });
-    } catch {
-      setFavorites(prev => wasFavorite ? [...prev, id] : prev.filter(f => f !== id));
-    }
-  }
-  const favoriteProducts = products.filter(p => favorites.includes(p.id));
 
   const iovr = config?.imageOverrides ?? {};
   const sc   = config?.sectionColors  ?? {};
@@ -234,9 +243,11 @@ export default function TechNova() {
   const contactoUrl = iovr["contactoImage"]?.url ?? "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=70";
 
   const footerBg    = sc["bgFooter"] ?? "#0a0a12";
-  const ftMid       = "rgba(255,255,255,0.5)";
+  const footerImg   = iovr["sectionbg_bgFooter"];
+  const ftText      = secText(footerImg, footerBg);
+  const ftMid       = secMid(footerImg, footerBg);
 
-  const navBg       = sc["navBg"] ?? "#ffffff";
+  const navBg       = sc["navBg"] ?? "#0f0f1a";
   const navDark     = getContrastColor(navBg) === "light";
   const navText     = navDark ? "#ffffff" : "#0f0f1a";
   const navTextMid  = navDark ? "rgba(255,255,255,0.7)" : "#6b6b80";
@@ -280,9 +291,11 @@ export default function TechNova() {
   const featuredProducts = products.filter(p => p.featured);
   const showcased = (featuredProducts.length > 0 ? featuredProducts : products).slice(0, 8);
   const hasMore   = (featuredProducts.length > 0 ? featuredProducts : products).length > 8;
-  const ofertas   = products.filter(p => p.comparePrice && p.comparePrice > p.price).slice(0, 8);
+  const allOfertas = products.filter(p => p.comparePrice && p.comparePrice > p.price);
+  const ofertas    = allOfertas.slice(0, 8);
+  const hasMoreOfertas = allOfertas.length > 8;
   const catalogHref = `/tienda/${config?.slug ?? ""}/productos?t=tech-nova${isPreview ? "&from=editor" : ""}`;
-  const socialNets: ["instagram"|"facebook"|"tiktok"|"youtube", string][] = [["instagram","Instagram"],["facebook","Facebook"],["tiktok","TikTok"],["youtube","YouTube"]];
+  const socialNets: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [["instagram","Instagram"],["facebook","Facebook"],["tiktok","TikTok"],["youtube","YouTube"],["pinterest","Pinterest"]];
 
   return (
     <div style={{ background:"#ffffff", color:"#0f0f1a", fontFamily:"'Inter','Segoe UI',system-ui,sans-serif", minHeight:"100vh" }}>
@@ -298,9 +311,6 @@ export default function TechNova() {
         @media(min-width:480px){ .tn-prod-item { flex:0 0 calc((100% - 18px)/2) } }
         @media(min-width:768px){ .tn-prod-item { flex:0 0 calc((100% - 36px)/3) } }
         @media(min-width:1024px){ .tn-prod-item { flex:0 0 calc((100% - 54px)/4) } }
-        .tn-carousel-arrow { opacity:0; transition:opacity 0.2s }
-        section:hover .tn-carousel-arrow { opacity:1 }
-        @media(max-width:640px){ .tn-carousel-arrow { opacity:1 } }
         .tn-trust-grid { grid-template-columns:repeat(2,1fr) }
         @media(min-width:768px){ .tn-trust-grid { grid-template-columns:repeat(4,1fr) } }
         .tn-benef-grid { grid-template-columns:1fr }
@@ -366,7 +376,7 @@ export default function TechNova() {
             <Link href={catalogHref} style={{ background:accent, color:"#fff", padding:"9px 20px", fontSize:12, fontWeight:700, textDecoration:"none", borderRadius:100 }}>Ver catálogo</Link>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            <button onClick={() => setFavoritesOpen(true)}
+            <button onClick={() => { setFavoritesOpen(true); setCartOpen(false); }}
               style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {favorites.length > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
@@ -404,9 +414,10 @@ export default function TechNova() {
                 </div>
               )}
             </div>
-            <Link href={catalogHref} aria-label="Carrito" style={{ color:navTextMid, display:"flex", alignItems:"center" }}>
+            <button onClick={() => { setCartOpen(true); setFavoritesOpen(false); }} aria-label="Carrito" style={{ position:"relative", background:"none", border:"none", color:navTextMid, display:"flex", alignItems:"center", cursor:"pointer", padding:0 }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-            </Link>
+              {cartCount > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color:accentText, borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
+            </button>
             <button className="tn-burger" onClick={() => setMenuOpen(m => !m)}
               style={{ background:"none", border:`1px solid ${navBorder}`, color:navText, padding:"7px 11px", cursor:"pointer", fontSize:18 }}>{menuOpen ? "×" : "☰"}</button>
           </div>
@@ -440,7 +451,7 @@ export default function TechNova() {
             </p>
             <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
               <Link href={catalogHref} style={{ background:accent, color:"#fff", padding:"15px 32px", fontWeight:700, fontSize:13, borderRadius:100, textDecoration:"none" }}>Ver catálogo</Link>
-              {whatsapp.enabled && whatsapp.number && (
+              {showWA && (
                 <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
                   target="_blank" rel="noopener noreferrer"
                   style={{ display:"flex", alignItems:"center", gap:8, background:"none", border:`1.5px solid ${heroText==="#ffffff"?"rgba(255,255,255,0.35)":"#d8d8e8"}`, color:heroText, textDecoration:"none", padding:"15px 24px", fontWeight:600, fontSize:13, borderRadius:100 }}>
@@ -452,8 +463,10 @@ export default function TechNova() {
           <div style={{ flex:"1 1 420px", position:"relative", display:"flex", justifyContent:"center", padding:"24px", minHeight:380 }}>
             <div style={{ position:"absolute", width:440, height:440, borderRadius:"50%", background:`${accent}22`, filter:"blur(50px)", zIndex:0 }} />
             <div className="tn-floating" style={{ position:"relative", zIndex:1, width:"min(420px,100%)", aspectRatio:"4/5", borderRadius:24, overflow:"hidden", boxShadow:"0 30px 60px rgba(124,58,237,0.25)" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={heroImgUrl} alt="Producto destacado" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              <FadeImage src={heroImgUrl} alt="Producto destacado" fill sizes="(max-width: 768px) 100vw, 420px" priority
+                style={{ objectFit:"cover", objectPosition:`${iovr["heroImage"]?.posX ?? 50}% ${iovr["heroImage"]?.posY ?? 50}%` }} />
+              <PhotoOverlay ov={iovr["heroImage"]} />
+              <BgDragHandle imgKey="heroImage" />
               <EditableImageButton field="heroImage" label="Imagen del hero" />
             </div>
           </div>
@@ -472,13 +485,13 @@ export default function TechNova() {
           <div style={{ position:"relative" }}>
             {DEPARTAMENTOS.length > 3 && (
               <>
-                <button onClick={() => scrollRow(depScrollRef, -1)} aria-label="Anterior" className="tn-carousel-arrow"
-                  style={{ position:"absolute", left:-18, top:"42%", transform:"translateY(-50%)", width:42, height:42, borderRadius:"50%",
-                    border:"none", background:"#fff", color:"#0f0f1a", fontSize:20, cursor:"pointer", zIndex:2, boxShadow:"0 6px 20px rgba(0,0,0,0.18)",
+                <button onClick={() => scrollRow(depScrollRef, -1)} aria-label="Anterior"
+                  style={{ position:"absolute", left:-36, top:"42%", transform:"translateY(-50%)", width:36,
+                    border:"none", background:"none", color:depText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
                     display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-                <button onClick={() => scrollRow(depScrollRef, 1)} aria-label="Siguiente" className="tn-carousel-arrow"
-                  style={{ position:"absolute", right:-18, top:"42%", transform:"translateY(-50%)", width:42, height:42, borderRadius:"50%",
-                    border:"none", background:"#fff", color:"#0f0f1a", fontSize:20, cursor:"pointer", zIndex:2, boxShadow:"0 6px 20px rgba(0,0,0,0.18)",
+                <button onClick={() => scrollRow(depScrollRef, 1)} aria-label="Siguiente"
+                  style={{ position:"absolute", right:-36, top:"42%", transform:"translateY(-50%)", width:36,
+                    border:"none", background:"none", color:depText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
                     display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
               </>
             )}
@@ -486,24 +499,31 @@ export default function TechNova() {
               {DEPARTAMENTOS.map((d, i) => {
                 const catKey = `dept${i}Cat`;
                 const categoryId = overrides[catKey]?.text ?? d.id;
+                // Si no es el dueño editando, ocultamos los departamentos sin productos
+                // para no mandar al cliente a un catálogo vacío.
+                if (!editMode && !products.some(p => p.category === categoryId)) return null;
                 return (
                   <div key={i} className="tn-dep-item" style={{ position:"relative", scrollSnapAlign:"start" }}>
-                    <Link className="tn-dep-card" href={`/tienda/${config?.slug ?? ""}/productos?categoria=${categoryId}&t=tech-nova${isPreview ? "&from=editor" : ""}`}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={iovr[`dept${i}Image`]?.url ?? d.img} alt={d.label} />
+                    <Link className="tn-dep-card" href={`/tienda/${config?.slug ?? ""}/productos?categoria=${categoryId}&t=tech-nova${isPreview ? "&from=editor" : ""}`}
+                      data-no-unsaved-guard={editMode ? "true" : undefined}
+                      onClick={e => { if (editMode) e.preventDefault(); }}>
+                      <FadeImage src={iovr[`dept${i}Image`]?.url ?? d.img} alt={d.label} fill sizes="(max-width: 768px) 50vw, 300px"
+                        style={{ objectFit:"cover", objectPosition:`${iovr[`dept${i}Image`]?.posX ?? 50}% ${iovr[`dept${i}Image`]?.posY ?? 50}%` }} />
+                      <PhotoOverlay ov={iovr[`dept${i}Image`]} />
                       <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(15,15,26,0.75), transparent 60%)" }} />
                       <span style={{ position:"absolute", bottom:16, left:18, color:"#fff", fontSize:15, fontWeight:700 }}>
                         <EditableZone field={`dept${i}Label`} label={`Departamento ${i+1} — texto`}>{d.label}</EditableZone>
                       </span>
                       <div onClick={e => { e.preventDefault(); e.stopPropagation(); }}>
-                        <EditableImageButton field={`dept${i}Image`} label={`Departamento ${i+1} — imagen`} />
+                        <BgDragHandle imgKey={`dept${i}Image`} />
+                        <EditableImageButton field={`dept${i}Image`} label={`Departamento ${i+1} — imagen`} compact />
                       </div>
                     </Link>
                     {editMode && (
                       <select value={categoryId} onClick={e => e.stopPropagation()}
                         onChange={e => setOverride(catKey, { text: e.target.value })}
                         title="A qué categoría apunta esta tarjeta"
-                        style={{ position:"absolute", top:8, right:8, zIndex:2, fontSize:11, border:"1px solid #7c3aed", borderRadius:8, background:"#fff", color:"#4c1d95", cursor:"pointer", padding:"3px 6px" }}>
+                        style={{ position:"absolute", top:8, left:8, zIndex:2, maxWidth:120, fontSize:11, border:"1px solid #7c3aed", borderRadius:8, background:"#fff", color:"#4c1d95", cursor:"pointer", padding:"3px 6px" }}>
                         {CATEGORY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                       </select>
                     )}
@@ -530,8 +550,8 @@ export default function TechNova() {
                   {TRUST_ICONS[iconIdx]}
                   {editMode && (
                     <button onClick={() => setOverride(`trust${i+1}IconIdx`, { text: String(nextIdx) })} title="Cambiar ícono"
-                      style={{ position:"absolute", inset:-6, background:"rgba(124,58,237,0.9)", border:"none", borderRadius:4, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:11, opacity:0, transition:"opacity 0.15s" }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
+                      style={{ position:"absolute", inset:-6, background:"rgba(124,58,237,0.9)", border:"none", borderRadius:4, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:11, opacity:0.8, transition:"opacity 0.15s" }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0.8")}>↻</button>
                   )}
                 </div>
                 <p style={{ margin:"0 0 4px", fontSize:13.5, fontWeight:700, color:trustText }}><EditableZone field={c.fv} label={`Sello ${i+1} título`}>{c.t}</EditableZone></p>
@@ -549,19 +569,22 @@ export default function TechNova() {
           <SectionOverlay ov={ofertasImg} />
           <EditableSectionBg field="bgOfertas" label="Fondo ofertas" />
           <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
-            <h2 style={{ margin:"0 0 24px", fontSize:"clamp(20px,3vw,28px)", fontWeight:800, color:ofertasText, letterSpacing:-0.5 }}>
-              🔥 <EditableZone field="ofertasHeading" label="Título ofertas">Ofertas destacadas</EditableZone>
-            </h2>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:24, flexWrap:"wrap", gap:12 }}>
+              <h2 style={{ margin:0, fontSize:"clamp(20px,3vw,28px)", fontWeight:800, color:ofertasText, letterSpacing:-0.5 }}>
+                🔥 <EditableZone field="ofertasHeading" label="Título ofertas">Ofertas destacadas</EditableZone>
+              </h2>
+              {hasMoreOfertas && <Link href={`${catalogHref}&oferta=true`} style={{ fontSize:13, fontWeight:700, color:accent, textDecoration:"none" }}>Ver todas las ofertas →</Link>}
+            </div>
             <div style={{ position:"relative" }}>
               {ofertas.length > 4 && (
                 <>
-                  <button onClick={() => scrollRow(ofertasScrollRef, -1)} aria-label="Anterior" className="tn-carousel-arrow"
-                    style={{ position:"absolute", left:-18, top:"38%", transform:"translateY(-50%)", width:42, height:42, borderRadius:"50%",
-                      border:"none", background:"#fff", color:"#0f0f1a", fontSize:20, cursor:"pointer", zIndex:2, boxShadow:"0 6px 20px rgba(0,0,0,0.18)",
+                  <button onClick={() => scrollRow(ofertasScrollRef, -1)} aria-label="Anterior"
+                    style={{ position:"absolute", left:-36, top:"38%", transform:"translateY(-50%)", width:36,
+                      border:"none", background:"none", color:ofertasText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
                       display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-                  <button onClick={() => scrollRow(ofertasScrollRef, 1)} aria-label="Siguiente" className="tn-carousel-arrow"
-                    style={{ position:"absolute", right:-18, top:"38%", transform:"translateY(-50%)", width:42, height:42, borderRadius:"50%",
-                      border:"none", background:"#fff", color:"#0f0f1a", fontSize:20, cursor:"pointer", zIndex:2, boxShadow:"0 6px 20px rgba(0,0,0,0.18)",
+                  <button onClick={() => scrollRow(ofertasScrollRef, 1)} aria-label="Siguiente"
+                    style={{ position:"absolute", right:-36, top:"38%", transform:"translateY(-50%)", width:36,
+                      border:"none", background:"none", color:ofertasText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
                       display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
                 </>
               )}
@@ -600,13 +623,13 @@ export default function TechNova() {
             <div style={{ position:"relative" }}>
               {showcased.length > 4 && (
                 <>
-                  <button onClick={() => scrollRow(prodScrollRef, -1)} aria-label="Anterior" className="tn-carousel-arrow"
-                    style={{ position:"absolute", left:-18, top:"38%", transform:"translateY(-50%)", width:42, height:42, borderRadius:"50%",
-                      border:"none", background:"#fff", color:"#0f0f1a", fontSize:20, cursor:"pointer", zIndex:2, boxShadow:"0 6px 20px rgba(0,0,0,0.18)",
+                  <button onClick={() => scrollRow(prodScrollRef, -1)} aria-label="Anterior"
+                    style={{ position:"absolute", left:-36, top:"38%", transform:"translateY(-50%)", width:36,
+                      border:"none", background:"none", color:prodText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
                       display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-                  <button onClick={() => scrollRow(prodScrollRef, 1)} aria-label="Siguiente" className="tn-carousel-arrow"
-                    style={{ position:"absolute", right:-18, top:"38%", transform:"translateY(-50%)", width:42, height:42, borderRadius:"50%",
-                      border:"none", background:"#fff", color:"#0f0f1a", fontSize:20, cursor:"pointer", zIndex:2, boxShadow:"0 6px 20px rgba(0,0,0,0.18)",
+                  <button onClick={() => scrollRow(prodScrollRef, 1)} aria-label="Siguiente"
+                    style={{ position:"absolute", right:-36, top:"38%", transform:"translateY(-50%)", width:36,
+                      border:"none", background:"none", color:prodText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
                       display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
                 </>
               )}
@@ -628,6 +651,21 @@ export default function TechNova() {
         </div>
       </section>
 
+      {/* ── BANNER PROMOCIONAL ── */}
+      <PromoBannerCarousel
+        images={[config?.imageOverrides?.["promoBanner1"], config?.imageOverrides?.["promoBanner2"], config?.imageOverrides?.["promoBanner3"]]}
+        demoImages={[
+          "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1920&q=80",
+          "https://images.unsplash.com/photo-1593640495253-23196b27a87f?auto=format&fit=crop&w=1920&q=80",
+          "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=1920&q=80",
+        ]}
+        intervalMs={config?.bannerInterval ?? 4000}
+        editMode={editMode}
+        isPreview={isPreview}
+        accent={accent}
+        bg="#0f0f1a"
+      />
+
       {/* ── BENEFICIOS — lista con íconos ── */}
       <section id="beneficios" data-reveal style={{ position:"relative", ...secBg(benefImg, benefBg), padding:"64px 24px" }}>
         <BgDragHandle imgKey="sectionbg_bgNosotros" />
@@ -642,18 +680,29 @@ export default function TechNova() {
           </h2>
           <div className="tn-benef-grid" style={{ display:"grid", gap:18 }}>
             {[
-              { field:"benef1", icon:"⚡", def:"Entrega inmediata en productos con stock" },
-              { field:"benef2", icon:"🔄", def:"Cambios sin cargo dentro de los primeros 10 días" },
-              { field:"benef3", icon:"💬", def:"Asesoramiento antes de comprar por WhatsApp" },
-              { field:"benef4", icon:"🔐", def:"Compra protegida con Mercado Pago" },
-            ].map(({ field, icon, def }) => (
-              <div key={field} style={{ display:"flex", alignItems:"flex-start", gap:14 }}>
-                <div style={{ width:42, height:42, borderRadius:12, background:`${accent}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:19, flexShrink:0 }}>{icon}</div>
-                <p style={{ margin:0, fontSize:14, color:benefMid, lineHeight:1.7, paddingTop:8 }}>
-                  <EditableZone field={field} label="Beneficio">{def}</EditableZone>
-                </p>
-              </div>
-            ))}
+              { field:"benef1", def:"Entrega inmediata en productos con stock" },
+              { field:"benef2", def:"Cambios sin cargo dentro de los primeros 10 días" },
+              { field:"benef3", def:"Asesoramiento antes de comprar por WhatsApp" },
+              { field:"benef4", def:"Compra protegida con Mercado Pago" },
+            ].map(({ field, def }, i) => {
+              const iconIdx = Math.abs(parseInt(overrides[`${field}IconIdx`]?.text ?? String(BENEF_ICON_DEFAULTS[i])) || 0) % TRUST_ICONS.length;
+              const nextIdx = (iconIdx + 1) % TRUST_ICONS.length;
+              return (
+                <div key={field} style={{ display:"flex", alignItems:"flex-start", gap:14 }}>
+                  <div style={{ width:42, height:42, borderRadius:12, background:`${accent}15`, color:accent, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, position:"relative" }}>
+                    {TRUST_ICONS[iconIdx]}
+                    {editMode && (
+                      <button onClick={() => setOverride(`${field}IconIdx`, { text: String(nextIdx) })} title="Cambiar ícono"
+                        style={{ position:"absolute", inset:0, background:"rgba(124,58,237,0.9)", border:"none", borderRadius:12, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:14, opacity:0.8, transition:"opacity 0.15s" }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0.8")}>↻</button>
+                    )}
+                  </div>
+                  <p style={{ margin:0, fontSize:14, color:benefMid, lineHeight:1.7, paddingTop:8 }}>
+                    <EditableZone field={field} label="Beneficio">{def}</EditableZone>
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -661,9 +710,12 @@ export default function TechNova() {
       {/* ── CONTACTO — foto de fondo + tarjeta flotante con glow ── */}
       <section id="contacto" data-reveal style={{ position:"relative", padding:"90px 24px", overflow:"hidden", display:"flex", justifyContent:"center" }}>
         {!contactoImg?.url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={contactoUrl} alt=""
-            style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+          <>
+            <FadeImage src={contactoUrl} alt="" fill sizes="100vw"
+              style={{ objectFit:"cover", objectPosition:`${iovr["contactoImage"]?.posX ?? 50}% ${iovr["contactoImage"]?.posY ?? 50}%` }} />
+            <PhotoOverlay ov={iovr["contactoImage"]} />
+            <BgDragHandle imgKey="contactoImage" />
+          </>
         )}
         {contactoImg?.url && <div style={{ position:"absolute", inset:0, ...secBg(contactoImg, contactoBg) }} />}
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, rgba(15,15,26,0.75), rgba(15,15,26,0.92))" }} />
@@ -681,11 +733,11 @@ export default function TechNova() {
           </p>
           <div style={{ background:"rgba(255,255,255,0.97)", backdropFilter:"blur(10px)", borderRadius:20, padding:30,
             boxShadow:`0 30px 70px ${accent}33`, border:"1px solid rgba(255,255,255,0.4)", textAlign:"left" }}>
-            <ContactForm storeId={config?.storeId} accent={accent} textColor="#0f0f1a" mutedColor="#6b6b80" radius={10} />
+            <ContactForm storeId={config?.storeId} accent={accent} textColor="#0f0f1a" mutedColor="#6b6b80" radius={10} isPreview={isPreview} />
           </div>
           <div style={{ display:"flex", justifyContent:"center", gap:20, marginTop:24, flexWrap:"wrap" }}>
             <Link href={catalogHref} style={{ color:accent, fontWeight:700, fontSize:13, textDecoration:"none" }}>Ver catálogo completo →</Link>
-            {whatsapp.enabled && whatsapp.number && (
+            {showWA && (
               <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ color:"#25d366", textDecoration:"none", fontWeight:600, fontSize:13 }}>
@@ -693,32 +745,42 @@ export default function TechNova() {
               </a>
             )}
           </div>
-          {socialNets.filter(([key]) => social?.[key]).length > 0 && (
+          {(editMode || socialNets.some(([key]) => social?.[key])) && (
             <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:10, marginTop:20 }}>
-              {socialNets.filter(([key]) => social?.[key]).map(([key, label]) => (
-                <a key={key} href={social![key]} target="_blank" rel="noopener noreferrer"
-                  style={{ padding:"8px 16px", borderRadius:100, border:`1px solid ${conText==="#ffffff"?"rgba(255,255,255,0.15)":"#ececf5"}`, textDecoration:"none", color:conText, fontSize:12.5, fontWeight:600 }}>
-                  {label}
-                </a>
-              ))}
+              {socialNets.map(([key, label]) => {
+                const url = social?.[key];
+                if (!editMode && !url) return null;
+                return (
+                  <a key={key} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener noreferrer"
+                    onClick={e => { if (!url) e.preventDefault(); }}
+                    style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:100, border:`1px solid ${conText==="#ffffff"?"rgba(255,255,255,0.15)":"#ececf5"}`, textDecoration:"none", color:conText, fontSize:12.5, fontWeight:600, opacity: url ? 1 : 0.4 }}>
+                    <SocialIcon network={key} /> {label}
+                  </a>
+                );
+              })}
             </div>
           )}
         </div>
       </section>
 
-      <footer style={{ background:footerBg, padding:"32px 24px", textAlign:"center" }}>
+      <footer style={{ position:"relative", ...secBg(footerImg, footerBg), color:ftText, padding:"32px 24px", textAlign:"center" }}>
+        <BgDragHandle imgKey="sectionbg_bgFooter" />
+        <SectionOverlay ov={footerImg} />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <div style={{ position:"relative", zIndex:1 }}>
         <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:14, color:accent }}>{storeName}</p>
         <p style={{ margin:"0 0 12px", fontSize:11, color:ftMid }}>© {new Date().getFullYear()} {storeName}. Todos los derechos reservados.</p>
         <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
           {[["Política de devoluciones","devoluciones"],["Política de envíos","envios"],["Términos y condiciones","terminos"]].map(([label, tipo]) => (
             <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:ftMid, opacity:0.6, textDecoration:"none" }}>{label}</a>
           ))}
-          {!editMode && !isPreview && (
+          {!editMode && (
             <button onClick={() => setShowReport(true)}
               style={{ fontSize:10, color:ftMid, opacity:0.6, background:"none", border:"none", cursor:"pointer", padding:0, textDecoration:"underline" }}>
               Reportar tienda
             </button>
           )}
+        </div>
         </div>
       </footer>
 
@@ -742,8 +804,11 @@ export default function TechNova() {
               </div>
             ) : favoriteProducts.map(product => (
               <div key={product.id} style={{ display:"flex", gap:14, padding:"14px 0", borderBottom:"1px solid #f5f5fa" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={product.images[0] ?? ""} alt="" style={{ width:80, height:60, objectFit:"cover", borderRadius:8, flexShrink:0, background:"#fafaff" }} />
+                {product.images[0] ? (
+                  <FadeImage src={product.images[0]} alt="" width={80} height={60} style={{ objectFit:"cover", borderRadius:8, flexShrink:0, background:"#fafaff" }} />
+                ) : (
+                  <div style={{ width:80, height:60, borderRadius:8, flexShrink:0, background:"#fafaff" }} />
+                )}
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:14, fontWeight:600, margin:"0 0 4px", color:"#0f0f1a" }}>{product.name}</p>
                   <p style={{ fontSize:13, color:accent, fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>
@@ -764,7 +829,16 @@ export default function TechNova() {
         </div>
       </div>
 
-      {!editMode && whatsapp.enabled && whatsapp.number && (
+      <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={whatsapp} />
+      <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} />
+
+      {toastMsg && (
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#111", color:"#fff", padding:"12px 20px", fontSize:13, fontWeight:600, zIndex:600, boxShadow:"0 4px 20px rgba(0,0,0,0.35)", whiteSpace:"nowrap" }}>
+          {toastMsg}
+        </div>
+      )}
+
+      {showWA && (
         <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
           target="_blank" rel="noopener noreferrer"
           style={{ position:"fixed", bottom:24, right:24, zIndex:500, background:"#25d366", color:"white", width:56, height:56,

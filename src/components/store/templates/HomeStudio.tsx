@@ -1,15 +1,19 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import { useCartLogic } from "@/hooks/useCartLogic";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
+import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
+import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
+import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import type { ImageOverride } from "@/types/store-config";
 
@@ -30,6 +34,14 @@ function secMid(ov: ImageOverride | undefined, bg: string): string {
 }
 function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
   if (!ov?.url || ov.overlayType === "none") return null;
+  return <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none",
+    background: ov.overlayType==="light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.5})` }} />;
+}
+// Para fotos simples (hero, departamentos, nosotros, contacto, menú) que
+// siempre muestran una imagen (de stock o subida) — la capa se aplica en
+// cuanto el dueño la elige, aunque todavía no haya subido una foto propia.
+function PhotoOverlay({ ov }: { ov: ImageOverride | undefined }) {
+  if (!ov?.overlayType || ov.overlayType === "none") return null;
   return <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none",
     background: ov.overlayType==="light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.5})` }} />;
 }
@@ -67,8 +79,7 @@ function ProductCard({ product, href, currency, accent, isFavorite, onToggleFavo
           <svg width={15} height={15} viewBox="0 0 24 24" fill={isFavorite ? accent : "none"} stroke={isFavorite ? accent : "#7a6a56"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>
         {product.images[0] ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.images[0]} alt={product.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+          <FadeImage src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} />
         ) : (
           <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#c9bba9", fontSize:13 }}>Sin imagen</div>
         )}
@@ -84,46 +95,56 @@ function ProductCard({ product, href, currency, accent, isFavorite, onToggleFavo
   );
 }
 
+const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
+  ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["pinterest", "Pinterest"],
+];
+function SocialIcon({ network }: { network: string }) {
+  const common = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  switch (network) {
+    case "instagram":
+      return <svg {...common}><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>;
+    case "facebook":
+      return <svg {...common}><path d="M16 3h-2a5 5 0 0 0-5 5v3H6v4h3v8h4v-8h3l1-4h-4V8a1 1 0 0 1 1-1h3z"/></svg>;
+    case "tiktok":
+      return <svg {...common}><path d="M9 12a4 4 0 1 0 4 4V3a5 5 0 0 0 5 5"/></svg>;
+    case "youtube":
+      return <svg {...common}><rect x="2" y="5" width="20" height="14" rx="4"/><polygon points="10 9 16 12 10 15" fill="currentColor" stroke="none"/></svg>;
+    case "pinterest":
+      return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M9 18l2-7"/><path d="M8 11a4 4 0 1 1 7 2c-1 1.5-3 1-3-1"/></svg>;
+    default:
+      return null;
+  }
+}
+
 export default function HomeStudio() {
   const config    = useStoreConfig();
   const pushBell  = usePushBell();
-  const { products, loadingProducts, isWholesale } = useStorefront();
+  const storefront = useStorefront();
+  const { products, loadingProducts, isWholesale } = storefront;
+  const cart = useCartLogic(storefront);
+  const {
+    favorites, favoritesOpen, setFavoritesOpen, favoriteProducts, toggleFavorite,
+    cartCount, setCartOpen, toastMsg,
+  } = cart;
   const { editMode, overrides, setOverride } = useEditContext();
   useScrollReveal();
   const isPreview = !!config?.previewFill;
+  const isOwner   = !!config?.isOwner;
   const accent    = config?.colors.accent ?? "#b5652a";
+  const accentText = getContrastColor(accent) === "light" ? "#111" : "#fff";
+  const cartTheme: CartTheme = { BG:"#faf8f4", S:"#fff", T:"#2c2218", MID:"#9a8a76", border:"#f1ece4", accent, accentText, serif:"Georgia, serif" };
   const currency  = config?.currency ?? "ARS";
   const storeName = config?.storeName ?? "HOME STUDIO";
   const whatsapp  = config?.whatsapp ?? { enabled:false, number:"", message:"" };
+  // En modo edición lo mostramos con solo activarlo, para que se pueda previsualizar
+  // antes de completar el número; en la tienda real hace falta el número sí o sí.
+  const showWA    = whatsapp.enabled && (editMode || !!whatsapp.number);
 
-  const { user, status, signOut } = useAuth();
-  const router = useRouter();
+  const { user, signOut } = useAuth();
   const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
   const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
-  const [favorites,        setFavorites]        = useState<string[]>([]);
-  const [favoritesOpen,    setFavoritesOpen]    = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (status === "loading") return;
-    if (status === "authenticated") {
-      fetch("/api/favoritos")
-        .then(r => r.ok ? r.json() : [])
-        .then((data: { productId: string }[]) => setFavorites(data.map(f => f.productId)))
-        .catch(() => {});
-    } else {
-      try {
-        const savedFavs = localStorage.getItem("storefront_favorites");
-        if (savedFavs) setFavorites(JSON.parse(savedFavs));
-      } catch {}
-    }
-  }, [status]);
-
-  useEffect(() => {
-    if (status === "authenticated") return;
-    try { localStorage.setItem("storefront_favorites", JSON.stringify(favorites)); } catch {}
-  }, [favorites, status]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -132,18 +153,6 @@ export default function HomeStudio() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  async function toggleFavorite(id: string) {
-    if (status !== "authenticated") { router.push(`/login?redirect=/tienda/${config?.slug}`); return; }
-    const wasFavorite = favorites.includes(id);
-    setFavorites(prev => wasFavorite ? prev.filter(f => f !== id) : [...prev, id]);
-    try {
-      await fetch("/api/favoritos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: id }) });
-    } catch {
-      setFavorites(prev => wasFavorite ? [...prev, id] : prev.filter(f => f !== id));
-    }
-  }
-  const favoriteProducts = products.filter(p => favorites.includes(p.id));
 
   const iovr = config?.imageOverrides ?? {};
   const sc   = config?.sectionColors  ?? {};
@@ -183,7 +192,9 @@ export default function HomeStudio() {
   const contactoUrl = iovr["contactoImage"]?.url ?? "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=1400&q=70";
 
   const footerBg    = sc["bgFooter"] ?? "#2c2218";
-  const ftMid       = "rgba(255,255,255,0.55)";
+  const footerImg   = iovr["sectionbg_bgFooter"];
+  const ftText      = secText(footerImg, footerBg);
+  const ftMid       = secMid(footerImg, footerBg);
 
   const navBg       = sc["navBg"] ?? "#faf8f4";
   const navDark     = getContrastColor(navBg) === "light";
@@ -221,7 +232,9 @@ export default function HomeStudio() {
   const featuredProducts = products.filter(p => p.featured);
   const showcased = (featuredProducts.length > 0 ? featuredProducts : products).slice(0, 6);
   const hasMore   = (featuredProducts.length > 0 ? featuredProducts : products).length > 6;
-  const ofertas   = products.filter(p => p.comparePrice && p.comparePrice > p.price).slice(0, 6);
+  const allOfertas = products.filter(p => p.comparePrice && p.comparePrice > p.price);
+  const ofertas    = allOfertas.slice(0, 6);
+  const hasMoreOfertas = allOfertas.length > 6;
   const catalogHref = `/tienda/${config?.slug ?? ""}/productos?t=home-studio${isPreview ? "&from=editor" : ""}`;
 
   return (
@@ -230,7 +243,7 @@ export default function HomeStudio() {
         .hs-nav-links { display:none }
         @media(min-width:768px){ .hs-nav-links { display:flex } .hs-burger { display:none } }
         .hs-mosaic { display:grid; grid-template-columns:1fr; gap:16px }
-        @media(min-width:700px){ .hs-mosaic { grid-template-columns:repeat(4,1fr); grid-auto-rows:160px } }
+        @media(min-width:700px){ .hs-mosaic { grid-template-columns:repeat(4,1fr); grid-auto-rows:160px; grid-auto-flow:dense } }
         .hs-mosaic-big { grid-column:span 2; grid-row:span 2 }
         .hs-mosaic-card { position:relative; border-radius:18px; overflow:hidden; text-decoration:none; display:block; min-height:160px }
         .hs-mosaic-card img { width:100%; height:100%; object-fit:cover; position:absolute; inset:0; transition:transform 0.5s }
@@ -274,8 +287,10 @@ export default function HomeStudio() {
                 background:"#fff", borderRadius:2, boxShadow:"0 18px 44px rgba(44,34,24,0.16)", zIndex:200, border:"1px solid rgba(181,101,41,0.15)",
                 display:"flex", overflow:"hidden", width:460 }}>
                 <div style={{ width:160, flexShrink:0, position:"relative" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={iovr["megaMenuImage"]?.url ?? "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=300&q=70"} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                  <FadeImage src={iovr["megaMenuImage"]?.url ?? "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=300&q=70"} alt="" fill sizes="160px"
+                    style={{ objectFit:"cover", objectPosition:`${iovr["megaMenuImage"]?.posX ?? 50}% ${iovr["megaMenuImage"]?.posY ?? 50}%` }} />
+                  <PhotoOverlay ov={iovr["megaMenuImage"]} />
+                  <BgDragHandle imgKey="megaMenuImage" />
                   <EditableImageButton field="megaMenuImage" label="Imagen del menú Departamentos" />
                 </div>
                 <div style={{ flex:1, padding:"18px 20px", display:"flex", flexDirection:"column", gap:2 }}>
@@ -295,7 +310,7 @@ export default function HomeStudio() {
             <Link href={catalogHref} style={{ background:accent, color:"#fff", padding:"10px 22px", fontSize:12, fontWeight:700, textDecoration:"none", borderRadius:4 }}>Ver catálogo</Link>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            <button onClick={() => setFavoritesOpen(true)}
+            <button onClick={() => { setFavoritesOpen(true); setCartOpen(false); }}
               style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {favorites.length > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
@@ -333,9 +348,10 @@ export default function HomeStudio() {
                 </div>
               )}
             </div>
-            <Link href={catalogHref} aria-label="Carrito" style={{ color:navTextMid, display:"flex", alignItems:"center" }}>
+            <button onClick={() => { setCartOpen(true); setFavoritesOpen(false); }} aria-label="Carrito" style={{ position:"relative", background:"none", border:"none", color:navTextMid, display:"flex", alignItems:"center", cursor:"pointer", padding:0 }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-            </Link>
+              {cartCount > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color:accentText, borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
+            </button>
             <button className="hs-burger" onClick={() => setMenuOpen(m => !m)}
               style={{ background:"none", border:`1px solid ${navBorder}`, color:navText, padding:"7px 11px", cursor:"pointer", fontSize:18 }}>{menuOpen ? "×" : "☰"}</button>
           </div>
@@ -355,8 +371,12 @@ export default function HomeStudio() {
       <section style={{ paddingTop: isPreview ? 0 : (showAnn ? PROMO_H + NAV_H : NAV_H), position:"relative", height: isPreview ? 520 : "88vh", minHeight:480, display:"flex", alignItems:"flex-end", ...secBg(heroImg, heroBg) }}>
         <BgDragHandle imgKey="sectionbg_bgHero" />
         {!heroImg?.url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={heroImgUrl} alt="Ambiente" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+          <>
+            <FadeImage src={heroImgUrl} alt="Ambiente" fill sizes="100vw" priority
+              style={{ objectFit:"cover", objectPosition:`${iovr["heroImage"]?.posX ?? 50}% ${iovr["heroImage"]?.posY ?? 50}%` }} />
+            <PhotoOverlay ov={iovr["heroImage"]} />
+            <BgDragHandle imgKey="heroImage" />
+          </>
         )}
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(20,15,8,0.78), rgba(20,15,8,0.15) 55%)" }} />
         <SectionOverlay ov={heroImg} />
@@ -388,34 +408,50 @@ export default function HomeStudio() {
             <EditableZone field="depHeading" label="Título departamentos">Por dónde empezar</EditableZone>
           </h2>
           <div className="hs-mosaic">
-            {DEPARTAMENTOS.map((d, i) => {
-              const catKey = `dept${i}Cat`;
-              const categoryId = overrides[catKey]?.text ?? d.id;
-              return (
-                <div key={i} style={{ position:"relative" }} className={d.big ? "hs-mosaic-big" : undefined}>
-                  <Link href={`/tienda/${config?.slug ?? ""}/productos?categoria=${categoryId}&t=home-studio${isPreview ? "&from=editor" : ""}`}
-                    className="hs-mosaic-card" style={{ height:"100%" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={iovr[`dept${i}Image`]?.url ?? d.img} alt={d.label} />
-                    <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(20,15,8,0.65), transparent 55%)" }} />
-                    <span style={{ position:"absolute", bottom:16, left:18, color:"#fff", fontSize: d.big ? 18 : 14, fontWeight:600 }}>
-                      <EditableZone field={`dept${i}Label`} label={`Departamento ${i+1} — texto`}>{d.label}</EditableZone>
-                    </span>
-                    <div onClick={e => { e.preventDefault(); e.stopPropagation(); }}>
-                      <EditableImageButton field={`dept${i}Image`} label={`Departamento ${i+1} — imagen`} />
-                    </div>
-                  </Link>
-                  {editMode && (
-                    <select value={categoryId} onClick={e => e.stopPropagation()}
-                      onChange={e => setOverride(catKey, { text: e.target.value })}
-                      title="A qué categoría apunta esta tarjeta"
-                      style={{ position:"absolute", top:8, right:8, zIndex:2, fontSize:11, border:`1px solid ${accent}`, borderRadius:6, background:"#fff", color:"#5c4a36", cursor:"pointer", padding:"3px 6px" }}>
-                      {CATEGORY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                    </select>
-                  )}
-                </div>
-              );
-            })}
+            {(() => {
+              // Para clientes reales, ocultamos los departamentos sin productos (no
+              // tiene sentido mandarlos a un catálogo vacío). Si el departamento que
+              // ocultamos era justo el "grande" del mosaico, promovemos al primero que
+              // quede visible — así el mosaico nunca pierde su jerarquía visual y no
+              // se ve como una fila pareja de tarjetas chicas.
+              const visible = DEPARTAMENTOS.map((d, i) => {
+                const catKey = `dept${i}Cat`;
+                const categoryId = overrides[catKey]?.text ?? d.id;
+                return { d, i, catKey, categoryId };
+              }).filter(({ categoryId }) => editMode || products.some(p => p.category === categoryId));
+              const hasBigVisible = visible.some(({ d }) => d.big);
+              return visible.map(({ d, i, catKey, categoryId }, idx) => {
+                const isBig = d.big || (!hasBigVisible && idx === 0);
+                return (
+                  <div key={i} style={{ position:"relative" }} className={isBig ? "hs-mosaic-big" : undefined}>
+                    <Link href={`/tienda/${config?.slug ?? ""}/productos?categoria=${categoryId}&t=home-studio${isPreview ? "&from=editor" : ""}`}
+                      data-no-unsaved-guard={editMode ? "true" : undefined}
+                      onClick={e => { if (editMode) e.preventDefault(); }}
+                      className="hs-mosaic-card" style={{ height:"100%" }}>
+                      <FadeImage src={iovr[`dept${i}Image`]?.url ?? d.img} alt={d.label} fill sizes="(max-width: 768px) 50vw, 400px"
+                        style={{ objectFit:"cover", objectPosition:`${iovr[`dept${i}Image`]?.posX ?? 50}% ${iovr[`dept${i}Image`]?.posY ?? 50}%` }} />
+                      <PhotoOverlay ov={iovr[`dept${i}Image`]} />
+                      <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(20,15,8,0.65), transparent 55%)" }} />
+                      <span style={{ position:"absolute", bottom:16, left:18, color:"#fff", fontSize: isBig ? 18 : 14, fontWeight:600 }}>
+                        <EditableZone field={`dept${i}Label`} label={`Departamento ${i+1} — texto`}>{d.label}</EditableZone>
+                      </span>
+                      <div onClick={e => { e.preventDefault(); e.stopPropagation(); }}>
+                        <BgDragHandle imgKey={`dept${i}Image`} />
+                        <EditableImageButton field={`dept${i}Image`} label={`Departamento ${i+1} — imagen`} compact />
+                      </div>
+                    </Link>
+                    {editMode && (
+                      <select value={categoryId} onClick={e => e.stopPropagation()}
+                        onChange={e => setOverride(catKey, { text: e.target.value })}
+                        title="A qué categoría apunta esta tarjeta"
+                        style={{ position:"absolute", top:8, left:8, zIndex:2, maxWidth:120, fontSize:11, border:`1px solid ${accent}`, borderRadius:6, background:"#fff", color:"#5c4a36", cursor:"pointer", padding:"3px 6px" }}>
+                        {CATEGORY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      </select>
+                    )}
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
       </section>
@@ -425,14 +461,18 @@ export default function HomeStudio() {
         <BgDragHandle imgKey="sectionbg_bgConfianza" />
         <SectionOverlay ov={trustImg} />
         <EditableSectionBg field="bgConfianza" label="Fondo confianza" />
-        <div style={{ position:"relative", zIndex:1, maxWidth:1000, margin:"0 auto", display:"flex", flexWrap:"wrap", justifyContent:"center", gap:8, fontSize:12.5, color:trustMid, fontWeight:500, letterSpacing:0.3 }}>
-          <EditableZone field="trustLine1" label="Frase de confianza 1">Cuotas con tarjeta</EditableZone>
-          <span style={{ opacity:0.5 }}>·</span>
-          <EditableZone field="trustLine2" label="Frase de confianza 2">Garantía oficial</EditableZone>
-          <span style={{ opacity:0.5 }}>·</span>
-          <EditableZone field="trustLine3" label="Frase de confianza 3">Envíos a todo el país</EditableZone>
-          <span style={{ opacity:0.5 }}>·</span>
-          <EditableZone field="trustLine4" label="Frase de confianza 4">Retiro sin cargo en local</EditableZone>
+        <div style={{ position:"relative", zIndex:1, maxWidth:1000, margin:"0 auto", display:"flex", flexWrap:"wrap", justifyContent:"center", gap:22, fontSize:12.5, color:trustMid, fontWeight:500, letterSpacing:0.3 }}>
+          {[
+            { field:"trustLine1", def:"Cuotas con tarjeta" },
+            { field:"trustLine2", def:"Garantía oficial" },
+            { field:"trustLine3", def:"Envíos a todo el país" },
+            { field:"trustLine4", def:"Retiro sin cargo en local" },
+          ].map(({ field, def }) => (
+            <span key={field} style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ width:5, height:5, borderRadius:"50%", background:accent, flexShrink:0 }} />
+              <EditableZone field={field} label="Frase de confianza">{def}</EditableZone>
+            </span>
+          ))}
         </div>
       </section>
 
@@ -443,9 +483,12 @@ export default function HomeStudio() {
           <SectionOverlay ov={ofertasImg} />
           <EditableSectionBg field="bgOfertas" label="Fondo ofertas" />
           <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
-            <h2 style={{ margin:"0 0 28px", fontSize:"clamp(20px,3vw,26px)", fontWeight:600, color:ofertasText, fontFamily:"Georgia, serif" }}>
-              🌿 <EditableZone field="ofertasHeading" label="Título ofertas">Ofertas de temporada</EditableZone>
-            </h2>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:28, flexWrap:"wrap", gap:12 }}>
+              <h2 style={{ margin:0, fontSize:"clamp(20px,3vw,26px)", fontWeight:600, color:ofertasText, fontFamily:"Georgia, serif" }}>
+                🌿 <EditableZone field="ofertasHeading" label="Título ofertas">Ofertas de temporada</EditableZone>
+              </h2>
+              {hasMoreOfertas && <Link href={`${catalogHref}&oferta=true`} style={{ fontSize:13, fontWeight:600, color:accent, textDecoration:"none" }}>Ver todas las ofertas →</Link>}
+            </div>
             <div className="hs-prod-grid" style={{ display:"grid", gap:32 }}>
               {ofertas.map(p => (
                 <ProductCard key={p.id} product={p} currency={currency} accent={accent}
@@ -490,6 +533,21 @@ export default function HomeStudio() {
         </div>
       </section>
 
+      {/* ── BANNER PROMOCIONAL ── */}
+      <PromoBannerCarousel
+        images={[config?.imageOverrides?.["promoBanner1"], config?.imageOverrides?.["promoBanner2"], config?.imageOverrides?.["promoBanner3"]]}
+        demoImages={[
+          "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1920&q=80",
+          "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1920&q=80",
+          "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=1920&q=80",
+        ]}
+        intervalMs={config?.bannerInterval ?? 4000}
+        editMode={editMode}
+        isPreview={isPreview}
+        accent={accent}
+        bg="#2c2218"
+      />
+
       {/* ── MAYORISTA ── */}
       {isWholesale && (
         <section data-reveal style={{ background:"#f0ebe2", borderTop:"1px solid rgba(181,101,41,0.15)", borderBottom:"1px solid rgba(181,101,41,0.15)" }}>
@@ -513,9 +571,11 @@ export default function HomeStudio() {
         <SectionOverlay ov={nosotrosImg} />
         <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
         <div className="hs-about" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"grid", gap:56, alignItems:"center" }}>
-          <div style={{ borderRadius:8, overflow:"hidden", aspectRatio:"4/3" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={nosotrosUrl} alt="Nuestro espacio" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+          <div style={{ position:"relative", borderRadius:8, overflow:"hidden", aspectRatio:"4/3" }}>
+            <FadeImage src={nosotrosUrl} alt="Nuestro espacio" fill sizes="(max-width: 768px) 100vw, 50vw"
+              style={{ objectFit:"cover", objectPosition:`${iovr["nosotrosImage"]?.posX ?? 50}% ${iovr["nosotrosImage"]?.posY ?? 50}%` }} />
+            <PhotoOverlay ov={iovr["nosotrosImage"]} />
+            <BgDragHandle imgKey="nosotrosImage" />
             <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
           </div>
           <div>
@@ -531,7 +591,7 @@ export default function HomeStudio() {
             <p style={{ margin:"0 0 28px", fontSize:14.5, color:nosMid, lineHeight:1.9 }}>
               <EditableZone field="nosotrosP2" label="Párrafo 2">Te acompañamos en el proceso, desde elegir el sillón perfecto hasta renovar tu cocina, con asesoramiento personalizado y cuotas accesibles.</EditableZone>
             </p>
-            {whatsapp.enabled && whatsapp.number && (
+            {showWA && (
               <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ display:"inline-flex", alignItems:"center", gap:8, background:"#25d366", color:"white", textDecoration:"none", padding:"13px 28px", borderRadius:4, fontWeight:600, fontSize:14 }}>
@@ -545,8 +605,12 @@ export default function HomeStudio() {
       {/* ── CONTACTO — fondo de imagen cálida ── */}
       <section id="contacto" data-reveal style={{ position:"relative", padding:"80px 24px", overflow:"hidden" }}>
         {!contactoImg?.url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={contactoUrl} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+          <>
+            <FadeImage src={contactoUrl} alt="" fill sizes="100vw"
+              style={{ objectFit:"cover", objectPosition:`${iovr["contactoImage"]?.posX ?? 50}% ${iovr["contactoImage"]?.posY ?? 50}%` }} />
+            <PhotoOverlay ov={iovr["contactoImage"]} />
+            <BgDragHandle imgKey="contactoImage" />
+          </>
         )}
         <div style={{ position:"absolute", inset:0, background:"rgba(20,15,8,0.72)" }} />
         <BgDragHandle imgKey="sectionbg_bgContacto" />
@@ -564,7 +628,7 @@ export default function HomeStudio() {
               <EditableZone field="contactSubtext" label="Subtítulo contacto">Contanos qué estás buscando y te ayudamos a encontrarlo.</EditableZone>
             </p>
             <Link href={catalogHref} style={{ display:"inline-flex", color:"#e8cba8", fontWeight:700, fontSize:13, textDecoration:"none", fontFamily:"Georgia, serif" }}>Ver catálogo completo →</Link>
-            {whatsapp.enabled && whatsapp.number && (
+            {showWA && (
               <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, marginTop:16, color:"#6ee7a0", textDecoration:"none", fontWeight:600, fontSize:13 }}>
@@ -573,24 +637,44 @@ export default function HomeStudio() {
             )}
           </div>
           <div style={{ background:"#fff", borderRadius:4, padding:28 }}>
-            <ContactForm storeId={config?.storeId} accent={accent} textColor="#2c2218" mutedColor="#9a8a76" radius={4} />
+            <ContactForm storeId={config?.storeId} accent={accent} textColor="#2c2218" mutedColor="#9a8a76" radius={4} isPreview={isPreview} />
           </div>
         </div>
       </section>
 
-      <footer style={{ background:footerBg, padding:"32px 24px", textAlign:"center" }}>
-        <p style={{ margin:"0 0 6px", fontWeight:600, fontSize:15, color:"#e8cba8", fontFamily:"Georgia, serif" }}>{storeName}</p>
+      <footer style={{ position:"relative", ...secBg(footerImg, footerBg), color:ftText, padding:"32px 24px", textAlign:"center" }}>
+        <BgDragHandle imgKey="sectionbg_bgFooter" />
+        <SectionOverlay ov={footerImg} />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <div style={{ position:"relative", zIndex:1 }}>
+        <p style={{ margin:"0 0 6px", fontWeight:600, fontSize:15, color:accent, fontFamily:"Georgia, serif" }}>{storeName}</p>
         <p style={{ margin:"0 0 12px", fontSize:11, color:ftMid }}>© {new Date().getFullYear()} {storeName}. Todos los derechos reservados.</p>
+        {(editMode || SOCIAL_NETWORKS.some(([key]) => config?.socialLinks?.[key])) && (
+          <div style={{ display:"flex", justifyContent:"center", gap:10, marginBottom:14 }}>
+            {SOCIAL_NETWORKS.map(([key, label]) => {
+              const url = config?.socialLinks?.[key];
+              if (!editMode && !url) return null;
+              return (
+                <a key={key} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener noreferrer" aria-label={label}
+                  onClick={e => { if (!url) e.preventDefault(); }}
+                  style={{ width:30, height:30, borderRadius:"50%", border:`1px solid ${ftMid}`, color:ftMid, display:"flex", alignItems:"center", justifyContent:"center", textDecoration:"none", opacity: url ? 1 : 0.35 }}>
+                  <SocialIcon network={key} />
+                </a>
+              );
+            })}
+          </div>
+        )}
         <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
           {[["Política de devoluciones","devoluciones"],["Política de envíos","envios"],["Términos y condiciones","terminos"]].map(([label, tipo]) => (
             <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:ftMid, opacity:0.7, textDecoration:"none" }}>{label}</a>
           ))}
-          {!editMode && !isPreview && (
+          {!editMode && (
             <button onClick={() => setShowReport(true)}
               style={{ fontSize:10, color:ftMid, opacity:0.7, background:"none", border:"none", cursor:"pointer", padding:0, textDecoration:"underline" }}>
               Reportar tienda
             </button>
           )}
+        </div>
         </div>
       </footer>
 
@@ -614,8 +698,11 @@ export default function HomeStudio() {
               </div>
             ) : favoriteProducts.map(product => (
               <div key={product.id} style={{ display:"flex", gap:14, padding:"14px 0", borderBottom:"1px solid #f5f1ea" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={product.images[0] ?? ""} alt="" style={{ width:80, height:60, objectFit:"cover", flexShrink:0, background:"#f0ebe2" }} />
+                {product.images[0] ? (
+                  <FadeImage src={product.images[0]} alt="" width={80} height={60} style={{ objectFit:"cover", flexShrink:0, background:"#f0ebe2" }} />
+                ) : (
+                  <div style={{ width:80, height:60, flexShrink:0, background:"#f0ebe2" }} />
+                )}
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:14, fontWeight:500, margin:"0 0 4px", color:"#2c2218" }}>{product.name}</p>
                   <p style={{ fontSize:13, color:accent, fontWeight:600, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>
@@ -636,7 +723,16 @@ export default function HomeStudio() {
         </div>
       </div>
 
-      {!editMode && whatsapp.enabled && whatsapp.number && (
+      <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={whatsapp} />
+      <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} />
+
+      {toastMsg && (
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#2c2218", color:"#fff", padding:"12px 20px", fontSize:13, fontWeight:600, zIndex:600, boxShadow:"0 4px 20px rgba(0,0,0,0.35)", whiteSpace:"nowrap" }}>
+          {toastMsg}
+        </div>
+      )}
+
+      {showWA && (
         <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
           target="_blank" rel="noopener noreferrer"
           style={{ position:"fixed", bottom:24, right:24, zIndex:500, background:"#25d366", color:"white", width:56, height:56,

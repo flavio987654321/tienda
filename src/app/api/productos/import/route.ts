@@ -11,7 +11,41 @@ type CsvRow = {
   descripcion?: string;
   estado?: string;
   imagenes?: string;
+  marca?: string;
+  modelo?: string;
+  version?: string;
+  anio?: string;
+  km?: string;
+  motor?: string;
+  combustible?: string;
+  transmision?: string;
+  traccion?: string;
+  carroceria?: string;
+  color?: string;
+  puertas?: string;
+  ciudad?: string;
+  condicion?: string;
 };
+
+// Mismas etiquetas (Título Case) que usa el formulario manual para Autos y
+// motos (storeTypes.ts → AUTOS.extraFields) — así el dato queda guardado con
+// la misma key que la página de detalle del vehículo espera mostrar.
+const VEHICLE_ATTR_LABELS: [keyof CsvRow, string][] = [
+  ["marca", "Marca"], ["modelo", "Modelo"], ["version", "Versión"], ["anio", "Año"],
+  ["km", "Kilómetros"], ["motor", "Motor"], ["combustible", "Combustible"],
+  ["transmision", "Transmisión"], ["traccion", "Tracción"], ["carroceria", "Carrocería"],
+  ["color", "Color"], ["puertas", "Puertas"], ["ciudad", "Ciudad / Zona"],
+];
+
+function buildVehicleAttributes(row: CsvRow): { key: string; value: string }[] {
+  const attrs: { key: string; value: string }[] = [];
+  if (row.condicion?.trim()) attrs.push({ key: "Condición", value: row.condicion.trim() });
+  for (const [field, label] of VEHICLE_ATTR_LABELS) {
+    const value = (row[field] as string | undefined)?.trim();
+    if (value) attrs.push({ key: label, value });
+  }
+  return attrs;
+}
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -28,6 +62,10 @@ export async function POST(req: NextRequest) {
   const rows: CsvRow[] = body.rows;
   if (rows.length === 0) return NextResponse.json({ error: "El CSV no tiene filas" }, { status: 400 });
   if (rows.length > 500) return NextResponse.json({ error: "Máximo 500 productos por importación" }, { status: 400 });
+
+  // El tipo de tienda se lee del lado del servidor (no de lo que mande el
+  // cliente) para decidir si hay que armar los atributos de vehículo.
+  const isAutos = store.tipoTienda === "AUTOS";
 
   let created = 0;
   const errors: { row: number; error: string }[] = [];
@@ -48,6 +86,7 @@ export async function POST(req: NextRequest) {
       ? row.imagenes.split("|").map(u => u.trim()).filter(Boolean)
       : [];
     const isActive = (row.estado ?? "ACTIVO").toUpperCase() !== "OCULTO";
+    const attributes = isAutos ? buildVehicleAttributes(row) : [];
 
     try {
       await prisma.product.create({
@@ -56,12 +95,12 @@ export async function POST(req: NextRequest) {
           description: row.descripcion?.trim() ?? null,
           price: precio,
           comparePrice: precioComp,
-          category: row.categoria?.trim() || "general",
+          category: row.categoria?.trim() || (isAutos ? "autos" : "general"),
           subcategory: row.subcategoria?.trim() || null,
           tags: "[]",
           images: JSON.stringify(images),
           reelUrls: "[]",
-          attributes: "[]",
+          attributes: JSON.stringify(attributes),
           isActive,
           storeId: store.id,
         },

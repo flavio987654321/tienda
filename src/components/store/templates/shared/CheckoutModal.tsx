@@ -1,0 +1,217 @@
+"use client";
+import { HandHeart } from "lucide-react";
+import type { useCartLogic } from "@/hooks/useCartLogic";
+import type { CartTheme } from "./CartDrawer";
+import { FadeImage } from "./FadeImage";
+
+// Checkout completo (datos del comprador, envío, pago, cupón, donación opcional
+// y términos) compartido por todos los templates de un mismo tipo de negocio.
+// Mismo motivo que CartDrawer: un solo lugar para arreglar/mantener en vez de
+// una copia por template.
+export function CheckoutModal({
+  cart, theme, isPreview,
+}: {
+  cart: ReturnType<typeof useCartLogic>;
+  theme: CartTheme;
+  isPreview: boolean;
+}) {
+  const { BG, S, T, MID, border, accent, accentText, serif } = theme;
+  const {
+    checkoutOpen, setCheckoutOpen, checkoutStatus, setCheckoutStatus, checkoutError,
+    cartItems, updateQty, buyerForm, setBuyerForm, rememberData, setRememberData,
+    envioOptions, envioId, setEnvioId, pagoOptions, pagoId, setPagoId,
+    notas, setNotas, coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
+    handleApplyCoupon, cartTotal, couponDiscount, envioPrice, envioCoordinar, orderTotal,
+    canastaDisponible, donationEnabled, setDonationEnabled, donationAmount, setDonationAmount,
+    acceptedTerms, setAcceptedTerms, handlePlaceOrder, fmt, fmtEnvioPrice,
+  } = cart;
+
+  if (!checkoutOpen) return null;
+
+  const inputStyle: React.CSSProperties = {
+    display:"block", width:"100%", marginBottom:10, background:S, border:`1px solid ${border}`,
+    color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box", borderRadius:6,
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20010 : 300, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
+      <div onClick={() => setCheckoutOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.6)", backdropFilter:"blur(4px)" }} />
+      <div style={{ position:"relative", width:"min(480px, 100vw)", height:"100vh", background:BG, display:"flex", flexDirection:"column", overflowY:"auto", borderLeft:`1px solid ${border}` }}>
+        <div style={{ padding:"24px 28px 16px", borderBottom:`1px solid ${border}`, display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexShrink:0 }}>
+          <div>
+            <p style={{ fontFamily: serif ?? "inherit", fontSize:20, margin:"0 0 4px", color:T }}>Checkout</p>
+            <p style={{ fontSize:11, opacity:0.5, margin:0, color:T }}>Completá tus datos para finalizar</p>
+          </div>
+          <button onClick={() => setCheckoutOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
+        </div>
+
+        {checkoutStatus === "done" ? (
+          <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:48, textAlign:"center" }}>
+            <div style={{ width:64, height:64, borderRadius:"50%", border:`2px solid ${accent}`, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:24 }}>
+              <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <p style={{ fontFamily: serif ?? "inherit", fontSize:22, color:T, marginBottom:12 }}>¡Pedido recibido!</p>
+            <p style={{ fontSize:13, opacity:0.6, lineHeight:1.8, marginBottom:16, color:T }}>Te enviamos un email con el resumen. El vendedor te contactará para coordinar el envío.</p>
+            <p style={{ fontSize:11, opacity:0.45, lineHeight:1.7, marginBottom:32, color:T }}>¿Algún inconveniente con tu pedido? Contactá directamente al vendedor. Tenés 10 días corridos para cancelar (Ley 24.240).</p>
+            <button onClick={() => { setCheckoutOpen(false); setCheckoutStatus("idle"); }}
+              style={{ background:accent, color:accentText, border:"none", padding:"14px 32px", fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
+              Seguir comprando
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handlePlaceOrder} style={{ flex:1, display:"flex", flexDirection:"column" }}>
+            <div style={{ flex:1, overflowY:"auto", padding:"24px 28px" }}>
+
+              <div style={{ marginBottom:28 }}>
+                {cartItems.map((item, idx) => (
+                  <div key={idx} style={{ display:"flex", gap:14, padding:"12px 0", borderBottom:`1px solid ${border}` }}>
+                    {item.product.images[0] ? (
+                      <FadeImage src={item.product.images[0]} alt="" width={56} height={56} style={{ objectFit:"cover", flexShrink:0, borderRadius:6 }} />
+                    ) : (
+                      <div style={{ width:56, height:56, flexShrink:0, borderRadius:6, background:S }} />
+                    )}
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500, color:T }}>{item.product.name}</p>
+                      {(item.size || item.color) && (
+                        <p style={{ fontSize:11, opacity:0.5, margin:"0 0 6px", color:T }}>{[item.color, item.size].filter(Boolean).join(" · ")}</p>
+                      )}
+                      <p style={{ fontSize:13, color:accent, fontWeight:700, margin:0 }}>{fmt(item.product.price)}</p>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}`, height:28, flexShrink:0 }}>
+                      <button type="button" onClick={() => updateQty(idx, -1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>−</button>
+                      <span style={{ width:24, textAlign:"center", fontSize:13, color:T }}>{item.qty}</span>
+                      <button type="button" onClick={() => updateQty(idx, 1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>+</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p style={{ fontSize:13, fontWeight:700, color:T, marginBottom:14 }}>Datos del comprador</p>
+              {([["nombre","Nombre y apellido","text"],["email","Email","email"],["telefono","Teléfono","tel"],["direccion","Dirección","text"]] as const).map(([field, ph, type]) => (
+                <input key={field} required type={type} placeholder={ph}
+                  value={buyerForm[field]} onChange={e => setBuyerForm(f => ({ ...f, [field]: e.target.value }))}
+                  style={inputStyle} />
+              ))}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
+                {([["ciudad","Ciudad"],["provincia","Provincia"]] as const).map(([field, ph]) => (
+                  <input key={field} required placeholder={ph}
+                    value={buyerForm[field]} onChange={e => setBuyerForm(f => ({ ...f, [field]: e.target.value }))}
+                    style={{ ...inputStyle, marginBottom:0 }} />
+                ))}
+              </div>
+              <input placeholder="Código postal" value={buyerForm.cp} onChange={e => setBuyerForm(f => ({ ...f, cp: e.target.value }))} style={inputStyle} />
+              <label style={{ display:"flex", alignItems:"center", gap:10, fontSize:12, opacity:0.7, cursor:"pointer", marginBottom:28, color:T }}>
+                <input type="checkbox" checked={rememberData} onChange={e => setRememberData(e.target.checked)} style={{ accentColor:accent }} />
+                Recordar mis datos para la próxima compra
+              </label>
+
+              <p style={{ fontSize:13, fontWeight:700, color:T, marginBottom:14 }}>Envío</p>
+              <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:28 }}>
+                {envioOptions.map(opt => (
+                  <label key={opt.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", border:`1px solid ${envioId===opt.id ? accent : border}`, cursor:"pointer", borderRadius:6 }}>
+                    <span style={{ display:"flex", alignItems:"center", gap:12 }}>
+                      <input type="radio" name="envio" value={opt.id} checked={envioId===opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor:accent }} />
+                      <span style={{ fontSize:13, color:T }}>{opt.label}</span>
+                    </span>
+                    <span style={{ fontSize:13, fontWeight:700, color: (opt.isPickup || (!opt.coordinar && opt.price === 0)) ? accent : T }}>{fmtEnvioPrice(opt, fmt)}</span>
+                  </label>
+                ))}
+              </div>
+
+              <p style={{ fontSize:13, fontWeight:700, color:T, marginBottom:14 }}>Pago</p>
+              <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:28 }}>
+                {pagoOptions.map(opt => (
+                  <label key={opt.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", border:`1px solid ${pagoId===opt.id ? accent : border}`, cursor:"pointer", borderRadius:6 }}>
+                    <input type="radio" name="pago" value={opt.id} checked={pagoId===opt.id} onChange={() => setPagoId(opt.id)} style={{ accentColor:accent }} />
+                    <span style={{ fontSize:13, color:T }}>{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+
+              <textarea placeholder="Notas para la tienda" rows={3} value={notas} onChange={e => setNotas(e.target.value)}
+                style={{ ...inputStyle, marginBottom:20, resize:"vertical", fontFamily:"inherit" }} />
+
+              <div style={{ display:"flex", gap:0, marginBottom:28 }}>
+                <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
+                  style={{ flex:1, background:S, border:`1px solid ${border}`, borderRight:"none", color:T, padding:"11px 14px", fontSize:11, letterSpacing:1, outline:"none", borderRadius:"6px 0 0 6px" }} />
+                <button type="button" onClick={handleApplyCoupon} style={{ background:"transparent", border:`1px solid ${border}`, color:accent, padding:"11px 18px", fontSize:11, letterSpacing:1, cursor:"pointer", borderRadius:"0 6px 6px 0" }}>Aplicar</button>
+              </div>
+              {couponError && <p style={{ fontSize:11, color:"#f87171", marginTop:-20, marginBottom:8 }}>{couponError}</p>}
+              {appliedCoupon && (
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"8px 12px", background:`${accent}15`, border:`1px solid ${accent}40`, borderRadius:6 }}>
+                  <span style={{ fontSize:12, color:accent }}>Cupón {appliedCoupon.code} aplicado</span>
+                  <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:12 }}>✕</button>
+                </div>
+              )}
+
+              <div style={{ borderTop:`1px solid ${border}`, paddingTop:20 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                  <span style={{ fontSize:13, opacity:0.6, color:T }}>Subtotal</span>
+                  <span style={{ fontSize:13, opacity:0.6, color:T }}>{fmt(cartTotal)}</span>
+                </div>
+                {couponDiscount > 0 && (
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                    <span style={{ fontSize:13, color:accent }}>Descuento cupón</span>
+                    <span style={{ fontSize:13, color:accent }}>-{fmt(couponDiscount)}</span>
+                  </div>
+                )}
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:16 }}>
+                  <span style={{ fontSize:13, opacity:0.6, color:T }}>Envío</span>
+                  <span style={{ fontSize:13, opacity:0.6, color:T }}>{envioCoordinar ? "A coordinar" : envioPrice === 0 ? "Gratis" : fmt(envioPrice)}</span>
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between" }}>
+                  <span style={{ fontSize:16, fontWeight:700, color:T }}>Total</span>
+                  <span style={{ fontSize:20, fontWeight:800, color:accent }}>{fmt(orderTotal)}</span>
+                </div>
+              </div>
+
+              {canastaDisponible && (
+                <div style={{ marginTop:20, paddingTop:16, borderTop:`1px solid ${border}` }}>
+                  <label style={{ display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
+                    <span style={{ fontSize:13, color:T, display:"flex", alignItems:"center", gap:6 }}><HandHeart size={16} style={{ color:accent }} /> ¿Donar?</span>
+                    <input type="checkbox" checked={donationEnabled} onChange={e => setDonationEnabled(e.target.checked)} style={{ accentColor:accent }} />
+                  </label>
+                  <p style={{ fontSize:10, opacity:0.6, marginTop:6, lineHeight:1.5, color:T }}>
+                    Sumá un aporte aparte para completar una canasta de alimentos para un vecino — se paga por separado, no afecta tu compra.{" "}
+                    <a href="/comunidad/campana" target="_blank" rel="noopener" style={{ color:accent, textDecoration:"underline" }}>¿Cómo funciona?</a>
+                  </p>
+                  {donationEnabled && (
+                    <div style={{ marginTop:10 }}>
+                      <input type="number" min={1000} value={donationAmount} onChange={e => setDonationAmount(Number(e.target.value) || 0)}
+                        style={{ width:"100%", background:S, border:`1px solid ${border}`, color:T, padding:"10px 14px", fontSize:13, outline:"none", borderRadius:6 }} />
+                      <p style={{ fontSize:10, opacity:0.6, marginTop:6, color:T }}>Mínimo $1.000.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {checkoutError && <p style={{ fontSize:12, color:"#f87171", marginTop:12 }}>{checkoutError}</p>}
+            </div>
+
+            <div style={{ padding:"16px 28px 28px", borderTop:`1px solid ${border}`, flexShrink:0 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, padding:"10px 14px", border:`1px solid ${border}`, borderRadius:6 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color:"#4ade80", flexShrink:0 }}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span style={{ fontSize:11, color:T, opacity:0.65, lineHeight:1.5 }}>
+                  Pago seguro procesado por <strong>MercadoPago</strong> · SSL cifrado
+                </span>
+              </div>
+              <label style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:14, cursor:"pointer" }}>
+                <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} style={{ marginTop:2, accentColor:accent, flexShrink:0 }} />
+                <span style={{ fontSize:11, color:T, opacity:0.7, lineHeight:1.6 }}>
+                  Acepto los{" "}
+                  <a href="/terminos?role=buyer" target="_blank" rel="noopener" style={{ color:accent, textDecoration:"underline" }}>Términos y Condiciones</a>
+                  {" "}y la{" "}
+                  <a href="/privacidad?role=buyer" target="_blank" rel="noopener" style={{ color:accent, textDecoration:"underline" }}>Política de Privacidad</a>
+                </span>
+              </label>
+              <button type="submit" disabled={checkoutStatus === "placing" || !acceptedTerms}
+                style={{ width:"100%", background:accent, color:accentText, border:"none", padding:"15px", fontSize:12, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor: (!acceptedTerms || checkoutStatus === "placing") ? "not-allowed" : "pointer", opacity: (!acceptedTerms || checkoutStatus === "placing") ? 0.45 : 1 }}>
+                {checkoutStatus === "placing" ? "Procesando..." : "Crear pedido"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}

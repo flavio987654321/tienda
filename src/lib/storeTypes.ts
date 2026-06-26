@@ -15,18 +15,32 @@ export interface ExtraField {
   placeholder?: string;
   type?: "text" | "number";
   options?: string[];
+  // Aclaración opcional para campos que pueden confundirse con otro ya
+  // visible en el formulario (ej. Carrocería vs. Subcategoría).
+  tip?: string;
 }
 
 export interface StoreTypeConfig {
   id: StoreType;
   label: string;
   emoji: string;
+  // Frase corta que ayuda a decidir si el rubro de uno encaja en este tipo
+  // de tienda — se muestra al elegir el tipo, antes de los ejemplos de categorías.
+  description: string;
   comingSoon?: boolean;
   supportsWholesale: boolean;
   supportsCondicion: boolean;
   hideVariants: boolean;
   hideTags: boolean;
   hideGender?: boolean;
+  // Oculta la sección "Envío" (peso/dimensiones del paquete) cuando el producto
+  // no se manda por correo — ej. un auto o una moto se entregan en persona.
+  hideShipping?: boolean;
+  // Muestra el bloque "Historial de servicios" y usa el texto "Condición del
+  // vehículo" en vez de "Condición del producto". Explícito (no inferido de
+  // hideVariants) para que un futuro rubro con hideVariants:true no herede
+  // por error textos/funciones pensadas para vehículos.
+  showServiceHistory?: boolean;
   supportsFeatured?: boolean;
   condicionOptions?: string[];
   defaultVariantName: string;
@@ -37,6 +51,10 @@ export interface StoreTypeConfig {
   categorias: string[];
   subcategorias: Record<string, string[]>;
   extraFields: ExtraField[];
+  // Specs propias de cada subcategoría (ej: "Pulgadas" para tvs, "RAM" para notebooks).
+  // Se suman a extraFields cuando el vendedor elige esa subcategoría — así una
+  // heladera y un celular no piden los mismos campos.
+  extraFieldsByCategory?: Record<string, ExtraField[]>;
 }
 
 export const STORE_TYPES: StoreTypeConfig[] = [
@@ -44,6 +62,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "ROPA",
     label: "Ropa y moda",
     emoji: "👗",
+    description: "Indumentaria, calzado y accesorios de moda: remeras, pantalones, vestidos, zapatillas, carteras, joyas. Tiene talles y colores.",
     supportsWholesale: true,
     supportsCondicion: false,
     hideVariants: false,
@@ -76,10 +95,13 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "AUTOS",
     label: "Autos y motos",
     emoji: "🚗",
+    description: "Venta de autos, motos, camionetas (0km o usados) y repuestos/accesorios para vehículos. No usa carrito — los interesados consultan por cada unidad.",
     supportsWholesale: false,
     supportsCondicion: true,
     hideVariants: true,
     hideTags: true,
+    hideShipping: true,
+    showServiceHistory: true,
     checkoutMode: "inquiry" as const,
     defaultVariantName: "Color",
     variantValuePlaceholder: "Rojo, Blanco, Negro",
@@ -105,7 +127,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
       { key: "combustible",label: "Combustible", options: ["Nafta", "Diesel", "GNC", "Eléctrico", "Híbrido"] },
       { key: "transmision",label: "Transmisión", options: ["Manual", "Automática", "CVT", "Secuencial"] },
       { key: "traccion",   label: "Tracción",    options: ["4x2", "4x4", "AWD", "FWD", "RWD"] },
-      { key: "carroceria", label: "Carrocería",  options: ["Sedán", "SUV", "Pickup", "Hatchback", "Coupé", "Convertible", "Van / Minivan", "Naked", "Scooter", "Trail / Enduro", "Cuatriciclo"] },
+      { key: "carroceria", label: "Carrocería",  options: ["Sedán", "SUV", "Pickup", "Hatchback", "Coupé", "Convertible", "Van / Minivan", "Naked", "Scooter", "Trail / Enduro", "Cuatriciclo"], tip: "Puede repetir lo que ya elegiste en Subcategoría — usalo si querés ser más específico (ej: subcategoría \"autos\" + carrocería \"SUV\")." },
       { key: "color",      label: "Color",       placeholder: "Blanco, Negro, Gris, Rojo..." },
       { key: "puertas",    label: "Puertas",     options: ["2", "3", "4", "5"] },
       { key: "ciudad",     label: "Ciudad / Zona", placeholder: "Ej: Capital Federal, GBA Norte, Rosario..." },
@@ -115,6 +137,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "HOGAR_TECH",
     label: "Hogar y Tecnología",
     emoji: "🏠",
+    description: "Electrodomésticos, celulares, informática, audio/video, muebles y artículos para el hogar y jardín.",
     supportsWholesale: true,
     supportsCondicion: true,
     condicionOptions: ["Nuevo", "Usado", "Reacondicionado"],
@@ -139,22 +162,170 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     subcategorias: {
       electrodomesticos: ["climatizacion", "refrigeracion", "agua-caliente", "cocina", "lavado-y-secado", "repuestos-y-accesorios"],
       "pequenos-electrodomesticos": ["desayuno", "ayudantes-de-cocina", "limpieza", "repuestos-y-accesorios"],
-      "celulares-y-accesorios": ["smartphones", "fundas", "cargadores", "auriculares-celular", "repuestos"],
+      "celulares-y-accesorios": ["smartphones", "wearables", "fundas", "cargadores", "auriculares-celular", "repuestos"],
       "informatica-y-gaming": ["pc", "notebooks", "impresoras", "monitores", "perifericos", "consolas", "videojuegos", "accesorios-gaming"],
       "audio-imagen-y-video": ["tvs", "camaras", "parlantes", "auriculares", "soundbars", "accesorios"],
       "muebles-y-colchones": ["mesas", "sillas", "sillones", "escritorios", "estantes", "colchones", "sommiers"],
-      "casa-y-jardin": ["cuadros", "lamparas", "espejos", "plantas-deco", "muebles-de-jardin", "herramientas-de-jardin"],
+      "casa-y-jardin": ["cuadros", "lamparas", "espejos", "plantas-deco", "textiles-hogar", "muebles-de-jardin", "herramientas-de-jardin"],
     },
     extraFields: [
       { key: "marca", label: "Marca", placeholder: "Samsung, LG, Whirlpool, Drean..." },
       { key: "modelo", label: "Modelo", placeholder: "RS27T5200S9, S4-W12JARPA..." },
       { key: "garantia", label: "Garantía", placeholder: "6 meses, 12 meses, sin garantía..." },
     ],
+    extraFieldsByCategory: {
+      // Electrodomésticos
+      refrigeracion: [
+        { key: "capacidad", label: "Capacidad (litros)", placeholder: "380" },
+        { key: "tipoFrio", label: "Tipo de frío", options: ["No Frost", "Frío directo"] },
+      ],
+      climatizacion: [
+        { key: "capacidadBtu", label: "Capacidad (BTU)", placeholder: "3000, 4500, 6000..." },
+        { key: "tipoClima", label: "Tipo", options: ["Split", "Ventana/Portátil"] },
+      ],
+      cocina: [
+        { key: "tipoCocina", label: "Tipo", placeholder: "Anafe, horno, microondas, cocina..." },
+        { key: "potencia", label: "Potencia (W)", placeholder: "1000" },
+      ],
+      "lavado-y-secado": [
+        { key: "capacidadKg", label: "Capacidad (kg)", placeholder: "8" },
+        { key: "carga", label: "Tipo de carga", options: ["Frontal", "Superior"] },
+      ],
+      "agua-caliente": [
+        { key: "capacidad", label: "Capacidad (litros)", placeholder: "80" },
+        { key: "tipoAgua", label: "Tipo", options: ["Termotanque", "Calefón"] },
+      ],
+      // Pequeños electrodomésticos
+      desayuno: [
+        { key: "potencia", label: "Potencia (W)", placeholder: "800" },
+      ],
+      "ayudantes-de-cocina": [
+        { key: "potencia", label: "Potencia (W)", placeholder: "600" },
+        { key: "capacidad", label: "Capacidad", placeholder: "1.5 L, 5 L..." },
+      ],
+      limpieza: [
+        { key: "potencia", label: "Potencia (W)", placeholder: "1800" },
+      ],
+      // Celulares y accesorios
+      smartphones: [
+        { key: "almacenamiento", label: "Almacenamiento", placeholder: "128GB, 256GB..." },
+        { key: "ram", label: "Memoria RAM", placeholder: "8GB" },
+        { key: "pantalla", label: "Pantalla", placeholder: "6.1\" AMOLED" },
+      ],
+      fundas: [
+        { key: "compatible", label: "Compatible con", placeholder: "iPhone 13, Samsung A54..." },
+      ],
+      cargadores: [
+        { key: "compatible", label: "Compatible con", placeholder: "USB-C, Lightning, Universal..." },
+        { key: "potencia", label: "Potencia (W)", placeholder: "20, 65..." },
+      ],
+      "auriculares-celular": [
+        { key: "conectividad", label: "Conectividad", options: ["Bluetooth", "Cable 3.5mm", "USB-C"] },
+      ],
+      wearables: [
+        { key: "pantalla", label: "Pantalla", placeholder: "AMOLED 1.4\", LCD..." },
+        { key: "autonomia", label: "Autonomía de batería", placeholder: "7 días, 24 horas..." },
+        { key: "resistenciaAgua", label: "Resistencia al agua", placeholder: "5 ATM, IP68..." },
+      ],
+      // Informática y gaming
+      impresoras: [
+        { key: "tipoImpresora", label: "Tipo", options: ["Láser", "Inyección de tinta", "Multifunción"] },
+      ],
+      perifericos: [
+        { key: "conectividad", label: "Conectividad", options: ["USB", "Bluetooth", "Inalámbrico"] },
+      ],
+      "accesorios-gaming": [
+        { key: "compatible", label: "Compatible con", placeholder: "PS5, Xbox, PC..." },
+      ],
+      notebooks: [
+        { key: "procesador", label: "Procesador", placeholder: "Ryzen 5, Core i5..." },
+        { key: "ram", label: "Memoria RAM", placeholder: "16GB" },
+        { key: "almacenamiento", label: "Almacenamiento", placeholder: "512GB SSD" },
+      ],
+      pc: [
+        { key: "procesador", label: "Procesador", placeholder: "Ryzen 5, Core i5..." },
+        { key: "ram", label: "Memoria RAM", placeholder: "16GB" },
+        { key: "almacenamiento", label: "Almacenamiento", placeholder: "512GB SSD" },
+      ],
+      monitores: [
+        { key: "pulgadas", label: "Pulgadas", placeholder: "24, 27, 32..." },
+        { key: "resolucion", label: "Resolución", placeholder: "Full HD, 4K..." },
+      ],
+      consolas: [
+        { key: "almacenamiento", label: "Almacenamiento", placeholder: "512GB, 1TB..." },
+      ],
+      // Audio, imagen y video
+      tvs: [
+        { key: "pulgadas", label: "Pulgadas", placeholder: "43, 50, 55, 65..." },
+        { key: "resolucion", label: "Resolución", options: ["HD", "Full HD", "4K UHD", "8K"] },
+        { key: "sistemaOperativo", label: "Sistema operativo", placeholder: "Android TV, Google TV, Roku..." },
+      ],
+      parlantes: [
+        { key: "conectividad", label: "Conectividad", placeholder: "Bluetooth, Wi-Fi..." },
+        { key: "potencia", label: "Potencia (W)", placeholder: "20" },
+      ],
+      soundbars: [
+        { key: "conectividad", label: "Conectividad", placeholder: "Bluetooth, HDMI, óptico..." },
+      ],
+      camaras: [
+        { key: "resolucion", label: "Resolución", placeholder: "12MP, 4K..." },
+      ],
+      auriculares: [
+        { key: "conectividad", label: "Conectividad", options: ["Bluetooth", "Cable", "Inalámbrico"] },
+      ],
+      // Muebles y colchones
+      colchones: [
+        { key: "medidas", label: "Medidas", placeholder: "2 plazas, Queen, King..." },
+        { key: "material", label: "Material", placeholder: "Espuma, resortes, viscoelástico..." },
+      ],
+      sommiers: [
+        { key: "medidas", label: "Medidas", placeholder: "2 plazas, Queen, King..." },
+      ],
+      mesas: [
+        { key: "material", label: "Material", placeholder: "Madera, vidrio, metal..." },
+        { key: "medidas", label: "Medidas", placeholder: "120x80 cm" },
+      ],
+      sillas: [
+        { key: "material", label: "Material", placeholder: "Madera, metal, plástico..." },
+      ],
+      sillones: [
+        { key: "tapizado", label: "Tapizado", placeholder: "Tela, cuero, símil cuero..." },
+        { key: "plazas", label: "Plazas", options: ["1", "2", "3", "Esquinero"] },
+      ],
+      escritorios: [
+        { key: "material", label: "Material", placeholder: "Madera, melamina, metal..." },
+        { key: "medidas", label: "Medidas", placeholder: "120x60 cm" },
+      ],
+      estantes: [
+        { key: "material", label: "Material", placeholder: "Madera, metal..." },
+      ],
+      // Casa y jardín
+      lamparas: [
+        { key: "tipoLuz", label: "Tipo de luz", options: ["Cálida", "Fría", "Neutra"] },
+      ],
+      cuadros: [
+        { key: "medidas", label: "Medidas", placeholder: "40x60 cm" },
+      ],
+      espejos: [
+        { key: "medidas", label: "Medidas", placeholder: "60x80 cm" },
+      ],
+      "muebles-de-jardin": [
+        { key: "material", label: "Material", placeholder: "Resina, aluminio, madera..." },
+      ],
+      "plantas-deco": [
+        { key: "material", label: "Material", placeholder: "Cerámica, plástico, terracota..." },
+      ],
+      "textiles-hogar": [
+        { key: "material", label: "Material", placeholder: "Algodón, blackout, lino..." },
+        { key: "medidas", label: "Medidas", placeholder: "140x220 cm" },
+      ],
+    },
   },
   {
     id: "ALIMENTOS",
     label: "Alimentos",
     emoji: "🥗",
+    description: "Comida, bebidas, almacén, viandas, productos gourmet o de despensa.",
     comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,
@@ -184,6 +355,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "BELLEZA",
     label: "Belleza y cuidado",
     emoji: "💄",
+    description: "Cosmética, maquillaje, perfumería, skincare y productos de cuidado personal.",
     comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,
@@ -213,6 +385,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "DEPORTE",
     label: "Deporte y fitness",
     emoji: "⚽",
+    description: "Indumentaria deportiva, calzado, equipamiento y accesorios para entrenar o practicar un deporte.",
     comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,
@@ -240,6 +413,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "MASCOTAS",
     label: "Mascotas",
     emoji: "🐾",
+    description: "Alimento, accesorios, juguetes y cuidado para perros, gatos y otras mascotas.",
     comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,
@@ -267,6 +441,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "LIBROS",
     label: "Libros y arte",
     emoji: "📚",
+    description: "Libros, revistas, papelería, materiales de arte y manualidades.",
     comingSoon: true,
     supportsWholesale: false,
     supportsCondicion: false,
@@ -295,6 +470,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     id: "GENERAL",
     label: "General",
     emoji: "🏪",
+    description: "Para cualquier otro producto que no encaje en los rubros anteriores.",
     comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,

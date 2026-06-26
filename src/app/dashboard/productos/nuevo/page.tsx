@@ -9,6 +9,7 @@ import {
   Upload, X, Star, ShoppingCart, Heart, Tag, Package, HelpCircle, Calendar, Film,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { getStoreType } from "@/lib/storeTypes";
 import StockHistoryPanel from "../StockHistoryPanel";
 
@@ -111,23 +112,46 @@ function colorPreview(val: string): string | null {
   return COLOR_PREVIEW[v.toLowerCase()] ?? null;
 }
 
-function Tip({ text }: { text: string }) {
+function Tip({ text, align = "center" }: { text: string; align?: "center" | "right" | "left" }) {
   return (
     <span className="relative inline-flex group/tip ml-1 cursor-help align-middle">
       <HelpCircle className="h-3.5 w-3.5 text-indigo-400 hover:text-indigo-600 transition-colors" />
-      <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-56 rounded-xl bg-gray-900 px-3 py-2 text-xs text-white opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 leading-relaxed shadow-lg">
+      <span
+        className={`pointer-events-none absolute bottom-full mb-2 w-56 rounded-xl bg-gray-900 px-3 py-2 text-xs text-white opacity-0 group-hover/tip:opacity-100 transition-opacity z-50 leading-relaxed shadow-lg ${
+          align === "right" ? "right-0" : align === "left" ? "left-0" : "left-1/2 -translate-x-1/2"
+        }`}
+      >
         {text}
-        <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+        <span
+          className={`absolute top-full border-4 border-transparent border-t-gray-900 ${
+            align === "right" ? "right-3" : align === "left" ? "left-3" : "left-1/2 -translate-x-1/2"
+          }`}
+        />
       </span>
     </span>
   );
+}
+
+function variantExample(tipoTienda: string): string {
+  const examples: Record<string, string> = {
+    ROPA:      "ej: Talle S + Color Negro",
+    AUTOS:     "ej: Color Blanco + Versión Full",
+    HOGAR_TECH: "ej: Color Blanco + Tamaño Grande",
+    BELLEZA:   "ej: Tono Claro + Tamaño Grande",
+    DEPORTE:   "ej: Talle S + Color Rojo",
+    ALIMENTOS: "ej: 500g + Vainilla",
+    MASCOTAS:  "ej: Tamaño Pequeño + Sabor Pollo",
+    LIBROS:    "ej: Formato Físico",
+    GENERAL:   "ej: Color Rojo + Tamaño Grande",
+  };
+  return examples[tipoTienda] || "ej: Variante 1 + Variante 2";
 }
 
 function variantTip(tipoTienda: string): string {
   const tips: Record<string, string> = {
     ROPA:      "Una fila por combinación. Ej: Talle S + Color Negro → fila 1, Talle M + Color Blanco → fila 2. Cada fila tiene su propio stock.",
     BELLEZA:   "Una fila por combinación. Ej: Tono Claro + Tamaño Grande → fila 1, Tono Oscuro + Tamaño Chico → fila 2.",
-    HOGAR_TECH: "Una fila por combinación. Ej: Color Blanco + Almacenamiento 256GB → fila 1, Color Negro + 128GB → fila 2. Cada fila tiene su propio stock.",
+    HOGAR_TECH: "Una fila por combinación. Ej: Color Blanco + Tamaño Grande → fila 1, Color Negro + Tamaño Chico → fila 2. Si el producto varía por capacidad/almacenamiento, usá esos valores en vez de Color/Tamaño. Cada fila tiene su propio stock.",
     DEPORTE:   "Una fila por combinación. Ej: Talle S + Color Rojo → fila 1, Talle M + Color Azul → fila 2.",
     ALIMENTOS: "Una fila por combinación. Ej: 500g + Vainilla → fila 1, 1kg + Chocolate → fila 2.",
     MASCOTAS:  "Una fila por combinación. Ej: Tamaño Pequeño + Sabor Pollo → fila 1. Cada fila tiene su propio stock.",
@@ -149,6 +173,21 @@ function tagsTip(tipoTienda: string): string {
     GENERAL:   "Palabras clave para búsqueda separadas por coma. Ayudan a tus clientes a encontrar el producto.",
   };
   return tips[tipoTienda] || "Palabras clave separadas por coma para que tus clientes encuentren el producto.";
+}
+
+function extraFieldsTip(tipoTienda: string): string {
+  const tips: Record<string, string> = {
+    ROPA:      "Información extra sin stock. Ej: Material → Algodón, Género → Unisex. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.",
+    AUTOS:     "Información extra sin stock. Ej: Marca → Toyota, Año → 2022, Combustible → Nafta. Son datos descriptivos del vehículo, no afectan precio ni stock.",
+    HOGAR_TECH: "Información extra sin stock. Ej: Marca → Samsung, Pulgadas → 55, RAM → 8GB. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.",
+    BELLEZA:   "Información extra sin stock. Ej: Marca → L'Oréal, Tipo de piel → Mixta. Son datos descriptivos, no afectan precio ni stock.",
+    DEPORTE:   "Información extra sin stock. Ej: Deporte → Running, Material → Mesh transpirable.",
+    ALIMENTOS: "Información extra sin stock. Ej: Ingredientes → Harina, azúcar, manteca.",
+    MASCOTAS:  "Información extra sin stock. Ej: Para mascota → Perro, Edad recomendada → Adulto.",
+    LIBROS:    "Información extra sin stock. Ej: Autor → Gabriel García Márquez, Editorial → Sudamericana.",
+    GENERAL:   "Información extra sin stock. Datos descriptivos que no afectan precio ni stock.",
+  };
+  return tips[tipoTienda] || "Información extra sin stock. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.";
 }
 
 function variantPlaceholder(name: string): string {
@@ -295,6 +334,7 @@ function ProductoFormPage() {
   const [condicion, setCondicion] = useState<string>("Usado");
   const [precioMayorista, setPrecioMayorista] = useState("");
   const [cantMinMayorista, setCantMinMayorista] = useState("");
+  const [cuotas, setCuotas] = useState(0);
   const [weightKg, setWeightKg] = useState("");
   const [widthCm, setWidthCm] = useState("");
   const [heightCm, setHeightCm] = useState("");
@@ -364,6 +404,7 @@ function ProductoFormPage() {
     loadedProductRef.current = null;
     if (!editingId) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- arranca el loader antes del fetch que dispara este mismo efecto, no se puede calcular durante el render
     setLoadingProduct(true);
     setError("");
     fetch(`/api/productos/${editingId}`)
@@ -429,6 +470,7 @@ function ProductoFormPage() {
         setAttributes(allAttrs.filter((a) => a.key !== "Condición" && a.key !== "Servicios"));
         setPrecioMayorista(product.precioMayorista?.toString() || "");
         setCantMinMayorista(product.cantMinMayorista?.toString() || "");
+        setCuotas(product.cuotas || 0);
         setWeightKg(product.weightKg?.toString() || "");
         setWidthCm(product.widthCm?.toString() || "");
         setHeightCm(product.heightCm?.toString() || "");
@@ -643,6 +685,11 @@ function ProductoFormPage() {
       setLoading(false);
       return;
     }
+    if (images.length === 0) {
+      setError("Agregá al menos una foto del producto.");
+      setLoading(false);
+      return;
+    }
     if (!isHideVariants && preparedVariants.some((variant) => !variant.value)) {
       setError("Cada combinación de variantes debe tener al menos un valor. Si es un producto simple, dejá una sola fila.");
       setLoading(false);
@@ -673,6 +720,7 @@ function ProductoFormPage() {
         attributes: finalAttrs,
         precioMayorista: precioMayorista || null,
         cantMinMayorista: cantMinMayorista || null,
+        cuotas,
         publishAt: publishAt || null,
         weightKg: weightKg || null,
         widthCm: widthCm || null,
@@ -701,6 +749,27 @@ function ProductoFormPage() {
   const previewCategory = form.category === "otro" ? customCategory.trim() || "otro" : form.category;
   const previewSubcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
   const availableSubcategories = form.category === "otro" ? [] : productSubcategories[form.category] || [];
+  // Specs propias de la subcategoría elegida (ej: Pulgadas para TVs, RAM para notebooks),
+  // sumadas a las genéricas del tipo de tienda (Marca, Modelo, Garantía).
+  const activeExtraFields = [
+    ...storeTypeConfig.extraFields,
+    ...(storeTypeConfig.extraFieldsByCategory?.[previewSubcategory] ?? []),
+  ];
+
+  // Al elegir una subcategoría con specs propias (ej: "tvs" → Pulgadas), agregamos
+  // esos campos vacíos a la ficha técnica para que el vendedor los vea y los complete.
+  // No borra nada de lo que ya haya escrito si cambia de subcategoría y vuelve.
+  useEffect(() => {
+    const suggested = storeTypeConfig.extraFieldsByCategory?.[previewSubcategory];
+    if (!suggested || suggested.length === 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- agrega los campos sugeridos de la subcategoría recién elegida, no se puede calcular durante el render porque depende de una interacción del usuario
+    setAttributes((prev) => {
+      const missing = suggested.filter((f) => !prev.some((a) => a.key === f.label));
+      if (missing.length === 0) return prev;
+      return [...prev, ...missing.map((f) => ({ key: f.label, value: "" }))];
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewSubcategory]);
 
   const discount =
     form.comparePrice && form.price && parseFloat(form.comparePrice) > parseFloat(form.price)
@@ -748,10 +817,142 @@ function ProductoFormPage() {
               </div>
             )}
 
+            {/* Basic info */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+              <h2 className="font-semibold text-gray-900">Informacion basica</h2>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre del producto *</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => updateForm("name", e.target.value)}
+                  required
+                  placeholder={storeLoaded ? storeTypeConfig.namePlaceholder : ""}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripcion</label>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => updateForm("description", e.target.value)}
+                  rows={3}
+                  placeholder="Describi tu producto..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                />
+              </div>
+              {!storeTypeConfig.hideGender && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Género</label>
+                  <div className="flex gap-2">
+                    {(["mujer", "hombre", "unisex"] as const).map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setGender(g)}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                          gender === g
+                            ? "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
+                        }`}
+                      >
+                        {g === "mujer" ? "Mujer" : g === "hombre" ? "Hombre" : "Unisex"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoria</label>
+                  <select
+                    value={form.category}
+                    onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value, subcategory: "" }))}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  >
+                    {productCategories.map((c) => (
+                      <option key={c} value={c}>{formatCategoryLabel(c)}</option>
+                    ))}
+                    <option value="otro">Otra categoria</option>
+                  </select>
+                  {form.category === "otro" && (
+                    <input
+                      type="text"
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      placeholder="Escribi la categoria"
+                      className="mt-3 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Subcategoria</label>
+                  <select
+                    value={form.subcategory}
+                    onChange={(e) => updateForm("subcategory", e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  >
+                    <option value="">Sin subcategoria</option>
+                    {availableSubcategories.map((subcat) => (
+                      <option key={subcat} value={subcat}>{formatCategoryLabel(subcat)}</option>
+                    ))}
+                    <option value="otro">Otra subcategoria</option>
+                  </select>
+                  {form.subcategory === "otro" && (
+                    <input
+                      type="text"
+                      value={customSubcategory}
+                      onChange={(e) => setCustomSubcategory(e.target.value)}
+                      placeholder="Ej: remeras, pantalones, camperas"
+                      className="mt-3 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  )}
+                </div>
+                {!storeTypeConfig.hideTags && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Tags (separados por coma)
+                      <Tip align="left" text={tagsTip(store.tipoTienda || "ROPA")} />
+                    </label>
+                    <input
+                      type="text"
+                      value={form.tags}
+                      onChange={(e) => updateForm("tags", e.target.value)}
+                      placeholder={storeTypeConfig.tagsPlaceholder}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Condición — solo para tipos que lo soportan (AUTOS, TECH) */}
+            {storeTypeConfig.supportsCondicion && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-6">
+                <h2 className="font-semibold text-gray-900 mb-3">{storeTypeConfig.showServiceHistory ? "Condición del vehículo" : "Condición del producto"}</h2>
+                <div className="flex flex-wrap gap-2">
+                  {(storeTypeConfig.condicionOptions ?? ["Nuevo", "Usado"]).map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => { setCondicion(opt); markDirty(); }}
+                      className={`flex-1 min-w-[100px] py-2.5 px-2 rounded-xl text-sm font-semibold border-2 transition-all text-center ${
+                        condicion === opt
+                          ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                          : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-300"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Images */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-gray-900">Imagenes del producto</h2>
+                <h2 className="font-semibold text-gray-900">Imagenes del producto *</h2>
                 <span className="text-xs text-gray-400">{images.length}/{MAX_PRODUCT_IMAGES}</span>
               </div>
 
@@ -815,7 +1016,7 @@ function ProductoFormPage() {
                           } ${carouselIdx === i ? "border-indigo-500 scale-105" : "border-transparent hover:border-gray-300"}`}
                           style={{ width: colorValues.length > 0 ? 88 : 64, height: colorValues.length > 0 ? 88 : 64 }}
                         >
-                          <img src={img.url} alt="" className="w-full h-full object-cover" />
+                          <Image src={img.url} alt="" fill className="object-cover" />
                           {img.variantValue && (
                             <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-center py-1">
                               <span className="text-[9px] text-white font-semibold px-1 truncate block">{img.variantValue}</span>
@@ -933,140 +1134,8 @@ function ProductoFormPage() {
               </div>
             </div>
 
-            {/* Basic info */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-              <h2 className="font-semibold text-gray-900">Informacion basica</h2>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre del producto *</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => updateForm("name", e.target.value)}
-                  required
-                  placeholder={storeLoaded ? storeTypeConfig.namePlaceholder : ""}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripcion</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => updateForm("description", e.target.value)}
-                  rows={3}
-                  placeholder="Describi tu producto..."
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                />
-              </div>
-              {!storeTypeConfig.hideGender && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Género</label>
-                  <div className="flex gap-2">
-                    {(["mujer", "hombre", "unisex"] as const).map((g) => (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => setGender(g)}
-                        className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all ${
-                          gender === g
-                            ? "bg-indigo-600 text-white border-indigo-600"
-                            : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
-                        }`}
-                      >
-                        {g === "mujer" ? "Mujer" : g === "hombre" ? "Hombre" : "Unisex"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoria</label>
-                  <select
-                    value={form.category}
-                    onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value, subcategory: "" }))}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                  >
-                    {productCategories.map((c) => (
-                      <option key={c} value={c}>{formatCategoryLabel(c)}</option>
-                    ))}
-                    <option value="otro">Otra categoria</option>
-                  </select>
-                  {form.category === "otro" && (
-                    <input
-                      type="text"
-                      value={customCategory}
-                      onChange={(e) => setCustomCategory(e.target.value)}
-                      placeholder="Escribi la categoria"
-                      className="mt-3 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Subcategoria</label>
-                  <select
-                    value={form.subcategory}
-                    onChange={(e) => updateForm("subcategory", e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                  >
-                    <option value="">Sin subcategoria</option>
-                    {availableSubcategories.map((subcat) => (
-                      <option key={subcat} value={subcat}>{formatCategoryLabel(subcat)}</option>
-                    ))}
-                    <option value="otro">Otra subcategoria</option>
-                  </select>
-                  {form.subcategory === "otro" && (
-                    <input
-                      type="text"
-                      value={customSubcategory}
-                      onChange={(e) => setCustomSubcategory(e.target.value)}
-                      placeholder="Ej: remeras, pantalones, camperas"
-                      className="mt-3 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  )}
-                </div>
-                {!storeTypeConfig.hideTags && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Tags (separados por coma)
-                      <Tip text={tagsTip(store.tipoTienda || "ROPA")} />
-                    </label>
-                    <input
-                      type="text"
-                      value={form.tags}
-                      onChange={(e) => updateForm("tags", e.target.value)}
-                      placeholder={storeTypeConfig.tagsPlaceholder}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Condición — solo para tipos que lo soportan (AUTOS, TECH) */}
-            {storeTypeConfig.supportsCondicion && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <h2 className="font-semibold text-gray-900 mb-3">{storeTypeConfig.hideVariants ? "Condición del vehículo" : "Condición del producto"}</h2>
-                <div className="flex flex-wrap gap-2">
-                  {(storeTypeConfig.condicionOptions ?? ["Nuevo", "Usado"]).map((opt) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => { setCondicion(opt); markDirty(); }}
-                      className={`flex-1 min-w-[100px] py-2.5 px-2 rounded-xl text-sm font-semibold border-2 transition-all text-center ${
-                        condicion === opt
-                          ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                          : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-300"
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Historial de servicios — solo AUTOS */}
-            {storeTypeConfig.hideVariants && (
+            {storeTypeConfig.showServiceHistory && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
                 <div>
                   <h2 className="font-semibold text-gray-900">Historial de servicios</h2>
@@ -1201,12 +1270,38 @@ function ProductoFormPage() {
               </div>
             )}
 
-            {/* Envío — peso y dimensiones, universal para todos los rubros */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+            {/* Cuotas sin interés — informativo, no conectado a ningún banco ni a Mercado Pago */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-3">
+              <div>
+                <h2 className="font-semibold text-gray-900">Cuotas sin interés</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Solo se muestra si tenés Mercado Pago conectado. Es información para el comprador, no una conexión real con tu banco — el cálculo es simplemente precio ÷ cuotas. Las cuotas reales y si se aplica interés se definen en tu cuenta de Mercado Pago al momento del pago. Elegí solo lo que realmente puedas ofrecer para evitar reclamos.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[0, 3, 6, 12].map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => { setCuotas(opt); markDirty(); }}
+                    className={`flex-1 min-w-[90px] py-2.5 px-2 rounded-xl text-sm font-semibold border-2 transition-all text-center ${
+                      cuotas === opt
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                        : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-300"
+                    }`}
+                  >
+                    {opt === 0 ? "Sin cuotas" : `${opt} cuotas`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Envío — peso y dimensiones, oculto para rubros como AUTOS que no se mandan por correo */}
+            {!storeTypeConfig.hideShipping && <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <div>
                 <div className="flex items-center gap-1">
                   <h2 className="font-semibold text-gray-900">Envío</h2>
-                  <Tip text="Usado para cotizar el costo de envío real con el correo. Si lo dejás vacío, el envío se coordina manualmente con el cliente." />
+                  <Tip align="left" text="Usado para cotizar el costo de envío real con el correo. Si lo dejás vacío, el envío se coordina manualmente con el cliente." />
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5">Peso y dimensiones del paquete (opcional)</p>
               </div>
@@ -1252,7 +1347,7 @@ function ProductoFormPage() {
                   />
                 </div>
               </div>
-            </div>
+            </div>}
 
             {/* Variantes — ocultas para tiendas como AUTOS donde no aplica */}
             {!storeTypeConfig.hideVariants && <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
@@ -1260,9 +1355,9 @@ function ProductoFormPage() {
                 <div>
                   <div className="flex items-center gap-1">
                     <h2 className="font-semibold text-gray-900">Variantes y stock</h2>
-                    <Tip text={variantTip(store.tipoTienda || "ROPA")} />
+                    <Tip align="left" text={variantTip(store.tipoTienda || "ROPA")} />
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">Una fila por combinación — ej: Talle S + Color Negro</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Una fila por combinación — {variantExample(store.tipoTienda || "ROPA")}</p>
                 </div>
                 <button
                   type="button"
@@ -1338,7 +1433,7 @@ function ProductoFormPage() {
                   <div className="w-24 shrink-0">
                     <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center">
                       Alerta stock
-                      <Tip text="Te avisamos por mail cuando el stock de esta variante baje a este número o menos. Dejalo vacío para usar el valor por defecto (5)." />
+                      <Tip align="right" text="Te avisamos por mail cuando el stock de esta variante baje a este número o menos. Dejalo vacío para usar el valor por defecto (5)." />
                     </label>
                     <input
                       type="number"
@@ -1380,13 +1475,13 @@ function ProductoFormPage() {
                 <div>
                   <div className="flex items-center gap-1">
                     <h2 className="font-semibold text-gray-900">
-                      {storeTypeConfig.hideVariants ? "Ficha técnica" : storeTypeConfig.extraFields.length > 0 ? "Especificaciones" : "Atributos del producto"}
+                      {storeTypeConfig.hideVariants ? "Ficha técnica" : activeExtraFields.length > 0 ? "Especificaciones" : "Atributos del producto"}
                     </h2>
-                    <Tip text="Información extra sin stock. Ej: Material → Algodón, Género → Unisex, Peso → 250g. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio." />
+                    <Tip align="left" text={extraFieldsTip(store.tipoTienda || "ROPA")} />
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {storeTypeConfig.extraFields.length > 0
-                      ? storeTypeConfig.extraFields.map((f) => f.label).join(", ")
+                    {activeExtraFields.length > 0
+                      ? activeExtraFields.map((f) => f.label).join(", ")
                       : "Número de serie, peso, material, dimensiones, etc."}
                   </p>
                 </div>
@@ -1400,10 +1495,10 @@ function ProductoFormPage() {
                 </button>
               </div>
 
-              {/* Campos tipados del store type (Marca, Año, Km, etc.) */}
-              {storeTypeConfig.extraFields.length > 0 && (
+              {/* Campos tipados del store type (Marca, Año, Km, etc.) + specs de la subcategoría */}
+              {activeExtraFields.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {storeTypeConfig.extraFields.map((field) => {
+                  {activeExtraFields.map((field) => {
                     const attrIdx = attributes.findIndex((a) => a.key === field.label);
                     const val = attrIdx >= 0 ? attributes[attrIdx].value : "";
                     const onChange = (v: string) => {
@@ -1416,7 +1511,10 @@ function ProductoFormPage() {
                     };
                     return (
                       <div key={field.key}>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">{field.label}</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                          {field.label}
+                          {field.tip && <Tip align="left" text={field.tip} />}
+                        </label>
                         {field.options ? (
                           <select
                             value={val}
@@ -1444,7 +1542,7 @@ function ProductoFormPage() {
               )}
 
               {/* Atributos personalizados (Agregar) */}
-              {storeTypeConfig.extraFields.length === 0 && attributes.length === 0 && (
+              {activeExtraFields.length === 0 && attributes.length === 0 && (
                 <p className="text-sm text-gray-400 text-center py-4">
                   Sin atributos. Usá esto para especificar datos técnicos del producto.
                 </p>
@@ -1452,7 +1550,7 @@ function ProductoFormPage() {
 
               {attributes
                 .map((attr, idx) => ({ attr, idx }))
-                .filter(({ attr }) => !storeTypeConfig.extraFields.some((f) => f.label === attr.key))
+                .filter(({ attr }) => !activeExtraFields.some((f) => f.label === attr.key))
                 .map(({ attr, idx }) => (
                   <div key={idx} className="flex flex-col sm:flex-row gap-3 sm:items-end">
                     <div className="flex-1">
@@ -1557,10 +1655,11 @@ function ProductoFormPage() {
                 <div className="relative bg-gray-100 aspect-square overflow-hidden">
                   {images.length > 0 ? (
                     <>
-                      <img
+                      <Image
                         src={images[carouselIdx]?.url || ""}
                         alt=""
-                        className="w-full h-full object-cover transition-all duration-300"
+                        fill
+                        className="object-cover transition-all duration-300"
                       />
                       {images.length > 1 && (
                         <>
@@ -1629,12 +1728,12 @@ function ProductoFormPage() {
                           key={img.url}
                           type="button"
                           onClick={() => setCarouselIdx(i)}
-                          className={`aspect-square overflow-hidden rounded-md border-2 transition ${
+                          className={`relative aspect-square overflow-hidden rounded-md border-2 transition ${
                             i === carouselIdx ? "border-indigo-500" : "border-gray-100 opacity-70 hover:opacity-100"
                           }`}
                           aria-label={`Seleccionar imagen ${i + 1}`}
                         >
-                          <img src={img.url} alt="" className="h-full w-full object-cover" />
+                          <Image src={img.url} alt="" fill className="object-cover" />
                         </button>
                       ))}
                     </div>

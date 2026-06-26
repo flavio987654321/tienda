@@ -1,6 +1,6 @@
 export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse" | "chic-paris" | "auto-motor" | "auto-drive" | "electro-prime" | "tech-nova" | "home-studio" | "casa-clara";
 
-export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = ["chic-paris"];
+export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = ["chic-paris", "electro-prime", "tech-nova", "home-studio", "casa-clara"];
 
 export type TextOverride = {
   text?: string;

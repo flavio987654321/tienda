@@ -26,6 +26,7 @@ type RawProduct = {
   comparePrice?: number | null;
   precioMayorista?: number | null;
   cantMinMayorista?: number | null;
+  cuotas?: number;
   category?: string;
   subcategory?: string;
   gender?: string;
@@ -80,6 +81,7 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     comparePrice: raw.comparePrice ?? null,
     precioMayorista: raw.precioMayorista ?? null,
     cantMinMayorista: raw.cantMinMayorista ?? null,
+    cuotas: raw.cuotas ?? 0,
     category: raw.category ?? "general",
     subcategory: raw.subcategory ?? undefined,
     gender: raw.gender ?? "unisex",
@@ -100,24 +102,33 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
   const [whatsapp, setWhatsapp] = useState<string | null>(null);
   const [template, setTemplate] = useState<string | null>(null);
   const [currency, setCurrency] = useState("ARS");
+  const [hasMercadoPago, setHasMercadoPago] = useState(false);
+  const [isPreview] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "editor");
+  const [isOwner, setIsOwner] = useState(false);
+  const [socialLinks, setSocialLinks] = useState<Record<string, string> | undefined>(undefined);
+  const [accentOverride, setAccentOverride] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [notFoundLocal, setNotFoundLocal] = useState(false);
   const [activeImg, setActiveImg] = useState(0);
 
   useEffect(() => {
     if (!slug) return;
-    const fromEditor = new URLSearchParams(window.location.search).get("from") === "editor";
+    const fromEditor = isPreview;
     fetch(`/api/public/${slug}`)
       .then(r => r.ok ? r.json() : Promise.reject("not_found"))
       .then(data => {
         if (!data?.store) { setNotFoundLocal(true); return; }
         if (data.store.id) setStoreId(data.store.id);
         setStoreName(data.store.name ?? "Tienda");
+        setHasMercadoPago(!!data.hasMercadoPago);
+        setIsOwner(!!data.isOwner);
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.whatsapp?.enabled && cfg.whatsapp?.number) setWhatsapp(cfg.whatsapp.number);
           if (cfg.template) setTemplate(cfg.template);
           if (cfg.currency) setCurrency(cfg.currency);
+          if (cfg.colors?.accent) setAccentOverride(cfg.colors.accent);
+          if (cfg.socialLinks) setSocialLinks(cfg.socialLinks);
         } catch {}
         const real = (data.store.products ?? []).map(mapProduct);
         // Productos demo del editor (ej. "hogar-2"): no existen en la base,
@@ -130,7 +141,7 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
       })
       .catch(() => setNotFoundLocal(true))
       .finally(() => setLoading(false));
-  }, [slug, productId]);
+  }, [slug, productId, isPreview]);
 
   const product = useMemo(() => products.find(p => p.id === productId) ?? null, [products, productId]);
   const related = useMemo(
@@ -210,12 +221,13 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
   const canAdd = (!needsSize || !!selectedSize) && (!needsColor || !!selectedColor);
   const discount = product.comparePrice && product.comparePrice > product.price
     ? Math.round((1 - product.price / product.comparePrice) * 100) : null;
-  const catalogHref = `/tienda/${slug}/productos`;
+  const catalogHref = `/tienda/${slug}/productos${isPreview ? "?from=editor" : ""}`;
 
   const ThemedDetail = template ? THEMED_DETAIL[template] : undefined;
   if (ThemedDetail) {
     const view: ProductDetailViewProps = {
-      slug, storeName, currency, whatsapp, product, related,
+      slug, storeName, currency, whatsapp, product, related, hasMercadoPago,
+      isPreview, isOwner, socialLinks, accentOverride, cart,
       activeImg, setActiveImg, selectedSize, setSelectedSize, selectedColor, setSelectedColor,
       needsSize, needsColor, canAdd, qty, setQty, addToCart, cartCount, toastMsg, discount, catalogHref,
     };

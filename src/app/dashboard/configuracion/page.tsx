@@ -3,7 +3,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TemplateId, TextOverride, ImageOverride } from "@/types/store-config";
-import { DEFAULT_CONFIG, TEMPLATES_WITH_CAROUSEL } from "@/types/store-config";
+import { DEFAULT_CONFIG, TEMPLATES_WITH_CAROUSEL, TEMPLATE_DEFAULTS } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
 import FashionNoir from "@/components/store/templates/FashionNoir";
@@ -107,6 +107,27 @@ const IMAGE_FIELD_INFO: Record<string, { label: string; tip: string }> = {
     label: "Imagen de fondo contacto",
     tip: "Fondo de la sección de contacto. Recomendado: 1920×700px horizontal.",
   },
+  // Electro Prime / Tech Nova / Home Studio / Casa Clara (Hogar y Tecnología)
+  contactImage: {
+    label: "Imagen sección Contacto",
+    tip: "Foto junto al formulario de contacto. Recomendado: 900×700px.",
+  },
+  contactoImage: {
+    label: "Imagen de fondo (contacto)",
+    tip: "Fondo de la sección de contacto. Recomendado: 1920×700px horizontal.",
+  },
+  megaMenuImage: {
+    label: "Imagen del menú Departamentos",
+    tip: "Foto decorativa que se ve al abrir el menú de departamentos. Recomendado: 600×500px.",
+  },
+  ...Object.fromEntries(Array.from({ length: 7 }, (_, i) => [
+    `dept${i}Image`,
+    { label: `Departamento ${i + 1} — imagen`, tip: "Foto del departamento. Recomendado: 600×500px." },
+  ])),
+  // Electro Prime / Tech Nova / Home Studio — carrusel de banner promocional (sin texto)
+  promoBanner1: { label: "Banner promocional 1", tip: "Recomendado: 1920×600px horizontal (imagen panorámica, sin texto)." },
+  promoBanner2: { label: "Banner promocional 2", tip: "Recomendado: 1920×600px horizontal (imagen panorámica, sin texto)." },
+  promoBanner3: { label: "Banner promocional 3", tip: "Recomendado: 1920×600px horizontal (imagen panorámica, sin texto)." },
 };
 
 /* ── Text field labels ─────────────────────────────────────── */
@@ -415,8 +436,10 @@ function BrowserFrame({ storeName, children }: { storeName: string; children: Re
           mitienda.com/tienda/{storeName.toLowerCase().replace(/\s+/g, "-")}
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "clip" }}>
-        {children}
+      <div style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden", transform: "translateZ(0)" }}>
+        <div style={{ height: "100%", overflowY: "auto", overflowX: "clip" }}>
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -1048,15 +1071,18 @@ function ImageFieldEditor({
   const dk = { color: "#f1f5f9" };
   const dkMuted = { color: "#94a3b8" };
   const dkBtn: React.CSSProperties = { padding: "5px 11px", borderRadius: 6, border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.07)", color: "#f1f5f9", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" as const };
-  const dkBtnActive: React.CSSProperties = { ...dkBtn, borderColor: "#6366f1", background: "#6366f1", color: "white" };
+  const dkBtnActive: React.CSSProperties = { ...dkBtn, border: "1.5px solid #6366f1", background: "#6366f1", color: "white" };
 
   return (
     <div style={{ ...base, display: "flex", flexDirection: "column" }}>
       {/* Fila 1: label + upload + preview */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 20px 9px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, padding: "10px 20px 9px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: "#818cf8", background: "rgba(99,102,241,0.2)", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>
           📷 {info?.label ?? field}
         </span>
+        {info?.tip && (
+          <span style={{ fontSize: 11, color: "#94a3b8" }}>{info.tip}</span>
+        )}
         <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
         <button onClick={() => fileRef.current?.click()} disabled={uploading}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 16px", borderRadius: 7, border: "none", background: uploading ? "#4338ca" : "#6366f1", color: "white", fontSize: 12, fontWeight: 700, cursor: uploading ? "default" : "pointer", whiteSpace: "nowrap", opacity: uploading ? 0.7 : 1 }}>
@@ -1102,6 +1128,16 @@ function ImageFieldEditor({
               />
               <span style={{ fontSize: 11, fontWeight: 600, ...dkMuted, whiteSpace: "nowrap" }}>Ocultar texto del slide</span>
             </label>
+          </>
+        )}
+        {(field.startsWith("heroBanner") || field.startsWith("promoBanner")) && (
+          <>
+            <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.1)" }} />
+            <span title="El tiempo de rotación del carrusel se configura en ⚙ Configuración avanzada → Carrusel de banner (es el mismo para los 3 banners)."
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, ...dkMuted, whiteSpace: "nowrap", cursor: "help" }}>
+              <span style={{ width: 14, height: 14, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, flexShrink: 0 }}>?</span>
+              Velocidad del carrusel: en ⚙ Configuración avanzada
+            </span>
           </>
         )}
         <div style={{ flex: 1 }} />
@@ -1157,12 +1193,12 @@ function BgFieldEditor({ field, base, setActiveField }: {
   }, [imgKey, setImageOverride]);
 
   const dkBtn: React.CSSProperties = { padding: "5px 11px", borderRadius: 6, border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.07)", color: "#f1f5f9", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" as const };
-  const dkBtnActive: React.CSSProperties = { ...dkBtn, borderColor: "#6366f1", background: "#6366f1", color: "white" };
+  const dkBtnActive: React.CSSProperties = { ...dkBtn, border: "1.5px solid #6366f1", background: "#6366f1", color: "white" };
 
   return (
     <div style={{ ...base, display: "flex", flexDirection: "column" }}>
       {/* Fila 1: label + color + foto de fondo + cerrar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 20px 9px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, padding: "10px 20px 9px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: "#818cf8", background: "rgba(99,102,241,0.2)", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>
           🎨 Fondo
         </span>
@@ -1217,7 +1253,7 @@ function BgFieldEditor({ field, base, setActiveField }: {
             </span>
           </>)}
           <button onClick={() => setImageOverride(imgKey, { url: undefined, overlayType: undefined, overlayOpacity: undefined })}
-            style={{ ...dkBtn, borderColor: "rgba(239,68,68,0.4)", color: "#f87171" }}>
+            style={{ ...dkBtn, border: "1.5px solid rgba(239,68,68,0.4)", color: "#f87171" }}>
             ✕ Quitar foto
           </button>
         </>)}
@@ -1528,12 +1564,23 @@ export default function ConfiguracionPage() {
   /* Step 1 → 2 */
   const handlePreview = (t: TemplateInfo) => {
     setSelected(t);
-    setConfig(c => ({
-      ...c,
-      template: t.id,
-      bannerInterval: undefined,
-      promoBanner: c.promoBanner ?? { enabled: true },
-    }));
+    // Si es el mismo diseño que ya tenés guardado, restauramos la versión guardada
+    // en vez de arrastrar ediciones sin guardar de una sesión anterior (esas quedaban
+    // "pegadas" en memoria al salir sin guardar y reaparecían al volver a entrar).
+    if (savedConfig && savedConfig.template === t.id) {
+      setConfig(savedConfig);
+    } else {
+      // Diseño que todavía no guardaste: arranca con el acento propio de
+      // ese template en vez de arrastrar el color del que estabas viendo antes.
+      const tplDefaults = TEMPLATE_DEFAULTS[t.id];
+      setConfig(c => ({
+        ...c,
+        template: t.id,
+        colors: tplDefaults ? { ...c.colors, accent: tplDefaults.accent } : c.colors,
+        bannerInterval: undefined,
+        promoBanner: c.promoBanner ?? { enabled: true },
+      }));
+    }
     setMode("preview");
   };
 
@@ -1565,6 +1612,11 @@ export default function ConfiguracionPage() {
   };
 
   const handleSave = async () => {
+    if (config.whatsapp.enabled && !config.whatsapp.number.trim()) {
+      setSaveError("Completá el número de WhatsApp o desactivalo antes de guardar.");
+      setTimeout(() => setSaveError(null), 4000);
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     try {
@@ -2025,6 +2077,9 @@ export default function ConfiguracionPage() {
               <button onClick={() => {
                 setConfirmLeave(false);
                 setIsDirty(false);
+                // Descartar las ediciones sin guardar acá mismo, para que no queden
+                // "pegadas" en memoria y reaparezcan al volver a entrar a este diseño.
+                setConfig(savedConfig ?? DEFAULT_CONFIG);
                 if (pendingNavUrl) {
                   setPendingNavUrl(null);
                   window.location.href = pendingNavUrl;

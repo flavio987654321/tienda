@@ -2,10 +2,18 @@
 import { useState, useRef } from "react";
 import { Upload, X, FileText, AlertCircle, CheckCircle2, Download } from "lucide-react";
 
-const CSV_TEMPLATE = `nombre,precio,precioComparacion,categoria,subcategoria,descripcion,estado,imagenes
+const CSV_TEMPLATE_DEFAULT = `nombre,precio,precioComparacion,categoria,subcategoria,descripcion,estado,imagenes
 Remera Blanca Oversize,18500,24000,Mujer,Remeras,Remera de algodón premium,ACTIVO,
 Jean Skinny Negro,35900,,Mujer,Jeans,Jean clásico corte skinny,ACTIVO,
 Hoodie Gris,29900,,Hombre,Buzos,,ACTIVO,
+`;
+
+// Autos y motos no entran en el mismo molde: un vehículo necesita Marca,
+// Modelo, Año, Km, etc. — son las mismas columnas que pide el formulario
+// (storeTypes.ts → AUTOS.extraFields), no las genéricas de cualquier producto.
+const CSV_TEMPLATE_AUTOS = `nombre,precio,precioComparacion,categoria,subcategoria,descripcion,estado,imagenes,marca,modelo,version,anio,km,motor,combustible,transmision,traccion,carroceria,color,puertas,ciudad,condicion
+Toyota Corolla 2022 XEI automático,18500000,,autos,sedán,Corolla XEI full equipo único dueño,ACTIVO,,Toyota,Corolla,XEI,2022,32000,2.0,Nafta,Automática,FWD,Sedán,Blanco,4,Capital Federal,Usado
+Yamaha MT-03 2021,4200000,4600000,motos,naked,,ACTIVO,,Yamaha,MT-03,,2021,8500,321cc,Nafta,Manual,,Naked,Negro,,Rosario,Usado
 `;
 
 type ParsedRow = {
@@ -17,9 +25,23 @@ type ParsedRow = {
   descripcion: string;
   estado: string;
   imagenes: string;
+  marca?: string;
+  modelo?: string;
+  version?: string;
+  anio?: string;
+  km?: string;
+  motor?: string;
+  combustible?: string;
+  transmision?: string;
+  traccion?: string;
+  carroceria?: string;
+  color?: string;
+  puertas?: string;
+  ciudad?: string;
+  condicion?: string;
 };
 
-function parseCsv(text: string): ParsedRow[] {
+function parseCsv(text: string, isAutos: boolean): ParsedRow[] {
   const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter(l => l.trim());
   if (lines.length < 2) return [];
   const headers = splitCsvLine(lines[0]).map(h => h.trim().toLowerCase());
@@ -37,6 +59,22 @@ function parseCsv(text: string): ParsedRow[] {
       descripcion: row["descripcion"] ?? "",
       estado: row["estado"] ?? "ACTIVO",
       imagenes: row["imagenes"] ?? "",
+      ...(isAutos ? {
+        marca: row["marca"] ?? "",
+        modelo: row["modelo"] ?? "",
+        version: row["version"] ?? "",
+        anio: row["anio"] ?? row["año"] ?? "",
+        km: row["km"] ?? "",
+        motor: row["motor"] ?? "",
+        combustible: row["combustible"] ?? "",
+        transmision: row["transmision"] ?? "",
+        traccion: row["traccion"] ?? "",
+        carroceria: row["carroceria"] ?? "",
+        color: row["color"] ?? "",
+        puertas: row["puertas"] ?? "",
+        ciudad: row["ciudad"] ?? "",
+        condicion: row["condicion"] ?? "",
+      } : {}),
     });
   }
   return rows.filter(r => r.nombre || r.precio);
@@ -61,7 +99,9 @@ function splitCsvLine(line: string): string[] {
   return result;
 }
 
-export default function CsvImportButton({ onImported }: { onImported?: () => void }) {
+export default function CsvImportButton({ onImported, tipoTienda = "ROPA" }: { onImported?: () => void; tipoTienda?: string }) {
+  const isAutos = tipoTienda === "AUTOS";
+  const itemLabel = isAutos ? "vehículo" : "producto";
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [fileName, setFileName] = useState("");
@@ -82,17 +122,17 @@ export default function CsvImportButton({ onImported }: { onImported?: () => voi
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
-      setRows(parseCsv(text));
+      setRows(parseCsv(text, isAutos));
     };
     reader.readAsText(file, "UTF-8");
     e.target.value = "";
   }
 
   function downloadTemplate() {
-    const blob = new Blob([CSV_TEMPLATE], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([isAutos ? CSV_TEMPLATE_AUTOS : CSV_TEMPLATE_DEFAULT], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = "template_productos.csv"; a.click();
+    a.href = url; a.download = isAutos ? "template_vehiculos.csv" : "template_productos.csv"; a.click();
     URL.revokeObjectURL(url);
   }
 
@@ -103,7 +143,7 @@ export default function CsvImportButton({ onImported }: { onImported?: () => voi
       const res = await fetch("/api/productos/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows }),
+        body: JSON.stringify({ rows, tipoTienda }),
       });
       const data = await res.json();
       setResult(data);
@@ -140,8 +180,8 @@ export default function CsvImportButton({ onImported }: { onImported?: () => voi
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Importar productos desde CSV</h2>
-                <p className="text-sm text-gray-500 mt-0.5">Cargá hasta 500 productos de una vez</p>
+                <h2 className="text-lg font-bold text-gray-900">Importar {isAutos ? "vehículos" : "productos"} desde CSV</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Cargá hasta 500 {isAutos ? "vehículos" : "productos"} de una vez</p>
               </div>
               <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 transition-colors">
                 <X className="h-5 w-5" />
@@ -160,8 +200,8 @@ export default function CsvImportButton({ onImported }: { onImported?: () => voi
                       : <AlertCircle className="h-5 w-5 text-red-500" />}
                     <span className="font-semibold text-sm text-gray-800">
                       {result.created > 0
-                        ? `${result.created} producto${result.created !== 1 ? "s" : ""} importado${result.created !== 1 ? "s" : ""} correctamente`
-                        : "No se pudieron importar productos"}
+                        ? `${result.created} ${itemLabel}${result.created !== 1 ? "s" : ""} importado${result.created !== 1 ? "s" : ""} correctamente`
+                        : `No se pudieron importar ${isAutos ? "vehículos" : "productos"}`}
                     </span>
                   </div>
                   {result.errors.length > 0 && (
@@ -180,7 +220,8 @@ export default function CsvImportButton({ onImported }: { onImported?: () => voi
                 <div className="bg-indigo-50 rounded-xl p-4">
                   <p className="text-sm font-semibold text-indigo-800 mb-2">Formato del CSV</p>
                   <p className="text-xs text-indigo-700 leading-relaxed mb-3">
-                    El archivo debe tener las columnas: <strong>nombre</strong>, <strong>precio</strong> (requeridos) + opcionales: precioComparacion, categoria, subcategoria, descripcion, estado (ACTIVO/OCULTO), imagenes (URLs separadas por |).
+                    El archivo debe tener las columnas: <strong>nombre</strong>, <strong>precio</strong> (requeridos) + opcionales: precioComparacion, categoria, subcategoria, descripcion, estado (ACTIVO/OCULTO), imagenes (URLs separadas por |)
+                    {isAutos && <> + propias de vehículos: marca, modelo, version, anio, km, motor, combustible, transmision, traccion, carroceria, color, puertas, ciudad, condicion</>}.
                   </p>
                   <button onClick={downloadTemplate}
                     className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors">
@@ -215,7 +256,7 @@ export default function CsvImportButton({ onImported }: { onImported?: () => voi
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50">
                         <tr>
-                          {["Nombre","Precio","Categoría","Estado"].map(h => (
+                          {(isAutos ? ["Nombre","Precio","Marca / Modelo","Estado"] : ["Nombre","Precio","Categoría","Estado"]).map(h => (
                             <th key={h} className="px-3 py-2 text-left font-semibold text-gray-500">{h}</th>
                           ))}
                         </tr>
@@ -225,7 +266,7 @@ export default function CsvImportButton({ onImported }: { onImported?: () => voi
                           <tr key={i} className="border-t border-gray-50">
                             <td className="px-3 py-2 text-gray-800 font-medium truncate max-w-[160px]">{r.nombre || <span className="text-red-400">—</span>}</td>
                             <td className="px-3 py-2 text-gray-700">{r.precio ? `$${r.precio}` : <span className="text-red-400">—</span>}</td>
-                            <td className="px-3 py-2 text-gray-500">{r.categoria || "general"}</td>
+                            <td className="px-3 py-2 text-gray-500">{isAutos ? [r.marca, r.modelo].filter(Boolean).join(" ") || "—" : (r.categoria || "general")}</td>
                             <td className="px-3 py-2">
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${(r.estado ?? "").toUpperCase() === "OCULTO" ? "bg-gray-100 text-gray-500" : "bg-green-100 text-green-700"}`}>
                                 {(r.estado || "ACTIVO").toUpperCase() === "OCULTO" ? "OCULTO" : "ACTIVO"}
@@ -258,7 +299,7 @@ export default function CsvImportButton({ onImported }: { onImported?: () => voi
                   className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-60 transition-colors">
                   {importing
                     ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> Importando...</>
-                    : <><Upload className="h-4 w-4" />Importar {rows.length} producto{rows.length !== 1 ? "s" : ""}</>}
+                    : <><Upload className="h-4 w-4" />Importar {rows.length} {itemLabel}{rows.length !== 1 ? "s" : ""}</>}
                 </button>
               )}
             </div>

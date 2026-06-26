@@ -1,15 +1,19 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
+import { useCartLogic } from "@/hooks/useCartLogic";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
+import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
+import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
+import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import type { ImageOverride } from "@/types/store-config";
 
@@ -35,6 +39,16 @@ function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
       background: ov.overlayType==="light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.55})` }} />
   );
 }
+// Para fotos simples (hero, nosotros, contacto) que siempre muestran una imagen
+// (de stock o subida) — a diferencia de los fondos de sección, acá la capa se
+// aplica en cuanto el dueño la elige, aunque todavía no haya subido una foto propia.
+function PhotoOverlay({ ov }: { ov: ImageOverride | undefined }) {
+  if (!ov?.overlayType || ov.overlayType === "none") return null;
+  return (
+    <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none",
+      background: ov.overlayType==="light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.55})` }} />
+  );
+}
 function fmtPrice(n: number, currency: string) {
   return `${currency === "ARS" ? "$" : currency} ${n.toLocaleString("es-AR")}`;
 }
@@ -50,26 +64,22 @@ const DEPARTAMENTOS_DEFAULT = [
 ];
 const CATEGORY_OPTIONS = DEPARTAMENTOS_DEFAULT.map(d => ({ id: d.id, label: d.label }));
 
-function CategoryIcon({ id, color }: { id: string; color: string }) {
+// Lista fija de siluetas para los círculos de "Comprá por departamento".
+// El índice elegido para cada departamento se guarda en overrides (dept{i}IconIdx)
+// y se puede cambiar con el botón "↻" en modo edición — no depende de la categoría.
+function makeCategoryIcons(color: string): React.ReactNode[] {
   const common = { width: 30, height: 30, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  switch (id) {
-    case "electrodomesticos":
-      return <svg {...common}><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="5" y1="10" x2="19" y2="10"/><line x1="8.5" y1="6" x2="8.5" y2="6"/><line x1="8.5" y1="14" x2="8.5" y2="14"/></svg>;
-    case "pequenos-electrodomesticos":
-      return <svg {...common}><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"/><line x1="7" y1="3" x2="7" y2="6"/><line x1="11" y1="3" x2="11" y2="6"/></svg>;
-    case "celulares-y-accesorios":
-      return <svg {...common}><rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>;
-    case "informatica-y-gaming":
-      return <svg {...common}><rect x="3" y="4" width="18" height="12" rx="1.5"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/></svg>;
-    case "audio-imagen-y-video":
-      return <svg {...common}><rect x="3" y="5" width="18" height="13" rx="1.5"/><path d="M10 9l4 2.5-4 2.5V9z" fill={color} stroke="none"/><line x1="8" y1="21" x2="16" y2="21"/></svg>;
-    case "muebles-y-colchones":
-      return <svg {...common}><path d="M4 12V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M3 12h18v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5z"/><line x1="5" y1="18" x2="5" y2="20"/><line x1="19" y1="18" x2="19" y2="20"/></svg>;
-    case "casa-y-jardin":
-      return <svg {...common}><path d="M12 21c-4-2-7-6-7-10a7 7 0 0 1 14 0c0 4-3 8-7 10z"/><line x1="12" y1="21" x2="12" y2="11"/></svg>;
-    default:
-      return <svg {...common}><circle cx="12" cy="12" r="9"/></svg>;
-  }
+  return [
+    <svg key="fridge" {...common}><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="5" y1="10" x2="19" y2="10"/><line x1="8.5" y1="6" x2="8.5" y2="6"/><line x1="8.5" y1="14" x2="8.5" y2="14"/></svg>,
+    <svg key="blender" {...common}><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"/><line x1="7" y1="3" x2="7" y2="6"/><line x1="11" y1="3" x2="11" y2="6"/></svg>,
+    <svg key="phone" {...common}><rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>,
+    <svg key="monitor" {...common}><rect x="3" y="4" width="18" height="12" rx="1.5"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/></svg>,
+    <svg key="tv" {...common}><rect x="3" y="5" width="18" height="13" rx="1.5"/><path d="M10 9l4 2.5-4 2.5V9z" fill={color} stroke="none"/><line x1="8" y1="21" x2="16" y2="21"/></svg>,
+    <svg key="sofa" {...common}><path d="M4 12V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M3 12h18v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5z"/><line x1="5" y1="18" x2="5" y2="20"/><line x1="19" y1="18" x2="19" y2="20"/></svg>,
+    <svg key="leaf" {...common}><path d="M12 21c-4-2-7-6-7-10a7 7 0 0 1 14 0c0 4-3 8-7 10z"/><line x1="12" y1="21" x2="12" y2="11"/></svg>,
+    <svg key="bolt" {...common}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+    <svg key="gift" {...common}><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
+  ];
 }
 
 const CONFIANZA = [
@@ -78,6 +88,27 @@ const CONFIANZA = [
   { fv: "trust3Title", fl: "trust3Desc", t: "Retiro en local",     d: "Coordiná el retiro sin costo de envío" },
   { fv: "trust4Title", fl: "trust4Desc", t: "Envío a todo el país", d: "Recibí tu compra donde estés" },
 ];
+
+const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
+  ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["pinterest", "Pinterest"],
+];
+function SocialIcon({ network }: { network: string }) {
+  const common = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  switch (network) {
+    case "instagram":
+      return <svg {...common}><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>;
+    case "facebook":
+      return <svg {...common}><path d="M16 3h-2a5 5 0 0 0-5 5v3H6v4h3v8h4v-8h3l1-4h-4V8a1 1 0 0 1 1-1h3z"/></svg>;
+    case "tiktok":
+      return <svg {...common}><path d="M9 12a4 4 0 1 0 4 4V3a5 5 0 0 0 5 5"/></svg>;
+    case "youtube":
+      return <svg {...common}><rect x="2" y="5" width="20" height="14" rx="4"/><polygon points="10 9 16 12 10 15" fill="currentColor" stroke="none"/></svg>;
+    case "pinterest":
+      return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M9 18l2-7"/><path d="M8 11a4 4 0 1 1 7 2c-1 1.5-3 1-3-1"/></svg>;
+    default:
+      return null;
+  }
+}
 
 // Íconos cambiables con el botón "↻" en modo edición (mismo patrón que FashionNoir/AutoDrive)
 const TRUST_ICONS: React.ReactNode[] = [
@@ -105,8 +136,7 @@ function ProductCard({ product, href, currency, isFavorite, onToggleFavorite }: 
           <svg width={15} height={15} viewBox="0 0 24 24" fill={isFavorite ? "#dc2626" : "none"} stroke={isFavorite ? "#dc2626" : "#6b7280"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>
         {product.images[0] ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.images[0]} alt={product.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+          <FadeImage src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} />
         ) : (
           <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:13 }}>Sin imagen</div>
         )}
@@ -126,43 +156,32 @@ function ProductCard({ product, href, currency, isFavorite, onToggleFavorite }: 
 export default function ElectroPrime() {
   const config    = useStoreConfig();
   const pushBell  = usePushBell();
-  const { products, loadingProducts, isWholesale } = useStorefront();
+  const storefront = useStorefront();
+  const { products, loadingProducts, isWholesale } = storefront;
+  const cart = useCartLogic(storefront);
+  const {
+    favorites, favoritesOpen, setFavoritesOpen, favoriteProducts, toggleFavorite,
+    cartCount, setCartOpen, toastMsg,
+  } = cart;
   const { editMode, overrides, setOverride } = useEditContext();
   useScrollReveal();
   const isPreview = !!config?.previewFill;
+  const isOwner   = !!config?.isOwner;
   const accent    = config?.colors.accent ?? "#ea580c";
+  const accentText = getContrastColor(accent) === "light" ? "#111" : "#fff";
+  const cartTheme: CartTheme = { BG:"#ffffff", S:"#fafafa", T:"#111111", MID:"#6b7280", border:"#e5e5e5", accent, accentText };
   const currency  = config?.currency ?? "ARS";
   const storeName = config?.storeName ?? "ELECTRO PRIME";
   const whatsapp  = config?.whatsapp ?? { enabled:false, number:"", message:"" };
+  // En modo edición lo mostramos con solo activarlo, para que se pueda previsualizar
+  // antes de completar el número; en la tienda real hace falta el número sí o sí.
+  const showWA    = whatsapp.enabled && (editMode || !!whatsapp.number);
 
-  const { user, status, signOut } = useAuth();
-  const router = useRouter();
+  const { user, signOut } = useAuth();
   const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
   const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
-  const [favorites,        setFavorites]        = useState<string[]>([]);
-  const [favoritesOpen,    setFavoritesOpen]    = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (status === "loading") return;
-    if (status === "authenticated") {
-      fetch("/api/favoritos")
-        .then(r => r.ok ? r.json() : [])
-        .then((data: { productId: string }[]) => setFavorites(data.map(f => f.productId)))
-        .catch(() => {});
-    } else {
-      try {
-        const savedFavs = localStorage.getItem("storefront_favorites");
-        if (savedFavs) setFavorites(JSON.parse(savedFavs));
-      } catch {}
-    }
-  }, [status]);
-
-  useEffect(() => {
-    if (status === "authenticated") return;
-    try { localStorage.setItem("storefront_favorites", JSON.stringify(favorites)); } catch {}
-  }, [favorites, status]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -171,18 +190,6 @@ export default function ElectroPrime() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  async function toggleFavorite(id: string) {
-    if (status !== "authenticated") { router.push(`/login?redirect=/tienda/${config?.slug}`); return; }
-    const wasFavorite = favorites.includes(id);
-    setFavorites(prev => wasFavorite ? prev.filter(f => f !== id) : [...prev, id]);
-    try {
-      await fetch("/api/favoritos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: id }) });
-    } catch {
-      setFavorites(prev => wasFavorite ? [...prev, id] : prev.filter(f => f !== id));
-    }
-  }
-  const favoriteProducts = products.filter(p => favorites.includes(p.id));
 
   const iovr = config?.imageOverrides ?? {};
   const sc   = config?.sectionColors  ?? {};
@@ -221,7 +228,9 @@ export default function ElectroPrime() {
   const contactoImg = iovr["sectionbg_bgContacto"];
 
   const footerBg    = sc["bgFooter"] ?? "#0a0a0a";
-  const ftMid       = "rgba(255,255,255,0.5)";
+  const footerImg   = iovr["sectionbg_bgFooter"];
+  const ftText      = secText(footerImg, footerBg);
+  const ftMid       = secMid(footerImg, footerBg);
 
   const navBg       = sc["navBg"] ?? "#ffffff";
   const navDark     = getContrastColor(navBg) === "light";
@@ -265,7 +274,9 @@ export default function ElectroPrime() {
   const featuredProducts = products.filter(p => p.featured);
   const showcased = (featuredProducts.length > 0 ? featuredProducts : products).slice(0, 8);
   const hasMore   = (featuredProducts.length > 0 ? featuredProducts : products).length > 8;
-  const ofertas   = products.filter(p => p.comparePrice && p.comparePrice > p.price).slice(0, 8);
+  const allOfertas = products.filter(p => p.comparePrice && p.comparePrice > p.price);
+  const ofertas    = allOfertas.slice(0, 8);
+  const hasMoreOfertas = allOfertas.length > 8;
   const catalogHref = `/tienda/${config?.slug ?? ""}/productos?t=electro-prime${isPreview ? "&from=editor" : ""}`;
 
   return (
@@ -277,9 +288,7 @@ export default function ElectroPrime() {
         .ep-dep-grid::-webkit-scrollbar { display:none }
         .ep-ofertas-row { scrollbar-width:none }
         .ep-ofertas-row::-webkit-scrollbar { display:none }
-        .ep-carousel-arrow { opacity:0; transition:opacity 0.2s }
-        section:hover .ep-carousel-arrow { opacity:1 }
-        @media(max-width:640px){ .ep-carousel-arrow { opacity:1 } }
+        .ep-dept-icon:hover > div { opacity:1 }
         .ep-trust-grid { grid-template-columns:repeat(2,1fr) }
         @media(min-width:768px){ .ep-trust-grid { grid-template-columns:repeat(4,1fr) } }
         .ep-prod-grid { grid-template-columns:repeat(2,1fr) }
@@ -353,7 +362,7 @@ export default function ElectroPrime() {
             </Link>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            <button onClick={() => setFavoritesOpen(true)}
+            <button onClick={() => { setFavoritesOpen(true); setCartOpen(false); }}
               style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {favorites.length > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
@@ -391,9 +400,10 @@ export default function ElectroPrime() {
                 </div>
               )}
             </div>
-            <Link href={catalogHref} aria-label="Carrito" style={{ color:navTextMid, display:"flex", alignItems:"center" }}>
+            <button onClick={() => { setCartOpen(true); setFavoritesOpen(false); }} aria-label="Carrito" style={{ position:"relative", background:"none", border:"none", color:navTextMid, display:"flex", alignItems:"center", cursor:"pointer", padding:0 }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-            </Link>
+              {cartCount > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color:accentText, borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
+            </button>
             <button className="ep-burger" onClick={() => setMenuOpen(m => !m)}
               style={{ background:"none", border:`1px solid ${navBorder}`, color:navText, padding:"7px 11px", cursor:"pointer", fontSize:18 }}>
               {menuOpen ? "×" : "☰"}
@@ -436,7 +446,7 @@ export default function ElectroPrime() {
                 padding:"15px 32px", fontWeight:700, fontSize:13, borderRadius:10, textDecoration:"none" }}>
                 Ver catálogo
               </Link>
-              {whatsapp.enabled && whatsapp.number && (
+              {showWA && (
                 <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
                   target="_blank" rel="noopener noreferrer"
                   style={{ display:"flex", alignItems:"center", gap:8, background:"none", border:`1.5px solid ${heroText==="#ffffff"?"rgba(255,255,255,0.35)":"#d1d5db"}`, color:heroText, textDecoration:"none", padding:"15px 24px", fontWeight:600, fontSize:13, borderRadius:10 }}>
@@ -446,8 +456,10 @@ export default function ElectroPrime() {
             </div>
           </div>
           <div style={{ flex:1, position:"relative", overflow:"hidden", minHeight:320 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={heroImgUrl} alt="Producto destacado" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+            <FadeImage src={heroImgUrl} alt="Producto destacado" fill sizes="(max-width: 768px) 100vw, 50vw" priority
+              style={{ objectFit:"cover", objectPosition:`${iovr["heroImage"]?.posX ?? 50}% ${iovr["heroImage"]?.posY ?? 50}%` }} />
+            <PhotoOverlay ov={iovr["heroImage"]} />
+            <BgDragHandle imgKey="heroImage" />
             <EditableImageButton field="heroImage" label="Imagen del hero" />
           </div>
         </div>
@@ -463,32 +475,48 @@ export default function ElectroPrime() {
             <EditableZone field="depHeading" label="Título departamentos">Comprá por departamento</EditableZone>
           </h2>
           <div className="ep-dep-grid">
-            {DEPARTAMENTOS_DEFAULT.map((d, i) => {
-              const catKey = `dept${i}Cat`;
-              const categoryId = overrides[catKey]?.text ?? d.id;
-              return (
-                <div key={i} style={{ position:"relative" }}>
-                  <Link href={`/tienda/${config?.slug ?? ""}/productos?categoria=${categoryId}&t=electro-prime${isPreview ? "&from=editor" : ""}`}
-                    style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, textDecoration:"none", flexShrink:0, width:96 }}>
-                    <div style={{ width:72, height:72, borderRadius:"50%", background:`${accent}12`, border:`1.5px solid ${accent}30`,
-                      display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      <CategoryIcon id={d.id} color={accent} />
-                    </div>
-                    <span style={{ fontSize:11.5, fontWeight:600, color:depText, textAlign:"center", lineHeight:1.3 }}>
-                      <EditableZone field={`dept${i}Label`} label={`Departamento ${i+1} — texto`}>{d.label}</EditableZone>
-                    </span>
-                  </Link>
-                  {editMode && (
-                    <select value={categoryId} onClick={e => e.stopPropagation()}
-                      onChange={e => setOverride(catKey, { text: e.target.value })}
-                      title="A qué categoría apunta este botón"
-                      style={{ position:"absolute", top:-8, right:-30, fontSize:10.5, border:"1px solid #6366f1", borderRadius:6, background:"#eef2ff", color:"#4338ca", cursor:"pointer", maxWidth:150, padding:"3px 4px", zIndex:3 }}>
-                      {CATEGORY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                    </select>
-                  )}
-                </div>
-              );
-            })}
+            {(() => {
+              const CATEGORY_ICON_LIST = makeCategoryIcons(accent);
+              return DEPARTAMENTOS_DEFAULT.map((d, i) => {
+                const catKey = `dept${i}Cat`;
+                const categoryId = overrides[catKey]?.text ?? d.id;
+                // Si no es el dueño editando, ocultamos los departamentos sin productos
+                // para no mandar al cliente a un catálogo vacío.
+                if (!editMode && !products.some(p => p.category === categoryId)) return null;
+                const iconIdx = Math.abs(parseInt(overrides[`dept${i}IconIdx`]?.text ?? String(i)) || 0) % CATEGORY_ICON_LIST.length;
+                const nextIconIdx = (iconIdx + 1) % CATEGORY_ICON_LIST.length;
+                return (
+                  <div key={i} style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0, minWidth:96 }}>
+                    <Link href={`/tienda/${config?.slug ?? ""}/productos?categoria=${categoryId}&t=electro-prime${isPreview ? "&from=editor" : ""}`}
+                      data-no-unsaved-guard={editMode ? "true" : undefined}
+                      onClick={e => { if (editMode) e.preventDefault(); }}
+                      style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, textDecoration:"none" }}>
+                      <div className={editMode ? "ep-dept-icon" : undefined}
+                        onClick={editMode ? (e => { e.preventDefault(); e.stopPropagation(); setOverride(`dept${i}IconIdx`, { text: String(nextIconIdx) }); }) : undefined}
+                        title={editMode ? "Cambiar ícono" : undefined}
+                        style={{ width:72, height:72, borderRadius:"50%", background:`${accent}12`, border:`1.5px solid ${accent}30`,
+                        display:"flex", alignItems:"center", justifyContent:"center", position:"relative", cursor: editMode ? "pointer" : undefined }}>
+                        {CATEGORY_ICON_LIST[iconIdx]}
+                        {editMode && (
+                          <div style={{ position:"absolute", inset:0, background:"rgba(99,102,241,0.9)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:15, opacity:0.8, transition:"opacity 0.15s", pointerEvents:"none" }}>↻</div>
+                        )}
+                      </div>
+                      <span style={{ fontSize:11.5, fontWeight:600, color:depText, textAlign:"center", lineHeight:1.3 }}>
+                        <EditableZone field={`dept${i}Label`} label={`Departamento ${i+1} — texto`}>{d.label}</EditableZone>
+                      </span>
+                    </Link>
+                    {editMode && (
+                      <select value={categoryId} onClick={e => e.stopPropagation()}
+                        onChange={e => setOverride(catKey, { text: e.target.value })}
+                        title="A qué categoría apunta este botón"
+                        style={{ marginTop:6, maxWidth:170, fontSize:10, border:"1px solid #6366f1", borderRadius:6, background:"#eef2ff", color:"#4338ca", cursor:"pointer", padding:"3px 4px" }}>
+                        {CATEGORY_OPTIONS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      </select>
+                    )}
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
       </section>
@@ -508,8 +536,8 @@ export default function ElectroPrime() {
                   {TRUST_ICONS[iconIdx]}
                   {editMode && (
                     <button onClick={() => setOverride(`trust${i+1}IconIdx`, { text: String(nextIdx) })} title="Cambiar ícono"
-                      style={{ position:"absolute", inset:-4, background:"rgba(99,102,241,0.9)", border:"none", borderRadius:4, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:11, opacity:0, transition:"opacity 0.15s" }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
+                      style={{ position:"absolute", inset:-4, background:"rgba(99,102,241,0.9)", border:"none", borderRadius:4, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:11, opacity:0.8, transition:"opacity 0.15s" }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0.8")}>↻</button>
                   )}
                 </span>
                 <div>
@@ -529,19 +557,22 @@ export default function ElectroPrime() {
           <SectionOverlay ov={ofertasImg} />
           <EditableSectionBg field="bgOfertas" label="Fondo ofertas" />
           <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto" }}>
-            <h2 style={{ margin:"0 0 24px", fontSize:"clamp(20px,3vw,28px)", fontWeight:800, color:ofertasText, letterSpacing:-0.5 }}>
-              🔥 <EditableZone field="ofertasHeading" label="Título ofertas">Ofertas destacadas</EditableZone>
-            </h2>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:24, flexWrap:"wrap", gap:12 }}>
+              <h2 style={{ margin:0, fontSize:"clamp(20px,3vw,28px)", fontWeight:800, color:ofertasText, letterSpacing:-0.5 }}>
+                🔥 <EditableZone field="ofertasHeading" label="Título ofertas">Ofertas destacadas</EditableZone>
+              </h2>
+              {hasMoreOfertas && <Link href={`${catalogHref}&oferta=true`} style={{ fontSize:13, fontWeight:700, color:accent, textDecoration:"none" }}>Ver todas las ofertas →</Link>}
+            </div>
             <div style={{ position:"relative" }}>
               {ofertas.length > 4 && (
                 <>
-                  <button onClick={() => scrollOfertas(-1)} aria-label="Anterior" className="ep-carousel-arrow ep-carousel-arrow-l"
-                    style={{ position:"absolute", left:-18, top:"38%", transform:"translateY(-50%)", width:42, height:42, borderRadius:"50%",
-                      border:"none", background:"#fff", color:"#111", fontSize:20, cursor:"pointer", zIndex:2, boxShadow:"0 6px 20px rgba(0,0,0,0.18)",
+                  <button onClick={() => scrollOfertas(-1)} aria-label="Anterior"
+                    style={{ position:"absolute", left:-36, top:"38%", transform:"translateY(-50%)", width:36,
+                      border:"none", background:"none", color:ofertasText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
                       display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-                  <button onClick={() => scrollOfertas(1)} aria-label="Siguiente" className="ep-carousel-arrow ep-carousel-arrow-r"
-                    style={{ position:"absolute", right:-18, top:"38%", transform:"translateY(-50%)", width:42, height:42, borderRadius:"50%",
-                      border:"none", background:"#fff", color:"#111", fontSize:20, cursor:"pointer", zIndex:2, boxShadow:"0 6px 20px rgba(0,0,0,0.18)",
+                  <button onClick={() => scrollOfertas(1)} aria-label="Siguiente"
+                    style={{ position:"absolute", right:-36, top:"38%", transform:"translateY(-50%)", width:36,
+                      border:"none", background:"none", color:ofertasText, opacity:0.6, textShadow:"0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize:44, lineHeight:1, cursor:"pointer", zIndex:2,
                       display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
                 </>
               )}
@@ -594,6 +625,21 @@ export default function ElectroPrime() {
         </div>
       </section>
 
+      {/* ── BANNER PROMOCIONAL ── */}
+      <PromoBannerCarousel
+        images={[config?.imageOverrides?.["promoBanner1"], config?.imageOverrides?.["promoBanner2"], config?.imageOverrides?.["promoBanner3"]]}
+        demoImages={[
+          "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=1920&q=80",
+          "https://images.unsplash.com/photo-1556911073-38141963c9e0?auto=format&fit=crop&w=1920&q=80",
+          "https://images.unsplash.com/photo-1556909114-44e3e70034e2?auto=format&fit=crop&w=1920&q=80",
+        ]}
+        intervalMs={config?.bannerInterval ?? 4000}
+        editMode={editMode}
+        isPreview={isPreview}
+        accent={accent}
+        bg="#111827"
+      />
+
       {/* ── MAYORISTA ── */}
       {isWholesale && (
         <section data-reveal style={{ background:"#f8fafc", borderTop:"1px solid #f0f0f0", borderBottom:"1px solid #f0f0f0" }}>
@@ -622,8 +668,10 @@ export default function ElectroPrime() {
         <div className="ep-about" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"grid", gap:48, alignItems:"center" }}>
           <div style={{ position:"relative" }}>
             <div style={{ borderRadius:18, overflow:"hidden", aspectRatio:"4/3", position:"relative" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={nosotrosUrl} alt="Nuestro local" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              <FadeImage src={nosotrosUrl} alt="Nuestro local" fill sizes="(max-width: 768px) 100vw, 50vw"
+                style={{ objectFit:"cover", objectPosition:`${iovr["nosotrosImage"]?.posX ?? 50}% ${iovr["nosotrosImage"]?.posY ?? 50}%` }} />
+              <PhotoOverlay ov={iovr["nosotrosImage"]} />
+              <BgDragHandle imgKey="nosotrosImage" />
               <EditableImageButton field="nosotrosImage" label="Imagen sección Nosotros" />
             </div>
             <div style={{ position:"absolute", bottom:-18, right:-14, background:"#fff", borderRadius:14, padding:"14px 20px", boxShadow:"0 8px 30px rgba(0,0,0,0.12)", textAlign:"center", border:`2px solid ${accent}` }}>
@@ -646,7 +694,7 @@ export default function ElectroPrime() {
             <p style={{ margin:"0 0 26px", fontSize:14.5, color:nosMid, lineHeight:1.85 }}>
               <EditableZone field="nosotrosP2" label="Párrafo 2">Te asesoramos para que encuentres el producto justo para tu casa, con financiación en cuotas y la mejor atención.</EditableZone>
             </p>
-            {whatsapp.enabled && whatsapp.number && (
+            {showWA && (
               <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ display:"inline-flex", alignItems:"center", gap:8, background:"#25d366", color:"white", textDecoration:"none", padding:"13px 28px", borderRadius:10, fontWeight:700, fontSize:14 }}>
@@ -665,20 +713,11 @@ export default function ElectroPrime() {
         <div className="ep-contact-grid" style={{ position:"relative", zIndex:1, maxWidth:1080, margin:"0 auto", display:"grid", gap:0, borderRadius:20, overflow:"hidden", boxShadow:"0 24px 60px rgba(0,0,0,0.3)" }}>
           <style>{`.ep-contact-grid{grid-template-columns:1fr} @media(min-width:768px){.ep-contact-grid{grid-template-columns:1fr 1fr}}`}</style>
           <div style={{ position:"relative", minHeight:280 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={contactImgUrl} alt="Atención al cliente" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", position:"absolute", inset:0 }} />
+            <FadeImage src={contactImgUrl} alt="Atención al cliente" fill sizes="(max-width: 768px) 100vw, 50vw"
+              style={{ objectFit:"cover", objectPosition:`${iovr["contactImage"]?.posX ?? 50}% ${iovr["contactImage"]?.posY ?? 50}%` }} />
+            <PhotoOverlay ov={iovr["contactImage"]} />
+            <BgDragHandle imgKey="contactImage" />
             <EditableImageButton field="contactImage" label="Imagen sección Contacto" />
-            <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.55))" }} />
-            <div style={{ position:"absolute", bottom:24, left:24, right:24 }}>
-              {CONFIANZA.slice(0,3).map((c,i) => {
-                const iconIdx = Math.abs(parseInt(overrides[`trust${i+1}IconIdx`]?.text ?? String(i)) || 0) % TRUST_ICONS.length;
-                return (
-                  <p key={i} style={{ margin:"0 0 8px", fontSize:13, color:"#fff", display:"flex", alignItems:"center", gap:8, fontWeight:600 }}>
-                    <span style={{ display:"flex", transform:"scale(0.6)", transformOrigin:"center" }}>{TRUST_ICONS[iconIdx]}</span> {c.t}
-                  </p>
-                );
-              })}
-            </div>
           </div>
           <div style={{ background:"#fff", padding:36 }}>
             <p style={{ margin:"0 0 10px", fontSize:11, color:accent, textTransform:"uppercase", letterSpacing:2, fontWeight:700 }}>Contacto</p>
@@ -688,12 +727,12 @@ export default function ElectroPrime() {
             <p style={{ margin:"0 0 22px", fontSize:13.5, color:"#6b7280", lineHeight:1.8 }}>
               <EditableZone field="contactSubtext" label="Subtítulo contacto">Escribinos y te asesoramos antes de tu compra.</EditableZone>
             </p>
-            <ContactForm storeId={config?.storeId} accent={accent} textColor="#111111" mutedColor="#6b7280" radius={10} />
+            <ContactForm storeId={config?.storeId} accent={accent} textColor="#111111" mutedColor="#6b7280" radius={10} isPreview={isPreview} />
           </div>
         </div>
         <div style={{ position:"relative", zIndex:1, maxWidth:1080, margin:"18px auto 0", display:"flex", justifyContent:"center", gap:20, flexWrap:"wrap" }}>
             <Link href={catalogHref} style={{ color:accent, fontWeight:700, fontSize:13, textDecoration:"none" }}>Ver catálogo completo →</Link>
-            {whatsapp.enabled && whatsapp.number && (
+            {showWA && (
               <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ color:"#25d366", textDecoration:"none", fontWeight:600, fontSize:13 }}>
@@ -704,21 +743,41 @@ export default function ElectroPrime() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{ background:footerBg, padding:"32px 24px", textAlign:"center" }}>
+      <footer style={{ position:"relative", ...secBg(footerImg, footerBg), color:ftText, padding:"32px 24px", textAlign:"center" }}>
+        <BgDragHandle imgKey="sectionbg_bgFooter" />
+        <SectionOverlay ov={footerImg} />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <div style={{ position:"relative", zIndex:1 }}>
         <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:14, color:accent }}>{storeName}</p>
         <p style={{ margin:"0 0 12px", fontSize:11, color:ftMid }}>
           © {new Date().getFullYear()} {storeName}. Todos los derechos reservados.
         </p>
+        {(editMode || SOCIAL_NETWORKS.some(([key]) => config?.socialLinks?.[key])) && (
+          <div style={{ display:"flex", justifyContent:"center", gap:10, marginBottom:14 }}>
+            {SOCIAL_NETWORKS.map(([key, label]) => {
+              const url = config?.socialLinks?.[key];
+              if (!editMode && !url) return null;
+              return (
+                <a key={key} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener noreferrer" aria-label={label}
+                  onClick={e => { if (!url) e.preventDefault(); }}
+                  style={{ width:30, height:30, borderRadius:"50%", border:`1px solid ${ftMid}`, color:ftMid, display:"flex", alignItems:"center", justifyContent:"center", textDecoration:"none", opacity: url ? 1 : 0.35 }}>
+                  <SocialIcon network={key} />
+                </a>
+              );
+            })}
+          </div>
+        )}
         <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
           {[["Política de devoluciones","devoluciones"],["Política de envíos","envios"],["Términos y condiciones","terminos"]].map(([label, tipo]) => (
             <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:ftMid, opacity:0.6, textDecoration:"none" }}>{label}</a>
           ))}
-          {!editMode && !isPreview && (
+          {!editMode && (
             <button onClick={() => setShowReport(true)}
               style={{ fontSize:10, color:ftMid, opacity:0.6, background:"none", border:"none", cursor:"pointer", padding:0, textDecoration:"underline" }}>
               Reportar tienda
             </button>
           )}
+        </div>
         </div>
       </footer>
 
@@ -742,8 +801,11 @@ export default function ElectroPrime() {
               </div>
             ) : favoriteProducts.map(product => (
               <div key={product.id} style={{ display:"flex", gap:14, padding:"14px 0", borderBottom:"1px solid #f5f5f5" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={product.images[0] ?? ""} alt="" style={{ width:80, height:60, objectFit:"cover", borderRadius:4, flexShrink:0, background:"#f5f5f5" }} />
+                {product.images[0] ? (
+                  <FadeImage src={product.images[0]} alt="" width={80} height={60} style={{ objectFit:"cover", borderRadius:4, flexShrink:0, background:"#f5f5f5" }} />
+                ) : (
+                  <div style={{ width:80, height:60, borderRadius:4, flexShrink:0, background:"#f5f5f5" }} />
+                )}
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:14, fontWeight:600, margin:"0 0 4px", color:"#111" }}>{product.name}</p>
                   <p style={{ fontSize:13, color:accent, fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>
@@ -764,7 +826,16 @@ export default function ElectroPrime() {
         </div>
       </div>
 
-      {!editMode && whatsapp.enabled && whatsapp.number && (
+      <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={whatsapp} />
+      <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} />
+
+      {toastMsg && (
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#111", color:"#fff", padding:"12px 20px", fontSize:13, fontWeight:600, zIndex:600, boxShadow:"0 4px 20px rgba(0,0,0,0.35)", whiteSpace:"nowrap" }}>
+          {toastMsg}
+        </div>
+      )}
+
+      {showWA && (
         <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
           target="_blank" rel="noopener noreferrer"
           style={{ position:"fixed", bottom:24, right:24, zIndex:500, background:"#25d366", color:"white", width:56, height:56,
