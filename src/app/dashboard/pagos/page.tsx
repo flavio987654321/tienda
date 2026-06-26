@@ -22,6 +22,10 @@ export default async function PagosPage() {
       policyReturnsActive: true,
       policyShippingActive: true,
       policyTermsActive: true,
+      originStreet: true,
+      originCity: true,
+      originProvince: true,
+      originPostalCode: true,
     },
   });
 
@@ -79,6 +83,10 @@ export default async function PagosPage() {
                 policyReturnsActive: store?.policyReturnsActive ?? true,
                 policyShippingActive: store?.policyShippingActive ?? true,
                 policyTermsActive: store?.policyTermsActive ?? true,
+                originStreet: store?.originStreet ?? "",
+                originCity: store?.originCity ?? "",
+                originProvince: store?.originProvince ?? "",
+                originPostalCode: store?.originPostalCode ?? "",
               }}
             />
           </section>

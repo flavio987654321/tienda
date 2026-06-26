@@ -195,6 +195,12 @@ model Store {
   mpConnectedAt         DateTime?
   // Preview image generada al guardar el template
   previewImage          String?
+  // Dirección de origen para cotizar envío en vivo (Envíopack). Opcional:
+  // sin esto, la tienda solo puede usar métodos fijos/"a coordinar".
+  originStreet          String?
+  originCity            String?
+  originProvince        String? // código de provincia (ej: "B", "X", "C")
+  originPostalCode      String?
   // Verificación de identidad
   isVerified            Boolean   @default(false)
   verifiedShowName      Boolean   @default(false)

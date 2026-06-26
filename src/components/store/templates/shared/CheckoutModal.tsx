@@ -3,6 +3,7 @@ import { HandHeart } from "lucide-react";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import type { CartTheme } from "./CartDrawer";
 import { FadeImage } from "./FadeImage";
+import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 
 // Checkout completo (datos del comprador, envío, pago, cupón, donación opcional
 // y términos) compartido por todos los templates de un mismo tipo de negocio.
@@ -23,7 +24,7 @@ export function CheckoutModal({
     notas, setNotas, coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
     handleApplyCoupon, cartTotal, couponDiscount, envioPrice, envioCoordinar, orderTotal,
     canastaDisponible, donationEnabled, setDonationEnabled, donationAmount, setDonationAmount,
-    acceptedTerms, setAcceptedTerms, handlePlaceOrder, fmt, fmtEnvioPrice,
+    acceptedTerms, setAcceptedTerms, handlePlaceOrder, fmt, fmtEnvioPrice, fmtLiveQuote,
   } = cart;
 
   if (!checkoutOpen) return null;
@@ -93,11 +94,16 @@ export function CheckoutModal({
                   style={inputStyle} />
               ))}
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
-                {([["ciudad","Ciudad"],["provincia","Provincia"]] as const).map(([field, ph]) => (
-                  <input key={field} required placeholder={ph}
-                    value={buyerForm[field]} onChange={e => setBuyerForm(f => ({ ...f, [field]: e.target.value }))}
-                    style={{ ...inputStyle, marginBottom:0 }} />
-                ))}
+                <input required placeholder="Ciudad"
+                  value={buyerForm.ciudad} onChange={e => setBuyerForm(f => ({ ...f, ciudad: e.target.value }))}
+                  style={{ ...inputStyle, marginBottom:0 }} />
+                <select required value={buyerForm.provincia} onChange={e => setBuyerForm(f => ({ ...f, provincia: e.target.value }))}
+                  style={{ ...inputStyle, marginBottom:0 }}>
+                  <option value="">Provincia...</option>
+                  {PROVINCIAS_ARGENTINA.map((p) => (
+                    <option key={p.code} value={p.code}>{p.name}</option>
+                  ))}
+                </select>
               </div>
               <input placeholder="Código postal" value={buyerForm.cp} onChange={e => setBuyerForm(f => ({ ...f, cp: e.target.value }))} style={inputStyle} />
               <label style={{ display:"flex", alignItems:"center", gap:10, fontSize:12, opacity:0.7, cursor:"pointer", marginBottom:28, color:T }}>
@@ -113,7 +119,7 @@ export function CheckoutModal({
                       <input type="radio" name="envio" value={opt.id} checked={envioId===opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor:accent }} />
                       <span style={{ fontSize:13, color:T }}>{opt.label}</span>
                     </span>
-                    <span style={{ fontSize:13, fontWeight:700, color: (opt.isPickup || (!opt.coordinar && opt.price === 0)) ? accent : T }}>{fmtEnvioPrice(opt, fmt)}</span>
+                    <span style={{ fontSize:13, fontWeight:700, color: (opt.isPickup || (!opt.coordinar && opt.price === 0)) ? accent : T }}>{opt.liveQuote ? fmtLiveQuote(opt.id) : fmtEnvioPrice(opt, fmt)}</span>
                   </label>
                 ))}
               </div>

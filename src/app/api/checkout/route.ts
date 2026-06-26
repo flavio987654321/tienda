@@ -6,6 +6,7 @@ import { sendOrderConfirmationEmail, sendNewOrderToOwnerEmail } from "@/lib/emai
 import { sendPushToUser } from "@/lib/push";
 import type { ShippingMethod } from "@/types/store-config";
 import { DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
+import { cotizarEnvio } from "@/lib/enviopack";
 import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
 import { recordStockMovement } from "@/lib/stockMovements";
 
@@ -36,12 +37,34 @@ type CheckoutBody = {
   donationAmount?: number;
 };
 
-function resolveShipping(shippingMethodId: string, methods: ShippingMethod[]): { label: string; cost: number } {
+async function resolveShipping(
+  shippingMethodId: string,
+  methods: ShippingMethod[],
+  storeId: string,
+  destinationPostalCode: string,
+  destinationProvince: string,
+  items: { productId: string; quantity: number }[]
+): Promise<{ label: string; cost: number }> {
   // Backward compat: old frontend sent "pickup"/"standard"/"national"
   const legacyMap: Record<string, string> = { pickup: "retiro", standard: "estandar", national: "nacional" };
   const normalizedId = legacyMap[shippingMethodId] ?? shippingMethodId;
   const found = methods.find(m => m.id === normalizedId && m.enabled);
-  if (found) return { label: found.label, cost: found.coordinar ? 0 : found.price };
+  if (found) {
+    if (found.liveQuote) {
+      // Nunca confiar en un precio mandado por el cliente para métodos
+      // cotizados: se recalcula server-side. Si la cotización falla, la
+      // orden se crea igual "a coordinar" en vez de bloquear la venta.
+      try {
+        const quote = await cotizarEnvio({ storeId, destinationPostalCode, destinationProvince, items });
+        if (quote.available) {
+          const price = found.id === "envio-sucursal" ? quote.sucursal : quote.domicilio;
+          if (price != null) return { label: found.label, cost: price };
+        }
+      } catch { /* fallback a coordinar abajo */ }
+      return { label: `${found.label} (a coordinar)`, cost: 0 };
+    }
+    return { label: found.label, cost: found.coordinar ? 0 : found.price };
+  }
   // fallback to pickup
   const pickup = methods.find(m => m.isPickup) ?? DEFAULT_SHIPPING_METHODS[0];
   return { label: pickup.label, cost: 0 };
@@ -85,7 +108,14 @@ export async function POST(req: NextRequest) {
       storeShippingMethods = cfg.shippingMethods;
     }
   } catch { /* noop */ }
-  const shipping = resolveShipping(shippingMethod, storeShippingMethods);
+  const shipping = await resolveShipping(
+    shippingMethod,
+    storeShippingMethods,
+    storeId,
+    customer?.postalCode ?? "",
+    customer?.province ?? "",
+    items.map((i) => ({ productId: i.productId, quantity: Math.max(1, Math.floor(Number(i.quantity) || 1)) }))
+  );
 
   try {
     let usedRewardCouponId: string | null = null;

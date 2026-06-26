@@ -58,6 +58,11 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
   // completó, el backend de /api/checkout ignora el aporte en silencio, así
   // que ocultamos el toggle entero para no dejar donar "al aire".
   const [canastaDisponible, setCanastaDisponible] = useState(false);
+  const [liveQuote, setLiveQuote] = useState<{
+    status: "idle" | "loading" | "unavailable" | "ready";
+    domicilio: number | null;
+    sucursal: number | null;
+  }>({ status: "idle", domicilio: null, sucursal: null });
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const { status } = useAuth();
@@ -157,6 +162,56 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
     };
   }, [modalProduct, lockScrollOnModal]);
 
+  // Cotización en vivo (Envíopack): se dispara cuando hay un método liveQuote
+  // habilitado y el comprador ya escribió un CP con pinta de válido. Debounced
+  // para no spamear el endpoint en cada tecla.
+  const liveQuoteMethods = (shippingMethods ?? []).filter((m) => m.liveQuote && m.enabled);
+  useEffect(() => {
+    if (liveQuoteMethods.length === 0 || !storeId) return;
+    const cp = buyerForm.cp.trim();
+    const provincia = buyerForm.provincia.trim();
+    if (cp.length < 4 || !provincia || cartItems.length === 0) return;
+
+    setLiveQuote((q) => ({ ...q, status: "loading" }));
+    const timeout = setTimeout(() => {
+      fetch("/api/envios/cotizar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId,
+          destinationPostalCode: cp,
+          destinationProvince: provincia,
+          items: cartItems.map((i) => ({ productId: i.product.id, quantity: i.qty })),
+        }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data?.available) {
+            setLiveQuote({ status: "ready", domicilio: data.domicilio ?? null, sucursal: data.sucursal ?? null });
+          } else {
+            setLiveQuote({ status: "unavailable", domicilio: null, sucursal: null });
+          }
+        })
+        .catch(() => setLiveQuote({ status: "unavailable", domicilio: null, sucursal: null }));
+    }, 500);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buyerForm.cp, buyerForm.provincia, storeId, JSON.stringify(cartItems.map((i) => [i.product.id, i.qty]))]);
+
+  function getLiveQuotePrice(methodId: string): number | null {
+    if (liveQuote.status !== "ready") return null;
+    if (methodId === "envio-domicilio") return liveQuote.domicilio;
+    if (methodId === "envio-sucursal") return liveQuote.sucursal;
+    return null;
+  }
+
+  function fmtLiveQuote(methodId: string): string {
+    if (liveQuote.status === "loading") return "Calculando...";
+    const price = getLiveQuotePrice(methodId);
+    if (price != null) return fmtFn(price);
+    return "A coordinar"; // unavailable (Fase A) o sin CP todavía
+  }
+
   // Derived values
   const cartTotal      = cartItems.reduce((s, i) => {
     const useWholesale = isWholesale && i.product.precioMayorista && i.product.cantMinMayorista && i.qty >= i.product.cantMinMayorista;
@@ -169,8 +224,9 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
   const cartCount      = cartItems.reduce((s, i) => s + i.qty, 0);
   const envioOptions   = getEnvioOptions(shippingMethods);
   const selectedEnvio  = envioOptions.find(o => o.id === envioId) ?? envioOptions[0];
-  const envioPrice     = selectedEnvio?.coordinar ? 0 : (selectedEnvio?.price ?? 0);
-  const envioCoordinar = selectedEnvio?.coordinar ?? false;
+  const selectedLiveQuotePrice = selectedEnvio?.liveQuote ? getLiveQuotePrice(selectedEnvio.id) : null;
+  const envioPrice     = selectedEnvio?.liveQuote ? (selectedLiveQuotePrice ?? 0) : (selectedEnvio?.coordinar ? 0 : (selectedEnvio?.price ?? 0));
+  const envioCoordinar = selectedEnvio?.liveQuote ? selectedLiveQuotePrice == null : (selectedEnvio?.coordinar ?? false);
   const couponDiscount = appliedCoupon?.discount ?? 0;
   const orderTotal     = cartTotal + envioPrice - couponDiscount;
 
@@ -381,7 +437,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
     searchResults, favoriteProducts,
     checkoutMode, isWholesale, wholesaleWarnings,
     pagoOptions: getPagoOptions(hasMercadoPago),
-    fmtEnvioPrice,
+    fmtEnvioPrice, fmtLiveQuote,
     // Functions
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,

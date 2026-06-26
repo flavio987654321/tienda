@@ -7,7 +7,8 @@ import {
   Eye, EyeOff, Lock, Mail, Package,
 } from "lucide-react";
 import type { StorePaymentInfo, ShippingMethod } from "@/types/store-config";
-import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
+import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS, LIVE_QUOTE_SHIPPING_METHODS } from "@/types/store-config";
+import { PROVINCIAS_ARGENTINA as PROVINCES } from "@/lib/provincias";
 
 type Props = {
   initial: {
@@ -20,6 +21,10 @@ type Props = {
     policyReturnsActive: boolean;
     policyShippingActive: boolean;
     policyTermsActive: boolean;
+    originStreet: string;
+    originCity: string;
+    originProvince: string;
+    originPostalCode: string;
   };
 };
 
@@ -38,6 +43,21 @@ export default function PagosClient({ initial }: Props) {
   const [policyReturnsActive, setPolicyReturnsActive] = useState(initial.policyReturnsActive);
   const [policyShippingActive, setPolicyShippingActive] = useState(initial.policyShippingActive);
   const [policyTermsActive, setPolicyTermsActive] = useState(initial.policyTermsActive);
+  const [originStreet, setOriginStreet] = useState(initial.originStreet);
+  const [originCity, setOriginCity] = useState(initial.originCity);
+  const [originProvince, setOriginProvince] = useState(initial.originProvince);
+  const [originPostalCode, setOriginPostalCode] = useState(initial.originPostalCode);
+
+  const hasFullOrigin = !!(originStreet.trim() && originCity.trim() && originProvince && originPostalCode.trim());
+  const liveQuoteEnabled = shippingMethods.some((m) => m.liveQuote && m.enabled);
+
+  function toggleLiveQuote(enable: boolean) {
+    setShippingMethods((prev) => {
+      const withoutLiveQuote = prev.filter((m) => !m.liveQuote);
+      if (!enable) return withoutLiveQuote;
+      return [...withoutLiveQuote, ...LIVE_QUOTE_SHIPPING_METHODS.map((m) => ({ ...m, enabled: true }))];
+    });
+  }
 
   const [openSection, setOpenSection] = useState<"transferencia" | "efectivo" | "envios" | "policies" | null>(
     !initial.shippingConfigured ? "envios" : "transferencia"
@@ -84,6 +104,10 @@ export default function PagosClient({ initial }: Props) {
         return;
       }
     }
+    if (liveQuoteEnabled && !hasFullOrigin) {
+      setValidationError("Completá la dirección de origen (calle, ciudad, provincia y código postal) antes de activar la cotización automática de envío.");
+      return;
+    }
     setValidationError(null);
     setSaveState("saving");
     try {
@@ -99,12 +123,20 @@ export default function PagosClient({ initial }: Props) {
           policyReturnsActive,
           policyShippingActive,
           policyTermsActive,
+          originStreet,
+          originCity,
+          originProvince,
+          originPostalCode,
         }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "");
+      }
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2500);
-    } catch {
+    } catch (err) {
+      setValidationError(err instanceof Error && err.message ? err.message : null);
       setSaveState("error");
       setTimeout(() => setSaveState("idle"), 3000);
     }
@@ -318,8 +350,13 @@ export default function PagosClient({ initial }: Props) {
                   )}
                 </div>
 
-                {/* Costo — solo envíos no pickup */}
-                {!method.isPickup && !disabled && (
+                {/* Costo cotizado en vivo — no editable, se calcula por CP + peso */}
+                {method.liveQuote && !disabled && (
+                  <p className="text-[11px] text-sky-600 pl-[72px]">Se cotiza automáticamente según el código postal y el peso del pedido (Correo Argentino / OCA / Andreani vía Envíopack).</p>
+                )}
+
+                {/* Costo — solo envíos fijos/a coordinar */}
+                {!method.isPickup && !method.liveQuote && !disabled && (
                   <div className="space-y-2 pl-[72px]">
                     <div className="flex gap-2">
                       <button
@@ -360,6 +397,50 @@ export default function PagosClient({ initial }: Props) {
               </div>
             );
           })}
+
+          {/* COTIZACIÓN AUTOMÁTICA — Envíopack */}
+          <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+            <Toggle
+              enabled={liveQuoteEnabled}
+              onChange={(v) => toggleLiveQuote(v)}
+              label="Cotizar el envío automáticamente con Correo Argentino / OCA / Andreani"
+            />
+            <p className="text-[11px] text-slate-400 pl-9">
+              Agrega 2 opciones nuevas en el checkout (a domicilio y a sucursal) con el precio real calculado según destino y peso. No necesitás contrato propio con ningún correo.
+            </p>
+
+            {liveQuoteEnabled && (
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <p className="text-xs font-semibold text-slate-600 pt-2">Dirección desde donde despachás los pedidos</p>
+                <Row label="Calle y altura" required>
+                  <Input value={originStreet} onChange={setOriginStreet} placeholder="Ej: Av. Siempre Viva 742" maxLength={200} />
+                </Row>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Row label="Ciudad" required>
+                    <Input value={originCity} onChange={setOriginCity} placeholder="Ej: Rosario" maxLength={100} />
+                  </Row>
+                  <Row label="Provincia" required>
+                    <select
+                      value={originProvince}
+                      onChange={(e) => setOriginProvince(e.target.value)}
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400"
+                    >
+                      <option value="">Elegir...</option>
+                      {PROVINCES.map((p) => (
+                        <option key={p.code} value={p.code}>{p.name}</option>
+                      ))}
+                    </select>
+                  </Row>
+                  <Row label="Código postal" required>
+                    <Input value={originPostalCode} onChange={setOriginPostalCode} placeholder="Ej: 2000" maxLength={10} />
+                  </Row>
+                </div>
+                {!hasFullOrigin && (
+                  <p className="text-[11px] text-amber-600">Completá los 4 datos para poder guardar con la cotización automática activada.</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </Section>
 

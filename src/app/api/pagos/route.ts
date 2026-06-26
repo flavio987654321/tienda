@@ -4,8 +4,11 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { revalidatePath } from "next/cache";
 import type { StorePaymentInfo, ShippingMethod } from "@/types/store-config";
 import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
+import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 
 const MAX_TEXT = 2000;
+
+const VALID_PROVINCE_CODES = new Set(PROVINCIAS_ARGENTINA.map((p) => p.code));
 
 function sanitizeText(v: unknown, max = MAX_TEXT): string {
   if (typeof v !== "string") return "";
@@ -47,7 +50,18 @@ function sanitizeShippingMethods(raw: unknown): ShippingMethod[] {
     coordinar: Boolean(m.coordinar),
     enabled: Boolean(m.enabled),
     isPickup: Boolean(m.isPickup),
+    liveQuote: Boolean(m.liveQuote),
   }));
+}
+
+function sanitizeOriginAddress(body: Record<string, unknown>) {
+  const province = sanitizeText(body.originProvince, 2).toUpperCase();
+  return {
+    originStreet: sanitizeText(body.originStreet, 200) || null,
+    originCity: sanitizeText(body.originCity, 100) || null,
+    originProvince: VALID_PROVINCE_CODES.has(province) ? province : null,
+    originPostalCode: sanitizeText(body.originPostalCode, 10).replace(/[^A-Za-z0-9]/g, "") || null,
+  };
 }
 
 export async function GET() {
@@ -64,6 +78,10 @@ export async function GET() {
       policyReturnsActive: true,
       policyShippingActive: true,
       policyTermsActive: true,
+      originStreet: true,
+      originCity: true,
+      originProvince: true,
+      originPostalCode: true,
     },
   });
 
@@ -91,6 +109,10 @@ export async function GET() {
     policyReturnsActive: store.policyReturnsActive,
     policyShippingActive: store.policyShippingActive,
     policyTermsActive: store.policyTermsActive,
+    originStreet: store.originStreet ?? "",
+    originCity: store.originCity ?? "",
+    originProvince: store.originProvince ?? "",
+    originPostalCode: store.originPostalCode ?? "",
   });
 }
 
@@ -102,6 +124,14 @@ export async function PUT(req: NextRequest) {
 
   const paymentInfo = sanitizePaymentInfo(body.paymentInfo);
   const shippingMethods = sanitizeShippingMethods(body.shippingMethods);
+  const origin = sanitizeOriginAddress(body);
+  const hasFullOrigin = !!(origin.originStreet && origin.originCity && origin.originProvince && origin.originPostalCode);
+  if (shippingMethods.some((m) => m.liveQuote && m.enabled) && !hasFullOrigin) {
+    return NextResponse.json(
+      { error: "Completá la dirección de origen (calle, ciudad, provincia y CP) antes de activar la cotización automática" },
+      { status: 400 }
+    );
+  }
 
   const policyReturns = sanitizeText(body.policyReturns);
   const policyShipping = sanitizeText(body.policyShipping);
@@ -133,6 +163,7 @@ export async function PUT(req: NextRequest) {
       policyReturnsActive,
       policyShippingActive,
       policyTermsActive,
+      ...origin,
     },
   });
 

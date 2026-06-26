@@ -34,12 +34,23 @@ export type ShippingMethod = {
   coordinar: boolean;
   enabled: boolean;
   isPickup: boolean;
+  // true = el precio no es fijo, se cotiza en vivo (Envíopack) según
+  // código postal del comprador + peso/dimensiones del carrito.
+  liveQuote?: boolean;
 };
 
 export const DEFAULT_SHIPPING_METHODS: ShippingMethod[] = [
   { id: "retiro",   label: "Retiro en local / acordar", price: 0, coordinar: false, enabled: true, isPickup: true  },
   { id: "estandar", label: "Envío estándar",             price: 0, coordinar: true,  enabled: true, isPickup: false },
   { id: "nacional", label: "Envío nacional",             price: 0, coordinar: true,  enabled: true, isPickup: false },
+];
+
+// Métodos de cotización en vivo: se agregan a la lista de la tienda solo
+// cuando el dueño activa el toggle correspondiente (ver PagosClient). Por
+// default vienen deshabilitados hasta que complete su dirección de origen.
+export const LIVE_QUOTE_SHIPPING_METHODS: ShippingMethod[] = [
+  { id: "envio-domicilio", label: "Envío a domicilio", price: 0, coordinar: false, enabled: false, isPickup: false, liveQuote: true },
+  { id: "envio-sucursal",  label: "Envío a sucursal",   price: 0, coordinar: false, enabled: false, isPickup: false, liveQuote: true },
 ];
 
 export type PaymentMethodTransferencia = {
