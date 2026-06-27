@@ -33,6 +33,7 @@ export default function CarritosAbandonadosClient({ carts, search }: { carts: Ca
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [errorId, setErrorId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string>("");
   const [toast, setToast] = useState<string | null>(null);
 
   function showToast(msg: string) {
@@ -48,15 +49,18 @@ export default function CarritosAbandonadosClient({ carts, search }: { carts: Ca
     setErrorId(null);
     try {
       const res = await fetch(`/api/dashboard/carritos-abandonados/${id}/recordar`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setSentIds((prev) => new Set(prev).add(id));
         showToast(`Recordatorio enviado a ${email}`);
       } else {
         setErrorId(id);
-        showToast("No se pudo enviar el recordatorio");
+        setErrorMsg(data?.error || "No se pudo enviar el recordatorio");
+        showToast(data?.error || "No se pudo enviar el recordatorio");
       }
     } catch {
       setErrorId(id);
+      setErrorMsg("No se pudo enviar el recordatorio");
       showToast("No se pudo enviar el recordatorio");
     } finally {
       setLoadingId(null);
@@ -134,7 +138,7 @@ export default function CarritosAbandonadosClient({ carts, search }: { carts: Ca
               </div>
 
               {errorId === cart.id && (
-                <p className="mt-3 text-xs text-red-600">No se pudo enviar el recordatorio. Intentá de nuevo.</p>
+                <p className="mt-3 text-xs text-red-600">{errorMsg}</p>
               )}
 
               <div className="mt-4">

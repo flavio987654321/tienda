@@ -31,6 +31,17 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Carrito no encontrado" }, { status: 404 });
   }
 
+  // Tope real anti-spam hacia el cliente final: por más que el botón se
+  // pueda tocar varias veces, no se le manda más de un recordatorio manual
+  // por día a la misma persona (la protección de 10s de arriba solo evita
+  // el doble click, no esto).
+  if (cart.reminderSentAt && Date.now() - cart.reminderSentAt.getTime() < 24 * 60 * 60 * 1000) {
+    return NextResponse.json(
+      { error: "Ya le mandaste un recordatorio a esta persona en las últimas 24 horas. Probá de nuevo más tarde." },
+      { status: 429 }
+    );
+  }
+
   let items: SnapshotItem[] = [];
   try {
     items = JSON.parse(cart.items);

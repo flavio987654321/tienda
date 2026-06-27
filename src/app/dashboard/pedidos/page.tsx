@@ -4,6 +4,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import OrderActions from "@/components/orders/OrderActions";
+import OrderCheckbox from "@/components/orders/OrderCheckbox";
+import BulkActionsBar from "@/components/orders/BulkActionsBar";
+import { BulkOrdersProvider, BulkModeToggle } from "@/components/orders/BulkOrdersContext";
 import { prisma } from "@/lib/prisma";
 import { ArrowUpRight, ChevronLeft, ChevronRight, Clock, Download, MessageSquare, Package, ShoppingBag, Star, Truck, UserRound } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
@@ -75,20 +78,24 @@ export default async function PedidosPage({ searchParams }: Props) {
 
   return (
     <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
+      <BulkOrdersProvider orders={orders.map((o) => ({ id: o.id, status: o.status }))}>
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pedidos</h1>
           <p className="mt-1 text-gray-500">Gestiona pagos, stock, comisiones y envios de {store?.name ?? "tu tienda"}</p>
         </div>
         {totalAll > 0 && (
-          <a
-            href="/api/pedidos/export"
-            download
-            className="self-start sm:self-auto flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            <Download className="h-4 w-4" />
-            Exportar CSV
-          </a>
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            {orders.length > 0 && <BulkModeToggle />}
+            <a
+              href="/api/pedidos/export"
+              download
+              className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <Download className="h-4 w-4" />
+              Exportar CSV
+            </a>
+          </div>
         )}
       </div>
 
@@ -170,7 +177,11 @@ export default async function PedidosPage({ searchParams }: Props) {
                 className={`rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 ${statusBorderClass(order.status)} ${order.status === "CANCELLED" ? "opacity-60" : ""}`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-gray-50 pb-4">
-                  <div>
+                  <div className="flex items-start gap-3">
+                    <div className="pt-1">
+                      <OrderCheckbox orderId={order.id} />
+                    </div>
+                    <div>
                     <div className="mb-2 flex flex-wrap items-center gap-2">
                       <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
                       <span className="text-xs text-gray-400">#{order.id.slice(-6).toUpperCase()}</span>
@@ -178,6 +189,7 @@ export default async function PedidosPage({ searchParams }: Props) {
                     </div>
                     <p className="text-lg font-bold text-gray-900">{money(order.total)}</p>
                     <p className="text-sm text-gray-400">{itemCount} producto(s) - pago {order.payment?.provider ?? "manual"} / {order.payment?.status ?? "PENDING"}</p>
+                    </div>
                   </div>
                   <OrderActions
                     orderId={order.id}
@@ -341,8 +353,10 @@ export default async function PedidosPage({ searchParams }: Props) {
               ) : <span />}
             </div>
           )}
+          <BulkActionsBar />
         </div>
       )}
+      </BulkOrdersProvider>
     </DashboardLayout>
   );
 }

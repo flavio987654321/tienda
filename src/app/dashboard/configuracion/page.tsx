@@ -1010,7 +1010,24 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                 {config.analytics?.googleAnalyticsId?.trim() && !/^G-[A-Za-z0-9]+$/.test(config.analytics.googleAnalyticsId.trim()) ? (
                   <p style={{ margin: "4px 0 0", fontSize: 11, color: "#dc2626" }}>Tiene que empezar con &quot;G-&quot; (ej: G-AB12CD3EF4). Revisalo en tu cuenta de Google Analytics.</p>
                 ) : (
-                  <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>Gratis. Te muestra cuántas visitas tiene tu tienda y de dónde vienen. Lo conseguís creando una cuenta en analytics.google.com → Administrar → Flujos de datos.</p>
+                  <>
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>Gratis. Te muestra cuántas visitas tiene tu tienda y de dónde vienen.</p>
+                    <details style={{ marginTop: 6 }}>
+                      <summary style={{ fontSize: 11, color: "#6366f1", fontWeight: 700, cursor: "pointer" }}>
+                        ¿Cómo consigo el ID? Ver los pasos
+                      </summary>
+                      <ol style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 11, color: "#64748b", lineHeight: 1.6 }}>
+                        <li>Entrá a analytics.google.com con tu cuenta de Google (o creá una, es gratis).</li>
+                        <li>Creá una &quot;Propiedad&quot; para tu tienda (nombre, zona horaria, moneda).</li>
+                        <li>Andá a Administrar (ícono de engranaje abajo a la izquierda) → Flujos de datos → elegí o creá un flujo &quot;Web&quot;.</li>
+                        <li>Ahí arriba vas a ver el &quot;ID de medición&quot; (formato G-XXXXXXXXXX) — copialo y pegalo en el campo de arriba.</li>
+                      </ol>
+                      <a href="https://analytics.google.com" target="_blank" rel="noreferrer"
+                        style={{ display: "inline-block", marginTop: 8, fontSize: 11, fontWeight: 700, color: "#6366f1" }}>
+                        Ir a Google Analytics →
+                      </a>
+                    </details>
+                  </>
                 )}
               </div>
               <div>
@@ -1023,7 +1040,24 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                 {config.analytics?.facebookPixelId?.trim() && !/^\d+$/.test(config.analytics.facebookPixelId.trim()) ? (
                   <p style={{ margin: "4px 0 0", fontSize: 11, color: "#dc2626" }}>Tiene que ser solo números. Revisalo en Meta Business Suite → Administrador de eventos.</p>
                 ) : (
-                  <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>Gratis. Si hacés publicidad en Instagram/Facebook, esto hace que tus anuncios rindan más. Lo conseguís en business.facebook.com → Administrador de eventos.</p>
+                  <>
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>Gratis. Si hacés publicidad en Instagram/Facebook, esto hace que tus anuncios rindan más.</p>
+                    <details style={{ marginTop: 6 }}>
+                      <summary style={{ fontSize: 11, color: "#6366f1", fontWeight: 700, cursor: "pointer" }}>
+                        ¿Cómo consigo el ID? Ver los pasos
+                      </summary>
+                      <ol style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 11, color: "#64748b", lineHeight: 1.6 }}>
+                        <li>Entrá a business.facebook.com con tu cuenta de Facebook o Instagram.</li>
+                        <li>Andá al Administrador de eventos (lo encontrás en el menú, o en business.facebook.com/events_manager).</li>
+                        <li>Si no tenés un Pixel creado, tocá &quot;Conectar fuente de datos&quot; → &quot;Web&quot; → &quot;Meta Pixel&quot; y seguí los pasos.</li>
+                        <li>Una vez creado, vas a ver su ID (solo números) en la lista de fuentes de datos — copialo y pegalo en el campo de arriba.</li>
+                      </ol>
+                      <a href="https://business.facebook.com/events_manager" target="_blank" rel="noreferrer"
+                        style={{ display: "inline-block", marginTop: 8, fontSize: 11, fontWeight: 700, color: "#6366f1" }}>
+                        Ir al Administrador de eventos →
+                      </a>
+                    </details>
+                  </>
                 )}
               </div>
             </div>
