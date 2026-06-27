@@ -2,17 +2,52 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Loader2 } from "lucide-react";
-import AsistentePersonaje, { type EstadoSacha } from "./AsistentePersonaje";
+import Link from "next/link";
+import { X, Send, Loader2, ShoppingCart, ArrowRight, ShoppingBag, PackageSearch, Store, Package, Wallet } from "lucide-react";
+import AsistentePersonaje, { type EstadoSasha } from "./AsistentePersonaje";
 
 type Mensaje = { role: "user" | "assistant"; content: string };
 type Novedad = { disponible: boolean; tieneNovedad: boolean; tipo: "oportunidad" | "alerta" | null };
+
+// Marca que Sasha agrega al final de un mensaje para pedir un botón de acción
+// concreto en vez de que el dueño tenga que ir a buscar la sección a mano.
+// Tiene que coincidir exactamente con lo que indica el system prompt (asistente-prompt.ts).
+const ACCIONES: Record<string, { label: string; href: string; icon: React.ElementType }> = {
+  CARRITOS_ABANDONADOS: { label: "Ver carritos abandonados", href: "/dashboard/carritos-abandonados", icon: ShoppingCart },
+  PEDIDOS_PENDIENTES: { label: "Ver pedidos pendientes", href: "/dashboard/pedidos?status=PENDING", icon: ShoppingBag },
+  STOCK_BAJO: { label: "Ver productos con stock bajo", href: "/dashboard/productos?stock=critical", icon: PackageSearch },
+  FALTA_DISENO: { label: "Elegir diseño de mi tienda", href: "/dashboard/configuracion", icon: Store },
+  FALTA_PRODUCTOS: { label: "Cargar un producto", href: "/dashboard/productos", icon: Package },
+  FALTA_COBRO: { label: "Configurar método de cobro", href: "/dashboard/pagos", icon: Wallet },
+};
+
+type AccionesValidas = Record<string, boolean>;
+
+// Sasha puede agregar más de una marca cuando hay más de un tema pendiente
+// a la vez (ej. carritos abandonados Y pedidos pendientes) — se van
+// despegando todas las marcas finales, una por una, manteniendo el orden.
+// "accionesValidas" (traído de /api/asistente/acciones, datos reales de la
+// base) filtra cualquier marca que el modelo haya puesto sin que el problema
+// siga siendo cierto ahora mismo — nunca se confía ciegamente en el texto.
+function parseAcciones(content: string, accionesValidas: AccionesValidas | null): { texto: string; acciones: (typeof ACCIONES)[string][] } {
+  let texto = content;
+  const acciones: (typeof ACCIONES)[string][] = [];
+  const re = /\s*\[\[ACCION:([A-Z_]+)\]\]\s*$/;
+  let match: RegExpMatchArray | null;
+  while ((match = texto.match(re))) {
+    const key = match[1];
+    const accion = ACCIONES[key];
+    if (accion && accionesValidas?.[key]) acciones.unshift(accion);
+    texto = texto.slice(0, match.index);
+  }
+  return { texto: texto.trimEnd(), acciones };
+}
 
 function hoyKey() {
   return new Date().toDateString();
 }
 
-const INTRO_TEXTO = `¡Hola! Soy Sacha, el asistente con inteligencia artificial de tu panel.
+const INTRO_TEXTO = `¡Hola! Soy Sasha, el asistente con inteligencia artificial de tu panel.
 
 Te voy a ir contando cómo viene tu tienda —pedidos pendientes, stock bajo, cómo andan las ventas— y avisándote cuando se acerca alguna fecha que conviene aprovechar, con alguna idea para esa ocasión.
 
@@ -30,6 +65,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historialError, setHistorialError] = useState(false);
+  const [accionesValidas, setAccionesValidas] = useState<AccionesValidas | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -50,7 +86,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
   }, []);
 
   // Traer del servidor la conversación de hoy (la misma en cualquier dispositivo),
-  // y detectar si todavía no se mostró nunca la intro de Sacha en este navegador.
+  // y detectar si todavía no se mostró nunca la intro de Sasha en este navegador.
   useEffect(() => {
     if (typeof window === "undefined") return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza con localStorage (sistema externo)
@@ -121,7 +157,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
 
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => null);
-        setError(data?.error ?? "No pudimos cargar a Sacha. Probá de nuevo.");
+        setError(data?.error ?? "No pudimos cargar a Sasha. Probá de nuevo.");
         setMensajes((prev) => prev.slice(0, -1));
         return;
       }
@@ -141,7 +177,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
       }
     } catch (err) {
       if ((err as Error).name !== "AbortError") {
-        setError("Se cortó la conexión con Sacha. Probá de nuevo.");
+        setError("Se cortó la conexión con Sasha. Probá de nuevo.");
         setMensajes((prev) => prev.slice(0, -1));
       }
     } finally {
@@ -156,6 +192,12 @@ export default function AsistenteIA({ userId }: { userId: string }) {
       if (typeof window !== "undefined") localStorage.setItem(introKey, "1");
       setIntroVista(true);
     }
+    // Se refresca cada vez que se abre el chat (no solo una vez) para que los
+    // botones de acción nunca queden mostrando un problema ya resuelto.
+    fetch("/api/asistente/acciones")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: AccionesValidas | null) => setAccionesValidas(d))
+      .catch(() => setAccionesValidas(null));
   }
 
   function enviarMensaje() {
@@ -170,7 +212,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
   if (!novedad?.disponible) return null;
 
   const yaVistoHoy = typeof window !== "undefined" && localStorage.getItem(visKey) === "1";
-  const estadoBurbuja: EstadoSacha =
+  const estadoBurbuja: EstadoSasha =
     !yaVistoHoy && novedad.tipo === "alerta" ? "sorprendido" : !yaVistoHoy && novedad.tipo === "oportunidad" ? "guiño" : "reposo";
 
   return (
@@ -178,8 +220,8 @@ export default function AsistenteIA({ userId }: { userId: string }) {
       <motion.button
         type="button"
         onClick={abrirChat}
-        aria-label="Abrir asistente Sacha"
-        title="Sacha, tu asistente"
+        aria-label="Abrir asistente Sasha"
+        title="Sasha, tu asistente"
         initial={{ scale: 0 }}
         animate={{
           scale: 1,
@@ -212,7 +254,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
             />
             <motion.div
               role="dialog"
-              aria-label="Chat con Sacha"
+              aria-label="Chat con Sasha"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
@@ -222,7 +264,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
               <div className="flex items-center gap-3 border-b border-gray-100 p-4">
                 <AsistentePersonaje estado={enviando ? "pensando" : "sonriente"} size={36} />
                 <div className="flex-1">
-                  <p className="font-bold text-gray-950">Sacha</p>
+                  <p className="font-bold text-gray-950">Sasha</p>
                   <p className="text-xs text-gray-400">Asistente con IA de TiendaApps</p>
                 </div>
                 <button
@@ -247,17 +289,36 @@ export default function AsistenteIA({ userId }: { userId: string }) {
                     </div>
                   </div>
                 )}
-                {mensajes.map((m, i) => (
-                  <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
-                        m.role === "user" ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {m.content || (enviando && i === mensajes.length - 1 ? <Loader2 className="h-4 w-4 animate-spin" /> : "")}
+                {mensajes.map((m, i) => {
+                  const { texto, acciones } = m.role === "assistant" ? parseAcciones(m.content, accionesValidas) : { texto: m.content, acciones: [] };
+                  return (
+                    <div key={i} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"} gap-1.5`}>
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
+                          m.role === "user" ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {texto || (enviando && i === mensajes.length - 1 ? <Loader2 className="h-4 w-4 animate-spin" /> : "")}
+                      </div>
+                      {acciones.length > 0 && (
+                        <div className="flex max-w-[85%] flex-wrap gap-2">
+                          {acciones.map((accion, j) => (
+                            <Link
+                              key={j}
+                              href={accion.href}
+                              onClick={() => setAbierto(false)}
+                              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-orange-50 px-3.5 py-2 text-xs font-bold text-orange-700 hover:bg-orange-100"
+                            >
+                              <accion.icon className="h-3.5 w-3.5 shrink-0" />
+                              {accion.label}
+                              <ArrowRight className="h-3.5 w-3.5 shrink-0" />
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {error && (
                   <div className="rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</div>
                 )}
@@ -270,7 +331,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && enviarMensaje()}
                   disabled={enviando}
-                  placeholder="Escribile a Sacha..."
+                  placeholder="Escribile a Sasha..."
                   maxLength={2000}
                   className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-60"
                 />

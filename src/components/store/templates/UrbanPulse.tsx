@@ -9,7 +9,6 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { HandHeart } from "lucide-react";
@@ -70,7 +69,6 @@ export default function UrbanPulse() {
   const [activeGender,     setActiveGender]     = useState<string | null>(null);
   const [hoveredNavCat,    setHoveredNavCat]    = useState<string | null>(null);
   const [visibleCount,     setVisibleCount]     = useState(8);
-  const [openPolicyField,  setOpenPolicyField]  = useState<string | null>(null);
   const [isMobile,         setIsMobile]         = useState(false);
   const [reelIndex,        setReelIndex]        = useState(0);
   const [mobileMenuOpen,   setMobileMenuOpen]   = useState(false);
@@ -80,7 +78,7 @@ export default function UrbanPulse() {
   const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
-  const [, setReviewSubmitting] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
@@ -216,7 +214,7 @@ export default function UrbanPulse() {
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
-    toastMsg, contactStatus, contactForm, setContactForm,
+    toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
     cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     searchResults, favoriteProducts, wholesaleWarnings,
     fmt, fmtEnvioPrice, fmtLiveQuote, showToast, openModal, addToCart, removeFromCart, updateQty,
@@ -966,7 +964,8 @@ export default function UrbanPulse() {
               <div style={{ height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center", border:`2px solid ${ACC}`, padding:40 }}>
                 <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom:16 }}><polyline points="20 6 9 17 4 12"/></svg>
                 <p style={{ color:contactUpText, fontSize:20, fontWeight:900, textTransform:"uppercase", margin:"0 0 8px" }}>¡Mensaje enviado!</p>
-                <p style={{ color:contactUpText, opacity:0.45, fontSize:13, margin:0 }}>Te respondemos pronto.</p>
+                <p style={{ color:contactUpText, opacity:0.45, fontSize:13, margin:"0 0 16px" }}>Te respondemos pronto.</p>
+                <button onClick={() => setContactStatus("idle")} style={{ background:"transparent", color:ACC, border:`1px solid ${ACC}`, padding:"9px 24px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro</button>
               </div>
             ) : (
               <form onSubmit={handleContact} style={{ display:"flex", flexDirection:"column", gap:14 }}>
@@ -1032,12 +1031,13 @@ export default function UrbanPulse() {
             <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:20, paddingBottom:80, display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
               <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 14px", justifyContent:"center" }}>
                 {[
-                  { label: "Devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
-                  { label: "Envíos",       tipo: "envios",       policyField: "policyShipping" },
-                  { label: "Términos",     tipo: "terminos",     policyField: "policyTerms" },
-                ].map(({ label, tipo, policyField }) => (
+                  { label: "Devoluciones", tipo: "devoluciones" },
+                  { label: "Envíos",       tipo: "envios" },
+                  { label: "Términos",     tipo: "terminos" },
+                ].map(({ label, tipo }) => (
                   editMode ? (
-                    <button key={tipo} type="button" onClick={() => setOpenPolicyField(policyField)}
+                    <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
+                      title="Editar en Dashboard → Pagos"
                       style={{ color:footerUpMid, fontSize:11, opacity:0.6, letterSpacing:1, textTransform:"uppercase", fontWeight:600, background:"none", border:"none", cursor:"pointer", padding:0, display:"inline-flex", alignItems:"center", gap:4 }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.6"; }}>
@@ -1072,12 +1072,13 @@ export default function UrbanPulse() {
             <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
               <div style={{ display:"flex", flexWrap:"wrap", gap:"0 16px" }}>
                 {[
-                  { label: "Devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
-                  { label: "Envíos",       tipo: "envios",       policyField: "policyShipping" },
-                  { label: "Términos",     tipo: "terminos",     policyField: "policyTerms" },
-                ].map(({ label, tipo, policyField }) => (
+                  { label: "Devoluciones", tipo: "devoluciones" },
+                  { label: "Envíos",       tipo: "envios" },
+                  { label: "Términos",     tipo: "terminos" },
+                ].map(({ label, tipo }) => (
                   editMode ? (
-                    <button key={tipo} type="button" onClick={() => setOpenPolicyField(policyField)}
+                    <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
+                      title="Editar en Dashboard → Pagos"
                       style={{ color:footerUpMid, fontSize:11, opacity:0.6, letterSpacing:1, textTransform:"uppercase", fontWeight:600, background:"none", border:"none", cursor:"pointer", padding:0, display:"inline-flex", alignItems:"center", gap:4 }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.6"; }}>
@@ -1111,10 +1112,6 @@ export default function UrbanPulse() {
         </div>
         </div>
       </footer>
-
-      {openPolicyField && (
-        <PolicyEditorModal field={openPolicyField} onClose={() => setOpenPolicyField(null)} />
-      )}
 
       {showReport && (
         <ReportStoreModal slug={storeConfig?.slug ?? ""} onClose={() => setShowReport(false)} />
@@ -1273,7 +1270,7 @@ export default function UrbanPulse() {
                   <div style={{ display:"flex", alignItems:"center", border:`2px solid ${DARK}` }}>
                     <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ width:36, height:36, background:"none", border:"none", fontSize:18, cursor:"pointer", fontWeight:900 }}>−</button>
                     <span style={{ width:32, textAlign:"center", fontWeight:900 }}>{qty}</span>
-                    <button onClick={() => setQty(q => q+1)} style={{ width:36, height:36, background:"none", border:"none", fontSize:18, cursor:"pointer", fontWeight:900 }}>+</button>
+                    <button onClick={() => setQty(q => selectedVariantStock !== null ? Math.min(selectedVariantStock, q+1) : q+1)} style={{ width:36, height:36, background:"none", border:"none", fontSize:18, cursor:"pointer", fontWeight:900 }}>+</button>
                   </div>
                 </div>
                 {/* Stock por variante */}
@@ -1383,9 +1380,9 @@ export default function UrbanPulse() {
                         <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
                           placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
                           style={{ background:"none", border:`2px solid ${DARK}`, padding:"9px 12px", fontSize:12, resize:"none", outline:"none" }} />
-                        <button type="submit" disabled={isPreview || !reviewForm.reviewer.trim()}
-                          style={{ background: isPreview || !reviewForm.reviewer.trim() ? MID : DARK, color:ACC, border:"none", padding:"12px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
-                          Publicar reseña
+                        <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim()}
+                          style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? MID : DARK, color:ACC, border:"none", padding:"12px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
+                          {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
                         </button>
                       </form>
                       {isPreview && <p style={{ fontSize:10, color:MID, fontStyle:"italic", marginTop:6 }}>Vista previa — solo disponible en la tienda real.</p>}
@@ -1636,8 +1633,8 @@ export default function UrbanPulse() {
                     <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} style={{ marginTop:2, accentColor:DARK, flexShrink:0 }} />
                     <span style={{ fontSize:11, color:MID, lineHeight:1.6 }}>
                       Acepto los{" "}
-                      <a href="/terminos?role=buyer" target="_blank" rel="noopener" style={{ color:DARK, textDecoration:"underline" }}>Términos y Condiciones</a>
-                      {" "}y la{" "}
+                      <a href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=terminos`} target="_blank" rel="noopener" style={{ color:DARK, textDecoration:"underline" }}>Términos y Condiciones</a>
+                      {" "}de la tienda y la{" "}
                       <a href="/privacidad?role=buyer" target="_blank" rel="noopener" style={{ color:DARK, textDecoration:"underline" }}>Política de Privacidad</a>
                     </span>
                   </label>

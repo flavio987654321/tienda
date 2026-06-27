@@ -574,7 +574,7 @@ export default function Home() {
               {
                 icon: Store, color: "#6366f1", gradient: "from-indigo-600/20 to-purple-600/10", border: "border-indigo-500/20",
                 title: "Dueño", sub: "Crecé sin contratar personal fijo. Tus afiliados venden y cobran solo cuando venden.",
-                items: ["Tienda con subdominio propio incluido", "Productos y variantes ilimitados", "Sacha, tu asistente de IA, te avisa el estado de tu tienda", "Panel de pedidos, estadísticas y afiliados", "Vos aprobás quién representa tu marca", "Comisiones automáticas o con aprobación manual, según prefieras", "7 días de prueba gratis, sin tarjeta"],
+                items: ["Tienda con subdominio propio incluido", "Productos y variantes ilimitados", "Sasha, tu asistente de IA, te avisa el estado de tu tienda", "Panel de pedidos, estadísticas y afiliados", "Vos aprobás quién representa tu marca", "Comisiones automáticas o con aprobación manual, según prefieras", "7 días de prueba gratis, sin tarjeta"],
                 cta: "Crear mi tienda gratis", href: "/registro",
               },
               {
@@ -946,14 +946,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── SACHA (asistente de IA) ── */}
+      {/* ── SASHA (asistente de IA) ── */}
       <section className="py-24 bg-white overflow-hidden">
         <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
             <motion.span variants={fadeUp} className="inline-flex items-center gap-1.5 bg-orange-50 text-orange-600 text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full mb-4">
               <Sparkles className="h-3.5 w-3.5" /> Nuevo en TiendaApps
             </motion.span>
-            <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-900 mb-6">Conocé a Sacha, el asistente de IA del panel de tu tienda.</motion.h2>
+            <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-900 mb-6">Conocé a Sasha, el asistente de IA del panel de tu tienda.</motion.h2>
             <motion.p variants={fadeUp} className="text-gray-500 leading-relaxed mb-5">
               Te avisa el estado real de tu tienda, te cuenta cuando se acerca una fecha buena para vender más, y responde tus dudas de cómo usar el panel — directo en el chat, con tus datos reales, sin vueltas.
             </motion.p>
@@ -978,7 +978,7 @@ export default function Home() {
               <div className="flex items-center gap-3 border-b border-gray-100 p-4">
                 <AsistentePersonaje estado="sonriente" size={36} />
                 <div>
-                  <p className="font-bold text-gray-950 text-sm">Sacha</p>
+                  <p className="font-bold text-gray-950 text-sm">Sasha</p>
                   <p className="text-xs text-gray-400">Tu asistente de TiendaApps</p>
                 </div>
               </div>

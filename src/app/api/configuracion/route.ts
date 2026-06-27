@@ -24,6 +24,10 @@ const storeConfigSchema = z.object({
   currency: z.enum(["ARS", "USD"]),
   language: z.enum(["ES", "EN"]),
   seo: z.object({ enabled: z.boolean(), title: z.string().max(120), description: z.string().max(320) }),
+  analytics: z.object({
+    googleAnalyticsId: z.string().max(30).optional(),
+    facebookPixelId: z.string().max(30).optional(),
+  }).optional(),
   textOverrides: z.record(z.string(), z.object({
     text: z.string().max(500).optional(),
     color: z.string().max(30).optional(),

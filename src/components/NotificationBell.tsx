@@ -22,6 +22,7 @@ const ICONS: Record<string, string> = {
   ORDER_SHIPPED: "📦",
   ORDER_DELIVERED: "🎉",
   ORDER_CANCELLED: "❌",
+  NEW_REVIEW: "⭐",
   // Afiliados — estado en programa
   AFFILIATE_APPROVED: "🤝",
   AFFILIATE_REJECTED: "🚫",

@@ -339,6 +339,67 @@ export async function sendSubscriptionConfirmationEmail({
 
 // ───────────────── Canasta Solidaria ─────────────────
 
+export async function sendAbandonedCartEmail({
+  to,
+  customerName,
+  storeName,
+  items,
+  total,
+  recoveryUrl,
+}: {
+  to: string;
+  customerName?: string | null;
+  storeName: string;
+  items: { name: string; qty: number; price: number; image?: string | null }[];
+  total: number;
+  recoveryUrl: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const itemsHtml = items
+    .map(
+      (i) => `
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#111827;font-size:14px;">${escapeHtml(i.name)} ${i.qty > 1 ? `<span style="color:#9ca3af;">x${i.qty}</span>` : ""}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;text-align:right;color:#374151;font-size:14px;font-weight:600;">${fmt(i.price * i.qty)}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Te olvidaste algo en ${storeName} 🛒`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#6366f1;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#c7d2fe;font-size:13px;margin:0 0 6px;font-weight:500;">${escapeHtml(storeName)}</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Tu carrito te está esperando</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">
+          Hola <strong>${escapeHtml(customerName || "")}</strong>, dejaste estos productos en tu carrito. Todavía podés completar tu compra.
+        </p>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+          ${itemsHtml}
+        </table>
+        <div style="display:flex;justify-content:space-between;padding:12px 0;margin-bottom:24px;border-top:2px solid #111827;">
+          <span style="font-size:15px;font-weight:700;color:#111827;">Total</span>
+          <span style="font-size:15px;font-weight:700;color:#111827;">${fmt(total)}</span>
+        </div>
+        <div style="text-align:center;margin-bottom:28px;">
+          <a href="${recoveryUrl}"
+             style="display:inline-block;background:#6366f1;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            Completar mi compra
+          </a>
+        </div>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">
+          Si ya no te interesa, podés ignorar este mensaje.
+        </p>
+      </div>
+    `,
+  });
+}
+
 export async function sendCanastaCompletedAdminEmail({
   to,
   campaignName,

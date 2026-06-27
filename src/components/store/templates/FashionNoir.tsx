@@ -9,7 +9,6 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { HandHeart } from "lucide-react";
@@ -88,13 +87,12 @@ export default function FashionNoir() {
   const [hoveredId,          setHoveredId]          = useState<string | null>(null);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [announcementIdx,    setAnnouncementIdx]    = useState(0);
-  const [openPolicyField,    setOpenPolicyField]    = useState<string | null>(null);
   const [activeSubcategory,  setActiveSubcategory]  = useState<string | null>(null);
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
-  const [, setReviewSubmitting] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
@@ -125,7 +123,7 @@ export default function FashionNoir() {
   const blockBuy    = isPreview || isOwner;
   const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
-  const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
+  const { products, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   const categoryList = useMemo(() => {
@@ -873,8 +871,14 @@ export default function FashionNoir() {
           </p>
         </div>
 
+        {loadingProducts && (
+          <div style={{ textAlign:"center", padding:"60px 0", color:productosText, opacity:0.4 }}>
+            <p style={{ fontSize:15 }}>Cargando productos...</p>
+          </div>
+        )}
+
         <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fill,minmax(260px,1fr))", gap: isMobile ? 12 : 24, marginBottom:48 }}>
-          {filtered.map(product => (
+          {!loadingProducts && filtered.map(product => (
             <div key={product.id} onClick={() => openModal(product)} onMouseEnter={() => setHoveredId(product.id)} onMouseLeave={() => setHoveredId(null)}
               style={{ cursor:"pointer" }}>
               <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:16 }}>
@@ -1071,12 +1075,13 @@ export default function FashionNoir() {
           <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:20, paddingBottom:80, maxWidth:1280, margin:"0 auto", display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px", justifyContent:"center" }}>
               {[
-                { label: "Política de devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
-                { label: "Política de envíos",       tipo: "envios",       policyField: "policyShipping" },
-                { label: "Términos y condiciones",   tipo: "terminos",     policyField: "policyTerms" },
-              ].map(({ label, tipo, policyField }) => (
+                { label: "Política de devoluciones", tipo: "devoluciones" },
+                { label: "Política de envíos",       tipo: "envios" },
+                { label: "Términos y condiciones",   tipo: "terminos" },
+              ].map(({ label, tipo }) => (
                 editMode ? (
-                  <button key={tipo} type="button" onClick={() => setOpenPolicyField(policyField)}
+                  <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
+                    title="Editar en Dashboard → Pagos"
                     style={{ fontSize:11, color:"inherit", opacity:0.3, background:"none", border:"none", cursor:"pointer", padding:0, letterSpacing:1, display:"inline-flex", alignItems:"center", gap:5 }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.3"; }}>
@@ -1115,12 +1120,13 @@ export default function FashionNoir() {
           <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:24, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"0 20px" }}>
               {[
-                { label: "Política de devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
-                { label: "Política de envíos",       tipo: "envios",       policyField: "policyShipping" },
-                { label: "Términos y condiciones",   tipo: "terminos",     policyField: "policyTerms" },
-              ].map(({ label, tipo, policyField }) => (
+                { label: "Política de devoluciones", tipo: "devoluciones" },
+                { label: "Política de envíos",       tipo: "envios" },
+                { label: "Términos y condiciones",   tipo: "terminos" },
+              ].map(({ label, tipo }) => (
                 editMode ? (
-                  <button key={tipo} type="button" onClick={() => setOpenPolicyField(policyField)}
+                  <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
+                    title="Editar en Dashboard → Pagos"
                     style={{ fontSize:11, color:"inherit", opacity:0.3, background:"none", border:"none", cursor:"pointer", padding:0, letterSpacing:1, display:"inline-flex", alignItems:"center", gap:5 }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.3"; }}>
@@ -1157,10 +1163,6 @@ export default function FashionNoir() {
         )}
         </div>
       </footer>
-
-      {openPolicyField && (
-        <PolicyEditorModal field={openPolicyField} onClose={() => setOpenPolicyField(null)} />
-      )}
 
       {showReport && (
         <ReportStoreModal slug={storeConfig?.slug ?? ""} onClose={() => setShowReport(false)} />
@@ -1269,7 +1271,7 @@ export default function FashionNoir() {
                 <div style={{ display:"flex", alignItems:"center", border:`1px solid rgba(240,235,227,0.18)` }}>
                   <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ width:38, height:38, background:"none", border:"none", color:T, fontSize:20, cursor:"pointer" }}>−</button>
                   <span style={{ width:38, textAlign:"center", fontSize:14 }}>{qty}</span>
-                  <button onClick={() => setQty(q => q+1)} style={{ width:38, height:38, background:"none", border:"none", color:T, fontSize:20, cursor:"pointer" }}>+</button>
+                  <button onClick={() => setQty(q => selectedVariantStock !== null ? Math.min(selectedVariantStock, q+1) : q+1)} style={{ width:38, height:38, background:"none", border:"none", color:T, fontSize:20, cursor:"pointer" }}>+</button>
                 </div>
               </div>
 
@@ -1378,9 +1380,9 @@ export default function FashionNoir() {
                       <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
                         placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
                         style={{ background:"rgba(240,235,227,0.06)", border:"1px solid rgba(240,235,227,0.12)", color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none" }} />
-                      <button type="submit" disabled={isPreview || !reviewForm.reviewer.trim()}
-                        style={{ background: isPreview || !reviewForm.reviewer.trim() ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
-                        Publicar reseña
+                      <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim()}
+                        style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
+                        {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
                       </button>
                     </form>
                     {isPreview && <p style={{ fontSize:10, opacity:0.4, fontStyle:"italic", marginTop:6 }}>Vista previa — solo disponible en la tienda real.</p>}
@@ -1604,8 +1606,8 @@ export default function FashionNoir() {
                     <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} style={{ marginTop:2, accentColor:G, flexShrink:0 }} />
                     <span style={{ fontSize:11, color:"rgba(240,235,227,0.55)", lineHeight:1.6 }}>
                       Acepto los{" "}
-                      <a href="/terminos?role=buyer" target="_blank" rel="noopener" style={{ color:G, textDecoration:"underline" }}>Términos y Condiciones</a>
-                      {" "}y la{" "}
+                      <a href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=terminos`} target="_blank" rel="noopener" style={{ color:G, textDecoration:"underline" }}>Términos y Condiciones</a>
+                      {" "}de la tienda y la{" "}
                       <a href="/privacidad?role=buyer" target="_blank" rel="noopener" style={{ color:G, textDecoration:"underline" }}>Política de Privacidad</a>
                     </span>
                   </label>

@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Mandaste muchos mensajes, esperá un momento." }, { status: 429 });
   }
   if (!(await checkRateLimitSeguro(`asistente-dia:${user.id}`, 150, 24 * 60 * 60_000))) {
-    return NextResponse.json({ error: "Llegaste al límite de mensajes de hoy con Sacha." }, { status: 429 });
+    return NextResponse.json({ error: "Llegaste al límite de mensajes de hoy con Sasha." }, { status: 429 });
   }
 
   let body: unknown;
@@ -193,7 +193,7 @@ export async function POST(req: NextRequest) {
         }
       } catch (err) {
         console.error("[asistente] error llamando a Anthropic", err);
-        controller.enqueue(encoder.encode("\n\nSacha no está disponible en este momento, probá de nuevo en un minuto."));
+        controller.enqueue(encoder.encode("\n\nSasha no está disponible en este momento, probá de nuevo en un minuto."));
       } finally {
         controller.close();
       }

@@ -9,7 +9,6 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { HandHeart } from "lucide-react";
@@ -71,7 +70,6 @@ export default function ChicParis() {
   const [mobileOpenCat,   setMobileOpenCat]   = useState<string | null>(null);
   const [heroSlide,       setHeroSlide]       = useState(0);
   const [heroPaused,      setHeroPaused]      = useState(false);
-  const [openPolicyField,  setOpenPolicyField]  = useState<string | null>(null);
   const [announcementIdx,  setAnnouncementIdx]  = useState(0);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -79,7 +77,7 @@ export default function ChicParis() {
   const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
-  const [, setReviewSubmitting] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
@@ -108,7 +106,6 @@ export default function ChicParis() {
   const isPreview   = !!storeConfig?.previewFill;
   const isOwner     = !!storeConfig?.isOwner;
   const blockBuy    = isPreview || isOwner;
-  const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
   const { products, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const { editMode, activeField, setActiveField, overrides: textOverrides, setOverride } = useEditContext();
@@ -1035,12 +1032,13 @@ export default function ChicParis() {
             <div>
               <p style={{ margin: "0 0 16px", fontSize: 10, fontWeight: 800, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>Legal</p>
               {[
-                { label: "Política de devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
-                { label: "Política de envíos",       tipo: "envios",       policyField: "policyShipping" },
-                { label: "Términos y condiciones",   tipo: "terminos",     policyField: "policyTerms" },
-              ].map(({ label, tipo, policyField }) => (
+                { label: "Política de devoluciones", tipo: "devoluciones" },
+                { label: "Política de envíos",       tipo: "envios" },
+                { label: "Términos y condiciones",   tipo: "terminos" },
+              ].map(({ label, tipo }) => (
                 editMode ? (
-                  <button key={tipo} type="button" onClick={() => setOpenPolicyField(policyField)}
+                  <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
+                    title="Editar en Dashboard → Pagos"
                     style={{ display: "flex", alignItems: "center", gap: 5, margin: "0 0 8px", fontSize: 13, color: footerText, opacity: 0.55, background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left" }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.55"; }}>
@@ -1061,12 +1059,13 @@ export default function ChicParis() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px 24px" }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0 16px" }}>
               {[
-                { label: "Política de devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
-                { label: "Política de envíos",       tipo: "envios",       policyField: "policyShipping" },
-                { label: "Términos y condiciones",   tipo: "terminos",     policyField: "policyTerms" },
-              ].map(({ label, tipo, policyField }) => (
+                { label: "Política de devoluciones", tipo: "devoluciones" },
+                { label: "Política de envíos",       tipo: "envios" },
+                { label: "Términos y condiciones",   tipo: "terminos" },
+              ].map(({ label, tipo }) => (
                 editMode ? (
-                  <button key={tipo} type="button" onClick={() => setOpenPolicyField(policyField)}
+                  <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
+                    title="Editar en Dashboard → Pagos"
                     style={{ fontSize: 11, color: footerText, opacity: 0.4, background: "none", border: "none", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", gap: 4 }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.4"; }}>
@@ -1100,10 +1099,6 @@ export default function ChicParis() {
 
         </div>
       </footer>
-
-      {openPolicyField && (
-        <PolicyEditorModal field={openPolicyField} onClose={() => setOpenPolicyField(null)} />
-      )}
 
       {showReport && (
         <ReportStoreModal slug={storeConfig?.slug ?? ""} onClose={() => setShowReport(false)} />
@@ -1228,7 +1223,7 @@ export default function ChicParis() {
                 <div style={{ display: "flex", alignItems: "center", border: "2px solid #e0e0e0" }}>
                   <button onClick={() => setQty(q => Math.max(1, q - 1))} style={{ width: 36, height: 36, background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#333" }}>−</button>
                   <span style={{ width: 36, textAlign: "center", fontSize: 14, fontWeight: 700 }}>{qty}</span>
-                  <button onClick={() => setQty(q => q + 1)} style={{ width: 36, height: 36, background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#333" }}>+</button>
+                  <button onClick={() => setQty(q => selectedVariantStock !== null ? Math.min(selectedVariantStock, q + 1) : q + 1)} style={{ width: 36, height: 36, background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#333" }}>+</button>
                 </div>
               </div>
               {/* Stock por variante */}
@@ -1332,9 +1327,9 @@ export default function ChicParis() {
                       <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
                         placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
                         style={{ border: "1px solid #e5e7eb", padding: "9px 12px", fontSize: 12, resize: "none", outline: "none" }} />
-                      <button type="submit" disabled={isPreview || !reviewForm.reviewer.trim()}
-                        style={{ background: isPreview || !reviewForm.reviewer.trim() ? "#f3f4f6" : ACC, color: isPreview || !reviewForm.reviewer.trim() ? "#9ca3af" : getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "12px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: isPreview ? "default" : "pointer" }}>
-                        Publicar reseña
+                      <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim()}
+                        style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#f3f4f6" : ACC, color: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#9ca3af" : getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "12px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: isPreview ? "default" : "pointer" }}>
+                        {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
                       </button>
                     </form>
                     {isPreview && <p style={{ fontSize: 10, color: "#bbb", fontStyle: "italic", marginTop: 6 }}>Vista previa — solo disponible en la tienda real.</p>}
@@ -1476,7 +1471,7 @@ export default function ChicParis() {
                   ))}
                   <p style={{ margin: "16px 0 14px", fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", color: "#333" }}>Dirección</p>
                   {[["direccion","Calle y número","text"],["ciudad","Ciudad","text"]].map(([f,ph,t]) => (
-                    <input key={f} type={t} placeholder={ph}
+                    <input key={f} required type={t} placeholder={ph}
                       value={buyerForm[f as keyof typeof buyerForm]}
                       onChange={e => setBuyerForm(b => ({ ...b, [f]: e.target.value }))}
                       style={{ ...iStyle, marginBottom: 10 }}
@@ -1597,8 +1592,8 @@ export default function ChicParis() {
                     <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} style={{ marginTop:2, accentColor:ACC, flexShrink:0 }} />
                     <span style={{ fontSize:11, color:"#888", lineHeight:1.6 }}>
                       Acepto los{" "}
-                      <a href="/terminos?role=buyer" target="_blank" rel="noopener" style={{ color:ACC, textDecoration:"underline" }}>Términos y Condiciones</a>
-                      {" "}y la{" "}
+                      <a href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=terminos`} target="_blank" rel="noopener" style={{ color:ACC, textDecoration:"underline" }}>Términos y Condiciones</a>
+                      {" "}de la tienda y la{" "}
                       <a href="/privacidad?role=buyer" target="_blank" rel="noopener" style={{ color:ACC, textDecoration:"underline" }}>Política de Privacidad</a>
                     </span>
                   </label>
@@ -1655,7 +1650,7 @@ export default function ChicParis() {
 
       {/* ── FLOATING CART BUTTON ────────────────────────────── */}
       <button onClick={() => { setCartOpen(true); setFavoritesOpen(false); }}
-        style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:500, width:52, height:52, borderRadius:"50%", background:ACC, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(0,0,0,0.2)", transition:"transform 0.2s" }}
+        style={{ position:"fixed", bottom:24, right:24, zIndex:500, width:52, height:52, borderRadius:"50%", background:ACC, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(0,0,0,0.2)", transition:"transform 0.2s" }}
         onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
         onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
         <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={getContrastColor(ACC)==="light"?"#fff":"#111"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>

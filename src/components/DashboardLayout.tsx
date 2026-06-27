@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut,
   BarChart2, Tag, UserCircle, Loader2, MessageCircle, BadgeCheck,
-  CreditCard, Menu, X, Wallet, AlertTriangle, Bell,
+  CreditCard, Menu, X, Wallet, AlertTriangle, Bell, ShoppingCart,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
@@ -50,6 +50,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/dashboard/consultas",  label: "Consultas",  icon: MessageCircle, onlyFor: LEADS_STORE_TYPES, tourId: "consultas" },
       { href: "/dashboard/productos",  label: "Productos",  icon: Package,       tourId: "productos", labelFor: { AUTOS: "Vehículos" } },
       { href: "/dashboard/cupones",        label: "Cupones",        icon: Tag,   tourId: "cupones",   hiddenFor: LEADS_STORE_TYPES },
+      { href: "/dashboard/carritos-abandonados", label: "Carritos abandonados", icon: ShoppingCart, tourId: "carritos-abandonados", hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/vendedoras",     label: "Afiliados",      icon: Users,         tourId: "afiliados" },
       { href: "/dashboard/notificaciones", label: "Notificaciones", icon: Bell, tourId: "notificaciones" },
     ],
@@ -59,7 +60,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/dashboard/configuracion", label: "Diseño",         icon: Store,     tourId: "diseno" },
       { href: "/dashboard/ajustes",       label: "Configuración",  icon: Settings,  tourId: "configuracion" },
-      { href: "/dashboard/pagos",         label: "Pagos",          icon: Wallet,    tourId: "pagos" },
+      { href: "/dashboard/pagos",         label: "Pagos",          icon: Wallet,    tourId: "pagos", labelFor: { AUTOS: "Legal" } },
     ],
   },
   {

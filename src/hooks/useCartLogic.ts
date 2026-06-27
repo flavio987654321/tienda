@@ -8,6 +8,27 @@ import { useAuth } from "@/components/AuthProvider";
 import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 
+// Misma lógica de matching de variante por talle/color que usan los templates
+// para mostrar "Sin stock"/"Últimas unidades" — se repite acá para que
+// addToCart pueda topar la cantidad al stock real en el momento de agregar,
+// sin depender de que cada template lo valide en su propio stepper de +/-.
+function resolveVariantStock(product: StorefrontProduct, selectedSize: string, selectedColor: string): number | null {
+  if (!product.variants.length) return null;
+  const v = product.variants.find(v => {
+    try {
+      const a = JSON.parse(v.name);
+      if (a && typeof a === "object") {
+        const vals = Object.values(a).map((x) => String(x).toLowerCase());
+        const sizeOk = !selectedSize || vals.includes(selectedSize.toLowerCase());
+        const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
+        return sizeOk && colorOk;
+      }
+    } catch {}
+    return v.value.includes(selectedSize) && v.value.includes(selectedColor);
+  }) ?? (product.variants.length === 1 ? product.variants[0] : null);
+  return v?.stock ?? null;
+}
+
 type StorefrontDeps = {
   products: StorefrontProduct[];
   storeId?: string | null;
@@ -131,6 +152,42 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
       else localStorage.removeItem("storefront_buyer");
     } catch {}
   }, [buyerForm, rememberData]);
+
+  // Carrito abandonado: si ya escribió un email válido en el checkout pero
+  // todavía no completó la compra, guardamos un snapshot para poder mandarle
+  // un recordatorio más tarde. No aplica a "inquiry" (tiendas sin carrito real).
+  useEffect(() => {
+    if (checkoutMode !== "cart" || !storeId || cartItems.length === 0) return;
+    const email = buyerForm.email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+
+    const timeout = setTimeout(() => {
+      const total = cartItems.reduce((s, i) => s + i.product.price * i.qty, 0);
+      fetch("/api/cart/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId,
+          email,
+          name: buyerForm.nombre,
+          phone: buyerForm.telefono,
+          total,
+          items: cartItems.map((i) => ({
+            productId: i.product.id,
+            variantId: i.variantId,
+            name: i.product.name,
+            image: i.product.images[0] ?? null,
+            price: i.product.price,
+            qty: i.qty,
+            size: i.size,
+            color: i.color,
+          })),
+        }),
+      }).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buyerForm.email, buyerForm.nombre, buyerForm.telefono, storeId, checkoutMode, JSON.stringify(cartItems.map((i) => [i.product.id, i.qty]))]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -283,14 +340,54 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
 
+  // Recuperar un carrito abandonado desde el link del email (?recuperar=ID)
+  useEffect(() => {
+    if (!products.length) return;
+    const id = new URLSearchParams(window.location.search).get("recuperar");
+    if (!id) return;
+
+    fetch(`/api/cart/track/${id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { storeId: string; items: { productId: string; variantId: string | null; qty: number; size?: string; color?: string }[] } | null) => {
+        if (!data || data.storeId !== storeId) return;
+        const restored: CartItem[] = [];
+        for (const item of data.items) {
+          const product = products.find((p) => p.id === item.productId);
+          if (!product) continue;
+          restored.push({ product, size: item.size ?? "", color: item.color ?? "", variantId: item.variantId ?? null, qty: item.qty });
+        }
+        if (restored.length === 0) return;
+        setCartItems((prev) => {
+          const existingKeys = new Set(prev.map((i) => `${i.product.id}|${i.size}|${i.color}`));
+          const toAdd = restored.filter((i) => !existingKeys.has(`${i.product.id}|${i.size}|${i.color}`));
+          return [...prev, ...toAdd];
+        });
+        setCartOpen(true);
+        showToast("Recuperamos tu carrito");
+      })
+      .catch(() => {})
+      .finally(() => {
+        const params = new URLSearchParams(window.location.search);
+        params.delete("recuperar");
+        const query = params.toString();
+        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, storeId]);
+
   const addToCart = () => {
     if (!modalProduct) return;
     const variantId = resolveVariantId(modalProduct, selectedSize, selectedColor);
     const name = modalProduct.name;
+    const stock = resolveVariantStock(modalProduct, selectedSize, selectedColor);
     setCartItems(prev => {
       const ex = prev.find(i => i.product.id === modalProduct.id && i.size === selectedSize && i.color === selectedColor);
-      if (ex) return prev.map(i => i === ex ? { ...i, qty: i.qty + qty } : i);
-      return [...prev, { product: modalProduct, size: selectedSize, color: selectedColor, variantId, qty }];
+      if (ex) {
+        const total = stock !== null ? Math.min(ex.qty + qty, stock) : ex.qty + qty;
+        return prev.map(i => i === ex ? { ...i, qty: total } : i);
+      }
+      const initialQty = stock !== null ? Math.min(qty, stock) : qty;
+      return [...prev, { product: modalProduct, size: selectedSize, color: selectedColor, variantId, qty: initialQty }];
     });
     setModalProduct(null);
     showToast(`${name} agregado al carrito`);

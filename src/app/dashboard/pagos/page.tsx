@@ -15,6 +15,9 @@ export default async function PagosPage() {
     where: { ownerId: user.id },
     select: {
       id: true,
+      name: true,
+      tipoTienda: true,
+      whatsappNumber: true,
       storeConfig: true,
       policyReturns: true,
       policyShipping: true,
@@ -35,6 +38,8 @@ export default async function PagosPage() {
         prisma.product.count({ where: { storeId: store.id, deletedAt: null, variants: { every: { stock: 0 } } } }),
       ])
     : [0, 0];
+
+  const isAutos = store?.tipoTienda === "AUTOS";
 
   let paymentInfo: StorePaymentInfo = DEFAULT_PAYMENT_INFO;
   let shippingMethods: ShippingMethod[] = DEFAULT_SHIPPING_METHODS;
@@ -61,9 +66,11 @@ export default async function PagosPage() {
         {/* Page header */}
         <div className="border-b border-slate-200 bg-white px-6 py-8">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 mb-2">Mi tienda</p>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Pagos y legales</h1>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">{isAutos ? "Legal" : "Pagos y legales"}</h1>
           <p className="text-slate-500 text-sm mt-1.5 max-w-xl">
-            Configurá cómo querés cobrar. Cuando un cliente hace un pedido, recibe un email automático con los datos que cargues acá para saber cómo pagarte.
+            {isAutos
+              ? "Acá redactás las políticas legales de tu tienda. Como vendés por consulta, el cobro y la entrega se coordinan directamente con cada comprador."
+              : "Configurá cómo querés cobrar. Cuando un cliente hace un pedido, recibe un email automático con los datos que cargues acá para saber cómo pagarte."}
           </p>
         </div>
 
@@ -71,7 +78,7 @@ export default async function PagosPage() {
         <div className="px-6 py-10 space-y-12">
 
           <section>
-            <SectionLabel>Métodos de pago</SectionLabel>
+            <SectionLabel>{isAutos ? "Información legal" : "Métodos de pago"}</SectionLabel>
             <PagosClient
               initial={{
                 paymentInfo,
@@ -87,6 +94,9 @@ export default async function PagosPage() {
                 originCity: store?.originCity ?? "",
                 originProvince: store?.originProvince ?? "",
                 originPostalCode: store?.originPostalCode ?? "",
+                storeName: store?.name ?? "",
+                contact: store?.whatsappNumber ?? "",
+                isAutos,
               }}
             />
           </section>

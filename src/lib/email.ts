@@ -198,6 +198,61 @@ export async function sendReviewRequestEmail({
   });
 }
 
+export async function sendNewReviewToOwnerEmail({
+  ownerEmail,
+  storeName,
+  storeSlug,
+  productId,
+  productName,
+  reviewerName,
+  rating,
+  comment,
+}: {
+  ownerEmail: string;
+  storeName: string;
+  storeSlug: string;
+  productId: string;
+  productName: string;
+  reviewerName: string;
+  rating: number;
+  comment?: string | null;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const productUrl = `${appUrl}/tienda/${storeSlug}/producto/${productId}`;
+  const stars = "⭐".repeat(rating) + "☆".repeat(5 - rating);
+
+  await transporter.sendMail({
+    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    to: ownerEmail,
+    subject: `Nueva reseña (${rating}★) en ${storeName}`,
+    html: `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#ffffff;">
+        <div style="background:#111827;border-radius:16px;padding:28px;margin-bottom:24px;">
+          <p style="color:#9ca3af;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 8px;font-weight:600;">${escapeHtml(storeName)}</p>
+          <h1 style="color:#ffffff;font-size:22px;margin:0;font-weight:800;letter-spacing:-0.02em;">Nueva reseña recibida</h1>
+        </div>
+
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:13px;color:#6b7280;margin:0 0 4px;">Producto</p>
+          <p style="font-size:15px;font-weight:700;color:#111827;margin:0 0 14px;">${escapeHtml(productName)}</p>
+          <p style="font-size:18px;margin:0 0 10px;">${stars}</p>
+          ${comment ? `<p style="font-size:14px;color:#374151;line-height:1.6;margin:0;white-space:pre-wrap;">"${escapeHtml(comment)}"</p>` : ""}
+          <p style="font-size:12px;color:#9ca3af;margin:14px 0 0;">— ${escapeHtml(reviewerName)}</p>
+        </div>
+
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${productUrl}"
+             style="display:inline-block;background:#111827;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            Ver la reseña en mi tienda
+          </a>
+        </div>
+      </div>
+    `,
+  });
+}
+
 export async function sendAffiliateStatusEmail({
   affiliateEmail,
   affiliateName,

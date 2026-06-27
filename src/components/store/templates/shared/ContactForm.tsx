@@ -23,7 +23,15 @@ export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8
   }
 
   if (status === "sent") {
-    return <p style={{ fontSize: 13.5, color: mutedColor, textAlign: "center", margin: 0 }}>¡Gracias! Te vamos a responder a la brevedad.</p>;
+    return (
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontSize: 13.5, color: mutedColor, margin: "0 0 12px" }}>¡Gracias! Te vamos a responder a la brevedad.</p>
+        <button type="button" onClick={() => setStatus("idle")}
+          style={{ background: "none", color: accent, border: `1px solid ${accent}`, borderRadius: buttonRadius ?? radius, padding: "8px 20px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
+          Enviar otro mensaje
+        </button>
+      </div>
+    );
   }
 
   const inputStyle: React.CSSProperties = variant === "underline"

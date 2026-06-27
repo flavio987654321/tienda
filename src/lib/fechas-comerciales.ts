@@ -19,7 +19,7 @@ function getArgentinaToday(): Date {
 /**
  * Clave de "día" en formato YYYY-MM-DD según el calendario de Argentina, sin depender
  * de la hora del servidor (UTC) ni del navegador del usuario. Se usa para resetear
- * por día cosas como el historial de chat con Sacha.
+ * por día cosas como el historial de chat con Sasha.
  */
 export function getArgentinaDayKey(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -102,7 +102,7 @@ function buildCalendar(year: number): Omit<FechaComercial, "diasFaltan">[] {
 }
 
 /**
- * Fecha y hora actual en Argentina, para que Sacha pueda saludar acorde al momento del día
+ * Fecha y hora actual en Argentina, para que Sasha pueda saludar acorde al momento del día
  * (buen día / buenas tardes / buenas noches) sin depender de la hora del servidor (UTC).
  */
 export function getArgentinaAhora(): { fechaTexto: string; hora: number } {

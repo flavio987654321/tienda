@@ -605,6 +605,8 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
         {/* Body */}
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px 24px" }}>
 
+          <p style={{ margin: "4px 0 10px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>Apariencia</p>
+
           {/* Colores */}
           <div style={sec}>
             <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
@@ -648,6 +650,8 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
               <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>El texto y los íconos del nav se adaptan automáticamente al color elegido.</p>
             </div>
           )}
+
+          <p style={{ margin: "20px 0 10px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>Contacto y comunicación</p>
 
           {/* WhatsApp */}
           <div style={sec}>
@@ -753,6 +757,8 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
               ))}
             </div>
           </div>
+
+          <p style={{ margin: "20px 0 10px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>Configuración de la tienda</p>
 
           {/* Moneda & Idioma */}
           <div style={sec}>
@@ -948,6 +954,8 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
             )}
           </div>
 
+          <p style={{ margin: "20px 0 10px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>Marketing y descubribilidad</p>
+
           {/* SEO */}
           <div style={sec}>
             <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
@@ -983,6 +991,41 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                   </div>
                 </>
               )}
+            </div>
+          </div>
+
+          {/* Analytics y Pixel */}
+          <div style={sec}>
+            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+              📊 Analytics y publicidad
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={lbl}>Google Analytics — ID de medición</label>
+                <input style={inp} value={config.analytics?.googleAnalyticsId ?? ""}
+                  placeholder="G-XXXXXXXXXX"
+                  onChange={e => update("analytics", { ...config.analytics, googleAnalyticsId: e.target.value })}
+                  onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                  onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                {config.analytics?.googleAnalyticsId?.trim() && !/^G-[A-Za-z0-9]+$/.test(config.analytics.googleAnalyticsId.trim()) ? (
+                  <p style={{ margin: "4px 0 0", fontSize: 11, color: "#dc2626" }}>Tiene que empezar con &quot;G-&quot; (ej: G-AB12CD3EF4). Revisalo en tu cuenta de Google Analytics.</p>
+                ) : (
+                  <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>Gratis. Te muestra cuántas visitas tiene tu tienda y de dónde vienen. Lo conseguís creando una cuenta en analytics.google.com → Administrar → Flujos de datos.</p>
+                )}
+              </div>
+              <div>
+                <label style={lbl}>Facebook Pixel — ID</label>
+                <input style={inp} value={config.analytics?.facebookPixelId ?? ""}
+                  placeholder="Solo números, ej: 1234567890123"
+                  onChange={e => update("analytics", { ...config.analytics, facebookPixelId: e.target.value })}
+                  onFocus={e => (e.target.style.borderColor = "#6366f1")}
+                  onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+                {config.analytics?.facebookPixelId?.trim() && !/^\d+$/.test(config.analytics.facebookPixelId.trim()) ? (
+                  <p style={{ margin: "4px 0 0", fontSize: 11, color: "#dc2626" }}>Tiene que ser solo números. Revisalo en Meta Business Suite → Administrador de eventos.</p>
+                ) : (
+                  <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>Gratis. Si hacés publicidad en Instagram/Facebook, esto hace que tus anuncios rindan más. Lo conseguís en business.facebook.com → Administrador de eventos.</p>
+                )}
+              </div>
             </div>
           </div>
 

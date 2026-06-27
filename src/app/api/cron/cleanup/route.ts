@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     adminLogs,
     coupons,
     storeViews,
+    abandonedCarts,
   ] = await Promise.all([
     // Sesiones de NextAuth ya expiradas
     prisma.session.deleteMany({
@@ -45,6 +46,11 @@ export async function GET(req: NextRequest) {
     prisma.storeView.deleteMany({
       where: { date: { lt: ago1y.toISOString().slice(0, 10) } },
     }),
+    // Carritos abandonados de hace más de 45 días sin recuperar — ya no
+    // tiene sentido mandarles recordatorio ni dejarlos acumulados en el panel
+    prisma.abandonedCart.deleteMany({
+      where: { recoveredAt: null, lastActivityAt: { lt: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000) } },
+    }),
   ]);
 
   return NextResponse.json({
@@ -55,9 +61,10 @@ export async function GET(req: NextRequest) {
       adminLogs:     adminLogs.count,
       rewardCoupons: coupons.count,
       storeViews:    storeViews.count,
+      abandonedCarts: abandonedCarts.count,
     },
     total: sessions.count + clicks.count + notifications.count +
-           adminLogs.count + coupons.count + storeViews.count,
+           adminLogs.count + coupons.count + storeViews.count + abandonedCarts.count,
     ranAt: now.toISOString(),
   });
 }

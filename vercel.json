@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/premios-mensuales",
       "schedule": "0 6 1 * *"
+    },
+    {
+      "path": "/api/cron/abandoned-carts",
+      "schedule": "0 */3 * * *"
     }
   ]
 }

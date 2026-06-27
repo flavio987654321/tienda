@@ -3,9 +3,9 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
-export type EstadoSacha = "reposo" | "pensando" | "sorprendido" | "guiño" | "sonriente";
+export type EstadoSasha = "reposo" | "pensando" | "sorprendido" | "guiño" | "sonriente";
 
-const BOCA: Record<EstadoSacha, string> = {
+const BOCA: Record<EstadoSasha, string> = {
   reposo: "M 34 58 Q 44 58 54 58",
   pensando: "M 36 60 Q 44 56 52 60",
   sorprendido: "M 40 56 a 4 4 0 1 0 8 0 a 4 4 0 1 0 -8 0",
@@ -13,7 +13,7 @@ const BOCA: Record<EstadoSacha, string> = {
   sonriente: "M 30 54 Q 44 70 58 54",
 };
 
-const CEJA_Y: Record<EstadoSacha, number> = {
+const CEJA_Y: Record<EstadoSasha, number> = {
   reposo: 28,
   pensando: 26,
   sorprendido: 23,
@@ -21,7 +21,7 @@ const CEJA_Y: Record<EstadoSacha, number> = {
   sonriente: 27,
 };
 
-const PUPILA_DX: Record<EstadoSacha, number> = {
+const PUPILA_DX: Record<EstadoSasha, number> = {
   reposo: 0,
   pensando: 3,
   sorprendido: 0,
@@ -33,7 +33,7 @@ export default function AsistentePersonaje({
   estado = "reposo",
   size = 40,
 }: {
-  estado?: EstadoSacha;
+  estado?: EstadoSasha;
   size?: number;
 }) {
   const [parpadeando, setParpadeando] = useState(false);
@@ -60,13 +60,13 @@ export default function AsistentePersonaje({
   return (
     <svg width={size} height={size} viewBox="0 0 88 88" fill="none" aria-hidden="true">
       <defs>
-        <linearGradient id="sachaGradient" x1="0" y1="0" x2="88" y2="88">
+        <linearGradient id="sashaGradient" x1="0" y1="0" x2="88" y2="88">
           <stop offset="0%" stopColor="#fbbf24" />
           <stop offset="100%" stopColor="#f97316" />
         </linearGradient>
       </defs>
 
-      <rect x="4" y="4" width="80" height="80" rx="28" fill="url(#sachaGradient)" />
+      <rect x="4" y="4" width="80" height="80" rx="28" fill="url(#sashaGradient)" />
 
       <motion.rect
         x="24" y={CEJA_Y[estado]} width="14" height="4" rx="2" fill="#7c2d12"

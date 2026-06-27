@@ -124,6 +124,10 @@ export type StoreConfig = {
     title: string;
     description: string;
   };
+  analytics?: {
+    googleAnalyticsId?: string;
+    facebookPixelId?: string;
+  };
   textOverrides: Record<string, TextOverride>;
   imageOverrides: Record<string, ImageOverride>;
   sectionColors: Record<string, string>;
@@ -199,6 +203,7 @@ export const DEFAULT_CONFIG: StoreConfig = {
   currency:      "ARS",
   language:      "ES",
   seo:           { enabled: false, title: "", description: "" },
+  analytics:     { googleAnalyticsId: "", facebookPixelId: "" },
   textOverrides: {},
   imageOverrides: {},
   sectionColors: {},

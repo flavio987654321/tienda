@@ -403,6 +403,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Si este comprador tenía un carrito marcado como abandonado, ya se recuperó
+    prisma.abandonedCart.updateMany({
+      where: { storeId: order.storeId, customerEmail: emailNorm, recoveredAt: null },
+      data: { recoveredAt: new Date() },
+    }).catch((e) => console.error("[abandonedCart] recovered:", e));
+
     // Notificar al dueño de la tienda en tiempo real
     const storeOwner = await prisma.store.findUnique({
       where: { id: order.storeId },

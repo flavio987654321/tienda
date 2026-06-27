@@ -8,14 +8,14 @@ export async function GET() {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { logo: true, mpConnectedAt: true, isVerified: true },
+    select: { logo: true, mpConnectedAt: true, isVerified: true, tipoTienda: true },
   });
 
   if (!store) return NextResponse.json({}, { status: 404 });
 
   return NextResponse.json({
     noLogo: !store.logo,
-    noMercadoPago: !store.mpConnectedAt,
+    noMercadoPago: store.tipoTienda !== "AUTOS" && !store.mpConnectedAt,
     notVerified: !store.isVerified,
   });
 }

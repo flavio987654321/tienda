@@ -11,6 +11,7 @@ import VisitorBackButton from "./VisitorBackButton";
 import PwaInstallBanner from "@/components/store/PwaInstallBanner";
 import PwaFadeIn from "@/components/store/PwaFadeIn";
 import PWAManager from "@/components/PWAManager";
+import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
 import { STORE_VERSION } from "@/lib/app-versions";
 import { getCurrentUser } from "@/lib/auth-session";
 import { isSubscriptionActive } from "@/lib/subscription";
@@ -34,11 +35,18 @@ export async function generateMetadata({ params }: TiendaPageProps): Promise<Met
 
   if (!store) return {};
 
+  let seo: StoreConfig["seo"] | undefined;
+  try {
+    seo = (JSON.parse(store.storeConfig || "{}") as Partial<StoreConfig>).seo;
+  } catch { /* config inválida, seguir con los valores de la base */ }
+
   const baseName = store.name ?? "Tienda";
-  const title = store.isPublished ? baseName : `${baseName} — Próximamente`;
-  const description = store.isPublished
-    ? (store.description || store.tagline || `Comprá en ${baseName}`)
-    : `${baseName} está preparando algo especial. ¡Volvé pronto!`;
+  const customTitle = seo?.enabled ? seo.title?.trim() : "";
+  const customDescription = seo?.enabled ? seo.description?.trim() : "";
+  const title = !store.isPublished ? `${baseName} — Próximamente` : (customTitle || baseName);
+  const description = !store.isPublished
+    ? `${baseName} está preparando algo especial. ¡Volvé pronto!`
+    : (customDescription || store.description || store.tagline || `Comprá en ${baseName}`);
 
   const sub = store.owner?.subscription;
   const isPremium = sub?.tier === "PREMIUM" && sub.status != null && isSubscriptionActive(sub as Parameters<typeof isSubscriptionActive>[0]);
@@ -152,6 +160,7 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
 
   return (
     <>
+      <StoreTrackingScripts googleAnalyticsId={config.analytics?.googleAnalyticsId} facebookPixelId={config.analytics?.facebookPixelId} />
       <PWAManager appVersion={STORE_VERSION} versionKey="pwa_store_version" disableNotifPrompt />
       <PwaFadeIn />
       {ownerIsPremium && !isOwner && (

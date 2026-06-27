@@ -49,7 +49,7 @@ model User {
   asistenteMensajes  AsistenteMensaje[]
 }
 
-// Historial de chat con Sacha (asistente IA del dashboard). Se guarda en la base
+// Historial de chat con Sasha (asistente IA del dashboard). Se guarda en la base
 // para que sea el mismo en cualquier dispositivo, y se filtra por `day` (zona Argentina)
 // para mantener el reseteo diario que ya tenía la versión basada en localStorage.
 model AsistenteMensaje {
@@ -226,6 +226,7 @@ model Store {
   pushCampaigns       PushCampaign[]
   storeViews          StoreView[]
   storeFollows        StoreFollow[]
+  abandonedCarts      AbandonedCart[]
 }
 
 // Suscripciones push a tiendas. userId es null para suscriptores anónimos legacy;
@@ -418,6 +419,29 @@ model Order {
   commission Commission?
   reviews    Review[]
   statusLogs OrderStatusLog[]
+}
+
+// Carrito con email/teléfono del comprador capturado durante el checkout
+// pero que nunca se completó en una Order — usado para recordatorios de
+// recuperación por email.
+model AbandonedCart {
+  id             String    @id @default(cuid())
+  customerEmail  String
+  customerName   String?
+  customerPhone  String?
+  items          String // JSON: [{productId, variantId, name, image, price, qty, size, color}]
+  total          Float
+  lastActivityAt DateTime  @default(now())
+  reminderSentAt DateTime?
+  recoveredAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, customerEmail])
+  @@index([storeId])
 }
 
 model OrderStatusLog {

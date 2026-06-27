@@ -11,9 +11,13 @@ import ChangeStoreTypeButton from "./ChangeStoreTypeButton";
 import CsvImportButton from "./CsvImportButton";
 import { STORE_TYPES } from "@/lib/storeTypes";
 
-export default async function ProductosPage() {
+type Props = { searchParams: Promise<{ stock?: string }> };
+
+export default async function ProductosPage({ searchParams }: Props) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  const { stock: stockParam } = await searchParams;
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
@@ -86,7 +90,7 @@ export default async function ProductosPage() {
           </Link>
         </div>
       ) : (
-        <ProductsTable products={products} storeSlug={store?.slug ?? ""} storeName={store?.name ?? ""} storeType={store?.tipoTienda ?? ""} />
+        <ProductsTable products={products} storeSlug={store?.slug ?? ""} storeName={store?.name ?? ""} storeType={store?.tipoTienda ?? ""} initialStockFilter={stockParam} />
       )}
     </DashboardLayout>
   );

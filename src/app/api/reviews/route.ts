@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { createNotification } from "@/lib/notifications";
+import { sendNewReviewToOwnerEmail } from "@/lib/email";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -91,6 +93,41 @@ export async function POST(req: NextRequest) {
     data: { userId: user.id, productId, orderId, rating, comment },
     include: { user: { select: { name: true, image: true } } },
   });
+
+  // Avisar a la dueña de la tienda — no debe bloquear ni romper la
+  // respuesta si falla, la reseña ya quedó guardada.
+  prisma.product
+    .findUnique({
+      where: { id: productId },
+      select: {
+        name: true,
+        store: { select: { slug: true, ownerId: true, name: true, owner: { select: { email: true } } } },
+      },
+    })
+    .then((product) => {
+      if (!product) return;
+      const reviewerName = review.user.name || "Una compradora";
+      createNotification({
+        userId: product.store.ownerId,
+        type: "NEW_REVIEW",
+        title: "Nueva reseña recibida",
+        body: `${rating}★ en ${product.name} — ${reviewerName}`,
+        link: `/tienda/${product.store.slug}/producto/${productId}`,
+      });
+      if (product.store.owner?.email) {
+        sendNewReviewToOwnerEmail({
+          ownerEmail: product.store.owner.email,
+          storeName: product.store.name,
+          storeSlug: product.store.slug,
+          productId,
+          productName: product.name,
+          reviewerName,
+          rating,
+          comment,
+        }).catch((e) => console.error("[email] nueva reseña:", e));
+      }
+    })
+    .catch((e) => console.error("[reviews] aviso a dueña:", e));
 
   return NextResponse.json(review, { status: 201 });
 }

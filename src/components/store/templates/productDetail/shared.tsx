@@ -541,7 +541,7 @@ export function ProductDetailFooter({ theme, bg: defaultBg = "#0a0a0a", view }: 
 // los homes (CartDrawer/CheckoutModal compartidos), para que el ícono de
 // carrito de esta página abra un panel acá mismo en vez de navegar a otro lado.
 export function ProductDetailOverlays({ theme, view }: { theme: DetailTheme; view: ProductDetailViewProps }) {
-  const { cart, isPreview, isOwner, whatsapp } = view;
+  const { cart, isPreview, isOwner, whatsapp, slug } = view;
   const { favorites, favoritesOpen, setFavoritesOpen, favoriteProducts, toggleFavorite, toastMsg } = cart;
   const cartTheme = detailCartTheme(theme);
   const whatsappConfig = whatsapp ? { enabled: true, number: whatsapp } : undefined;
@@ -549,7 +549,7 @@ export function ProductDetailOverlays({ theme, view }: { theme: DetailTheme; vie
   return (
     <>
       <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={whatsappConfig} />
-      <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} />
+      <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} storeSlug={slug} />
 
       <div style={{ position: "fixed", inset: 0, zIndex: isPreview ? 20000 : 205, pointerEvents: favoritesOpen ? "auto" : "none" }}>
         <div onClick={() => setFavoritesOpen(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", opacity: favoritesOpen ? 1 : 0, transition: "opacity 0.3s" }} />

@@ -17,6 +17,7 @@ export type StoreSnapshot = {
   tendenciaVentas: "subiendo" | "bajando" | "estable" | "sin_datos";
   productoTop: string | null;
   diasDesdeUltimaVenta: number | null;
+  carritosAbandonadosPendientes: number;
 };
 
 export type ChecklistEstado = {
@@ -32,7 +33,7 @@ export type ChecklistEstado = {
 
 /**
  * Misma lógica que el checklist de onboarding de /dashboard (src/app/dashboard/page.tsx),
- * para que Sacha vea exactamente lo mismo que ya ve el dueño en pantalla.
+ * para que Sasha vea exactamente lo mismo que ya ve el dueño en pantalla.
  */
 export function getChecklistEstado(args: {
   isPublished: boolean;
@@ -85,6 +86,7 @@ export async function getStoreSnapshot(storeId: string, tipoTienda: string): Pro
     ventasAnteriores,
     ultimaVenta,
     itemsTop,
+    carritosAbandonadosPendientes,
   ] = await Promise.all([
       esTipoConsultas
         ? Promise.resolve(0)
@@ -133,6 +135,10 @@ export async function getStoreSnapshot(storeId: string, tipoTienda: string): Pro
         orderBy: { _sum: { quantity: "desc" } },
         take: 1,
       }),
+
+      esTipoConsultas
+        ? Promise.resolve(0)
+        : prisma.abandonedCart.count({ where: { storeId, recoveredAt: null } }),
     ]);
 
   const productIdsStockBajo = new Set(variantesSinUmbral.map((v) => v.productId));
@@ -177,5 +183,6 @@ export async function getStoreSnapshot(storeId: string, tipoTienda: string): Pro
     tendenciaVentas,
     productoTop,
     diasDesdeUltimaVenta,
+    carritosAbandonadosPendientes,
   };
 }

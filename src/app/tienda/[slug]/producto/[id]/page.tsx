@@ -4,6 +4,8 @@ import { unstable_noStore as noStore } from "next/cache";
 import type { Metadata } from "next";
 import { isDemoProductId } from "@/lib/demoProducts";
 import ProductDetailClient from "./ProductDetailClient";
+import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
+import type { StoreConfig } from "@/types/store-config";
 
 type ProductoPageProps = {
   params: Promise<{ slug: string; id: string }>;
@@ -48,6 +50,16 @@ export async function generateMetadata({ params, searchParams }: ProductoPagePro
   };
 }
 
+async function findAnalyticsConfig(slug: string) {
+  const store = await prisma.store.findFirst({ where: { slug, isActive: true }, select: { storeConfig: true } });
+  try {
+    const parsed: Partial<StoreConfig> = JSON.parse(store?.storeConfig || "{}");
+    return parsed.analytics;
+  } catch {
+    return undefined;
+  }
+}
+
 export default async function ProductoPage({ params, searchParams }: ProductoPageProps) {
   noStore();
   const { slug, id } = await params;
@@ -61,5 +73,12 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
     if (!product) notFound();
   }
 
-  return <ProductDetailClient slug={slug} productId={id} />;
+  const analytics = await findAnalyticsConfig(slug);
+
+  return (
+    <>
+      <StoreTrackingScripts googleAnalyticsId={analytics?.googleAnalyticsId} facebookPixelId={analytics?.facebookPixelId} />
+      <ProductDetailClient slug={slug} productId={id} />
+    </>
+  );
 }

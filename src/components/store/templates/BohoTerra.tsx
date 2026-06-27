@@ -9,7 +9,6 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { HandHeart } from "lucide-react";
@@ -38,7 +37,7 @@ export default function BohoTerra() {
   const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
-  const [, setReviewSubmitting] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
 
   const storeConfig = useStoreConfig();
@@ -101,7 +100,6 @@ export default function BohoTerra() {
   const [carouselIdx,         setCarouselIdx]         = useState(0);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [announcementIdx,     setAnnouncementIdx]     = useState(0);
-  const [openPolicyField,     setOpenPolicyField]     = useState<string | null>(null);
   const [showReport,          setShowReport]          = useState(false);
   const [isMobile,            setIsMobile]            = useState(false);
   const [reelIndex,           setReelIndex]           = useState(0);
@@ -955,12 +953,13 @@ export default function BohoTerra() {
         <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, padding: isMobile ? "16px" : "16px 40px", maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
           <div style={{ display:"flex", flexWrap:"wrap", gap:"0 16px" }}>
             {[
-              { label: "Política de devoluciones", tipo: "devoluciones", policyField: "policyReturns" },
-              { label: "Política de envíos",       tipo: "envios",       policyField: "policyShipping" },
-              { label: "Términos y condiciones",   tipo: "terminos",     policyField: "policyTerms" },
-            ].map(({ label, tipo, policyField }) => (
+              { label: "Política de devoluciones", tipo: "devoluciones" },
+              { label: "Política de envíos",       tipo: "envios" },
+              { label: "Términos y condiciones",   tipo: "terminos" },
+            ].map(({ label, tipo }) => (
               editMode ? (
-                <button key={tipo} type="button" onClick={() => setOpenPolicyField(policyField)}
+                <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
+                  title="Editar en Dashboard → Pagos"
                   style={{ fontSize:11, color:footerMid, opacity:0.55, background:"none", border:"none", cursor:"pointer", padding:0, display:"inline-flex", alignItems:"center", gap:4 }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.55"; }}>
@@ -994,10 +993,6 @@ export default function BohoTerra() {
         </div>
         </div>
       </footer>
-
-      {openPolicyField && (
-        <PolicyEditorModal field={openPolicyField} onClose={() => setOpenPolicyField(null)} />
-      )}
 
       {showReport && (
         <ReportStoreModal slug={storeConfig?.slug ?? ""} onClose={() => setShowReport(false)} />
@@ -1080,7 +1075,7 @@ export default function BohoTerra() {
                 <div style={{ display:"flex", alignItems:"center", border:`1px solid rgba(44,34,24,0.18)` }}>
                   <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{ width:36, height:36, background:"none", border:"none", color:T, fontSize:18, cursor:"pointer" }}>−</button>
                   <span style={{ width:36, textAlign:"center", fontSize:14 }}>{qty}</span>
-                  <button onClick={()=>setQty(q=>q+1)} style={{ width:36, height:36, background:"none", border:"none", color:T, fontSize:18, cursor:"pointer" }}>+</button>
+                  <button onClick={()=>setQty(q=>selectedVariantStock !== null ? Math.min(selectedVariantStock, q+1) : q+1)} style={{ width:36, height:36, background:"none", border:"none", color:T, fontSize:18, cursor:"pointer" }}>+</button>
                 </div>
               </div>
               {/* Stock por variante */}
@@ -1184,9 +1179,9 @@ export default function BohoTerra() {
                       <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
                         placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
                         style={{ border:`1px solid rgba(44,34,24,0.2)`, padding:"9px 12px", fontSize:12, resize:"none", outline:"none", background:"#faf7f2" }} />
-                      <button type="submit" disabled={isPreview || !reviewForm.reviewer.trim()}
-                        style={{ background: isPreview || !reviewForm.reviewer.trim() ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"12px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
-                        Publicar reseña
+                      <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim()}
+                        style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"12px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
+                        {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
                       </button>
                     </form>
                     {isPreview && <p style={{ fontSize:10, color:MID, fontStyle:"italic", marginTop:6 }}>Vista previa — solo disponible en la tienda real.</p>}
@@ -1488,8 +1483,8 @@ export default function BohoTerra() {
                     <input type="checkbox" checked={acceptedTerms} onChange={e=>setAcceptedTerms(e.target.checked)} style={{ marginTop:2, accentColor:A, flexShrink:0 }} />
                     <span style={{ fontSize:11, color:"rgba(44,34,24,0.55)", lineHeight:1.6 }}>
                       Acepto los{" "}
-                      <a href="/terminos?role=buyer" target="_blank" rel="noopener" style={{ color:A, textDecoration:"underline" }}>Términos y Condiciones</a>
-                      {" "}y la{" "}
+                      <a href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=terminos`} target="_blank" rel="noopener" style={{ color:A, textDecoration:"underline" }}>Términos y Condiciones</a>
+                      {" "}de la tienda y la{" "}
                       <a href="/privacidad?role=buyer" target="_blank" rel="noopener" style={{ color:A, textDecoration:"underline" }}>Política de Privacidad</a>
                     </span>
                   </label>

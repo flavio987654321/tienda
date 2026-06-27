@@ -4,11 +4,16 @@ import { useState, useEffect, useCallback } from "react";
 import {
   CreditCard, Banknote, FileText, Shield, Truck, Check,
   ChevronDown, ChevronUp, Save, AlertCircle, ToggleLeft, ToggleRight,
-  Eye, EyeOff, Lock, Mail, Package,
+  Eye, EyeOff, Lock, Mail, Package, Sparkles, X,
 } from "lucide-react";
 import type { StorePaymentInfo, ShippingMethod } from "@/types/store-config";
 import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS, LIVE_QUOTE_SHIPPING_METHODS } from "@/types/store-config";
 import { PROVINCIAS_ARGENTINA as PROVINCES } from "@/lib/provincias";
+import {
+  generatePolicyShipping, generatePolicyReturns, generatePolicyTerms,
+  generatePolicyDeliveryAutos, generatePolicyOperationAutos, generatePolicyTermsAutos,
+  type LegalWizardAnswers, type LegalWizardAnswersAutos, type LegalStoreInfo,
+} from "@/lib/legal-generator";
 
 type Props = {
   initial: {
@@ -25,6 +30,9 @@ type Props = {
     originCity: string;
     originProvince: string;
     originPostalCode: string;
+    storeName: string;
+    contact: string;
+    isAutos: boolean;
   };
 };
 
@@ -47,6 +55,30 @@ export default function PagosClient({ initial }: Props) {
   const [originCity, setOriginCity] = useState(initial.originCity);
   const [originProvince, setOriginProvince] = useState(initial.originProvince);
   const [originPostalCode, setOriginPostalCode] = useState(initial.originPostalCode);
+  const [legalWizardOpen, setLegalWizardOpen] = useState(false);
+
+  const storeInfo: LegalStoreInfo = { name: initial.storeName, contact: initial.contact };
+  const isAutos = initial.isAutos;
+
+  function applyLegalWizard(answers: LegalWizardAnswers) {
+    setPolicyShipping(generatePolicyShipping(storeInfo, answers));
+    setPolicyReturns(generatePolicyReturns(storeInfo, answers));
+    setPolicyTerms(generatePolicyTerms(storeInfo, answers));
+    setPolicyShippingActive(true);
+    setPolicyReturnsActive(true);
+    setPolicyTermsActive(true);
+    setLegalWizardOpen(false);
+  }
+
+  function applyLegalWizardAutos(answers: LegalWizardAnswersAutos) {
+    setPolicyShipping(generatePolicyDeliveryAutos(storeInfo, answers));
+    setPolicyReturns(generatePolicyOperationAutos(storeInfo, answers));
+    setPolicyTerms(generatePolicyTermsAutos(storeInfo, answers));
+    setPolicyShippingActive(true);
+    setPolicyReturnsActive(true);
+    setPolicyTermsActive(true);
+    setLegalWizardOpen(false);
+  }
 
   const hasFullOrigin = !!(originStreet.trim() && originCity.trim() && originProvince && originPostalCode.trim());
   const liveQuoteEnabled = shippingMethods.some((m) => m.liveQuote && m.enabled);
@@ -149,27 +181,44 @@ export default function PagosClient({ initial }: Props) {
     <div className="space-y-4">
 
       {/* How it works banner */}
-      <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5">
-        <Mail className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm font-semibold text-blue-900">¿Para qué sirve esto?</p>
-          <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
-            Esta pantalla junta dos cosas distintas: <strong>cómo te cobran</strong> (transferencia, efectivo) y <strong>cómo se entrega</strong> el pedido (retiro, envío). No hace falta activar todo — elegís solo las opciones que usás en tu negocio. Lo que actives le llega al cliente en el email de confirmación del pedido.
-          </p>
+      {isAutos ? (
+        <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5">
+          <Mail className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-blue-900">¿Para qué sirve esto?</p>
+            <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
+              Como tu tienda funciona por consulta, no hace falta configurar métodos de pago ni de envío acá — eso lo coordinás directo con cada interesado. Esta pantalla es solo para las políticas legales de tu tienda.
+            </p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5">
+            <Mail className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-blue-900">¿Para qué sirve esto?</p>
+              <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
+                Esta pantalla junta dos cosas distintas: <strong>cómo te cobran</strong> (transferencia, efectivo) y <strong>cómo se entrega</strong> el pedido (retiro, envío). No hace falta activar todo — elegís solo las opciones que usás en tu negocio. Lo que actives le llega al cliente en el email de confirmación del pedido.
+              </p>
+            </div>
+          </div>
 
-      {/* Security notice */}
-      <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-        <Lock className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-        <p className="text-xs text-amber-800 leading-relaxed">
-          Los datos sensibles (CBU, CVU, CUIL) se ocultan automáticamente si dejás la pantalla sin atención o cambiás de pestaña.
-        </p>
-      </div>
+          {/* Security notice */}
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <Lock className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <p className="text-xs text-amber-800 leading-relaxed">
+              Los datos sensibles (CBU, CVU, CUIL) se ocultan automáticamente si dejás la pantalla sin atención o cambiás de pestaña.
+            </p>
+          </div>
+        </>
+      )}
 
-      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-2">Cómo te cobran</p>
+      {!isAutos && <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-2">Cómo te cobran</p>}
 
       {/* TRANSFERENCIA */}
+      {!isAutos && (
+      <>
+
       <Section
         open={openSection === "transferencia"}
         onToggle={() => setOpenSection(openSection === "transferencia" ? null : "transferencia")}
@@ -447,6 +496,8 @@ export default function PagosClient({ initial }: Props) {
           </div>
         </div>
       </Section>
+      </>
+      )}
 
       <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-2">Legal</p>
 
@@ -465,24 +516,37 @@ export default function PagosClient({ initial }: Props) {
             Tus políticas aparecen como links en el footer de tu tienda. Los clientes las ven antes de comprar y también en los emails.
           </div>
 
+          <button
+            type="button"
+            onClick={() => setLegalWizardOpen(true)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition-colors"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {policyReturns || policyShipping || policyTerms ? "Regenerar con asistente" : "Generar con asistente"}
+          </button>
+
           <PolicyBlock
             icon={<Truck className="h-3.5 w-3.5" />}
-            label="Política de devoluciones y cambios"
+            label={isAutos ? "Condiciones de la operación" : "Política de devoluciones y cambios"}
             active={policyReturnsActive}
             onToggle={() => setPolicyReturnsActive((v) => !v)}
             value={policyReturns}
             onChange={setPolicyReturns}
-            placeholder={`Ej: Aceptamos cambios dentro de los 30 días de recibido el producto, con ticket de compra. El producto debe estar sin uso y con etiquetas. Para solicitar un cambio contactanos por WhatsApp o email.\n\nNo aceptamos devoluciones de dinero salvo defecto de fabricación.`}
+            placeholder={isAutos
+              ? "Ej: Para reservar un vehículo pedimos una seña, que se descuenta del precio final. Si la operación no se concreta por causas ajenas al comprador, la seña se devuelve.\n\nLos vehículos se entregan con la documentación al día."
+              : `Ej: Aceptamos cambios dentro de los 30 días de recibido el producto, con ticket de compra. El producto debe estar sin uso y con etiquetas. Para solicitar un cambio contactanos por WhatsApp o email.\n\nNo aceptamos devoluciones de dinero salvo defecto de fabricación.`}
           />
 
           <PolicyBlock
             icon={<Truck className="h-3.5 w-3.5" />}
-            label="Política de envíos"
+            label={isAutos ? "Cómo se coordina la entrega" : "Política de envíos"}
             active={policyShippingActive}
             onToggle={() => setPolicyShippingActive((v) => !v)}
             value={policyShipping}
             onChange={setPolicyShipping}
-            placeholder={`Ej: Enviamos por correo y transporte a todo el país. Los tiempos de entrega son de 3 a 7 días hábiles. El costo de envío se calcula según destino.\n\nRetiro en local sin cargo, coordinar por WhatsApp.`}
+            placeholder={isAutos
+              ? "Ej: La entrega se coordina en persona por WhatsApp una vez acordados los detalles de la operación. Recomendamos revisar la documentación antes de cerrar la compra."
+              : `Ej: Enviamos por correo y transporte a todo el país. Los tiempos de entrega son de 3 a 7 días hábiles. El costo de envío se calcula según destino.\n\nRetiro en local sin cargo, coordinar por WhatsApp.`}
           />
 
           <PolicyBlock
@@ -530,6 +594,266 @@ export default function PagosClient({ initial }: Props) {
           )}
           {saveState === "saving" ? "Guardando..." : saveState === "saved" ? "Guardado" : saveState === "error" ? "Error al guardar" : "Guardar cambios"}
         </button>
+      </div>
+
+      {legalWizardOpen && (
+        isAutos ? (
+          <LegalWizardModalAutos
+            storeInfo={storeInfo}
+            onClose={() => setLegalWizardOpen(false)}
+            onApply={applyLegalWizardAutos}
+          />
+        ) : (
+          <LegalWizardModal
+            storeInfo={storeInfo}
+            onClose={() => setLegalWizardOpen(false)}
+            onApply={applyLegalWizard}
+          />
+        )
+      )}
+    </div>
+  );
+}
+
+function LegalWizardModal({ storeInfo, onClose, onApply }: {
+  storeInfo: LegalStoreInfo;
+  onClose: () => void;
+  onApply: (answers: LegalWizardAnswers) => void;
+}) {
+  const [shipsNationwide, setShipsNationwide] = useState(true);
+  const [avgDeliveryDays, setAvgDeliveryDays] = useState("3 a 7");
+  const [extraReturnDays, setExtraReturnDays] = useState(0);
+  const [cancellationFeePercent, setCancellationFeePercent] = useState(0);
+  const [preview, setPreview] = useState<{ shipping: string; returns: string; terms: string } | null>(null);
+
+  const answers: LegalWizardAnswers = { shipsNationwide, avgDeliveryDays, extraReturnDays, cancellationFeePercent };
+
+  function generatePreview() {
+    setPreview({
+      shipping: generatePolicyShipping(storeInfo, answers),
+      returns: generatePolicyReturns(storeInfo, answers),
+      terms: generatePolicyTerms(storeInfo, answers),
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-indigo-500" />
+            <h3 className="text-base font-bold text-slate-900">Generar políticas</h3>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+        </div>
+        <p className="text-xs text-slate-500 mb-5">
+          Completá esto y armamos las 3 políticas con las cláusulas que exige la ley argentina (derecho de arrepentimiento, garantía, datos personales) más lo que respondas. Después podés editar cualquier párrafo a mano.
+        </p>
+
+        {!preview ? (
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">¿Hacés envíos a todo el país, o solo entregás en tu zona / retiro en persona?</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setShipsNationwide(true)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${shipsNationwide ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                  Envío a todo el país
+                </button>
+                <button type="button" onClick={() => setShipsNationwide(false)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${!shipsNationwide ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                  Solo en persona
+                </button>
+              </div>
+            </div>
+
+            {shipsNationwide && (
+              <div>
+                <p className="text-xs font-semibold text-slate-700 mb-1.5">¿Cuántos días tarda el envío en promedio?</p>
+                <input
+                  value={avgDeliveryDays}
+                  onChange={(e) => setAvgDeliveryDays(e.target.value)}
+                  placeholder="Ej: 3 a 7"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-indigo-300"
+                />
+              </div>
+            )}
+
+            <div>
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">
+                Además de los 10 días que exige la ley, ¿le das más días al comprador para cambios por simple arrepentimiento?
+              </p>
+              <input
+                type="number"
+                min={0}
+                value={extraReturnDays}
+                onChange={(e) => setExtraReturnDays(Math.max(0, Number(e.target.value) || 0))}
+                placeholder="0"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-indigo-300"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">Dejá 0 si solo aplicás el mínimo legal.</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">
+                Si alguien cancela un pedido ya confirmado, ¿le cobrás un % administrativo?
+              </p>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={cancellationFeePercent}
+                onChange={(e) => setCancellationFeePercent(Math.max(0, Number(e.target.value) || 0))}
+                placeholder="0"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-indigo-300"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">Dejá 0 si no cobrás nada.</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={generatePreview}
+              className="w-full py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700"
+            >
+              Generar
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {[
+              { label: "Política de envíos", text: preview.shipping },
+              { label: "Política de devoluciones y cambios", text: preview.returns },
+              { label: "Términos y condiciones", text: preview.terms },
+            ].map(({ label, text }) => (
+              <div key={label} className="rounded-lg border border-slate-200 p-3">
+                <p className="text-xs font-bold text-slate-700 mb-1.5">{label}</p>
+                <p className="text-xs text-slate-600 whitespace-pre-line leading-relaxed">{text}</p>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setPreview(null)} className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-semibold">
+                Volver
+              </button>
+              <button type="button" onClick={() => onApply(answers)} className="flex-[2] py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
+                Usar este texto
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LegalWizardModalAutos({ storeInfo, onClose, onApply }: {
+  storeInfo: LegalStoreInfo;
+  onClose: () => void;
+  onApply: (answers: LegalWizardAnswersAutos) => void;
+}) {
+  const [hasWarranty, setHasWarranty] = useState(false);
+  const [requiresDeposit, setRequiresDeposit] = useState(false);
+  const [depositRefundable, setDepositRefundable] = useState(true);
+  const [preview, setPreview] = useState<{ delivery: string; operation: string; terms: string } | null>(null);
+
+  const answers: LegalWizardAnswersAutos = { hasWarranty, requiresDeposit, depositRefundable };
+
+  function generatePreview() {
+    setPreview({
+      delivery: generatePolicyDeliveryAutos(storeInfo, answers),
+      operation: generatePolicyOperationAutos(storeInfo, answers),
+      terms: generatePolicyTermsAutos(storeInfo, answers),
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-indigo-500" />
+            <h3 className="text-base font-bold text-slate-900">Generar políticas</h3>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+        </div>
+        <p className="text-xs text-slate-500 mb-5">
+          Como tu tienda funciona por consulta, estas políticas se enfocan en cómo se coordina la entrega y las condiciones de la operación, no en envíos ni pagos online. Después podés editar cualquier párrafo a mano.
+        </p>
+
+        {!preview ? (
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">¿Pedís una seña para reservar el vehículo?</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setRequiresDeposit(false)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${!requiresDeposit ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                  No
+                </button>
+                <button type="button" onClick={() => setRequiresDeposit(true)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${requiresDeposit ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                  Sí
+                </button>
+              </div>
+            </div>
+
+            {requiresDeposit && (
+              <div>
+                <p className="text-xs font-semibold text-slate-700 mb-1.5">Si quien reserva se baja antes de concretar la compra, ¿devolvés la seña?</p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setDepositRefundable(true)}
+                    className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${depositRefundable ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                    Sí, se devuelve
+                  </button>
+                  <button type="button" onClick={() => setDepositRefundable(false)}
+                    className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${!depositRefundable ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                    No se devuelve
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">¿Tus vehículos suelen tener garantía vigente?</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setHasWarranty(false)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${!hasWarranty ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                  No, se venden como están
+                </button>
+                <button type="button" onClick={() => setHasWarranty(true)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border ${hasWarranty ? "border-indigo-300 bg-indigo-50 text-indigo-700" : "border-slate-200 text-slate-500"}`}>
+                  Sí, suelen tener
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={generatePreview}
+              className="w-full py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700"
+            >
+              Generar
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {[
+              { label: "Cómo se coordina la entrega", text: preview.delivery },
+              { label: "Condiciones de la operación", text: preview.operation },
+              { label: "Términos y condiciones", text: preview.terms },
+            ].map(({ label, text }) => (
+              <div key={label} className="rounded-lg border border-slate-200 p-3">
+                <p className="text-xs font-bold text-slate-700 mb-1.5">{label}</p>
+                <p className="text-xs text-slate-600 whitespace-pre-line leading-relaxed">{text}</p>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setPreview(null)} className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-semibold">
+                Volver
+              </button>
+              <button type="button" onClick={() => onApply(answers)} className="flex-[2] py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
+                Usar este texto
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

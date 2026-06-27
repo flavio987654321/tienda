@@ -10,11 +10,12 @@ import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 // Mismo motivo que CartDrawer: un solo lugar para arreglar/mantener en vez de
 // una copia por template.
 export function CheckoutModal({
-  cart, theme, isPreview,
+  cart, theme, isPreview, storeSlug,
 }: {
   cart: ReturnType<typeof useCartLogic>;
   theme: CartTheme;
   isPreview: boolean;
+  storeSlug: string;
 }) {
   const { BG, S, T, MID, border, accent, accentText, serif } = theme;
   const {
@@ -205,8 +206,8 @@ export function CheckoutModal({
                 <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} style={{ marginTop:2, accentColor:accent, flexShrink:0 }} />
                 <span style={{ fontSize:11, color:T, opacity:0.7, lineHeight:1.6 }}>
                   Acepto los{" "}
-                  <a href="/terminos?role=buyer" target="_blank" rel="noopener" style={{ color:accent, textDecoration:"underline" }}>Términos y Condiciones</a>
-                  {" "}y la{" "}
+                  <a href={`/tienda/${storeSlug}/politicas?tipo=terminos`} target="_blank" rel="noopener" style={{ color:accent, textDecoration:"underline" }}>Términos y Condiciones</a>
+                  {" "}de la tienda y la{" "}
                   <a href="/privacidad?role=buyer" target="_blank" rel="noopener" style={{ color:accent, textDecoration:"underline" }}>Política de Privacidad</a>
                 </span>
               </label>

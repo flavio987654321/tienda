@@ -29,7 +29,7 @@ interface Product {
   soldBuyerName?: string | null;
 }
 
-interface Props { products: Product[]; storeSlug?: string; storeName?: string; storeType?: string }
+interface Props { products: Product[]; storeSlug?: string; storeName?: string; storeType?: string; initialStockFilter?: string }
 
 const PAGE_SIZE = 20;
 
@@ -42,13 +42,15 @@ function parseImages(raw: string): string[] {
   } catch { return []; }
 }
 
-export default function ProductsTable({ products: initialProducts, storeSlug = "", storeName = "", storeType = "" }: Props) {
+const VALID_STOCK_FILTERS = ["all", "out", "low", "critical"];
+
+export default function ProductsTable({ products: initialProducts, storeSlug = "", storeName = "", storeType = "", initialStockFilter = "all" }: Props) {
   const showStock = storeType !== "AUTOS";
   const [products,      setProducts]      = useState(initialProducts);
   const [search,        setSearch]        = useState("");
   const [categoryFilter,setCategoryFilter]= useState("all");
   const [statusFilter,  setStatusFilter]  = useState("all");
-  const [stockFilter,   setStockFilter]   = useState("all");
+  const [stockFilter,   setStockFilter]   = useState(VALID_STOCK_FILTERS.includes(initialStockFilter) ? initialStockFilter : "all");
   const [sortBy,        setSortBy]        = useState("newest");
   const [viewMode,      setViewMode]      = useState<"table" | "grid">("table");
   const [page,          setPage]          = useState(1);
