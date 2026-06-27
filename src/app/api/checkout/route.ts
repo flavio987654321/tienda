@@ -5,7 +5,7 @@ import { createNotification } from "@/lib/notifications";
 import { sendOrderConfirmationEmail, sendNewOrderToOwnerEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/push";
 import type { ShippingMethod } from "@/types/store-config";
-import { DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
+import { DEFAULT_SHIPPING_METHODS, LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
 import { cotizarEnvio } from "@/lib/enviopack";
 import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
 import { recordStockMovement } from "@/lib/stockMovements";
@@ -37,27 +37,34 @@ type CheckoutBody = {
   donationAmount?: number;
 };
 
+// Backward compat: old frontend sent "pickup"/"standard"/"national"
+const SHIPPING_LEGACY_ID_MAP: Record<string, string> = { pickup: "retiro", standard: "estandar", national: "nacional" };
+
+function findShippingMethod(shippingMethodId: string, methods: ShippingMethod[]): ShippingMethod | undefined {
+  const normalizedId = SHIPPING_LEGACY_ID_MAP[shippingMethodId] ?? shippingMethodId;
+  return methods.find(m => m.id === normalizedId && m.enabled);
+}
+
 async function resolveShipping(
-  shippingMethodId: string,
+  found: ShippingMethod | undefined,
   methods: ShippingMethod[],
   storeId: string,
   destinationPostalCode: string,
   destinationProvince: string,
   items: { productId: string; quantity: number }[]
 ): Promise<{ label: string; cost: number }> {
-  // Backward compat: old frontend sent "pickup"/"standard"/"national"
-  const legacyMap: Record<string, string> = { pickup: "retiro", standard: "estandar", national: "nacional" };
-  const normalizedId = legacyMap[shippingMethodId] ?? shippingMethodId;
-  const found = methods.find(m => m.id === normalizedId && m.enabled);
   if (found) {
     if (found.liveQuote) {
-      // Nunca confiar en un precio mandado por el cliente para métodos
-      // cotizados: se recalcula server-side. Si la cotización falla, la
-      // orden se crea igual "a coordinar" en vez de bloquear la venta.
+      // La cotización en vivo necesita destino real del comprador — si falta,
+      // no es un fallo del servicio de Envíopack, es un dato obligatorio que
+      // no se completó (el caller valida esto antes y rechaza el pedido).
+      // Acá solo nos queda el caso de que cotizarEnvio falle (Envíopack caído,
+      // tienda sin dirección de origen, etc.): ahí sí cae a "a coordinar" en
+      // vez de bloquear la venta.
       try {
         const quote = await cotizarEnvio({ storeId, destinationPostalCode, destinationProvince, items });
         if (quote.available) {
-          const price = found.id === "envio-sucursal" ? quote.sucursal : quote.domicilio;
+          const price = found.id === LIVE_QUOTE_DOMICILIO_ID ? quote.domicilio : null;
           if (price != null) return { label: found.label, cost: price };
         }
       } catch { /* fallback a coordinar abajo */ }
@@ -108,8 +115,17 @@ export async function POST(req: NextRequest) {
       storeShippingMethods = cfg.shippingMethods;
     }
   } catch { /* noop */ }
+
+  const foundShippingMethod = findShippingMethod(shippingMethod, storeShippingMethods);
+  if (foundShippingMethod?.liveQuote && (!customer?.postalCode?.trim() || !customer?.province?.trim())) {
+    return NextResponse.json(
+      { error: "Ingresá tu código postal y provincia para cotizar el envío" },
+      { status: 400 }
+    );
+  }
+
   const shipping = await resolveShipping(
-    shippingMethod,
+    foundShippingMethod,
     storeShippingMethods,
     storeId,
     customer?.postalCode ?? "",

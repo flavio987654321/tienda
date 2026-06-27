@@ -5,6 +5,8 @@ import { useRouter, usePathname } from "next/navigation";
 import type { StorefrontProduct, ValidatedCoupon, PlaceOrderParams } from "./useStorefront";
 import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, type CartItem, type ContactStatus, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
 import { useAuth } from "@/components/AuthProvider";
+import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
+import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 
 type StorefrontDeps = {
   products: StorefrontProduct[];
@@ -82,7 +84,18 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
       const savedCart = localStorage.getItem("storefront_cart");
       if (savedCart) setCartItems(JSON.parse(savedCart));
       const savedBuyer = localStorage.getItem("storefront_buyer");
-      if (savedBuyer) { setBuyerForm(JSON.parse(savedBuyer)); setRememberData(true); }
+      if (savedBuyer) {
+        const parsed = JSON.parse(savedBuyer);
+        // Compradores que guardaron sus datos antes de que "provincia" pasara
+        // a ser un código ISO (ej: "B") tienen ahí texto libre (ej: "Buenos
+        // Aires") que no matchea ninguna opción del <select> — se limpia para
+        // que no quede un valor inválido sin que el comprador lo note.
+        if (parsed?.provincia && !PROVINCIAS_ARGENTINA.some((p) => p.code === parsed.provincia)) {
+          parsed.provincia = "";
+        }
+        setBuyerForm(parsed);
+        setRememberData(true);
+      }
     } catch {}
   }, []);
 
@@ -170,7 +183,12 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
     if (liveQuoteMethods.length === 0 || !storeId) return;
     const cp = buyerForm.cp.trim();
     const provincia = buyerForm.provincia.trim();
-    if (cp.length < 4 || !provincia || cartItems.length === 0) return;
+    if (cp.length < 4 || !provincia || cartItems.length === 0) {
+      // El destino dejó de ser válido (ej: el comprador borró el CP después
+      // de tener una cotización) — no dejar el precio viejo mostrándose.
+      setLiveQuote({ status: "idle", domicilio: null, sucursal: null });
+      return;
+    }
 
     setLiveQuote((q) => ({ ...q, status: "loading" }));
     const timeout = setTimeout(() => {
@@ -200,8 +218,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
 
   function getLiveQuotePrice(methodId: string): number | null {
     if (liveQuote.status !== "ready") return null;
-    if (methodId === "envio-domicilio") return liveQuote.domicilio;
-    if (methodId === "envio-sucursal") return liveQuote.sucursal;
+    if (methodId === LIVE_QUOTE_DOMICILIO_ID) return liveQuote.domicilio;
     return null;
   }
 

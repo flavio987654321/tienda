@@ -45,31 +45,33 @@ async function getAccessToken(): Promise<string | null> {
 // falla) responde `available: false` para que el checkout caiga a "a
 // coordinar" sin romper la venta.
 export async function cotizarEnvio(input: CotizarEnvioInput): Promise<CotizarEnvioResult> {
-  const accessToken = await getAccessToken();
-  if (!accessToken) {
-    return { available: false, reason: "enviopack_not_configured" };
-  }
-
-  const store = await prisma.store.findUnique({
-    where: { id: input.storeId },
-    select: { originStreet: true, originCity: true, originProvince: true, originPostalCode: true },
-  });
-  if (!store?.originStreet || !store.originCity || !store.originProvince || !store.originPostalCode) {
-    return { available: false, reason: "store_missing_origin_address" };
-  }
-
   const destination = input.destinationPostalCode.trim();
   const province = input.destinationProvince.trim().toUpperCase();
   if (!destination || !province) {
     return { available: false, reason: "missing_destination" };
   }
 
-  // Peso total del carrito en kg (con respaldo de 1kg por unidad si al
-  // producto le falta ese dato opcional).
-  const products = await prisma.product.findMany({
-    where: { id: { in: input.items.map((i) => i.productId) } },
-    select: { id: true, weightKg: true },
-  });
+  const accessToken = await getAccessToken();
+  if (!accessToken) {
+    return { available: false, reason: "enviopack_not_configured" };
+  }
+
+  const [store, products] = await Promise.all([
+    prisma.store.findUnique({
+      where: { id: input.storeId },
+      select: { originStreet: true, originCity: true, originProvince: true, originPostalCode: true },
+    }),
+    // Peso del carrito (con respaldo de 1kg por unidad si al producto le
+    // falta ese dato opcional).
+    prisma.product.findMany({
+      where: { id: { in: input.items.map((i) => i.productId) } },
+      select: { id: true, weightKg: true },
+    }),
+  ]);
+  if (!store?.originStreet || !store.originCity || !store.originProvince || !store.originPostalCode) {
+    return { available: false, reason: "store_missing_origin_address" };
+  }
+
   const weightMap = new Map(products.map((p) => [p.id, p.weightKg]));
   const totalWeightKg = input.items.reduce((sum, item) => {
     const weight = weightMap.get(item.productId) ?? 1;
@@ -88,14 +90,13 @@ export async function cotizarEnvio(input: CotizarEnvioInput): Promise<CotizarEnv
 
     const data = await res.json();
     const options: { valor?: number }[] = Array.isArray(data) ? data : [];
-    const domicilio = options.length > 0
-      ? Math.min(...options.map((o) => Number(o.valor)).filter((v) => !isNaN(v)))
-      : null;
+    const validPrices = options.map((o) => Number(o.valor)).filter((v) => Number.isFinite(v));
+    const domicilio = validPrices.length > 0 ? Math.min(...validPrices) : null;
 
     // Cotización "a sucursal" requiere el ID de localidad (no el código
     // postal), que todavía no resolvemos — queda como pendiente, el checkout
     // ya maneja bien que sucursal sea null cayendo a "a coordinar" para esa opción.
-    return { available: true, domicilio: domicilio ?? null, sucursal: null };
+    return { available: true, domicilio, sucursal: null };
   } catch {
     return { available: false, reason: "enviopack_quote_error" };
   }

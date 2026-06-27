@@ -45,12 +45,17 @@ export const DEFAULT_SHIPPING_METHODS: ShippingMethod[] = [
   { id: "nacional", label: "Envío nacional",             price: 0, coordinar: true,  enabled: true, isPickup: false },
 ];
 
+export const LIVE_QUOTE_DOMICILIO_ID = "envio-domicilio";
+
 // Métodos de cotización en vivo: se agregan a la lista de la tienda solo
 // cuando el dueño activa el toggle correspondiente (ver PagosClient). Por
 // default vienen deshabilitados hasta que complete su dirección de origen.
+// Nota: "envío a sucursal" no está acá todavía — la cotización a sucursal de
+// Envíopack requiere resolver el ID de localidad (no alcanza con el código
+// postal) y eso todavía no está implementado en src/lib/enviopack.ts. Ofrecer
+// ese método ahora haría que se cobre $0 siempre, sin que la tienda lo sepa.
 export const LIVE_QUOTE_SHIPPING_METHODS: ShippingMethod[] = [
-  { id: "envio-domicilio", label: "Envío a domicilio", price: 0, coordinar: false, enabled: false, isPickup: false, liveQuote: true },
-  { id: "envio-sucursal",  label: "Envío a sucursal",   price: 0, coordinar: false, enabled: false, isPickup: false, liveQuote: true },
+  { id: LIVE_QUOTE_DOMICILIO_ID, label: "Envío a domicilio", price: 0, coordinar: false, enabled: false, isPickup: false, liveQuote: true },
 ];
 
 export type PaymentMethodTransferencia = {

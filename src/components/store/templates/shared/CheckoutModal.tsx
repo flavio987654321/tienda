@@ -105,7 +105,7 @@ export function CheckoutModal({
                   ))}
                 </select>
               </div>
-              <input placeholder="Código postal" value={buyerForm.cp} onChange={e => setBuyerForm(f => ({ ...f, cp: e.target.value }))} style={inputStyle} />
+              <input required placeholder="Código postal" value={buyerForm.cp} onChange={e => setBuyerForm(f => ({ ...f, cp: e.target.value }))} style={inputStyle} />
               <label style={{ display:"flex", alignItems:"center", gap:10, fontSize:12, opacity:0.7, cursor:"pointer", marginBottom:28, color:T }}>
                 <input type="checkbox" checked={rememberData} onChange={e => setRememberData(e.target.checked)} style={{ accentColor:accent }} />
                 Recordar mis datos para la próxima compra
@@ -119,7 +119,7 @@ export function CheckoutModal({
                       <input type="radio" name="envio" value={opt.id} checked={envioId===opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor:accent }} />
                       <span style={{ fontSize:13, color:T }}>{opt.label}</span>
                     </span>
-                    <span style={{ fontSize:13, fontWeight:700, color: (opt.isPickup || (!opt.coordinar && opt.price === 0)) ? accent : T }}>{opt.liveQuote ? fmtLiveQuote(opt.id) : fmtEnvioPrice(opt, fmt)}</span>
+                    <span style={{ fontSize:13, fontWeight:700, color: (opt.isPickup || (!opt.coordinar && !opt.liveQuote && opt.price === 0)) ? accent : T }}>{opt.liveQuote ? fmtLiveQuote(opt.id) : fmtEnvioPrice(opt, fmt)}</span>
                   </label>
                 ))}
               </div>

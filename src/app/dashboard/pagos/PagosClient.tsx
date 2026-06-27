@@ -406,7 +406,7 @@ export default function PagosClient({ initial }: Props) {
               label="Cotizar el envío automáticamente con Correo Argentino / OCA / Andreani"
             />
             <p className="text-[11px] text-slate-400 pl-9">
-              Agrega 2 opciones nuevas en el checkout (a domicilio y a sucursal) con el precio real calculado según destino y peso. No necesitás contrato propio con ningún correo.
+              Agrega una opción nueva de envío a domicilio en el checkout, con el precio real calculado según destino y peso. No necesitás contrato propio con ningún correo.
             </p>
 
             {liveQuoteEnabled && (

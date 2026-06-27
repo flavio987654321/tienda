@@ -13,6 +13,7 @@ import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { HandHeart } from "lucide-react";
+import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 
 type Product = StorefrontProduct;
 
@@ -235,7 +236,7 @@ export default function ChicParis() {
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
     cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     searchResults, favoriteProducts, wholesaleWarnings,
-    fmt, fmtEnvioPrice, showToast, openModal, addToCart, removeFromCart, updateQty,
+    fmt, fmtEnvioPrice, fmtLiveQuote, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
     pagoOptions, acceptedTerms, setAcceptedTerms,
     donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
@@ -1474,7 +1475,7 @@ export default function ChicParis() {
                       onBlur={e => (e.target.style.borderColor = "#ddd")} />
                   ))}
                   <p style={{ margin: "16px 0 14px", fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", color: "#333" }}>Dirección</p>
-                  {[["direccion","Calle y número","text"],["ciudad","Ciudad","text"],["provincia","Provincia","text"]].map(([f,ph,t]) => (
+                  {[["direccion","Calle y número","text"],["ciudad","Ciudad","text"]].map(([f,ph,t]) => (
                     <input key={f} type={t} placeholder={ph}
                       value={buyerForm[f as keyof typeof buyerForm]}
                       onChange={e => setBuyerForm(b => ({ ...b, [f]: e.target.value }))}
@@ -1482,7 +1483,14 @@ export default function ChicParis() {
                       onFocus={e => (e.target.style.borderColor = ACC)}
                       onBlur={e => (e.target.style.borderColor = "#ddd")} />
                   ))}
-                  <input placeholder="Código postal" value={buyerForm.cp} onChange={e => setBuyerForm(b => ({ ...b, cp: e.target.value }))} style={{ ...iStyle, marginBottom: 16 }} onFocus={e => (e.target.style.borderColor = ACC)} onBlur={e => (e.target.style.borderColor = "#ddd")} />
+                  <select required value={buyerForm.provincia} onChange={e => setBuyerForm(b => ({ ...b, provincia: e.target.value }))}
+                    style={{ ...iStyle, marginBottom: 10 }}>
+                    <option value="">Provincia...</option>
+                    {PROVINCIAS_ARGENTINA.map((p) => (
+                      <option key={p.code} value={p.code}>{p.name}</option>
+                    ))}
+                  </select>
+                  <input required placeholder="Código postal" value={buyerForm.cp} onChange={e => setBuyerForm(b => ({ ...b, cp: e.target.value }))} style={{ ...iStyle, marginBottom: 16 }} onFocus={e => (e.target.style.borderColor = ACC)} onBlur={e => (e.target.style.borderColor = "#ddd")} />
 
                   <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", color: "#333" }}>Envío</p>
                   {envioOptions.map(opt => (
@@ -1491,7 +1499,7 @@ export default function ChicParis() {
                         <input type="radio" checked={envioId === opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor: ACC }} />
                         <span style={{ fontSize: 13 }}>{opt.label}</span>
                       </span>
-                      <span style={{ fontSize: 13, fontWeight: 700 }}>{fmtEnvioPrice(opt,fmt)}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>{opt.liveQuote ? fmtLiveQuote(opt.id) : fmtEnvioPrice(opt,fmt)}</span>
                     </label>
                   ))}
 

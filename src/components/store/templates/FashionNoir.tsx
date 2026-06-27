@@ -13,6 +13,7 @@ import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { HandHeart } from "lucide-react";
+import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 
 const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
@@ -160,7 +161,7 @@ export default function FashionNoir() {
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
     cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     searchResults, favoriteProducts, wholesaleWarnings,
-    fmt, fmtEnvioPrice, showToast, openModal, addToCart, removeFromCart, updateQty,
+    fmt, fmtEnvioPrice, fmtLiveQuote, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
     pagoOptions, acceptedTerms, setAcceptedTerms,
     donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
@@ -1474,14 +1475,19 @@ export default function FashionNoir() {
                       onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
                   ))}
                   <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
-                    {([ ["ciudad","Ciudad"], ["provincia","Provincia"] ] as const).map(([field, ph]) => (
-                      <input key={field} required placeholder={ph}
-                        value={buyerForm[field]} onChange={e => setBuyerForm(f => ({...f, [field]:e.target.value}))}
-                        style={{ background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box" }}
-                        onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
-                    ))}
+                    <input required placeholder="Ciudad"
+                      value={buyerForm.ciudad} onChange={e => setBuyerForm(f => ({...f, ciudad:e.target.value}))}
+                      style={{ background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                      onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
+                    <select required value={buyerForm.provincia} onChange={e => setBuyerForm(f => ({...f, provincia:e.target.value}))}
+                      style={{ background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box" }}>
+                      <option value="">Provincia...</option>
+                      {PROVINCIAS_ARGENTINA.map((p) => (
+                        <option key={p.code} value={p.code}>{p.name}</option>
+                      ))}
+                    </select>
                   </div>
-                  <input placeholder="Código postal" value={buyerForm.cp} onChange={e => setBuyerForm(f => ({...f, cp:e.target.value}))}
+                  <input required placeholder="Código postal" value={buyerForm.cp} onChange={e => setBuyerForm(f => ({...f, cp:e.target.value}))}
                     style={{ display:"block", width:"100%", marginBottom:10, background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box" }}
                     onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
                   <label style={{ display:"flex", alignItems:"center", gap:10, fontSize:12, opacity:0.5, cursor:"pointer", marginBottom:28 }}>
@@ -1498,7 +1504,7 @@ export default function FashionNoir() {
                           <input type="radio" name="envio" value={opt.id} checked={envioId===opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor:G }}/>
                           <span style={{ fontSize:13, color:T }}>{opt.label}</span>
                         </span>
-                        <span style={{ fontSize:13, fontWeight:700, color:(opt.isPickup||(!opt.coordinar&&opt.price===0))?G:T }}>{fmtEnvioPrice(opt,fmt)}</span>
+                        <span style={{ fontSize:13, fontWeight:700, color:(opt.isPickup||(!opt.coordinar&&!opt.liveQuote&&opt.price===0))?G:T }}>{opt.liveQuote ? fmtLiveQuote(opt.id) : fmtEnvioPrice(opt,fmt)}</span>
                       </label>
                     ))}
                   </div>

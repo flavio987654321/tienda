@@ -13,6 +13,7 @@ import PolicyEditorModal from "@/components/store/PolicyEditorModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { HandHeart } from "lucide-react";
+import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 
 type Product = StorefrontProduct;
 
@@ -218,7 +219,7 @@ export default function UrbanPulse() {
     toastMsg, contactStatus, contactForm, setContactForm,
     cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     searchResults, favoriteProducts, wholesaleWarnings,
-    fmt, fmtEnvioPrice, showToast, openModal, addToCart, removeFromCart, updateQty,
+    fmt, fmtEnvioPrice, fmtLiveQuote, showToast, openModal, addToCart, removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
     pagoOptions, acceptedTerms, setAcceptedTerms,
     donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
@@ -1520,7 +1521,6 @@ export default function UrbanPulse() {
                       { key:"telefono",  placeholder:"Teléfono" },
                       { key:"direccion", placeholder:"Dirección", span:true },
                       { key:"ciudad",    placeholder:"Ciudad" },
-                      { key:"provincia", placeholder:"Provincia" },
                       { key:"cp",        placeholder:"Código postal" },
                     ].map(f => (
                       <input key={f.key} placeholder={f.placeholder} required
@@ -1528,6 +1528,13 @@ export default function UrbanPulse() {
                         onChange={e => setBuyerForm(b => ({ ...b, [f.key]:e.target.value }))}
                         style={{ gridColumn: f.span ? "span 2" : "span 1", padding:"11px", border:`1px solid #ddd`, fontSize:13, outline:"none", fontFamily:"inherit" }} />
                     ))}
+                    <select required value={buyerForm.provincia} onChange={e => setBuyerForm(b => ({ ...b, provincia:e.target.value }))}
+                      style={{ gridColumn:"span 1", padding:"11px", border:`1px solid #ddd`, fontSize:13, outline:"none", fontFamily:"inherit" }}>
+                      <option value="">Provincia...</option>
+                      {PROVINCIAS_ARGENTINA.map((p) => (
+                        <option key={p.code} value={p.code}>{p.name}</option>
+                      ))}
+                    </select>
                   </div>
                   <p style={{ margin:"0 0 10px", fontSize:10, fontWeight:900, letterSpacing:4, textTransform:"uppercase" }}>Envío</p>
                   <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:22 }}>
@@ -1535,7 +1542,7 @@ export default function UrbanPulse() {
                       <label key={opt.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"13px", border:`2px solid ${envioId === opt.id ? DARK : "#ddd"}`, cursor:"pointer" }}>
                         <input type="radio" name="envio" value={opt.id} checked={envioId === opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor:DARK }} />
                         <span style={{ flex:1, fontSize:13, fontWeight:700 }}>{opt.label}</span>
-                        <span style={{ fontSize:13, fontWeight:900 }}>{fmtEnvioPrice(opt,fmt)}</span>
+                        <span style={{ fontSize:13, fontWeight:900 }}>{opt.liveQuote ? fmtLiveQuote(opt.id) : fmtEnvioPrice(opt,fmt)}</span>
                       </label>
                     ))}
                   </div>

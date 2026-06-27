@@ -44,10 +44,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   if (!store) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
   const isOwner = !!currentUser && currentUser.id === store.ownerId;
   const hasMercadoPago = !!store.mpAccessToken;
-  // El access/refresh token de Mercado Pago nunca debe llegar al navegador del
-  // visitante (este endpoint es público) — se manda solo `hasMercadoPago`.
+  // El access/refresh token de Mercado Pago y la dirección física de
+  // despacho (usada server-side para cotizar envío) nunca deben llegar al
+  // navegador del visitante (este endpoint es público).
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { mpAccessToken, mpRefreshToken, ...safeStore } = store;
+  const { mpAccessToken, mpRefreshToken, originStreet, originCity, originProvince, originPostalCode, ...safeStore } = store;
 
   // Ranking de ventas — solo se calcula cuando se pide explícitamente (ej: panel de afiliadas)
   // para no sumar una consulta extra en cada visita normal de un comprador a la tienda.
