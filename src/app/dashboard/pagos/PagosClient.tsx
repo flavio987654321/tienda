@@ -59,9 +59,9 @@ export default function PagosClient({ initial }: Props) {
     });
   }
 
-  const [openSection, setOpenSection] = useState<"transferencia" | "efectivo" | "envios" | "policies" | null>(
-    !initial.shippingConfigured ? "envios" : "transferencia"
-  );
+  // Nada abierto por default — el dueño elige qué mirar, en vez de
+  // encontrarse una sección ya desplegada sin haberla tocado.
+  const [openSection, setOpenSection] = useState<"transferencia" | "efectivo" | "envios" | "policies" | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -154,7 +154,7 @@ export default function PagosClient({ initial }: Props) {
         <div>
           <p className="text-sm font-semibold text-blue-900">¿Para qué sirve esto?</p>
           <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
-            Cada vez que un cliente confirma un pedido, le llega un email automático con los datos de pago que configurás acá. Así sabe exactamente a dónde transferir, o dónde y cómo retirar.
+            Esta pantalla junta dos cosas distintas: <strong>cómo te cobran</strong> (transferencia, efectivo) y <strong>cómo se entrega</strong> el pedido (retiro, envío). No hace falta activar todo — elegís solo las opciones que usás en tu negocio. Lo que actives le llega al cliente en el email de confirmación del pedido.
           </p>
         </div>
       </div>
@@ -166,6 +166,8 @@ export default function PagosClient({ initial }: Props) {
           Los datos sensibles (CBU, CVU, CUIL) se ocultan automáticamente si dejás la pantalla sin atención o cambiás de pestaña.
         </p>
       </div>
+
+      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-2">Cómo te cobran</p>
 
       {/* TRANSFERENCIA */}
       <Section
@@ -295,6 +297,8 @@ export default function PagosClient({ initial }: Props) {
           )}
         </div>
       </Section>
+
+      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-2">Cómo se entrega</p>
 
       {/* MÉTODOS DE ENVÍO */}
       <Section
@@ -443,6 +447,8 @@ export default function PagosClient({ initial }: Props) {
           </div>
         </div>
       </Section>
+
+      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-2">Legal</p>
 
       {/* POLÍTICAS LEGALES */}
       <Section
