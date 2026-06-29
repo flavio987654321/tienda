@@ -127,22 +127,20 @@ export default function PromotionsCarousel() {
           <>
             <button onClick={prev} aria-label="Anterior"
               style={{
-                position: "absolute", left: -24, top: "50%", transform: "translateY(-50%)",
-                width: 38, height: 38, borderRadius: "50%",
-                background: "rgba(15,23,42,0.75)", border: "1.5px solid rgba(255,255,255,0.18)",
-                color: "white", fontSize: 20, cursor: "pointer",
+                position: "absolute", left: -36, top: "50%", transform: "translateY(-50%)",
+                width: 36, background: "none", border: "none",
+                color: "white", fontSize: 40, lineHeight: 1, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
+                filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.5))",
               }}
             >‹</button>
             <button onClick={next} aria-label="Siguiente"
               style={{
-                position: "absolute", right: -24, top: "50%", transform: "translateY(-50%)",
-                width: 38, height: 38, borderRadius: "50%",
-                background: "rgba(15,23,42,0.75)", border: "1.5px solid rgba(255,255,255,0.18)",
-                color: "white", fontSize: 20, cursor: "pointer",
+                position: "absolute", right: -36, top: "50%", transform: "translateY(-50%)",
+                width: 36, background: "none", border: "none",
+                color: "white", fontSize: 40, lineHeight: 1, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
+                filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.5))",
               }}
             >›</button>
           </>

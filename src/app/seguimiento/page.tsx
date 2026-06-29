@@ -26,7 +26,7 @@ export default function SeguimientoPage() {
       <nav className="bg-white/90 backdrop-blur-xl border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
+            <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center">
               <ShoppingBag className="h-5 w-5 text-white" />
             </div>
             <span className="text-lg font-bold text-gray-900">TiendaApps</span>
@@ -36,12 +36,12 @@ export default function SeguimientoPage() {
             <Link href="/#como-funciona" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Cómo funciona</Link>
             <Link href="/quienes-somos" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Quiénes somos</Link>
             <Link href="/precios" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Precios</Link>
-            <Link href="/seguimiento" className="text-indigo-600 text-sm font-medium transition-colors flex items-center gap-1.5"><Package className="h-4 w-4" />Seguimiento</Link>
+            <Link href="/seguimiento" className="text-orange-600 text-sm font-medium transition-colors flex items-center gap-1.5"><Package className="h-4 w-4" />Seguimiento</Link>
             <Link href="/contacto" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors flex items-center gap-1.5"><MessageCircle className="h-4 w-4" />Contacto</Link>
           </div>
           <div className="hidden md:flex items-center gap-3">
             <Link href="/login" className="text-gray-700 hover:text-gray-900 text-sm font-medium px-5 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 transition-all">Iniciar sesión</Link>
-            <Link href="/registro" className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
+            <Link href="/registro" className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
               Crear cuenta
             </Link>
           </div>
@@ -54,12 +54,12 @@ export default function SeguimientoPage() {
 
           {/* Left — copy */}
           <div>
-            <span className="inline-block text-xs font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full mb-6">
+            <span className="inline-block text-xs font-bold uppercase tracking-widest text-orange-600 bg-orange-50 px-3 py-1 rounded-full mb-6">
               Seguimiento en tiempo real
             </span>
             <h1 className="text-5xl lg:text-6xl font-black text-gray-900 leading-none tracking-tight mb-6">
               Seguí tu pedido<br />
-              <span className="text-indigo-600">en tiempo real.</span>
+              <span className="text-orange-600">en tiempo real.</span>
             </h1>
             <p className="text-gray-500 text-lg leading-relaxed mb-8">
               Ingresá el código de 8 caracteres que recibiste en el email de confirmación y mirá el estado de tu pedido al instante.
@@ -89,13 +89,13 @@ export default function SeguimientoPage() {
                     onChange={e => { setCodigo(e.target.value.toUpperCase()); setError(""); }}
                     placeholder="Ej: LRRVV6ZZ"
                     maxLength={20}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-900 font-mono font-bold tracking-widest text-lg outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-gray-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-base"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-900 font-mono font-bold tracking-widest text-lg outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent placeholder:text-gray-400 placeholder:font-normal placeholder:tracking-normal placeholder:text-base"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl text-base transition-colors disabled:opacity-60"
+                  className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold py-3.5 rounded-xl text-base transition-colors disabled:opacity-60"
                 >
                   {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
                   Ver seguimiento

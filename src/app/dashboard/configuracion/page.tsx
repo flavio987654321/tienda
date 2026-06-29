@@ -2,68 +2,20 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import type { StoreConfig, TemplateId, TextOverride, ImageOverride } from "@/types/store-config";
+import type { StoreConfig, TextOverride, ImageOverride } from "@/types/store-config";
 import { DEFAULT_CONFIG, TEMPLATES_WITH_CAROUSEL, TEMPLATE_DEFAULTS } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
-import FashionNoir from "@/components/store/templates/FashionNoir";
-import BohoTerra from "@/components/store/templates/BohoTerra";
-import UrbanPulse from "@/components/store/templates/UrbanPulse";
-import ChicParis from "@/components/store/templates/ChicParis";
-import AutoMotor from "@/components/store/templates/AutoMotor";
-import AutoDrive from "@/components/store/templates/AutoDrive";
-import ElectroPrime from "@/components/store/templates/ElectroPrime";
-import TechNova from "@/components/store/templates/TechNova";
-import HomeStudio from "@/components/store/templates/HomeStudio";
-import CasaClara from "@/components/store/templates/CasaClara";
+import { TEMPLATE_CATEGORIES, type TemplateInfo } from "@/lib/templateRegistry";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
-import { TEMPLATE_TIPO_TIENDA } from "@/types/store-config";
 
 /* ── Types ─────────────────────────────────────────────────── */
 type Mode = "gallery" | "preview" | "editing";
 
-type TemplateInfo = {
-  id: TemplateId;
-  name: string;
-  desc: string;
-  palette: string[];
-  component: React.ComponentType;
-  tipoTiendas: string[];
-};
-
 type Category = { id: string; name: string; templates: TemplateInfo[] };
 
 /* ── Template registry ─────────────────────────────────────── */
-const CATEGORIES: Category[] = [
-  {
-    id: "moda",
-    name: "Moda & Ropa",
-    templates: [
-      { id: "fashion-noir", name: "Fashion Noir", desc: "Lujo · Oscuro · Editorial",    palette: ["#0a0a0a", "#c9a84c", "#f0ebe3"], component: FashionNoir, tipoTiendas: TEMPLATE_TIPO_TIENDA["fashion-noir"] },
-      { id: "boho-terra",   name: "Boho Terra",   desc: "Orgánico · Natural · Cálido",  palette: ["#faf7f2", "#b5652a", "#2c2218"], component: BohoTerra,   tipoTiendas: TEMPLATE_TIPO_TIENDA["boho-terra"]   },
-      { id: "urban-pulse",  name: "Urban Pulse",  desc: "Deportivo · Energético",        palette: ["#0f0f0f", "#d4ff00", "#f5f5f5"], component: UrbanPulse,  tipoTiendas: TEMPLATE_TIPO_TIENDA["urban-pulse"]  },
-      { id: "chic-paris",   name: "Chic Paris",   desc: "Editorial · Carousel · Limpio", palette: ["#ffffff", "#c0392b", "#111111"], component: ChicParis,   tipoTiendas: TEMPLATE_TIPO_TIENDA["chic-paris"]   },
-    ],
-  },
-  {
-    id: "autos",
-    name: "Autos & Motos",
-    templates: [
-      { id: "auto-motor", name: "Auto Motor", desc: "Oscuro · Premium · Concesionaria", palette: ["#0a0a0a", "#e8a020", "#1a1a1a"], component: AutoMotor, tipoTiendas: TEMPLATE_TIPO_TIENDA["auto-motor"] },
-      { id: "auto-drive", name: "Auto Drive", desc: "Claro · Moderno · Marketplace",    palette: ["#f0f4f8", "#2563eb", "#0f172a"], component: AutoDrive,  tipoTiendas: TEMPLATE_TIPO_TIENDA["auto-drive"]  },
-    ],
-  },
-  {
-    id: "hogar-tech",
-    name: "Hogar & Tecnología",
-    templates: [
-      { id: "electro-prime", name: "Electro Prime", desc: "Claro · Confianza · Cuotas",   palette: ["#ffffff", "#ea580c", "#111827"], component: ElectroPrime, tipoTiendas: TEMPLATE_TIPO_TIENDA["electro-prime"] },
-      { id: "tech-nova",     name: "Tech Nova",     desc: "Claro · Tech · Vibrante",       palette: ["#fafaff", "#7c3aed", "#0f0f1a"], component: TechNova,    tipoTiendas: TEMPLATE_TIPO_TIENDA["tech-nova"]     },
-      { id: "home-studio",   name: "Home Studio",   desc: "Cálido · Lifestyle · Editorial", palette: ["#faf8f4", "#b5652a", "#2c2218"], component: HomeStudio,  tipoTiendas: TEMPLATE_TIPO_TIENDA["home-studio"]   },
-      { id: "casa-clara",    name: "Casa Clara",    desc: "Minimalista · Blanco · Simple", palette: ["#ffffff", "#0f172a", "#444444"], component: CasaClara,   tipoTiendas: TEMPLATE_TIPO_TIENDA["casa-clara"]    },
-    ],
-  },
-];
+const CATEGORIES: Category[] = TEMPLATE_CATEGORIES;
 
 /* ── Image field info ──────────────────────────────────────── */
 const IMAGE_FIELD_INFO: Record<string, { label: string; tip: string }> = {

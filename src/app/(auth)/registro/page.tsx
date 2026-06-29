@@ -32,7 +32,7 @@ const TYPES = [
   {
     key: "owner" as AccountType,
     icon: Store,
-    color: "indigo",
+    color: "orange",
     title: "Tengo una tienda",
     desc: "Creá tu tienda online y gestioná afiliados que vendan por vos.",
     perks: [
@@ -55,7 +55,7 @@ const TYPES = [
   {
     key: "seller" as AccountType,
     icon: Users,
-    color: "purple",
+    color: "amber",
     title: "Soy vendedor/a",
     desc: "Vendé productos de otras tiendas y ganá comisiones sin tener stock.",
     perks: [
@@ -71,7 +71,7 @@ const TYPES = [
   {
     key: "buyer" as AccountType,
     icon: ShoppingCart,
-    color: "pink",
+    color: "rose",
     title: "Soy cliente",
     desc: "Explorá tiendas, guardá tus favoritos y seguí el estado de tus pedidos.",
     perks: [
@@ -85,30 +85,33 @@ const TYPES = [
   },
 ];
 
-const COLOR_MAP: Record<string, { bg: string; border: string; ring: string; text: string; btn: string; check: string }> = {
-  indigo: {
-    bg: "bg-indigo-500/5 hover:bg-indigo-500/10",
-    border: "border-indigo-500/20",
-    ring: "ring-indigo-500",
-    text: "text-indigo-400",
-    btn: "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20 hover:shadow-indigo-500/40",
-    check: "text-indigo-400",
+const COLOR_MAP: Record<string, { bg: string; border: string; ring: string; text: string; btn: string; check: string; iconBg: string }> = {
+  orange: {
+    bg: "bg-orange-50 hover:bg-orange-100/70",
+    border: "border-orange-200",
+    ring: "ring-orange-500",
+    text: "text-orange-600",
+    btn: "bg-orange-600 hover:bg-orange-500 shadow-orange-500/25 hover:shadow-orange-500/40",
+    check: "text-orange-500",
+    iconBg: "bg-orange-100",
   },
-  purple: {
-    bg: "bg-purple-500/5 hover:bg-purple-500/10",
-    border: "border-purple-500/20",
-    ring: "ring-purple-500",
-    text: "text-purple-400",
-    btn: "bg-purple-600 hover:bg-purple-500 shadow-purple-500/20 hover:shadow-purple-500/40",
-    check: "text-purple-400",
+  amber: {
+    bg: "bg-amber-50 hover:bg-amber-100/70",
+    border: "border-amber-200",
+    ring: "ring-amber-500",
+    text: "text-amber-600",
+    btn: "bg-amber-500 hover:bg-amber-400 shadow-amber-500/25 hover:shadow-amber-500/40",
+    check: "text-amber-500",
+    iconBg: "bg-amber-100",
   },
-  pink: {
-    bg: "bg-pink-500/5 hover:bg-pink-500/10",
-    border: "border-pink-500/20",
-    ring: "ring-pink-500",
-    text: "text-pink-400",
-    btn: "bg-pink-600 hover:bg-pink-500 shadow-pink-500/20 hover:shadow-pink-500/40",
-    check: "text-pink-400",
+  rose: {
+    bg: "bg-rose-50 hover:bg-rose-100/70",
+    border: "border-rose-200",
+    ring: "ring-rose-500",
+    text: "text-rose-600",
+    btn: "bg-rose-600 hover:bg-rose-500 shadow-rose-500/25 hover:shadow-rose-500/40",
+    check: "text-rose-500",
+    iconBg: "bg-rose-100",
   },
 };
 
@@ -249,8 +252,8 @@ function RegistroContent() {
 
   if (redirecting) {
     return (
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
       </div>
     );
   }
@@ -262,17 +265,17 @@ function RegistroContent() {
 
   const LEFT_PANEL: Record<AccountType, { gradient: string; headline: string; sub: string }> = {
     owner: {
-      gradient: "from-indigo-950 via-[#1a0f3c] to-purple-950",
+      gradient: "from-orange-600 via-orange-600 to-rose-600",
       headline: "Tu tienda te\nestá esperando",
       sub: "Gestioná productos, pedidos y afiliados desde un panel simple y potente.",
     },
     seller: {
-      gradient: "from-purple-950 via-[#1a0f3c] to-pink-950",
+      gradient: "from-amber-500 via-orange-500 to-rose-500",
       headline: "Vendé sin\ninvertir nada",
       sub: "Elegí tiendas, compartí tu link y cobrá comisiones automáticas por cada venta.",
     },
     buyer: {
-      gradient: "from-pink-950 via-[#1a0f3c] to-rose-950",
+      gradient: "from-rose-500 via-orange-500 to-amber-500",
       headline: "Todo lo que\nquerés, en un lugar",
       sub: "Explorá tiendas, guardá favoritos y seguí tus pedidos desde cualquier dispositivo.",
     },
@@ -283,21 +286,19 @@ function RegistroContent() {
   /* ── STEP 2: split layout ── */
   if (step === "form") {
     return (
-      <div className="min-h-screen bg-[#030712] flex">
+      <div className="min-h-screen bg-white flex">
         <style>{`
-          .grid-bg { background-image: linear-gradient(rgba(99,102,241,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,.06) 1px, transparent 1px); background-size: 48px 48px; }
-          @keyframes gradient-shift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
-          .gradient-text { background: linear-gradient(135deg,#818cf8,#a78bfa,#f472b6,#818cf8); background-size:300% 300%; animation:gradient-shift 4s ease infinite; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+          .grid-bg { background-image: linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px); background-size: 48px 48px; }
         `}</style>
 
         {/* LEFT PANEL */}
         <div className={`hidden lg:flex flex-col justify-between w-[480px] flex-shrink-0 bg-gradient-to-br ${panel.gradient} p-12 relative overflow-hidden`}>
           <div className="absolute inset-0 grid-bg opacity-40" />
-          <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-indigo-600/25 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute top-16 -right-12 w-56 h-56 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-16 -right-12 w-56 h-56 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
           <Link href="/" className="relative flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/10">
+            <div className="w-9 h-9 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20">
               <ShoppingBag className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold text-white">TiendaApps</span>
@@ -306,24 +307,23 @@ function RegistroContent() {
           <div className="relative space-y-7">
             <div>
               <h2 className="text-4xl font-black text-white leading-tight mb-3 whitespace-pre-line">
-                {panel.headline.split("\n")[0]}<br />
-                <span className="gradient-text">{panel.headline.split("\n")[1]}</span>
+                {panel.headline}
               </h2>
-              <p className="text-indigo-200/70 leading-relaxed">{panel.sub}</p>
+              <p className="text-white/80 leading-relaxed">{panel.sub}</p>
             </div>
             <ul className="space-y-3.5">
               {selected.perks.map((perk) => (
-                <li key={perk} className="flex items-center gap-3 text-sm text-indigo-200/80">
-                  <div className="w-7 h-7 bg-indigo-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="h-3.5 w-3.5 text-indigo-300" />
+                <li key={perk} className="flex items-center gap-3 text-sm text-white/85">
+                  <div className="w-7 h-7 bg-white/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="h-3.5 w-3.5 text-white" />
                   </div>
                   {perk}
                 </li>
               ))}
               {"premiumPerks" in selected && selected.premiumPerks?.map((perk) => (
-                <li key={perk} className={`flex items-center gap-3 text-sm transition-colors ${ownerTier === "PREMIUM" ? "text-amber-300/80" : "text-indigo-200/25"}`}>
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${ownerTier === "PREMIUM" ? "bg-amber-500/20" : "bg-indigo-500/5"}`}>
-                    <CheckCircle className={`h-3.5 w-3.5 transition-colors ${ownerTier === "PREMIUM" ? "text-amber-300" : "text-indigo-300/20"}`} />
+                <li key={perk} className={`flex items-center gap-3 text-sm transition-colors ${ownerTier === "PREMIUM" ? "text-amber-200" : "text-white/30"}`}>
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${ownerTier === "PREMIUM" ? "bg-amber-400/25" : "bg-white/10"}`}>
+                    <CheckCircle className={`h-3.5 w-3.5 transition-colors ${ownerTier === "PREMIUM" ? "text-amber-200" : "text-white/25"}`} />
                   </div>
                   {perk}
                 </li>
@@ -332,39 +332,38 @@ function RegistroContent() {
 
             {/* Plan preview en panel lateral */}
             {hasPlan && planPrices && (
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                <p className="text-xs text-indigo-300/60 font-medium mb-2">Plan seleccionado</p>
+              <div className="bg-white/10 border border-white/20 rounded-2xl p-4">
+                <p className="text-xs text-white/70 font-medium mb-2">Plan seleccionado</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-indigo-300" />
+                    <Zap className="h-4 w-4 text-white" />
                     <span className="text-white font-bold text-sm">
                       {accountType === "owner"
                         ? ownerTier === "PREMIUM" ? "Tienda Premium" : "Tienda Pro"
                         : billing === "ANNUAL" ? "Anual" : "Mensual"}
                     </span>
                   </div>
-                  <span className="text-indigo-200 font-black">
+                  <span className="text-white font-black">
                     {billing === "ANNUAL"
                       ? `${money(Math.round(planPrices.ANNUAL / 12))}/mes`
                       : `${money(planPrices.MONTHLY)}/mes`}
                   </span>
                 </div>
                 {billing === "ANNUAL" && (
-                  <p className="text-xs text-emerald-400/80 mt-1">
+                  <p className="text-xs text-white/90 mt-1 font-medium">
                     {money(planPrices.ANNUAL)}/año · Ahorrás {money(planPrices.MONTHLY * 12 - planPrices.ANNUAL)}
                   </p>
                 )}
-                <p className="text-xs text-indigo-300/50 mt-1.5">7 días gratis · Sin tarjeta</p>
+                <p className="text-xs text-white/60 mt-1.5">7 días gratis · Sin tarjeta</p>
               </div>
             )}
           </div>
 
-          <p className="relative text-indigo-400/40 text-xs">© 2026 TiendaApps · Argentina</p>
+          <p className="relative text-white/50 text-xs">© 2026 TiendaApps · Argentina</p>
         </div>
 
         {/* RIGHT PANEL — form */}
         <div className="flex-1 flex items-center justify-center p-6 relative">
-          <div className="absolute inset-0 grid-bg opacity-20" />
           <motion.div
             key="form"
             initial={{ opacity: 0, y: 24 }}
@@ -374,27 +373,28 @@ function RegistroContent() {
           >
             {/* Mobile logo */}
             <Link href="/" className="flex items-center gap-2.5 mb-10 lg:hidden">
-              <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
+              <div className="w-9 h-9 bg-orange-600 rounded-xl flex items-center justify-center">
                 <ShoppingBag className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-white">TiendaApps</span>
+              <span className="text-xl font-bold text-gray-950">TiendaApps</span>
             </Link>
 
             {/* Tipo + cambiar */}
             <div className="flex items-center justify-between mb-8">
-              <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border ${colors.border} bg-white/5`}>
+              <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border ${colors.border} ${colors.bg}`}>
                 <selected.icon className={`h-4 w-4 ${colors.text}`} />
                 <span className={`text-sm font-semibold ${colors.text}`}>{selected.title}</span>
               </div>
               <button
+                type="button"
                 onClick={() => { setStep("type"); setError(""); }}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors underline underline-offset-2"
+                className="text-xs text-gray-500 hover:text-gray-800 transition-colors underline underline-offset-2"
               >
                 Cambiar
               </button>
             </div>
 
-            <h1 className="text-4xl font-black text-white mb-2">Completá tus datos</h1>
+            <h1 className="text-4xl font-black text-gray-950 mb-2">Completá tus datos</h1>
             <p className="text-gray-500 mb-8 text-sm">
               {accountType === "owner"
                 ? "Tu tienda estará lista en segundos."
@@ -410,15 +410,15 @@ function RegistroContent() {
                 {/* Selector de tier — solo para dueños */}
                 {accountType === "owner" && (
                   <div>
-                    <p className="text-xs text-gray-400 font-semibold mb-2">Elegí tu plan de tienda</p>
-                    <div className="inline-flex w-full rounded-2xl border border-white/10 bg-white/5 p-1 gap-1">
+                    <p className="text-xs text-gray-500 font-semibold mb-2">Elegí tu plan de tienda</p>
+                    <div className="inline-flex w-full rounded-2xl border border-gray-200 bg-gray-50 p-1 gap-1">
                       <button
                         type="button"
                         onClick={() => setOwnerTier("BASIC")}
                         className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
                           ownerTier === "BASIC"
                             ? "bg-white text-gray-900 shadow"
-                            : "text-gray-400 hover:text-white"
+                            : "text-gray-500 hover:text-gray-900"
                         }`}
                       >
                         Tienda Pro
@@ -429,34 +429,34 @@ function RegistroContent() {
                         className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
                           ownerTier === "PREMIUM"
                             ? "bg-white text-gray-900 shadow"
-                            : "text-gray-400 hover:text-white"
+                            : "text-gray-500 hover:text-gray-900"
                         }`}
                       >
                         Tienda Premium
-                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${ownerTier === "PREMIUM" ? "bg-amber-500 text-white" : "bg-amber-500/20 text-amber-400"}`}>
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${ownerTier === "PREMIUM" ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-700"}`}>
                           ★
                         </span>
                       </button>
                     </div>
                     {ownerTier === "BASIC" ? (
-                      <p className="text-xs text-gray-600 mt-1.5">6 afiliados · 10 cupones · Dominio propio no incluido</p>
+                      <p className="text-xs text-gray-400 mt-1.5">6 afiliados · 10 cupones · Dominio propio no incluido</p>
                     ) : (
-                      <p className="text-xs text-amber-500/70 mt-1.5">Afiliados y cupones ilimitados · Dominio propio · App instalable · Flyer publicitario</p>
+                      <p className="text-xs text-amber-700/80 mt-1.5">Afiliados y cupones ilimitados · Dominio propio · App instalable · Flyer publicitario</p>
                     )}
                   </div>
                 )}
 
                 {/* Selector de facturación */}
                 <div>
-                  <p className="text-xs text-gray-400 font-semibold mb-2">Facturación</p>
-                  <div className="inline-flex w-full rounded-2xl border border-white/10 bg-white/5 p-1 gap-1">
+                  <p className="text-xs text-gray-500 font-semibold mb-2">Facturación</p>
+                  <div className="inline-flex w-full rounded-2xl border border-gray-200 bg-gray-50 p-1 gap-1">
                     <button
                       type="button"
                       onClick={() => setBilling("MONTHLY")}
                       className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
                         billing === "MONTHLY"
                           ? "bg-white text-gray-900 shadow"
-                          : "text-gray-400 hover:text-white"
+                          : "text-gray-500 hover:text-gray-900"
                       }`}
                     >
                       Mensual
@@ -467,11 +467,11 @@ function RegistroContent() {
                       className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
                         billing === "ANNUAL"
                           ? "bg-white text-gray-900 shadow"
-                          : "text-gray-400 hover:text-white"
+                          : "text-gray-500 hover:text-gray-900"
                       }`}
                     >
                       Anual
-                      <span className={`text-xs font-black px-1.5 py-0.5 rounded-full ${billing === "ANNUAL" ? "bg-emerald-500 text-white" : "bg-emerald-500/20 text-emerald-400"}`}>
+                      <span className={`text-xs font-black px-1.5 py-0.5 rounded-full ${billing === "ANNUAL" ? "bg-teal-600 text-white" : "bg-teal-100 text-teal-700"}`}>
                         -25%
                       </span>
                     </button>
@@ -479,20 +479,20 @@ function RegistroContent() {
                 </div>
 
                 {/* Precio según selección */}
-                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 flex items-center justify-between">
+                <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 flex items-center justify-between">
                   <div>
-                    <p className="text-white font-black text-xl">
+                    <p className="text-gray-950 font-black text-xl">
                       {money(billing === "ANNUAL" ? Math.round(planPrices.ANNUAL / 12) : planPrices.MONTHLY)}
                       <span className="text-gray-500 text-sm font-normal">/mes</span>
                     </p>
                     {billing === "ANNUAL" && (
                       <p className="text-xs text-gray-500 mt-0.5">
                         {money(planPrices.ANNUAL)}/año
-                        <span className="ml-2 text-emerald-400 font-semibold">Ahorrás {money(planPrices.MONTHLY * 12 - planPrices.ANNUAL)}</span>
+                        <span className="ml-2 text-teal-600 font-semibold">Ahorrás {money(planPrices.MONTHLY * 12 - planPrices.ANNUAL)}</span>
                       </p>
                     )}
                   </div>
-                  <span className="text-xs text-gray-600">7 días gratis</span>
+                  <span className="text-xs text-gray-400">7 días gratis</span>
                 </div>
               </div>
             )}
@@ -501,7 +501,7 @@ function RegistroContent() {
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3.5 rounded-2xl text-sm mb-6"
+                className="bg-red-50 border border-red-200 text-red-600 px-4 py-3.5 rounded-2xl text-sm mb-6"
               >
                 {error}
               </motion.div>
@@ -509,42 +509,42 @@ function RegistroContent() {
 
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1.5">Nombre completo</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1.5">Nombre completo</label>
                 <input
                   type="text" name="name" value={form.name} onChange={handleChange} onBlur={handleBlur}
                   placeholder="Ej: María García"
-                  className={`w-full bg-white/5 border rounded-2xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all ${fieldErrors.name ? "border-red-500/50" : "border-white/10"}`}
+                  className={`w-full bg-gray-50 border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-300 transition-all ${fieldErrors.name ? "border-red-400" : "border-gray-200"}`}
                 />
                 {fieldErrors.name
-                  ? <p className="text-xs text-red-400 mt-1">{fieldErrors.name}</p>
-                  : <p className="text-xs text-gray-600 mt-1">Solo letras, mínimo 2 caracteres.</p>
+                  ? <p className="text-xs text-red-500 mt-1">{fieldErrors.name}</p>
+                  : <p className="text-xs text-gray-400 mt-1">Solo letras, mínimo 2 caracteres.</p>
                 }
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1.5">Teléfono</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1.5">Teléfono</label>
                 <input
                   type="tel" name="phone" value={form.phone} onChange={handleChange} onBlur={handleBlur}
                   placeholder="Ej: 11 4567-8901"
-                  className={`w-full bg-white/5 border rounded-2xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all ${fieldErrors.phone ? "border-red-500/50" : "border-white/10"}`}
+                  className={`w-full bg-gray-50 border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-300 transition-all ${fieldErrors.phone ? "border-red-400" : "border-gray-200"}`}
                 />
                 {fieldErrors.phone
-                  ? <p className="text-xs text-red-400 mt-1">{fieldErrors.phone}</p>
-                  : <p className="text-xs text-gray-600 mt-1">Con código de área, sin el 0. Ej: 11 4567-8901</p>
+                  ? <p className="text-xs text-red-500 mt-1">{fieldErrors.phone}</p>
+                  : <p className="text-xs text-gray-400 mt-1">Con código de área, sin el 0. Ej: 11 4567-8901</p>
                 }
               </div>
 
               {accountType === "owner" && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1.5">Nombre de tu tienda</label>
+                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Nombre de tu tienda</label>
                   <input
                     type="text" name="storeName" value={form.storeName} onChange={handleChange} onBlur={handleBlur}
                     placeholder="Ej: Joyas María, Luna Moda..."
-                    className={`w-full bg-white/5 border rounded-2xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all ${fieldErrors.storeName ? "border-red-500/50" : "border-white/10"}`}
+                    className={`w-full bg-gray-50 border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-300 transition-all ${fieldErrors.storeName ? "border-red-400" : "border-gray-200"}`}
                   />
                   {fieldErrors.storeName
-                    ? <p className="text-xs text-red-400 mt-1">{fieldErrors.storeName}</p>
-                    : <p className="text-xs text-gray-600 mt-1">
+                    ? <p className="text-xs text-red-500 mt-1">{fieldErrors.storeName}</p>
+                    : <p className="text-xs text-gray-400 mt-1">
                         Tu tienda quedará en{" "}
                         <span className="text-gray-500">
                           {form.storeName
@@ -558,34 +558,34 @@ function RegistroContent() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1.5">Email</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1.5">Email</label>
                 <input
                   type="email" name="email" value={form.email} onChange={handleChange} onBlur={handleBlur}
                   placeholder="tu@email.com"
-                  className={`w-full bg-white/5 border rounded-2xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all ${fieldErrors.email ? "border-red-500/50" : "border-white/10"}`}
+                  className={`w-full bg-gray-50 border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-300 transition-all ${fieldErrors.email ? "border-red-400" : "border-gray-200"}`}
                 />
-                {fieldErrors.email && <p className="text-xs text-red-400 mt-1">{fieldErrors.email}</p>}
+                {fieldErrors.email && <p className="text-xs text-red-500 mt-1">{fieldErrors.email}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1.5">Contraseña</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1.5">Contraseña</label>
                 <div className="relative">
                   <input
                     type={showPass ? "text" : "password"} name="password" value={form.password} onChange={handleChange} onBlur={handleBlur}
                     placeholder="Mínimo 6 caracteres"
-                    className={`w-full bg-white/5 border rounded-2xl px-4 py-3.5 pr-12 text-white placeholder-gray-600 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-white/20 transition-all ${fieldErrors.password ? "border-red-500/50" : "border-white/10"}`}
+                    className={`w-full bg-gray-50 border rounded-2xl px-4 py-3.5 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-300 transition-all ${fieldErrors.password ? "border-red-400" : "border-gray-200"}`}
                   />
                   <button
                     type="button" onClick={() => setShowPass(!showPass)}
                     aria-label={showPass ? "Ocultar contraseña" : "Mostrar contraseña"}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 {fieldErrors.password
-                  ? <p className="text-xs text-red-400 mt-1">{fieldErrors.password}</p>
-                  : <p className="text-xs text-gray-600 mt-1">Mínimo 6 caracteres.</p>
+                  ? <p className="text-xs text-red-500 mt-1">{fieldErrors.password}</p>
+                  : <p className="text-xs text-gray-400 mt-1">Mínimo 6 caracteres.</p>
                 }
               </div>
 
@@ -595,10 +595,10 @@ function RegistroContent() {
                     type="checkbox"
                     checked={ageConfirmed}
                     onChange={(e) => { setAgeConfirmed(e.target.checked); setError(""); }}
-                    className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 accent-indigo-500 cursor-pointer flex-shrink-0"
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 bg-white accent-orange-600 cursor-pointer flex-shrink-0"
                   />
-                  <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-400 transition-colors">
-                    Confirmo que tengo <span className="text-gray-300 font-semibold">18 años o más</span>. Entiendo que el uso de esta plataforma está reservado para mayores de edad.
+                  <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-600 transition-colors">
+                    Confirmo que tengo <span className="text-gray-700 font-semibold">18 años o más</span>. Entiendo que el uso de esta plataforma está reservado para mayores de edad.
                   </span>
                 </label>
 
@@ -607,13 +607,13 @@ function RegistroContent() {
                     type="checkbox"
                     checked={termsAccepted}
                     onChange={(e) => { setTermsAccepted(e.target.checked); setError(""); }}
-                    className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 accent-indigo-500 cursor-pointer flex-shrink-0"
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 bg-white accent-orange-600 cursor-pointer flex-shrink-0"
                   />
-                  <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-400 transition-colors">
+                  <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-600 transition-colors">
                     Leí y acepto los{" "}
                     <Link
                       href={`/terminos?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`}
-                      className="text-gray-400 underline hover:text-white transition-colors"
+                      className="text-gray-600 underline hover:text-gray-900 transition-colors"
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
@@ -623,7 +623,7 @@ function RegistroContent() {
                     {" "}y la{" "}
                     <Link
                       href={`/privacidad?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`}
-                      className="text-gray-400 underline hover:text-white transition-colors"
+                      className="text-gray-600 underline hover:text-gray-900 transition-colors"
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
@@ -645,9 +645,9 @@ function RegistroContent() {
               </button>
             </form>
 
-            <p className="text-center text-sm text-gray-600 mt-7">
+            <p className="text-center text-sm text-gray-500 mt-7">
               ¿Ya tenés cuenta?{" "}
-              <Link href="/login" className="text-indigo-400 font-bold hover:text-indigo-300 transition-colors">
+              <Link href="/login" className="text-orange-600 font-bold hover:text-orange-700 transition-colors">
                 Iniciar sesión →
               </Link>
             </p>
@@ -659,25 +659,25 @@ function RegistroContent() {
 
   /* ── STEP 1: elegí tu tipo ── */
   return (
-    <div className="min-h-screen bg-[#030712] flex items-center justify-center p-6 relative">
+    <div className="min-h-screen bg-white flex items-center justify-center p-6 relative">
       <style>{`
-        .grid-bg { background-image: linear-gradient(rgba(99,102,241,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,.06) 1px, transparent 1px); background-size: 48px 48px; }
+        .grid-bg { background-image: linear-gradient(rgba(249,115,22,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(249,115,22,.05) 1px, transparent 1px); background-size: 48px 48px; }
       `}</style>
 
       <div className="absolute inset-0 grid-bg" />
-      <div className="absolute top-1/4 -left-32 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-32 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 -left-32 w-80 h-80 bg-orange-200/40 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-32 w-80 h-80 bg-rose-200/30 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative w-full max-w-5xl">
         <div className="text-center mb-10">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-8">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+            <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
               <ShoppingBag className="h-5 w-5 text-white" />
             </div>
-            <span className="text-2xl font-black text-white">TiendaApps</span>
+            <span className="text-2xl font-black text-gray-950">TiendaApps</span>
           </Link>
-          <h1 className="text-4xl font-black text-white mb-3">Crear cuenta gratis</h1>
-          <p className="text-gray-400 text-lg">¿Cómo querés usar TiendaApps?</p>
+          <h1 className="text-4xl font-black text-gray-950 mb-3">Crear cuenta gratis</h1>
+          <p className="text-gray-500 text-lg">¿Cómo querés usar TiendaApps?</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -687,24 +687,25 @@ function RegistroContent() {
             return (
               <button
                 key={key}
+                type="button"
                 onClick={() => selectType(key)}
-                className={`group text-left flex flex-col ${c.bg} border ${c.border} rounded-3xl p-6 transition-all duration-300 hover:scale-[1.02]`}
+                className={`group text-left flex flex-col ${c.bg} border ${c.border} rounded-3xl p-6 transition-all duration-300 hover:scale-[1.02] shadow-sm`}
               >
-                <div className={`w-12 h-12 bg-${color}-500/15 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                <div className={`w-12 h-12 ${c.iconBg} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                   <Icon className={`h-6 w-6 ${c.text}`} />
                 </div>
-                <h3 className="text-lg font-black text-white mb-1.5">{title}</h3>
+                <h3 className="text-lg font-black text-gray-950 mb-1.5">{title}</h3>
                 <p className="text-gray-500 text-xs mb-4 leading-relaxed">{desc}</p>
                 <ul className="space-y-1.5 mb-4">
                   {perks.map((p) => (
-                    <li key={p} className="flex items-start gap-2 text-xs text-gray-400">
+                    <li key={p} className="flex items-start gap-2 text-xs text-gray-600">
                       <CheckCircle className={`h-3.5 w-3.5 ${c.check} flex-shrink-0 mt-0.5`} />
                       {p}
                     </li>
                   ))}
                   {premiumPerks?.map((p) => (
-                    <li key={p} className={`flex items-start gap-2 text-xs transition-colors ${key === "owner" && step1Tier === "PREMIUM" ? "text-amber-400/80" : "text-gray-600"}`}>
-                      <CheckCircle className={`h-3.5 w-3.5 flex-shrink-0 mt-0.5 transition-colors ${key === "owner" && step1Tier === "PREMIUM" ? "text-amber-400" : "text-gray-700"}`} />
+                    <li key={p} className={`flex items-start gap-2 text-xs transition-colors ${key === "owner" && step1Tier === "PREMIUM" ? "text-amber-700" : "text-gray-400"}`}>
+                      <CheckCircle className={`h-3.5 w-3.5 flex-shrink-0 mt-0.5 transition-colors ${key === "owner" && step1Tier === "PREMIUM" ? "text-amber-600" : "text-gray-300"}`} />
                       {p}
                     </li>
                   ))}
@@ -713,28 +714,30 @@ function RegistroContent() {
                 {key === "owner" && (
                   <div className="flex gap-1.5 mb-4" onClick={(e) => e.stopPropagation()}>
                     <button
+                      type="button"
                       onClick={() => setStep1Tier("BASIC")}
                       className={`flex-1 rounded-xl border p-2.5 text-left transition-all ${
                         step1Tier === "BASIC"
-                          ? "border-indigo-500/60 bg-indigo-500/10"
-                          : "border-white/10 bg-white/5 hover:border-white/20"
+                          ? "border-orange-400 bg-orange-100"
+                          : "border-gray-200 bg-white hover:border-gray-300"
                       }`}
                     >
-                      <p className="text-[11px] font-bold text-white">Tienda Pro</p>
-                      <p className={`text-[11px] font-black ${step1Tier === "BASIC" ? "text-indigo-400" : "text-gray-500"}`}>
+                      <p className="text-[11px] font-bold text-gray-900">Tienda Pro</p>
+                      <p className={`text-[11px] font-black ${step1Tier === "BASIC" ? "text-orange-600" : "text-gray-400"}`}>
                         {money(PRICES.owner.BASIC.MONTHLY)}/mes
                       </p>
                     </button>
                     <button
+                      type="button"
                       onClick={() => setStep1Tier("PREMIUM")}
                       className={`flex-1 rounded-xl border p-2.5 text-left transition-all ${
                         step1Tier === "PREMIUM"
-                          ? "border-amber-500/60 bg-amber-500/10"
-                          : "border-white/10 bg-white/5 hover:border-white/20"
+                          ? "border-amber-400 bg-amber-100"
+                          : "border-gray-200 bg-white hover:border-gray-300"
                       }`}
                     >
-                      <p className="text-[11px] font-bold text-white">Premium ★</p>
-                      <p className={`text-[11px] font-black ${step1Tier === "PREMIUM" ? "text-amber-400" : "text-gray-500"}`}>
+                      <p className="text-[11px] font-bold text-gray-900">Premium ★</p>
+                      <p className={`text-[11px] font-black ${step1Tier === "PREMIUM" ? "text-amber-700" : "text-gray-400"}`}>
                         {money(PRICES.owner.PREMIUM.MONTHLY)}/mes
                       </p>
                     </button>
@@ -743,7 +746,7 @@ function RegistroContent() {
 
                 <div className="mt-auto">
                   {key !== "buyer" && (
-                    <p className="text-xs text-gray-600 mb-3">
+                    <p className="text-xs text-gray-400 mb-3">
                       {key === "owner"
                         ? `${money(PRICES.owner[step1Tier].MONTHLY)}/mes · 7 días gratis`
                         : "Gratis · Sin tarjeta · Sin límite de tiempo"}
@@ -758,9 +761,9 @@ function RegistroContent() {
           })}
         </div>
 
-        <p className="text-center text-sm text-gray-600 mt-8">
+        <p className="text-center text-sm text-gray-500 mt-8">
           ¿Ya tenés cuenta?{" "}
-          <Link href="/login" className="text-indigo-400 font-bold hover:text-indigo-300 transition-colors">
+          <Link href="/login" className="text-orange-600 font-bold hover:text-orange-700 transition-colors">
             Iniciar sesión →
           </Link>
         </p>
