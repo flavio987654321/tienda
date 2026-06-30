@@ -31,9 +31,19 @@ export function CartDrawer({
   const { BG, T, MID, border, accent, accentText, serif } = theme;
   const {
     cartItems, cartOpen, setCartOpen, cartCount, cartTotal, removeFromCart, updateQty,
-    openCheckout, fmt, wholesaleWarnings,
+    openCheckout, fmt, wholesaleWarnings, isWholesale,
   } = cart;
   const blockBuy = isOwner || isPreview;
+
+  function itemEffectiveUnitPrice(product: typeof cartItems[number]["product"], qty: number): number {
+    if (!isWholesale || !product.cantMinMayorista || qty < product.cantMinMayorista) return product.price;
+    const escalones = product.preciosEscalonados ?? [];
+    let best: number | null = null;
+    for (const band of escalones) {
+      if (qty >= band.desde && (best === null || band.precio < best)) best = band.precio;
+    }
+    return best ?? product.precioMayorista ?? product.price;
+  }
 
   return (
     <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 150, pointerEvents: cartOpen ? "auto" : "none" }}>
@@ -41,7 +51,7 @@ export function CartDrawer({
       <div style={{ position:"absolute", top:0, right:0, bottom:0, width:"min(420px, 100vw)", background:BG, transform: cartOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:`1px solid ${border}` }}>
         <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid ${border}`, display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
           <p style={{ fontFamily: serif ?? "inherit", fontSize:18, margin:0, color:T }}>Tu carrito <span style={{ fontSize:13, color:MID }}>({cartCount})</span></p>
-          <button onClick={() => setCartOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
+          <button onClick={() => setCartOpen(false)} aria-label="Cerrar carrito" style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
         </div>
         <div style={{ flex:1, overflowY:"auto", padding:"16px 24px" }}>
           {cartItems.length === 0 ? (
@@ -69,10 +79,10 @@ export function CartDrawer({
                     <span style={{ width:24, textAlign:"center", fontSize:13, color:T }}>{item.qty}</span>
                     <button onClick={() => updateQty(idx, 1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>+</button>
                   </div>
-                  <span style={{ color:accent, fontWeight:700, fontSize:14 }}>{fmt(item.product.price * item.qty)}</span>
+                  <span style={{ color:accent, fontWeight:700, fontSize:14 }}>{fmt(itemEffectiveUnitPrice(item.product, item.qty) * item.qty)}</span>
                 </div>
               </div>
-              <button onClick={() => removeFromCart(idx)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:18, alignSelf:"flex-start" }}>×</button>
+              <button onClick={() => removeFromCart(idx)} aria-label="Quitar del carrito" style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:18, alignSelf:"flex-start" }}>×</button>
             </div>
           ))}
         </div>

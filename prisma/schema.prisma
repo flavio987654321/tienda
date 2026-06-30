@@ -312,8 +312,13 @@ model Product {
   tags             String    @default("[]")
   attributes       String    @default("[]")
   reelUrls         String    @default("[]")
-  precioMayorista  Float?
-  cantMinMayorista Int?
+  precioMayorista     Float?
+  cantMinMayorista    Int?
+  // Escalones de precio mayorista: JSON array [{desde:Int, precio:Float}] en orden ascendente por "desde".
+  // Cada banda aplica a partir de "desde" unidades; precio debe ser < precioMayorista.
+  preciosEscalonados  String  @default("[]")
+  // Producto exclusivo de catálogo mayorista: solo aparece en tiendas con tieneVentaMayorista=true.
+  soloMayorista       Boolean @default(false)
   // Cuotas sin interés informativas (no conectado a ninguna API bancaria ni
   // de Mercado Pago): 0 = no mostrar, o 3/6/12. Solo se muestra en la tienda
   // si además la tienda tiene Mercado Pago conectado.

@@ -12,6 +12,7 @@ import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { WaIcon, VehicleCard, VehicleModal, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
+import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 
 function smoothScrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -56,6 +57,8 @@ const SVC_ICON_SETS = [
   ["💳","💰","🏦","📊","💵","🏧","💸","📈"],
   ["🤝","👨‍💼","🎯","📞","💬","🌟","🧑‍💼","🎓"],
 ];
+
+const AD_SECTION_IDS = ["ad-filtros", "ad-catalogo", "ad-stats", "ad-nosotros", "ad-servicios", "ad-contacto"];
 
 export default function AutoDrive() {
   const config       = useStoreConfig();
@@ -336,11 +339,11 @@ export default function AutoDrive() {
           </div>
           {/* Grupo derecho — búsqueda + favoritos + campanita + usuario + menú mobile */}
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            <button onClick={() => setSearchOpen(true)}
+            <button onClick={() => setSearchOpen(true)} aria-label="Buscar"
               style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
-            <button onClick={() => setFavoritesOpen(true)}
+            <button onClick={() => setFavoritesOpen(true)} aria-label="Favoritos"
               style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {favorites.length > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
@@ -535,7 +538,9 @@ export default function AutoDrive() {
         </div>
       </section>
 
+      <div style={{ display:"flex", flexDirection:"column" }}>
       {/* ── FILTROS RÁPIDOS — pills horizontales ── */}
+      <SectionBlock id="ad-filtros" label="Filtros rápidos" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
       <section style={{ padding:"16px 28px", position:"relative",
         ...secBg(catsImg, catsBg),
         borderBottom:`1px solid ${catsText==="#ffffff" ? "rgba(255,255,255,0.1)" : "#f0f0f0"}` }}>
@@ -587,8 +592,10 @@ export default function AutoDrive() {
           </div>
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── CATÁLOGO CARRUSEL ── */}
+      <SectionBlock id="ad-catalogo" label="Catálogo" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
       <section id="catálogo" style={{ padding:"72px 0 72px", position:"relative",
         overflow:"hidden", ...secBg(catalogoImg, catalogoBg) }}>
         <BgDragHandle imgKey="sectionbg_bgCatalogo" />
@@ -611,7 +618,7 @@ export default function AutoDrive() {
           {/* Flechas flanqueando el carrusel */}
           {!loadingProducts && showcased.length > 1 && (
             <>
-              <button onClick={() => scrollCarousel("prev")}
+              <button onClick={() => scrollCarousel("prev")} aria-label="Anterior"
                 style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)",
                   zIndex:3, width:40, height:40, borderRadius:10,
                   border:`1.5px solid ${catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"}`,
@@ -624,7 +631,7 @@ export default function AutoDrive() {
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor=catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"; (e.currentTarget as HTMLElement).style.color=catText==="#ffffff"?"#fff":"#374151"; }}>
                 ‹
               </button>
-              <button onClick={() => scrollCarousel("next")}
+              <button onClick={() => scrollCarousel("next")} aria-label="Siguiente"
                 style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)",
                   zIndex:3, width:40, height:40, borderRadius:10,
                   border:`1.5px solid ${catText==="#ffffff"?"rgba(255,255,255,0.2)":"#e5e7eb"}`,
@@ -682,8 +689,10 @@ export default function AutoDrive() {
           </div>
         )}
       </section>
+      </SectionBlock>
 
       {/* ── STATS — 4 columnas, números en color accent ── */}
+      <SectionBlock id="ad-stats" label="Estadísticas" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
       <section style={{ position:"relative", ...secBg(statsImg, statsBg),
         borderTop:`1px solid ${statsText==="#ffffff"?"rgba(255,255,255,0.1)":"#f0f0f0"}`,
         borderBottom:`1px solid ${statsText==="#ffffff"?"rgba(255,255,255,0.1)":"#f0f0f0"}` }}>
@@ -715,8 +724,10 @@ export default function AutoDrive() {
           ))}
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── NOSOTROS — imagen izquierda con badge flotante, texto derecha con checklist ── */}
+      <SectionBlock id="ad-nosotros" label="Nuestra historia" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
       <section id="nosotros" style={{ padding:"88px 28px", position:"relative",
         ...secBg(nosotrosImg2, nosotrosBg) }}>
         <BgDragHandle imgKey="sectionbg_bgNosotros" />
@@ -800,8 +811,10 @@ export default function AutoDrive() {
           </div>
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── SERVICIOS — tarjetas horizontales ícono+texto ── */}
+      <SectionBlock id="ad-servicios" label="Servicios" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
       <section id="servicios" style={{ padding:"80px 28px", position:"relative",
         ...secBg(serviciosImg, serviciosBg) }}>
         <BgDragHandle imgKey="sectionbg_bgServicios" />
@@ -863,8 +876,10 @@ export default function AutoDrive() {
           </div>
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── CONTACTO ── */}
+      <SectionBlock id="ad-contacto" label="Contacto" isPreview={isPreview} defaultOrder={AD_SECTION_IDS}>
       <section id="contacto" style={{ padding:"88px 28px", position:"relative",
         ...secBg(contactoImg, contactoBg), overflow:"hidden" }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
@@ -923,6 +938,8 @@ export default function AutoDrive() {
           </div>
         </div>
       </section>
+      </SectionBlock>
+      </div>
 
       {/* ── FOOTER ── */}
       <footer style={{ position:"relative", padding:"32px 28px", textAlign:"center",
@@ -969,7 +986,7 @@ export default function AutoDrive() {
       {/* ── SEARCH OVERLAY ── */}
       {searchOpen && (
         <div style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(255,255,255,0.97)", backdropFilter:"blur(8px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:120 }}>
-          <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
+          <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }} aria-label="Cerrar búsqueda"
             style={{ position:"absolute", top:24, right:32, background:"none", border:"none", color:"#111", fontSize:28, cursor:"pointer", lineHeight:1 }}>×</button>
           <div style={{ width:"100%", maxWidth:640, padding:"0 24px" }}>
             <input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
@@ -1014,7 +1031,7 @@ export default function AutoDrive() {
               </div>
             ) : favoriteProducts.map(product => (
               <div key={product.id} style={{ display:"flex", gap:14, padding:"14px 0", borderBottom:"1px solid #f5f5f5" }}>
-                <img src={product.images[0] ?? ""} alt="" style={{ width:80, height:60, objectFit:"cover", borderRadius:4, flexShrink:0, background:"#f5f5f5" }} />
+                <img src={product.images[0] ?? ""} alt={product.name} style={{ width:80, height:60, objectFit:"cover", borderRadius:4, flexShrink:0, background:"#f5f5f5" }} />
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:14, fontWeight:600, margin:"0 0 4px", color:"#111" }}>{product.name}</p>
                   <p style={{ fontSize:13, color:accent, fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>

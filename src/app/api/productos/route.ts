@@ -46,9 +46,19 @@ export async function POST(req: NextRequest) {
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;
   const {
-    name, parsedPrice, parsedComparePrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista, parsedCuotas, normalizedVariants,
+    name, parsedPrice, parsedComparePrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista,
+    parsedPreciosEscalonados, parsedSoloMayorista, parsedCuotas, normalizedVariants,
     parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
   } = validated;
+
+  // Guard de seguridad: escalones y soloMayorista solo aplican a tiendas mayoristas
+  // de rubros que lo soportan. Aunque el cliente mande estos campos, los descartamos
+  // si la tienda no cumple los requisitos.
+  const { getStoreType } = await import("@/lib/storeTypes");
+  const storeTypeConfig = getStoreType(store.tipoTienda || "ROPA");
+  const isWholesaleStore = store.tieneVentaMayorista && storeTypeConfig.supportsWholesale;
+  const safeEscalonados = isWholesaleStore ? JSON.stringify(parsedPreciosEscalonados) : "[]";
+  const safeSoloMayorista = isWholesaleStore ? parsedSoloMayorista : false;
 
   const parsedPublishAt = publishAt ? new Date(publishAt) : null;
   const scheduledInFuture = parsedPublishAt && parsedPublishAt > new Date();
@@ -69,6 +79,8 @@ export async function POST(req: NextRequest) {
       attributes: JSON.stringify(Array.isArray(attributes) ? attributes : []),
       precioMayorista: parsedPrecioMayorista,
       cantMinMayorista: parsedCantMinMayorista,
+      preciosEscalonados: safeEscalonados,
+      soloMayorista: safeSoloMayorista,
       cuotas: parsedCuotas,
       weightKg: parsedWeightKg,
       widthCm: parsedWidthCm,

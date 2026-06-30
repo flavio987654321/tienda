@@ -45,9 +45,22 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;
   const {
-    name, parsedPrice, parsedComparePrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista, parsedCuotas, normalizedVariants,
+    name, parsedPrice, parsedComparePrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista,
+    parsedPreciosEscalonados, parsedSoloMayorista, parsedCuotas, normalizedVariants,
     parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
   } = validated;
+
+  // Guard de seguridad: escalones y soloMayorista solo aplican a tiendas mayoristas.
+  // Se consulta la tienda para verificar — getOwnerStore no devuelve estos campos.
+  const ownerStore = await prisma.store.findUnique({
+    where: { id: auth.storeId },
+    select: { tieneVentaMayorista: true, tipoTienda: true },
+  });
+  const { getStoreType } = await import("@/lib/storeTypes");
+  const storeTypeConfigPatch = getStoreType(ownerStore?.tipoTienda || "ROPA");
+  const isWholesaleStorePatch = (ownerStore?.tieneVentaMayorista ?? false) && storeTypeConfigPatch.supportsWholesale;
+  const safeEscalonados = isWholesaleStorePatch ? JSON.stringify(parsedPreciosEscalonados) : "[]";
+  const safeSoloMayorista = isWholesaleStorePatch ? parsedSoloMayorista : false;
 
   const parsedPublishAt = publishAt !== undefined ? (publishAt ? new Date(publishAt) : null) : undefined;
   const scheduledInFuture = parsedPublishAt && parsedPublishAt > new Date();
@@ -189,6 +202,8 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         attributes: JSON.stringify(Array.isArray(attributes) ? attributes : []),
         precioMayorista: parsedPrecioMayorista,
         cantMinMayorista: parsedCantMinMayorista,
+        preciosEscalonados: safeEscalonados,
+        soloMayorista: safeSoloMayorista,
         cuotas: parsedCuotas,
         weightKg: parsedWeightKg,
         widthCm: parsedWidthCm,

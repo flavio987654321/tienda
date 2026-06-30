@@ -26,6 +26,8 @@ type RawProduct = {
   comparePrice?: number | null;
   precioMayorista?: number | null;
   cantMinMayorista?: number | null;
+  preciosEscalonados?: string;
+  soloMayorista?: boolean;
   cuotas?: number;
   category?: string;
   subcategory?: string;
@@ -81,6 +83,8 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     comparePrice: raw.comparePrice ?? null,
     precioMayorista: raw.precioMayorista ?? null,
     cantMinMayorista: raw.cantMinMayorista ?? null,
+    preciosEscalonados: (() => { try { const p = JSON.parse(raw.preciosEscalonados || "[]"); return Array.isArray(p) ? p : []; } catch { return []; } })(),
+    soloMayorista: raw.soloMayorista ?? false,
     cuotas: raw.cuotas ?? 0,
     category: raw.category ?? "general",
     subcategory: raw.subcategory ?? undefined,

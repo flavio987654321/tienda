@@ -75,6 +75,10 @@ export async function POST(req: Request) {
         heroStyle: "full",
         // No publicar hasta que el nuevo tipo esté configurado
         isPublished: false,
+        // El flag de mayorista se reconfigura desde cero en el nuevo rubro
+        // (el nuevo tipo puede no soportarlo; dejar el valor viejo causaría que
+        // campos y lógica de mayorista aparezcan en rubros que no corresponden)
+        tieneVentaMayorista: false,
       },
     });
   }, { timeout: 20000 });

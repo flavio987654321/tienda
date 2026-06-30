@@ -1,29 +1,28 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { StorefrontProduct, ValidatedCoupon, PlaceOrderParams } from "./useStorefront";
 import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, type CartItem, type ContactStatus, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
 import { useAuth } from "@/components/AuthProvider";
 import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
+import { parseVariantAttrs } from "@/lib/variantAttrs";
 
 // Misma lógica de matching de variante por talle/color que usan los templates
-// para mostrar "Sin stock"/"Últimas unidades" — se repite acá para que
-// addToCart pueda topar la cantidad al stock real en el momento de agregar,
-// sin depender de que cada template lo valide en su propio stepper de +/-.
+// para mostrar "Sin stock"/"Últimas unidades" — se centraliza acá (y se expone
+// como `selectedVariantStock`) para que addToCart pueda topar la cantidad al
+// stock real, y los templates no necesiten reimplementarla cada uno.
 function resolveVariantStock(product: StorefrontProduct, selectedSize: string, selectedColor: string): number | null {
   if (!product.variants.length) return null;
   const v = product.variants.find(v => {
-    try {
-      const a = JSON.parse(v.name);
-      if (a && typeof a === "object") {
-        const vals = Object.values(a).map((x) => String(x).toLowerCase());
-        const sizeOk = !selectedSize || vals.includes(selectedSize.toLowerCase());
-        const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
-        return sizeOk && colorOk;
-      }
-    } catch {}
+    const a = parseVariantAttrs(v.name);
+    if (a) {
+      const vals = Object.values(a).map((x) => String(x).toLowerCase());
+      const sizeOk = !selectedSize || vals.includes(selectedSize.toLowerCase());
+      const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
+      return sizeOk && colorOk;
+    }
     return v.value.includes(selectedSize) && v.value.includes(selectedColor);
   }) ?? (product.variants.length === 1 ? product.variants[0] : null);
   return v?.stock ?? null;
@@ -88,6 +87,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
   }>({ status: "idle", domicilio: null, sucursal: null });
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
+  const addingToCartRef = useRef(false);
   const { status } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -286,10 +286,61 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
     return "A coordinar"; // unavailable (Fase A) o sin CP todavía
   }
 
+  // Stock de la variante (talle/color) actualmente seleccionada en el modal de
+  // producto — calculado una sola vez acá para que los templates no necesiten
+  // reimplementar el mismo parseo de `variant.name` para mostrar "Sin stock"
+  // o "Últimas unidades" en el modal.
+  const selectedVariantStock = useMemo(() => {
+    if (!modalProduct) return null;
+    return resolveVariantStock(modalProduct, selectedSize, selectedColor);
+  }, [modalProduct, selectedSize, selectedColor]);
+
+  // Talles sin stock para el color ya elegido (o para cualquier color si
+  // todavía no eligió uno) — se usa para tachar/atenuar el talle en el
+  // selector antes de que el comprador lo seleccione y recién ahí se
+  // entere de que no hay stock.
+  const outOfStockSizes = useMemo(() => {
+    const set = new Set<string>();
+    if (!modalProduct?.variants.length) return set;
+    for (const size of modalProduct.sizes) {
+      const matching = modalProduct.variants.filter(v => {
+        const a = parseVariantAttrs(v.name);
+        if (a) {
+          const vals = Object.values(a).map((x) => String(x).toLowerCase());
+          const sizeOk = vals.includes(size.toLowerCase());
+          const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
+          return sizeOk && colorOk;
+        }
+        return v.value.includes(size) && (!selectedColor || v.value.includes(selectedColor));
+      });
+      if (matching.length > 0 && matching.every(v => v.stock === 0)) set.add(size);
+    }
+    return set;
+  }, [modalProduct, selectedColor]);
+
+  // Devuelve el precio unitario efectivo para un producto en modo mayorista,
+  // aplicando el mejor escalón disponible según la cantidad.
+  // Prioridad: escalón más alto aplicable > precio base > precio retail.
+  function getEffectiveWholesalePrice(product: typeof cartItems[number]["product"], qty: number): number {
+    if (!product.cantMinMayorista || qty < product.cantMinMayorista) return product.price;
+    // Buscar el mejor escalón (desde ≤ qty, precio más bajo = mayor descuento)
+    const escalones = product.preciosEscalonados ?? [];
+    let bestEscalonPrice: number | null = null;
+    for (const band of escalones) {
+      if (qty >= band.desde) {
+        if (bestEscalonPrice === null || band.precio < bestEscalonPrice) {
+          bestEscalonPrice = band.precio;
+        }
+      }
+    }
+    if (bestEscalonPrice !== null) return bestEscalonPrice;
+    // Sin escalón aplicable: usar precio base mayorista
+    return product.precioMayorista ?? product.price;
+  }
+
   // Derived values
   const cartTotal      = cartItems.reduce((s, i) => {
-    const useWholesale = isWholesale && i.product.precioMayorista && i.product.cantMinMayorista && i.qty >= i.product.cantMinMayorista;
-    const price = useWholesale ? (i.product.precioMayorista as number) : i.product.price;
+    const price = isWholesale ? getEffectiveWholesalePrice(i.product, i.qty) : i.product.price;
     return s + price * i.qty;
   }, 0);
   const wholesaleWarnings = isWholesale ? cartItems.filter(i =>
@@ -325,7 +376,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
     setModalImg(0);
     setSelectedSize(p.sizes[0] ?? "");
     setSelectedColor(p.colors[0] ?? "");
-    setQty(1);
+    setQty(isWholesale && p.cantMinMayorista ? p.cantMinMayorista : 1);
     setSearchOpen(false);
   };
 
@@ -376,7 +427,8 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
   }, [products, storeId]);
 
   const addToCart = () => {
-    if (!modalProduct) return;
+    if (!modalProduct || addingToCartRef.current) return;
+    addingToCartRef.current = true;
     const variantId = resolveVariantId(modalProduct, selectedSize, selectedColor);
     const name = modalProduct.name;
     const stock = resolveVariantStock(modalProduct, selectedSize, selectedColor);
@@ -392,6 +444,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
     setModalProduct(null);
     showToast(`${name} agregado al carrito`);
     setCartOpen(true);
+    addingToCartRef.current = false;
   };
 
   const removeFromCart = (idx: number) =>
@@ -548,7 +601,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
     donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
     // Derived
     cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
-    searchResults, favoriteProducts,
+    searchResults, favoriteProducts, selectedVariantStock, outOfStockSizes,
     checkoutMode, isWholesale, wholesaleWarnings,
     pagoOptions: getPagoOptions(hasMercadoPago),
     fmtEnvioPrice, fmtLiveQuote,

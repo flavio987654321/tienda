@@ -1,18 +1,24 @@
 ﻿"use client";
-import { useState, useEffect, useMemo, Fragment } from "react";
+import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
-import { HandHeart } from "lucide-react";
-import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
+import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
+import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
+import { FadeImage } from "@/components/store/templates/shared/FadeImage";
+import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
+import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
+import { parseVariantAttrs } from "@/lib/variantAttrs";
+import { colorToSwatch } from "@/lib/colorSwatch";
+import { discountPercent } from "@/lib/discount";
 
 const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
@@ -24,6 +30,13 @@ const announcementMessages_DEFAULT = [
 ];
 
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
+
+/* ── Ícono de carrito flotante — variantes para elegir en modo edición ── */
+const CART_ICON_OPTIONS: React.ReactNode[] = [
+  <Fragment key="bag"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></Fragment>,
+  <Fragment key="cart"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></Fragment>,
+  <Fragment key="basket"><path d="M5 11 2 7h20l-3 4"/><path d="M4 11h16l-1.7 8.5a2 2 0 0 1-2 1.5H7.7a2 2 0 0 1-2-1.5L4 11Z"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></Fragment>,
+];
 
 /* ── Garantías ─────────────────────────────────────────── */
 const FN_STRIP_ICONS: React.ReactNode[][] = [
@@ -72,6 +85,8 @@ const GARANTIAS = [
   },
 ];
 
+const FN_SECTION_IDS = ["fn-garantias", "fn-mayorista", "fn-categorias", "fn-statement", "fn-banner", "fn-productos", "fn-ofertas", "fn-masvisto", "fn-nosotros", "fn-contacto"];
+
 /* ── Component ─────────────────────────────────────────── */
 export default function FashionNoir() {
   const [scrolled,           setScrolled]           = useState(false);
@@ -90,12 +105,30 @@ export default function FashionNoir() {
   const [activeSubcategory,  setActiveSubcategory]  = useState<string | null>(null);
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews,        setReviews]        = useState<PReview[]>([]);
+  const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
+  const ofertasScrollRef = useRef<HTMLDivElement>(null);
+  const scrollOfertas = (dir: 1 | -1) => { ofertasScrollRef.current?.scrollBy({ left: dir * 240, behavior: "smooth" }); };
+  const [ofertasCanLeft, setOfertasCanLeft] = useState(false);
+  const [ofertasCanRight, setOfertasCanRight] = useState(false);
+  useEffect(() => {
+    const el = ofertasScrollRef.current;
+    if (!el) return;
+    const update = () => {
+      setOfertasCanLeft(el.scrollLeft > 4);
+      setOfertasCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    };
+    update();
+    el.addEventListener("scroll", update);
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
+  });
   useEffect(() => {
     const allowsPinch = (el: Element | null) => {
       while (el) { if ((el as HTMLElement).style?.touchAction?.includes("pinch-zoom")) return true; el = el.parentElement; }
@@ -120,7 +153,6 @@ export default function FashionNoir() {
   const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const isPreview   = !!storeConfig?.previewFill;
   const isOwner     = !!storeConfig?.isOwner;
-  const blockBuy    = isPreview || isOwner;
   const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
   const { products, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
@@ -143,27 +175,21 @@ export default function FashionNoir() {
     return map;
   }, [products]);
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
+  const cart = useCartLogic(storefront);
   const {
-    cartItems, cartOpen, setCartOpen,
+    setCartOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
     selectedSize, setSelectedSize, selectedColor, setSelectedColor,
-    qty, setQty,
-    checkoutOpen, setCheckoutOpen, checkoutStatus, setCheckoutStatus, checkoutError,
-    envioId, setEnvioId, pagoId, setPagoId,
-    coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
-    notas, setNotas, rememberData, setRememberData,
-    buyerForm, setBuyerForm,
+    qty, setQty, selectedVariantStock, outOfStockSizes,
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
-    cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
-    searchResults, favoriteProducts, wholesaleWarnings,
-    fmt, fmtEnvioPrice, fmtLiveQuote, showToast, openModal, addToCart, removeFromCart, updateQty,
-    openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
-    pagoOptions, acceptedTerms, setAcceptedTerms,
-    donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
-  } = useCartLogic(storefront);
+    cartCount,
+    searchResults, favoriteProducts,
+    fmt, showToast, openModal, addToCart,
+    handleContact, toggleFavorite,
+  } = cart;
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
@@ -198,7 +224,7 @@ export default function FashionNoir() {
   useEffect(() => {
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug) { setReviews([]); return; }
-    setReviewsLoading(true); setReviewDone(false); setReelIndex(0);
+    setReviewsLoading(true); setReviewDone(false); setReelIndex(0); setReviewsShown(5);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
     fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
       .then(r => r.ok ? r.json() : { reviews: [] })
@@ -294,15 +320,16 @@ export default function FashionNoir() {
     );
     if (imgIdx !== -1) setModalImg(imgIdx);
     const colorVariants = modalProduct.variants.filter((v) => {
-      try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
+      const a = parseVariantAttrs(v.name);
+      return !!a && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase());
     });
     if (!colorVariants.length) return;
     const best = colorVariants.find((v) => v.stock > 0) ?? colorVariants[0];
-    try {
-      const a = JSON.parse(best.name);
-      const sizeKey = Object.keys(a).find((k: string) => SIZE_ATTRS.includes(k.toLowerCase()));
-      if (sizeKey && a[sizeKey] && a[sizeKey] !== selectedSize) setSelectedSize(a[sizeKey]);
-    } catch {}
+    const bestAttrs = parseVariantAttrs(best.name);
+    if (bestAttrs) {
+      const sizeKey = Object.keys(bestAttrs).find((k: string) => SIZE_ATTRS.includes(k.toLowerCase()));
+      if (sizeKey && bestAttrs[sizeKey] && bestAttrs[sizeKey] !== selectedSize) setSelectedSize(String(bestAttrs[sizeKey]));
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedColor, modalProduct?.id]);
 
@@ -311,29 +338,25 @@ export default function FashionNoir() {
     if (!modalProduct || !selectedSize) return;
     if (selectedColor) {
       const hasCombo = modalProduct.variants.some((v) => {
-        try {
-          const a = JSON.parse(v.name);
-          if (typeof a !== "object") return false;
-          const vals = Object.values(a).map((x) => String(x).toLowerCase());
-          return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
-        } catch { return false; }
+        const a = parseVariantAttrs(v.name);
+        if (!a) return false;
+        const vals = Object.values(a).map((x) => String(x).toLowerCase());
+        return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
       });
       if (hasCombo) return;
     }
     const sizeVariants = modalProduct.variants.filter((v) => {
-      try {
-        const a = JSON.parse(v.name);
-        if (typeof a !== "object") return false;
-        return Object.entries(a).some(([k, val]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
-      } catch { return false; }
+      const a = parseVariantAttrs(v.name);
+      if (!a) return false;
+      return Object.entries(a).some(([k, val]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
     });
     if (!sizeVariants.length) return;
     const best = sizeVariants.find((v) => v.stock > 0) ?? sizeVariants[0];
-    try {
-      const a = JSON.parse(best.name);
-      const colorKey = Object.keys(a).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
-      if (colorKey && a[colorKey]) {
-        const newColor = String(a[colorKey]);
+    const bestAttrs = parseVariantAttrs(best.name);
+    if (bestAttrs) {
+      const colorKey = Object.keys(bestAttrs).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
+      if (colorKey && bestAttrs[colorKey]) {
+        const newColor = String(bestAttrs[colorKey]);
         if (newColor !== selectedColor) {
           setSelectedColor(newColor);
           const imgIdx = modalProduct.imageItems.findIndex(
@@ -342,27 +365,19 @@ export default function FashionNoir() {
           if (imgIdx !== -1) setModalImg(imgIdx);
         }
       }
-    } catch {}
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSize, modalProduct?.id]);
 
-  // Stock del variante seleccionado en el modal (D-06)
-  const selectedVariantStock = useMemo(() => {
-    if (!modalProduct?.variants.length) return null;
-    const v = modalProduct.variants.find(v => {
-      try {
-        const a = JSON.parse(v.name);
-        if (a && typeof a === "object") {
-          const vals = Object.values(a).map((x) => String(x).toLowerCase());
-          const sizeOk  = !selectedSize  || vals.includes(selectedSize.toLowerCase());
-          const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
-          return sizeOk && colorOk;
-        }
-      } catch {}
-      return v.value.includes(selectedSize) && v.value.includes(selectedColor);
-    }) ?? (modalProduct.variants.length === 1 ? modalProduct.variants[0] : null);
-    return v?.stock ?? null;
-  }, [modalProduct, selectedSize, selectedColor]);
+  // Al cambiar de imagen (flechas/miniaturas): sync color si esa foto pertenece a otra variante
+  useEffect(() => {
+    if (!modalProduct) return;
+    const img = modalProduct.imageItems[modalImg];
+    if (img?.variantValue && img.variantValue.toLowerCase() !== selectedColor?.toLowerCase()) {
+      setSelectedColor(img.variantValue);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalImg]);
 
   const changeGender = (g: string | null) => {
     setActiveGender(g);
@@ -371,19 +386,30 @@ export default function FashionNoir() {
     setVisibleCount(8);
   };
 
-  const allFiltered = products.filter(p => {
+  const allFiltered = useMemo(() => products.filter(p => {
     if (activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
     if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
     if (activeSubcategory && p.subcategory !== activeSubcategory) return false;
     return true;
-  });
+  }), [products, activeGender, activeCategory, activeSubcategory]);
   const filtered    = allFiltered.slice(0, visibleCount);
+
+  const similarProducts = useMemo(() => {
+    if (!modalProduct) return [];
+    const others = products.filter(p => p.id !== modalProduct.id);
+    const sameSub = modalProduct.subcategory ? others.filter(p => p.subcategory === modalProduct.subcategory) : [];
+    const sameCat = others.filter(p => p.category === modalProduct.category && !sameSub.includes(p));
+    const rest = others.filter(p => !sameSub.includes(p) && !sameCat.includes(p));
+    return [...sameSub, ...sameCat, ...rest].slice(0, 4);
+  }, [products, modalProduct]);
 
   /* ─ Colores base ─ */
   const G  = storeConfig?.colors.accent ?? "#c9a84c";  // gold / accent
   const BG = "#0a0a0a";  // background
   const S  = "#111111";  // surface
   const T  = "#f0ebe3";  // text
+  const accentText = getContrastColor(G) === "light" ? BG : T;
+  const cartTheme: CartTheme = { BG, S, T, MID:"#555555", border:"rgba(240,235,227,0.1)", accent:G, accentText, serif:"Georgia, serif" };
 
   /* ─ Hero image con override dinámico ─ */
   const heroImageOv        = storeConfig?.imageOverrides?.["heroBackground"];
@@ -434,6 +460,11 @@ export default function FashionNoir() {
   const productosBg    = scn["bgProductos"]   ?? BG;
   const productosText  = getContrastColor(productosBg)  === "light" ? T : "#0a0a0a";
   const productosMid   = getContrastColor(productosBg)  === "light" ? "#888" : "#555";
+  const ofertasBg      = scn["bgOfertas"]     ?? S;
+  const ofertasText    = getContrastColor(ofertasBg)    === "light" ? T : "#0a0a0a";
+  const ofertasMid     = getContrastColor(ofertasBg)    === "light" ? "#888" : "#555";
+  const masVistoBg     = scn["bgMasVisto"]    ?? BG;
+  const masVistoText   = getContrastColor(masVistoBg)   === "light" ? T : "#0a0a0a";
   const contactoBg     = scn["bgContacto"]    ?? BG;
   const contactoText   = contactoBgImg?.url
     ? (contactoBgImg.overlayType === "light" ? "#0a0a0a" : T)
@@ -443,6 +474,15 @@ export default function FashionNoir() {
 
   return (
     <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
+      <style>{`
+        .fn-ofertas-row { scrollbar-width:none }
+        .fn-ofertas-row::-webkit-scrollbar { display:none }
+        @keyframes fn-wa-pulse { 0% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0.55); } 70% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 14px rgba(37,211,102,0); } 100% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0); } }
+        .fn-wa-fab { background:linear-gradient(135deg,#2be374,#1fae57); animation:fn-wa-pulse 2.4s ease-out infinite; }
+        .fn-wa-fab:hover { animation-play-state:paused; }
+        .fn-zoom-img { transition:transform 0.5s ease; }
+        .fn-zoom:hover .fn-zoom-img { transform:scale(1.06); }
+      `}</style>
 
       {/* ── ANNOUNCEMENT BAR ───────────────────────────────── */}
       {showAnnouncement && (
@@ -473,7 +513,7 @@ export default function FashionNoir() {
       {/* ── SEARCH OVERLAY ─────────────────────────────────── */}
       {searchOpen && (
         <div style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(10,10,10,0.92)", backdropFilter:"blur(8px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:120 }}>
-          <button onClick={() => setSearchOpen(false)}
+          <button onClick={() => setSearchOpen(false)} aria-label="Cerrar búsqueda"
             style={{ position:"absolute", top:24, right:32, background:"none", border:"none", color:T, fontSize:28, cursor:"pointer", lineHeight:1 }}>×</button>
           <div style={{ width:"100%", maxWidth:640, padding:"0 24px" }}>
             <input
@@ -490,7 +530,9 @@ export default function FashionNoir() {
                 {searchResults.map(p => (
                   <button key={p.id} onClick={() => openModal(p)}
                     style={{ background:"none", border:`1px solid rgba(201,168,76,0.2)`, cursor:"pointer", textAlign:"left", padding:0, color:T }}>
-                    <img src={p.images[0]} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }}/>
+                    <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:S }}>
+                      {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 33vw, 200px" style={{ objectFit:"cover" }}/>}
+                    </div>
                     <div style={{ padding:"10px 12px" }}>
                       <p style={{ fontSize:12, margin:"0 0 4px", fontWeight:500 }}>{p.name}</p>
                       <p style={{ fontSize:13, color:G, fontWeight:700, margin:0 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
@@ -525,36 +567,43 @@ export default function FashionNoir() {
                 onMouseLeave={e => { e.currentTarget.style.opacity="0.8"; e.currentTarget.style.color=T; }}>
                 Categorías <span style={{ fontSize:9, opacity:0.7 }}>▾</span>
               </button>
-              {hoveredNavCat && (
-                <div style={{ position:"absolute", top:"100%", left:0, background:"#111", border:`1px solid rgba(201,168,76,0.15)`, minWidth:180, zIndex:500, padding:"6px 0", boxShadow:"0 12px 40px rgba(0,0,0,0.6)" }}>
-                  {categoryList.map(cat => {
-                    const subs = subcategoriesFor[cat] || [];
-                    return (
-                      <div key={cat} style={{ position:"relative" }}
-                        onMouseEnter={() => setHoveredNavCat(cat)}
-                        onMouseLeave={() => setHoveredNavCat("__open__")}>
-                        <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
-                          style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background: hoveredNavCat===cat ? "rgba(201,168,76,0.08)" : "none", border:"none", color:T, padding:"9px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase", transition:"background 0.15s" }}>
-                          {cat}
-                          {subs.length > 0 && <span style={{ opacity:0.5, fontSize:10 }}>›</span>}
-                        </button>
-                        {subs.length > 0 && hoveredNavCat === cat && (
-                          <div style={{ position:"absolute", top:0, left:"100%", background:"#1a1a1a", border:`1px solid rgba(201,168,76,0.15)`, minWidth:160, padding:"6px 0", boxShadow:"8px 8px 32px rgba(0,0,0,0.5)", zIndex:501 }}>
-                            {subs.map(sub => (
-                              <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
-                                style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"8px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"background 0.15s" }}
-                                onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
-                                onMouseLeave={e => (e.currentTarget.style.background="none")}>
-                                {sub}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+              {hoveredNavCat && (() => {
+                const activeCat = hoveredNavCat === "__open__" ? (categoryList[0] ?? null) : hoveredNavCat;
+                const activeSubs = activeCat ? (subcategoriesFor[activeCat] || []) : [];
+                return (
+                  <div style={{ position:"absolute", top:"100%", left:0, display:"flex", background:"#111", border:`1px solid rgba(201,168,76,0.15)`, zIndex:500, boxShadow:"0 12px 40px rgba(0,0,0,0.6)" }}>
+                    {/* columna izquierda: categorías */}
+                    <div style={{ minWidth:200, padding:"10px 0", borderRight: activeSubs.length > 0 ? `1px solid rgba(201,168,76,0.12)` : "none" }}>
+                      {categoryList.map(cat => {
+                        const subs = subcategoriesFor[cat] || [];
+                        return (
+                          <button key={cat}
+                            onMouseEnter={() => setHoveredNavCat(cat)}
+                            onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
+                            style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background: activeCat===cat ? "rgba(201,168,76,0.08)" : "none", border:"none", color: activeCat===cat ? G : T, padding:"9px 18px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase", transition:"background 0.15s" }}>
+                            {cat}
+                            {subs.length > 0 && <span style={{ opacity:0.5, fontSize:10 }}>›</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {/* columna derecha: subcategorías de la categoría activa */}
+                    {activeSubs.length > 0 && (
+                      <div style={{ minWidth:190, padding:"10px 0" }}>
+                        <p style={{ margin:0, padding:"4px 18px 8px", fontSize:9, letterSpacing:2, textTransform:"uppercase", color:"rgba(201,168,76,0.55)" }}>{activeCat}</p>
+                        {activeSubs.map(sub => (
+                          <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(activeCat ?? "")}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
+                            style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"8px 18px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"background 0.15s" }}
+                            onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
+                            onMouseLeave={e => (e.currentTarget.style.background="none")}>
+                            {sub}
+                          </button>
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    )}
+                  </div>
+                );
+              })()}
             </div>
             {/* MUJER */}
             <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); scrollTo("productos"); }}
@@ -582,7 +631,7 @@ export default function FashionNoir() {
           </div>}
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             {/* Search icon */}
-            <button onClick={() => setSearchOpen(true)} style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
+            <button onClick={() => setSearchOpen(true)} aria-label="Buscar" style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
             {/* Follow button */}
@@ -621,7 +670,7 @@ export default function FashionNoir() {
               </>
             )}
             {/* Favorites icon */}
-            {!isMobile && <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); setCartOpen(false); }} style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
+            {!isMobile && <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); setCartOpen(false); }} aria-label="Favoritos" style={{ background:"none", border:"none", color:T, cursor:"pointer", position:"relative", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? G : "none"} stroke={favorites.length > 0 ? G : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {favorites.length > 0 && <span style={{ position:"absolute", top:-6, right:-6, background:G, color:BG, borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
             </button>}
@@ -729,14 +778,14 @@ export default function FashionNoir() {
       )}
 
       {/* ── HERO ───────────────────────────────────────────── */}
-      <section id="hero" style={{ position:"relative", height:"100vh", minHeight:600, overflow:"hidden" }}>
-        <img src={heroImageUrl} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:`${heroPosX}% ${heroPosY}%` }}/>
+      <section id="hero" style={{ position:"relative", minHeight: isPreview ? `calc(100vh - ${announcementBarHeight + 72}px)` : "100vh", display:"flex", alignItems:"center", padding: "60px 0" }}>
+        <FadeImage src={heroImageUrl} alt="" fill priority sizes="100vw" style={{ objectFit:"cover", objectPosition:`${heroPosX}% ${heroPosY}%` }}/>
         {heroOverlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, background:heroGradient }}/>
         )}
         <BgDragHandle imgKey="heroBackground" />
         <EditableImageButton field="heroBackground" label="Cambiar imagen" />
-        <div style={{ position:"relative", height:"100%", display:"flex", alignItems:"center", padding: isMobile ? "0 20px" : "0 80px", maxWidth:1280, margin:"0 auto" }}>
+        <div style={{ position:"relative", width:"100%", padding: isMobile ? "0 20px" : "0 80px", maxWidth:1280, margin:"0 auto" }}>
           <div style={{ maxWidth:520 }}>
             <p style={{ fontSize:11, letterSpacing:5, color:heroAccentColor, marginBottom:20, textTransform:"uppercase" }}>
               <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva Temporada · Otoño 2025"}</EditableZone>
@@ -767,6 +816,8 @@ export default function FashionNoir() {
         </div>
       </section>
 
+      <div style={{ display:"flex", flexDirection:"column" }}>
+      <SectionBlock id="fn-garantias" label="Garantías" isPreview={isPreview} defaultOrder={FN_SECTION_IDS}>
       {/* ── GARANTÍAS ──────────────────────────────────────── */}
       <section data-reveal style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, borderBottom:`1px solid rgba(201,168,76,0.12)`, background:garantiasBg, position:"relative" }}>
         <EditableSectionBg field="bgGarantias" label="Fondo garantías" />
@@ -793,8 +844,10 @@ export default function FashionNoir() {
           })}
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── MAYORISTA — banner "Solicitá tu lista de precios" ── */}
+      <SectionBlock id="fn-mayorista" label="Mayorista" isPreview={isPreview} defaultOrder={FN_SECTION_IDS}>
       {isWholesale && (
         <section data-reveal style={{ background:S, borderTop:`1px solid rgba(201,168,76,0.2)`, borderBottom:`1px solid rgba(201,168,76,0.2)` }}>
           <div style={{ maxWidth:1280, margin:"0 auto", padding:"60px 32px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:24 }}>
@@ -812,7 +865,9 @@ export default function FashionNoir() {
           </div>
         </section>
       )}
+      </SectionBlock>
 
+      <SectionBlock id="fn-categorias" label="Categorías" isPreview={isPreview} defaultOrder={FN_SECTION_IDS}>
       {/* ── CATEGORÍAS ─────────────────────────────────────── */}
       <section id="categorias" data-reveal style={{ background:categoriasBg, position:"relative" }}>
         <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
@@ -826,9 +881,9 @@ export default function FashionNoir() {
               { label:"Hombre",     img: catHombreUrl,     field:"catHombre" },
               { label:"Accesorios", img: catAccesoriosUrl, field:"catAccesorios" },
             ].map(cat => (
-              <button key={cat.label} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat.label)}`; }}
-                style={{ position:"relative", aspectRatio:"2/3", overflow:"hidden", background:S, cursor:"pointer", border:"none", display:"block" }}>
-                <img src={cat.img} alt={cat.label} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", transition:"transform 0.6s ease" }}
+              <div key={cat.label} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat.label)}`; }}
+                style={{ position:"relative", aspectRatio:"2/3", overflow:"hidden", background:S, cursor:"pointer" }}>
+                <FadeImage src={cat.img} alt={cat.label} fill sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit:"cover", transition:"transform 0.6s ease" }}
                   onMouseEnter={e => (e.currentTarget.style.transform="scale(1.06)")}
                   onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}/>
                 <EditableImageButton field={cat.field} label={`Imagen ${cat.label}`} />
@@ -838,12 +893,14 @@ export default function FashionNoir() {
                   <p style={{ fontFamily:"Georgia, serif", fontSize:24, color:T, margin:0, fontWeight:700 }}>{cat.label}</p>
                   <p style={{ fontSize:10, letterSpacing:4, color:G, marginTop:8, textTransform:"uppercase" }}>{"Ver más"} →</p>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         </div>
       </section>
+      </SectionBlock>
 
+      <SectionBlock id="fn-statement" label="Frase de marca" isPreview={isPreview} defaultOrder={FN_SECTION_IDS}>
       {/* ── STATEMENT ──────────────────────────────────────── */}
       <section data-reveal style={{ borderTop:`1px solid rgba(201,168,76,0.1)`, borderBottom:`1px solid rgba(201,168,76,0.1)`, textAlign:"center", position:"relative", ...(statementBgImg?.url ? { backgroundImage:`url(${statementBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${statementBgImg.posX ?? 50}% ${statementBgImg.posY ?? 50}%` } : { background:statementBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgStatement" />
@@ -858,8 +915,27 @@ export default function FashionNoir() {
           <div style={{ width:56, height:1, background:G, margin:"28px auto 0" }}/>
         </div>
       </section>
+      </SectionBlock>
+
+      {/* ── BANNER HORIZONTAL ──────────────────────────────── */}
+      <SectionBlock id="fn-banner" label="Banner horizontal" isPreview={isPreview} defaultOrder={FN_SECTION_IDS}>
+        <PromoBannerCarousel
+          images={[storeConfig?.imageOverrides?.["promoBanner1"], storeConfig?.imageOverrides?.["promoBanner2"], storeConfig?.imageOverrides?.["promoBanner3"]]}
+          demoImages={[
+            "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1920&q=80",
+            "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1920&q=80",
+            "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80",
+          ]}
+          intervalMs={storeConfig?.bannerInterval ?? 4000}
+          editMode={editMode}
+          isPreview={isPreview}
+          accent={G}
+          bg={BG}
+        />
+      </SectionBlock>
 
       {/* ── PRODUCTOS ──────────────────────────────────────── */}
+      <SectionBlock id="fn-productos" label="Catálogo de productos" isPreview={isPreview} defaultOrder={FN_SECTION_IDS}>
       <section id="productos" data-reveal style={{ background:productosBg, position:"relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
         <div style={{ padding: isMobile ? "48px 16px" : "80px 32px", maxWidth:1280, margin:"0 auto" }}>
@@ -882,11 +958,11 @@ export default function FashionNoir() {
             <div key={product.id} onClick={() => openModal(product)} onMouseEnter={() => setHoveredId(product.id)} onMouseLeave={() => setHoveredId(null)}
               style={{ cursor:"pointer" }}>
               <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:16 }}>
-                <img src={product.images[0] || ""} alt={product.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", transition:"transform 0.5s ease", transform: hoveredId===product.id ? "scale(1.05)" : "scale(1)" }} onError={e => { e.currentTarget.style.opacity="0"; }}/>
+                {product.images[0] && <FadeImage src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover", transition:"transform 0.5s ease", transform: hoveredId===product.id ? "scale(1.05)" : "scale(1)" }} onError={e => { e.currentTarget.style.opacity="0"; }}/>}
                 <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"flex-end", justifyContent:"center", padding:16, opacity: hoveredId===product.id ? 1 : 0, transition:"opacity 0.3s", background:"linear-gradient(to top, rgba(10,10,10,0.65) 30%, transparent)", pointerEvents:"none" }}>
                   <span style={{ color:T, fontSize:11, letterSpacing:3, textTransform:"uppercase", borderBottom:`1px solid ${G}`, paddingBottom:3 }}>Ver detalle</span>
                 </div>
-                {product.comparePrice && <div style={{ position:"absolute", top:12, left:12, background:G, color:BG, fontSize:9, fontWeight:800, letterSpacing:2, padding:"4px 10px", textTransform:"uppercase" }}>Oferta</div>}
+                {discountPercent(product.price, product.comparePrice) !== null && <div style={{ position:"absolute", top:12, left:12, background:G, color:BG, fontSize:9, fontWeight:800, letterSpacing:2, padding:"4px 10px", textTransform:"uppercase" }}>Oferta -{discountPercent(product.price, product.comparePrice)}%</div>}
                 <div style={{ position:"absolute", top:12, right:12, background:"rgba(10,10,10,0.7)", color:T, fontSize:9, letterSpacing:2, padding:"4px 10px", textTransform:"uppercase" }}>{product.category}</div>
                 {/* Favorite button */}
                 <button
@@ -923,12 +999,113 @@ export default function FashionNoir() {
         </div>
         </div>
       </section>
+      </SectionBlock>
 
+      {/* ── OFERTAS ────────────────────────────────────────── */}
+      <SectionBlock id="fn-ofertas" label="Ofertas" isPreview={isPreview} defaultOrder={FN_SECTION_IDS}>
+        {(() => {
+          const allOfertas = products.filter(p => p.comparePrice && p.comparePrice > p.price);
+          if (allOfertas.length === 0 && !isPreview) return null;
+          const displayList = (allOfertas.length > 0 ? allOfertas : products).slice(0, 8);
+          const hasMore = allOfertas.length > 8;
+          return (
+            <section data-reveal style={{ position:"relative", background:ofertasBg, padding: isMobile ? "48px 0" : "80px 0", borderTop:`1px solid rgba(201,168,76,0.1)` }}>
+              <EditableSectionBg field="bgOfertas" label="Fondo ofertas" />
+              <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "0 16px" : "0 32px", marginBottom:32 }}>
+                <p style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", margin:"0 0 8px" }}><EditableZone field="ofertasKicker" label="Texto sobre Ofertas">Aprovechá</EditableZone></p>
+                <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,3vw,36px)", margin:0, color:ofertasText }}><EditableZone field="ofertasTitle" label="Título Ofertas">Ofertas</EditableZone></h2>
+              </div>
+              <div style={{ position:"relative" }}>
+                <div ref={ofertasScrollRef} className="fn-ofertas-row" style={{ display:"flex", gap:16, overflowX:"auto", scrollSnapType:"x mandatory", paddingBottom:8, padding: (ofertasCanLeft || ofertasCanRight) ? (isMobile ? "0 60px 8px" : "0 64px 8px") : (isMobile ? "0 16px 8px" : "0 32px 8px") }}>
+                  {displayList.map(p => {
+                    const pct = p.comparePrice && p.comparePrice > p.price ? Math.round((1 - p.price / p.comparePrice) * 100) : null;
+                    return (
+                      <div key={p.id} onClick={() => openModal(p)} className="fn-zoom" style={{ cursor:"pointer", flex:"0 0 auto", width: isMobile ? "62vw" : 220, scrollSnapAlign:"start" }}>
+                        <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:S, overflow:"hidden" }}>
+                          {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 62vw, 220px" className="fn-zoom-img" style={{ objectFit:"cover" }} />}
+                          {pct && <span style={{ position:"absolute", top:10, left:10, background:G, color:BG, fontSize:10, fontWeight:800, letterSpacing:2, padding:"4px 10px" }}>-{pct}%</span>}
+                        </div>
+                        <div style={{ padding:"10px 0 0" }}>
+                          <p style={{ margin:"0 0 4px", fontSize:12, color:ofertasText, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
+                          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                            <span style={{ fontSize:14, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                            {p.comparePrice && p.comparePrice > p.price && <span style={{ fontSize:12, color:ofertasMid, textDecoration:"line-through" }}>{fmt(p.comparePrice)}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {ofertasCanLeft && (
+                  <button onClick={() => scrollOfertas(-1)} aria-label="Anterior" style={{ position:"absolute", left:0, top:"38%", transform:"translateY(-50%)", background:ofertasBg, border:`1px solid rgba(201,168,76,0.3)`, color:G, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10 }}>
+                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                )}
+                {ofertasCanRight && (
+                  <button onClick={() => scrollOfertas(1)} aria-label="Siguiente" style={{ position:"absolute", right:0, top:"38%", transform:"translateY(-50%)", background:ofertasBg, border:`1px solid rgba(201,168,76,0.3)`, color:G, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10 }}>
+                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+                )}
+              </div>
+              {hasMore && (
+                <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "0 16px" : "0 32px", textAlign:"center", marginTop:32 }}>
+                  <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&oferta=true`; }}
+                    style={{ background:"none", border:`1px solid rgba(201,168,76,0.4)`, color:G, padding:"12px 32px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="ofertasCta" label="Botón ver todas las ofertas">Ver todas las ofertas</EditableZone></button>
+                </div>
+              )}
+            </section>
+          );
+        })()}
+      </SectionBlock>
+
+      {/* ── LO MÁS VISTO ───────────────────────────────────── */}
+      <SectionBlock id="fn-masvisto" label="Lo más visto" isPreview={isPreview} defaultOrder={FN_SECTION_IDS}>
+        {(() => {
+          const featured = products.filter(p => p.featured);
+          const pool = featured.length > 0 ? featured : products;
+          const displayList = pool.slice(0, 8);
+          const hasMore = pool.length > 8;
+          if (displayList.length === 0) return null;
+          return (
+            <section data-reveal style={{ position:"relative", background:masVistoBg, padding: isMobile ? "48px 16px" : "80px 32px", borderTop:`1px solid rgba(201,168,76,0.1)` }}>
+              <EditableSectionBg field="bgMasVisto" label="Fondo lo más visto" />
+              <div style={{ maxWidth:1280, margin:"0 auto" }}>
+                <div style={{ marginBottom:40 }}>
+                  <p style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", margin:"0 0 8px" }}><EditableZone field="masVistoKicker" label="Texto sobre Lo más visto">Tendencia</EditableZone></p>
+                  <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,3vw,36px)", margin:0, color:masVistoText }}><EditableZone field="masVistoTitle" label="Título Lo más visto">Lo más visto</EditableZone></h2>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:16 }}>
+                  {displayList.map((p, idx) => (
+                    <div key={p.id} onClick={() => openModal(p)} className="fn-zoom" style={{ cursor:"pointer" }}>
+                      <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:S, overflow:"hidden" }}>
+                        {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="fn-zoom-img" style={{ objectFit:"cover" }} />}
+                        <span style={{ position:"absolute", top:10, left:10, background:"rgba(10,10,10,0.8)", color:G, fontSize:10, fontWeight:800, padding:"4px 10px", letterSpacing:2 }}>#{idx + 1}</span>
+                      </div>
+                      <div style={{ padding:"10px 0 0" }}>
+                        <p style={{ margin:"0 0 4px", fontSize:12, color:masVistoText, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
+                        <span style={{ fontSize:14, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {hasMore && (
+                  <div style={{ textAlign:"center", marginTop:32 }}>
+                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&destacado=true`; }}
+                      style={{ background:"none", border:`1px solid rgba(201,168,76,0.4)`, color:G, padding:"12px 32px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })()}
+      </SectionBlock>
+
+      <SectionBlock id="fn-nosotros" label="Nuestra historia" isPreview={isPreview} defaultOrder={FN_SECTION_IDS}>
       {/* ── NOSOTROS ───────────────────────────────────────── */}
       <section id="nosotros" data-reveal style={{ borderTop:`1px solid rgba(201,168,76,0.1)` }}>
         <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
           <div style={{ position:"relative", minHeight: isMobile ? 280 : 560, overflow:"hidden" }}>
-            <img src={nosotrosImageUrl} alt="Nuestra historia" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${nosotrosPosX}% ${nosotrosPosY}%`, display:"block" }}/>
+            <FadeImage src={nosotrosImageUrl} alt="Nuestra historia" fill sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit:"cover", objectPosition:`${nosotrosPosX}% ${nosotrosPosY}%` }}/>
             <BgDragHandle imgKey="nosotrosImage" />
             <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
             {(() => { const ov = storeConfig?.imageOverrides?.["nosotrosImage"]; if (ov?.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov?.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.25})` : `rgba(10,10,10,${ov?.overlayOpacity ?? 0.25})` }} />; })()}
@@ -960,7 +1137,9 @@ export default function FashionNoir() {
           </div>
         </div>
       </section>
+      </SectionBlock>
 
+      <SectionBlock id="fn-contacto" label="Contacto" isPreview={isPreview} defaultOrder={FN_SECTION_IDS}>
       {/* ── CONTACTO ───────────────────────────────────────── */}
       <section id="contacto" data-reveal style={{ position:"relative", borderTop:`1px solid rgba(201,168,76,0.1)`, color:contactoText, ...(contactoBgImg?.url ? { backgroundImage:`url(${contactoBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${contactoBgImg.posX ?? 50}% ${contactoBgImg.posY ?? 50}%` } : { background:contactoBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
@@ -1014,6 +1193,8 @@ export default function FashionNoir() {
           )}
         </div>
       </section>
+      </SectionBlock>
+      </div>
 
       {/* ── FOOTER ─────────────────────────────────────────── */}
       <footer style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, marginTop:0, position:"relative", color:footerText, ...(footerBgImg?.url ? { backgroundImage:`url(${footerBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${footerBgImg.posX ?? 50}% ${footerBgImg.posY ?? 50}%` } : { background:footerBg }) }}>
@@ -1032,6 +1213,7 @@ export default function FashionNoir() {
             <div style={{ display:"flex", gap:12, marginTop:24 }}>
               {([["IG","instagram"],["FB","facebook"],["TK","tiktok"],["YT","youtube"]] as const).map(([label, key]) => {
                 const url = storeConfig?.socialLinks?.[key];
+                if (!isPreview && !url) return null;
                 return (
                   <button key={label}
                     onClick={() => url && window.open(url, "_blank")}
@@ -1117,7 +1299,7 @@ export default function FashionNoir() {
           </div>
         ) : (
           /* ── DESKTOP: fila izq/der original ── */
-          <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:24, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
+          <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:24, paddingLeft: hasWA ? 110 : 0, paddingRight:110, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"0 20px" }}>
               {[
                 { label: "Política de devoluciones", tipo: "devoluciones" },
@@ -1177,10 +1359,12 @@ export default function FashionNoir() {
             <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
             <div>
               {/* Imagen principal con flechas */}
-              <div style={{ position:"relative" }} {...imgSwipe}>
-                <img src={modalProduct.images[modalImg]} alt="" style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block", cursor:"zoom-in" }}
-                  onError={e => { e.currentTarget.style.opacity="0"; }}
-                  onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
+              <div style={{ position:"relative", width:"100%", aspectRatio:"3/4" }} {...imgSwipe}>
+                {modalProduct.images[modalImg] && (
+                  <FadeImage src={modalProduct.images[modalImg]} alt="" fill sizes="(max-width: 768px) 100vw, 480px" style={{ objectFit:"cover", cursor:"zoom-in" }}
+                    onError={e => { e.currentTarget.style.opacity="0"; }}
+                    onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
+                )}
                 {modalProduct.images.length > 1 && (
                   <>
                     <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
@@ -1206,8 +1390,8 @@ export default function FashionNoir() {
                 <div style={{ display:"flex", gap:8, padding:"12px 16px", background:"#0d0d0d", overflowX:"auto" }}>
                   {modalProduct.images.map((img, i) => (
                     <button key={i} onClick={() => setModalImg(i)}
-                      style={{ width:56, height:56, flexShrink:0, padding:2, border: i===modalImg ? `2px solid ${G}` : "2px solid transparent", background:"none", cursor:"pointer", transition:"border-color 0.2s" }}>
-                      <img src={img} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
+                      style={{ position:"relative", width:56, height:56, flexShrink:0, padding:2, border: i===modalImg ? `2px solid ${G}` : "2px solid transparent", background:"none", cursor:"pointer", transition:"border-color 0.2s" }}>
+                      <FadeImage src={img} alt="" fill sizes="56px" style={{ objectFit:"cover" }}
                         onError={e => { e.currentTarget.style.opacity="0.3"; }}/>
                     </button>
                   ))}
@@ -1242,34 +1426,72 @@ export default function FashionNoir() {
               </div>
               <p style={{ fontSize:13, opacity:0.58, lineHeight:1.75, borderTop:`1px solid rgba(240,235,227,0.08)`, paddingTop:16 }}>{modalProduct.description}</p>
 
+              {(() => {
+                const attrs = modalProduct.attributes ?? [];
+                const condicionAttr = attrs.find(a => a.key === "Condición");
+                const serviciosAttr = attrs.find(a => a.key === "Servicios");
+                const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
+                let servicios: string[] = [];
+                if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
+                if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
+                return (
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {condicionAttr && (
+                      <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:700, color:G, border:`1px solid ${G}`, padding:"4px 10px" }}>{condicionAttr.value}</span>
+                    )}
+                    {otherAttrs.length > 0 && (
+                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                        {otherAttrs.map(a => (
+                          <p key={a.key} style={{ fontSize:12, opacity:0.6, margin:0 }}><span style={{ opacity:0.8 }}>{a.key}:</span> {a.value}</p>
+                        ))}
+                      </div>
+                    )}
+                    {servicios.length > 0 && (
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                        {servicios.map(k => (
+                          <span key={k} style={{ fontSize:10, letterSpacing:1, padding:"4px 10px", border:`1px solid rgba(201,168,76,0.3)`, color:G }}>✓ {k}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div>
                 <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:10, opacity:0.6 }}>Color: <strong style={{ color:T, opacity:1 }}>{selectedColor}</strong></p>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                  {modalProduct.colors.map(color => (
-                    <button key={color} onClick={() => setSelectedColor(color)}
-                      style={{ padding:"7px 16px", fontSize:11, border: selectedColor===color ? `1px solid ${G}` : "1px solid rgba(240,235,227,0.18)", background: selectedColor===color ? "rgba(201,168,76,0.12)" : "transparent", color:T, cursor:"pointer", transition:"all 0.2s" }}>
-                      {color}
-                    </button>
-                  ))}
+                  {modalProduct.colors.map(color => {
+                    const swatch = colorToSwatch(color);
+                    return (
+                      <button key={color} onClick={() => setSelectedColor(color)}
+                        style={{ display:"flex", alignItems:"center", gap:7, padding:"7px 16px", fontSize:11, border: selectedColor===color ? `1px solid ${G}` : "1px solid rgba(240,235,227,0.18)", background: selectedColor===color ? "rgba(201,168,76,0.12)" : "transparent", color:T, cursor:"pointer", transition:"all 0.2s" }}>
+                        {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid rgba(240,235,227,0.3)", flexShrink:0 }} />}
+                        {color}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               <div>
                 <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:10, opacity:0.6 }}>Talle: <strong style={{ color:T, opacity:1 }}>{selectedSize}</strong></p>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                  {modalProduct.sizes.map(size => (
-                    <button key={size} onClick={() => setSelectedSize(size)}
-                      style={{ width:46, height:46, fontSize:12, fontWeight:600, border: selectedSize===size ? `1px solid ${G}` : "1px solid rgba(240,235,227,0.18)", background: selectedSize===size ? "rgba(201,168,76,0.12)" : "transparent", color:T, cursor:"pointer", transition:"all 0.2s" }}>
-                      {size}
-                    </button>
-                  ))}
+                  {modalProduct.sizes.map(size => {
+                    const outOfStock = outOfStockSizes.has(size);
+                    return (
+                      <button key={size} onClick={() => setSelectedSize(size)}
+                        style={{ width:46, height:46, fontSize:12, fontWeight:600, border: selectedSize===size ? `1px solid ${G}` : "1px solid rgba(240,235,227,0.18)", background: selectedSize===size ? "rgba(201,168,76,0.12)" : "transparent", color:T, cursor:"pointer", transition:"all 0.2s", opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none" }}>
+                        {size}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               <div style={{ display:"flex", alignItems:"center", gap:16 }}>
                 <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.6, margin:0 }}>Cantidad</p>
                 <div style={{ display:"flex", alignItems:"center", border:`1px solid rgba(240,235,227,0.18)` }}>
-                  <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ width:38, height:38, background:"none", border:"none", color:T, fontSize:20, cursor:"pointer" }}>−</button>
+                  <button onClick={() => setQty(q => Math.max(isWholesale && modalProduct.cantMinMayorista ? modalProduct.cantMinMayorista : 1, q-1))} style={{ width:38, height:38, background:"none", border:"none", color:T, fontSize:20, cursor:"pointer" }}>−</button>
                   <span style={{ width:38, textAlign:"center", fontSize:14 }}>{qty}</span>
                   <button onClick={() => setQty(q => selectedVariantStock !== null ? Math.min(selectedVariantStock, q+1) : q+1)} style={{ width:38, height:38, background:"none", border:"none", color:T, fontSize:20, cursor:"pointer" }}>+</button>
                 </div>
@@ -1347,7 +1569,7 @@ export default function FashionNoir() {
                   <p style={{ fontSize:12, opacity:0.4 }}>Cargando...</p>
                 ) : reviews.length > 0 ? (
                   <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:20 }}>
-                    {reviews.map(r => (
+                    {reviews.slice(0, reviewsShown).map(r => (
                       <div key={r.id} style={{ borderBottom:`1px solid rgba(240,235,227,0.06)`, paddingBottom:14 }}>
                         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
                           <span style={{ fontSize:12, fontWeight:600, color:T }}>{r.reviewer}</span>
@@ -1356,6 +1578,11 @@ export default function FashionNoir() {
                         {r.comment && <p style={{ fontSize:12, opacity:0.6, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
                       </div>
                     ))}
+                    {reviews.length > reviewsShown && (
+                      <button onClick={() => setReviewsShown(n => n + 10)} style={{ alignSelf:"flex-start", background:"none", border:"none", color:G, fontSize:11, fontWeight:700, letterSpacing:1, cursor:"pointer", padding:0, textDecoration:"underline" }}>
+                        Ver más reseñas ({reviews.length - reviewsShown})
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <p style={{ fontSize:12, opacity:0.35, marginBottom:16 }}>Sé el primero en dejar una reseña.</p>
@@ -1391,19 +1618,16 @@ export default function FashionNoir() {
               </div>
             </div>
             {(() => {
-              const others = products.filter(p => p.id !== modalProduct.id);
-              const sameSub = modalProduct.subcategory ? others.filter(p => p.subcategory === modalProduct.subcategory) : [];
-              const sameCat = others.filter(p => p.category === modalProduct.category && !sameSub.includes(p));
-              const rest = others.filter(p => !sameSub.includes(p) && !sameCat.includes(p));
-              const similar = [...sameSub, ...sameCat, ...rest].slice(0, 4);
-              if (similar.length === 0) return null;
+              if (similarProducts.length === 0) return null;
               return (
                 <div style={{ gridColumn: isMobile ? undefined : "1 / -1", padding: isMobile ? "20px 20px 28px" : "0 36px 36px", borderTop:"1px solid rgba(240,235,227,0.08)", paddingTop:24 }}>
                   <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.5, margin:"0 0 16px" }}>Productos similares</p>
                   <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
-                    {similar.map(p => (
+                    {similarProducts.map(p => (
                       <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
-                        <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} onError={e => { e.currentTarget.style.opacity="0"; }} />
+                        <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:S }}>
+                          {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} onError={e => { e.currentTarget.style.opacity="0"; }} />}
+                        </div>
                         <p style={{ margin:"8px 0 2px", fontSize:12, color:T, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
                         <p style={{ margin:0, fontSize:13, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
                       </div>
@@ -1417,289 +1641,8 @@ export default function FashionNoir() {
         </div>
       )}
 
-      {/* ── CHECKOUT ───────────────────────────────────────── */}
-      {checkoutOpen && (
-        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20010 : 300, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
-          <div onClick={() => setCheckoutOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.72)", backdropFilter:"blur(6px)" }}/>
-          <div style={{ position:"relative", width:480, maxWidth:"100vw", height:"100vh", background:"#0e0e0e", display:"flex", flexDirection:"column", overflowY:"auto", borderLeft:`1px solid rgba(201,168,76,0.12)` }}>
-
-            {/* header */}
-            <div style={{ padding:"24px 28px 16px", borderBottom:`1px solid rgba(240,235,227,0.06)`, display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexShrink:0 }}>
-              <div>
-                <p style={{ fontFamily:"Georgia, serif", fontSize:20, margin:"0 0 4px", color:T }}>Checkout</p>
-                <p style={{ fontSize:11, opacity:0.35, margin:0, letterSpacing:1 }}>Pedido para Tiendaapps</p>
-              </div>
-              <button onClick={() => setCheckoutOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
-            </div>
-
-            {checkoutStatus === "done" ? (
-              <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:48, textAlign:"center" }}>
-                <div style={{ width:64, height:64, borderRadius:"50%", border:`2px solid ${G}`, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:24 }}>
-                  <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={G} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                </div>
-                <p style={{ fontFamily:"Georgia, serif", fontSize:24, color:T, marginBottom:12 }}>¡Pedido recibido!</p>
-                <p style={{ fontSize:13, opacity:0.5, lineHeight:1.8, marginBottom:16 }}>Te enviamos un email con el resumen. El vendedor te contactará para coordinar el envío.</p>
-                <p style={{ fontSize:11, opacity:0.35, lineHeight:1.7, marginBottom:32 }}>¿Algún inconveniente con tu pedido? Contactá directamente al vendedor. Tenés 10 días corridos para cancelar (Ley 24.240).</p>
-                <button onClick={() => { setCheckoutOpen(false); setCheckoutStatus("idle"); }}
-                  style={{ background:G, color:BG, border:"none", padding:"14px 36px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
-                  Seguir comprando
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handlePlaceOrder} style={{ flex:1, display:"flex", flexDirection:"column" }}>
-                <div style={{ flex:1, overflowY:"auto", padding:"24px 28px" }}>
-
-                  {/* resumen de items */}
-                  <div style={{ marginBottom:28 }}>
-                    {cartItems.map((item, idx) => (
-                      <div key={idx} style={{ display:"flex", gap:14, padding:"12px 0", borderBottom:`1px solid rgba(240,235,227,0.05)` }}>
-                        <img src={item.product.images[0]} alt="" style={{ width:56, height:74, objectFit:"cover", flexShrink:0 }}/>
-                        <div style={{ flex:1 }}>
-                          <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500, color:T }}>{item.product.name}</p>
-                          <p style={{ fontSize:11, opacity:0.4, margin:"0 0 6px" }}>Talle: {item.size} · Color: {item.color}</p>
-                          <p style={{ fontSize:13, color:G, fontWeight:700 }}>{fmt(item.product.price)}</p>
-                        </div>
-                        <div style={{ display:"flex", alignItems:"center", border:`1px solid rgba(240,235,227,0.13)`, height:28, flexShrink:0 }}>
-                          <button type="button" onClick={() => updateQty(idx,-1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>−</button>
-                          <span style={{ width:24, textAlign:"center", fontSize:13, color:T }}>{item.qty}</span>
-                          <button type="button" onClick={() => updateQty(idx,1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>+</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* datos del comprador */}
-                  <p style={{ fontSize:13, fontWeight:700, color:T, marginBottom:14, letterSpacing:1 }}>Datos del comprador</p>
-                  {([ ["nombre","Nombre y apellido","text"], ["email","Email","email"], ["telefono","Teléfono","tel"], ["direccion","Dirección","text"], ] as const).map(([field, ph, type]) => (
-                    <input key={field} required type={type} placeholder={ph}
-                      value={buyerForm[field]} onChange={e => setBuyerForm(f => ({...f, [field]:e.target.value}))}
-                      style={{ display:"block", width:"100%", marginBottom:10, background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box" }}
-                      onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
-                  ))}
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
-                    <input required placeholder="Ciudad"
-                      value={buyerForm.ciudad} onChange={e => setBuyerForm(f => ({...f, ciudad:e.target.value}))}
-                      style={{ background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box" }}
-                      onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
-                    <select required value={buyerForm.provincia} onChange={e => setBuyerForm(f => ({...f, provincia:e.target.value}))}
-                      style={{ background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box" }}>
-                      <option value="">Provincia...</option>
-                      {PROVINCIAS_ARGENTINA.map((p) => (
-                        <option key={p.code} value={p.code}>{p.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <input required placeholder="Código postal" value={buyerForm.cp} onChange={e => setBuyerForm(f => ({...f, cp:e.target.value}))}
-                    style={{ display:"block", width:"100%", marginBottom:10, background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box" }}
-                    onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
-                  <label style={{ display:"flex", alignItems:"center", gap:10, fontSize:12, opacity:0.5, cursor:"pointer", marginBottom:28 }}>
-                    <input type="checkbox" checked={rememberData} onChange={e => setRememberData(e.target.checked)} style={{ accentColor:G }}/>
-                    Recordar mis datos para la próxima compra
-                  </label>
-
-                  {/* envío */}
-                  <p style={{ fontSize:13, fontWeight:700, color:T, marginBottom:14, letterSpacing:1 }}>Envío</p>
-                  <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:28 }}>
-                    {envioOptions.map(opt => (
-                      <label key={opt.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", border:`1px solid ${envioId===opt.id ? G : "rgba(240,235,227,0.1)"}`, cursor:"pointer", transition:"border-color 0.2s" }}>
-                        <span style={{ display:"flex", alignItems:"center", gap:12 }}>
-                          <input type="radio" name="envio" value={opt.id} checked={envioId===opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor:G }}/>
-                          <span style={{ fontSize:13, color:T }}>{opt.label}</span>
-                        </span>
-                        <span style={{ fontSize:13, fontWeight:700, color:(opt.isPickup||(!opt.coordinar&&!opt.liveQuote&&opt.price===0))?G:T }}>{opt.liveQuote ? fmtLiveQuote(opt.id) : fmtEnvioPrice(opt,fmt)}</span>
-                      </label>
-                    ))}
-                  </div>
-
-                  {/* pago */}
-                  <p style={{ fontSize:13, fontWeight:700, color:T, marginBottom:14, letterSpacing:1 }}>Pago</p>
-                  <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:28 }}>
-                    {pagoOptions.map(opt => (
-                      <label key={opt.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", border:`1px solid ${pagoId===opt.id ? G : "rgba(240,235,227,0.1)"}`, cursor:"pointer", transition:"border-color 0.2s" }}>
-                        <input type="radio" name="pago" value={opt.id} checked={pagoId===opt.id} onChange={() => setPagoId(opt.id)} style={{ accentColor:G }}/>
-                        <span style={{ fontSize:13, color:T }}>{opt.label}</span>
-                      </label>
-                    ))}
-                  </div>
-
-                  {/* notas */}
-                  <textarea placeholder="Notas para la tienda" rows={3} value={notas} onChange={e => setNotas(e.target.value)}
-                    style={{ display:"block", width:"100%", marginBottom:20, background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"11px 14px", fontSize:13, outline:"none", resize:"vertical", fontFamily:"inherit", boxSizing:"border-box" }}
-                    onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
-
-                  {/* cupón */}
-                  <div style={{ display:"flex", gap:0, marginBottom:28 }}>
-                    <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
-                      style={{ flex:1, background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, borderRight:"none", color:T, padding:"11px 14px", fontSize:11, letterSpacing:2, outline:"none" }}
-                      onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor="rgba(201,168,76,0.15)")}/>
-                    <button type="button" onClick={handleApplyCoupon} style={{ background:"transparent", border:`1px solid rgba(201,168,76,0.15)`, color:G, padding:"11px 18px", fontSize:11, letterSpacing:2, cursor:"pointer" }}>Aplicar</button>
-                  </div>
-                  {couponError && <p style={{ fontSize:11, color:"#f87171", marginBottom:8, marginTop:-20 }}>{couponError}</p>}
-                  {appliedCoupon && (
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"8px 12px", background:"rgba(201,168,76,0.08)", border:`1px solid rgba(201,168,76,0.2)` }}>
-                      <span style={{ fontSize:12, color:G }}>Cupón {appliedCoupon.code} aplicado</span>
-                      <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background:"none", border:"none", color:"#666", cursor:"pointer", fontSize:12 }}>✕</button>
-                    </div>
-                  )}
-
-                  {/* resumen de totales */}
-                  <div style={{ borderTop:`1px solid rgba(240,235,227,0.07)`, paddingTop:20 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
-                      <span style={{ fontSize:13, opacity:0.55 }}>Subtotal</span>
-                      <span style={{ fontSize:13, opacity:0.55 }}>{fmt(cartTotal)}</span>
-                    </div>
-                    {couponDiscount > 0 && (
-                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
-                        <span style={{ fontSize:13, color:G }}>Descuento cupón</span>
-                        <span style={{ fontSize:13, color:G }}>-{fmt(couponDiscount)}</span>
-                      </div>
-                    )}
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:16 }}>
-                      <span style={{ fontSize:13, opacity:0.55 }}>Envío</span>
-                      <span style={{ fontSize:13, opacity:0.55 }}>{envioCoordinar?"A coordinar":envioPrice===0?"Gratis":fmt(envioPrice)}</span>
-                    </div>
-                    <div style={{ display:"flex", justifyContent:"space-between" }}>
-                      <span style={{ fontSize:16, fontWeight:700, color:T }}>Total</span>
-                      <span style={{ fontSize:20, fontWeight:800, color:G }}>{fmt(orderTotal)}</span>
-                    </div>
-                  </div>
-
-                  {/* donación opcional a la Canasta Solidaria — pago aparte, no se suma al total. Solo se muestra si hay una campaña ACTIVE recibiendo donaciones. */}
-                  {canastaDisponible && (
-                  <div style={{ marginTop:20, paddingTop:16, borderTop:`1px solid rgba(240,235,227,0.07)` }}>
-                    <label style={{ display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
-                      <span style={{ fontSize:13, color:T, display:"flex", alignItems:"center", gap:6 }}><HandHeart size={16} style={{ color:G }} /> ¿Donar?</span>
-                      <input type="checkbox" checked={donationEnabled} onChange={e => setDonationEnabled(e.target.checked)} style={{ accentColor:G }} />
-                    </label>
-                    <p style={{ fontSize:10, opacity:0.5, marginTop:6, lineHeight:1.5 }}>
-                      Sumá un aporte aparte para completar una canasta de alimentos para un vecino — se paga por separado, no afecta tu compra.{" "}
-                      <a href="/comunidad/campana" target="_blank" rel="noopener" style={{ color:G, textDecoration:"underline" }}>¿Cómo funciona?</a>
-                    </p>
-                    {donationEnabled && (
-                      <div style={{ marginTop:10 }}>
-                        <input
-                          type="number"
-                          min={1000}
-                          value={donationAmount}
-                          onChange={e => setDonationAmount(Number(e.target.value) || 0)}
-                          style={{ width:"100%", background:"#171717", border:`1px solid rgba(201,168,76,0.15)`, color:T, padding:"10px 14px", fontSize:13, outline:"none" }}
-                        />
-                        <p style={{ fontSize:10, opacity:0.5, marginTop:6, lineHeight:1.5 }}>Mínimo $1.000.</p>
-                      </div>
-                    )}
-                  </div>
-                  )}
-
-                  {checkoutError && <p style={{ fontSize:12, color:"#f87171", marginTop:12 }}>{checkoutError}</p>}
-                </div>
-
-                {/* botón crear pedido */}
-                <div style={{ padding:"16px 28px 28px", borderTop:`1px solid rgba(240,235,227,0.06)`, flexShrink:0 }}>
-                  {/* seguridad */}
-                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, padding:"10px 14px", border:`1px solid rgba(240,235,227,0.08)`, borderRadius:4 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color:"#4ade80", flexShrink:0 }}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    <span style={{ fontSize:11, color:"rgba(240,235,227,0.45)", lineHeight:1.5 }}>
-                      Pago seguro procesado por <strong style={{ color:"rgba(240,235,227,0.7)" }}>MercadoPago</strong> · SSL cifrado
-                    </span>
-                  </div>
-                  <label style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:14, cursor:"pointer" }}>
-                    <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} style={{ marginTop:2, accentColor:G, flexShrink:0 }} />
-                    <span style={{ fontSize:11, color:"rgba(240,235,227,0.55)", lineHeight:1.6 }}>
-                      Acepto los{" "}
-                      <a href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=terminos`} target="_blank" rel="noopener" style={{ color:G, textDecoration:"underline" }}>Términos y Condiciones</a>
-                      {" "}de la tienda y la{" "}
-                      <a href="/privacidad?role=buyer" target="_blank" rel="noopener" style={{ color:G, textDecoration:"underline" }}>Política de Privacidad</a>
-                    </span>
-                  </label>
-                  <button type="submit" disabled={checkoutStatus==="placing" || !acceptedTerms}
-                    style={{ width:"100%", background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: (!acceptedTerms || checkoutStatus==="placing") ? "not-allowed" : "pointer", opacity: (!acceptedTerms || checkoutStatus==="placing") ? 0.45 : 1, transition:"opacity 0.2s" }}>
-                    {checkoutStatus==="placing" ? "Procesando..." : "Crear pedido"}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── CARRITO ────────────────────────────────────────── */}
-      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 150, pointerEvents: cartOpen ? "auto" : "none", overflow:"hidden" }}>
-        <div onClick={() => setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.6)", opacity: cartOpen ? 1 : 0, transition:"opacity 0.3s" }}/>
-        <div style={{ position:"absolute", top:0, right:0, bottom:0, left: isMobile ? 0 : "auto", width: isMobile ? "auto" : 420, background:S, transform: cartOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
-          <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid rgba(240,235,227,0.07)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <p style={{ fontFamily:"Georgia, serif", fontSize:18, margin:0 }}>Tu carrito <span style={{ fontSize:13, color:"#555" }}>({cartCount})</span></p>
-            <button onClick={() => setCartOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
-          </div>
-          <div style={{ flex:1, overflowY:"auto", padding:"16px 24px" }}>
-            {cartItems.length === 0
-              ? <div style={{ textAlign:"center", padding:"60px 0", opacity:0.35 }}><p style={{ fontSize:36, marginBottom:12 }}>🛍️</p><p style={{ fontSize:13, lineHeight:1.8 }}>Tu carrito está vacío.<br/>Explorá la colección.</p></div>
-              : cartItems.map((item, idx) => (
-                <div key={idx} style={{ display:"flex", gap:14, padding:"16px 0", borderBottom:`1px solid rgba(240,235,227,0.06)` }}>
-                  <img src={item.product.images[0]} alt="" style={{ width:70, height:93, objectFit:"cover", flexShrink:0 }}/>
-                  <div style={{ flex:1 }}>
-                    <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500 }}>{item.product.name}</p>
-                    <p style={{ fontSize:11, opacity:0.45, margin:"0 0 10px" }}>{item.color} · Talle {item.size}</p>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <div style={{ display:"flex", alignItems:"center", border:`1px solid rgba(240,235,227,0.13)` }}>
-                        <button onClick={() => updateQty(idx,-1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>−</button>
-                        <span style={{ width:24, textAlign:"center", fontSize:13 }}>{item.qty}</span>
-                        <button onClick={() => updateQty(idx,1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>+</button>
-                      </div>
-                      <span style={{ color:G, fontWeight:700, fontSize:14 }}>{fmt(item.product.price * item.qty)}</span>
-                    </div>
-                  </div>
-                  <button onClick={() => removeFromCart(idx)} style={{ background:"none", border:"none", color:"#444", cursor:"pointer", fontSize:18, alignSelf:"flex-start", transition:"color 0.2s" }}
-                    onMouseEnter={e => (e.currentTarget.style.color="#f0ebe3")}
-                    onMouseLeave={e => (e.currentTarget.style.color="#444")}>×</button>
-                </div>
-              ))
-            }
-          </div>
-          {cartItems.length > 0 && (
-            <div style={{ padding:"16px 24px 32px", borderTop:`1px solid rgba(240,235,227,0.07)` }}>
-              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                <span style={{ fontSize:11, opacity:0.5, letterSpacing:2, textTransform:"uppercase" }}>Subtotal</span>
-                <span style={{ fontSize:11, opacity:0.5 }}>{cartCount} {cartCount === 1 ? "pieza" : "piezas"}</span>
-              </div>
-              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:24 }}>
-                <span style={{ fontSize:13, opacity:0.6 }}>Total</span>
-                <span style={{ fontSize:22, fontWeight:700, color:G }}>{fmt(cartTotal)}</span>
-              </div>
-              {wholesaleWarnings.length > 0 && (
-                <div style={{ marginBottom:14, padding:"10px 14px", background:"rgba(234,179,8,0.1)", borderLeft:"3px solid #eab308", borderRadius:"0 6px 6px 0" }}>
-                  <p style={{ fontSize:11, margin:0, color:"#eab308", fontWeight:600, letterSpacing:0.5 }}>Cantidad mínima no alcanzada</p>
-                  {wholesaleWarnings.map((item, i) => (
-                    <p key={i} style={{ fontSize:10, margin:"4px 0 0", color:"rgba(240,235,227,0.55)" }}>
-                      {item.product.name}: mín. {item.product.cantMinMayorista} uds.
-                    </p>
-                  ))}
-                </div>
-              )}
-              <button onClick={blockBuy ? undefined : openCheckout} disabled={blockBuy} title={isOwner ? "No podés comprar en tu propia tienda" : isPreview ? "No disponible en modo edición" : undefined} style={{ width:"100%", background: blockBuy ? "rgba(201,168,76,0.25)" : G, color: blockBuy ? "rgba(240,235,227,0.35)" : BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: blockBuy ? "not-allowed" : "pointer", marginBottom:10 }}>
-                {isOwner ? "No disponible para el dueño" : isPreview ? "Solo en la tienda real" : "Finalizar Compra"}
-              </button>
-              <button onClick={() => setCartOpen(false)} style={{ width:"100%", background:"transparent", color:T, border:`1px solid rgba(240,235,227,0.15)`, padding:"12px", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
-                Seguir Comprando
-              </button>
-              {storeConfig?.whatsapp?.enabled && storeConfig.whatsapp.number && (
-                <a
-                  href={`https://wa.me/${storeConfig.whatsapp.number.replace(/\D/g,"")}${storeConfig.whatsapp.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`}
-                  target="_blank" rel="noreferrer"
-                  style={{ display:"flex", alignItems:"center", gap:10, marginTop:14, padding:"11px 14px", background:"rgba(37,211,102,0.08)", borderRadius:6, textDecoration:"none", transition:"background 0.2s" }}
-                  onMouseEnter={e => (e.currentTarget.style.background="rgba(37,211,102,0.15)")}
-                  onMouseLeave={e => (e.currentTarget.style.background="rgba(37,211,102,0.08)")}
-                >
-                  <svg width={18} height={18} viewBox="0 0 24 24" fill="#25D366" style={{ flexShrink:0 }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                  <div>
-                    <p style={{ fontSize:10, margin:0, color:"rgba(240,235,227,0.45)", letterSpacing:1 }}>¿TENÉS DUDAS?</p>
-                    <p style={{ fontSize:12, margin:0, color:"#25D366", fontWeight:600 }}>Consultá por WhatsApp</p>
-                  </div>
-                </a>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} storeSlug={storeConfig?.slug ?? ""} />
+      <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={storeConfig?.whatsapp} />
 
       {/* ── FAVORITES DRAWER ───────────────────────────────── */}
       <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
@@ -1717,7 +1660,7 @@ export default function FashionNoir() {
                 </div>
               : favoriteProducts.map(product => (
                 <div key={product.id} style={{ display:"flex", gap:14, padding:"16px 0", borderBottom:`1px solid rgba(240,235,227,0.06)` }}>
-                  <img src={product.images[0]} alt="" style={{ width:70, height:93, objectFit:"cover", flexShrink:0 }}/>
+                  {product.images[0] ? <FadeImage src={product.images[0]} alt={product.name} width={70} height={93} style={{ objectFit:"cover", flexShrink:0 }}/> : <div style={{ width:70, height:93, flexShrink:0, background:S }}/>}
                   <div style={{ flex:1 }}>
                     <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500 }}>{product.name}</p>
                     <p style={{ fontSize:13, color:G, fontWeight:700, margin:"0 0 10px" }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
@@ -1743,7 +1686,7 @@ export default function FashionNoir() {
 
       {/* ── LIGHTBOX ───────────────────────────────────────── */}
       {lightboxSrc && (
-        <div style={{ position:"fixed", inset:0, zIndex:700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
@@ -1751,25 +1694,37 @@ export default function FashionNoir() {
       )}
 
       {/* ── FLOATING CART BUTTON ────────────────────────────── */}
-      <button onClick={() => { setCartOpen(true); setFavoritesOpen(false); }}
-        style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:500, width:52, height:52, borderRadius:"50%", background:G, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(0,0,0,0.3)", transition:"transform 0.2s" }}
-        onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
-        onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
-        <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={getContrastColor(G)==="light"?"#fff":"#0a0a0a"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-        {cartCount > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:"#e53e3e", color:"#fff", borderRadius:"50%", width:20, height:20, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
-      </button>
+      {(() => {
+        const cartIconIdx = (Math.abs(parseInt(textOverrides["cartIcon"]?.text ?? "0") || 0)) % CART_ICON_OPTIONS.length;
+        const nextCartIconIdx = (cartIconIdx + 1) % CART_ICON_OPTIONS.length;
+        return (
+          <div onClick={() => { if (!editMode) { setCartOpen(true); setFavoritesOpen(false); } }}
+            role="button" tabIndex={0} aria-label="Carrito"
+            onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && !editMode) { e.preventDefault(); setCartOpen(true); setFavoritesOpen(false); } }}
+            style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:500, width:52, height:52, borderRadius:"50%", background:G, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 18px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3)", transition:"transform 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
+            onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
+            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={getContrastColor(G)==="light"?"#fff":"#0a0a0a"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{CART_ICON_OPTIONS[cartIconIdx]}</svg>
+            {cartCount > 0 && !editMode && <span style={{ position:"absolute", top:-4, right:-4, background:"#e53e3e", color:"#fff", borderRadius:"50%", width:20, height:20, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
+            {editMode && (
+              <button onClick={e => { e.stopPropagation(); setOverride("cartIcon", { text: String(nextCartIconIdx) }); }} title="Cambiar ícono del carrito"
+                style={{ position:"absolute", inset:0, background:"rgba(99,102,241,0.9)", border:"none", borderRadius:"50%", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:18, opacity:0, transition:"opacity 0.15s" }}
+                onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── WHATSAPP BUTTON ────────────────────────────────── */}
       {(!storeConfig || storeConfig.whatsapp.enabled) && (
-        <EditableFixed field="whatsapp" label="WhatsApp" bottom={24} right={24}>
-          <button
-            onClick={() => window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`, "_blank")}
-            style={{ position:"fixed", bottom:24, right:24, zIndex:500, width:52, height:52, borderRadius:"50%", background:"#25D366", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(37,211,102,0.4)", transition:"transform 0.2s" }}
-            onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
-            onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
-            <svg width={28} height={28} viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          </button>
-        </EditableFixed>
+        <button
+          className="fn-wa-fab"
+          onClick={() => { if (editMode) return; window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`, "_blank"); }}
+          style={{ position:"fixed", bottom:24, right:24, zIndex:500, width:52, height:52, borderRadius:"50%", border:"none", cursor: editMode ? "default" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"transform 0.2s" }}
+          onMouseEnter={e => { if (!editMode) e.currentTarget.style.transform="scale(1.1)"; }}
+          onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
+          <svg width={28} height={28} viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </button>
       )}
 
     </div>

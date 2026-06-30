@@ -165,6 +165,8 @@ export type StoreConfig = {
     shipping?: string;
     terms?: string;
   };
+  hiddenSections?: string[];
+  sectionOrder?: string[];
 };
 
 export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: string }> = {

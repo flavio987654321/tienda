@@ -14,6 +14,10 @@ type EditContextType = {
   sectionColors: Record<string, string>;
   setSectionColor: (field: string, color: string) => void;
   imageLoading: Record<string, boolean>;
+  hiddenSections: string[];
+  toggleHiddenSection: (id: string) => void;
+  sectionOrder: string[];
+  moveSection: (id: string, defaultOrder: string[], direction: "up" | "down") => void;
 };
 
 export const EditContext = createContext<EditContextType>({
@@ -28,6 +32,10 @@ export const EditContext = createContext<EditContextType>({
   sectionColors: {},
   setSectionColor: () => {},
   imageLoading: {},
+  hiddenSections: [],
+  toggleHiddenSection: () => {},
+  sectionOrder: [],
+  moveSection: () => {},
 });
 
 export function getContrastColor(hex: string): "light" | "dark" {

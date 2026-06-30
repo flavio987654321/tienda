@@ -4,19 +4,32 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableFixed, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
-import { HandHeart } from "lucide-react";
-import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
+import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
+import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
+import { FadeImage } from "@/components/store/templates/shared/FadeImage";
+import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
+import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
+import { parseVariantAttrs } from "@/lib/variantAttrs";
+import { colorToSwatch } from "@/lib/colorSwatch";
+import { discountPercent } from "@/lib/discount";
 
 type Product = StorefrontProduct;
 
-const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
+/* ── Ícono de carrito flotante — variantes para elegir en modo edición ── */
+const CART_ICON_OPTIONS: React.ReactNode[] = [
+  <Fragment key="bag"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></Fragment>,
+  <Fragment key="cart"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></Fragment>,
+  <Fragment key="basket"><path d="M5 11 2 7h20l-3 4"/><path d="M4 11h16l-1.7 8.5a2 2 0 0 1-2 1.5H7.7a2 2 0 0 1-2-1.5L4 11Z"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></Fragment>,
+];
+
+const SIZE_ATTRS =["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
 const TESTIMONIALS = [
   { name:"Valentina R.", text:"La calidad es increíble, se nota que es para alto rendimiento. Volví a comprar dos veces este mes.", stars:5 },
@@ -63,6 +76,8 @@ const UP_STRIP_ICONS: React.ReactNode[][] = [
 
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
 
+const UP_SECTION_IDS = ["up-garantias", "up-banner", "up-categorias", "up-mayorista", "up-featured", "up-productos", "up-testimonios", "up-ofertas", "up-masvisto", "up-nosotros", "up-contacto"];
+
 export default function UrbanPulse() {
   const [scrolled,         setScrolled]         = useState(false);
   const [activeCategory,   setActiveCategory]   = useState("Todos");
@@ -76,6 +91,7 @@ export default function UrbanPulse() {
   const [mobileOpenCat,    setMobileOpenCat]    = useState<string | null>(null);
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews,        setReviews]        = useState<PReview[]>([]);
+  const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
@@ -106,7 +122,6 @@ export default function UrbanPulse() {
   const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const isPreview   = !!storeConfig?.previewFill;
   const isOwner     = !!storeConfig?.isOwner;
-  const blockBuy    = isPreview || isOwner;
   const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
   const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
@@ -155,6 +170,10 @@ export default function UrbanPulse() {
   const footerBgImg     = storeConfig?.imageOverrides?.["sectionbg_bgFooter"];
   const productosBgUp   = scu["bgProductos"]  ?? BG;
   const productosTextUp = getContrastColor(productosBgUp) === "light" ? WHITE : DARK;
+  const ofertasBgUp   = scu["bgOfertas"]  ?? DARK;
+  const ofertasTextUp = getContrastColor(ofertasBgUp) === "light" ? WHITE : DARK;
+  const masVistoBgUp   = scu["bgMasVisto"]  ?? DARK;
+  const masVistoTextUp = getContrastColor(masVistoBgUp) === "light" ? WHITE : DARK;
 
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
   const configMsgs = storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? [];
@@ -201,48 +220,27 @@ export default function UrbanPulse() {
     };
   }, [mobileMenuOpen]);
 
+  const cart = useCartLogic(storefront);
   const {
-    cartItems, cartOpen, setCartOpen,
+    setCartOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
     selectedSize, setSelectedSize, selectedColor, setSelectedColor,
-    qty, setQty,
-    checkoutOpen, setCheckoutOpen, checkoutStatus, checkoutError,
-    envioId, setEnvioId, pagoId, setPagoId,
-    coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
-    notas, setNotas, rememberData, setRememberData,
-    buyerForm, setBuyerForm,
+    qty, setQty, selectedVariantStock, outOfStockSizes,
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
-    cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
-    searchResults, favoriteProducts, wholesaleWarnings,
-    fmt, fmtEnvioPrice, fmtLiveQuote, showToast, openModal, addToCart, removeFromCart, updateQty,
-    openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
-    pagoOptions, acceptedTerms, setAcceptedTerms,
-    donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
-  } = useCartLogic(storefront);
+    cartCount,
+    searchResults, favoriteProducts,
+    fmt, showToast, openModal, addToCart,
+    handleContact, toggleFavorite,
+  } = cart;
+  const accentText = getContrastColor(ACC) === "light" ? DARK : "#fff";
+  const cartTheme: CartTheme = { BG:"#ffffff", S:BG, T:DARK, MID, border:"#e0e0e0", accent:ACC, accentText };
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
   );
-
-  const selectedVariantStock = useMemo(() => {
-    if (!modalProduct?.variants.length) return null;
-    const v = modalProduct.variants.find(v => {
-      try {
-        const a = JSON.parse(v.name);
-        if (a && typeof a === "object") {
-          const vals = Object.values(a).map((x) => String(x).toLowerCase());
-          const sizeOk  = !selectedSize  || vals.includes(selectedSize.toLowerCase());
-          const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
-          return sizeOk && colorOk;
-        }
-      } catch {}
-      return v.value.includes(selectedSize) && v.value.includes(selectedColor);
-    }) ?? (modalProduct.variants.length === 1 ? modalProduct.variants[0] : null);
-    return v?.stock ?? null;
-  }, [modalProduct, selectedSize, selectedColor]);
 
   function openInquiry(product: Product) {
     setModalProduct(null);
@@ -273,7 +271,7 @@ export default function UrbanPulse() {
   useEffect(() => {
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug) { setReviews([]); return; }
-    setReviewsLoading(true); setReviewDone(false); setReelIndex(0);
+    setReviewsLoading(true); setReviewDone(false); setReelIndex(0); setReviewsShown(5);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
     fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
       .then(r => r.ok ? r.json() : { reviews: [] })
@@ -291,15 +289,16 @@ export default function UrbanPulse() {
     );
     if (imgIdx !== -1) setModalImg(imgIdx);
     const colorVariants = modalProduct.variants.filter((v) => {
-      try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
+      const a = parseVariantAttrs(v.name);
+      return !!a && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase());
     });
     if (!colorVariants.length) return;
     const best = colorVariants.find((v) => v.stock > 0) ?? colorVariants[0];
-    try {
-      const a = JSON.parse(best.name);
-      const sizeKey = Object.keys(a).find((k: string) => SIZE_ATTRS.includes(k.toLowerCase()));
-      if (sizeKey && a[sizeKey] && a[sizeKey] !== selectedSize) setSelectedSize(a[sizeKey]);
-    } catch {}
+    const bestAttrs = parseVariantAttrs(best.name);
+    if (bestAttrs) {
+      const sizeKey = Object.keys(bestAttrs).find((k: string) => SIZE_ATTRS.includes(k.toLowerCase()));
+      if (sizeKey && bestAttrs[sizeKey] && bestAttrs[sizeKey] !== selectedSize) setSelectedSize(String(bestAttrs[sizeKey]));
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedColor, modalProduct?.id]);
 
@@ -308,29 +307,25 @@ export default function UrbanPulse() {
     if (!modalProduct || !selectedSize) return;
     if (selectedColor) {
       const hasCombo = modalProduct.variants.some((v) => {
-        try {
-          const a = JSON.parse(v.name);
-          if (typeof a !== "object") return false;
-          const vals = Object.values(a).map((x) => String(x).toLowerCase());
-          return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
-        } catch { return false; }
+        const a = parseVariantAttrs(v.name);
+        if (!a) return false;
+        const vals = Object.values(a).map((x) => String(x).toLowerCase());
+        return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
       });
       if (hasCombo) return;
     }
     const sizeVariants = modalProduct.variants.filter((v) => {
-      try {
-        const a = JSON.parse(v.name);
-        if (typeof a !== "object") return false;
-        return Object.entries(a).some(([k, val]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
-      } catch { return false; }
+      const a = parseVariantAttrs(v.name);
+      if (!a) return false;
+      return Object.entries(a).some(([k, val]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
     });
     if (!sizeVariants.length) return;
     const best = sizeVariants.find((v) => v.stock > 0) ?? sizeVariants[0];
-    try {
-      const a = JSON.parse(best.name);
-      const colorKey = Object.keys(a).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
-      if (colorKey && a[colorKey]) {
-        const newColor = String(a[colorKey]);
+    const bestAttrs = parseVariantAttrs(best.name);
+    if (bestAttrs) {
+      const colorKey = Object.keys(bestAttrs).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
+      if (colorKey && bestAttrs[colorKey]) {
+        const newColor = String(bestAttrs[colorKey]);
         if (newColor !== selectedColor) {
           setSelectedColor(newColor);
           const imgIdx = modalProduct.imageItems.findIndex(
@@ -339,9 +334,19 @@ export default function UrbanPulse() {
           if (imgIdx !== -1) setModalImg(imgIdx);
         }
       }
-    } catch {}
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSize, modalProduct?.id]);
+
+  // Al cambiar de imagen (flechas/miniaturas): sync color si esa foto pertenece a otra variante
+  useEffect(() => {
+    if (!modalProduct) return;
+    const img = modalProduct.imageItems[modalImg];
+    if (img?.variantValue && img.variantValue.toLowerCase() !== selectedColor?.toLowerCase()) {
+      setSelectedColor(img.variantValue);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalImg]);
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
@@ -376,13 +381,22 @@ export default function UrbanPulse() {
 
   const changeGender = (g: string | null) => { setActiveGender(g); setActiveCategory("Todos"); setVisibleCount(8); };
 
-  const allFiltered = products.filter(p => {
+  const allFiltered = useMemo(() => products.filter(p => {
     if (activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
     if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
     return true;
-  });
+  }), [products, activeGender, activeCategory]);
   const filtered    = allFiltered.slice(0, visibleCount);
   const featuredProduct  = products[7] ?? products[0] ?? null;
+
+  const similarProducts = useMemo(() => {
+    if (!modalProduct) return [];
+    const others = products.filter(p => p.id !== modalProduct.id);
+    const sameSub = modalProduct.subcategory ? others.filter(p => p.subcategory === modalProduct.subcategory) : [];
+    const sameCat = others.filter(p => p.category === modalProduct.category && !sameSub.includes(p));
+    const rest = others.filter(p => !sameSub.includes(p) && !sameCat.includes(p));
+    return [...sameSub, ...sameCat, ...rest].slice(0, 4);
+  }, [products, modalProduct]);
 
   const iconBtn = { background:"none", border:"none", cursor:"pointer", color:DARK, padding:6, display:"flex", alignItems:"center" } as const;
 
@@ -402,6 +416,11 @@ export default function UrbanPulse() {
           .up-prod:hover .up-prod-img { transform:scale(1.06); }
           .up-cat:hover img { transform:scale(1.08); }
         }
+        @keyframes up-wa-pulse { 0% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0.55); } 70% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 14px rgba(37,211,102,0); } 100% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0); } }
+        .up-wa-fab { background:linear-gradient(135deg,#2be374,#1fae57); animation:up-wa-pulse 2.4s ease-out infinite; }
+        .up-wa-fab:hover { animation-play-state:paused; }
+        .up-zoom-img { transition:transform 0.5s ease; }
+        .up-zoom:hover .up-zoom-img { transform:scale(1.06); }
       `}</style>
 
       {/* TOAST */}
@@ -452,29 +471,30 @@ export default function UrbanPulse() {
             {hoveredNavCat && (
               <>
               <div style={{ position:"absolute", top:"100%", left:0, right:0, height:12, zIndex:499 }} />
-              <div style={{ position:"absolute", top:"calc(100% + 12px)", left:0, background:WHITE, border:`2px solid ${DARK}`, minWidth:180, zIndex:500, padding:"6px 0", boxShadow:`4px 4px 0 ${DARK}` }}>
+              <div style={{ position:"absolute", top:"calc(100% + 12px)", left:0, background:WHITE, border:`2px solid ${DARK}`, zIndex:500, padding:16, boxShadow:`6px 6px 0 ${DARK}`, display:"grid", gridTemplateColumns:"repeat(2, 200px)", gap:10 }}>
                 {categoryList.map(cat => {
                   const subs = subcategoriesFor[cat] || [];
                   return (
-                    <div key={cat} style={{ position:"relative" }}
-                      onMouseEnter={() => setHoveredNavCat(cat)}
-                      onMouseLeave={() => setHoveredNavCat("__open__")}>
+                    <div key={cat} style={{ border:`2px solid ${DARK}`, padding:"10px 12px", background:"#f5f5f5" }}>
                       <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
-                        style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background: hoveredNavCat===cat ? "#f5f5f5" : "none", border:"none", color:DARK, padding:"9px 16px", fontSize:11, fontWeight:700, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+                        style={{ display:"block", width:"100%", background:ACC, border:`2px solid ${DARK}`, color:DARK, padding:"6px 8px", marginBottom:8, fontSize:11, fontWeight:800, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"transform 0.1s" }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = `2px 2px 0 ${DARK}`; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = "translate(0,0)"; e.currentTarget.style.boxShadow = "none"; }}>
                         {cat}
-                        {subs.length > 0 && <span style={{ opacity:0.5, fontSize:10 }}>›</span>}
                       </button>
-                      {subs.length > 0 && hoveredNavCat === cat && (
-                        <div style={{ position:"absolute", top:0, left:"100%", background:WHITE, border:`2px solid ${DARK}`, minWidth:160, padding:"6px 0", boxShadow:`4px 4px 0 ${DARK}`, zIndex:501 }}>
+                      {subs.length > 0 ? (
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                           {subs.map(sub => (
                             <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
-                              style={{ display:"block", width:"100%", background:"none", border:"none", color:DARK, padding:"8px 16px", fontSize:11, fontWeight:700, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase" }}
-                              onMouseEnter={e => (e.currentTarget.style.background = "#f5f5f5")}
-                              onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                              style={{ background:WHITE, border:`1.5px solid ${DARK}`, color:DARK, padding:"4px 8px", fontSize:9.5, fontWeight:700, textAlign:"left", cursor:"pointer", letterSpacing:0.5, textTransform:"uppercase" }}
+                              onMouseEnter={e => { e.currentTarget.style.background = ACC; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = WHITE; }}>
                               {sub}
                             </button>
                           ))}
                         </div>
+                      ) : (
+                        <p style={{ margin:0, fontSize:9.5, fontWeight:700, color:"#888", letterSpacing:0.5, textTransform:"uppercase" }}>Ver todo →</p>
                       )}
                     </div>
                   );
@@ -505,7 +525,7 @@ export default function UrbanPulse() {
           </button>
         </div>}
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-          <button onClick={() => setSearchOpen(true)} style={iconBtn}>
+          <button onClick={() => setSearchOpen(true)} aria-label="Buscar" style={iconBtn}>
             <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </button>
           {pushBell && storeConfig?.showPushBell && !isPreview && (
@@ -541,7 +561,7 @@ export default function UrbanPulse() {
               )}
             </>
           )}
-          <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); setCartOpen(false); }} style={{ ...iconBtn, position:"relative" }}>
+          <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); setCartOpen(false); }} aria-label="Favoritos" style={{ ...iconBtn, position:"relative" }}>
             <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? DARK : "none"} stroke={DARK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
             {favorites.length > 0 && <span style={{ position:"absolute", top:4, right:4, width:8, height:8, background:ACC, border:`2px solid ${DARK}`, borderRadius:"50%" }} />}
           </button>
@@ -667,8 +687,8 @@ export default function UrbanPulse() {
             )}
           </div>
         </div>
-        <div style={{ position:"relative", overflow:"hidden" }}>
-          <img src={storeConfig?.imageOverrides?.["heroImage"]?.url ?? "https://picsum.photos/seed/up_hero/800/900"} alt="Hero" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.["heroImage"]?.posX ?? 50}% ${storeConfig?.imageOverrides?.["heroImage"]?.posY ?? 50}%`, display:"block" }} />
+        <div style={{ position:"relative", width:"100%", height:"100%", overflow:"hidden" }}>
+          <FadeImage src={storeConfig?.imageOverrides?.["heroImage"]?.url ?? "https://picsum.photos/seed/up_hero/800/900"} alt="Hero" fill sizes="(max-width: 768px) 100vw, 45vw" style={{ objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.["heroImage"]?.posX ?? 50}% ${storeConfig?.imageOverrides?.["heroImage"]?.posY ?? 50}%` }} />
           <BgDragHandle imgKey="heroImage" />
           <EditableImageButton field="heroImage" label="Imagen hero" />
           {(() => { const ov = storeConfig?.imageOverrides?.["heroImage"]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
@@ -678,6 +698,8 @@ export default function UrbanPulse() {
         </div>
       </section>
 
+      <div style={{ display:"flex", flexDirection:"column" }}>
+      <SectionBlock id="up-garantias" label="Garantías" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
       {/* GARANTÍAS */}
       <section data-reveal style={{ background:garantiasUpBg, borderTop:`3px solid ${DARK}`, borderBottom:`3px solid ${DARK}`, position:"relative" }}>
         <EditableSectionBg field="bgGarantias" label="Fondo garantías" />
@@ -704,7 +726,26 @@ export default function UrbanPulse() {
           })}
         </div>
       </section>
+      </SectionBlock>
 
+      {/* BANNER HORIZONTAL */}
+      <SectionBlock id="up-banner" label="Banner horizontal" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
+        <PromoBannerCarousel
+          images={[storeConfig?.imageOverrides?.["promoBanner1"], storeConfig?.imageOverrides?.["promoBanner2"], storeConfig?.imageOverrides?.["promoBanner3"]]}
+          demoImages={[
+            "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1920&q=80",
+            "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1920&q=80",
+            "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80",
+          ]}
+          intervalMs={storeConfig?.bannerInterval ?? 4000}
+          editMode={editMode}
+          isPreview={isPreview}
+          accent={ACC}
+          bg={DARK}
+        />
+      </SectionBlock>
+
+      <SectionBlock id="up-categorias" label="Categorías" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
       {/* CATEGORY TILES */}
       <section data-reveal style={{ background:categoriesBgUp, position:"relative" }}>
         <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
@@ -725,8 +766,8 @@ export default function UrbanPulse() {
             { label:"Accesorios", cat:"Accesorios", img: storeConfig?.imageOverrides?.["catAccesorios"]?.url ?? "https://picsum.photos/seed/up_cat3/600/700", field:"catAccesorios" },
           ].map(c => (
             <div key={c.label} className="up-cat" onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(c.cat)}`; }}
-              style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", cursor:"pointer" }}>
-              <img src={c.img} alt={c.label} style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.[c.field]?.posX ?? 50}% ${storeConfig?.imageOverrides?.[c.field]?.posY ?? 50}%`, display:"block" }} />
+              style={{ position:"relative", width:"100%", aspectRatio:"3/4", overflow:"hidden", cursor:"pointer" }}>
+              <FadeImage src={c.img} alt={c.label} fill sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.[c.field]?.posX ?? 50}% ${storeConfig?.imageOverrides?.[c.field]?.posY ?? 50}%` }} />
               <BgDragHandle imgKey={c.field} />
               <EditableImageButton field={c.field} label={`Imagen ${c.label}`} />
               {(() => { const ov = storeConfig?.imageOverrides?.[c.field]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
@@ -740,8 +781,10 @@ export default function UrbanPulse() {
         </div>
         </div>
       </section>
+      </SectionBlock>
 
       {/* MAYORISTA — banner "Solicitá tu lista de precios" */}
+      <SectionBlock id="up-mayorista" label="Mayorista" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
       {isWholesale && (
         <section data-reveal style={{ background:DARK, borderTop:`2px solid ${ACC}` }}>
           <div style={{ maxWidth:1200, margin:"0 auto", padding:"64px 40px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:20 }}>
@@ -759,14 +802,16 @@ export default function UrbanPulse() {
           </div>
         </section>
       )}
+      </SectionBlock>
 
+      <SectionBlock id="up-featured" label="Producto destacado" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
       {/* FEATURED DROP */}
       {featuredProduct && (
       <section id="featured" data-reveal style={{ background:featuredBg, padding:"80px 40px", position:"relative" }}>
         <EditableSectionBg field="bgFeatured" label="Fondo featured" />
         <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:0, alignItems:"center" }}>
-          <div style={{ position:"relative" }}>
-            <img src={featuredProduct.images[0]} alt={featuredProduct.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
+          <div style={{ position:"relative", width:"100%", aspectRatio:"3/4" }}>
+            {featuredProduct.images[0] && <FadeImage src={featuredProduct.images[0]} alt={featuredProduct.name} fill sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit:"cover" }} />}
             {featuredProduct.badge && (
               <span style={{ position:"absolute", top:20, left:20, background:ACC, color:DARK, padding:"6px 14px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase" }}>
                 {featuredProduct.badge}
@@ -803,8 +848,10 @@ export default function UrbanPulse() {
         </div>
       </section>
       )}
+      </SectionBlock>
 
       {/* PRODUCTS */}
+      <SectionBlock id="up-productos" label="Catálogo de productos" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
       <section id="productos" data-reveal style={{ background:productosBgUp, position:"relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
         <div style={{ padding: isMobile ? "48px 16px" : "80px 40px", maxWidth:1200, margin:"0 auto" }}>
@@ -820,8 +867,8 @@ export default function UrbanPulse() {
             return (
               <div key={product.id} className="up-prod" onClick={() => openModal(product)}
                 style={{ gridColumn: big ? "span 2" : "span 1", cursor:"pointer", position:"relative", overflow:"hidden", background:WHITE }}>
-                <div style={{ overflow:"hidden", aspectRatio: big ? "16/9" : "3/4" }}>
-                  <img className="up-prod-img" src={product.images[0]} alt={product.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                <div style={{ position:"relative", width:"100%", overflow:"hidden", aspectRatio: big ? "16/9" : "3/4" }}>
+                  {product.images[0] && <FadeImage className="up-prod-img" src={product.images[0]} alt={product.name} fill sizes={big ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 50vw, 33vw"} style={{ objectFit:"cover" }} />}
                 </div>
                 <div style={{ padding:"14px 16px" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
@@ -832,6 +879,9 @@ export default function UrbanPulse() {
                     <div style={{ textAlign:"right", flexShrink:0 }}>
                       {!ocultarPrecios && product.comparePrice && <p style={{ margin:0, fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</p>}
                       <p style={{ margin:0, fontSize:15, fontWeight:900, color: product.comparePrice ? RED : DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
+                      {!ocultarPrecios && discountPercent(product.price, product.comparePrice) !== null && (
+                        <p style={{ margin:"2px 0 0", fontSize:10, fontWeight:800, color:RED }}>-{discountPercent(product.price, product.comparePrice)}%</p>
+                      )}
                     </div>
                   </div>
                   {product.badge && (
@@ -858,8 +908,10 @@ export default function UrbanPulse() {
         </div>
         </div>
       </section>
+      </SectionBlock>
 
       {/* TESTIMONIALS */}
+      <SectionBlock id="up-testimonios" label="Testimonios" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
       <section data-reveal style={{ background:testimonialsBgUp, padding:"80px 0", position:"relative" }}>
         <EditableSectionBg field="bgTestimonios" label="Fondo testimonios" />
         <div style={{ padding:"0 40px", marginBottom:36, position:"relative", zIndex:1 }}>
@@ -891,7 +943,98 @@ export default function UrbanPulse() {
           })}
         </div>
       </section>
+      </SectionBlock>
 
+      {/* OFERTAS */}
+      <SectionBlock id="up-ofertas" label="Ofertas" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
+        {(() => {
+          const allOfertas = products.filter(p => p.comparePrice && p.comparePrice > p.price);
+          if (allOfertas.length === 0 && !isPreview) return null;
+          const displayList = (allOfertas.length > 0 ? allOfertas : products).slice(0, 8);
+          const hasMore = allOfertas.length > 8;
+          return (
+            <section data-reveal style={{ position:"relative", background:ofertasBgUp, padding: isMobile ? "48px 16px" : "80px 40px", borderTop:`3px solid ${DARK}` }}>
+              <EditableSectionBg field="bgOfertas" label="Fondo ofertas" />
+              <div style={{ maxWidth:1200, margin:"0 auto" }}>
+                <div style={{ marginBottom:32 }}>
+                  <p style={{ fontSize:9, letterSpacing:5, color:ACC, textTransform:"uppercase", fontWeight:900, margin:"0 0 8px" }}><EditableZone field="ofertasKicker" label="Texto sobre Ofertas">Aprovechá</EditableZone></p>
+                  <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, color:ofertasTextUp }}><EditableZone field="ofertasTitle" label="Título Ofertas">Ofertas</EditableZone></h2>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:2 }}>
+                  {displayList.map(p => {
+                    const pct = p.comparePrice && p.comparePrice > p.price ? Math.round((1 - p.price / p.comparePrice) * 100) : null;
+                    return (
+                      <div key={p.id} onClick={() => openModal(p)} className="up-zoom" style={{ cursor:"pointer" }}>
+                        <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:DARK, overflow:"hidden" }}>
+                          {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="up-zoom-img" style={{ objectFit:"cover" }} />}
+                          {pct && <span style={{ position:"absolute", top:0, left:0, background:ACC, color:DARK, fontSize:10, fontWeight:900, padding:"5px 10px", letterSpacing:1 }}>-{pct}%</span>}
+                        </div>
+                        <div style={{ padding:"10px 0 0" }}>
+                          <p style={{ margin:"0 0 4px", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1, color:ofertasTextUp, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
+                          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                            <span style={{ fontSize:13, fontWeight:900, color:ACC }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                            {p.comparePrice && p.comparePrice > p.price && <span style={{ fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(p.comparePrice)}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {hasMore && (
+                  <div style={{ textAlign:"center", marginTop:36 }}>
+                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&oferta=true`; }}
+                      style={{ background:"none", border:`2px solid ${ofertasTextUp}`, color:ofertasTextUp, padding:"12px 32px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="ofertasCta" label="Botón ver todas las ofertas">Ver todas las ofertas</EditableZone></button>
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })()}
+      </SectionBlock>
+
+      {/* LO MÁS VISTO */}
+      <SectionBlock id="up-masvisto" label="Lo más visto" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
+        {(() => {
+          const featured = products.filter(p => p.featured);
+          const pool = featured.length > 0 ? featured : products;
+          const displayList = pool.slice(0, 8);
+          const hasMore = pool.length > 8;
+          if (displayList.length === 0) return null;
+          return (
+            <section data-reveal style={{ position:"relative", background:masVistoBgUp, padding: isMobile ? "48px 16px" : "80px 40px", borderTop:`3px solid ${ACC}` }}>
+              <EditableSectionBg field="bgMasVisto" label="Fondo lo más visto" />
+              <div style={{ maxWidth:1200, margin:"0 auto" }}>
+                <div style={{ marginBottom:32 }}>
+                  <p style={{ fontSize:9, letterSpacing:5, color:ACC, textTransform:"uppercase", fontWeight:900, margin:"0 0 8px" }}><EditableZone field="masVistoKicker" label="Texto sobre Lo más visto">Tendencia</EditableZone></p>
+                  <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, color:masVistoTextUp }}><EditableZone field="masVistoTitle" label="Título Lo más visto">Lo más visto</EditableZone></h2>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:2 }}>
+                  {displayList.map((p, idx) => (
+                    <div key={p.id} onClick={() => openModal(p)} className="up-zoom" style={{ cursor:"pointer" }}>
+                      <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:"#1a1a1a", overflow:"hidden" }}>
+                        {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="up-zoom-img" style={{ objectFit:"cover" }} />}
+                        <span style={{ position:"absolute", top:0, left:0, background:ACC, color:DARK, fontSize:10, fontWeight:900, padding:"5px 10px", letterSpacing:1 }}>#{idx + 1}</span>
+                      </div>
+                      <div style={{ padding:"10px 0 0" }}>
+                        <p style={{ margin:"0 0 4px", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1, color:masVistoTextUp, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
+                        <span style={{ fontSize:13, fontWeight:900, color:ACC }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {hasMore && (
+                  <div style={{ textAlign:"center", marginTop:36 }}>
+                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&destacado=true`; }}
+                      style={{ background:"none", border:`2px solid ${masVistoTextUp}`, color:masVistoTextUp, padding:"12px 32px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })()}
+      </SectionBlock>
+
+      <SectionBlock id="up-nosotros" label="Nuestra historia" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
       {/* NOSOTROS */}
       <section id="nosotros" data-reveal style={{ background:nosotrosBgUp, position:"relative" }}>
         <EditableSectionBg field="bgNosotros" label="Fondo nosotros" />
@@ -918,8 +1061,8 @@ export default function UrbanPulse() {
             ))}
           </div>
         </div>
-        <div style={{ position:"relative", overflow:"hidden" }}>
-          <img src={storeConfig?.imageOverrides?.["nosotrosImage"]?.url ?? "https://picsum.photos/seed/up_about/600/700"} alt="Nosotros" style={{ width:"100%", aspectRatio:"4/5", objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.["nosotrosImage"]?.posX ?? 50}% ${storeConfig?.imageOverrides?.["nosotrosImage"]?.posY ?? 50}%`, display:"block" }} />
+        <div style={{ position:"relative", width:"100%", aspectRatio:"4/5", overflow:"hidden" }}>
+          <FadeImage src={storeConfig?.imageOverrides?.["nosotrosImage"]?.url ?? "https://picsum.photos/seed/up_about/600/700"} alt="Nosotros" fill sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.["nosotrosImage"]?.posX ?? 50}% ${storeConfig?.imageOverrides?.["nosotrosImage"]?.posY ?? 50}%` }} />
           {(() => { const ov = storeConfig?.imageOverrides?.["nosotrosImage"]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
           <BgDragHandle imgKey="nosotrosImage" />
           <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
@@ -930,7 +1073,9 @@ export default function UrbanPulse() {
         </div>
         </div>
       </section>
+      </SectionBlock>
 
+      <SectionBlock id="up-contacto" label="Contacto" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
       {/* CONTACT */}
       <section id="contacto" data-reveal style={{ position:"relative", ...(contactBgImg?.url ? { backgroundImage:`url(${contactBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${contactBgImg.posX ?? 50}% ${contactBgImg.posY ?? 50}%` } : { background:contactUpBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
@@ -988,6 +1133,8 @@ export default function UrbanPulse() {
         </div>
         </div>
       </section>
+      </SectionBlock>
+      </div>
 
       {/* FOOTER */}
       <footer style={{ position:"relative", borderTop:`3px solid ${ACC}`, ...(footerBgImg?.url ? { backgroundImage:`url(${footerBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${footerBgImg.posX ?? 50}% ${footerBgImg.posY ?? 50}%` } : { background:footerUpBg }) }}>
@@ -1008,6 +1155,21 @@ export default function UrbanPulse() {
               <p style={{ color:footerUpMid, fontSize:13, lineHeight:1.8, maxWidth:260 }}>
                 <EditableZone field="footerDescription" label="Descripción footer">Ropa deportiva de alta performance. Para quienes van más rápido.</EditableZone>
               </p>
+              <div style={{ display:"flex", gap:10, marginTop:18 }}>
+                {([["IG","instagram"],["FB","facebook"],["TK","tiktok"],["YT","youtube"]] as const).map(([label, key]) => {
+                  const url = storeConfig?.socialLinks?.[key];
+                  if (!isPreview && !url) return null;
+                  return (
+                    <button key={label}
+                      onClick={() => url && window.open(url, "_blank")}
+                      style={{ background:"none", border:`2px solid ${footerUpMid}`, color:footerUpText, width:32, height:32, fontSize:10, fontWeight:900, cursor: url ? "pointer" : "default", letterSpacing:1, transition:"transform 0.1s", opacity: url ? 1 : 0.35 }}
+                      onMouseEnter={e => { if (url) { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = `2px 2px 0 ${ACC}`; e.currentTarget.style.borderColor = ACC; } }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = "translate(0,0)"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = footerUpMid; }}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             {([
               { titleField:"footerCol1Title", titleDefault:"Tienda",   links:[["footerCol1Link1","Mujer"],["footerCol1Link2","Hombre"],["footerCol1Link3","Accesorios"],["footerCol1Link4","Novedades"],["footerCol1Link5","Sale"]] },
@@ -1069,7 +1231,7 @@ export default function UrbanPulse() {
             </div>
           ) : (
             /* ── DESKTOP: fila izq/der original ── */
-            <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
+            <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22, paddingLeft: hasWA ? 110 : 0, paddingRight:110, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
               <div style={{ display:"flex", flexWrap:"wrap", gap:"0 16px" }}>
                 {[
                   { label: "Devoluciones", tipo: "devoluciones" },
@@ -1118,28 +1280,41 @@ export default function UrbanPulse() {
       )}
 
       {/* ── FLOATING CART BUTTON ────────────────────────────── */}
-      <button onClick={() => { setCartOpen(true); setFavoritesOpen(false); }}
-        style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:500, width:52, height:52, borderRadius:"50%", background:ACC, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(0,0,0,0.25)", transition:"transform 0.2s" }}
-        onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
-        onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
-        <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={getContrastColor(ACC)==="light"?"#fff":DARK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-        {cartCount > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:"#e53e3e", color:"#fff", borderRadius:"50%", width:20, height:20, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
-      </button>
+      {(() => {
+        const cartIconIdx = (Math.abs(parseInt(textOverrides["cartIcon"]?.text ?? "0") || 0)) % CART_ICON_OPTIONS.length;
+        const nextCartIconIdx = (cartIconIdx + 1) % CART_ICON_OPTIONS.length;
+        return (
+          <div onClick={() => { if (!editMode) { setCartOpen(true); setFavoritesOpen(false); } }}
+            role="button" tabIndex={0} aria-label="Carrito"
+            onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && !editMode) { e.preventDefault(); setCartOpen(true); setFavoritesOpen(false); } }}
+            style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:500, width:52, height:52, borderRadius:"50%", background:ACC, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 18px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)", transition:"transform 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
+            onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
+            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={getContrastColor(ACC)==="light"?"#fff":DARK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{CART_ICON_OPTIONS[cartIconIdx]}</svg>
+            {cartCount > 0 && !editMode && <span style={{ position:"absolute", top:-4, right:-4, background:"#e53e3e", color:"#fff", borderRadius:"50%", width:20, height:20, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
+            {editMode && (
+              <button onClick={e => { e.stopPropagation(); setOverride("cartIcon", { text: String(nextCartIconIdx) }); }} title="Cambiar ícono del carrito"
+                style={{ position:"absolute", inset:0, background:"rgba(99,102,241,0.9)", border:"none", borderRadius:"50%", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:18, opacity:0, transition:"opacity 0.15s" }}
+                onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* WHATSAPP */}
       {(!storeConfig || storeConfig.whatsapp.enabled) && (
-        <EditableFixed field="whatsapp" label="WhatsApp" bottom={24} right={24}>
-          <a href={`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`} target="_blank" rel="noopener noreferrer"
-            style={{ position:"fixed", bottom:24, right:24, background:"#25D366", width:56, height:56, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", zIndex:500, boxShadow:"0 4px 20px rgba(37,211,102,0.4)", textDecoration:"none" }}>
-            <svg viewBox="0 0 24 24" width={28} height={28} fill={WHITE}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          </a>
-        </EditableFixed>
+        <a href={`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`} target="_blank" rel="noopener noreferrer"
+          onClick={e => { if (editMode) e.preventDefault(); }}
+          className="up-wa-fab"
+          style={{ position:"fixed", bottom:24, right:24, width:56, height:56, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", zIndex:500, textDecoration:"none", cursor: editMode ? "default" : "pointer" }}>
+          <svg viewBox="0 0 24 24" width={28} height={28} fill={WHITE}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </a>
       )}
 
       {/* SEARCH OVERLAY */}
       {searchOpen && (
         <div className="up-fade" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.96)", zIndex:1000, padding:"80px 40px 40px", overflowY:"auto" }}>
-          <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }} style={{ position:"absolute", top:24, right:28, background:"none", border:"none", color:WHITE, fontSize:28, cursor:"pointer" }}>✕</button>
+          <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }} aria-label="Cerrar búsqueda" style={{ position:"absolute", top:24, right:28, background:"none", border:"none", color:WHITE, fontSize:28, cursor:"pointer" }}>✕</button>
           <div style={{ maxWidth:680, margin:"0 auto" }}>
             <p style={{ color:"rgba(255,255,255,0.4)", fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", marginBottom:20 }}>Buscar</p>
             <input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Buscar productos..."
@@ -1148,7 +1323,7 @@ export default function UrbanPulse() {
               {(searchQuery.trim() ? searchResults : products.slice(0,4)).map(p => (
                 <div key={p.id} onClick={() => { openModal(p); setSearchQuery(""); }}
                   style={{ display:"flex", gap:14, cursor:"pointer", padding:14, background:"rgba(255,255,255,0.05)" }}>
-                  <img src={p.images[0]} alt={p.name} style={{ width:56, height:72, objectFit:"cover", flexShrink:0 }} />
+                  {p.images[0] ? <FadeImage src={p.images[0]} alt={p.name} width={56} height={72} style={{ objectFit:"cover", flexShrink:0 }} /> : <div style={{ width:56, height:72, flexShrink:0, background:BG }} />}
                   <div>
                     <p style={{ color:"rgba(255,255,255,0.4)", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", margin:0 }}>{p.category}</p>
                     <p style={{ color:WHITE, fontSize:13, fontWeight:800, margin:"5px 0 4px" }}>{p.name}</p>
@@ -1175,7 +1350,7 @@ export default function UrbanPulse() {
                 ? <p style={{ color:MID, textAlign:"center", marginTop:60, fontSize:14 }}>No tenés favoritos aún.</p>
                 : favoriteProducts.map(p => (
                   <div key={p.id} style={{ display:"flex", gap:14, marginBottom:20, paddingBottom:20, borderBottom:`1px solid ${BG}` }}>
-                    <img src={p.images[0]} alt={p.name} style={{ width:68, height:86, objectFit:"cover", flexShrink:0 }} />
+                    {p.images[0] ? <FadeImage src={p.images[0]} alt={p.name} width={68} height={86} style={{ objectFit:"cover", flexShrink:0 }} /> : <div style={{ width:68, height:86, flexShrink:0, background:BG }} />}
                     <div style={{ flex:1 }}>
                       <p style={{ margin:0, fontSize:10, color:MID, fontWeight:800, letterSpacing:2, textTransform:"uppercase" }}>{p.category}</p>
                       <p style={{ margin:"4px 0 6px", fontSize:13, fontWeight:800 }}>{p.name}</p>
@@ -1200,9 +1375,11 @@ export default function UrbanPulse() {
               <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:0, right:0, background:DARK, border:"none", color:ACC, width:40, height:40, fontSize:18, cursor:"pointer", zIndex:10, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
               <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
               <div>
-                <div style={{ position:"relative" }} {...imgSwipe}>
-                  <img src={modalProduct.images[modalImg]} alt={modalProduct.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block", cursor:"zoom-in" }}
-                    onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
+                <div style={{ position:"relative", width:"100%", aspectRatio:"3/4" }} {...imgSwipe}>
+                  {modalProduct.images[modalImg] && (
+                    <FadeImage src={modalProduct.images[modalImg]} alt={modalProduct.name} fill sizes="(max-width: 768px) 100vw, 420px" style={{ objectFit:"cover", cursor:"zoom-in" }}
+                      onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
+                  )}
                   {modalProduct.images.length > 1 && (<>
                     <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
                       style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.55)", border:"none", color:"#fff", width:42, height:42, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, fontWeight:700, zIndex:2, borderRadius:2 }}>‹</button>
@@ -1216,8 +1393,8 @@ export default function UrbanPulse() {
                 {modalProduct.images.length > 1 && (
                   <div style={{ display:"flex", gap:4, padding:4 }}>
                     {modalProduct.images.map((img, i) => (
-                      <img key={i} src={img} alt="" onClick={() => setModalImg(i)}
-                        style={{ width:58, height:68, objectFit:"cover", cursor:"pointer", border: i === modalImg ? `2px solid ${DARK}` : "2px solid transparent", opacity: i === modalImg ? 1 : 0.5 }} />
+                      <FadeImage key={i} src={img} alt="" onClick={() => setModalImg(i)} width={58} height={68}
+                        style={{ objectFit:"cover", cursor:"pointer", border: i === modalImg ? `2px solid ${DARK}` : "2px solid transparent", opacity: i === modalImg ? 1 : 0.5 }} />
                     ))}
                   </div>
                 )}
@@ -1243,32 +1420,70 @@ export default function UrbanPulse() {
                   <span style={{ fontSize:28, fontWeight:900, color: modalProduct.comparePrice ? RED : DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price)}</span>
                   {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:15, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                 </div>
+                {modalProduct.description && <p style={{ fontSize:13, color:MID, lineHeight:1.7, marginBottom:22 }}>{modalProduct.description}</p>}
+                {(() => {
+                  const attrs = modalProduct.attributes ?? [];
+                  const condicionAttr = attrs.find(a => a.key === "Condición");
+                  const serviciosAttr = attrs.find(a => a.key === "Servicios");
+                  const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
+                  let servicios: string[] = [];
+                  if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
+                  if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
+                  return (
+                    <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:18 }}>
+                      {condicionAttr && (
+                        <span style={{ alignSelf:"flex-start", fontSize:9, letterSpacing:1.5, textTransform:"uppercase", fontWeight:900, color:DARK, background:ACC, padding:"5px 10px" }}>{condicionAttr.value}</span>
+                      )}
+                      {otherAttrs.length > 0 && (
+                        <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                          {otherAttrs.map(a => (
+                            <p key={a.key} style={{ fontSize:11, color:MID, margin:0, fontWeight:600 }}><span style={{ color:DARK }}>{a.key}:</span> {a.value}</p>
+                          ))}
+                        </div>
+                      )}
+                      {servicios.length > 0 && (
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                          {servicios.map(k => (
+                            <span key={k} style={{ fontSize:9, letterSpacing:1, padding:"4px 10px", border:`2px solid ${DARK}`, color:DARK, fontWeight:800 }}>✓ {k}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div style={{ marginBottom:18 }}>
                   <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>Talle: <span style={{ color:MID, fontWeight:600 }}>{selectedSize}</span></p>
                   <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                    {modalProduct.sizes.map(s => (
-                      <button key={s} onClick={() => setSelectedSize(s)}
-                        style={{ border:`2px solid ${selectedSize === s ? DARK : "#ddd"}`, background: selectedSize === s ? DARK : WHITE, color: selectedSize === s ? ACC : DARK, padding:"7px 13px", fontSize:11, fontWeight:800, cursor:"pointer", letterSpacing:1 }}>
-                        {s}
-                      </button>
-                    ))}
+                    {modalProduct.sizes.map(s => {
+                      const outOfStock = outOfStockSizes.has(s);
+                      return (
+                        <button key={s} onClick={() => setSelectedSize(s)}
+                          style={{ border:`2px solid ${selectedSize === s ? DARK : "#ddd"}`, background: selectedSize === s ? DARK : WHITE, color: selectedSize === s ? ACC : DARK, padding:"7px 13px", fontSize:11, fontWeight:800, cursor:"pointer", letterSpacing:1, opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none" }}>
+                          {s}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
                 <div style={{ marginBottom:22 }}>
                   <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>Color: <span style={{ color:MID, fontWeight:600 }}>{selectedColor}</span></p>
                   <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                    {modalProduct.colors.map(c => (
-                      <button key={c} onClick={() => setSelectedColor(c)}
-                        style={{ border:`2px solid ${selectedColor === c ? DARK : "#ddd"}`, background:WHITE, color: selectedColor === c ? DARK : MID, padding:"6px 12px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                        {c}
-                      </button>
-                    ))}
+                    {modalProduct.colors.map(c => {
+                      const swatch = colorToSwatch(c);
+                      return (
+                        <button key={c} onClick={() => setSelectedColor(c)}
+                          style={{ display:"flex", alignItems:"center", gap:7, border:`2px solid ${selectedColor === c ? DARK : "#ddd"}`, background:WHITE, color: selectedColor === c ? DARK : MID, padding:"6px 12px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                          {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid #ddd", flexShrink:0 }} />}
+                          {c}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:26 }}>
                   <span style={{ fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>Cantidad</span>
                   <div style={{ display:"flex", alignItems:"center", border:`2px solid ${DARK}` }}>
-                    <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ width:36, height:36, background:"none", border:"none", fontSize:18, cursor:"pointer", fontWeight:900 }}>−</button>
+                    <button onClick={() => setQty(q => Math.max(isWholesale && modalProduct.cantMinMayorista ? modalProduct.cantMinMayorista : 1,q-1))} style={{ width:36, height:36, background:"none", border:"none", fontSize:18, cursor:"pointer", fontWeight:900 }}>−</button>
                     <span style={{ width:32, textAlign:"center", fontWeight:900 }}>{qty}</span>
                     <button onClick={() => setQty(q => selectedVariantStock !== null ? Math.min(selectedVariantStock, q+1) : q+1)} style={{ width:36, height:36, background:"none", border:"none", fontSize:18, cursor:"pointer", fontWeight:900 }}>+</button>
                   </div>
@@ -1347,7 +1562,7 @@ export default function UrbanPulse() {
                     <p style={{ fontSize:12, color:MID }}>Cargando...</p>
                   ) : reviews.length > 0 ? (
                     <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:20 }}>
-                      {reviews.map(r => (
+                      {reviews.slice(0, reviewsShown).map(r => (
                         <div key={r.id} style={{ borderBottom:`1px solid ${DARK}`, paddingBottom:14 }}>
                           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
                             <span style={{ fontSize:12, fontWeight:900, textTransform:"uppercase" }}>{r.reviewer}</span>
@@ -1356,6 +1571,11 @@ export default function UrbanPulse() {
                           {r.comment && <p style={{ fontSize:12, color:MID, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
                         </div>
                       ))}
+                      {reviews.length > reviewsShown && (
+                        <button onClick={() => setReviewsShown(n => n + 10)} style={{ alignSelf:"flex-start", background:"none", border:"none", color:ACC, fontSize:10, fontWeight:900, letterSpacing:1, textTransform:"uppercase", cursor:"pointer", padding:0, textDecoration:"underline" }}>
+                          Ver más reseñas ({reviews.length - reviewsShown})
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <p style={{ fontSize:12, color:MID, marginBottom:16 }}>Sé el primero en dejar una reseña.</p>
@@ -1391,19 +1611,16 @@ export default function UrbanPulse() {
                 </div>
               </div>
               {(() => {
-                const others = products.filter(p => p.id !== modalProduct.id);
-                const sameSub = modalProduct.subcategory ? others.filter(p => p.subcategory === modalProduct.subcategory) : [];
-                const sameCat = others.filter(p => p.category === modalProduct.category && !sameSub.includes(p));
-                const rest = others.filter(p => !sameSub.includes(p) && !sameCat.includes(p));
-                const similar = [...sameSub, ...sameCat, ...rest].slice(0, 4);
-                if (similar.length === 0) return null;
+                if (similarProducts.length === 0) return null;
                 return (
                   <div style={{ gridColumn: isMobile ? undefined : "1 / -1", padding:32, borderTop:"1px solid #f0f0f0" }}>
                     <p style={{ margin:"0 0 16px", fontSize:10, color:MID, fontWeight:800, letterSpacing:3, textTransform:"uppercase" }}>Productos similares</p>
                     <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
-                      {similar.map(p => (
+                      {similarProducts.map(p => (
                         <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
-                          <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} />
+                          <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:BG }}>
+                            {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} />}
+                          </div>
                           <p style={{ margin:"8px 0 2px", fontSize:12, color:DARK, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
                           <p style={{ margin:0, fontSize:13, fontWeight:900, color:DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
                         </div>
@@ -1418,240 +1635,12 @@ export default function UrbanPulse() {
         </div>
       )}
 
-      {/* CART DRAWER */}
-      {cartOpen && (
-        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 700, overflow:"hidden" }}>
-          <div onClick={() => setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.5)" }} />
-          <div style={{ position:"absolute", right:0, top:0, bottom:0, left: isMobile ? 0 : "auto", width: isMobile ? "auto" : 440, background:WHITE, display:"flex", flexDirection:"column" }}>
-            <div style={{ padding:"20px 24px", borderBottom:`3px solid ${DARK}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <h3 style={{ margin:0, fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase" }}>Carrito ({cartCount})</h3>
-              <button onClick={() => setCartOpen(false)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer" }}>✕</button>
-            </div>
-            <div style={{ flex:1, overflowY:"auto", padding:24 }}>
-              {cartItems.length === 0
-                ? <p style={{ color:MID, textAlign:"center", marginTop:60, fontSize:14 }}>Tu carrito está vacío.</p>
-                : cartItems.map((item, idx) => (
-                  <div key={idx} style={{ display:"flex", gap:14, marginBottom:20, paddingBottom:20, borderBottom:`1px solid ${BG}` }}>
-                    <img src={item.product.images[0]} alt={item.product.name} style={{ width:68, height:86, objectFit:"cover", flexShrink:0 }} />
-                    <div style={{ flex:1 }}>
-                      <p style={{ margin:0, fontSize:13, fontWeight:800 }}>{item.product.name}</p>
-                      <p style={{ margin:"3px 0 8px", fontSize:11, color:MID }}>Talle: {item.size} · {item.color}</p>
-                      <p style={{ margin:0, fontSize:14, fontWeight:900 }}>{fmt(item.product.price)}</p>
-                      <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:10 }}>
-                        <div style={{ display:"flex", alignItems:"center", border:`1px solid ${DARK}` }}>
-                          <button onClick={() => updateQty(idx,-1)} style={{ width:28, height:28, background:"none", border:"none", cursor:"pointer", fontWeight:900 }}>−</button>
-                          <span style={{ width:28, textAlign:"center", fontSize:13, fontWeight:800 }}>{item.qty}</span>
-                          <button onClick={() => updateQty(idx,1)} style={{ width:28, height:28, background:"none", border:"none", cursor:"pointer", fontWeight:900 }}>+</button>
-                        </div>
-                        <button onClick={() => removeFromCart(idx)} style={{ background:"none", border:"none", color:MID, fontSize:11, fontWeight:700, cursor:"pointer", letterSpacing:1, textTransform:"uppercase" }}>Quitar</button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              }
-            </div>
-            {cartItems.length > 0 && (
-              <div style={{ padding:24, borderTop:`2px solid ${DARK}` }}>
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:18 }}>
-                  <span style={{ fontSize:12, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>Total</span>
-                  <span style={{ fontSize:20, fontWeight:900 }}>{fmt(cartTotal)}</span>
-                </div>
-                {wholesaleWarnings.length > 0 && (
-                  <div style={{ marginBottom:12, padding:"10px 14px", background:"rgba(234,179,8,0.08)", borderLeft:"3px solid #eab308" }}>
-                    <p style={{ fontSize:11, margin:0, color:"#eab308", fontWeight:700, letterSpacing:1 }}>CANTIDAD MÍNIMA NO ALCANZADA</p>
-                    {wholesaleWarnings.map((item, i) => (
-                      <p key={i} style={{ fontSize:10, margin:"3px 0 0", color:"rgba(0,0,0,0.5)" }}>
-                        {item.product.name}: mín. {item.product.cantMinMayorista} uds.
-                      </p>
-                    ))}
-                  </div>
-                )}
-                <button onClick={blockBuy ? undefined : openCheckout} disabled={blockBuy} title={isOwner ? "No podés comprar en tu propia tienda" : isPreview ? "No disponible en modo edición" : undefined} style={{ width:"100%", background: blockBuy ? "rgba(0,0,0,0.08)" : DARK, color: blockBuy ? "rgba(0,0,0,0.25)" : ACC, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor: blockBuy ? "not-allowed" : "pointer" }}>
-                  {isOwner ? "No disponible para el dueño" : isPreview ? "Solo en la tienda real" : "Finalizar Compra →"}
-                </button>
-                {storeConfig?.whatsapp?.enabled && storeConfig.whatsapp.number && (
-                  <a
-                    href={`https://wa.me/${storeConfig.whatsapp.number.replace(/\D/g,"")}${storeConfig.whatsapp.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`}
-                    target="_blank" rel="noreferrer"
-                    style={{ display:"flex", alignItems:"center", gap:10, marginTop:12, padding:"10px 14px", background:"rgba(37,211,102,0.1)", textDecoration:"none" }}
-                  >
-                    <svg width={16} height={16} viewBox="0 0 24 24" fill="#25D366" style={{ flexShrink:0 }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                    <div>
-                      <p style={{ fontSize:9, margin:0, color:"rgba(255,255,255,0.4)", letterSpacing:2, textTransform:"uppercase" }}>¿TENÉS DUDAS?</p>
-                      <p style={{ fontSize:11, margin:0, color:"#25D366", fontWeight:700, letterSpacing:1 }}>Consultá por WhatsApp</p>
-                    </div>
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* CHECKOUT DRAWER */}
-      {checkoutOpen && (
-        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex: isPreview ? 20010 : 800 }}>
-          <div onClick={() => { if (checkoutStatus !== "placing") setCheckoutOpen(false); }} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.6)" }} />
-          <div style={{ position:"absolute", right:0, top:0, bottom:0, width:520, background:WHITE, display:"flex", flexDirection:"column", overflowY:"auto" }}>
-            {checkoutStatus === "done" ? (
-              <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:40, textAlign:"center" }}>
-                <div style={{ width:72, height:72, background:ACC, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:24 }}>
-                  <svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={DARK} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                </div>
-                <h3 style={{ fontSize:26, fontWeight:900, textTransform:"uppercase", margin:"0 0 10px" }}>¡Pedido creado!</h3>
-                <p style={{ color:MID, fontSize:14, marginBottom:10 }}>Te enviamos un email con el resumen. El vendedor te contactará para coordinar el envío.</p>
-                <p style={{ color:MID, fontSize:11, opacity:0.6, lineHeight:1.7, marginBottom:32 }}>¿Algún inconveniente con tu pedido? Contactá al vendedor o escribinos a marketplacemitienda@gmail.com · Tenés 10 días corridos para cancelar (Ley 24.240).</p>
-                <button onClick={() => setCheckoutOpen(false)} style={{ background:DARK, color:ACC, border:"none", padding:"14px 40px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>Cerrar</button>
-              </div>
-            ) : (
-              <form onSubmit={handlePlaceOrder} style={{ flex:1, display:"flex", flexDirection:"column" }}>
-                <div style={{ padding:"20px 24px", borderBottom:`3px solid ${DARK}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <h3 style={{ margin:0, fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase" }}>Checkout</h3>
-                  <button type="button" onClick={() => setCheckoutOpen(false)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer" }}>✕</button>
-                </div>
-                <div style={{ flex:1, overflowY:"auto", padding:24 }}>
-                  <p style={{ margin:"0 0 14px", fontSize:10, fontWeight:900, letterSpacing:4, textTransform:"uppercase" }}>Datos del comprador</p>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:24 }}>
-                    {[
-                      { key:"nombre",    placeholder:"Nombre completo", span:true },
-                      { key:"email",     placeholder:"Email" },
-                      { key:"telefono",  placeholder:"Teléfono" },
-                      { key:"direccion", placeholder:"Dirección", span:true },
-                      { key:"ciudad",    placeholder:"Ciudad" },
-                      { key:"cp",        placeholder:"Código postal" },
-                    ].map(f => (
-                      <input key={f.key} placeholder={f.placeholder} required
-                        value={buyerForm[f.key as keyof typeof buyerForm]}
-                        onChange={e => setBuyerForm(b => ({ ...b, [f.key]:e.target.value }))}
-                        style={{ gridColumn: f.span ? "span 2" : "span 1", padding:"11px", border:`1px solid #ddd`, fontSize:13, outline:"none", fontFamily:"inherit" }} />
-                    ))}
-                    <select required value={buyerForm.provincia} onChange={e => setBuyerForm(b => ({ ...b, provincia:e.target.value }))}
-                      style={{ gridColumn:"span 1", padding:"11px", border:`1px solid #ddd`, fontSize:13, outline:"none", fontFamily:"inherit" }}>
-                      <option value="">Provincia...</option>
-                      {PROVINCIAS_ARGENTINA.map((p) => (
-                        <option key={p.code} value={p.code}>{p.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <p style={{ margin:"0 0 10px", fontSize:10, fontWeight:900, letterSpacing:4, textTransform:"uppercase" }}>Envío</p>
-                  <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:22 }}>
-                    {envioOptions.map(opt => (
-                      <label key={opt.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"13px", border:`2px solid ${envioId === opt.id ? DARK : "#ddd"}`, cursor:"pointer" }}>
-                        <input type="radio" name="envio" value={opt.id} checked={envioId === opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor:DARK }} />
-                        <span style={{ flex:1, fontSize:13, fontWeight:700 }}>{opt.label}</span>
-                        <span style={{ fontSize:13, fontWeight:900 }}>{opt.liveQuote ? fmtLiveQuote(opt.id) : fmtEnvioPrice(opt,fmt)}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <p style={{ margin:"0 0 10px", fontSize:10, fontWeight:900, letterSpacing:4, textTransform:"uppercase" }}>Pago</p>
-                  <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:22 }}>
-                    {pagoOptions.map(opt => (
-                      <label key={opt.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"13px", border:`2px solid ${pagoId === opt.id ? DARK : "#ddd"}`, cursor:"pointer" }}>
-                        <input type="radio" name="pago" value={opt.id} checked={pagoId === opt.id} onChange={() => setPagoId(opt.id)} style={{ accentColor:DARK }} />
-                        <span style={{ fontSize:13, fontWeight:700 }}>{opt.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <div style={{ display:"flex", gap:8, marginBottom:20 }}>
-                    <input value={coupon} onChange={e => setCoupon(e.target.value)} placeholder="Código de descuento"
-                      style={{ flex:1, padding:"11px", border:`1px solid #ddd`, fontSize:13, outline:"none", fontFamily:"inherit" }} />
-                    <button type="button" onClick={handleApplyCoupon} style={{ background:DARK, color:ACC, border:"none", padding:"0 18px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>Aplicar</button>
-                  </div>
-                  {couponError && <p style={{ fontSize:11, color:RED, marginBottom:8, marginTop:-12 }}>{couponError}</p>}
-                  {appliedCoupon && (
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"8px 12px", background:`rgba(212,255,0,0.08)`, border:`1px solid rgba(212,255,0,0.3)` }}>
-                      <span style={{ fontSize:12, color:ACC }}>Cupón {appliedCoupon.code} aplicado</span>
-                      <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:12 }}>✕</button>
-                    </div>
-                  )}
-                  <textarea value={notas} onChange={e => setNotas(e.target.value)} placeholder="Notas adicionales (opcional)" rows={3}
-                    style={{ width:"100%", padding:"11px", border:`1px solid #ddd`, fontSize:13, outline:"none", resize:"none", fontFamily:"inherit", boxSizing:"border-box", marginBottom:20 }} />
-                  <div style={{ background:BG, padding:14, marginBottom:8 }}>
-                    {cartItems.map((item,i) => (
-                      <div key={i} style={{ display:"flex", justifyContent:"space-between", marginBottom:6, fontSize:13 }}>
-                        <span style={{ color:MID }}>{item.product.name} × {item.qty}</span>
-                        <span style={{ fontWeight:700 }}>{fmt(item.product.price * item.qty)}</span>
-                      </div>
-                    ))}
-                    {couponDiscount > 0 && (
-                      <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, paddingTop:6 }}>
-                        <span style={{ color:ACC }}>Descuento cupón</span>
-                        <span style={{ fontWeight:700, color:ACC }}>-{fmt(couponDiscount)}</span>
-                      </div>
-                    )}
-                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, paddingTop:8, borderTop:`1px solid #ddd` }}>
-                      <span style={{ color:MID }}>Envío</span>
-                      <span style={{ fontWeight:700 }}>{envioCoordinar?"A coordinar":envioPrice===0?"Gratis":fmt(envioPrice)}</span>
-                    </div>
-                  </div>
-                  <label style={{ display:"flex", gap:8, alignItems:"center", fontSize:12, color:MID, cursor:"pointer", marginBottom:8 }}>
-                    <input type="checkbox" checked={rememberData} onChange={e => setRememberData(e.target.checked)} />
-                    Guardar mis datos para la próxima compra
-                  </label>
-                </div>
-                <div style={{ padding:24, borderTop:`2px solid ${DARK}` }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14 }}>
-                    <span style={{ fontSize:12, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>Total</span>
-                    <span style={{ fontSize:22, fontWeight:900 }}>{fmt(orderTotal)}</span>
-                  </div>
-
-                  {/* donación opcional a la Canasta Solidaria — pago aparte, no se suma al total. Solo se muestra si hay una campaña ACTIVE recibiendo donaciones. */}
-                  {canastaDisponible && (
-                  <div style={{ marginBottom:14, paddingTop:10, borderTop:`1px solid #ddd` }}>
-                    <label style={{ display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
-                      <span style={{ fontSize:13, display:"flex", alignItems:"center", gap:6 }}><HandHeart size={16} style={{ color:ACC }} /> ¿Donar?</span>
-                      <input type="checkbox" checked={donationEnabled} onChange={e => setDonationEnabled(e.target.checked)} style={{ accentColor:ACC }} />
-                    </label>
-                    <p style={{ fontSize:10, color:MID, marginTop:6, lineHeight:1.5 }}>
-                      Sumá un aporte aparte para completar una canasta de alimentos para un vecino — se paga por separado, no afecta tu compra.{" "}
-                      <a href="/comunidad/campana" target="_blank" rel="noopener" style={{ color:DARK, textDecoration:"underline" }}>¿Cómo funciona?</a>
-                    </p>
-                    {donationEnabled && (
-                      <div style={{ marginTop:10 }}>
-                        <input
-                          type="number"
-                          min={1000}
-                          value={donationAmount}
-                          onChange={e => setDonationAmount(Number(e.target.value) || 0)}
-                          style={{ width:"100%", background:"#fff", border:`1px solid ${MID}`, padding:"10px 14px", fontSize:13, outline:"none" }}
-                        />
-                        <p style={{ fontSize:10, color:MID, marginTop:6, lineHeight:1.5 }}>Mínimo $1.000.</p>
-                      </div>
-                    )}
-                  </div>
-                  )}
-
-                  {checkoutError && <p style={{ fontSize:12, color:RED, marginBottom:10 }}>{checkoutError}</p>}
-                  {/* seguridad */}
-                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10, padding:"9px 12px", border:`1px solid ${MID}`, borderRadius:0, background:"rgba(0,0,0,0.04)" }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color:"#16a34a", flexShrink:0 }}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    <span style={{ fontSize:10, color:MID, letterSpacing:1, textTransform:"uppercase", lineHeight:1.5 }}>
-                      Pago seguro · <strong>MercadoPago</strong> · SSL
-                    </span>
-                  </div>
-                  <label style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:12, cursor:"pointer" }}>
-                    <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} style={{ marginTop:2, accentColor:DARK, flexShrink:0 }} />
-                    <span style={{ fontSize:11, color:MID, lineHeight:1.6 }}>
-                      Acepto los{" "}
-                      <a href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=terminos`} target="_blank" rel="noopener" style={{ color:DARK, textDecoration:"underline" }}>Términos y Condiciones</a>
-                      {" "}de la tienda y la{" "}
-                      <a href="/privacidad?role=buyer" target="_blank" rel="noopener" style={{ color:DARK, textDecoration:"underline" }}>Política de Privacidad</a>
-                    </span>
-                  </label>
-                  <button type="submit" disabled={checkoutStatus === "placing" || !acceptedTerms}
-                    style={{ width:"100%", background: (!acceptedTerms || checkoutStatus === "placing") ? MID : DARK, color:ACC, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor: (!acceptedTerms || checkoutStatus==="placing") ? "not-allowed" : "pointer", opacity: (!acceptedTerms || checkoutStatus==="placing") ? 0.5 : 1 }}>
-                    {checkoutStatus === "placing" ? "Procesando..." : "Crear Pedido →"}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+      <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={storeConfig?.whatsapp} />
+      <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} storeSlug={storeConfig?.slug ?? ""} />
 
       {/* ── LIGHTBOX ───────────────────────────────────────── */}
       {lightboxSrc && (
-        <div style={{ position:"fixed", inset:0, zIndex:700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>

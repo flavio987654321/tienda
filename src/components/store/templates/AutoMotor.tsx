@@ -12,6 +12,7 @@ import type { ImageOverride } from "@/types/store-config";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { WaIcon, VehicleCard, VehicleModal, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
+import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 
 function smoothScrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -40,6 +41,8 @@ function SectionOverlay({ ov }: { ov: ImageOverride | undefined }) {
 
 const NAVY = "#1b3f6e";
 const NAVY_DARK = "#0d1f3c";
+
+const AM_SECTION_IDS = ["am-stats", "am-catalogo", "am-servicios", "am-nosotros", "am-contacto"];
 
 export default function AutoMotor() {
   const config        = useStoreConfig();
@@ -278,11 +281,11 @@ export default function AutoMotor() {
           </div>
           {/* Grupo derecho — búsqueda + favoritos + campanita + usuario + menú mobile */}
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            <button onClick={() => setSearchOpen(true)}
+            <button onClick={() => setSearchOpen(true)} aria-label="Buscar"
               style={{ background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
-            <button onClick={() => setFavoritesOpen(true)}
+            <button onClick={() => setFavoritesOpen(true)} aria-label="Favoritos"
               style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {favorites.length > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color: getContrastColor(accent)==="light"?"#fff":"#111", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
@@ -449,7 +452,9 @@ export default function AutoMotor() {
         </div>
       </section>
 
+      <div style={{ display:"flex", flexDirection:"column" }}>
       {/* ── STATS STRIP — white bg, accent numbers ── */}
+      <SectionBlock id="am-stats" label="Estadísticas" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       <div style={{ background:"#ffffff", borderTop:`4px solid ${accent}`,
         borderBottom:"1px solid rgba(0,0,0,0.06)", padding:"0 28px" }}>
         <div style={{ maxWidth:1200, margin:"0 auto",
@@ -473,8 +478,10 @@ export default function AutoMotor() {
           ))}
         </div>
       </div>
+      </SectionBlock>
 
       {/* ── CATÁLOGO — sin filtros ── */}
+      <SectionBlock id="am-catalogo" label="Catálogo" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       <section id="catálogo" style={{ padding:"72px 28px", position:"relative",
         ...secBg(catalogoImg, catalogoBg) }}>
         <BgDragHandle imgKey="sectionbg_bgCatalogo" />
@@ -526,8 +533,10 @@ export default function AutoMotor() {
           )}
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── SERVICIOS — navy bg ── */}
+      <SectionBlock id="am-servicios" label="Servicios" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       <section id="servicios" style={{ padding:"80px 28px", position:"relative",
         ...secBg(serviciosImg, serviciosBg) }}>
         <BgDragHandle imgKey="sectionbg_bgServicios" />
@@ -574,8 +583,10 @@ export default function AutoMotor() {
           </div>
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── NOSOTROS ── */}
+      <SectionBlock id="am-nosotros" label="Nuestra historia" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       <section id="nosotros" style={{ padding:"80px 28px", position:"relative",
         ...secBg(nosotrosImg, nosotrosBg) }}>
         <BgDragHandle imgKey="sectionbg_bgNosotros" />
@@ -616,8 +627,10 @@ export default function AutoMotor() {
           </div>
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── CONTACTO ── */}
+      <SectionBlock id="am-contacto" label="Contacto" isPreview={isPreview} defaultOrder={AM_SECTION_IDS}>
       <section id="contacto" style={{ padding:"80px 28px", position:"relative",
         ...secBg(contactoImg, contactoBg), borderTop:`4px solid ${accent}` }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
@@ -646,6 +659,8 @@ export default function AutoMotor() {
           )}
         </div>
       </section>
+      </SectionBlock>
+      </div>
 
       {/* ── FOOTER ── */}
       <footer style={{ position:"relative", padding:"32px 28px", textAlign:"center",
@@ -692,7 +707,7 @@ export default function AutoMotor() {
       {/* ── SEARCH OVERLAY ── */}
       {searchOpen && (
         <div style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(255,255,255,0.97)", backdropFilter:"blur(8px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:120 }}>
-          <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
+          <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }} aria-label="Cerrar búsqueda"
             style={{ position:"absolute", top:24, right:32, background:"none", border:"none", color:"#111", fontSize:28, cursor:"pointer", lineHeight:1 }}>×</button>
           <div style={{ width:"100%", maxWidth:640, padding:"0 24px" }}>
             <input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
@@ -737,7 +752,7 @@ export default function AutoMotor() {
               </div>
             ) : favoriteProducts.map(product => (
               <div key={product.id} style={{ display:"flex", gap:14, padding:"14px 0", borderBottom:"1px solid #f5f5f5" }}>
-                <img src={product.images[0] ?? ""} alt="" style={{ width:80, height:60, objectFit:"cover", borderRadius:4, flexShrink:0, background:"#f5f5f5" }} />
+                <img src={product.images[0] ?? ""} alt={product.name} style={{ width:80, height:60, objectFit:"cover", borderRadius:4, flexShrink:0, background:"#f5f5f5" }} />
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:14, fontWeight:600, margin:"0 0 4px", color:"#111" }}>{product.name}</p>
                   <p style={{ fontSize:13, color:accent, fontWeight:700, margin:"0 0 10px" }}>{fmtPrice(product.price, currency)}</p>

@@ -1585,6 +1585,29 @@ export default function ConfiguracionPage() {
     setIsDirty(true);
   }, []);
 
+  const toggleHiddenSection = useCallback((id: string) => {
+    setConfig(c => {
+      const current = c.hiddenSections ?? [];
+      const next = current.includes(id) ? current.filter(s => s !== id) : [...current, id];
+      return { ...c, hiddenSections: next };
+    });
+    setIsDirty(true);
+  }, []);
+
+  const moveSection = useCallback((id: string, defaultOrder: string[], direction: "up" | "down") => {
+    setConfig(c => {
+      const persisted = c.sectionOrder ?? [];
+      const effective = [...persisted.filter(i => defaultOrder.includes(i)), ...defaultOrder.filter(i => !persisted.includes(i))];
+      const idx = effective.indexOf(id);
+      const swapWith = direction === "up" ? idx - 1 : idx + 1;
+      if (idx === -1 || swapWith < 0 || swapWith >= effective.length) return c;
+      const next = [...effective];
+      [next[idx], next[swapWith]] = [next[swapWith], next[idx]];
+      return { ...c, sectionOrder: next };
+    });
+    setIsDirty(true);
+  }, []);
+
   const update = useCallback(<K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => {
     setConfig(c => ({ ...c, [key]: value }));
     setIsDirty(true);
@@ -2062,6 +2085,10 @@ export default function ConfiguracionPage() {
           sectionColors: config.sectionColors,
           setSectionColor,
           imageLoading: imageLoadingFields,
+          hiddenSections: config.hiddenSections ?? [],
+          toggleHiddenSection,
+          sectionOrder: config.sectionOrder ?? [],
+          moveSection,
         }}>
           <div style={{ flex: 1, overflow: "hidden", position: "relative", padding: "12px 16px 0" }}>
             <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",

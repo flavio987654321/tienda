@@ -14,6 +14,7 @@ import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
+import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import type { ImageOverride } from "@/types/store-config";
 
@@ -169,6 +170,8 @@ function SocialIcon({ network }: { network: string }) {
       return null;
   }
 }
+
+const TN_SECTION_IDS = ["tn-departamentos", "tn-confianza", "tn-ofertas", "tn-productos", "tn-promo", "tn-beneficios", "tn-contacto"];
 
 export default function TechNova() {
   const config    = useStoreConfig();
@@ -388,7 +391,7 @@ export default function TechNova() {
             <Link href={catalogHref} style={{ background:accent, color:"#fff", padding:"9px 20px", fontSize:12, fontWeight:700, textDecoration:"none", borderRadius:100 }}>Ver catálogo</Link>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            <button onClick={() => { setFavoritesOpen(true); setCartOpen(false); }}
+            <button onClick={() => { setFavoritesOpen(true); setCartOpen(false); }} aria-label="Favoritos"
               style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {favorites.length > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
@@ -485,7 +488,9 @@ export default function TechNova() {
         </div>
       </section>
 
+      <div style={{ display:"flex", flexDirection:"column" }}>
       {/* ── DEPARTAMENTOS — tarjetas grandes con imagen de fondo ── */}
+      <SectionBlock id="tn-departamentos" label="Departamentos" isPreview={isPreview} defaultOrder={TN_SECTION_IDS}>
       <section id="departamentos" data-reveal style={{ position:"relative", ...secBg(depImg, depBg), padding:"64px 24px" }}>
         <BgDragHandle imgKey="sectionbg_bgDepartamentos" />
         <SectionOverlay ov={depImg} />
@@ -560,8 +565,10 @@ export default function TechNova() {
           })()}
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── CONFIANZA — tarjetas con borde ── */}
+      <SectionBlock id="tn-confianza" label="Confianza" isPreview={isPreview} defaultOrder={TN_SECTION_IDS}>
       <section data-reveal style={{ position:"relative", ...secBg(trustImg, trustBg), padding:"56px 24px" }}>
         <BgDragHandle imgKey="sectionbg_bgConfianza" />
         <SectionOverlay ov={trustImg} />
@@ -587,8 +594,10 @@ export default function TechNova() {
           })}
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── OFERTAS ── */}
+      <SectionBlock id="tn-ofertas" label="Ofertas" isPreview={isPreview} defaultOrder={TN_SECTION_IDS}>
       {ofertas.length > 0 && (
         <section data-reveal style={{ position:"relative", ...secBg(ofertasImg, ofertasBg), padding:"56px 24px" }}>
           <BgDragHandle imgKey="sectionbg_bgOfertas" />
@@ -627,8 +636,10 @@ export default function TechNova() {
           </div>
         </section>
       )}
+      </SectionBlock>
 
       {/* ── PRODUCTOS — specs aparecen al hover ── */}
+      <SectionBlock id="tn-productos" label="Catálogo de productos" isPreview={isPreview} defaultOrder={TN_SECTION_IDS}>
       <section id="productos" data-reveal style={{ position:"relative", ...secBg(prodImg, prodBg), padding:"64px 24px" }}>
         <BgDragHandle imgKey="sectionbg_bgProductos" />
         <SectionOverlay ov={prodImg} />
@@ -676,8 +687,10 @@ export default function TechNova() {
           )}
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── BANNER PROMOCIONAL ── */}
+      <SectionBlock id="tn-promo" label="Banner promocional" isPreview={isPreview} defaultOrder={TN_SECTION_IDS}>
       <PromoBannerCarousel
         images={[config?.imageOverrides?.["promoBanner1"], config?.imageOverrides?.["promoBanner2"], config?.imageOverrides?.["promoBanner3"]]}
         demoImages={[
@@ -691,8 +704,10 @@ export default function TechNova() {
         accent={accent}
         bg="#0f0f1a"
       />
+      </SectionBlock>
 
       {/* ── BENEFICIOS — lista con íconos ── */}
+      <SectionBlock id="tn-beneficios" label="Beneficios" isPreview={isPreview} defaultOrder={TN_SECTION_IDS}>
       <section id="beneficios" data-reveal style={{ position:"relative", ...secBg(benefImg, benefBg), padding:"64px 24px" }}>
         <BgDragHandle imgKey="sectionbg_bgNosotros" />
         <SectionOverlay ov={benefImg} />
@@ -732,8 +747,10 @@ export default function TechNova() {
           </div>
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── CONTACTO — foto de fondo + tarjeta flotante con glow ── */}
+      <SectionBlock id="tn-contacto" label="Contacto" isPreview={isPreview} defaultOrder={TN_SECTION_IDS}>
       <section id="contacto" data-reveal style={{ position:"relative", padding:"90px 24px", overflow:"hidden", display:"flex", justifyContent:"center" }}>
         {!contactoImg?.url && (
           <>
@@ -788,6 +805,8 @@ export default function TechNova() {
           )}
         </div>
       </section>
+      </SectionBlock>
+      </div>
 
       <footer style={{ position:"relative", ...secBg(footerImg, footerBg), color:ftText, padding:"32px 24px", textAlign:"center" }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
@@ -831,7 +850,7 @@ export default function TechNova() {
             ) : favoriteProducts.map(product => (
               <div key={product.id} style={{ display:"flex", gap:14, padding:"14px 0", borderBottom:"1px solid #f5f5fa" }}>
                 {product.images[0] ? (
-                  <FadeImage src={product.images[0]} alt="" width={80} height={60} style={{ objectFit:"cover", borderRadius:8, flexShrink:0, background:"#fafaff" }} />
+                  <FadeImage src={product.images[0]} alt={product.name} width={80} height={60} style={{ objectFit:"cover", borderRadius:8, flexShrink:0, background:"#fafaff" }} />
                 ) : (
                   <div style={{ width:80, height:60, borderRadius:8, flexShrink:0, background:"#fafaff" }} />
                 )}

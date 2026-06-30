@@ -44,6 +44,10 @@ export default function StorefrontTemplateRenderer({ config }: { config: StoreCo
         sectionColors: config.sectionColors,
         setSectionColor: () => {},
         imageLoading: {},
+        hiddenSections: config.hiddenSections ?? [],
+        toggleHiddenSection: () => {},
+        sectionOrder: config.sectionOrder ?? [],
+        moveSection: () => {},
       }}>
         <Template />
         {!config.isOwner && config.flyerConfig?.enabled && (config.flyerConfig.images?.length ?? 0) > 0 && (

@@ -18,7 +18,7 @@ export function FadeImage({ alt, style, onLoad, onError, ...props }: ImageProps)
       // Si la imagen no carga (URL rota, 404), igual la mostramos — mejor el
       // ícono de imagen rota del navegador que dejarla invisible para siempre.
       onError={(e) => { setLoaded(true); onError?.(e); }}
-      style={{ ...style, opacity: loaded ? 1 : 0, transition: "opacity 0.45s ease" }}
+      style={{ ...style, opacity: loaded ? (style?.opacity ?? 1) : 0, transition: style?.transition ? `${style.transition}, opacity 0.45s ease` : "opacity 0.45s ease" }}
     />
   );
 }

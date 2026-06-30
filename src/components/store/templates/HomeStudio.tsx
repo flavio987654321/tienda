@@ -14,6 +14,7 @@ import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
+import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import type { ImageOverride } from "@/types/store-config";
 
@@ -119,6 +120,8 @@ function SocialIcon({ network }: { network: string }) {
       return null;
   }
 }
+
+const HS_SECTION_IDS = ["hs-departamentos", "hs-confianza", "hs-ofertas", "hs-productos", "hs-promo", "hs-mayorista", "hs-nosotros", "hs-contacto"];
 
 export default function HomeStudio() {
   const config    = useStoreConfig();
@@ -322,7 +325,7 @@ export default function HomeStudio() {
             <Link href={catalogHref} style={{ background:accent, color:"#fff", padding:"10px 22px", fontSize:12, fontWeight:700, textDecoration:"none", borderRadius:4 }}>Ver catálogo</Link>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            <button onClick={() => { setFavoritesOpen(true); setCartOpen(false); }}
+            <button onClick={() => { setFavoritesOpen(true); setCartOpen(false); }} aria-label="Favoritos"
               style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {favorites.length > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color:"#fff", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
@@ -410,7 +413,9 @@ export default function HomeStudio() {
         </div>
       </section>
 
+      <div style={{ display:"flex", flexDirection:"column" }}>
       {/* ── DEPARTAMENTOS — mosaico desigual ── */}
+      <SectionBlock id="hs-departamentos" label="Departamentos" isPreview={isPreview} defaultOrder={HS_SECTION_IDS}>
       <section id="departamentos" data-reveal style={{ position:"relative", ...secBg(depImg, depBg), padding:"64px 24px" }}>
         <BgDragHandle imgKey="sectionbg_bgDepartamentos" />
         <SectionOverlay ov={depImg} />
@@ -476,8 +481,10 @@ export default function HomeStudio() {
           </div>
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── CONFIANZA — línea de texto elegante, sin íconos ── */}
+      <SectionBlock id="hs-confianza" label="Confianza" isPreview={isPreview} defaultOrder={HS_SECTION_IDS}>
       <section data-reveal style={{ position:"relative", ...secBg(trustImg, trustBg), padding:"28px 24px", borderTop:"1px solid rgba(181,101,41,0.15)", borderBottom:"1px solid rgba(181,101,41,0.15)" }}>
         <BgDragHandle imgKey="sectionbg_bgConfianza" />
         <SectionOverlay ov={trustImg} />
@@ -496,8 +503,10 @@ export default function HomeStudio() {
           ))}
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── OFERTAS ── */}
+      <SectionBlock id="hs-ofertas" label="Ofertas" isPreview={isPreview} defaultOrder={HS_SECTION_IDS}>
       {ofertas.length > 0 && (
         <section data-reveal style={{ position:"relative", ...secBg(ofertasImg, ofertasBg), padding:"56px 24px" }}>
           <BgDragHandle imgKey="sectionbg_bgOfertas" />
@@ -520,8 +529,10 @@ export default function HomeStudio() {
           </div>
         </section>
       )}
+      </SectionBlock>
 
       {/* ── PRODUCTOS — grid espaciado, estilo revista ── */}
+      <SectionBlock id="hs-productos" label="Catálogo de productos" isPreview={isPreview} defaultOrder={HS_SECTION_IDS}>
       <section id="productos" data-reveal style={{ position:"relative", ...secBg(prodImg, prodBg), padding:"72px 24px" }}>
         <BgDragHandle imgKey="sectionbg_bgProductos" />
         <SectionOverlay ov={prodImg} />
@@ -553,8 +564,10 @@ export default function HomeStudio() {
           )}
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── BANNER PROMOCIONAL ── */}
+      <SectionBlock id="hs-promo" label="Banner promocional" isPreview={isPreview} defaultOrder={HS_SECTION_IDS}>
       <PromoBannerCarousel
         images={[config?.imageOverrides?.["promoBanner1"], config?.imageOverrides?.["promoBanner2"], config?.imageOverrides?.["promoBanner3"]]}
         demoImages={[
@@ -568,8 +581,10 @@ export default function HomeStudio() {
         accent={accent}
         bg="#2c2218"
       />
+      </SectionBlock>
 
       {/* ── MAYORISTA ── */}
+      <SectionBlock id="hs-mayorista" label="Mayorista" isPreview={isPreview} defaultOrder={HS_SECTION_IDS}>
       {isWholesale && (
         <section data-reveal style={{ background:"#f0ebe2", borderTop:"1px solid rgba(181,101,41,0.15)", borderBottom:"1px solid rgba(181,101,41,0.15)" }}>
           <div style={{ maxWidth:1240, margin:"0 auto", padding:"48px 24px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:16 }}>
@@ -585,8 +600,10 @@ export default function HomeStudio() {
           </div>
         </section>
       )}
+      </SectionBlock>
 
       {/* ── NOSOTROS — imagen + texto narrativo ── */}
+      <SectionBlock id="hs-nosotros" label="Nuestra historia" isPreview={isPreview} defaultOrder={HS_SECTION_IDS}>
       <section id="nosotros" data-reveal style={{ position:"relative", ...secBg(nosotrosImg, nosotrosBg), padding:"72px 24px" }}>
         <BgDragHandle imgKey="sectionbg_bgNosotros" />
         <SectionOverlay ov={nosotrosImg} />
@@ -622,8 +639,10 @@ export default function HomeStudio() {
           </div>
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── CONTACTO — fondo de imagen cálida ── */}
+      <SectionBlock id="hs-contacto" label="Contacto" isPreview={isPreview} defaultOrder={HS_SECTION_IDS}>
       <section id="contacto" data-reveal style={{ position:"relative", padding:"80px 24px", overflow:"hidden" }}>
         {!contactoImg?.url && (
           <>
@@ -662,6 +681,8 @@ export default function HomeStudio() {
           </div>
         </div>
       </section>
+      </SectionBlock>
+      </div>
 
       <footer style={{ position:"relative", ...secBg(footerImg, footerBg), color:ftText, padding:"32px 24px", textAlign:"center" }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
@@ -720,7 +741,7 @@ export default function HomeStudio() {
             ) : favoriteProducts.map(product => (
               <div key={product.id} style={{ display:"flex", gap:14, padding:"14px 0", borderBottom:"1px solid #f5f1ea" }}>
                 {product.images[0] ? (
-                  <FadeImage src={product.images[0]} alt="" width={80} height={60} style={{ objectFit:"cover", flexShrink:0, background:"#f0ebe2" }} />
+                  <FadeImage src={product.images[0]} alt={product.name} width={80} height={60} style={{ objectFit:"cover", flexShrink:0, background:"#f0ebe2" }} />
                 ) : (
                   <div style={{ width:80, height:60, flexShrink:0, background:"#f0ebe2" }} />
                 )}

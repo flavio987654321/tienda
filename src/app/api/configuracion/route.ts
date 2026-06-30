@@ -59,6 +59,8 @@ const storeConfigSchema = z.object({
     enabled: z.boolean(),
     images: z.array(z.string().max(2000)).max(3),
   }).optional(),
+  hiddenSections: z.array(z.string().max(60)).optional(),
+  sectionOrder: z.array(z.string().max(60)).optional(),
 });
 
 export async function GET() {

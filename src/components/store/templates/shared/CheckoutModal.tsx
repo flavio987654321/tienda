@@ -26,7 +26,18 @@ export function CheckoutModal({
     handleApplyCoupon, cartTotal, couponDiscount, envioPrice, envioCoordinar, orderTotal,
     canastaDisponible, donationEnabled, setDonationEnabled, donationAmount, setDonationAmount,
     acceptedTerms, setAcceptedTerms, handlePlaceOrder, fmt, fmtEnvioPrice, fmtLiveQuote,
+    isWholesale,
   } = cart;
+
+  function itemEffectiveUnitPrice(product: typeof cartItems[number]["product"], qty: number): number {
+    if (!isWholesale || !product.cantMinMayorista || qty < product.cantMinMayorista) return product.price;
+    const escalones = product.preciosEscalonados ?? [];
+    let best: number | null = null;
+    for (const band of escalones) {
+      if (qty >= band.desde && (best === null || band.precio < best)) best = band.precio;
+    }
+    return best ?? product.precioMayorista ?? product.price;
+  }
 
   if (!checkoutOpen) return null;
 
@@ -44,7 +55,7 @@ export function CheckoutModal({
             <p style={{ fontFamily: serif ?? "inherit", fontSize:20, margin:"0 0 4px", color:T }}>Checkout</p>
             <p style={{ fontSize:11, opacity:0.5, margin:0, color:T }}>Completá tus datos para finalizar</p>
           </div>
-          <button onClick={() => setCheckoutOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
+          <button onClick={() => setCheckoutOpen(false)} aria-label="Cerrar checkout" style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
         </div>
 
         {checkoutStatus === "done" ? (
@@ -77,7 +88,9 @@ export function CheckoutModal({
                       {(item.size || item.color) && (
                         <p style={{ fontSize:11, opacity:0.5, margin:"0 0 6px", color:T }}>{[item.color, item.size].filter(Boolean).join(" · ")}</p>
                       )}
-                      <p style={{ fontSize:13, color:accent, fontWeight:700, margin:0 }}>{fmt(item.product.price)}</p>
+                      <p style={{ fontSize:13, color:accent, fontWeight:700, margin:0 }}>
+                        {fmt(itemEffectiveUnitPrice(item.product, item.qty))} × {item.qty}
+                      </p>
                     </div>
                     <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}`, height:28, flexShrink:0 }}>
                       <button type="button" onClick={() => updateQty(idx, -1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>−</button>
@@ -147,7 +160,7 @@ export function CheckoutModal({
               {appliedCoupon && (
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"8px 12px", background:`${accent}15`, border:`1px solid ${accent}40`, borderRadius:6 }}>
                   <span style={{ fontSize:12, color:accent }}>Cupón {appliedCoupon.code} aplicado</span>
-                  <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:12 }}>✕</button>
+                  <button type="button" onClick={() => setAppliedCoupon(null)} aria-label="Quitar cupón" style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:12 }}>✕</button>
                 </div>
               )}
 

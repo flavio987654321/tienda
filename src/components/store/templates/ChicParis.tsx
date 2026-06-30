@@ -11,8 +11,13 @@ import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
-import { HandHeart } from "lucide-react";
-import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
+import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
+import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
+import { FadeImage } from "@/components/store/templates/shared/FadeImage";
+import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
+import { parseVariantAttrs } from "@/lib/variantAttrs";
+import { colorToSwatch } from "@/lib/colorSwatch";
+import { discountPercent } from "@/lib/discount";
 
 type Product = StorefrontProduct;
 
@@ -21,6 +26,15 @@ const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","
 const BANNER_COUNT = 3;
 
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+
+const CP_SECTION_IDS = ["cp-strip", "cp-mayorista", "cp-productos", "cp-ofertas", "cp-masvisto", "cp-nosotros", "cp-contacto"];
+
+/* ── Ícono de carrito flotante — variantes para elegir en modo edición ── */
+const CART_ICON_OPTIONS: React.ReactNode[] = [
+  <Fragment key="bag"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></Fragment>,
+  <Fragment key="cart"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></Fragment>,
+  <Fragment key="basket"><path d="M5 11 2 7h20l-3 4"/><path d="M4 11h16l-1.7 8.5a2 2 0 0 1-2 1.5H7.7a2 2 0 0 1-2-1.5L4 11Z"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></Fragment>,
+];
 
 /* ── Strip icon sets — 4 options per slot ──────────────────── */
 const STRIP_ICONS: React.ReactNode[][] = [
@@ -69,12 +83,14 @@ export default function ChicParis() {
   const [mobileCatsOpen,  setMobileCatsOpen]  = useState(false);
   const [mobileOpenCat,   setMobileOpenCat]   = useState<string | null>(null);
   const [heroSlide,       setHeroSlide]       = useState(0);
+  const [ofertasPage,     setOfertasPage]     = useState(0);
   const [heroPaused,      setHeroPaused]      = useState(false);
   const [announcementIdx,  setAnnouncementIdx]  = useState(0);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews,        setReviews]        = useState<PReview[]>([]);
+  const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
@@ -105,7 +121,6 @@ export default function ChicParis() {
   const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const isPreview   = !!storeConfig?.previewFill;
   const isOwner     = !!storeConfig?.isOwner;
-  const blockBuy    = isPreview || isOwner;
   const storefront  = useStorefront();
   const { products, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const { editMode, activeField, setActiveField, overrides: textOverrides, setOverride } = useEditContext();
@@ -121,6 +136,7 @@ export default function ChicParis() {
   const sc    = storeConfig?.sectionColors ?? {};
   const bannerMs = storeConfig?.bannerInterval ?? 4000;
   const PROMO_BAR_H = 36;
+  const hasWA = !storeConfig || storeConfig.whatsapp.enabled;
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
   const CP_DEFAULTS = ["🚚 Envío gratis en compras mayores a $30.000", "🔄 Cambios sin cargo hasta 30 días", "💳 6 cuotas sin interés"];
   const announcementMessages = (storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
@@ -132,6 +148,10 @@ export default function ChicParis() {
   const stripText = getContrastColor(stripBg) === "light" ? "#fff" : "#111";
   const prodBg    = sc["bgProductos"] ?? "#fafaf8";
   const prodText  = getContrastColor(prodBg) === "light" ? "#fff" : "#111";
+  const ofertasBg   = sc["bgOfertas"]   ?? "#ffffff";
+  const ofertasText = getContrastColor(ofertasBg) === "light" ? "#fff" : "#111";
+  const masVistoBg   = sc["bgMasVisto"]   ?? "#f5f0eb";
+  const masVistoText = getContrastColor(masVistoBg) === "light" ? "#fff" : "#111";
   const aboutBg   = sc["bgAbout"]    ?? "#f5f0eb";
   const aboutText = getContrastColor(aboutBg) === "light" ? "#fff" : "#111";
   const footerBg  = sc["bgFooter"]   ?? "#0a0a0a";
@@ -148,7 +168,6 @@ export default function ChicParis() {
     if (!showAnnouncement || announcementMessages.length <= 1) return;
     const id = setInterval(() => setAnnouncementIdx(i => (i + 1) % announcementMessages.length), 3500);
     return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAnnouncement, announcementMessages.length]);
 
   useEffect(() => {
@@ -217,48 +236,27 @@ export default function ChicParis() {
     }
   };
 
+  const cart = useCartLogic(storefront);
   const {
-    cartItems, cartOpen, setCartOpen,
+    setCartOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
     selectedSize, setSelectedSize, selectedColor, setSelectedColor,
-    qty, setQty,
-    checkoutOpen, setCheckoutOpen, checkoutStatus, setCheckoutStatus, checkoutError,
-    envioId, setEnvioId, pagoId, setPagoId,
-    coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
-    notas, setNotas,
-    buyerForm, setBuyerForm,
+    qty, setQty, selectedVariantStock, outOfStockSizes,
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
-    cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
-    searchResults, favoriteProducts, wholesaleWarnings,
-    fmt, fmtEnvioPrice, fmtLiveQuote, showToast, openModal, addToCart, removeFromCart, updateQty,
-    openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
-    pagoOptions, acceptedTerms, setAcceptedTerms,
-    donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
-  } = useCartLogic(storefront);
+    cartCount,
+    searchResults, favoriteProducts,
+    fmt, showToast, openModal, addToCart,
+    handleContact, toggleFavorite,
+  } = cart;
+  const accentText = getContrastColor(ACC) === "light" ? "#fff" : "#111";
+  const cartTheme: CartTheme = { BG:"#ffffff", S:"#fafafa", T:"#111111", MID:"#999999", border:"#e5e5e5", accent:ACC, accentText };
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
   );
-
-  const selectedVariantStock = useMemo(() => {
-    if (!modalProduct?.variants.length) return null;
-    const v = modalProduct.variants.find(v => {
-      try {
-        const a = JSON.parse(v.name);
-        if (a && typeof a === "object") {
-          const vals = Object.values(a).map((x) => String(x).toLowerCase());
-          const sizeOk  = !selectedSize  || vals.includes(selectedSize.toLowerCase());
-          const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
-          return sizeOk && colorOk;
-        }
-      } catch {}
-      return v.value.includes(selectedSize) && v.value.includes(selectedColor);
-    }) ?? (modalProduct.variants.length === 1 ? modalProduct.variants[0] : null);
-    return v?.stock ?? null;
-  }, [modalProduct, selectedSize, selectedColor]);
 
   function openInquiry(product: Product) {
     setModalProduct(null);
@@ -289,7 +287,7 @@ export default function ChicParis() {
   useEffect(() => {
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug) { setReviews([]); return; }
-    setReviewsLoading(true); setReviewDone(false); setReelIndex(0);
+    setReviewsLoading(true); setReviewDone(false); setReelIndex(0); setReviewsShown(5);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
     fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
       .then(r => r.ok ? r.json() : { reviews: [] })
@@ -307,15 +305,16 @@ export default function ChicParis() {
     );
     if (imgIdx !== -1) setModalImg(imgIdx);
     const colorVariants = modalProduct.variants.filter((v) => {
-      try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
+      const a = parseVariantAttrs(v.name);
+      return !!a && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase());
     });
     if (!colorVariants.length) return;
     const best = colorVariants.find((v) => v.stock > 0) ?? colorVariants[0];
-    try {
-      const a = JSON.parse(best.name);
-      const sizeKey = Object.keys(a).find((k: string) => SIZE_ATTRS.includes(k.toLowerCase()));
-      if (sizeKey && a[sizeKey] && a[sizeKey] !== selectedSize) setSelectedSize(a[sizeKey]);
-    } catch {}
+    const bestAttrs = parseVariantAttrs(best.name);
+    if (bestAttrs) {
+      const sizeKey = Object.keys(bestAttrs).find((k: string) => SIZE_ATTRS.includes(k.toLowerCase()));
+      if (sizeKey && bestAttrs[sizeKey] && bestAttrs[sizeKey] !== selectedSize) setSelectedSize(String(bestAttrs[sizeKey]));
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedColor, modalProduct?.id]);
 
@@ -324,29 +323,25 @@ export default function ChicParis() {
     if (!modalProduct || !selectedSize) return;
     if (selectedColor) {
       const hasCombo = modalProduct.variants.some((v) => {
-        try {
-          const a = JSON.parse(v.name);
-          if (typeof a !== "object") return false;
-          const vals = Object.values(a).map((x) => String(x).toLowerCase());
-          return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
-        } catch { return false; }
+        const a = parseVariantAttrs(v.name);
+        if (!a) return false;
+        const vals = Object.values(a).map((x) => String(x).toLowerCase());
+        return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
       });
       if (hasCombo) return;
     }
     const sizeVariants = modalProduct.variants.filter((v) => {
-      try {
-        const a = JSON.parse(v.name);
-        if (typeof a !== "object") return false;
-        return Object.entries(a).some(([k, val]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
-      } catch { return false; }
+      const a = parseVariantAttrs(v.name);
+      if (!a) return false;
+      return Object.entries(a).some(([k, val]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
     });
     if (!sizeVariants.length) return;
     const best = sizeVariants.find((v) => v.stock > 0) ?? sizeVariants[0];
-    try {
-      const a = JSON.parse(best.name);
-      const colorKey = Object.keys(a).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
-      if (colorKey && a[colorKey]) {
-        const newColor = String(a[colorKey]);
+    const bestAttrs = parseVariantAttrs(best.name);
+    if (bestAttrs) {
+      const colorKey = Object.keys(bestAttrs).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
+      if (colorKey && bestAttrs[colorKey]) {
+        const newColor = String(bestAttrs[colorKey]);
         if (newColor !== selectedColor) {
           setSelectedColor(newColor);
           const imgIdx = modalProduct.imageItems.findIndex(
@@ -355,9 +350,19 @@ export default function ChicParis() {
           if (imgIdx !== -1) setModalImg(imgIdx);
         }
       }
-    } catch {}
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSize, modalProduct?.id]);
+
+  // Al cambiar de imagen (flechas/miniaturas): sync color si esa foto pertenece a otra variante
+  useEffect(() => {
+    if (!modalProduct) return;
+    const img = modalProduct.imageItems[modalImg];
+    if (img?.variantValue && img.variantValue.toLowerCase() !== selectedColor?.toLowerCase()) {
+      setSelectedColor(img.variantValue);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalImg]);
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
@@ -392,12 +397,21 @@ export default function ChicParis() {
 
   const changeGender = (g: string | null) => { setActiveGender(g); setActiveCategory("Todos"); setVisibleCount(8); };
 
-  const allFiltered = products.filter(p => {
+  const allFiltered = useMemo(() => products.filter(p => {
     if (activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
     if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
     return true;
-  });
+  }), [products, activeGender, activeCategory]);
   const filtered    = allFiltered.slice(0, visibleCount);
+
+  const similarProducts = useMemo(() => {
+    if (!modalProduct) return [];
+    const others = products.filter(p => p.id !== modalProduct.id);
+    const sameSub = modalProduct.subcategory ? others.filter(p => p.subcategory === modalProduct.subcategory) : [];
+    const sameCat = others.filter(p => p.category === modalProduct.category && !sameSub.includes(p));
+    const rest = others.filter(p => !sameSub.includes(p) && !sameCat.includes(p));
+    return [...sameSub, ...sameCat, ...rest].slice(0, 4);
+  }, [products, modalProduct]);
 
   // Banner slide images
   const bannerImgs = Array.from({ length: BANNER_COUNT }, (_, i) =>
@@ -423,6 +437,11 @@ export default function ChicParis() {
         }
         .cp-btn:hover { opacity:0.85; }
         @keyframes cp-toast { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes cp-wa-pulse { 0% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0.55); } 70% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 14px rgba(37,211,102,0); } 100% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0); } }
+        .cp-wa-fab { background:linear-gradient(135deg,#2be374,#1fae57); animation:cp-wa-pulse 2.4s ease-out infinite; }
+        .cp-wa-fab:hover { animation-play-state:paused; }
+        .cp-zoom-img { transition:transform 0.5s ease; }
+        .cp-zoom:hover .cp-zoom-img { transform:scale(1.06); }
       `}</style>
 
       {/* ── PROMO BAR ── */}
@@ -469,29 +488,35 @@ export default function ChicParis() {
               {hoveredNavCat && (
                 <>
                 <div style={{ position: "absolute", top: "100%", left: 0, right: 0, height: 12, zIndex: 499 }} />
-                <div style={{ position: "absolute", top: "calc(100% + 12px)", left: 0, background: "#fff", border: "1px solid #e8e8e8", minWidth: 180, zIndex: 500, padding: "6px 0", boxShadow: "0 12px 40px rgba(0,0,0,0.12)" }}>
+                <div style={{ position: "absolute", top: "calc(100% + 12px)", left: 0, background: "#fff", border: "1px solid #e8e8e8", zIndex: 500, padding: "24px 32px", boxShadow: "0 12px 40px rgba(0,0,0,0.12)", display: "flex", gap: 40 }}>
                   {categoryList.map(cat => {
                     const subs = subcategoriesFor[cat] || [];
                     return (
-                      <div key={cat} style={{ position: "relative" }}
-                        onMouseEnter={() => setHoveredNavCat(cat)}
-                        onMouseLeave={() => setHoveredNavCat("__open__")}>
+                      <div key={cat} style={{ minWidth: 140 }}>
                         <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
-                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: hoveredNavCat === cat ? "#f9f9f9" : "none", border: "none", color: "#111", padding: "9px 16px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 2, textTransform: "uppercase" }}>
+                          style={{ display: "block", width: "100%", background: "none", border: "none", borderBottom: "1px solid #111", color: "#111", padding: "0 0 8px", marginBottom: 10, fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, whiteSpace: "nowrap", transition: "color 0.15s, border-color 0.15s" }}
+                          onMouseEnter={e => { e.currentTarget.style.color = ACC; e.currentTarget.style.borderBottomColor = ACC; }}
+                          onMouseLeave={e => { e.currentTarget.style.color = "#111"; e.currentTarget.style.borderBottomColor = "#111"; }}>
                           {cat}
-                          {subs.length > 0 && <span style={{ opacity: 0.4, fontSize: 10 }}>›</span>}
                         </button>
-                        {subs.length > 0 && hoveredNavCat === cat && (
-                          <div style={{ position: "absolute", top: 0, left: "100%", background: "#fff", border: "1px solid #e8e8e8", minWidth: 160, padding: "6px 0", boxShadow: "8px 8px 32px rgba(0,0,0,0.08)", zIndex: 501 }}>
+                        {subs.length > 0 ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                             {subs.map(sub => (
                               <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
-                                style={{ display: "block", width: "100%", background: "none", border: "none", color: "#111", padding: "8px 16px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 1, textTransform: "uppercase" }}
-                                onMouseEnter={e => (e.currentTarget.style.background = "#f9f9f9")}
-                                onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                                style={{ display: "block", width: "100%", background: "none", border: "none", color: "#555", padding: "5px 0", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 0.5, whiteSpace: "nowrap" }}
+                                onMouseEnter={e => (e.currentTarget.style.color = "#111")}
+                                onMouseLeave={e => (e.currentTarget.style.color = "#555")}>
                                 {sub}
                               </button>
                             ))}
                           </div>
+                        ) : (
+                          <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
+                            style={{ display: "block", background: "none", border: "none", color: "#999", padding: "5px 0", fontSize: 11, textAlign: "left", cursor: "pointer", transition: "color 0.15s" }}
+                            onMouseEnter={e => (e.currentTarget.style.color = "#111")}
+                            onMouseLeave={e => (e.currentTarget.style.color = "#999")}>
+                            Ver todo
+                          </button>
                         )}
                       </div>
                     );
@@ -522,7 +547,7 @@ export default function ChicParis() {
 
           {/* Nav right */}
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={() => setSearchOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", transition: "color 0.3s" }}>
+            <button onClick={() => setSearchOpen(true)} aria-label="Buscar" style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", transition: "color 0.3s" }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
             {pushBell && storeConfig?.showPushBell && !isPreview && (
@@ -558,7 +583,7 @@ export default function ChicParis() {
                 )}
               </>
             )}
-            <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); setCartOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, position: "relative", display: "flex", transition: "color 0.3s" }}>
+            <button onClick={() => { setFavoritesOpen(true); setUserDropdownOpen(false); setCartOpen(false); }} aria-label="Favoritos" style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, position: "relative", display: "flex", transition: "color 0.3s" }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill={favorites.length > 0 ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
             </button>
             <div ref={userDropdownRef} style={{ position: "relative" }}>
@@ -652,7 +677,7 @@ export default function ChicParis() {
       )}
 
       {/* ── HERO CAROUSEL ── */}
-      <section id="hero" style={{ position: "relative", height: "100vh", overflow: "hidden", background: "#111" }}
+      <section id="hero" style={{ position: "relative", height: isPreview ? `calc(100vh - ${68 + (showAnnouncement ? PROMO_BAR_H : 0)}px)` : "100vh", background: "#111" }}
         onMouseEnter={() => setHeroPaused(true)}
         onMouseLeave={() => setHeroPaused(false)}>
 
@@ -676,7 +701,7 @@ export default function ChicParis() {
               background: ov?.url ? "transparent" : ["#1a1a2e", "#16213e", "#0f3460"][i],
             }}>
               {ov?.url && (
-                <img src={ov.url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` }} />
+                <FadeImage src={ov.url} alt="" fill sizes="100vw" style={{ objectFit: "cover", objectPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` }} />
               )}
               {overlayGradient && (
                 <div style={{ position: "absolute", inset: 0, background: overlayGradient }} />
@@ -737,6 +762,8 @@ export default function ChicParis() {
         ))}
       </section>
 
+      <div style={{ display:"flex", flexDirection:"column" }}>
+      <SectionBlock id="cp-strip" label="Garantías" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
       {/* ── STRIP ── */}
       <section data-reveal style={{ background: stripBg, borderTop: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, borderBottom: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, padding: "20px 40px", position: "relative" }}>
         <EditableSectionBg field="bgStrip" label="Fondo franja garantías" />
@@ -771,8 +798,10 @@ export default function ChicParis() {
           })}
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── MAYORISTA — banner "Solicitá tu lista de precios" ── */}
+      <SectionBlock id="cp-mayorista" label="Mayorista" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
       {isWholesale && (
         <section data-reveal style={{ background: "#f8f5f0", borderTop: `3px solid ${ACC}` }}>
           <div style={{ maxWidth: 1280, margin: "0 auto", padding: "72px 40px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 20 }}>
@@ -790,8 +819,10 @@ export default function ChicParis() {
           </div>
         </section>
       )}
+      </SectionBlock>
 
       {/* ── PRODUCTOS ── */}
+      <SectionBlock id="cp-productos" label="Catálogo de productos" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
       <section id="productos" data-reveal style={{ background: prodBg, padding: isMobile ? "48px 16px" : "72px 40px", position: "relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
@@ -819,14 +850,14 @@ export default function ChicParis() {
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fill,minmax(260px,1fr))", gap: isMobile ? 12 : 24 }}>
                 {filtered.map(product => (
                   <div key={product.id} className="cp-prod" onClick={() => openModal(product)} style={{ cursor: "pointer", background: "#fff", borderRadius: 4, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                    <div style={{ position: "relative", overflow: "hidden", aspectRatio: "3/4" }}>
-                      <img className="cp-img" src={product.images[0] ?? "/placeholder.jpg"} alt={product.name}
-                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <div style={{ position: "relative", width: "100%", overflow: "hidden", aspectRatio: "3/4" }}>
+                      <FadeImage className="cp-img" src={product.images[0] ?? "/placeholder.jpg"} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw"
+                        style={{ objectFit: "cover" }} />
                       <div className="cp-overlay" style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <span style={{ color: "#fff", fontSize: 11, letterSpacing: 3, fontWeight: 700, textTransform: "uppercase", border: "1px solid #fff", padding: "10px 20px" }}>Ver detalle</span>
                       </div>
-                      {product.comparePrice && (
-                        <span style={{ position: "absolute", top: 12, left: 12, background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", fontSize: 10, fontWeight: 800, padding: "4px 10px", letterSpacing: 1 }}>SALE</span>
+                      {discountPercent(product.price, product.comparePrice) !== null && (
+                        <span style={{ position: "absolute", top: 12, left: 12, background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", fontSize: 10, fontWeight: 800, padding: "4px 10px", letterSpacing: 1 }}>SALE -{discountPercent(product.price, product.comparePrice)}%</span>
                       )}
                       <button onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
                         style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.9)", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
@@ -856,7 +887,128 @@ export default function ChicParis() {
           )}
         </div>
       </section>
+      </SectionBlock>
 
+      {/* ── OFERTAS ── */}
+      <SectionBlock id="cp-ofertas" label="Ofertas" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
+        {(() => {
+          const allOfertas = products.filter(p => p.comparePrice && p.comparePrice > p.price);
+          if (allOfertas.length === 0 && !isPreview) return null;
+          const displayList = (allOfertas.length > 0 ? allOfertas : products).slice(0, 8);
+          const hasMore = allOfertas.length > 8;
+          const PAGE_SIZE = 4;
+          const totalPages = Math.ceil(displayList.length / PAGE_SIZE);
+          const page = Math.min(ofertasPage, Math.max(0, totalPages - 1));
+          const pageItems = displayList.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+          return (
+            <section data-reveal style={{ position: "relative", background: ofertasBg, padding: isMobile ? "48px 16px" : "72px 40px", borderTop: "1px solid #f0f0f0" }}>
+              <EditableSectionBg field="bgOfertas" label="Fondo ofertas" />
+              <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+                <div style={{ textAlign: "center", marginBottom: 48 }}>
+                  <p style={{ fontSize: 10, letterSpacing: 4, color: ACC, textTransform: "uppercase", fontWeight: 700, margin: "0 0 6px" }}><EditableZone field="ofertasKicker" label="Texto sobre Ofertas">Aprovechá</EditableZone></p>
+                  <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "clamp(26px,3.5vw,42px)", fontWeight: 300, fontStyle: "italic", margin: 0, color: ofertasText }}><EditableZone field="ofertasTitle" label="Título Ofertas">Ofertas</EditableZone></h2>
+                </div>
+                <div style={{ position: "relative" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 360px)", justifyContent: "center", gap: isMobile ? 32 : 48 }}>
+                    {pageItems.map(p => {
+                      const pct = p.comparePrice && p.comparePrice > p.price ? Math.round((1 - p.price / p.comparePrice) * 100) : null;
+                      return (
+                        <div key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer", display: "flex", gap: 20, alignItems: "center" }}>
+                          <div style={{ position: "relative", width: 140, height: 175, flexShrink: 0, background: "#f5f5f5", overflow: "hidden", borderRadius: 4 }}>
+                            {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="140px" className="cp-zoom-img" style={{ objectFit: "cover" }} />}
+                            {pct && (
+                              <span style={{ position: "absolute", top: -8, right: -8, width: 42, height: 42, borderRadius: "50%", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", lineHeight: 1.1 }}>-{pct}%</span>
+                            )}
+                          </div>
+                          <div>
+                            <p style={{ margin: "0 0 8px", fontSize: 16, fontFamily: "'Playfair Display', Georgia, serif", fontStyle: "italic", color: ofertasText }}>{p.name}</p>
+                            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                              <span style={{ fontSize: 16, fontWeight: 800, color: ACC }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                              {p.comparePrice && p.comparePrice > p.price && <span style={{ fontSize: 13, color: "#999", textDecoration: "line-through" }}>{fmt(p.comparePrice)}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {totalPages > 1 && page > 0 && (
+                    <button onClick={() => setOfertasPage(p => p - 1)} aria-label="Anterior"
+                      style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", background: "#fff", border: `1px solid ${ACC}`, color: ACC, width: 44, height: 44, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
+                      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                  )}
+                  {totalPages > 1 && page < totalPages - 1 && (
+                    <button onClick={() => setOfertasPage(p => p + 1)} aria-label="Siguiente"
+                      style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", background: "#fff", border: `1px solid ${ACC}`, color: ACC, width: 44, height: 44, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
+                      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                  )}
+                </div>
+                {totalPages > 1 && (
+                  <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 32 }}>
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <button key={i} onClick={() => setOfertasPage(i)} aria-label={`Página ${i + 1}`} style={{
+                        width: page === i ? 22 : 8, height: 8, borderRadius: 4, border: "none", padding: 0,
+                        background: page === i ? ACC : "#ddd", cursor: "pointer", transition: "all 0.3s",
+                      }} />
+                    ))}
+                  </div>
+                )}
+                {hasMore && (
+                  <div style={{ textAlign: "center", marginTop: 32 }}>
+                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&oferta=true`; }}
+                      style={{ background: "none", border: `1px solid ${ACC}`, color: ACC, padding: "12px 32px", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}><EditableZone field="ofertasCta" label="Botón ver todas las ofertas">Ver todas las ofertas</EditableZone></button>
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })()}
+      </SectionBlock>
+
+      {/* ── LO MÁS VISTO ── */}
+      <SectionBlock id="cp-masvisto" label="Lo más visto" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
+        {(() => {
+          const featured = products.filter(p => p.featured);
+          const pool = featured.length > 0 ? featured : products;
+          const displayList = pool.slice(0, 8);
+          const hasMore = pool.length > 8;
+          if (displayList.length === 0) return null;
+          return (
+            <section data-reveal style={{ position: "relative", background: masVistoBg, padding: isMobile ? "48px 16px" : "72px 40px", borderTop: "1px solid #f0f0f0" }}>
+              <EditableSectionBg field="bgMasVisto" label="Fondo lo más visto" />
+              <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+                <div style={{ marginBottom: 40 }}>
+                  <p style={{ fontSize: 10, letterSpacing: 4, color: ACC, textTransform: "uppercase", fontWeight: 700, margin: "0 0 6px" }}><EditableZone field="masVistoKicker" label="Texto sobre Lo más visto">Tendencia</EditableZone></p>
+                  <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "clamp(24px,3vw,38px)", fontWeight: 300, fontStyle: "italic", margin: 0, color: masVistoText }}><EditableZone field="masVistoTitle" label="Título Lo más visto">Lo más visto</EditableZone></h2>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 16 }}>
+                  {displayList.map((p, idx) => (
+                    <div key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer" }}>
+                      <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", background: "#f5f5f5", overflow: "hidden", borderRadius: 4 }}>
+                        {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="cp-zoom-img" style={{ objectFit: "cover" }} />}
+                        <span style={{ position: "absolute", top: 10, left: 10, background: "rgba(0,0,0,0.65)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "4px 10px" }}>#{idx + 1}</span>
+                      </div>
+                      <div style={{ padding: "10px 0 0" }}>
+                        <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: masVistoText }}>{p.name}</p>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: ACC }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {hasMore && (
+                  <div style={{ textAlign: "center", marginTop: 40 }}>
+                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&destacado=true`; }}
+                      style={{ background: "none", border: `1px solid ${ACC}`, color: ACC, padding: "12px 32px", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })()}
+      </SectionBlock>
+
+      <SectionBlock id="cp-nosotros" label="Nuestra historia" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
       {/* ── ABOUT ── */}
       <section id="nosotros" data-reveal style={{ background: aboutBg, padding: isMobile ? "48px 16px" : "80px 40px", position: "relative" }}>
         <EditableSectionBg field="bgAbout" label="Fondo nosotros" />
@@ -865,9 +1017,9 @@ export default function ChicParis() {
             {(() => {
               const ov = storeConfig?.imageOverrides?.["nosotrosImage"];
               return (
-                <div style={{ aspectRatio: "4/5", background: "#d8d0c8", overflow: "hidden", position: "relative" }}>
+                <div style={{ width: "100%", aspectRatio: "4/5", background: "#d8d0c8", overflow: "hidden", position: "relative" }}>
                   {ov?.url
-                    ? <img src={ov.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` }} />
+                    ? <FadeImage src={ov.url} alt="" fill sizes="(max-width: 768px) 100vw, 450px" style={{ objectFit: "cover", objectPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` }} />
                     : <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #e8e0d8, #c8bcb0)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <span style={{ fontSize: 11, color: "#a09080", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Subí tu foto</span>
                       </div>
@@ -899,7 +1051,9 @@ export default function ChicParis() {
           </div>
         </div>
       </section>
+      </SectionBlock>
 
+      <SectionBlock id="cp-contacto" label="Contacto" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
       {/* ── CONTACT — split editorial ── */}
       <section id="contacto" data-reveal style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", minHeight: isMobile ? "auto" : 540 }}>
 
@@ -936,11 +1090,12 @@ export default function ChicParis() {
             ))}
 
             {/* Social links */}
-            {storeConfig?.socialLinks && Object.entries(storeConfig.socialLinks).some(([, v]) => v) && (
+            {storeConfig?.socialLinks && (isPreview || Object.entries(storeConfig.socialLinks).some(([, v]) => v)) && (
               <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
-                {Object.entries(storeConfig.socialLinks).filter(([, v]) => v).map(([net, url]) => (
-                  <a key={net} href={url} target="_blank" rel="noopener"
-                    style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", textDecoration: "none", transition: "color 0.2s" }}
+                {Object.entries(storeConfig.socialLinks).filter(([, v]) => isPreview || v).map(([net, url]) => (
+                  <a key={net} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener"
+                    onClick={e => { if (!url) e.preventDefault(); }}
+                    style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", textDecoration: "none", transition: "color 0.2s", opacity: url ? 1 : 0.4, cursor: url ? "pointer" : "default" }}
                     onMouseEnter={e => (e.currentTarget.style.color = ACC)}
                     onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}>
                     {net}
@@ -1001,6 +1156,8 @@ export default function ChicParis() {
           )}
         </div>
       </section>
+      </SectionBlock>
+      </div>
 
       {/* ── FOOTER ── */}
       <footer style={{ background: footerBg, padding: "48px 40px 32px", position: "relative" }}>
@@ -1016,8 +1173,10 @@ export default function ChicParis() {
               </p>
               {storeConfig?.socialLinks && (
                 <div style={{ display: "flex", gap: 14, marginTop: 20 }}>
-                  {Object.entries(storeConfig.socialLinks).filter(([, v]) => v).map(([net, url]) => (
-                    <a key={net} href={url} target="_blank" rel="noopener" style={{ color: footerText, opacity: 0.55, fontSize: 11, textDecoration: "none", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>{net}</a>
+                  {Object.entries(storeConfig.socialLinks).filter(([, v]) => isPreview || v).map(([net, url]) => (
+                    <a key={net} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener"
+                      onClick={e => { if (!url) e.preventDefault(); }}
+                      style={{ color: footerText, opacity: url ? 0.55 : 0.3, fontSize: 11, textDecoration: "none", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600, cursor: url ? "pointer" : "default" }}>{net}</a>
                   ))}
                 </div>
               )}
@@ -1056,7 +1215,7 @@ export default function ChicParis() {
               ))}
             </div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px 24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px 24px", paddingLeft: hasWA ? 110 : 0, paddingRight: 100 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0 16px" }}>
               {[
                 { label: "Política de devoluciones", tipo: "devoluciones" },
@@ -1113,7 +1272,7 @@ export default function ChicParis() {
               <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Buscar productos..." style={{ flex: 1, border: "none", padding: "18px 14px", fontSize: 15, outline: "none", fontFamily: "inherit" }} />
-              <button onClick={() => setSearchOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#999" }}>×</button>
+              <button onClick={() => setSearchOpen(false)} aria-label="Cerrar búsqueda" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#999" }}>×</button>
             </div>
             <div style={{ maxHeight: 380, overflowY: "auto", padding: 12 }}>
               {searchResults.length > 0 ? searchResults.map(p => (
@@ -1121,7 +1280,7 @@ export default function ChicParis() {
                   style={{ display: "flex", gap: 14, padding: "10px 8px", cursor: "pointer", borderRadius: 4 }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#fafafa")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                  <img src={p.images[0] ?? "/placeholder.jpg"} alt={p.name} style={{ width: 48, height: 60, objectFit: "cover", flexShrink: 0 }} />
+                  <FadeImage src={p.images[0] ?? "/placeholder.jpg"} alt={p.name} width={48} height={60} style={{ objectFit: "cover", flexShrink: 0 }} />
                   <div>
                     <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600 }}>{p.name}</p>
                     <p style={{ margin: 0, fontSize: 13, color: ACC, fontWeight: 700 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
@@ -1144,11 +1303,12 @@ export default function ChicParis() {
           <div style={{ background: "#fff", width: "100%", maxWidth: 860, maxHeight: isPreview ? "100%" : "90vh", overflow: "hidden", display: "flex", flexDirection: "column", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", position:"relative" }}
             onClick={e => e.stopPropagation()}>
             <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(0,0,0,0.5)", border:"none", color:"#fff", width:36, height:36, borderRadius:"50%", cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
-            <div style={{ overflow:"auto", flex:1, minHeight:0, display:"flex", flexDirection: isMobile ? "column" : "row" }}>
+            <div style={{ overflow:"auto", flex:1, minHeight:0, display:"flex", flexDirection:"column" }}>
+            <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row" }}>
             {/* Images */}
             <div style={{ width: isMobile ? "100%" : "48%", flexShrink: 0, position: "relative", overflow: "hidden", aspectRatio: isMobile ? "4/3" : undefined }} {...imgSwipe}>
-              <img src={modalProduct.images[modalImg] ?? "/placeholder.jpg"} alt={modalProduct.name}
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", cursor:"zoom-in" }}
+              <FadeImage src={modalProduct.images[modalImg] ?? "/placeholder.jpg"} alt={modalProduct.name} fill sizes="(max-width: 768px) 100vw, 420px"
+                style={{ objectFit: "cover", cursor:"zoom-in" }}
                 onClick={() => setLightboxSrc(modalProduct.images[modalImg] ?? "/placeholder.jpg")} />
               {modalProduct.images.length > 1 && (<>
                 <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
@@ -1187,18 +1347,53 @@ export default function ChicParis() {
               </div>
               {modalProduct.description && <p style={{ fontSize: 14, color: "#555", lineHeight: 1.7, marginBottom: 20 }}>{modalProduct.description}</p>}
 
+              {(() => {
+                const attrs = modalProduct.attributes ?? [];
+                const condicionAttr = attrs.find(a => a.key === "Condición");
+                const serviciosAttr = attrs.find(a => a.key === "Servicios");
+                const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
+                let servicios: string[] = [];
+                if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
+                if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+                    {condicionAttr && (
+                      <span style={{ alignSelf: "flex-start", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", fontWeight: 800, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", background: ACC, padding: "4px 10px", borderRadius: 4 }}>{condicionAttr.value}</span>
+                    )}
+                    {otherAttrs.length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        {otherAttrs.map(a => (
+                          <p key={a.key} style={{ fontSize: 12, color: "#555", margin: 0 }}><span style={{ color: "#111", fontWeight: 600 }}>{a.key}:</span> {a.value}</p>
+                        ))}
+                      </div>
+                    )}
+                    {servicios.length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {servicios.map(k => (
+                          <span key={k} style={{ fontSize: 10, letterSpacing: 1, padding: "4px 10px", border: "1px solid #e5e7eb", color: "#555", borderRadius: 4 }}>✓ {k}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {modalProduct.sizes.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: "#333", textTransform: "uppercase", letterSpacing: 1 }}>Talle</p>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {modalProduct.sizes.map(s => (
-                      <button key={s} onClick={() => setSelectedSize(s)} style={{
-                        padding: "8px 14px", border: selectedSize === s ? `2px solid ${ACC}` : "2px solid #e0e0e0",
-                        background: selectedSize === s ? ACC : "transparent",
-                        color: selectedSize === s ? (getContrastColor(ACC) === "light" ? "#fff" : "#111") : "#333",
-                        fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
-                      }}>{s}</button>
-                    ))}
+                    {modalProduct.sizes.map(s => {
+                      const outOfStock = outOfStockSizes.has(s);
+                      return (
+                        <button key={s} onClick={() => setSelectedSize(s)} style={{
+                          padding: "8px 14px", border: selectedSize === s ? `2px solid ${ACC}` : "2px solid #e0e0e0",
+                          background: selectedSize === s ? ACC : "transparent",
+                          color: selectedSize === s ? (getContrastColor(ACC) === "light" ? "#fff" : "#111") : "#333",
+                          fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
+                          opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none",
+                        }}>{s}</button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1206,14 +1401,21 @@ export default function ChicParis() {
                 <div style={{ marginBottom: 16 }}>
                   <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: "#333", textTransform: "uppercase", letterSpacing: 1 }}>Color</p>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {modalProduct.colors.map(c => (
-                      <button key={c} onClick={() => setSelectedColor(c)} style={{
-                        padding: "8px 14px", border: selectedColor === c ? `2px solid ${ACC}` : "2px solid #e0e0e0",
-                        background: selectedColor === c ? ACC : "transparent",
-                        color: selectedColor === c ? (getContrastColor(ACC) === "light" ? "#fff" : "#111") : "#333",
-                        fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
-                      }}>{c}</button>
-                    ))}
+                    {modalProduct.colors.map(c => {
+                      const swatch = colorToSwatch(c);
+                      return (
+                        <button key={c} onClick={() => setSelectedColor(c)} style={{
+                          display: "flex", alignItems: "center", gap: 7,
+                          padding: "8px 14px", border: selectedColor === c ? `2px solid ${ACC}` : "2px solid #e0e0e0",
+                          background: selectedColor === c ? ACC : "transparent",
+                          color: selectedColor === c ? (getContrastColor(ACC) === "light" ? "#fff" : "#111") : "#333",
+                          fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
+                        }}>
+                          {swatch && <span style={{ width: 14, height: 14, borderRadius: "50%", background: swatch, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />}
+                          {c}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1221,7 +1423,7 @@ export default function ChicParis() {
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
                 <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#333", textTransform: "uppercase", letterSpacing: 1 }}>Cantidad</p>
                 <div style={{ display: "flex", alignItems: "center", border: "2px solid #e0e0e0" }}>
-                  <button onClick={() => setQty(q => Math.max(1, q - 1))} style={{ width: 36, height: 36, background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#333" }}>−</button>
+                  <button onClick={() => setQty(q => Math.max(isWholesale && modalProduct.cantMinMayorista ? modalProduct.cantMinMayorista : 1, q - 1))} style={{ width: 36, height: 36, background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#333" }}>−</button>
                   <span style={{ width: 36, textAlign: "center", fontSize: 14, fontWeight: 700 }}>{qty}</span>
                   <button onClick={() => setQty(q => selectedVariantStock !== null ? Math.min(selectedVariantStock, q + 1) : q + 1)} style={{ width: 36, height: 36, background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#333" }}>+</button>
                 </div>
@@ -1294,7 +1496,7 @@ export default function ChicParis() {
                   <p style={{ fontSize: 12, color: "#bbb" }}>Cargando...</p>
                 ) : reviews.length > 0 ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 20 }}>
-                    {reviews.map(r => (
+                    {reviews.slice(0, reviewsShown).map(r => (
                       <div key={r.id} style={{ borderBottom: "1px solid #f5f5f5", paddingBottom: 14 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                           <span style={{ fontSize: 12, fontWeight: 700 }}>{r.reviewer}</span>
@@ -1303,6 +1505,11 @@ export default function ChicParis() {
                         {r.comment && <p style={{ fontSize: 13, color: "#666", margin: 0, lineHeight: 1.6 }}>{r.comment}</p>}
                       </div>
                     ))}
+                    {reviews.length > reviewsShown && (
+                      <button onClick={() => setReviewsShown(n => n + 10)} style={{ alignSelf: "flex-start", background: "none", border: "none", color: ACC, fontSize: 11, fontWeight: 700, letterSpacing: 1, cursor: "pointer", padding: 0, textDecoration: "underline" }}>
+                        Ver más reseñas ({reviews.length - reviewsShown})
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <p style={{ fontSize: 12, color: "#bbb", marginBottom: 16 }}>Sé el primero en dejar una reseña.</p>
@@ -1336,277 +1543,31 @@ export default function ChicParis() {
                   </div>
                 )}
               </div>
-              {(() => {
-                const others = products.filter(p => p.id !== modalProduct.id);
-                const sameSub = modalProduct.subcategory ? others.filter(p => p.subcategory === modalProduct.subcategory) : [];
-                const sameCat = others.filter(p => p.category === modalProduct.category && !sameSub.includes(p));
-                const rest = others.filter(p => !sameSub.includes(p) && !sameCat.includes(p));
-                const similar = [...sameSub, ...sameCat, ...rest].slice(0, 4);
-                if (similar.length === 0) return null;
-                return (
-                  <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 20, marginTop: 20 }}>
-                    <p style={{ margin: "0 0 14px", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#999" }}>Productos similares</p>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>
-                      {similar.map(p => (
-                        <div key={p.id} onClick={() => openModal(p)} style={{ cursor: "pointer" }}>
-                          <img src={p.images[0] ?? ""} alt={p.name} style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", display: "block", borderRadius: 4 }} />
-                          <p style={{ margin: "8px 0 2px", fontSize: 12, color: "#111", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" as const }}>{p.name}</p>
-                          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: ACC }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── CART ── */}
-      {cartOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: isPreview ? 20000 : 9500, display: "flex", justifyContent: "flex-end", overflow: "hidden" }} onClick={() => setCartOpen(false)}>
-          <div style={{ width: isMobile ? "100%" : 400, background: "#fff", height: "100%", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(0,0,0,0.15)" }} onClick={e => e.stopPropagation()}>
-            <div style={{ padding: "20px 24px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>Tu carrito ({cartCount})</h3>
-              <button onClick={() => setCartOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: "#999" }}>×</button>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
-              {cartItems.length === 0 ? (
-                <p style={{ color: "#bbb", fontSize: 14, textAlign: "center", marginTop: 40 }}>Tu carrito está vacío</p>
-              ) : cartItems.map((item, idx) => (
-                <div key={idx} style={{ display: "flex", gap: 14, marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid #f5f5f5" }}>
-                  <img src={item.product.images[0] ?? "/placeholder.jpg"} alt={item.product.name} style={{ width: 72, height: 88, objectFit: "cover", flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 700 }}>{item.product.name}</p>
-                    {item.size && <p style={{ margin: "0 0 2px", fontSize: 11, color: "#999" }}>Talle: {item.size}</p>}
-                    {item.color && <p style={{ margin: "0 0 8px", fontSize: 11, color: "#999" }}>Color: {item.color}</p>}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ display: "flex", alignItems: "center", border: "1px solid #e0e0e0" }}>
-                        <button onClick={() => updateQty(idx, -1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>−</button>
-                        <span style={{ width: 28, textAlign: "center", fontSize: 12, fontWeight: 700 }}>{item.qty}</span>
-                        <button onClick={() => updateQty(idx, 1)} style={{ width: 28, height: 28, background: "none", border: "none", cursor: "pointer" }}>+</button>
+            {similarProducts.length > 0 && (
+              <div style={{ borderTop: "1px solid #f0f0f0", padding: isMobile ? "20px 20px" : "24px 32px" }}>
+                <p style={{ margin: "0 0 14px", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#999" }}>Productos similares</p>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 12 }}>
+                  {similarProducts.map(p => (
+                    <div key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer" }}>
+                      <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", borderRadius: 4, overflow: "hidden", background: "#f5f5f5" }}>
+                        {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 200px" className="cp-zoom-img" style={{ objectFit: "cover" }} />}
                       </div>
-                      <div style={{ textAlign: "right" }}>
-                        <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: ACC }}>{fmt(item.product.price * item.qty)}</p>
-                        <button onClick={() => removeFromCart(idx)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "#bbb", marginTop: 2 }}>Eliminar</button>
-                      </div>
+                      <p style={{ margin: "8px 0 2px", fontSize: 12, color: "#111", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" as const }}>{p.name}</p>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: ACC }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            {cartItems.length > 0 && (
-              <div style={{ padding: "16px 24px", borderTop: "1px solid #f0f0f0" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, color: "#666" }}>Subtotal</span>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>{fmt(cartTotal)}</span>
-                </div>
-                {wholesaleWarnings.length > 0 && (
-                  <div style={{ marginBottom:12, padding:"10px 14px", background:"#fefce8", border:"1px solid #fde047", borderRadius:4 }}>
-                    <p style={{ fontSize:11, margin:0, color:"#ca8a04", fontWeight:600 }}>Cantidad mínima no alcanzada</p>
-                    {wholesaleWarnings.map((item, i) => (
-                      <p key={i} style={{ fontSize:10, margin:"4px 0 0", color:"#9a7000" }}>
-                        {item.product.name}: mín. {item.product.cantMinMayorista} uds.
-                      </p>
-                    ))}
-                  </div>
-                )}
-                <button onClick={blockBuy ? undefined : openCheckout} disabled={blockBuy} title={isOwner ? "No podés comprar en tu propia tienda" : isPreview ? "No disponible en modo edición" : undefined} style={{ width: "100%", background: blockBuy ? "#f3f4f6" : ACC, color: blockBuy ? "#9ca3af" : getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "14px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: blockBuy ? "not-allowed" : "pointer", marginTop: 8 }}>
-                  {isOwner ? "No disponible para el dueño" : isPreview ? "Solo en la tienda real" : "Finalizar compra"}
-                </button>
-                {storeConfig?.whatsapp?.enabled && storeConfig.whatsapp.number && (
-                  <a
-                    href={`https://wa.me/${storeConfig.whatsapp.number.replace(/\D/g,"")}${storeConfig.whatsapp.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`}
-                    target="_blank" rel="noreferrer"
-                    style={{ display:"flex", alignItems:"center", gap:10, marginTop:12, padding:"10px 14px", background:"#f0fdf4", borderRadius:4, textDecoration:"none", border:"1px solid #bbf7d0" }}
-                  >
-                    <svg width={16} height={16} viewBox="0 0 24 24" fill="#16a34a" style={{ flexShrink:0 }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                    <div>
-                      <p style={{ fontSize:10, margin:0, color:"#6b7280", letterSpacing:1 }}>¿Tenés dudas?</p>
-                      <p style={{ fontSize:12, margin:0, color:"#16a34a", fontWeight:600 }}>Consultá por WhatsApp</p>
-                    </div>
-                  </a>
-                )}
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* ── CHECKOUT ── */}
-      {checkoutOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: isPreview ? 20010 : 9600, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(4px)" }}>
-          <div style={{ background: "#fff", width: "100%", maxWidth: 520, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.3)" }}>
-            <div style={{ padding: "18px 24px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase" }}>Finalizar compra</h3>
-              <button onClick={() => setCheckoutOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: "#999" }}>×</button>
             </div>
-
-            {checkoutStatus === "done" ? (
-              <div style={{ padding: 40, textAlign: "center" }}>
-                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
-                  <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                </div>
-                <h3 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 900, color: "#111" }}>¡Pedido recibido!</h3>
-                <p style={{ fontSize: 14, color: "#666", margin: "0 0 8px" }}>Te enviamos un email con el resumen. El vendedor te contactará para coordinar el envío.</p>
-                <p style={{ fontSize: 12, color: "#999", margin: "0 0 28px", lineHeight: 1.6 }}>¿Algún inconveniente con tu pedido? Contactá al vendedor o escribinos a marketplacemitienda@gmail.com · Tenés 10 días corridos para cancelar (Ley 24.240).</p>
-                <button onClick={() => { setCheckoutOpen(false); setCheckoutStatus("idle"); }}
-                  style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "12px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
-                  Cerrar
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handlePlaceOrder} style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
-                <div style={{ padding: "20px 24px", flex: 1 }}>
-                  <p style={{ margin: "0 0 14px", fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", color: "#333" }}>Tus datos</p>
-                  {[["nombre","Nombre completo","text"],["email","Email","email"],["telefono","Teléfono","tel"]].map(([f,ph,t]) => (
-                    <input key={f} required type={t} placeholder={ph}
-                      value={buyerForm[f as keyof typeof buyerForm]}
-                      onChange={e => setBuyerForm(b => ({ ...b, [f]: e.target.value }))}
-                      style={{ ...iStyle, marginBottom: 10 }}
-                      onFocus={e => (e.target.style.borderColor = ACC)}
-                      onBlur={e => (e.target.style.borderColor = "#ddd")} />
-                  ))}
-                  <p style={{ margin: "16px 0 14px", fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", color: "#333" }}>Dirección</p>
-                  {[["direccion","Calle y número","text"],["ciudad","Ciudad","text"]].map(([f,ph,t]) => (
-                    <input key={f} required type={t} placeholder={ph}
-                      value={buyerForm[f as keyof typeof buyerForm]}
-                      onChange={e => setBuyerForm(b => ({ ...b, [f]: e.target.value }))}
-                      style={{ ...iStyle, marginBottom: 10 }}
-                      onFocus={e => (e.target.style.borderColor = ACC)}
-                      onBlur={e => (e.target.style.borderColor = "#ddd")} />
-                  ))}
-                  <select required value={buyerForm.provincia} onChange={e => setBuyerForm(b => ({ ...b, provincia: e.target.value }))}
-                    style={{ ...iStyle, marginBottom: 10 }}>
-                    <option value="">Provincia...</option>
-                    {PROVINCIAS_ARGENTINA.map((p) => (
-                      <option key={p.code} value={p.code}>{p.name}</option>
-                    ))}
-                  </select>
-                  <input required placeholder="Código postal" value={buyerForm.cp} onChange={e => setBuyerForm(b => ({ ...b, cp: e.target.value }))} style={{ ...iStyle, marginBottom: 16 }} onFocus={e => (e.target.style.borderColor = ACC)} onBlur={e => (e.target.style.borderColor = "#ddd")} />
-
-                  <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", color: "#333" }}>Envío</p>
-                  {envioOptions.map(opt => (
-                    <label key={opt.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", border: `1px solid ${envioId === opt.id ? ACC : "#e0e0e0"}`, marginBottom: 8, cursor: "pointer", background: envioId === opt.id ? `${ACC}10` : "#fff" }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <input type="radio" checked={envioId === opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor: ACC }} />
-                        <span style={{ fontSize: 13 }}>{opt.label}</span>
-                      </span>
-                      <span style={{ fontSize: 13, fontWeight: 700 }}>{opt.liveQuote ? fmtLiveQuote(opt.id) : fmtEnvioPrice(opt,fmt)}</span>
-                    </label>
-                  ))}
-
-                  <p style={{ margin: "16px 0 10px", fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", color: "#333" }}>Pago</p>
-                  {pagoOptions.map(opt => (
-                    <label key={opt.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: `1px solid ${pagoId === opt.id ? ACC : "#e0e0e0"}`, marginBottom: 8, cursor: "pointer", background: pagoId === opt.id ? `${ACC}10` : "#fff" }}>
-                      <input type="radio" checked={pagoId === opt.id} onChange={() => setPagoId(opt.id)} style={{ accentColor: ACC }} />
-                      <span style={{ fontSize: 13 }}>{opt.label}</span>
-                    </label>
-                  ))}
-
-                  {/* Cupón */}
-                  <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-                    <input value={coupon} onChange={e => setCoupon(e.target.value.toUpperCase())} placeholder="Código de cupón"
-                      style={{ ...iStyle, flex: 1 }}
-                      onFocus={e => (e.target.style.borderColor = ACC)}
-                      onBlur={e => (e.target.style.borderColor = "#ddd")} />
-                    <button type="button" onClick={handleApplyCoupon}
-                      style={{ background: "#111", color: "#fff", border: "none", padding: "0 18px", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>
-                      Aplicar
-                    </button>
-                  </div>
-                  {couponError && <p style={{ color: "#dc2626", fontSize: 12, margin: "6px 0 0" }}>{couponError}</p>}
-                  {appliedCoupon && (
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f0fdf4", border: "1px solid #86efac", padding: "8px 14px", marginTop: 8 }}>
-                      <span style={{ fontSize: 12, color: "#166534", fontWeight: 700 }}>✓ Cupón {appliedCoupon.code} — −{fmt(appliedCoupon.discount)}</span>
-                      <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#999" }}>×</button>
-                    </div>
-                  )}
-
-                  <textarea placeholder="Notas adicionales (opcional)" value={notas} onChange={e => setNotas(e.target.value)} rows={2}
-                    style={{ ...iStyle, resize: "none", marginTop: 16 }}
-                    onFocus={e => (e.target.style.borderColor = ACC)}
-                    onBlur={e => (e.target.style.borderColor = "#ddd")} />
-                </div>
-
-                {/* Summary */}
-                <div style={{ padding: "16px 24px", borderTop: "1px solid #f0f0f0" }}>
-                  {/* items desglose */}
-                  {cartItems.map((item, idx) => (
-                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, color: "#555", maxWidth: "70%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {item.product.name}{item.size ? ` · ${item.size}` : ""}{item.color ? ` · ${item.color}` : ""} ×{item.qty}
-                      </span>
-                      <span style={{ fontSize: 12, color: "#111", fontWeight: 600, whiteSpace: "nowrap" }}>{fmt(item.product.price * item.qty)}</span>
-                    </div>
-                  ))}
-                  <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 8, paddingTop: 8 }} />
-                  {[["Envío", envioCoordinar?"A coordinar":envioPrice===0?"Gratis":fmt(envioPrice)], ...(appliedCoupon ? [["Descuento", `−${fmt(couponDiscount)}`]] : [])].map(([k, v]) => (
-                    <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                      <span style={{ fontSize: 13, color: "#666" }}>{k}</span>
-                      <span style={{ fontSize: 13, color: k === "Descuento" ? "#16a34a" : "#111", fontWeight: k === "Descuento" ? 700 : 400 }}>{v}</span>
-                    </div>
-                  ))}
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid #f0f0f0" }}>
-                    <span style={{ fontSize: 14, fontWeight: 800 }}>Total</span>
-                    <span style={{ fontSize: 16, fontWeight: 900, color: ACC }}>{fmt(orderTotal)}</span>
-                  </div>
-
-                  {/* donación opcional a la Canasta Solidaria — pago aparte, no se suma al total. Solo se muestra si hay una campaña ACTIVE recibiendo donaciones. */}
-                  {canastaDisponible && (
-                  <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
-                    <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-                      <span style={{ fontSize: 13, color: "#111", display: "flex", alignItems: "center", gap: 6 }}><HandHeart size={16} style={{ color: ACC }} /> ¿Donar?</span>
-                      <input type="checkbox" checked={donationEnabled} onChange={e => setDonationEnabled(e.target.checked)} style={{ accentColor: ACC }} />
-                    </label>
-                    <p style={{ fontSize: 10, color: "#888", marginTop: 6, lineHeight: 1.5 }}>
-                      Sumá un aporte aparte para completar una canasta de alimentos para un vecino — se paga por separado, no afecta tu compra.{" "}
-                      <a href="/comunidad/campana" target="_blank" rel="noopener" style={{ color: ACC, textDecoration: "underline" }}>¿Cómo funciona?</a>
-                    </p>
-                    {donationEnabled && (
-                      <div style={{ marginTop: 10 }}>
-                        <input
-                          type="number"
-                          min={1000}
-                          value={donationAmount}
-                          onChange={e => setDonationAmount(Number(e.target.value) || 0)}
-                          style={{ width: "100%", background: "#fff", border: "1px solid #e5e5e5", color: "#111", padding: "10px 14px", fontSize: 13, outline: "none", borderRadius: 4 }}
-                        />
-                        <p style={{ fontSize: 10, color: "#888", marginTop: 6, lineHeight: 1.5 }}>Mínimo $1.000.</p>
-                      </div>
-                    )}
-                  </div>
-                  )}
-
-                  {checkoutError && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 8 }}>{checkoutError}</p>}
-                  {/* seguridad */}
-                  <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:14, marginBottom:0, padding:"9px 12px", border:"1px solid #e5e5e5", borderRadius:4, background:"#fafafa" }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color:"#16a34a", flexShrink:0 }}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    <span style={{ fontSize:11, color:"#888", lineHeight:1.5 }}>
-                      Pago seguro vía <strong style={{ color:"#555" }}>MercadoPago</strong> · SSL cifrado
-                    </span>
-                  </div>
-                  <label style={{ display:"flex", alignItems:"flex-start", gap:10, marginTop:10, cursor:"pointer" }}>
-                    <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} style={{ marginTop:2, accentColor:ACC, flexShrink:0 }} />
-                    <span style={{ fontSize:11, color:"#888", lineHeight:1.6 }}>
-                      Acepto los{" "}
-                      <a href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=terminos`} target="_blank" rel="noopener" style={{ color:ACC, textDecoration:"underline" }}>Términos y Condiciones</a>
-                      {" "}de la tienda y la{" "}
-                      <a href="/privacidad?role=buyer" target="_blank" rel="noopener" style={{ color:ACC, textDecoration:"underline" }}>Política de Privacidad</a>
-                    </span>
-                  </label>
-                  <button type="submit" disabled={checkoutStatus === "placing" || !acceptedTerms}
-                    style={{ width: "100%", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "14px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: (!acceptedTerms || checkoutStatus==="placing") ? "not-allowed" : "pointer", marginTop: 12, opacity: (!acceptedTerms || checkoutStatus === "placing") ? 0.45 : 1 }}>
-                    {checkoutStatus === "placing" ? "Procesando..." : "Confirmar pedido"}
-                  </button>
-                </div>
-              </form>
-            )}
           </div>
         </div>
       )}
+
+      <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} storeSlug={storeConfig?.slug ?? ""} />
+      <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={storeConfig?.whatsapp} />
 
       {/* ── FAVORITES ── */}
       {favoritesOpen && (
@@ -1622,7 +1583,7 @@ export default function ChicParis() {
                 <p style={{ color: "#bbb", fontSize: 14, textAlign: "center", marginTop: 40 }}>No tenés favoritos aún</p>
               ) : favoriteProducts.map(product => (
                 <div key={product.id} style={{ display: "flex", gap: 14, marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #f5f5f5" }}>
-                  <img src={product.images[0] ?? "/placeholder.jpg"} alt={product.name} style={{ width: 64, height: 80, objectFit: "cover" }} />
+                  <FadeImage src={product.images[0] ?? "/placeholder.jpg"} alt={product.name} width={64} height={80} style={{ objectFit: "cover" }} />
                   <div style={{ flex: 1 }}>
                     <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600 }}>{product.name}</p>
                     <p style={{ margin: "0 0 8px", fontSize: 13, color: ACC, fontWeight: 700 }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
@@ -1641,7 +1602,7 @@ export default function ChicParis() {
 
       {/* ── LIGHTBOX ───────────────────────────────────────── */}
       {lightboxSrc && (
-        <div style={{ position:"fixed", inset:0, zIndex:9500, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 9500, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
@@ -1649,13 +1610,38 @@ export default function ChicParis() {
       )}
 
       {/* ── FLOATING CART BUTTON ────────────────────────────── */}
-      <button onClick={() => { setCartOpen(true); setFavoritesOpen(false); }}
-        style={{ position:"fixed", bottom:24, right:24, zIndex:500, width:52, height:52, borderRadius:"50%", background:ACC, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(0,0,0,0.2)", transition:"transform 0.2s" }}
-        onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
-        onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
-        <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={getContrastColor(ACC)==="light"?"#fff":"#111"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-        {cartCount > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:"#e53e3e", color:"#fff", borderRadius:"50%", width:20, height:20, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
-      </button>
+      {(() => {
+        const cartIconIdx = (Math.abs(parseInt(textOverrides["cartIcon"]?.text ?? "0") || 0)) % CART_ICON_OPTIONS.length;
+        const nextCartIconIdx = (cartIconIdx + 1) % CART_ICON_OPTIONS.length;
+        return (
+          <div onClick={() => { if (!editMode) { setCartOpen(true); setFavoritesOpen(false); } }}
+            role="button" tabIndex={0} aria-label="Carrito"
+            onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && !editMode) { e.preventDefault(); setCartOpen(true); setFavoritesOpen(false); } }}
+            style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:500, width:52, height:52, borderRadius:"50%", background:ACC, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 18px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)", transition:"transform 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
+            onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
+            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={getContrastColor(ACC)==="light"?"#fff":"#111"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{CART_ICON_OPTIONS[cartIconIdx]}</svg>
+            {cartCount > 0 && !editMode && <span style={{ position:"absolute", top:-4, right:-4, background:"#e53e3e", color:"#fff", borderRadius:"50%", width:20, height:20, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
+            {editMode && (
+              <button onClick={e => { e.stopPropagation(); setOverride("cartIcon", { text: String(nextCartIconIdx) }); }} title="Cambiar ícono del carrito"
+                style={{ position:"absolute", inset:0, background:"rgba(99,102,241,0.9)", border:"none", borderRadius:"50%", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:18, opacity:0, transition:"opacity 0.15s" }}
+                onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── WHATSAPP BUTTON ────────────────────────────────── */}
+      {hasWA && (
+        <button
+          className="cp-wa-fab"
+          onClick={() => { if (editMode) return; window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`, "_blank"); }}
+          style={{ position:"fixed", bottom:24, right:24, zIndex:500, width:52, height:52, borderRadius:"50%", border:"none", cursor: editMode ? "default" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"transform 0.2s" }}
+          onMouseEnter={e => { if (!editMode) e.currentTarget.style.transform="scale(1.1)"; }}
+          onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
+          <svg width={28} height={28} viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </button>
+      )}
 
       {/* ── TOAST ── */}
       {toastMsg && (

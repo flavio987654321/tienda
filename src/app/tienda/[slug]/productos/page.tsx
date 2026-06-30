@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, Suspense, Fragment } from "react";
 import Link from "next/link";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct, StorefrontVariant, PlaceOrderParams } from "@/hooks/useStorefront";
@@ -44,6 +44,13 @@ const SIZE_ATTRS  = [
 const COLOR_ATTRS = ["color","colour","colores","colors","tono"];
 const PAGE_SIZE   = 24;
 
+/* ── Ícono de carrito — mismas variantes que se eligen en el editor ── */
+const CART_ICON_OPTIONS: React.ReactNode[] = [
+  <Fragment key="bag"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></Fragment>,
+  <Fragment key="cart"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></Fragment>,
+  <Fragment key="basket"><path d="M5 11 2 7h20l-3 4"/><path d="M4 11h16l-1.7 8.5a2 2 0 0 1-2 1.5H7.7a2 2 0 0 1-2-1.5L4 11Z"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></Fragment>,
+];
+
 type RawProduct = {
   id: string;
   name: string;
@@ -52,6 +59,8 @@ type RawProduct = {
   featured?: boolean;
   precioMayorista?: number | null;
   cantMinMayorista?: number | null;
+  preciosEscalonados?: string;
+  soloMayorista?: boolean;
   category?: string;
   subcategory?: string;
   gender?: string;
@@ -106,6 +115,8 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     featured: raw.featured ?? false,
     precioMayorista: raw.precioMayorista ?? null,
     cantMinMayorista: raw.cantMinMayorista ?? null,
+    preciosEscalonados: (() => { try { const p = JSON.parse(raw.preciosEscalonados || "[]"); return Array.isArray(p) ? p : []; } catch { return []; } })(),
+    soloMayorista: raw.soloMayorista ?? false,
     category: raw.category ?? "general",
     subcategory: raw.subcategory ?? undefined,
     gender: raw.gender ?? "unisex",
@@ -120,6 +131,11 @@ type Theme = {
   BG: string; S: string; T: string; G: string; MID: string;
   border: string; borderFaint: string; inputBorder: string; inputBg: string;
   serif: string; sans: string; dark: boolean;
+  // Estilo visual per-template para los elementos diferenciadores (Moda)
+  tabStyle?: "default" | "pill" | "underline" | "brutalist";
+  cardRadius?: number;
+  titleStyle?: "editorial" | "organic" | "minimal" | "bold";
+  inputRadius?: number;
 };
 
 const THEMES: Record<string, Theme> = {
@@ -128,24 +144,28 @@ const THEMES: Record<string, Theme> = {
     border:"rgba(201,168,76,0.15)", borderFaint:"rgba(240,235,227,0.06)",
     inputBorder:"rgba(201,168,76,0.15)", inputBg:"#171717",
     serif:"Georgia, serif", sans:"'Helvetica Neue', Arial, sans-serif", dark:true,
+    tabStyle:"default", cardRadius:0, titleStyle:"editorial", inputRadius:0,
   },
   "boho-terra": {
     BG:"#faf8f4", S:"#f2ebe0", T:"#2c2218", G:"#b56529", MID:"#999",
     border:"rgba(181,101,41,0.2)", borderFaint:"rgba(44,34,24,0.06)",
     inputBorder:"rgba(181,101,41,0.25)", inputBg:"#fff",
     serif:"Georgia, serif", sans:"Inter, system-ui, sans-serif", dark:false,
+    tabStyle:"pill", cardRadius:10, titleStyle:"organic", inputRadius:8,
   },
   "chic-paris": {
     BG:"#f9f9f7", S:"#f0eeea", T:"#1a1a1a", G:"#5e7c6f", MID:"#999",
     border:"rgba(94,124,111,0.2)", borderFaint:"rgba(26,26,26,0.06)",
     inputBorder:"rgba(94,124,111,0.25)", inputBg:"#fff",
     serif:"Garamond, Georgia, serif", sans:"Inter, system-ui, sans-serif", dark:false,
+    tabStyle:"underline", cardRadius:0, titleStyle:"minimal", inputRadius:0,
   },
   "urban-pulse": {
     BG:"#0f172a", S:"#1e293b", T:"#f8fafc", G:"#f97316", MID:"#64748b",
     border:"rgba(249,115,22,0.2)", borderFaint:"rgba(248,250,252,0.06)",
     inputBorder:"rgba(249,115,22,0.2)", inputBg:"#1e293b",
     serif:"Inter, system-ui, sans-serif", sans:"Inter, system-ui, sans-serif", dark:true,
+    tabStyle:"brutalist", cardRadius:0, titleStyle:"bold", inputRadius:0,
   },
   "electro-prime": {
     BG:"#ffffff", S:"#f8fafc", T:"#111111", G:"#ea580c", MID:"#6b7280",
@@ -202,6 +222,8 @@ function ProductosPageInner() {
   const subCatParam  = searchParams?.get("subcategoria") ?? null;
   const ofertaParam  = searchParams?.get("oferta") === "true";
   const [onlyOfertas, setOnlyOfertas] = useState(ofertaParam);
+  const destacadoParam  = searchParams?.get("destacado") === "true";
+  const [onlyDestacados, setOnlyDestacados] = useState(destacadoParam);
 
   const [products,   setProducts]   = useState<StorefrontProduct[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -212,6 +234,8 @@ function ProductosPageInner() {
   const [isOwner,    setIsOwner]    = useState(false);
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
   const [footerBg, setFooterBg] = useState<string | null>(null);
+  const [whatsapp, setWhatsapp] = useState<{ enabled: boolean; number: string; message: string } | null>(null);
+  const [cartIconIdx, setCartIconIdx] = useState(0);
   const [showReport, setShowReport] = useState(false);
 
   const storeIdRef  = useRef<string | null>(null);
@@ -225,6 +249,7 @@ function ProductosPageInner() {
 
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews,          setReviews]          = useState<PReview[]>([]);
+  const [reviewsShown,     setReviewsShown]     = useState(5);
   const [reviewsLoading,   setReviewsLoading]   = useState(false);
   const [reviewForm,       setReviewForm]       = useState({ reviewer: "", rating: 5, comment: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
@@ -307,6 +332,9 @@ function ProductosPageInner() {
           if (cfg.colors?.accent) setAccentOverride(cfg.colors.accent);
           if (cfg.socialLinks) setSocialLinks(cfg.socialLinks);
           if (cfg.sectionColors?.bgFooter) setFooterBg(cfg.sectionColors.bgFooter);
+          if (cfg.whatsapp) setWhatsapp(cfg.whatsapp);
+          const savedIcon = parseInt(cfg.textOverrides?.["cartIcon"]?.text ?? "0") || 0;
+          setCartIconIdx(Math.abs(savedIcon) % CART_ICON_OPTIONS.length);
         } catch {}
         const real: StorefrontProduct[] = (data.store.products ?? []).map(mapProduct);
         if (fromEditor) {
@@ -475,6 +503,7 @@ function ProductosPageInner() {
       }
       if (priceRange && (p.price < priceRange[0] || p.price > priceRange[1])) return false;
       if (onlyOfertas && !(p.comparePrice && p.comparePrice > p.price)) return false;
+      if (onlyDestacados && !p.featured) return false;
       return true;
     });
     if (sortBy === "price_asc")  r = [...r].sort((a, b) => a.price - b.price);
@@ -486,7 +515,7 @@ function ProductosPageInner() {
       return db - da;
     });
     return r;
-  }, [productsInCategory, activeAttrFilters, priceRange, search, sortBy, onlyOfertas]);
+  }, [productsInCategory, activeAttrFilters, priceRange, search, sortBy, onlyOfertas, onlyDestacados]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -577,6 +606,16 @@ function ProductosPageInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSize, modalProduct?.id]);
 
+  // Al cambiar de imagen (flechas/miniaturas): sync color si esa foto pertenece a otra variante
+  useEffect(() => {
+    if (!modalProduct) return;
+    const img = modalProduct.imageItems[modalImg];
+    if (img?.variantValue && img.variantValue.toLowerCase() !== selectedColor?.toLowerCase()) {
+      setSelectedColor(img.variantValue);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalImg]);
+
   // ── isMobile ───────────────────────────────────────────────────────────────
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -613,6 +652,7 @@ function ProductosPageInner() {
     setReviews([]);
     setReviewDone(false);
     setReelIndex(0);
+    setReviewsShown(5);
     setReviewsLoading(true);
     fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
       .then(r => r.ok ? r.json() : { reviews: [] })
@@ -625,7 +665,8 @@ function ProductosPageInner() {
   // ── Tema activo ─────────────────────────────────────────────────────────────
   const th: Theme = THEMES[template] ?? THEMES["fashion-noir"];
   const G = accentOverride ?? th.G;
-  const { BG, S, T, MID, border, borderFaint, inputBorder, inputBg, serif, sans, dark } = th;
+  const { BG, S, T, MID, border, borderFaint, inputBorder, inputBg, serif, sans, dark,
+    tabStyle = "default", cardRadius = 0, titleStyle = "editorial", inputRadius = 0 } = th;
   // Texto blanco/negro sobre fondos pintados con el acento (G): se calcula según
   // el color real elegido, no según si el template en sí es claro u oscuro —
   // así un acento muy claro en un template claro sigue siendo legible.
@@ -634,6 +675,10 @@ function ProductosPageInner() {
   // botón: si el acento elegido casi no se distingue del fondo de la página,
   // caemos al color de texto normal del tema en vez de dejarlo invisible.
   const GT = getReadableAccentText(G, BG, T);
+  // Fondo de inputs dentro del modal (cuyo fondo es S). Si inputBg coincide con S
+  // (como en Urban Pulse donde ambos son #1e293b), los inputs desaparecen —
+  // en ese caso usamos BG (el nivel más oscuro) para crear contraste visible.
+  const modalInputBg = inputBg === S ? BG : inputBg;
 
   // Footer: mismo color que el dueño eligió para el footer del home (o el
   // default propio del template si no lo tocó), con texto/iconos recalculados
@@ -700,9 +745,62 @@ function ProductosPageInner() {
           {paginated.map(product => {
             const isFav = favorites.includes(product.id);
             const useDetailPage = DETAIL_PAGE_TEMPLATES.includes(template);
+
+            // ── Estilos per-template del wrapper de tarjeta ──────────────────
+            const cardWrapperBase: React.CSSProperties = tabStyle === "pill"
+              ? { borderRadius:cardRadius, overflow:"hidden", transition:"transform 0.3s, box-shadow 0.3s" }
+              : tabStyle === "brutalist"
+              ? { border:`2px solid ${border}`, overflow:"hidden", transition:"border-color 0.15s, box-shadow 0.15s" }
+              : tabStyle === "underline"
+              ? { border:`1px solid transparent`, transition:"border-color 0.2s, transform 0.2s" }
+              : { border:`1px solid transparent`, transition:"border-color 0.2s" };
+
+            const onCardEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+              const el = e.currentTarget;
+              if (tabStyle === "pill") { el.style.transform="translateY(-5px)"; el.style.boxShadow=`0 14px 32px ${dark?"rgba(0,0,0,0.3)":"rgba(44,34,24,0.14)"}`; }
+              else if (tabStyle === "brutalist") { el.style.borderColor=G; el.style.boxShadow=`4px 4px 0 ${G}`; }
+              else if (tabStyle === "underline") { el.style.borderColor=T; el.style.transform="scale(1.015)"; }
+              else { el.style.borderColor="rgba(201,168,76,0.4)"; }
+            };
+            const onCardLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+              const el = e.currentTarget;
+              if (tabStyle === "pill") { el.style.transform=""; el.style.boxShadow=""; }
+              else if (tabStyle === "brutalist") { el.style.borderColor=border; el.style.boxShadow=""; }
+              else { el.style.borderColor="transparent"; el.style.transform=""; }
+            };
+
+            // ── Badg de oferta per-template ──────────────────────────────────
+            const ofertaBadge = product.comparePrice ? (
+              tabStyle === "pill"
+                ? <div style={{ position:"absolute", top:10, left:10, background:G, color:accentDark?"#000":"#fff", fontSize:9, fontWeight:700, padding:"3px 10px", borderRadius:999, letterSpacing:1 }}>Oferta</div>
+                : tabStyle === "underline"
+                ? <div style={{ position:"absolute", top:10, left:10, background:"none", color:G, fontSize:10, fontStyle:"italic", fontFamily:serif, fontWeight:600 }}>Sale</div>
+                : tabStyle === "brutalist"
+                ? <div style={{ position:"absolute", top:0, left:0, background:G, color:accentDark?"#000":"#fff", fontSize:9, fontWeight:900, letterSpacing:2, padding:"4px 10px", textTransform:"uppercase" }}>SALE</div>
+                : <div style={{ position:"absolute", top:10, left:10, background:G, color:accentDark?"#000":"#fff", fontSize:9, fontWeight:800, letterSpacing:2, padding:"3px 8px", textTransform:"uppercase" }}>Oferta</div>
+            ) : null;
+
+            // ── Contenedor de texto per-template ─────────────────────────────
+            const textPad = (tabStyle === "pill" || tabStyle === "brutalist") ? "10px 14px 14px" : "0";
+            const nameStyle: React.CSSProperties = tabStyle === "pill"
+              ? { fontSize:14, color:T, margin:"0 0 6px", fontWeight:400, fontStyle:"italic", fontFamily:serif, lineHeight:1.35 }
+              : tabStyle === "underline"
+              ? { fontSize:13, color:T, margin:"0 0 6px", fontWeight:300, fontFamily:serif, lineHeight:1.35 }
+              : tabStyle === "brutalist"
+              ? { fontSize:12, color:T, margin:"0 0 6px", fontWeight:800, textTransform:"uppercase", letterSpacing:0.5, lineHeight:1.3 }
+              : { fontSize:15, color:T, margin:"0 0 7px", fontWeight:500, fontFamily:serif, lineHeight:1.3 };
+            const priceStyle: React.CSSProperties = tabStyle === "brutalist"
+              ? { fontSize:16, fontWeight:900, color:G }
+              : tabStyle === "underline"
+              ? { fontSize:15, fontWeight:600, color:G }
+              : { fontSize:16, fontWeight:700, color:GT };
+
+            // ── Imagen mb: 0 cuando el wrapper maneja el overflow ────────────
+            const imgMb = (tabStyle === "pill" || tabStyle === "brutalist") ? 0 : 14;
+
             const cardInner = (
               <>
-                <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:14 }}>
+                <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:imgMb }}>
                   {product.images[0] ? (
                     <img src={product.images[0]} alt={product.name}
                       className="pc-img"
@@ -713,16 +811,14 @@ function ProductosPageInner() {
                       <svg width={48} height={48} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={0.8}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                     </div>
                   )}
-                  {product.comparePrice && (
-                    <div style={{ position:"absolute", top:10, left:10, background:G, color:accentDark?"#000":"#fff", fontSize:9, fontWeight:800, letterSpacing:2, padding:"3px 8px", textTransform:"uppercase" }}>Oferta</div>
-                  )}
+                  {ofertaBadge}
                   {(product.subcategory || product.category !== "general") && (
                     <div style={{ position:"absolute", top:10, right:10, background: dark ? "rgba(10,10,10,0.7)" : "rgba(255,255,255,0.85)", color:T, fontSize:9, letterSpacing:2, padding:"3px 8px", textTransform:"uppercase" }}>
                       {product.subcategory ?? product.category}
                     </div>
                   )}
-                  {/* Botón favorito */}
                   <button onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
+                    aria-label={isFav ? "Quitar de favoritos" : "Agregar a favoritos"}
                     style={{ position:"absolute", bottom:10, right:10, background: dark ? "rgba(10,10,10,0.65)" : "rgba(255,255,255,0.9)", border:"none", borderRadius:"50%", width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"transform 0.2s" }}
                     onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
                     onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
@@ -730,28 +826,33 @@ function ProductosPageInner() {
                       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                     </svg>
                   </button>
-                  {/* Overlay "Ver detalle" */}
                   <div className="product-overlay" style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.3)", display:"flex", alignItems:"center", justifyContent:"center", opacity:0, transition:"opacity 0.3s" }}
                     onMouseEnter={e => (e.currentTarget.style.opacity="1")}
                     onMouseLeave={e => (e.currentTarget.style.opacity="0")}>
                     <span style={{ background:G, color:accentDark?"#000":"#fff", fontSize:10, fontWeight:800, letterSpacing:3, padding:"9px 20px", textTransform:"uppercase" }}>Ver detalle</span>
                   </div>
                 </div>
-                <p style={{ fontSize:10, color:MID, letterSpacing:2, textTransform:"uppercase", margin:"0 0 4px" }}>{product.category}</p>
-                <p style={{ fontSize:15, color:T, margin:"0 0 7px", fontWeight:500, lineHeight:1.3 }}>{product.name}</p>
-                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                  <span style={{ fontSize:16, fontWeight:700, color:GT }}>{fmt(product.price)}</span>
-                  {product.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
+                {/* Área de texto */}
+                <div style={{ padding:textPad }}>
+                  <p style={{ fontSize:10, color:MID, letterSpacing:2, textTransform:"uppercase", margin:"0 0 4px" }}>{product.category}</p>
+                  <p style={nameStyle}>{product.name}</p>
+                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    <span style={priceStyle}>{fmt(product.price)}</span>
+                    {product.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
+                  </div>
                 </div>
               </>
             );
+
+            const wrapStyle: React.CSSProperties = { cursor:"pointer", ...cardWrapperBase };
             return useDetailPage ? (
               <Link key={product.id} href={`/tienda/${slug}/producto/${product.id}${fromEditor ? "?from=editor" : ""}`}
-                style={{ cursor:"pointer", textDecoration:"none", color:"inherit", display:"block" }}>
+                style={{ textDecoration:"none", color:"inherit", display:"block", ...cardWrapperBase }}>
                 {cardInner}
               </Link>
             ) : (
-              <div key={product.id} style={{ cursor:"pointer" }} onClick={() => openModal(product)}>
+              <div key={product.id} style={wrapStyle} onClick={() => openModal(product)}
+                onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
                 {cardInner}
               </div>
             );
@@ -832,8 +933,8 @@ function ProductosPageInner() {
             );
           })}
         </div>
-        {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas) && (
-          <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); }}
+        {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || onlyDestacados) && (
+          <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); setOnlyDestacados(false); }}
             style={{ marginTop:10, background:"none", border:"none", color:MID, fontSize:11, letterSpacing:0.5, textDecoration:"underline", cursor:"pointer", padding:0 }}>
             Limpiar filtros
           </button>
@@ -1021,7 +1122,7 @@ function ProductosPageInner() {
             onMouseEnter={e => (e.currentTarget.style.borderColor=G)}
             onMouseLeave={e => (e.currentTarget.style.borderColor=border)}>
             <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+              {CART_ICON_OPTIONS[cartIconIdx]}
             </svg>
             {cartCount > 0 && (
               <span style={{ position:"absolute", top:-6, right:-6, background:G, color:accentDark?"#000":"#fff", borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>
@@ -1033,53 +1134,108 @@ function ProductosPageInner() {
       <div style={{ maxWidth:1280, margin:"0 auto", padding:"clamp(32px,5vw,48px) clamp(16px,4vw,32px)" }}>
 
         {/* ── TÍTULO + BÚSQUEDA ──────────────────────────────────────── */}
-        <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", marginBottom:40, flexWrap:"wrap", gap:16 }}>
-          <div>
-            <p style={{ fontSize:10, letterSpacing:5, color:GT, textTransform:"uppercase", margin:"0 0 12px" }}>
-              {onlyOfertas ? "Promociones" : "Colección completa"}
-            </p>
-            <h1 style={{ fontFamily:serif, fontSize:"clamp(28px,4vw,42px)", margin:"0 0 8px", color:T, lineHeight:1.1 }}>
-              {onlyOfertas ? "Ofertas" : activeCategory === "Todos" ? "Todos los productos" : activeCategory}
-              {activeSubcategory && <span style={{ fontStyle:"italic", opacity:0.55 }}> › {activeSubcategory}</span>}
-            </h1>
-            <p style={{ fontSize:12, opacity:0.35, margin:0, letterSpacing:2 }}>
-              {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-          <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
-            <button onClick={() => { setOnlyOfertas(o => !o); setPage(1); }}
-              style={{ background: onlyOfertas ? G : "none", color: onlyOfertas ? (accentDark?"#000":"#fff") : T,
-                border:`1px solid ${onlyOfertas ? G : border}`, padding:"10px 16px", fontSize:12, fontWeight:600,
-                cursor:"pointer", whiteSpace:"nowrap" }}>
-              🔥 En oferta
-            </button>
-            <div style={{ position:"relative" }}>
-              <input
-                value={search}
-                onChange={e => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Buscar productos..."
-                style={{ background:S, border:`1px solid ${border}`, color:T, padding:"11px 16px 11px 40px", fontSize:13, outline:"none", width:"clamp(180px,50vw,230px)", boxSizing:"border-box" as const }}
-                onFocus={e => (e.target.style.borderColor=G)}
-                onBlur={e => (e.target.style.borderColor=border)}
-              />
-              <svg style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", opacity:0.35, pointerEvents:"none" }} width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-              {search && (
-                <button onClick={() => { setSearch(""); setPage(1); }}
-                  style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:MID, cursor:"pointer", fontSize:16, padding:0 }}>×</button>
-              )}
+        {/* Kicker per-template */}
+        {(() => {
+          const label = onlyOfertas ? "Promociones" : onlyDestacados ? "Selección" : "Colección completa";
+          const heading = onlyOfertas ? "Ofertas" : onlyDestacados ? "Lo más buscado" : activeCategory === "Todos" ? "Todos los productos" : activeCategory;
+          const sub = activeSubcategory;
+          // Estilos de toggle per-template
+          const toggleBase = (active: boolean): React.CSSProperties =>
+            tabStyle === "pill"
+              ? { background: active ? G : "rgba(44,34,24,0.06)", color: active ? (accentDark?"#000":"#fff") : T, border:`1px solid ${active ? G : "rgba(44,34,24,0.15)"}`, borderRadius:999, padding:"9px 18px", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" as const, transition:"background 0.2s, border-color 0.2s" }
+              : tabStyle === "underline"
+              ? { background:"none", color: active ? G : T, border:"none", borderBottom:`2px solid ${active ? G : "transparent"}`, padding:"9px 4px", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" as const, transition:"border-color 0.2s, color 0.2s" }
+              : tabStyle === "brutalist"
+              ? { background: active ? G : "transparent", color: active ? (accentDark?"#000":"#fff") : T, border:`2px solid ${active ? G : border}`, boxShadow: active ? `3px 3px 0 ${G}` : "none", padding:"9px 16px", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap" as const, transition:"border-color 0.15s, box-shadow 0.15s" }
+              : { background: active ? G : "none", color: active ? (accentDark?"#000":"#fff") : T, border:`1px solid ${active ? G : border}`, padding:"10px 16px", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" as const };
+          // Estilos de input/select per-template
+          const inputStyle: React.CSSProperties = tabStyle === "underline"
+            ? { background:"transparent", border:"none", borderBottom:`1px solid ${border}`, color:T, padding:"11px 8px 11px 36px", fontSize:13, outline:"none", width:"clamp(160px,40vw,210px)", boxSizing:"border-box" as const }
+            : tabStyle === "brutalist"
+            ? { background:S, border:`2px solid ${border}`, color:T, padding:"11px 16px 11px 40px", fontSize:13, outline:"none", width:"clamp(180px,50vw,230px)", boxSizing:"border-box" as const }
+            : { background:S, border:`1px solid ${border}`, color:T, padding:"11px 16px 11px 40px", fontSize:13, outline:"none", width:"clamp(180px,50vw,230px)", boxSizing:"border-box" as const, borderRadius:inputRadius };
+          const selectStyle: React.CSSProperties = tabStyle === "underline"
+            ? { background:"transparent", border:"none", borderBottom:`1px solid ${border}`, color:T, padding:"11px 8px", fontSize:12, outline:"none", cursor:"pointer" }
+            : tabStyle === "brutalist"
+            ? { background:S, border:`2px solid ${border}`, color:T, padding:"11px 14px", fontSize:12, outline:"none", cursor:"pointer" }
+            : { background:S, border:`1px solid ${border}`, color:T, padding:"11px 14px", fontSize:12, outline:"none", cursor:"pointer", borderRadius:inputRadius };
+          return (
+            <div style={{ display:"flex", flexDirection: titleStyle === "bold" ? "column" : "row", alignItems: titleStyle === "bold" ? "flex-start" : "flex-end", justifyContent: titleStyle === "bold" ? "flex-start" : "space-between", marginBottom:40, flexWrap: titleStyle === "bold" ? "nowrap" : "wrap", gap: titleStyle === "bold" ? 20 : 16 }}>
+              <div>
+                {/* Kicker */}
+                {titleStyle === "bold" ? (
+                  <p style={{ fontSize:11, letterSpacing:3, color:G, textTransform:"uppercase", margin:"0 0 8px", fontWeight:700 }}>// {label}</p>
+                ) : titleStyle === "organic" ? (
+                  <p style={{ fontSize:11, fontStyle:"italic", color:MID, margin:"0 0 8px", fontFamily:serif }}>{label}</p>
+                ) : titleStyle === "minimal" ? (
+                  <p style={{ fontSize:9, letterSpacing:6, color:MID, textTransform:"uppercase", margin:"0 0 16px" }}>{label}</p>
+                ) : (
+                  <p style={{ fontSize:10, letterSpacing:5, color:GT, textTransform:"uppercase", margin:"0 0 12px" }}>{label}</p>
+                )}
+                {/* Heading */}
+                {titleStyle === "editorial" && (
+                  <>
+                    <h1 style={{ fontFamily:serif, fontSize:"clamp(28px,4vw,42px)", margin:"0 0 10px", color:T, lineHeight:1.1, fontWeight:700 }}>
+                      {heading}{sub && <span style={{ fontStyle:"italic", opacity:0.55 }}> › {sub}</span>}
+                    </h1>
+                    <div style={{ width:40, height:2, background:G, marginBottom:8 }} />
+                  </>
+                )}
+                {titleStyle === "organic" && (
+                  <h1 style={{ fontFamily:serif, fontStyle:"italic", fontSize:"clamp(26px,4vw,40px)", margin:"0 0 8px", color:T, lineHeight:1.15, fontWeight:400 }}>
+                    {heading}{sub && <span style={{ opacity:0.55 }}> › {sub}</span>}
+                  </h1>
+                )}
+                {titleStyle === "minimal" && (
+                  <h1 style={{ fontFamily:serif, fontSize:"clamp(26px,4vw,40px)", margin:"0 0 8px", color:T, lineHeight:1.15, fontWeight:300 }}>
+                    {heading}{sub && <span style={{ fontStyle:"italic", opacity:0.55 }}> › {sub}</span>}
+                  </h1>
+                )}
+                {titleStyle === "bold" && (
+                  <h1 style={{ fontSize:"clamp(30px,5vw,50px)", margin:"0 0 8px", color:T, lineHeight:1.0, fontWeight:900, textTransform:"uppercase", letterSpacing:-1 }}>
+                    {heading}{sub && <span style={{ color:G }}> / {sub}</span>}
+                  </h1>
+                )}
+                <p style={{ fontSize:12, opacity:0.35, margin:0, letterSpacing:2 }}>
+                  {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
+                <button onClick={() => { setOnlyDestacados(o => !o); setOnlyOfertas(false); setPage(1); }} style={toggleBase(onlyDestacados)}>
+                  ⭐ Lo más buscado
+                </button>
+                <button onClick={() => { setOnlyOfertas(o => !o); setOnlyDestacados(false); setPage(1); }} style={toggleBase(onlyOfertas)}>
+                  🔥 En oferta
+                </button>
+                <div style={{ position:"relative" }}>
+                  <input
+                    value={search}
+                    onChange={e => { setSearch(e.target.value); setPage(1); }}
+                    placeholder="Buscar..."
+                    aria-label="Buscar productos"
+                    style={inputStyle}
+                    onFocus={e => (e.target.style.borderColor=G)}
+                    onBlur={e => (e.target.style.borderColor=border)}
+                  />
+                  <svg style={{ position:"absolute", left:tabStyle==="underline"?8:13, top:"50%", transform:"translateY(-50%)", opacity:0.35, pointerEvents:"none" }} width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  {search && (
+                    <button onClick={() => { setSearch(""); setPage(1); }} aria-label="Limpiar búsqueda"
+                      style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:MID, cursor:"pointer", fontSize:16, padding:0 }}>×</button>
+                  )}
+                </div>
+                <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} aria-label="Ordenar por" style={selectStyle}>
+                  <option value="newest">Más recientes</option>
+                  <option value="price_asc">Precio ↑</option>
+                  <option value="price_desc">Precio ↓</option>
+                  <option value="name_az">Nombre A→Z</option>
+                  <option value="discount">Mayor descuento</option>
+                </select>
+              </div>
             </div>
-            <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
-              style={{ background:S, border:`1px solid ${border}`, color:T, padding:"11px 14px", fontSize:12, outline:"none", cursor:"pointer" }}>
-              <option value="newest">Más recientes</option>
-              <option value="price_asc">Precio ↑</option>
-              <option value="price_desc">Precio ↓</option>
-              <option value="name_az">Nombre A→Z</option>
-              <option value="discount">Mayor descuento</option>
-            </select>
-          </div>
-        </div>
+          );
+        })()}
 
         {isSidebarLayout ? (
           <div style={{ display:"flex", gap:36, alignItems:"flex-start" }}>
@@ -1160,8 +1316,8 @@ function ProductosPageInner() {
                   )}
                 </button>
               )}
-              {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || Object.keys(activeAttrFilters).length > 0 || priceRange) && (
-                <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); clearAttrFilters(); setPriceRange(null); }}
+              {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || onlyDestacados || Object.keys(activeAttrFilters).length > 0 || priceRange) && (
+                <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); setOnlyDestacados(false); clearAttrFilters(); setPriceRange(null); }}
                   style={{ background:"none", border:"none", color:MID, fontSize:11, letterSpacing:1, cursor:"pointer", padding:0, textDecoration:"underline" }}>
                   Limpiar filtros
                 </button>
@@ -1253,8 +1409,8 @@ function ProductosPageInner() {
                 </button>
               )}
 
-              {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || Object.keys(activeAttrFilters).length > 0 || priceRange) && (
-                <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); clearAttrFilters(); setPriceRange(null); }}
+              {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || onlyDestacados || Object.keys(activeAttrFilters).length > 0 || priceRange) && (
+                <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); setOnlyDestacados(false); clearAttrFilters(); setPriceRange(null); }}
                   style={{ background:"none", border:"none", color:MID, fontSize:11.5, cursor:"pointer", padding:0, textDecoration:"underline" }}>
                   Limpiar filtros
                 </button>
@@ -1275,30 +1431,46 @@ function ProductosPageInner() {
             {hoveredCatMenu !== null && (
               <div style={{ position:"fixed", inset:0, zIndex:350 }} onClick={() => setHoveredCatMenu(null)} />
             )}
-            <div style={{ position:"relative", marginBottom:40, borderBottom:`1px solid ${borderFaint}`, padding:"0 46px 24px" }}>
+            <div style={{ position:"relative", marginBottom:40,
+              borderBottom: tabStyle === "underline" ? "none" : `1px solid ${borderFaint}`,
+              paddingBottom: tabStyle === "underline" ? 0 : 24,
+              padding: `0 ${CATEGORIES.length > 5 ? 46 : 0}px ${tabStyle === "underline" ? 0 : 24}px` }}>
               {CATEGORIES.length > 5 && (
                 <>
                   <button onClick={() => scrollCats(-1)} aria-label="Anterior"
-                    style={{ position:"absolute", left:0, top:0, bottom:24, zIndex:2, width:36, margin:"auto 0", padding:0,
+                    style={{ position:"absolute", left:0, top:0, bottom:tabStyle==="underline"?0:24, zIndex:2, width:36, margin:"auto 0", padding:0,
                       border:"none", background:"none", color:T, opacity:0.45, fontSize:44, lineHeight:1, cursor:"pointer",
                       display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
                   <button onClick={() => scrollCats(1)} aria-label="Siguiente"
-                    style={{ position:"absolute", right:0, top:0, bottom:24, zIndex:2, width:36, margin:"auto 0", padding:0,
+                    style={{ position:"absolute", right:0, top:0, bottom:tabStyle==="underline"?0:24, zIndex:2, width:36, margin:"auto 0", padding:0,
                       border:"none", background:"none", color:T, opacity:0.45, fontSize:44, lineHeight:1, cursor:"pointer",
                       display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
                 </>
               )}
-              <div ref={catScrollRef} className="st-tabs" style={{ display:"flex", gap:8, flexWrap:"nowrap", overflowX:"auto", WebkitOverflowScrolling:"touch" } as React.CSSProperties}>
+              <div ref={catScrollRef} className="st-tabs" style={{ display:"flex", gap: tabStyle==="underline" ? 20 : tabStyle==="pill" ? 8 : 8, flexWrap:"nowrap", overflowX:"auto", WebkitOverflowScrolling:"touch" } as React.CSSProperties}>
                 {CATEGORIES.map(cat => {
                   const subcats = cat !== "Todos" ? (subcategoriesFor[cat] || []) : [];
                   const isActive = activeCategory === cat;
+                  // Wrapper del tab per-template
+                  const tabWrapperStyle: React.CSSProperties = tabStyle === "pill"
+                    ? { display:"flex", alignItems:"stretch", border:`1px solid ${isActive ? G : border}`, borderRadius:999, overflow:"hidden", transition:"border-color 0.2s" }
+                    : tabStyle === "underline"
+                    ? { display:"flex", alignItems:"stretch", border:"none", borderBottom:`2px solid ${isActive ? G : "transparent"}`, paddingBottom:8, transition:"border-color 0.2s" }
+                    : tabStyle === "brutalist"
+                    ? { display:"flex", alignItems:"stretch", border:`2px solid ${isActive ? G : border}`, boxShadow: isActive ? `3px 3px 0 ${G}` : "none", transition:"border-color 0.15s, box-shadow 0.15s" }
+                    : { display:"flex", alignItems:"stretch", border:`1px solid ${isActive ? G : border}`, transition:"border-color 0.2s" };
+                  // Botón principal del tab per-template
+                  const tabBtnStyle: React.CSSProperties = tabStyle === "pill"
+                    ? { background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"8px 18px", fontSize:11, letterSpacing:1, cursor:"pointer", fontWeight:600, textTransform:"uppercase", whiteSpace:"nowrap" as const, transition:"background 0.2s, color 0.2s" }
+                    : tabStyle === "underline"
+                    ? { background:"none", color: isActive ? G : T, border:"none", padding:"8px 0", fontSize:12, letterSpacing:2, cursor:"pointer", fontWeight: isActive ? 700 : 400, textTransform:"uppercase", whiteSpace:"nowrap" as const, transition:"color 0.2s, font-weight 0.15s", fontFamily:serif }
+                    : tabStyle === "brutalist"
+                    ? { background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"9px 18px", fontSize:11, fontWeight:900, letterSpacing:1, cursor:"pointer", textTransform:"uppercase", whiteSpace:"nowrap" as const }
+                    : { background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"9px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", whiteSpace:"nowrap" as const, fontFamily:serif, transition:"all 0.2s" };
                   return (
                     <div key={cat} ref={(el) => { catTabRefs.current[cat] = el; }} style={{ position:"relative", flexShrink:0 }}>
-                      <div style={{ display:"flex", alignItems:"stretch", border:`1px solid ${isActive ? G : border}` }}>
-                        <button onClick={() => changeCategory(cat)}
-                          style={{ background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"9px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", whiteSpace:"nowrap", transition:"all 0.2s" }}>
-                          {cat}
-                        </button>
+                      <div style={tabWrapperStyle}>
+                        <button onClick={() => changeCategory(cat)} style={tabBtnStyle}>{cat}</button>
                         {subcats.length > 0 && (
                           <button onClick={() => {
                               if (hoveredCatMenu === cat) { setHoveredCatMenu(null); return; }
@@ -1307,7 +1479,7 @@ function ProductosPageInner() {
                               setHoveredCatMenu(cat);
                             }}
                             aria-label={`Subcategorías de ${cat}`}
-                            style={{ background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", borderLeft:`1px solid ${isActive ? (dark?"rgba(0,0,0,0.25)":"rgba(255,255,255,0.3)") : border}`, padding:"9px 14px", fontSize:14, fontWeight:700, lineHeight:1, opacity:1, cursor:"pointer", display:"flex", alignItems:"center" }}>
+                            style={{ background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", borderLeft: tabStyle==="underline" ? "none" : `1px solid ${isActive ? (dark?"rgba(0,0,0,0.25)":"rgba(255,255,255,0.3)") : border}`, padding: tabStyle==="underline" ? "8px 0 8px 6px" : "9px 12px", fontSize:13, fontWeight:700, lineHeight:1, cursor:"pointer", display:"flex", alignItems:"center" }}>
                             {hoveredCatMenu === cat ? "▴" : "▾"}
                           </button>
                         )}
@@ -1315,8 +1487,8 @@ function ProductosPageInner() {
                     </div>
                   );
                 })}
-                {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas) && (
-                  <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); }}
+                {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || onlyDestacados) && (
+                  <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); setOnlyDestacados(false); }}
                     style={{ flexShrink:0, background:"none", border:"none", color:MID, fontSize:11, letterSpacing:1, cursor:"pointer", padding:"9px 8px", textDecoration:"underline", whiteSpace:"nowrap" }}>
                     Limpiar filtros
                   </button>
@@ -1389,6 +1561,25 @@ function ProductosPageInner() {
 
       {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
 
+      {/* ── WHATSAPP FLOTANTE ─────────────────────────────────────────── */}
+      {whatsapp?.enabled && (
+        <>
+          <style>{`
+            @keyframes pp-wa-pulse { 0% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0.55); } 70% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 14px rgba(37,211,102,0); } 100% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0); } }
+            .pp-wa-fab { background:linear-gradient(135deg,#2be374,#1fae57); animation:pp-wa-pulse 2.4s ease-out infinite; }
+            .pp-wa-fab:hover { animation-play-state:paused; }
+          `}</style>
+          <button
+            className="pp-wa-fab"
+            onClick={() => window.open(`https://wa.me/${(whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`, "_blank")}
+            style={{ position:"fixed", bottom:24, right:24, zIndex:500, width:52, height:52, borderRadius:"50%", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"transform 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
+            onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
+            <svg width={28} height={28} viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          </button>
+        </>
+      )}
+
       {/* ── MODAL PRODUCTO ─────────────────────────────────────────────── */}
       {modalProduct && (
         <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
@@ -1439,6 +1630,37 @@ function ProductosPageInner() {
               {modalProduct.description && (
                 <p style={{ fontSize:13, opacity:0.55, lineHeight:1.75, borderTop:`1px solid ${borderFaint}`, paddingTop:14, margin:0 }}>{modalProduct.description}</p>
               )}
+
+              {(() => {
+                const attrs = modalProduct.attributes ?? [];
+                const condicionAttr = attrs.find(a => a.key === "Condición");
+                const serviciosAttr = attrs.find(a => a.key === "Servicios");
+                const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
+                let servicios: string[] = [];
+                if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
+                if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
+                return (
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {condicionAttr && (
+                      <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:700, color:GT, border:`1px solid ${GT}`, padding:"4px 10px" }}>{condicionAttr.value}</span>
+                    )}
+                    {otherAttrs.length > 0 && (
+                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                        {otherAttrs.map(a => (
+                          <p key={a.key} style={{ fontSize:12, opacity:0.65, margin:0, color:T }}><span style={{ opacity:0.85 }}>{a.key}:</span> {a.value}</p>
+                        ))}
+                      </div>
+                    )}
+                    {servicios.length > 0 && (
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                        {servicios.map(k => (
+                          <span key={k} style={{ fontSize:10, letterSpacing:1, padding:"4px 10px", border:`1px solid ${border}`, color:T }}>✓ {k}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {modalProduct.colors.length > 0 && (
                 <div>
@@ -1541,7 +1763,7 @@ function ProductosPageInner() {
                   <p style={{ fontSize:12, opacity:0.4 }}>Cargando...</p>
                 ) : reviews.length > 0 ? (
                   <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:20 }}>
-                    {reviews.map(r => (
+                    {reviews.slice(0, reviewsShown).map(r => (
                       <div key={r.id} style={{ borderBottom:`1px solid ${borderFaint}`, paddingBottom:14 }}>
                         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
                           <span style={{ fontSize:12, fontWeight:600, color:T }}>{r.reviewer}</span>
@@ -1550,6 +1772,11 @@ function ProductosPageInner() {
                         {r.comment && <p style={{ fontSize:12, opacity:0.6, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
                       </div>
                     ))}
+                    {reviews.length > reviewsShown && (
+                      <button onClick={() => setReviewsShown(n => n + 10)} style={{ alignSelf:"flex-start", background:"none", border:"none", color:GT, fontSize:11, fontWeight:700, letterSpacing:1, cursor:"pointer", padding:0, textDecoration:"underline" }}>
+                        Ver más reseñas ({reviews.length - reviewsShown})
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <p style={{ fontSize:12, opacity:0.35, marginBottom:16 }}>Sé el primero en dejar una reseña.</p>
@@ -1564,7 +1791,7 @@ function ProductosPageInner() {
                     <form onSubmit={fromEditor ? e => e.preventDefault() : submitReview} style={{ display:"flex", flexDirection:"column", gap:10, opacity: fromEditor ? 0.55 : 1 }}>
                       <input value={reviewForm.reviewer} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
                         placeholder="Tu nombre" readOnly={fromEditor}
-                        style={{ background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, outline:"none" }}
+                        style={{ background:modalInputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, outline:"none" }}
                         onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
                       <div style={{ display:"flex", gap:4 }}>
                         {[1,2,3,4,5].map(s => (
@@ -1574,7 +1801,7 @@ function ProductosPageInner() {
                       </div>
                       <textarea value={reviewForm.comment} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, comment: e.target.value }))}
                         placeholder="Comentario (opcional)" rows={3} readOnly={fromEditor}
-                        style={{ background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none", fontFamily:sans }}
+                        style={{ background:modalInputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none", fontFamily:sans }}
                         onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
                       <button type="submit" disabled={fromEditor || reviewSubmitting || !reviewForm.reviewer.trim()}
                         style={{ background: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>
@@ -1585,29 +1812,29 @@ function ProductosPageInner() {
                   </div>
                 )}
               </div>
-              {(() => {
-                const others = products.filter(p => p.id !== modalProduct.id);
-                const sameSub = modalProduct.subcategory ? others.filter(p => p.subcategory === modalProduct.subcategory) : [];
-                const sameCat = others.filter(p => p.category === modalProduct.category && !sameSub.includes(p));
-                const rest = others.filter(p => !sameSub.includes(p) && !sameCat.includes(p));
-                const similar = [...sameSub, ...sameCat, ...rest].slice(0, 4);
-                if (similar.length === 0) return null;
-                return (
-                  <div style={{ gridColumn: isMobile ? undefined : "1 / -1", padding: isMobile ? "0 16px 24px" : "0 32px 32px", borderTop:`1px solid ${border}`, paddingTop:20 }}>
-                    <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:14 }}>Productos similares</p>
-                    <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
-                      {similar.map(p => (
-                        <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
-                          <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} onError={e => { e.currentTarget.style.opacity="0"; }} />
-                          <p style={{ margin:"8px 0 2px", fontSize:12, color:T, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                          <p style={{ margin:0, fontSize:13, fontWeight:700, color:GT }}>{fmt(p.price)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
+            {(() => {
+              const others = products.filter(p => p.id !== modalProduct.id);
+              const sameSub = modalProduct.subcategory ? others.filter(p => p.subcategory === modalProduct.subcategory) : [];
+              const sameCat = others.filter(p => p.category === modalProduct.category && !sameSub.includes(p));
+              const rest = others.filter(p => !sameSub.includes(p) && !sameCat.includes(p));
+              const similar = [...sameSub, ...sameCat, ...rest].slice(0, 4);
+              if (similar.length === 0) return null;
+              return (
+                <div style={{ gridColumn: isMobile ? undefined : "1 / -1", padding: isMobile ? "0 16px 24px" : "0 32px 32px", borderTop:`1px solid ${border}`, paddingTop:20 }}>
+                  <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:14 }}>Productos similares</p>
+                  <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
+                    {similar.map(p => (
+                      <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
+                        <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} onError={e => { e.currentTarget.style.opacity="0"; }} />
+                        <p style={{ margin:"8px 0 2px", fontSize:12, color:T, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
+                        <p style={{ margin:0, fontSize:13, fontWeight:700, color:GT }}>{fmt(p.price)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             </div>
           </div>
         </div>

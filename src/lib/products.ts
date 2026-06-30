@@ -36,6 +36,13 @@ export function normalizeVariants(input: unknown): NormalizedVariant[] {
   return variants;
 }
 
+// Estructura de un escalón de precio mayorista.
+// "desde" = cantidad mínima para aplicar este precio; "precio" = precio por unidad.
+export type PrecioEscalon = { desde: number; precio: number };
+
+// Número máximo de escalones por producto (anti-abuso).
+export const MAX_ESCALONES = 3;
+
 type ProductBodyRaw = {
   name?: unknown;
   price?: unknown;
@@ -43,6 +50,8 @@ type ProductBodyRaw = {
   featured?: unknown;
   precioMayorista?: unknown;
   cantMinMayorista?: unknown;
+  preciosEscalonados?: unknown;
+  soloMayorista?: unknown;
   cuotas?: unknown;
   variants?: unknown;
   reelUrls?: unknown;
@@ -59,6 +68,8 @@ type ValidatedProductBody = {
   parsedFeatured: boolean;
   parsedPrecioMayorista: number | null;
   parsedCantMinMayorista: number | null;
+  parsedPreciosEscalonados: PrecioEscalon[];
+  parsedSoloMayorista: boolean;
   parsedCuotas: number;
   normalizedVariants: NormalizedVariant[];
   parsedWeightKg: number | null;
@@ -70,7 +81,7 @@ type ValidatedProductBody = {
 export function validateProductBody(
   body: ProductBodyRaw
 ): { error: NextResponse } | ValidatedProductBody {
-  const { name, price, comparePrice, featured, precioMayorista, cantMinMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm } = body;
+  const { name, price, comparePrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm } = body;
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     return { error: NextResponse.json({ error: "Nombre requerido (mínimo 2 caracteres)" }, { status: 400 }) };
@@ -145,6 +156,76 @@ export function validateProductBody(
     return { error: NextResponse.json({ error: "Si completás la cantidad mínima mayorista, también tenés que indicar el precio mayorista" }, { status: 400 }) };
   }
 
+  // ── Escalones de precio mayorista ──────────────────────────────────────────
+  // Formato esperado: array de objetos {desde: integer ≥ 2, precio: float > 0}
+  // Reglas de seguridad: máximo MAX_ESCALONES, "desde" ascendente y único,
+  // cada "desde" > cantMinMayorista, cada "precio" < precioMayorista y < price.
+  let parsedPreciosEscalonados: PrecioEscalon[] = [];
+  if (preciosEscalonados !== undefined && preciosEscalonados !== null && preciosEscalonados !== "") {
+    let raw: unknown;
+    if (typeof preciosEscalonados === "string") {
+      try { raw = JSON.parse(preciosEscalonados); } catch {
+        return { error: NextResponse.json({ error: "El formato de los escalones de precio no es válido" }, { status: 400 }) };
+      }
+    } else {
+      raw = preciosEscalonados;
+    }
+    if (!Array.isArray(raw)) {
+      return { error: NextResponse.json({ error: "Los escalones de precio deben ser un array" }, { status: 400 }) };
+    }
+    if (raw.length > MAX_ESCALONES) {
+      return { error: NextResponse.json({ error: `Podés agregar hasta ${MAX_ESCALONES} escalones de precio por mayor` }, { status: 400 }) };
+    }
+    // Solo procesamos si hay precio base mayorista configurado
+    if (raw.length > 0 && parsedPrecioMayorista === null) {
+      return { error: NextResponse.json({ error: "Para agregar escalones de precio, primero configurá el precio por mayor base" }, { status: 400 }) };
+    }
+    const escalones: PrecioEscalon[] = [];
+    const desdeVisto = new Set<number>();
+    for (let i = 0; i < raw.length; i++) {
+      const band = raw[i];
+      if (!band || typeof band !== "object" || Array.isArray(band)) {
+        return { error: NextResponse.json({ error: `Escalón ${i + 1}: formato inválido` }, { status: 400 }) };
+      }
+      // Extraer solo los campos permitidos (strip extra keys)
+      const { desde: desdeRaw, precio: precioRaw } = band as Record<string, unknown>;
+      const desde = typeof desdeRaw === "string" ? parseInt(desdeRaw) : (typeof desdeRaw === "number" ? Math.trunc(desdeRaw) : NaN);
+      const precio = typeof precioRaw === "string" ? parseFloat(precioRaw) : (typeof precioRaw === "number" ? precioRaw : NaN);
+      if (!Number.isInteger(desde) || desde < 2) {
+        return { error: NextResponse.json({ error: `Escalón ${i + 1}: la cantidad mínima debe ser un número entero ≥ 2` }, { status: 400 }) };
+      }
+      if (isNaN(precio) || precio <= 0) {
+        return { error: NextResponse.json({ error: `Escalón ${i + 1}: el precio debe ser mayor a 0` }, { status: 400 }) };
+      }
+      if (parsedCantMinMayorista !== null && desde <= parsedCantMinMayorista) {
+        return { error: NextResponse.json({ error: `Escalón ${i + 1}: la cantidad mínima (${desde}) debe ser mayor a la cantidad base (${parsedCantMinMayorista})` }, { status: 400 }) };
+      }
+      if (desdeVisto.has(desde)) {
+        return { error: NextResponse.json({ error: `Escalón ${i + 1}: cantidad duplicada (${desde})` }, { status: 400 }) };
+      }
+      desdeVisto.add(desde);
+      if (precio >= parsedPrecioMayorista!) {
+        return { error: NextResponse.json({ error: `Escalón ${i + 1}: el precio mayorista escalonado debe ser menor al precio mayorista base` }, { status: 400 }) };
+      }
+      if (precio >= parsedPrice) {
+        return { error: NextResponse.json({ error: `Escalón ${i + 1}: el precio escalonado debe ser menor al precio de lista` }, { status: 400 }) };
+      }
+      escalones.push({ desde, precio });
+    }
+    // Verificar orden estrictamente ascendente por "desde"
+    for (let i = 1; i < escalones.length; i++) {
+      if (escalones[i].desde <= escalones[i - 1].desde) {
+        return { error: NextResponse.json({ error: "Los escalones deben estar ordenados por cantidad mínima de forma ascendente" }, { status: 400 }) };
+      }
+    }
+    parsedPreciosEscalonados = escalones;
+  }
+
+  // ── Producto solo mayorista ────────────────────────────────────────────────
+  // Se acepta como booleano; el API route verifica adicionalmente que la tienda
+  // tenga mayorista habilitado antes de persistir true.
+  const parsedSoloMayorista = soloMayorista === true || soloMayorista === "true";
+
   const CUOTAS_OPTIONS = [0, 3, 6, 12];
   const parsedCuotas = typeof cuotas === "number" ? cuotas : parseInt((cuotas as string) ?? "0") || 0;
   if (!CUOTAS_OPTIONS.includes(parsedCuotas)) {
@@ -200,6 +281,8 @@ export function validateProductBody(
     parsedFeatured: featured === true,
     parsedPrecioMayorista,
     parsedCantMinMayorista,
+    parsedPreciosEscalonados,
+    parsedSoloMayorista,
     parsedCuotas,
     normalizedVariants,
     parsedWeightKg: weightResult.value,

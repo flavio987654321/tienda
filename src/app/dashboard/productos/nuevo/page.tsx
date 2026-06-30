@@ -223,7 +223,7 @@ function getTalleSuggestions(category: string, subcategory: string): string[] {
   if (c === "pantalones" || pantSubcats.includes(s)) {
     return ["26", "28", "30", "32", "34", "36", "38", "40", "42", "44"];
   }
-  return ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+  return ["Único", "XS", "S", "M", "L", "XL", "XXL", "XXXL"];
 }
 
 function isDirectVideoUrl(url: string) {
@@ -334,6 +334,9 @@ function ProductoFormPage() {
   const [condicion, setCondicion] = useState<string>("Usado");
   const [precioMayorista, setPrecioMayorista] = useState("");
   const [cantMinMayorista, setCantMinMayorista] = useState("");
+  // Escalones: array de {desde, precio} como strings para los inputs controlados
+  const [escalones, setEscalones] = useState<Array<{ desde: string; precio: string }>>([]);
+  const [soloMayorista, setSoloMayorista] = useState(false);
   const [cuotas, setCuotas] = useState(0);
   const [weightKg, setWeightKg] = useState("");
   const [widthCm, setWidthCm] = useState("");
@@ -470,6 +473,14 @@ function ProductoFormPage() {
         setAttributes(allAttrs.filter((a) => a.key !== "Condición" && a.key !== "Servicios"));
         setPrecioMayorista(product.precioMayorista?.toString() || "");
         setCantMinMayorista(product.cantMinMayorista?.toString() || "");
+        try {
+          const rawEsc = product.preciosEscalonados;
+          const parsed = typeof rawEsc === "string" ? JSON.parse(rawEsc) : (rawEsc ?? []);
+          if (Array.isArray(parsed)) {
+            setEscalones(parsed.map((e: { desde: number; precio: number }) => ({ desde: String(e.desde), precio: String(e.precio) })));
+          }
+        } catch { /* si falla el parse dejamos el estado vacío inicial */ }
+        setSoloMayorista(product.soloMayorista === true);
         setCuotas(product.cuotas || 0);
         setWeightKg(product.weightKg?.toString() || "");
         setWidthCm(product.widthCm?.toString() || "");
@@ -720,6 +731,10 @@ function ProductoFormPage() {
         attributes: finalAttrs,
         precioMayorista: precioMayorista || null,
         cantMinMayorista: cantMinMayorista || null,
+        preciosEscalonados: escalones
+          .filter((e) => e.desde.trim() !== "" && e.precio.trim() !== "")
+          .map((e) => ({ desde: parseInt(e.desde), precio: parseFloat(e.precio) })),
+        soloMayorista,
         cuotas,
         publishAt: publishAt || null,
         weightKg: weightKg || null,
@@ -1235,38 +1250,136 @@ function ProductoFormPage() {
               )}
             </div>
 
-            {/* Precio mayorista */}
-            {store.tieneVentaMayorista && (
-              <div className="bg-white rounded-2xl border border-indigo-100 p-6 space-y-4">
+            {/* Precio mayorista — solo rubros que soportan mayorista Y tienda configurada como tal */}
+            {store.tieneVentaMayorista && storeTypeConfig.supportsWholesale && (
+              <div className="bg-white rounded-2xl border border-indigo-100 p-6 space-y-5">
+                {/* Cabecera */}
                 <div>
-                  <h2 className="font-semibold text-gray-900">Precio mayorista</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Solo visible para compradores que cumplan la cantidad mínima</p>
+                  <h2 className="font-semibold text-gray-900">Venta mayorista</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Los precios mayoristas aplican automáticamente cuando el comprador alcanza la cantidad mínima</p>
                 </div>
+
+                {/* Precio base + cantidad mínima */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Precio por mayor *</label>
+                    <label htmlFor="precioMayorista" className="block text-sm font-medium text-gray-700 mb-1.5">Precio por mayor base *</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
                       <input
+                        id="precioMayorista"
                         type="number"
                         value={precioMayorista}
                         onChange={(e) => { setPrecioMayorista(e.target.value); markDirty(); }}
                         min="0" step="0.01" placeholder="0"
+                        aria-label="Precio mayorista base"
                         className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Cantidad mínima</label>
+                    <label htmlFor="cantMinMayorista" className="block text-sm font-medium text-gray-700 mb-1.5">Cantidad mínima *</label>
                     <input
+                      id="cantMinMayorista"
                       type="number"
                       value={cantMinMayorista}
                       onChange={(e) => { setCantMinMayorista(e.target.value); markDirty(); }}
-                      min="1" placeholder="Ej: 10"
+                      min="1" step="1" placeholder="Ej: 6"
+                      aria-label="Cantidad mínima para precio mayorista"
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                 </div>
+
+                {/* Escalones de precio — solo aparecen si ya hay un precio base cargado */}
+                {precioMayorista && cantMinMayorista && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Escalones de precio</p>
+                        <p className="text-xs text-gray-400">Precio menor para quien compra más. Máximo 3 escalones.</p>
+                      </div>
+                      {escalones.length < 3 && (
+                        <button
+                          type="button"
+                          onClick={() => { setEscalones([...escalones, { desde: "", precio: "" }]); markDirty(); }}
+                          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 border border-indigo-200 rounded-lg px-3 py-1.5 transition-colors"
+                          aria-label="Agregar escalón de precio mayorista"
+                        >
+                          + Agregar escalón
+                        </button>
+                      )}
+                    </div>
+                    {escalones.length > 0 && (
+                      <div className="space-y-2">
+                        {escalones.map((esc, idx) => (
+                          <div key={idx} className="flex items-center gap-3 bg-indigo-50 rounded-xl px-4 py-3">
+                            <div className="flex-1">
+                              <label htmlFor={`esc-desde-${idx}`} className="block text-xs text-gray-500 mb-1">Desde (unidades)</label>
+                              <input
+                                id={`esc-desde-${idx}`}
+                                type="number"
+                                value={esc.desde}
+                                min={parseInt(cantMinMayorista) + 1 || 2}
+                                step="1"
+                                placeholder={`> ${cantMinMayorista}`}
+                                aria-label={`Escalón ${idx + 1}: cantidad mínima`}
+                                onChange={(e) => {
+                                  const next = [...escalones];
+                                  next[idx] = { ...next[idx], desde: e.target.value };
+                                  setEscalones(next); markDirty();
+                                }}
+                                className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <label htmlFor={`esc-precio-${idx}`} className="block text-xs text-gray-500 mb-1">Precio por unidad</label>
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                                <input
+                                  id={`esc-precio-${idx}`}
+                                  type="number"
+                                  value={esc.precio}
+                                  min="0" step="0.01"
+                                  placeholder={`< $${precioMayorista}`}
+                                  aria-label={`Escalón ${idx + 1}: precio por unidad`}
+                                  onChange={(e) => {
+                                    const next = [...escalones];
+                                    next[idx] = { ...next[idx], precio: e.target.value };
+                                    setEscalones(next); markDirty();
+                                  }}
+                                  className="w-full border border-indigo-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              aria-label={`Eliminar escalón ${idx + 1}`}
+                              onClick={() => { setEscalones(escalones.filter((_, i) => i !== idx)); markDirty(); }}
+                              className="mt-4 text-gray-400 hover:text-red-500 transition-colors text-lg leading-none"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Visibilidad: solo mayorista */}
+                <label className="flex items-start gap-3 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={soloMayorista}
+                    onChange={(e) => { setSoloMayorista(e.target.checked); markDirty(); }}
+                    aria-label="Producto exclusivo para compradores mayoristas"
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-gray-700 group-hover:text-indigo-700 transition-colors">Solo visible en tienda mayorista</span>
+                    <span className="block text-xs text-gray-400 mt-0.5">Este producto no aparece si la tienda no tiene venta mayorista activada</span>
+                  </span>
+                </label>
               </div>
             )}
 

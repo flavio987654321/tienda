@@ -14,6 +14,7 @@ import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
+import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import type { ImageOverride } from "@/types/store-config";
 
@@ -112,6 +113,8 @@ function SocialIcon({ network }: { network: string }) {
       return null;
   }
 }
+
+const CC_SECTION_IDS = ["cc-departamentos", "cc-ofertas", "cc-productos", "cc-promo", "cc-nosotros", "cc-contacto"];
 
 export default function CasaClara() {
   const config    = useStoreConfig();
@@ -267,7 +270,7 @@ export default function CasaClara() {
             <Link href={catalogHref} style={{ color:navText, fontSize:12, textDecoration:"underline", textUnderlineOffset:3 }}>Ver catálogo</Link>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            <button onClick={() => { setFavoritesOpen(true); setCartOpen(false); }}
+            <button onClick={() => { setFavoritesOpen(true); setCartOpen(false); }} aria-label="Favoritos"
               style={{ position:"relative", background:"none", border:"none", color:navTextMid, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill={favorites.length > 0 ? accent : "none"} stroke={favorites.length > 0 ? accent : "currentColor"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               {favorites.length > 0 && <span style={{ position:"absolute", top:-4, right:-4, background:accent, color:"#fff", borderRadius:"50%", width:14, height:14, fontSize:8, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{favorites.length}</span>}
@@ -356,7 +359,9 @@ export default function CasaClara() {
         </div>
       </section>
 
+      <div style={{ display:"flex", flexDirection:"column" }}>
       {/* ── DEPARTAMENTOS — lista editorial en una fila ── */}
+      <SectionBlock id="cc-departamentos" label="Departamentos" isPreview={isPreview} defaultOrder={CC_SECTION_IDS}>
       <section id="departamentos" data-reveal style={{ borderTop:"1px solid #f0f0f0", borderBottom:"1px solid #f0f0f0" }}>
         <div className="cc-dep-row" style={{ maxWidth:1100, margin:"0 auto" }}>
           {(() => {
@@ -399,8 +404,10 @@ export default function CasaClara() {
           })()}
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── OFERTAS ── */}
+      <SectionBlock id="cc-ofertas" label="Ofertas" isPreview={isPreview} defaultOrder={CC_SECTION_IDS}>
       {ofertas.length > 0 && (
         <section data-reveal style={{ position:"relative", ...secBg(ofertasImg, ofertasBg), padding:"56px 24px", borderTop:"1px solid #f0f0f0" }}>
           <BgDragHandle imgKey="sectionbg_bgOfertas" />
@@ -439,8 +446,10 @@ export default function CasaClara() {
           </div>
         </section>
       )}
+      </SectionBlock>
 
       {/* ── PRODUCTOS — grid limpio, mucho blanco ── */}
+      <SectionBlock id="cc-productos" label="Catálogo de productos" isPreview={isPreview} defaultOrder={CC_SECTION_IDS}>
       <section id="productos" data-reveal style={{ position:"relative", ...secBg(prodImg, prodBg), padding:"72px 24px" }}>
         <BgDragHandle imgKey="sectionbg_bgProductos" />
         <SectionOverlay ov={prodImg} />
@@ -468,8 +477,10 @@ export default function CasaClara() {
           )}
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── BANNER PROMOCIONAL ── */}
+      <SectionBlock id="cc-promo" label="Banner promocional" isPreview={isPreview} defaultOrder={CC_SECTION_IDS}>
       <PromoBannerCarousel
         images={[config?.imageOverrides?.["promoBanner1"], config?.imageOverrides?.["promoBanner2"], config?.imageOverrides?.["promoBanner3"]]}
         demoImages={[
@@ -483,8 +494,10 @@ export default function CasaClara() {
         accent={accent}
         bg="#0f172a"
       />
+      </SectionBlock>
 
       {/* ── NOSOTROS — imagen + texto ── */}
+      <SectionBlock id="cc-nosotros" label="Nuestra historia" isPreview={isPreview} defaultOrder={CC_SECTION_IDS}>
       <section id="nosotros" data-reveal style={{ position:"relative", ...secBg(nosotrosImg, nosotrosBg), padding:"72px 24px", borderTop:"1px solid #f0f0f0" }}>
         <BgDragHandle imgKey="sectionbg_bgNosotros" />
         <SectionOverlay ov={nosotrosImg} />
@@ -511,8 +524,10 @@ export default function CasaClara() {
           </div>
         </div>
       </section>
+      </SectionBlock>
 
       {/* ── CONTACTO — minimal ── */}
+      <SectionBlock id="cc-contacto" label="Contacto" isPreview={isPreview} defaultOrder={CC_SECTION_IDS}>
       <section id="contacto" data-reveal style={{ position:"relative", ...secBg(contactoImg, contactoBg), padding:"64px 24px", borderTop:"1px solid #f0f0f0" }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
         <SectionOverlay ov={contactoImg} />
@@ -543,6 +558,8 @@ export default function CasaClara() {
         </div>
         <style>{`@media(min-width:768px){.cc-contact-divider{display:block!important}}`}</style>
       </section>
+      </SectionBlock>
+      </div>
 
       <footer style={{ position:"relative", ...secBg(footerImg, footerBg), color:ftText, padding:"28px 24px", textAlign:"center", borderTop: footerImg?.url ? "none" : "1px solid #f0f0f0" }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
@@ -600,7 +617,7 @@ export default function CasaClara() {
             ) : favoriteProducts.map(product => (
               <div key={product.id} style={{ display:"flex", gap:12, padding:"12px 0", borderBottom:"1px solid #f5f5f5" }}>
                 {product.images[0] ? (
-                  <FadeImage src={product.images[0]} alt="" width={72} height={54} style={{ objectFit:"cover", flexShrink:0, background:"#fafafa" }} />
+                  <FadeImage src={product.images[0]} alt={product.name} width={72} height={54} style={{ objectFit:"cover", flexShrink:0, background:"#fafafa" }} />
                 ) : (
                   <div style={{ width:72, height:54, flexShrink:0, background:"#fafafa" }} />
                 )}
