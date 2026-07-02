@@ -48,7 +48,7 @@ export default async function VendedoraPage({ params, searchParams }: Props) {
           description: true,
           primaryColor: true,
           products: {
-            where: { isActive: true },
+            where: { isActive: true, deletedAt: null },
             orderBy: { createdAt: "desc" },
             take: 12,
             select: { id: true, name: true, price: true, comparePrice: true, images: true },

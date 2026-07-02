@@ -72,6 +72,19 @@ function CopyLinkButton({ url }: { url: string }) {
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      try {
+        const el = document.createElement("textarea");
+        el.value = url;
+        el.style.position = "fixed";
+        el.style.opacity = "0";
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand("copy");
+        document.body.removeChild(el);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch { /* silencioso */ }
     });
   }
   return (
@@ -324,6 +337,7 @@ function WithdrawModal({ affiliates, onClose, onSuccess }: { affiliates: Affilia
 const statusLabel: Record<string, { label: string; color: string }> = {
   PENDING: { label: "Pendiente", color: "text-yellow-600 bg-yellow-50" },
   PROCESSING: { label: "Procesando", color: "text-blue-600 bg-blue-50" },
+  APPROVED: { label: "Acreditado", color: "text-green-600 bg-green-50" },
   PAID: { label: "Acreditado", color: "text-green-600 bg-green-50" },
   REJECTED: { label: "Rechazado", color: "text-red-600 bg-red-50" },
 };
@@ -616,13 +630,33 @@ export default function BilleteraPage() {
                   <div className="space-y-2">
                     {affiliate.wallet!.withdrawals.map((w) => {
                       const s = statusLabel[w.status] ?? { label: w.status, color: "text-gray-600 bg-gray-50" };
+                      const daysOld = Math.floor((Date.now() - new Date(w.createdAt).getTime()) / 86_400_000);
+                      const supportSubject = encodeURIComponent(`Consulta retiro — $${w.amount.toLocaleString("es-AR")} del ${new Date(w.createdAt).toLocaleDateString("es-AR")}`);
                       return (
-                        <div key={w.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/5 last:border-0">
-                          <div>
+                        <div key={w.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/5 last:border-0 gap-2">
+                          <div className="min-w-0">
                             <p className="text-sm text-gray-700 dark:text-gray-300">${w.amount.toLocaleString("es-AR")}</p>
-                            <p className="text-xs text-gray-400">{new Date(w.createdAt).toLocaleDateString("es-AR")}</p>
+                            <p className="text-xs text-gray-400">
+                              {new Date(w.createdAt).toLocaleDateString("es-AR")}
+                              {w.status === "PENDING" && daysOld >= 3 && (
+                                <span className={`ml-1 font-semibold ${daysOld >= 15 ? "text-red-500" : daysOld >= 7 ? "text-amber-500" : "text-gray-400"}`}>
+                                  · {daysOld}d
+                                </span>
+                              )}
+                            </p>
                           </div>
-                          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${s.color}`}>{s.label}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {w.status === "PENDING" && daysOld >= 3 && (
+                              <a
+                                href={`mailto:marketplacemitienda@gmail.com?subject=${supportSubject}`}
+                                className="flex items-center gap-1 px-2 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-lg text-[10px] font-bold transition-colors dark:bg-amber-900/20 dark:border-amber-500/30 dark:text-amber-400"
+                              >
+                                <Info className="h-3 w-3" />
+                                Consultar
+                              </a>
+                            )}
+                            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${s.color}`}>{s.label}</span>
+                          </div>
                         </div>
                       );
                     })}

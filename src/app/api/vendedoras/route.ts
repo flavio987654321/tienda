@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
         commissions: { select: { amount: true, status: true }, orderBy: { createdAt: "desc" }, take: 100 },
         // Solo últimas 100 órdenes para el conteo
         orders: { select: { id: true, total: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 100 },
-        wallet: { select: { balance: true, totalEarned: true } },
+        wallet: { select: { balance: true, totalEarned: true, withdrawals: { where: { status: "PENDING" }, select: { amount: true } } } },
         store: { select: { name: true, slug: true } },
       },
     });
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     const totalEarned = affiliates.reduce((s, a) => s + (a.wallet?.totalEarned ?? 0), 0);
     const pendingBalance = affiliates.reduce((s, a) => s + (a.wallet?.balance ?? 0), 0);
     const pendingCommissions = affiliates.reduce(
-      (s, a) => s + a.commissions.filter((c) => c.status === "PENDING").reduce((x, c) => x + c.amount, 0), 0
+      (s, a) => s + (a.wallet?.withdrawals ?? []).reduce((x, w) => x + w.amount, 0), 0
     );
 
     return NextResponse.json({ totalOrders, totalEarned, pendingBalance, pendingCommissions, affiliates });
@@ -44,7 +44,14 @@ export async function GET(req: NextRequest) {
 
   if (mode === "tiendas-disponibles") {
     const stores = await prisma.store.findMany({
-      where: { isActive: true, isPublished: true, affiliatesEnabled: true },
+      where: {
+        OR: [
+          // Tiendas activas con MP para descubrir
+          { isActive: true, isPublished: true, affiliatesEnabled: true, mpAccessToken: { not: null } },
+          // Tiendas donde el usuario ya tiene afiliación (siempre visibles aunque MP se desconecte)
+          { isActive: true, affiliates: { some: { userId: user.id } } },
+        ],
+      },
       select: {
         id: true,
         name: true,
@@ -55,6 +62,7 @@ export async function GET(req: NextRequest) {
         primaryColor: true,
         affiliatesEnabled: true,
         acceptsRewardCoupons: true,
+        mpAccessToken: true,
         owner: { select: { name: true } },
         _count: { select: { products: true } },
         affiliates: {
@@ -65,9 +73,10 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    const result = stores.map((s) => ({
+    const result = stores.map(({ mpAccessToken, tagline, ...s }) => ({
       ...s,
-      description: s.description || s.tagline || null,
+      description: s.description || tagline || null,
+      hasMercadoPago: !!mpAccessToken,
     }));
 
     return NextResponse.json({ stores: result });
@@ -92,7 +101,7 @@ export async function GET(req: NextRequest) {
 }
 
 
-const TC_VERSION = "1.5";
+const TC_VERSION = "1.7";
 
 // POST - afiliado se une a una tienda
 export async function POST(req: NextRequest) {

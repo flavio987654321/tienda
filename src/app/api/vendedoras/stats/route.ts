@@ -19,9 +19,13 @@ export async function GET() {
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
   const statsPerAffiliate = await Promise.all(
     affiliates.map(async (aff) => {
-      const [clicksLast30, ordersLast30, topProducts, clicksByDay, clicksByChannel] = await Promise.all([
+      const [clicksLast30, ordersLast30, topProducts, clicksByDay, clicksByChannel,
+             commissionsSum, ticketData, clicksThisWeek, clicksLastWeek] = await Promise.all([
         prisma.affiliateClick.count({
           where: { affiliateId: aff.id, createdAt: { gte: thirtyDaysAgo } },
         }),
@@ -47,6 +51,25 @@ export async function GET() {
           where: { affiliateId: aff.id, createdAt: { gte: thirtyDaysAgo } },
           _count: { utmSource: true },
         }),
+        // comisiones en $ reales (sum de amount)
+        prisma.commission.aggregate({
+          where: { affiliateId: aff.id },
+          _sum: { amount: true },
+        }),
+        // ticket promedio: total revenue / total orders (órdenes confirmadas)
+        prisma.order.aggregate({
+          where: { affiliateId: aff.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+          _sum: { total: true },
+          _count: { id: true },
+        }),
+        // clicks esta semana (últimos 7 días)
+        prisma.affiliateClick.count({
+          where: { affiliateId: aff.id, createdAt: { gte: sevenDaysAgo } },
+        }),
+        // clicks semana anterior (7-14 días atrás)
+        prisma.affiliateClick.count({
+          where: { affiliateId: aff.id, createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } },
+        }),
       ]);
 
       const productIds = topProducts.map((p) => p.productId);
@@ -62,6 +85,18 @@ export async function GET() {
       const conversionRate = clicksLast30 > 0
         ? Math.round((ordersLast30 / clicksLast30) * 100 * 10) / 10
         : 0;
+
+      const totalCommissionsAmount = commissionsSum._sum.amount ?? 0;
+      const confirmedOrdersCount = ticketData._count.id ?? 0;
+      const confirmedOrdersTotal = ticketData._sum.total ?? 0;
+      const avgTicket = confirmedOrdersCount > 0
+        ? Math.round(confirmedOrdersTotal / confirmedOrdersCount)
+        : 0;
+
+      // tendencia semanal de clicks: % de cambio vs semana anterior
+      const weekTrend = clicksLastWeek > 0
+        ? Math.round(((clicksThisWeek - clicksLastWeek) / clicksLastWeek) * 100)
+        : clicksThisWeek > 0 ? 100 : 0;
 
       // Agrupar clicks por día
       const dayMap: Record<string, number> = {};
@@ -86,8 +121,11 @@ export async function GET() {
         storeSlug: aff.store.slug,
         totalClicks: aff._count.clicks,
         totalOrders: aff._count.orders,
-        totalCommissions: aff._count.commissions,
+        totalCommissionsAmount,
+        avgTicket,
         clicksLast30,
+        clicksThisWeek,
+        weekTrend,
         ordersLast30,
         conversionRate,
         clicksTimeline,

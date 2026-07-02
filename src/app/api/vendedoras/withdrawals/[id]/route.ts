@@ -21,6 +21,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   if (action === "REJECT" && !rejectionReason?.trim()) {
     return NextResponse.json({ error: "Ingresá el motivo del rechazo" }, { status: 400 });
   }
+  if (rejectionReason && rejectionReason.length > 500) {
+    return NextResponse.json({ error: "El motivo no puede superar 500 caracteres" }, { status: 400 });
+  }
+  if (notes && notes.length > 500) {
+    return NextResponse.json({ error: "Las notas no pueden superar 500 caracteres" }, { status: 400 });
+  }
 
   const withdrawal = await prisma.walletWithdrawal.findUnique({
     where: { id },
@@ -67,7 +73,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           type: "WITHDRAWAL_REJECTED",
           title: "Tu retiro fue rechazado",
           body: `Tu retiro de $${withdrawal.amount.toLocaleString("es-AR")} fue rechazado. Motivo: ${rejectionReason}. El saldo fue devuelto a tu billetera.`,
-          link: "/vendedoras/billetera",
+          link: "/afiliados/billetera",
         }).catch((err) => console.error("[notify] withdrawal rejected", err));
 
         return tx.walletWithdrawal.update({
@@ -93,7 +99,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return tx.walletWithdrawal.update({
         where: { id },
         data: {
-          status: "PAID",
+          status: "APPROVED",
           approvedAt: new Date(),
           notes: notes || null,
         },

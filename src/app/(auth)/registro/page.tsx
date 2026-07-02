@@ -395,7 +395,7 @@ function RegistroContent() {
             </div>
 
             <h1 className="text-4xl font-black text-gray-950 mb-2">Completá tus datos</h1>
-            <p className="text-gray-500 mb-8 text-sm">
+            <p className="text-gray-600 mb-8 text-sm">
               {accountType === "owner"
                 ? "Tu tienda estará lista en segundos."
                 : accountType === "seller"
@@ -509,42 +509,42 @@ function RegistroContent() {
 
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">Nombre completo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre completo</label>
                 <input
                   type="text" name="name" value={form.name} onChange={handleChange} onBlur={handleBlur}
                   placeholder="Ej: María García"
-                  className={`w-full bg-gray-50 border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-300 transition-all ${fieldErrors.name ? "border-red-400" : "border-gray-200"}`}
+                  className={`w-full bg-white border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-400 transition-all ${fieldErrors.name ? "border-red-400" : "border-gray-300"}`}
                 />
                 {fieldErrors.name
                   ? <p className="text-xs text-red-500 mt-1">{fieldErrors.name}</p>
-                  : <p className="text-xs text-gray-400 mt-1">Solo letras, mínimo 2 caracteres.</p>
+                  : <p className="text-xs text-gray-500 mt-1">Solo letras, mínimo 2 caracteres.</p>
                 }
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">Teléfono</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Teléfono</label>
                 <input
                   type="tel" name="phone" value={form.phone} onChange={handleChange} onBlur={handleBlur}
                   placeholder="Ej: 11 4567-8901"
-                  className={`w-full bg-gray-50 border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-300 transition-all ${fieldErrors.phone ? "border-red-400" : "border-gray-200"}`}
+                  className={`w-full bg-white border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-400 transition-all ${fieldErrors.phone ? "border-red-400" : "border-gray-300"}`}
                 />
                 {fieldErrors.phone
                   ? <p className="text-xs text-red-500 mt-1">{fieldErrors.phone}</p>
-                  : <p className="text-xs text-gray-400 mt-1">Con código de área, sin el 0. Ej: 11 4567-8901</p>
+                  : <p className="text-xs text-gray-500 mt-1">Con código de área, sin el 0. Ej: 11 4567-8901</p>
                 }
               </div>
 
               {accountType === "owner" && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Nombre de tu tienda</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre de tu tienda</label>
                   <input
                     type="text" name="storeName" value={form.storeName} onChange={handleChange} onBlur={handleBlur}
                     placeholder="Ej: Joyas María, Luna Moda..."
-                    className={`w-full bg-gray-50 border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-300 transition-all ${fieldErrors.storeName ? "border-red-400" : "border-gray-200"}`}
+                    className={`w-full bg-white border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-400 transition-all ${fieldErrors.storeName ? "border-red-400" : "border-gray-300"}`}
                   />
                   {fieldErrors.storeName
                     ? <p className="text-xs text-red-500 mt-1">{fieldErrors.storeName}</p>
-                    : <p className="text-xs text-gray-400 mt-1">
+                    : <p className="text-xs text-gray-500 mt-1">
                         Tu tienda quedará en{" "}
                         <span className="text-gray-500">
                           {form.storeName
@@ -558,22 +558,22 @@ function RegistroContent() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <input
                   type="email" name="email" value={form.email} onChange={handleChange} onBlur={handleBlur}
                   placeholder="tu@email.com"
-                  className={`w-full bg-gray-50 border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-300 transition-all ${fieldErrors.email ? "border-red-400" : "border-gray-200"}`}
+                  className={`w-full bg-white border rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-400 transition-all ${fieldErrors.email ? "border-red-400" : "border-gray-300"}`}
                 />
                 {fieldErrors.email && <p className="text-xs text-red-500 mt-1">{fieldErrors.email}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">Contraseña</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Contraseña</label>
                 <div className="relative">
                   <input
                     type={showPass ? "text" : "password"} name="password" value={form.password} onChange={handleChange} onBlur={handleBlur}
                     placeholder="Mínimo 6 caracteres"
-                    className={`w-full bg-gray-50 border rounded-2xl px-4 py-3.5 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-300 transition-all ${fieldErrors.password ? "border-red-400" : "border-gray-200"}`}
+                    className={`w-full bg-gray-50 border rounded-2xl px-4 py-3.5 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-300 transition-all ${fieldErrors.password ? "border-red-400" : "border-gray-300"}`}
                   />
                   <button
                     type="button" onClick={() => setShowPass(!showPass)}
@@ -585,7 +585,7 @@ function RegistroContent() {
                 </div>
                 {fieldErrors.password
                   ? <p className="text-xs text-red-500 mt-1">{fieldErrors.password}</p>
-                  : <p className="text-xs text-gray-400 mt-1">Mínimo 6 caracteres.</p>
+                  : <p className="text-xs text-gray-500 mt-1">Mínimo 6 caracteres.</p>
                 }
               </div>
 
@@ -597,7 +597,7 @@ function RegistroContent() {
                     onChange={(e) => { setAgeConfirmed(e.target.checked); setError(""); }}
                     className="mt-0.5 h-4 w-4 rounded border-gray-300 bg-white accent-orange-600 cursor-pointer flex-shrink-0"
                   />
-                  <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-600 transition-colors">
+                  <span className="text-xs text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors">
                     Confirmo que tengo <span className="text-gray-700 font-semibold">18 años o más</span>. Entiendo que el uso de esta plataforma está reservado para mayores de edad.
                   </span>
                 </label>
@@ -609,7 +609,7 @@ function RegistroContent() {
                     onChange={(e) => { setTermsAccepted(e.target.checked); setError(""); }}
                     className="mt-0.5 h-4 w-4 rounded border-gray-300 bg-white accent-orange-600 cursor-pointer flex-shrink-0"
                   />
-                  <span className="text-xs text-gray-500 leading-relaxed group-hover:text-gray-600 transition-colors">
+                  <span className="text-xs text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors">
                     Leí y acepto los{" "}
                     <Link
                       href={`/terminos?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`}

@@ -345,12 +345,13 @@ model Product {
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
-  variants      ProductVariant[]
-  orderItems    OrderItem[]
-  favorites     Favorite[]
-  reviews       Review[]
-  publicReviews PublicReview[]
-  stockMovements StockMovement[]
+  variants        ProductVariant[]
+  orderItems      OrderItem[]
+  favorites       Favorite[]
+  reviews         Review[]
+  publicReviews   PublicReview[]
+  stockMovements  StockMovement[]
+  affiliateClicks AffiliateClick[]
 
   @@index([deletedAt])
 }
@@ -424,6 +425,8 @@ model Order {
   commission Commission?
   reviews    Review[]
   statusLogs OrderStatusLog[]
+
+  @@index([storeId, status, createdAt(sort: Desc)])
 }
 
 // Carrito con email/teléfono del comprador capturado durante el checkout
@@ -539,6 +542,7 @@ model Affiliate {
   leads       Lead[]
 
   @@unique([storeId, userId])
+  @@index([storeId, status])
 }
 
 model AffiliateClick {
@@ -546,6 +550,8 @@ model AffiliateClick {
   affiliateId      String
   affiliate        Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
   storeId          String
+  productId        String?
+  product          Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
   ip               String?
   utmSource        String?
   convertedToOrder Boolean   @default(false)
@@ -555,6 +561,7 @@ model AffiliateClick {
   @@index([storeId])
   @@index([createdAt])
   @@index([affiliateId, ip])
+  @@index([productId])
 }
 
 model Commission {
@@ -570,6 +577,8 @@ model Commission {
 
   orderId String @unique
   order   Order  @relation(fields: [orderId], references: [id])
+
+  @@index([affiliateId, status])
 }
 
 model Wallet {
@@ -691,6 +700,8 @@ model WalletWithdrawal {
 
   walletId String
   wallet   Wallet @relation(fields: [walletId], references: [id])
+
+  @@index([walletId, status])
 }
 
 model Testimonial {

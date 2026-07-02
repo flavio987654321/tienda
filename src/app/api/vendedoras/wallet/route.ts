@@ -39,7 +39,7 @@ export async function GET() {
   const affiliates = await prisma.affiliate.findMany({
     where: { userId },
     include: {
-      store: { select: { name: true, slug: true } },
+      store: { select: { name: true, slug: true, commissionRate: true } },
       wallet: {
         include: {
           withdrawals: { orderBy: { createdAt: "desc" }, take: 20 },
@@ -132,6 +132,9 @@ export async function PUT(req: NextRequest) {
   if (!holderClean || holderClean.length < 3) {
     return NextResponse.json({ error: "Ingresá el nombre del titular de la cuenta" }, { status: 400 });
   }
+  if (holderClean.length > 100) {
+    return NextResponse.json({ error: "El nombre del titular no puede superar 100 caracteres" }, { status: 400 });
+  }
 
   const updated = await prisma.wallet.update({
     where: { id: walletId },
@@ -184,9 +187,7 @@ export async function POST(req: NextRequest) {
     include: {
       affiliate: {
         include: {
-          store: {
-            include: { owner: { select: { id: true, email: true, name: true } } },
-          },
+          store: { select: { name: true } },
         },
       },
     },
@@ -286,16 +287,17 @@ export async function POST(req: NextRequest) {
     throw e;
   }
 
-  // Notificar al dueño de la tienda automáticamente con los datos bancarios (fire-and-forget)
-  const owner = walletFull.affiliate.store.owner;
-  if (owner?.email) {
-    const affiliateUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { name: true, email: true },
-    });
+  // Buscar al afiliado y al admin (fire-and-forget: ambas queries en paralelo)
+  const [affiliateUser, admin] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } }),
+    prisma.user.findFirst({ where: { role: "ADMIN" }, select: { id: true, email: true, name: true } }),
+  ]);
+
+  // Email al admin con los datos bancarios para transferir
+  if (admin?.email) {
     sendWithdrawalRequestEmail({
-      ownerEmail: owner.email,
-      ownerName: owner.name ?? "",
+      ownerEmail: admin.email,
+      ownerName: admin.name ?? "Admin",
       storeName: walletFull.affiliate.store.name,
       affiliateName: affiliateUser?.name ?? "Afiliada",
       affiliateEmail: affiliateUser?.email ?? "",
@@ -307,17 +309,28 @@ export async function POST(req: NextRequest) {
     }).catch((err) => console.error("[email] sendWithdrawalRequestEmail failed:", err));
   }
 
-  // Notificación in-app a la afiliada
+  // Notificación in-app al admin
+  if (admin?.id) {
+    createNotification({
+      userId: admin.id,
+      type: "WITHDRAWAL_REQUESTED",
+      title: "Nueva solicitud de retiro",
+      body: `${affiliateUser?.name ?? "Una afiliada"} solicitó retirar $${amount.toLocaleString("es-AR")} — ${walletFull.affiliate.store.name}`,
+      link: "/admin/retiros",
+    }).catch((err) => console.error("[notify] admin withdrawal:", err));
+  }
+
+  // Notificación in-app a la afiliada confirmando la solicitud
   createNotification({
     userId,
     type: "WITHDRAWAL_REQUESTED",
     title: "Retiro en proceso",
-    body: `Tu retiro de $${amount.toLocaleString("es-AR")} fue solicitado y el dueño de la tienda está procesando la transferencia.`,
-    link: "/vendedoras/billetera",
-  });
+    body: `Tu retiro de $${amount.toLocaleString("es-AR")} fue solicitado. Lo procesaremos en 1 a 3 días hábiles.`,
+    link: "/afiliados/billetera",
+  }).catch((err) => console.error("[notify] affiliate withdrawal:", err));
 
   return NextResponse.json({
     withdrawal,
-    message: "Retiro solicitado. El dueño de la tienda recibirá los datos para realizar la transferencia.",
+    message: "Retiro solicitado. Lo procesaremos en 1 a 3 días hábiles.",
   });
 }

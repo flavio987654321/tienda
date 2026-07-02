@@ -72,8 +72,8 @@ const CONTENT = {
         ],
       },
       {
-        title: "6. Gestión de afiliados y consultas",
-        body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. Al aceptar un afiliado y activar el programa, aceptás los Términos del Programa de Afiliados y te comprometés a pagarle la comisión configurada por cada venta válida generada a través de su link. Las comisiones se acreditan al confirmar el pago del pedido. Adicionalmente, cuando un potencial cliente consulta por WhatsApp a través del link de un afiliado, la Plataforma registra esa consulta en tu panel. Si confirmás la consulta como venta, la comisión se acredita automáticamente en la billetera del afiliado. Si la rechazás, no se genera comisión. Los datos del consultante (nombre, teléfono, mensaje) quedan registrados y son de tu responsabilidad conforme a la Ley 25.326. TiendaApps actúa como intermediaria tecnológica en la gestión de comisiones.",
+        title: "6. Gestión de afiliados y comisiones",
+        body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. Para activar el programa necesitás tener conectada tu cuenta de MercadoPago. Cuando se confirma un pago a través de MercadoPago, la plataforma retiene automáticamente el importe de la comisión y lo acredita en la billetera del afiliado — no tenés que hacer nada manualmente. TiendaApps es el responsable directo del pago de comisiones a los afiliados, no el titular de la tienda. El titular no tiene intervención ni responsabilidad sobre la transferencia de fondos a los afiliados. Adicionalmente, cuando un potencial cliente consulta por WhatsApp a través del link de un afiliado, la Plataforma registra esa consulta en tu panel. Si confirmás la consulta como venta, la comisión se acredita automáticamente en la billetera del afiliado. Si la rechazás, no se genera comisión. Los datos del consultante (nombre, teléfono, mensaje) quedan registrados y son de tu responsabilidad conforme a la Ley 25.326.",
       },
       {
         title: "6 bis. Programa de Verificación de identidad",
@@ -165,8 +165,7 @@ const CONTENT = {
           "El plan de Afiliado/a es gratuito, sin costo de suscripción y sin límite de tiempo.",
           "No se requiere tarjeta de crédito para usar la plataforma como afiliado/a.",
           "Una vez aprobado/a por una tienda, podés generar y usar tu link de afiliado de inmediato, sin necesidad de pagar ni de período de prueba.",
-          "Las comisiones ganadas se acreditan en tu billetera digital dentro de la plataforma.",
-          "El cobro de comisiones está sujeto a los períodos de liquidación de cada tienda.",
+          "Las comisiones ganadas se acreditan en tu billetera digital dentro de la plataforma. Para compras realizadas a través del checkout con MercadoPago, la acreditación es automática al confirmarse el pago, sin intervención del dueño de la tienda.",
           "Podés afiliarte a múltiples tiendas simultáneamente según las disponibilidades de cada una.",
         ],
       },
@@ -176,6 +175,7 @@ const CONTENT = {
         list: [
           "No podés hacer publicidad engañosa ni prometer beneficios que la tienda no ofrece.",
           "No podés usar spam, técnicas de phishing ni prácticas desleales para generar ventas.",
+          "Identificar claramente tu condición de afiliado/a al realizar publicaciones promocionales en redes sociales u otros medios (por ejemplo, con etiquetas como #publicidad, #afiliado o equivalentes), en cumplimiento de las normas de publicidad transparente vigentes.",
           "Sos responsable de declarar tus ingresos por comisiones ante la AFIP según corresponda.",
           "No podés compartir tu link de afiliado en nombre de terceros sin autorización.",
           "Debés respetar las condiciones de cada tienda a la que estés afiliado.",
@@ -183,7 +183,7 @@ const CONTENT = {
       },
       {
         title: "5. Comisiones",
-        body: "Las comisiones son definidas por cada dueño de tienda y pueden variar. TiendaApps no garantiza un monto mínimo de comisión ni un volumen de ventas. Las comisiones se calculan sobre el subtotal del pedido sin envío y se acreditan automáticamente en tu billetera cuando el dueño de la tienda confirma el pago del pedido (estado Confirmado). Pedidos en estado Pendiente no generan comisión.",
+        body: "Las comisiones son definidas por cada dueño de tienda y pueden variar. TiendaApps no garantiza un monto mínimo de comisión ni un volumen de ventas. Las comisiones se calculan sobre el subtotal del pedido menos descuentos, sin incluir el costo de envío. Se acreditan automáticamente en tu billetera cuando MercadoPago confirma el pago (estado Confirmado). Pedidos en estado Pendiente no generan comisión. En caso de devolución de cargo (chargeback) iniciada por el comprador en MercadoPago, TiendaApps se reserva el derecho de revertir la comisión acreditada.",
       },
       {
         title: "6. Premios y beneficios",
@@ -346,7 +346,7 @@ export default async function TerminosPage({
           </div>
 
           <h1 className="text-4xl font-black mb-2">Términos y Condiciones</h1>
-          <p className="text-gray-500 text-sm mb-6">Última actualización: junio 2026</p>
+          <p className="text-gray-500 text-sm mb-6">Última actualización: julio 2026</p>
 
           {/* Responsable */}
           <div className="rounded-xl border border-white/10 bg-white/5 p-5 mb-8 text-sm text-gray-300 space-y-1">

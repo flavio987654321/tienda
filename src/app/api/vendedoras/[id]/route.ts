@@ -76,7 +76,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         type: "AFFILIATE_APPROVED",
         title: `¡Fuiste aceptado/a en ${affiliate.store.name}!`,
         body: "Ya podés compartir tu link de afiliado y empezar a ganar comisiones.",
-        link: "/vendedoras",
+        link: "/afiliados",
       }),
     ]);
 
@@ -106,7 +106,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         type: "AFFILIATE_REJECTED",
         title: `Tu solicitud en ${affiliate.store.name} fue rechazada`,
         body: "El dueño de la tienda decidió no aceptar tu postulación en este momento.",
-        link: "/vendedoras",
+        link: "/afiliados",
       }),
     ]);
 
@@ -132,7 +132,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         type: "AFFILIATE_PAUSED",
         title: `Tu acceso en ${affiliate.store.name} fue pausado`,
         body: "Tu link de afiliado está temporalmente inactivo. Contactate con el dueño de la tienda para más información.",
-        link: "/vendedoras",
+        link: "/afiliados",
       }),
     ]);
 
@@ -179,7 +179,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         type: "AFFILIATE_APPROVED",
         title: `Tu acceso en ${affiliate.store.name} fue reactivado`,
         body: "Ya podés volver a compartir tu link de afiliado y generar comisiones.",
-        link: "/vendedoras",
+        link: "/afiliados",
       }),
     ]);
 
@@ -211,7 +211,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           type: "AFFILIATE_REMOVED",
           title: `Fuiste dado/a de baja en ${affiliate.store.name}`,
           body: "Tu link de afiliado fue desactivado. Los saldos ya acreditados en tu billetera siguen disponibles para retirar.",
-          link: "/vendedoras",
+          link: "/afiliados",
         }),
       ]);
     }

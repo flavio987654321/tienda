@@ -242,8 +242,15 @@ export async function PUT(req: NextRequest) {
 
   const prevStore = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, commissionRate: true, affiliatesEnabled: true, acceptsRewardCoupons: true },
+    select: { id: true, commissionRate: true, affiliatesEnabled: true, acceptsRewardCoupons: true, mpAccessToken: true },
   });
+
+  if (b.affiliatesEnabled && !prevStore?.mpAccessToken) {
+    return NextResponse.json(
+      { error: "Necesitás conectar MercadoPago para activar el programa de afiliados" },
+      { status: 400 }
+    );
+  }
 
   const store = await prisma.store.update({
     where: { ownerId: user.id },

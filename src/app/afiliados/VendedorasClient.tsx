@@ -402,7 +402,9 @@ function ShareModal({
   const [productSearch, setProductSearch] = useState("");
   const [selectedImages, setSelectedImages] = useState<Record<string, number>>({});
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [sortMode, setSortMode] = useState<"sales" | "price_asc" | "price_desc" | "az">("sales");
   const [expandedDescs, setExpandedDescs] = useState<Set<string>>(new Set());
+  const [lightbox, setLightbox] = useState<{ imgs: string[]; idx: number } | null>(null);
   const [showQr, setShowQr] = useState(false);
   const [downloadingQr, setDownloadingQr] = useState(false);
   const [templatePicker, setTemplatePicker] = useState<{ product: ShareProduct; autoShare: boolean } | null>(null);
@@ -425,7 +427,19 @@ function ShareModal({
   }, [target.storeSlug]);
 
   function copy(text: string, key: string) {
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(text).catch(() => {
+      // Fallback para navegadores sin soporte o contextos no-HTTPS
+      try {
+        const el = document.createElement("textarea");
+        el.value = text;
+        el.style.position = "fixed";
+        el.style.opacity = "0";
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand("copy");
+        document.body.removeChild(el);
+      } catch { /* silencioso */ }
+    });
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
   }
@@ -447,12 +461,16 @@ function ShareModal({
     return `${origin}/tienda/${target.storeSlug}?ref=${target.affiliateId}&p=${productId}`;
   }
 
+  function productShortUrl(productId: string) {
+    return `${origin}/v/${target.affiliateId}/${productId}`;
+  }
+
   function productShareText(product: ShareProduct, url: string) {
     return [
       `Mira este producto de ${target.storeName}`,
       product.name,
       money(product.price),
-      product.description ? product.description : "",
+      product.description ? product.description.slice(0, 200) : "",
       url,
     ].filter(Boolean).join("\n");
   }
@@ -594,6 +612,50 @@ function ShareModal({
       transition={{ type: "spring", damping: 30, stiffness: 280 }}
       className="fixed inset-0 z-[100] bg-gray-50 dark:bg-[#080b14] flex flex-col"
     >
+      {/* ── LIGHTBOX ── */}
+      <AnimatePresence>
+        {lightbox && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center"
+            onClick={() => setLightbox(null)}
+          >
+            <button
+              className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-all"
+              onClick={() => setLightbox(null)}
+            >
+              <X className="h-5 w-5" />
+            </button>
+            {lightbox.imgs.length > 1 && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/40 text-white/70 text-sm px-3 py-1 rounded-full">
+                {lightbox.idx + 1} / {lightbox.imgs.length}
+              </div>
+            )}
+            <div className="relative w-full h-full max-w-4xl max-h-[90vh] mx-16" onClick={(e) => e.stopPropagation()}>
+              <Image src={lightbox.imgs[lightbox.idx]} alt="" fill className="object-contain" sizes="(max-width: 768px) 100vw, 896px" />
+            </div>
+            {lightbox.idx > 0 && (
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/10 hover:bg-white/25 rounded-full flex items-center justify-center text-white transition-all"
+                onClick={(e) => { e.stopPropagation(); setLightbox((l) => l ? { ...l, idx: l.idx - 1 } : l); }}
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+            )}
+            {lightbox.idx < lightbox.imgs.length - 1 && (
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/10 hover:bg-white/25 rounded-full flex items-center justify-center text-white transition-all"
+                onClick={(e) => { e.stopPropagation(); setLightbox((l) => l ? { ...l, idx: l.idx + 1 } : l); }}
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
         {/* Header */}
         <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-gray-200 dark:border-white/8 flex items-center gap-3 flex-shrink-0 bg-white dark:bg-[#0d0f1a]">
           <button onClick={onClose} className="w-9 h-9 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/15 rounded-xl flex items-center justify-center text-gray-600 dark:text-gray-300 transition-all flex-shrink-0">
@@ -718,14 +780,20 @@ function ShareModal({
                   const matchCat = categoryFilter === "all" || p.category === categoryFilter;
                   return matchSearch && matchCat;
                 });
-                // products ya viene ordenado por ventas (desc) desde el servidor — el top 3 con ventas reales se destaca
+                const sortedProducts = [...filteredProducts].sort((a, b) => {
+                  if (sortMode === "price_asc") return a.price - b.price;
+                  if (sortMode === "price_desc") return b.price - a.price;
+                  if (sortMode === "az") return a.name.localeCompare(b.name, "es");
+                  return (b.salesCount ?? 0) - (a.salesCount ?? 0);
+                });
+                // top 3 más vendidos — siempre sobre la lista completa sin filtros
                 const topSellerIds = new Set(
                   products.filter((p) => (p.salesCount ?? 0) > 0).slice(0, 3).map((p) => p.id)
                 );
 
                 return (
-                  <div className="space-y-4 max-w-4xl mx-auto">
-                    {/* Search + view toggle */}
+                  <div className="space-y-4 max-w-7xl mx-auto">
+                    {/* Search + sort + view toggle */}
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-600 pointer-events-none" />
@@ -742,6 +810,16 @@ function ShareModal({
                           </button>
                         )}
                       </div>
+                      <select
+                        value={sortMode}
+                        onChange={(e) => setSortMode(e.target.value as typeof sortMode)}
+                        className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-2.5 text-xs font-medium text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
+                      >
+                        <option value="sales">Más vendidos</option>
+                        <option value="price_asc">Menor precio</option>
+                        <option value="price_desc">Mayor precio</option>
+                        <option value="az">A-Z</option>
+                      </select>
                       <div className="flex border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden">
                         <button onClick={() => setViewMode("grid")} className={`px-3 flex items-center transition-colors ${viewMode === "grid" ? "bg-indigo-600 text-white" : "bg-white dark:bg-white/5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}>
                           <LayoutGrid className="h-4 w-4" />
@@ -792,44 +870,60 @@ function ShareModal({
                     )}
 
                     {/* Products grid / list */}
-                    {filteredProducts.length === 0 ? (
+                    {sortedProducts.length === 0 ? (
                       <div className="text-center py-12">
                         <p className="text-gray-500 text-sm">Sin resultados{productSearch ? ` para "${productSearch}"` : ""}</p>
                       </div>
                     ) : viewMode === "list" ? (
                       <div className="flex flex-col gap-2">
-                        {filteredProducts.map((p) => {
+                        {sortedProducts.map((p) => {
                           const pUrl = productUrl(p.id);
+                          const shortUrl = productShortUrl(p.id);
                           const imgs = parseImages(p.images);
                           const isLoading = cardLoading === p.id;
                           return (
                             <div key={p.id} className="flex items-center gap-3 bg-white dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-3">
                               {/* Thumbnail */}
-                              <div className="relative w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                              <button
+                                className="relative w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800"
+                                style={{ cursor: imgs[0] ? "zoom-in" : "default" }}
+                                onClick={() => { if (imgs[0]) setLightbox({ imgs, idx: 0 }); }}
+                              >
                                 {imgs[0]
                                   ? <Image src={imgs[0]} alt={p.name} fill className="object-cover" />
                                   : <div className="w-full h-full flex items-center justify-center"><Package className="h-5 w-5 text-gray-400" /></div>
                                 }
-                              </div>
+                              </button>
                               {/* Info */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5">
                                   <p className="text-gray-900 dark:text-white font-bold text-sm leading-snug truncate">{p.name}</p>
                                   {topSellerIds.has(p.id) && (
-                                    <span className="flex-shrink-0 text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-1.5 py-0.5 rounded-full">🔥 Top</span>
+                                    <span className="flex-shrink-0 text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-1.5 py-0.5 rounded-full">🔥 Más vendido</span>
                                   )}
                                 </div>
-                                <p className="text-emerald-600 dark:text-emerald-400 font-black text-sm">{money(p.price)}</p>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <p className="text-emerald-600 dark:text-emerald-400 font-black text-sm">{money(p.price)}</p>
+                                  <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded-full">+{target.commissionRate ?? 0}%</span>
+                                </div>
                               </div>
                               {/* Actions */}
                               <div className="flex items-center gap-1.5 flex-shrink-0">
-                                <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name} — ${money(p.price)}\n${pUrl}`)}`, "_blank")}
+                                <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name} — ${money(p.price)}\n${shortUrl}`)}`, "_blank")}
                                   className="p-2 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/15 text-[#25D366] rounded-lg transition-all">
                                   <WaIcon />
                                 </button>
-                                <button onClick={() => copy(pUrl, p.id)}
+                                <button onClick={() => copy(shortUrl, p.id)}
                                   className="p-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 rounded-lg transition-all">
                                   {copied === p.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                </button>
+                                <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shortUrl)}`, "_blank")}
+                                  className="p-2 bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/15 text-[#1877F2] rounded-lg transition-all">
+                                  <FbIcon />
+                                </button>
+                                <button onClick={() => window.open(pUrl, "_blank")}
+                                  className="p-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 rounded-lg transition-all">
+                                  <ExternalLink className="h-3.5 w-3.5" />
                                 </button>
                                 <button onClick={() => handleGenerateClick(p)} disabled={isLoading}
                                   className="p-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-60 text-white rounded-lg transition-all">
@@ -841,9 +935,10 @@ function ShareModal({
                         })}
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {filteredProducts.map((p) => {
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {sortedProducts.map((p) => {
                           const pUrl = productUrl(p.id);
+                          const shortUrl = productShortUrl(p.id);
                           const imgs = parseImages(p.images);
                           const isLoading = cardLoading === p.id;
                           const selectedIdx = selectedImages[p.id] ?? 0;
@@ -864,6 +959,11 @@ function ShareModal({
                                   const diff = touchStartX.current - e.changedTouches[0].clientX;
                                   if (Math.abs(diff) > 40) selectImg(diff > 0 ? Math.min(selectedIdx + 1, imgs.length - 1) : Math.max(selectedIdx - 1, 0));
                                 }}
+                                onClick={(e) => {
+                                  if ((e.target as HTMLElement).closest("button")) return;
+                                  if (imgs[selectedIdx]) setLightbox({ imgs, idx: selectedIdx });
+                                }}
+                                style={{ cursor: imgs[selectedIdx] ? "zoom-in" : "default" }}
                               >
                                 {imgs[selectedIdx]
                                   ? <Image src={imgs[selectedIdx]} alt={p.name} fill className="object-cover transition-opacity duration-200" />
@@ -917,7 +1017,7 @@ function ShareModal({
                                   <div className="flex items-center gap-1.5">
                                     <p className="text-gray-900 dark:text-white font-bold text-sm leading-snug">{p.name}</p>
                                     {topSellerIds.has(p.id) && (
-                                      <span className="flex-shrink-0 text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-1.5 py-0.5 rounded-full">🔥 Top</span>
+                                      <span className="flex-shrink-0 text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-1.5 py-0.5 rounded-full">🔥 Más vendido</span>
                                     )}
                                   </div>
                                   {p.description && (
@@ -938,7 +1038,10 @@ function ShareModal({
                                       )}
                                     </div>
                                   )}
-                                  <p className="text-emerald-600 dark:text-emerald-400 font-black text-base mt-2">{money(p.price)}</p>
+                                  <div className="flex items-center justify-between gap-1 mt-2">
+                                    <p className="text-emerald-600 dark:text-emerald-400 font-black text-base">{money(p.price)}</p>
+                                    <span className="flex-shrink-0 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded-full">+{target.commissionRate ?? 0}%</span>
+                                  </div>
                                 </div>
 
                                 {/* CTA placa */}
@@ -953,16 +1056,16 @@ function ShareModal({
 
                                 {/* Acciones secundarias */}
                                 <div className="grid grid-cols-4 gap-1.5">
-                                  <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name} — ${money(p.price)}\n${pUrl}`)}`, "_blank")}
+                                  <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name} — ${money(p.price)}\n${shortUrl}`)}`, "_blank")}
                                     className="flex flex-col items-center gap-1 py-2 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/15 text-[#25D366] rounded-xl text-[9px] font-bold transition-all">
                                     <WaIcon /> WhatsApp
                                   </button>
-                                  <button onClick={() => copy(pUrl, p.id)}
+                                  <button onClick={() => copy(shortUrl, p.id)}
                                     className="flex flex-col items-center gap-1 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl text-[9px] font-bold transition-all">
                                     {copied === p.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                                     {copied === p.id ? "¡Listo!" : "Copiar"}
                                   </button>
-                                  <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pUrl)}`, "_blank")}
+                                  <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shortUrl)}`, "_blank")}
                                     className="flex flex-col items-center gap-1 py-2 bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/15 text-[#1877F2] rounded-xl text-[9px] font-bold transition-all">
                                     <FbIcon /> Facebook
                                   </button>
@@ -998,7 +1101,7 @@ function ShareModal({
 }
 
 /* ── Application Modal ── */
-interface StoreItem { id: string; name: string; slug: string; description: string | null; commissionRate: number; primaryColor: string; affiliatesEnabled: boolean; _count: { products: number }; owner: { name: string | null }; affiliates: { id: string; status: string; isActive: boolean }[]; }
+interface StoreItem { id: string; name: string; slug: string; description: string | null; commissionRate: number; primaryColor: string; affiliatesEnabled: boolean; hasMercadoPago?: boolean; acceptsRewardCoupons?: boolean; _count: { products: number }; owner: { name: string | null }; affiliates: { id: string; status: string; isActive: boolean }[]; }
 
 function ApplyModal({ store, onClose, onSuccess }: { store: StoreItem; onClose: () => void; onSuccess: (id: string) => void }) {
   const [submitting, setSubmitting] = useState(false);
@@ -1533,7 +1636,7 @@ function ProfileCard({ profile, stats, onEdit }: { profile: UserProfile; stats: 
           {[
             { label: "Pedidos generados", value: stats.totalOrders, icon: ShoppingCart, color: "text-blue-500 dark:text-blue-400" },
             { label: "Total ganado", value: fmt(stats.totalEarned), icon: Award, color: "text-emerald-600 dark:text-emerald-400" },
-            { label: "Comisiones pend.", value: fmt(stats.pendingCommissions), icon: DollarSign, color: "text-yellow-600 dark:text-yellow-400" },
+            { label: "Retiros en proceso", value: fmt(stats.pendingCommissions), icon: DollarSign, color: "text-yellow-600 dark:text-yellow-400" },
             { label: "Saldo disponible", value: fmt(stats.pendingBalance), icon: Wallet, color: "text-purple-600 dark:text-purple-400", link: "/afiliados/billetera" },
           ].map(({ label, value, icon: Icon, color, link }) =>
             link ? (
@@ -1717,7 +1820,7 @@ export default function VendedorasClient() {
 
   const myAffiliations = stores.filter((s) => s.affiliates.length > 0);
   const approvedStores = myAffiliations.filter((s) => s.affiliates[0]?.status === "APPROVED");
-  const activeStores = approvedStores.filter((s) => s.affiliatesEnabled);
+  const activeStores = approvedStores.filter((s) => s.affiliatesEnabled && s.hasMercadoPago !== false);
   const pendingStores = myAffiliations.filter((s) => s.affiliates[0]?.status === "PENDING");
   const availableStores = stores.filter((s) => s.affiliates.length === 0 || ["REJECTED", "REMOVED"].includes(s.affiliates[0]?.status));
   const sortedAvailable = [...availableStores].sort((a, b) => (b.commissionRate * 10 + b._count.products) - (a.commissionRate * 10 + a._count.products));
@@ -1743,188 +1846,7 @@ export default function VendedorasClient() {
         .gt { background: linear-gradient(135deg,#818cf8,#a78bfa,#f472b6,#818cf8); background-size:300% 300%; animation:gs 4s ease infinite; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
       `}</style>
 
-      {/* ── NAVBAR ── */}
-      <nav className="sticky top-0 z-40 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5">
-        <div className="max-w-6xl mx-auto px-6 py-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <ShoppingBag className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-lg font-bold text-gray-900 dark:text-white">TiendaApps</span>
-          </Link>
 
-          {/* Desktop — links centrados, se oculta en mobile */}
-          <div className="hidden sm:flex items-center gap-1">
-            <Link href="/afiliados/billetera" className="flex items-center gap-2 whitespace-nowrap text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
-              <Wallet className="h-4 w-4" /> Mi billetera
-            </Link>
-            <Link href="/afiliados/premios" className="flex items-center gap-2 whitespace-nowrap text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
-              <Award className="h-4 w-4" /> Mis premios
-            </Link>
-            <Link href="/afiliados/estadisticas" className="flex items-center gap-2 whitespace-nowrap text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
-              <BarChart3 className="h-4 w-4" /> Estadísticas
-            </Link>
-            <Link href="/afiliados/ranking" className="flex items-center gap-2 whitespace-nowrap text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-medium transition-colors px-3 py-2">
-              <Trophy className="h-4 w-4" /> Ranking
-            </Link>
-          </div>
-
-          {/* Desktop — íconos + salir, se oculta en mobile */}
-          <div className="hidden sm:flex items-center justify-end gap-1">
-            <FavoritesDrawer buttonClassName="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all" />
-            {user?.id && <NotificationBell userId={user.id} />}
-            {mounted && (
-              <button
-                type="button"
-                onClick={() => setTheme(isDark ? "light" : "dark")}
-                title={isDark ? "Modo claro" : "Modo oscuro"}
-                className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
-              >
-                {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setShowHelp(true)}
-              title="Ayuda"
-              className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
-            >
-              <HelpCircle className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => signOut("/")}
-              title="Cerrar sesión"
-              className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all border border-transparent hover:border-red-200 dark:hover:border-red-500/20"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Mobile — botón hamburguesa */}
-          <button
-            className="sm:hidden col-start-3 justify-self-end w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300"
-            onClick={() => setMobileMenuOpen((v) => !v)}
-            aria-label="Menú"
-          >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-        </div>
-
-      </nav>
-
-      {/* Panel lateral mobile — fuera del nav para cubrir toda la pantalla */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <>
-            {/* Overlay */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="sm:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            {/* Panel derecho */}
-            <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 280 }}
-              className="sm:hidden fixed top-0 right-0 h-full w-72 z-50 bg-white dark:bg-[#0f1629] shadow-2xl flex flex-col"
-            >
-              {/* Header del panel */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0">
-                    {userInitial}
-                  </div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{userName}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <FavoritesDrawer buttonClassName="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10" />
-                  {user?.id && <NotificationBell userId={user.id} />}
-                  <button
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Items */}
-              <div className="flex-1 px-4 py-4 flex flex-col gap-1">
-                <>
-                    <Link
-                      href="/afiliados/billetera"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-                    >
-                      <Wallet className="h-4 w-4 text-indigo-500" /> Mi billetera
-                    </Link>
-                    <Link
-                      href="/afiliados/premios"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-                    >
-                      <Award className="h-4 w-4 text-amber-500" /> Mis premios
-                    </Link>
-                    <Link href="/afiliados/pedidos" onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <ShoppingBag className="h-4 w-4 text-green-500" /> Mis pedidos
-                    </Link>
-                    <Link href="/afiliados/estadisticas" onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <BarChart3 className="h-4 w-4 text-blue-500" /> Estadísticas
-                    </Link>
-                    <Link href="/afiliados/plantillas" onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <MessageSquare className="h-4 w-4 text-purple-500" /> Plantillas
-                    </Link>
-                    <Link href="/afiliados/kit" onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <Download className="h-4 w-4 text-indigo-500" /> Kit de contenido
-                    </Link>
-                    <Link href="/afiliados/metas" onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <Target className="h-4 w-4 text-orange-500" /> Mis metas
-                    </Link>
-                    <Link href="/afiliados/ranking" onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <Trophy className="h-4 w-4 text-amber-500" /> Ranking
-                    </Link>
-                    <button type="button" onClick={() => { setShowHelp(true); setMobileMenuOpen(false); }}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors w-full text-left">
-                      <HelpCircle className="h-4 w-4 text-indigo-500" /> Ayuda
-                    </button>
-                    <Link href="/afiliados/soporte" onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <Headset className="h-4 w-4 text-indigo-500" /> Soporte
-                    </Link>
-                    {mounted && (
-                      <button
-                        onClick={() => { setTheme(isDark ? "light" : "dark"); }}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors w-full text-left"
-                      >
-                        {isDark ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4 text-gray-500" />}
-                        {isDark ? "Modo claro" : "Modo oscuro"}
-                      </button>
-                    )}
-                    <div className="mt-auto pt-4 border-t border-gray-100 dark:border-white/10">
-                      <button
-                        onClick={() => { signOut("/"); setMobileMenuOpen(false); }}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors w-full"
-                      >
-                        <LogOut className="h-4 w-4" /> Cerrar sesión
-                      </button>
-                    </div>
-                </>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
 
       {/* ── DASHBOARD ── */}
       <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
@@ -1977,10 +1899,12 @@ export default function VendedorasClient() {
                 {approvedStores.map((store) => {
                   const aff = store.affiliates[0];
                   const paused = !store.affiliatesEnabled;
+                  const mpDisconnected = store.affiliatesEnabled && store.hasMercadoPago === false;
+                  const dimmed = paused || mpDisconnected;
                   return (
-                    <motion.div key={store.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={`bg-white dark:bg-gray-900/80 border rounded-3xl overflow-hidden shadow-sm ${paused ? "border-gray-200 dark:border-white/5 opacity-60" : "border-gray-200 dark:border-white/10"}`}>
-                      <div className="h-20 relative flex items-center px-5 gap-3" style={{ backgroundColor: store.primaryColor + (paused ? "10" : "20"), borderBottom: `1px solid ${store.primaryColor}25` }}>
-                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ backgroundColor: store.primaryColor + (paused ? "60" : "") }}>
+                    <motion.div key={store.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={`bg-white dark:bg-gray-900/80 border rounded-3xl overflow-hidden shadow-sm ${dimmed ? "border-gray-200 dark:border-white/5 opacity-60" : "border-gray-200 dark:border-white/10"}`}>
+                      <div className="h-20 relative flex items-center px-5 gap-3" style={{ backgroundColor: store.primaryColor + (dimmed ? "10" : "20"), borderBottom: `1px solid ${store.primaryColor}25` }}>
+                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ backgroundColor: store.primaryColor + (dimmed ? "60" : "") }}>
                           <Store className="h-5 w-5 text-white" />
                         </div>
                         <div>
@@ -1991,6 +1915,10 @@ export default function VendedorasClient() {
                           {paused ? (
                             <span className="text-xs bg-gray-100 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10 px-2.5 py-1 rounded-full font-semibold">
                               Programa pausado
+                            </span>
+                          ) : mpDisconnected ? (
+                            <span className="text-xs bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 px-2.5 py-1 rounded-full font-semibold">
+                              Sin MercadoPago
                             </span>
                           ) : (
                             <span className="text-xs bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 px-2.5 py-1 rounded-full font-bold">
@@ -2003,6 +1931,10 @@ export default function VendedorasClient() {
                         {paused ? (
                           <div className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/8 rounded-2xl p-4 text-center">
                             <p className="text-sm text-gray-500 dark:text-gray-400">La dueña pausó el programa de afiliados temporalmente. Tu saldo en billetera sigue disponible para retirar.</p>
+                          </div>
+                        ) : mpDisconnected ? (
+                          <div className="bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20 rounded-2xl p-4 text-center">
+                            <p className="text-sm text-amber-700 dark:text-amber-400">La tienda desconectó MercadoPago. Tu link no genera comisiones nuevas hasta que lo vuelvan a conectar. Tu saldo acumulado sigue disponible para retirar.</p>
                           </div>
                         ) : (
                           <>
@@ -2031,7 +1963,7 @@ export default function VendedorasClient() {
                               {store._count.products} productos disponibles para compartir
                             </p>
                           </>
-                        )}
+                        ) }
                       </div>
                     </motion.div>
                   );

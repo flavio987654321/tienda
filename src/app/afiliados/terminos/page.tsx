@@ -19,7 +19,7 @@ export default function TerminosAfiliados() {
           Términos y Condiciones del Programa de Afiliados
         </h1>
         <p className="text-gray-500 text-sm mb-6">
-          Versión 1.5 — Vigente desde junio de 2026
+          Versión 1.7 — Vigente desde julio de 2026
         </p>
 
         <div className="rounded-xl border border-white/10 bg-white/5 p-5 mb-10 text-sm text-gray-300 space-y-1">
@@ -72,8 +72,14 @@ export default function TerminosAfiliados() {
               </li>
               <li>
                 Una vez acreditada, la comisión <strong className="text-gray-300">no se revierte</strong> aunque
-                el pedido sea cancelado con posterioridad. La afiliada cumplió su función al generar
+                el pedido sea cancelado con posterioridad por el/la Titular. La afiliada cumplió su función al generar
                 la venta; cualquier cancelación posterior es responsabilidad del/la Titular.
+                <br />
+                <span className="text-gray-500">
+                  Excepción: si el comprador inicia una devolución de cargo (<em>chargeback</em>) a través de MercadoPago
+                  y el pago es revertido por MercadoPago, TiendaApps se reserva el derecho de revertir la comisión
+                  acreditada en la billetera, dado que el ingreso que la sustenta fue devuelto.
+                </span>
               </li>
               <li>
                 El porcentaje de comisión es el vigente al momento de la venta y puede ser
@@ -116,8 +122,8 @@ export default function TerminosAfiliados() {
             <ul className="list-disc list-inside space-y-2 text-gray-400">
               <li>El monto mínimo de retiro es de <strong className="text-gray-300">$500 ARS</strong>.</li>
               <li>
-                Los retiros se procesan de forma automática a través de un procesador de pagos
-                externo. El tiempo estimado de acreditación es de <strong className="text-gray-300">1 a 3 días hábiles</strong>.
+                Una vez aprobada la solicitud de retiro, TiendaApps realizará la transferencia bancaria
+                dentro de los <strong className="text-gray-300">1 a 3 días hábiles</strong> siguientes.
               </li>
               <li>
                 Al momento del retiro se descuenta una <strong className="text-gray-300">comisión de procesamiento</strong>{" "}
@@ -154,6 +160,12 @@ export default function TerminosAfiliados() {
               </li>
               <li>
                 No hacer comparaciones denigrantes con otras marcas o tiendas competidoras.
+              </li>
+              <li>
+                Identificar claramente su condición de afiliado/a al realizar publicaciones
+                promocionales en redes sociales, blogs u otros medios (por ejemplo, con etiquetas
+                como <em>#publicidad</em>, <em>#afiliado</em> o equivalentes), en cumplimiento
+                de las normas de publicidad transparente vigentes.
               </li>
               <li>
                 Mantener actualizados sus datos de contacto y bancarios en la Plataforma.
@@ -202,9 +214,11 @@ export default function TerminosAfiliados() {
               es de naturaleza comercial independiente y no implica relación de dependencia laboral.
             </p>
             <p className="mt-3">
-              La acreditación automática de comisiones en billetera constituye un servicio de la Plataforma,
-              pero el/la Titular es el/la único/a responsable del pago efectivo. TiendaApps no garantiza
-              la solvencia del/la Titular ni asume responsabilidad ante incumplimientos de pago de su parte.
+              El programa de afiliados opera exclusivamente con tiendas que tienen MercadoPago conectado.
+              Cuando se confirma un pago, MercadoPago retiene automáticamente el importe de la comisión
+              y lo transfiere a TiendaApps, quien lo acredita en la billetera del/la Afiliado/a.
+              <strong className="text-white"> TiendaApps es el responsable directo del pago de comisiones</strong>,
+              no el/la Titular de la tienda.
             </p>
             <p className="mt-3">
               TiendaApps no será responsable por daños indirectos o imprevisibles derivados del uso de la
@@ -272,7 +286,7 @@ export default function TerminosAfiliados() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/5 text-xs text-gray-600 text-center">
-          <p>TiendaApps — Programa de Afiliados · Versión 1.5</p>
+          <p>TiendaApps — Programa de Afiliados · Versión 1.7</p>
           <p className="mt-1">Para consultas escribí a soporte desde tu panel de afiliado/a.</p>
         </div>
       </div>

@@ -25,12 +25,13 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
     }),
   ]);
 
-  const [pendingAffiliateCount, lowStockCount] = store
+  const [pendingAffiliateCount, lowStockCount, activeAffiliateCount] = store
     ? await Promise.all([
         prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } }),
         prisma.product.count({ where: { storeId: store.id, deletedAt: null, variants: { every: { stock: 0 } } } }),
+        prisma.affiliate.count({ where: { storeId: store.id, status: "APPROVED", isActive: true } }),
       ])
-    : [0, 0];
+    : [0, 0, 0];
 
   const tier = sub?.tier ?? "BASIC";
   const isPremium = tier === "PREMIUM";
@@ -85,6 +86,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
               connectedAt={store?.mpConnectedAt?.toISOString() ?? null}
               mpSellerId={store?.mpSellerId ?? null}
               mpStatus={mp === "connected" ? "connected" : mp === "error" ? "error" : undefined}
+              activeAffiliatesCount={activeAffiliateCount}
             />
           </section>
 

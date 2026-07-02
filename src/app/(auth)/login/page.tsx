@@ -199,7 +199,7 @@ function LoginForm() {
           )}
 
           <h1 className="text-4xl font-black text-gray-950 mb-2">Bienvenido</h1>
-          <p className="text-gray-500 mb-8">Ingresá a tu cuenta para continuar.</p>
+          <p className="text-gray-600 mb-8">Ingresá a tu cuenta para continuar.</p>
 
           {error && (
             <motion.div
@@ -223,20 +223,20 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1.5">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="tu@email.com"
-                className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm transition-all hover:border-gray-300"
+                className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm transition-all hover:border-gray-400"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium text-gray-600">Contraseña</label>
+                <label className="text-sm font-medium text-gray-700">Contraseña</label>
                 <button type="button" onClick={handleForgotPassword} disabled={resetting} className="text-xs text-orange-600 hover:text-orange-700 transition-colors disabled:opacity-60">
                   {resetting ? "Enviando..." : "¿Olvidaste tu contraseña?"}
                 </button>
@@ -248,7 +248,7 @@ function LoginForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="••••••••"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm transition-all hover:border-gray-300"
+                  className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-3.5 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm transition-all hover:border-gray-400"
                 />
                 <button
                   type="button"

@@ -65,9 +65,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   // para no sumar una consulta extra en cada visita normal de un comprador a la tienda.
   if (!withSales) return NextResponse.json({ store: { ...safeStore, products: visibleProducts }, isOwner, hasMercadoPago });
 
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const visibleProductIds = visibleProducts.map((p) => p.id);
   const salesAgg = await prisma.orderItem.groupBy({
     by: ["productId"],
-    where: { order: { storeId: store.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } } },
+    where: {
+      productId: { in: visibleProductIds },
+      order: {
+        storeId: store.id,
+        status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] },
+        createdAt: { gte: ninetyDaysAgo },
+      },
+    },
     _sum: { quantity: true },
   });
   const salesMap = Object.fromEntries(salesAgg.map((s) => [s.productId, s._sum.quantity ?? 0]));

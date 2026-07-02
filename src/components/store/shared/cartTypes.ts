@@ -36,7 +36,8 @@ export const BASE_PAGO_OPTIONS = [
 
 export const MP_PAGO_OPTION = { id: "mercadopago", label: "MercadoPago (tarjeta / débito)" };
 
-export function getPagoOptions(hasMercadoPago: boolean) {
+export function getPagoOptions(hasMercadoPago: boolean, hasAffiliate = false) {
+  if (hasAffiliate) return hasMercadoPago ? [MP_PAGO_OPTION] : [];
   return hasMercadoPago ? [MP_PAGO_OPTION, ...BASE_PAGO_OPTIONS] : BASE_PAGO_OPTIONS;
 }
 

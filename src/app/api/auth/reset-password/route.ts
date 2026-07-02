@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendPasswordResetEmail } from "@/lib/resend";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (!(await checkRateLimit(`reset-password:${ip}`, 3, 60_000))) {
+    return NextResponse.json({ ok: true }); // respuesta genérica para no revelar el bloqueo
+  }
+
   const { email } = await req.json();
 
   if (!email || typeof email !== "string") {

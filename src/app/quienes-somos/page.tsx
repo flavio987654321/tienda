@@ -1,14 +1,14 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ShoppingBag, Users, Wallet, TrendingUp, Heart, Briefcase,
   ArrowRight, CheckCircle, Globe, Shield, MessageCircle,
-  Home, Share2, DollarSign, Zap, Store, ShoppingCart, Menu, X, Package,
+  Share2, Zap, Store, ShoppingCart, Menu, X, Package,
+  Sparkles, Bell, Tag, QrCode, Utensils, Car,
 } from "lucide-react";
 
 const fadeUp = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, transition: { duration: 0.55 } } };
@@ -17,6 +17,7 @@ const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.12 } } };
 export default function QuienesSomosPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const pathname = usePathname();
+
   return (
     <div className="min-h-screen bg-white text-gray-950 overflow-x-hidden">
       <style>{`
@@ -42,7 +43,7 @@ export default function QuienesSomosPage() {
             <span className="text-lg font-bold text-gray-950">TiendaApps</span>
           </Link>
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/#tiendas" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Tiendas</Link>
+            <Link href="/tiendas" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Tiendas</Link>
             <Link href="/#como-funciona" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Cómo funciona</Link>
             <Link href="/quienes-somos" className="text-gray-950 text-sm font-medium transition-colors">Quiénes somos</Link>
             <Link href="/precios" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Precios</Link>
@@ -50,34 +51,21 @@ export default function QuienesSomosPage() {
             <Link href="/contacto" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors flex items-center gap-1.5"><MessageCircle className="h-4 w-4" />Contacto</Link>
           </div>
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium px-5 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 transition-all">
-              Iniciar sesión
-            </Link>
-            <Link href="/registro" className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
-              Crear cuenta
-            </Link>
+            <Link href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium px-5 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 transition-all">Iniciar sesión</Link>
+            <Link href="/registro" className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">Crear cuenta</Link>
           </div>
-
           <button onClick={() => setMobileMenu(true)} className="md:hidden text-gray-500 hover:text-gray-900">
             <Menu className="h-6 w-6" />
           </button>
         </div>
       </nav>
 
-      {/* Mobile menu overlay */}
-      {mobileMenu && (
-        <div
-          className="fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm md:hidden"
-          onClick={() => setMobileMenu(false)}
-        />
-      )}
-      {/* Mobile menu drawer (slide from right) */}
+      {/* Mobile menu */}
+      {mobileMenu && <div className="fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm md:hidden" onClick={() => setMobileMenu(false)} />}
       <div className={`fixed top-0 right-0 bottom-0 z-50 w-72 bg-white border-l border-gray-200 transition-transform duration-300 ease-in-out md:hidden flex flex-col ${mobileMenu ? "translate-x-0" : "translate-x-full"}`}>
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
           <span className="text-gray-950 font-bold">Menú</span>
-          <button onClick={() => setMobileMenu(false)} className="text-gray-500 hover:text-gray-900">
-            <X className="h-5 w-5" />
-          </button>
+          <button onClick={() => setMobileMenu(false)} className="text-gray-500 hover:text-gray-900"><X className="h-5 w-5" /></button>
         </div>
         <div className="flex flex-col gap-1 px-4 py-4 flex-1">
           {[
@@ -87,14 +75,10 @@ export default function QuienesSomosPage() {
             { href: "/quienes-somos", label: "Quiénes somos" },
             { href: "/precios", label: "Precios" },
           ].map(({ href, label }) => {
-            const active = href === "/quienes-somos" ? pathname === "/quienes-somos" : href === "/precios" ? pathname === "/precios" : href === "/tiendas" ? pathname === "/tiendas" : false;
+            const active = pathname === href;
             return (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setMobileMenu(false)}
-                className={`flex items-center gap-2 py-3 px-3 rounded-xl transition-all text-sm font-medium ${active ? "bg-orange-50 text-orange-600 border border-orange-200" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}`}
-              >
+              <Link key={href} href={href} onClick={() => setMobileMenu(false)}
+                className={`flex items-center gap-2 py-3 px-3 rounded-xl transition-all text-sm font-medium ${active ? "bg-orange-50 text-orange-600 border border-orange-200" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}`}>
                 {active && <span className="w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" />}
                 {label}
               </Link>
@@ -108,31 +92,27 @@ export default function QuienesSomosPage() {
       </div>
 
       {/* ── HERO ── */}
-      <section className="relative pt-32 pb-20 grid-bg">
+      <section className="relative pt-32 pb-20 grid-bg overflow-hidden">
         <div className="absolute top-1/4 -left-32 w-96 h-96 bg-orange-200/40 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 -right-32 w-96 h-96 bg-rose-200/30 rounded-full blur-3xl pointer-events-none" />
-
         <div className="relative max-w-4xl mx-auto px-6 text-center">
           <motion.div initial="hidden" animate="show" variants={stagger}>
             <motion.div variants={fadeUp} className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 text-orange-700 px-4 py-1.5 rounded-full text-sm font-medium mb-8">
               <Heart className="h-3.5 w-3.5 fill-orange-500 text-orange-500" />
-              Hecho en Argentina, para Argentina
+              Hecho en Argentina, con compromiso real
             </motion.div>
-
             <motion.h1 variants={fadeUp} className="text-5xl lg:text-7xl font-black leading-[1.05] mb-6 tracking-tight text-gray-950">
-              Construimos esto<br />
-              <span className="gradient-text">para ayudar a la gente.</span>
+              Arrancamos desde cero.<br />
+              <span className="gradient-text">Seguimos avanzando.</span>
             </motion.h1>
-
             <motion.p variants={fadeUp} className="text-xl text-gray-500 leading-relaxed max-w-2xl mx-auto mb-10">
-              TiendaApps existe para que el dueño de tienda pueda vender más, el afiliado pueda
-              ganarse la vida desde su casa, y el comprador encuentre lo que busca en tiendas argentinas reales.
-              Todos importan. Todos ganan.
+              TiendaApps es un proyecto argentino construido en etapas a lo largo de casi un año.
+              No hubo atajos ni fórmulas mágicas — solo trabajo constante, muchos intentos, y el compromiso
+              de construir algo que realmente sirva.
             </motion.p>
-
             <motion.div variants={fadeUp} className="flex flex-wrap gap-4 justify-center">
               <Link href="/registro" className="group flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-orange-500/25 hover:scale-105">
-                Empezar gratis <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                Crear mi tienda gratis <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link href="/afiliados" className="flex items-center gap-2 border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 px-8 py-4 rounded-2xl font-semibold text-lg transition-all hover:bg-gray-50">
                 <Briefcase className="h-5 w-5" /> Quiero ser afiliado
@@ -142,17 +122,185 @@ export default function QuienesSomosPage() {
         </div>
       </section>
 
-      {/* ── TRES PERSONAS, UN SOLO PROPÓSITO ── */}
-      <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
-            <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Para quiénes existe TiendaApps</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-5">
-              Una plataforma, tres personas que ganan.
+      {/* ── EL ORIGEN ── */}
+      <section className="py-24 bg-white relative overflow-hidden">
+        <div className="max-w-5xl mx-auto px-6">
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-16">
+            <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">El origen</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-950 mb-5">
+              No nació de un plan de negocios.<br className="hidden sm:block" /> Nació de un problema real.
             </motion.h2>
             <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">
-              No diseñamos esto para un solo tipo de usuario. Pensamos en todos — y cada uno
-              tiene un lugar real en este ecosistema.
+              Cada proyecto que no funcionó fue un aprendizaje. Cada idea descartada dejó algo útil para la siguiente.
+              Así se llegó a lo que es hoy TiendaApps.
+            </motion.p>
+          </motion.div>
+
+          <div className="relative">
+            {/* Línea vertical de conexión (desktop) */}
+            <div className="hidden lg:block absolute left-1/2 top-8 bottom-8 w-px bg-gray-100 -translate-x-1/2 pointer-events-none" />
+
+            <div className="space-y-8 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-16 lg:gap-y-12">
+
+              {/* Etapa 1 */}
+              <motion.div
+                initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
+                className="relative bg-white border border-gray-100 rounded-3xl p-7 shadow-sm"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center flex-shrink-0">
+                    <Car className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-orange-500 uppercase tracking-widest">El principio</span>
+                    <p className="font-black text-gray-950 text-lg">Autos y códigos QR</p>
+                  </div>
+                </div>
+                <p className="text-gray-500 text-sm leading-relaxed">
+                  Todo empezó vendiendo autos. Contestar las mismas consultas por las redes todo el día era agotador.
+                  La solución: crear un sistema propio de códigos QR. Pegabas el código en el vidrio del auto y cualquiera
+                  que lo escaneara veía toda la información del vehículo — fotos, descripción, precio. Sin mensajes de ida y vuelta.
+                </p>
+                <div className="mt-4 flex items-center gap-2 text-xs text-orange-600 font-semibold">
+                  <QrCode className="h-3.5 w-3.5" />
+                  El primer proyecto real
+                </div>
+              </motion.div>
+
+              {/* Etapa 2 */}
+              <motion.div
+                initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.1 }}
+                className="relative bg-white border border-gray-100 rounded-3xl p-7 shadow-sm lg:mt-16"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center flex-shrink-0">
+                    <Utensils className="h-6 w-6 text-teal-600" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-teal-600 uppercase tracking-widest">El experimento</span>
+                    <p className="font-black text-gray-950 text-lg">Sistemas para negocios</p>
+                  </div>
+                </div>
+                <p className="text-gray-500 text-sm leading-relaxed">
+                  Después vino un sistema de administración para restaurantes, hoteles e inmobiliarias.
+                  La idea era que cualquiera pudiera registrarse y crear su propio negocio dentro de la plataforma.
+                  No salió como se esperaba, pero dejó claro el camino: una sola plataforma, múltiples rubros.
+                </p>
+                <div className="mt-4 flex items-center gap-2 text-xs text-teal-600 font-semibold">
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  La idea base tomó forma
+                </div>
+              </motion.div>
+
+              {/* Etapa 3 */}
+              <motion.div
+                initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.15 }}
+                className="relative bg-white border border-gray-100 rounded-3xl p-7 shadow-sm"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center flex-shrink-0">
+                    <Zap className="h-6 w-6 text-violet-600" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-violet-600 uppercase tracking-widest">La búsqueda</span>
+                    <p className="font-black text-gray-950 text-lg">Kiosco y otros proyectos</p>
+                  </div>
+                </div>
+                <p className="text-gray-500 text-sm leading-relaxed">
+                  Vinieron más proyectos: un sistema para kioscos, otras ideas. Cada uno con la misma pregunta de fondo:
+                  ¿cómo puedo ofrecerle algo que realmente necesite a la mayor cantidad de personas posible?
+                  Algunos funcionaron, otros no. Todos enseñaron algo.
+                </p>
+                <div className="mt-4 flex items-center gap-2 text-xs text-violet-600 font-semibold">
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  Cada error fue una lección
+                </div>
+              </motion.div>
+
+              {/* Etapa 4 */}
+              <motion.div
+                initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.2 }}
+                className="relative bg-gradient-to-br from-orange-500 to-rose-600 rounded-3xl p-7 shadow-xl shadow-orange-200 lg:mt-16"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <Store className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-orange-100 uppercase tracking-widest">Hoy</span>
+                    <p className="font-black text-white text-lg">TiendaApps</p>
+                  </div>
+                </div>
+                <p className="text-orange-100 text-sm leading-relaxed">
+                  Todas esas ideas convergieron en una sola plataforma: tiendas online, pagos, pedidos, afiliados,
+                  estadísticas, inteligencia artificial, donaciones. Un lugar donde cualquier negocio argentino
+                  puede existir, crecer y llegar a más personas.
+                </p>
+                <div className="mt-4 flex items-center gap-2 text-xs text-white font-semibold">
+                  <Heart className="h-3.5 w-3.5 fill-white" />
+                  Hecho en Argentina, con IA
+                </div>
+              </motion.div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── QUÉ ES HOY ── */}
+      <section className="py-24 bg-gray-50 relative overflow-hidden">
+        <div className="absolute inset-0 grid-bg opacity-40" />
+        <div className="relative max-w-6xl mx-auto px-6">
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
+            <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">La plataforma hoy</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-950 mb-5">
+              Todo lo que un negocio necesita,<br className="hidden sm:block" /> en un solo lugar.
+            </motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">
+              No es solo una tienda online. Es una plataforma completa con herramientas reales para vender,
+              crecer, y llegar a más clientes — sin depender de apps de terceros.
+            </motion.p>
+          </motion.div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {[
+              { icon: Store,        label: "Tienda online",        color: "#ea580c", bg: "#ea580c12" },
+              { icon: ShoppingCart, label: "Pagos integrados",     color: "#0d9488", bg: "#0d948812" },
+              { icon: Package,      label: "Gestión de pedidos",   color: "#e11d48", bg: "#e11d4812" },
+              { icon: Sparkles,     label: "Sasha IA",             color: "#7c3aed", bg: "#7c3aed12" },
+              { icon: Users,        label: "Sistema de afiliados", color: "#f59e0b", bg: "#f59e0b12" },
+              { icon: Tag,          label: "Cupones",              color: "#16a34a", bg: "#16a34a12" },
+              { icon: Bell,         label: "Notificaciones push",  color: "#3b82f6", bg: "#3b82f612" },
+              { icon: TrendingUp,   label: "Estadísticas",         color: "#6366f1", bg: "#6366f112" },
+              { icon: Heart,        label: "Donaciones",           color: "#e11d48", bg: "#e11d4812" },
+              { icon: Globe,        label: "Múltiples rubros",     color: "#0891b2", bg: "#0891b212" },
+            ].map(({ icon: Icon, label, color, bg }, i) => (
+              <motion.div
+                key={label}
+                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.06 }}
+                className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all text-center"
+              >
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: bg }}>
+                  <Icon className="h-5 w-5" style={{ color }} />
+                </div>
+                <p className="text-gray-800 font-semibold text-xs leading-tight">{label}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── PARA QUIÉN ── */}
+      <section className="py-24 bg-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
+            <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Para quién existe</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-950 mb-5">
+              Tres personas. Un mismo ecosistema.
+            </motion.h2>
+            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">
+              TiendaApps funciona cuando todos los que participan encuentran valor real en la plataforma.
             </motion.p>
           </motion.div>
 
@@ -161,15 +309,16 @@ export default function QuienesSomosPage() {
               {
                 icon: Store,
                 color: "#ea580c",
-                bg: "from-orange-50 to-orange-100/50",
+                bg: "from-orange-50 to-orange-100/40",
                 border: "border-orange-200",
                 title: "El dueño de tienda",
-                sub: "Tiene productos, necesita equipo de ventas",
-                gains: [
-                  "Arma un equipo sin pagar sueldos fijos",
-                  "Sus productos llegan a todo el país",
-                  "Solo paga cuando se genera una venta real",
-                  "Control total sobre quién representa su marca",
+                sub: "Tiene productos y quiere venderlos mejor",
+                points: [
+                  "Crea su tienda online en minutos, sin saber programar",
+                  "Gestiona productos, pedidos y pagos desde un panel",
+                  "Activa afiliados que representan su marca",
+                  "Usa herramientas de marketing integradas (cupones, emails, push)",
+                  "Ve sus estadísticas en tiempo real",
                 ],
                 cta: "Crear mi tienda",
                 href: "/registro",
@@ -177,36 +326,38 @@ export default function QuienesSomosPage() {
               {
                 icon: Users,
                 color: "#f59e0b",
-                bg: "from-amber-50 to-amber-100/50",
+                bg: "from-amber-50 to-amber-100/40",
                 border: "border-amber-200",
                 title: "El afiliado",
-                sub: "Quiere trabajar desde casa, sin inversión",
-                gains: [
-                  "Empieza sin poner un peso",
-                  "Trabaja a su ritmo, desde cualquier lugar",
-                  "Cobra comisión automática por cada venta",
-                  "Su billetera crece cuanto más comparte",
+                sub: "Quiere representar marcas y generar comisiones",
+                points: [
+                  "Se postula a tiendas que le interesan",
+                  "Recibe un link único para compartir",
+                  "Cada venta generada acredita su comisión automáticamente",
+                  "Ve su historial y comisiones desde su panel",
+                  "Sin stock, sin pagos, sin envíos a su cargo",
                 ],
-                cta: "Quiero ser afiliado",
+                cta: "Postularme como afiliado",
                 href: "/afiliados",
               },
               {
                 icon: ShoppingCart,
                 color: "#e11d48",
-                bg: "from-rose-50 to-rose-100/50",
+                bg: "from-rose-50 to-rose-100/40",
                 border: "border-rose-200",
                 title: "El comprador",
-                sub: "Quiere comprar con confianza y comodidad",
-                gains: [
+                sub: "Quiere comprar con confianza en tiendas argentinas",
+                points: [
                   "Descubre tiendas argentinas verificadas",
                   "Paga con Mercado Pago de forma segura",
                   "Sigue sus envíos en tiempo real",
-                  "Compra desde el celular como si fuera una app",
+                  "Compra desde el celular con experiencia fluida",
+                  "Puede dejar reseñas de sus compras",
                 ],
                 cta: "Explorar tiendas",
                 href: "/tiendas",
               },
-            ].map(({ icon: Icon, color, bg, border, title, sub, gains, cta, href }) => (
+            ].map(({ icon: Icon, color, bg, border, title, sub, points, cta, href }) => (
               <motion.div
                 key={title}
                 initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
@@ -218,10 +369,10 @@ export default function QuienesSomosPage() {
                 <h3 className="text-xl font-black text-gray-900 mb-1">{title}</h3>
                 <p className="text-gray-500 text-sm mb-6">{sub}</p>
                 <ul className="space-y-3 mb-8 flex-1">
-                  {gains.map((g) => (
-                    <li key={g} className="flex items-start gap-3 text-sm text-gray-600">
+                  {points.map((p) => (
+                    <li key={p} className="flex items-start gap-3 text-sm text-gray-600">
                       <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color }} />
-                      {g}
+                      {p}
                     </li>
                   ))}
                 </ul>
@@ -238,197 +389,56 @@ export default function QuienesSomosPage() {
         </div>
       </section>
 
-      {/* ── EL PROBLEMA QUE VIMOS ── */}
-      <section className="py-20 bg-gray-50 relative overflow-hidden">
-        <div className="absolute inset-0 grid-bg opacity-40" />
-        <div className="relative max-w-5xl mx-auto px-6">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
-            <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Por qué lo construimos</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-950 mb-5">
-              Dos mundos que no se encontraban
-            </motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-600 text-lg max-w-2xl mx-auto">
-              Vimos dos problemas que nadie estaba resolviendo al mismo tiempo.
-              Decidimos resolverlos juntos.
-            </motion.p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
-              className="bg-red-50 border border-red-200 rounded-3xl p-8"
-            >
-              <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mb-5">
-                <Store className="h-7 w-7 text-red-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">El dueño de tienda</h3>
-              <ul className="space-y-3">
-                {[
-                  "Tiene productos pero poca visibilidad",
-                  "No puede pagar un equipo de vendedores",
-                  "Las redes sociales requieren tiempo y dinero",
-                  "Cada peso que gasta en marketing es un riesgo",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-3 text-sm text-gray-600">
-                    <span className="text-red-500 mt-0.5 font-bold flex-shrink-0">✗</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
-              className="bg-red-50 border border-red-200 rounded-3xl p-8"
-            >
-              <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mb-5">
-                <Users className="h-7 w-7 text-red-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">La persona que busca trabajo</h3>
-              <ul className="space-y-3">
-                {[
-                  "Quiere trabajar desde casa pero no sabe cómo",
-                  "No tiene capital para emprender su propio negocio",
-                  "Los empleos formales son cada vez más escasos",
-                  "Tiene tiempo libre y ganas, pero le falta la oportunidad",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-3 text-sm text-gray-600">
-                    <span className="text-red-500 mt-0.5 font-bold flex-shrink-0">✗</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── LA SOLUCIÓN ── */}
-      <section className="py-24 bg-white relative overflow-hidden">
-        <div className="max-w-5xl mx-auto px-6">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-16">
-            <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Nuestra solución</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-5">
-              Todos ganan. <span className="text-orange-600">En serio.</span>
-            </motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">
-              Conectamos dueños de tienda con personas que quieren trabajar.
-              Los dos crecen juntos, sin que ninguno ponga un peso extra.
-            </motion.p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-            {[
-              {
-                icon: Store,
-                color: "#ea580c",
-                bg: "#ea580c11",
-                step: "1",
-                who: "El dueño crea su tienda",
-                desc: "Carga sus productos, configura su tienda y activa el sistema de afiliados. Listo.",
-                result: "Tiene una tienda online profesional sin saber de tecnología.",
-              },
-              {
-                icon: Share2,
-                color: "#f59e0b",
-                bg: "#f59e0b11",
-                step: "2",
-                who: "El afiliado empieza a compartir",
-                desc: "Se postula a la tienda, recibe su link único y empieza a compartirlo en redes desde su celular.",
-                result: "Trabaja desde casa, a cualquier hora, sin invertir nada.",
-              },
-              {
-                icon: DollarSign,
-                color: "#e11d48",
-                bg: "#e11d4811",
-                step: "3",
-                who: "Ambos cobran por cada venta",
-                desc: "Cuando alguien compra por el link del afiliado, la comisión va automáticamente a su billetera.",
-                result: "El dueño vende más. El afiliado gana plata. Nadie pierde.",
-              },
-            ].map(({ icon: Icon, color, bg, step, who, desc, result }) => (
-              <motion.div
-                key={step}
-                initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: parseInt(step) * 0.15 }}
-                className="relative bg-white border border-gray-100 rounded-3xl p-7 shadow-sm hover:shadow-xl transition-all"
-              >
-                <div className="absolute -top-4 left-7 w-8 h-8 rounded-full flex items-center justify-center text-white font-black text-sm shadow-lg" style={{ backgroundColor: color }}>
-                  {step}
-                </div>
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 mt-2" style={{ backgroundColor: bg }}>
-                  <Icon className="h-7 w-7" style={{ color }} />
-                </div>
-                <h3 className="font-bold text-gray-900 text-lg mb-2">{who}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed mb-4">{desc}</p>
-                <div className="flex items-start gap-2 bg-gray-50 rounded-2xl p-3">
-                  <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color }} />
-                  <p className="text-sm font-medium text-gray-700">{result}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            className="bg-gradient-to-br from-orange-600 to-rose-600 rounded-3xl p-10 text-center text-white"
-          >
-            <div className="w-16 h-16 bg-white/15 rounded-2xl flex items-center justify-center mx-auto mb-5">
-              <Zap className="h-8 w-8 text-white" />
-            </div>
-            <h3 className="text-3xl font-black mb-4">
-              &quot;El dueño genera empleo sin pagar sueldos.<br />El afiliado trabaja sin invertir capital.&quot;
-            </h3>
-            <p className="text-orange-50 text-lg max-w-2xl mx-auto">
-              Cuánto más tiempo le dedique el afiliado a compartir productos en sus redes,
-              más gana — y más crece la tienda. Un círculo virtuoso donde nadie pierde.
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── NUESTRO EQUIPO ── */}
+      {/* ── NUESTRO COMPROMISO ── */}
       <section className="py-24 bg-gray-50 relative overflow-hidden">
         <div className="absolute inset-0 grid-bg opacity-30" />
-        <div className="relative max-w-6xl mx-auto px-6">
+        <div className="relative max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="relative w-full aspect-square rounded-3xl overflow-hidden">
-                  <Image src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=600&q=80" alt="Equipo" fill className="object-cover" />
+
+            <motion.div
+              initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
+              className="bg-gradient-to-br from-orange-500 to-rose-600 rounded-3xl p-10 text-white relative overflow-hidden"
+            >
+              <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/10 rounded-full pointer-events-none" />
+              <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/5 rounded-full pointer-events-none" />
+              <div className="relative">
+                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
+                  <Sparkles className="h-8 w-8 text-white" />
                 </div>
-                <div className="relative w-full aspect-square rounded-3xl overflow-hidden mt-8">
-                  <Image src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=600&q=80" alt="Equipo" fill className="object-cover" />
-                </div>
-                <div className="relative w-full aspect-square rounded-3xl overflow-hidden -mt-8">
-                  <Image src="https://images.unsplash.com/photo-1573497161161-c3e73707e25c?auto=format&fit=crop&w=600&q=80" alt="Equipo" fill className="object-cover" />
-                </div>
-                <div className="relative w-full aspect-square rounded-3xl overflow-hidden">
-                  <Image src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80" alt="Equipo" fill className="object-cover" />
-                </div>
+                <p className="text-orange-100 text-sm font-semibold uppercase tracking-widest mb-3">Tecnología al servicio del negocio</p>
+                <p className="text-white text-2xl font-black mb-4 leading-tight">
+                  Usamos las mejores herramientas para construir las tuyas.
+                </p>
+                <p className="text-orange-100 text-sm leading-relaxed">
+                  Combinamos inteligencia artificial, desarrollo constante y feedback real de quienes usan
+                  la plataforma para que TiendaApps sea cada vez más útil, más simple y más poderosa.
+                </p>
               </div>
             </motion.div>
 
             <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
-              <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">El equipo</motion.p>
+              <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Nuestro equipo</motion.p>
               <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-950 mb-6">
-                Un equipo chico<br />con un objetivo grande.
+                Un equipo comprometido<br />con cada negocio.
               </motion.h2>
-              <motion.p variants={fadeUp} className="text-gray-600 leading-relaxed mb-5">
-                Somos un equipo argentino. Vimos de cerca la falta de oportunidades — personas con ganas de
-                trabajar sin poder arrancar, y dueños de tienda con productos que no llegaban a ningún lado.
+              <motion.p variants={fadeUp} style={{ color: "#4b5563" }} className="leading-relaxed mb-4">
+                Detrás de TiendaApps hay personas comprometidas con que la plataforma funcione, mejore
+                y crezca con cada negocio que se suma. Empezamos con una idea simple y fuimos construyendo
+                con trabajo constante, escuchando lo que los negocios realmente necesitaban.
               </motion.p>
-              <motion.p variants={fadeUp} className="text-gray-600 leading-relaxed mb-8">
-                TiendaApps nació de esa frustración. Decidimos construir algo simple, honesto, y que le dé
-                trabajo real a la gente. No solo a uno — a todos los que participan.
+              <motion.p variants={fadeUp} style={{ color: "#4b5563" }} className="leading-relaxed mb-8">
+                No somos una corporación. Somos un equipo que conoce el mercado argentino, que sabe
+                lo que cuesta arrancar un negocio, y que pone todo el esfuerzo en que las herramientas
+                que ofrecemos sean reales, simples y confiables.
               </motion.p>
-              <motion.div variants={stagger} className="grid grid-cols-3 gap-4">
+              <motion.div variants={stagger} className="grid grid-cols-3 gap-3">
                 {[
-                  { label: "Honestidad", sub: "Sin promesas vacías" },
-                  { label: "Impacto real", sub: "Trabajo concreto" },
-                  { label: "Simple", sub: "Sin complicaciones" },
+                  { label: "~1 año", sub: "en desarrollo activo" },
+                  { label: "100% AR", sub: "equipo argentino" },
+                  { label: "Siempre", sub: "mejorando la plataforma" },
                 ].map(({ label, sub }) => (
                   <motion.div key={label} variants={fadeUp} className="bg-white border border-gray-200 shadow-sm rounded-2xl p-4 text-center">
-                    <p className="text-gray-900 font-bold text-sm mb-1">{label}</p>
+                    <p className="text-gray-950 font-black text-lg mb-0.5">{label}</p>
                     <p className="text-gray-500 text-xs">{sub}</p>
                   </motion.div>
                 ))}
@@ -438,180 +448,67 @@ export default function QuienesSomosPage() {
         </div>
       </section>
 
-      {/* ── PARA EL AFILIADO ── */}
+      {/* ── LA MISIÓN ── */}
       <section className="py-24 bg-white relative overflow-hidden">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
-              <motion.p variants={fadeUp} className="text-amber-600 font-semibold text-sm uppercase tracking-widest mb-3">Para quienes buscan trabajo</motion.p>
-              <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-900 mb-6">
-                Trabajá desde tu casa.<br />
-                <span className="text-amber-600">Con tu celular.</span>
-              </motion.h2>
-              <motion.p variants={fadeUp} className="text-gray-500 text-lg leading-relaxed mb-8">
-                No necesitás experiencia, no necesitás inversión, no necesitás local.
-                Solo tenés que compartir productos que ya existen en tiendas reales —
-                y por cada venta que generás, cobrás tu comisión automáticamente.
-              </motion.p>
-              <motion.ul variants={stagger} className="space-y-4 mb-10">
-                {[
-                  { icon: Home, text: "Trabajás desde tu casa, a tus horarios" },
-                  { icon: Share2, text: "Compartís productos por WhatsApp, Instagram, TikTok" },
-                  { icon: Wallet, text: "Cobrás comisión por cada venta que generás" },
-                  { icon: TrendingUp, text: "Cuanto más compartís, más ganás — sin techo" },
-                  { icon: DollarSign, text: "Retirás tus ganancias cuando querés" },
-                ].map(({ icon: Icon, text }) => (
-                  <motion.li key={text} variants={fadeUp} className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Icon className="h-5 w-5 text-amber-600" />
-                    </div>
-                    <span className="text-gray-600 text-sm font-medium">{text}</span>
-                  </motion.li>
-                ))}
-              </motion.ul>
-              <motion.div variants={fadeUp}>
-                <Link href="/afiliados" className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-amber-500/25 hover:scale-105">
-                  Quiero ser afiliado <ArrowRight className="h-5 w-5" />
-                </Link>
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
-            >
-              <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-5">Ejemplo real</p>
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 mb-5">
-                  <p className="text-amber-700 text-sm mb-1">Ganancias del mes</p>
-                  <p className="text-4xl font-black text-gray-950">$183.400</p>
-                  <p className="text-amber-600 text-sm mt-2">Compartiendo desde el celular</p>
-                </div>
-                <div className="space-y-3">
-                  {[
-                    { label: "Invertiste para arrancar", value: "$0" },
-                    { label: "Conocimientos técnicos requeridos", value: "Ninguno" },
-                    { label: "Horario obligatorio", value: "Libre" },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
-                      <span className="text-gray-500 text-sm">{label}</span>
-                      <span className="font-bold text-sm text-teal-600">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── PARA EL DUEÑO ── */}
-      <section className="py-24 bg-white relative overflow-hidden">
-        <div className="absolute inset-0 grid-bg opacity-40" />
-        <div className="relative max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
-              className="order-2 lg:order-1"
-            >
-              <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-5">Panel del dueño</p>
-                <div className="grid grid-cols-2 gap-4 mb-5">
-                  {[
-                    { label: "Afiliados activos", value: "12", color: "#ea580c" },
-                    { label: "Ventas este mes", value: "94", color: "#0d9488" },
-                    { label: "Costo en sueldos", value: "$0", color: "#f59e0b" },
-                    { label: "Ganancia neta", value: "$847K", color: "#e11d48" },
-                  ].map(({ label, value, color }) => (
-                    <div key={label} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                      <p className="text-gray-500 text-xs mb-2">{label}</p>
-                      <p className="text-2xl font-black" style={{ color }}>{value}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 text-center">
-                  <p className="text-orange-700 text-sm font-semibold">
-                    12 personas vendiendo tus productos — sin pagar un sueldo fijo.
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="order-1 lg:order-2">
-              <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Para dueños de tienda</motion.p>
-              <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-950 mb-6">
-                Un equipo de ventas.<br />
-                <span className="text-orange-600">Sin costo fijo.</span>
-              </motion.h2>
-              <motion.p variants={fadeUp} className="text-gray-600 text-lg leading-relaxed mb-8">
-                Cada afiliado que activés es una persona que va a salir a vender tus productos
-                en sus redes, con sus contactos. Solo pagás comisión cuando se genera una venta real.
-              </motion.p>
-              <motion.ul variants={stagger} className="space-y-4 mb-10">
-                {[
-                  { icon: Users, text: "Aprobás vos mismo quién puede vender tus productos" },
-                  { icon: Globe, text: "Tus productos llegan a más gente, sin gastar en publicidad" },
-                  { icon: Shield, text: "Solo pagás comisión cuando se efectúa una venta real" },
-                  { icon: TrendingUp, text: "Tu tienda crece con cada afiliado que sumás" },
-                  { icon: MessageCircle, text: "Panel completo para ver el rendimiento de cada afiliado" },
-                ].map(({ icon: Icon, text }) => (
-                  <motion.li key={text} variants={fadeUp} className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Icon className="h-5 w-5 text-orange-600" />
-                    </div>
-                    <span className="text-gray-700 text-sm font-medium">{text}</span>
-                  </motion.li>
-                ))}
-              </motion.ul>
-              <motion.div variants={fadeUp}>
-                <Link href="/registro?plan=owner" className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-orange-500/25 hover:scale-105">
-                  Crear mi tienda gratis <ArrowRight className="h-5 w-5" />
-                </Link>
-              </motion.div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── IMPACTO SOCIAL ── */}
-      <section className="py-24 bg-gray-50 relative overflow-hidden">
-        <div className="absolute inset-0 grid-bg opacity-40" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-orange-100/60 rounded-full blur-3xl" />
-        <div className="relative max-w-5xl mx-auto px-6 text-center">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
-            <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Por qué lo hacemos</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-950 mb-6">
-              Queremos que la gente<br />
-              <span className="gradient-text">tenga trabajo.</span>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-orange-50 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative max-w-5xl mx-auto px-6">
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
+            <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">La misión</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-950 mb-5">
+              Que cualquier persona con algo<br className="hidden sm:block" /> para vender, pueda hacerlo bien.
             </motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-600 text-xl max-w-3xl mx-auto leading-relaxed mb-14">
-              No es solo un negocio. Sabemos cómo está el país. Sabemos que hay personas
-              con ganas de trabajar que no encuentran oportunidades. TiendaApps es nuestra
-              respuesta a eso: una plataforma donde cualquiera puede ganarse la vida
-              honestamente, desde su casa, con su celular, sin depender de nadie.
+            <motion.p variants={fadeUp} style={{ color: "#6b7280" }} className="text-lg max-w-2xl mx-auto leading-relaxed">
+              Sin necesidad de saber programar, sin grandes inversiones, sin depender de plataformas extranjeras.
+              Herramientas profesionales, accesibles para cualquier negocio argentino.
             </motion.p>
+          </motion.div>
 
-            <motion.div variants={stagger} className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-14">
-              {[
-                { value: "3.800+", label: "Afiliados generando ingresos", sub: "trabajando desde casa" },
-                { value: "$12M+", label: "Distribuido en comisiones", sub: "en el último mes" },
-                { value: "1.200+", label: "Tiendas con afiliados activos", sub: "creciendo con equipo" },
-              ].map(({ value, label, sub }) => (
-                <motion.div key={label} variants={fadeUp} className="border border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
-                  <p className="text-5xl font-black gradient-text mb-2">{value}</p>
-                  <p className="text-gray-900 font-semibold text-sm">{label}</p>
-                  <p className="text-gray-500 text-xs mt-1">{sub}</p>
-                </motion.div>
-              ))}
-            </motion.div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            {[
+              {
+                icon: Store,
+                color: "#ea580c",
+                bg: "#ea580c10",
+                title: "Herramientas reales",
+                desc: "No prometemos magia. Damos un panel completo con todo lo que un negocio online necesita para funcionar y crecer.",
+              },
+              {
+                icon: Share2,
+                color: "#f59e0b",
+                bg: "#f59e0b10",
+                title: "Crecimiento con afiliados",
+                desc: "El sistema de afiliados existe para que los negocios lleguen a más personas a través de quienes ya confían en ellos.",
+              },
+              {
+                icon: Heart,
+                color: "#e11d48",
+                bg: "#e11d4810",
+                title: "Espacio para donar",
+                desc: "Dentro de la plataforma existe un espacio de donaciones. Creemos que un negocio que crece puede ayudar a otros a hacerlo también.",
+              },
+            ].map(({ icon: Icon, color, bg, title, desc }) => (
+              <motion.div
+                key={title}
+                initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
+                className="bg-white border border-gray-100 rounded-3xl p-7 shadow-sm hover:shadow-lg transition-all"
+              >
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: bg }}>
+                  <Icon className="h-6 w-6" style={{ color }} />
+                </div>
+                <h3 className="font-black text-gray-950 text-lg mb-2">{title}</h3>
+                <p style={{ color: "#6b7280" }} className="text-sm leading-relaxed">{desc}</p>
+              </motion.div>
+            ))}
+          </div>
 
-            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/registro" className="group flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-10 py-5 rounded-2xl font-bold text-xl transition-all shadow-2xl shadow-orange-500/30 hover:scale-105">
-                Sumate a la plataforma <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link href="/precios" className="flex items-center justify-center gap-2 border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 px-10 py-5 rounded-2xl font-bold text-xl transition-all hover:bg-white">
-                Ver planes y precios
-              </Link>
-            </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            className="text-center"
+          >
+            <Link href="/registro" className="group inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-10 py-5 rounded-2xl font-bold text-xl transition-all shadow-2xl shadow-orange-500/30 hover:scale-105">
+              Sumate a TiendaApps <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <p style={{ color: "#9ca3af" }} className="text-sm mt-4">7 días de prueba gratis · Sin tarjeta de crédito</p>
           </motion.div>
         </div>
       </section>

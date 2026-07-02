@@ -8,6 +8,7 @@ import AutoRefresh from "@/components/AutoRefresh";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import {
+  AlertTriangle,
   CalendarDays,
   Clock,
   DollarSign,
@@ -69,7 +70,10 @@ export default async function VendedorasPage() {
               },
             },
           },
-          commissions: { orderBy: { createdAt: "desc" } },
+          commissions: {
+            orderBy: { createdAt: "desc" },
+            include: { order: { select: { id: true, total: true, createdAt: true } } },
+          },
           orders: {
             select: { id: true, total: true, status: true, createdAt: true },
             orderBy: { createdAt: "desc" },
@@ -82,12 +86,6 @@ export default async function VendedorasPage() {
   });
 
   const affiliates = store?.affiliates ?? [];
-  const pendingWithdrawals = affiliates.flatMap((a) =>
-    (a.wallet?.withdrawals ?? []).map((w) => ({
-      ...w,
-      affiliateName: a.user.name || a.user.email,
-    }))
-  );
   const pending = affiliates.filter((affiliate) => affiliate.status === "PENDING");
   const teamAffiliates = affiliates.filter((affiliate) => affiliate.status !== "PENDING" && affiliate.status !== "REMOVED");
   const approved = affiliates.filter((affiliate) => affiliate.status === "APPROVED");
@@ -125,10 +123,20 @@ export default async function VendedorasPage() {
     (sum, affiliate) => sum + affiliate.commissions.filter((commission) => commission.status === "PAID").reduce((s, commission) => s + commission.amount, 0),
     0
   );
-  const totalComisionesPendientes = affiliates.reduce(
-    (sum, affiliate) => sum + affiliate.commissions.filter((commission) => commission.status === "PENDING").reduce((s, commission) => s + commission.amount, 0),
-    0
-  );
+  // Retiros pendientes enriquecidos con antigüedad en días
+  const pendingWithdrawalsDetail = affiliates
+    .flatMap((a) =>
+      (a.wallet?.withdrawals ?? [])
+        .filter((w) => w.status === "PENDING")
+        .map((w) => ({
+          ...w,
+          affiliateName: a.user.name || a.user.email,
+          affiliatePhone: a.user.phone,
+          daysOld: Math.floor((now.getTime() - new Date(w.createdAt).getTime()) / 86_400_000),
+        }))
+    )
+    .sort((a, b) => b.daysOld - a.daysOld);
+
   const ventasConfirmadas = affiliates.reduce(
     (sum, affiliate) => sum + affiliate.orders.filter((order) => ["CONFIRMED", "SHIPPED", "DELIVERED"].includes(order.status)).length,
     0
@@ -152,31 +160,43 @@ export default async function VendedorasPage() {
         acceptsRewardCoupons={Boolean(store?.acceptsRewardCoupons)}
         activeAffiliatesCount={active.length}
         pendingBalance={affiliates.reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0)}
+        hasMercadoPago={!!store?.mpAccessToken}
       />
 
       {store?.affiliatesEnabled && <MetasWidget />}
 
       <div className={`transition-opacity ${store?.affiliatesEnabled ? "opacity-100" : "opacity-30 pointer-events-none select-none"}`}>
 
-      {pendingWithdrawals.length > 0 && (
+      {pendingWithdrawalsDetail.length > 0 && (
         <section className="mb-8">
           <h2 className="font-bold text-gray-900 mb-1">Transferencias pendientes</h2>
           <p className="text-sm text-gray-400 mb-4">
             Recibiste un email con los datos bancarios de cada retiro. Realizá la transferencia por home banking.
           </p>
+          {pendingWithdrawalsDetail.some((w) => w.daysOld >= 15) && (
+            <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-sm">
+              <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+              <p className="text-red-800">
+                <span className="font-bold">Hay retiros de más de 15 días sin procesar.</span>{" "}
+                Tu equipo de afiliadas está esperando — priorizá estas transferencias para mantener la confianza del equipo.
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {pendingWithdrawals.map((w) => (
-              <div key={w.id} className="bg-white rounded-2xl border border-amber-100 p-5 flex flex-col gap-3">
+            {pendingWithdrawalsDetail.map((w) => (
+              <div key={w.id} className={`bg-white rounded-2xl border p-5 flex flex-col gap-3 ${w.daysOld >= 15 ? "border-red-200" : "border-amber-100"}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="font-bold text-gray-900">{w.affiliateName}</p>
-                    <p className="text-2xl font-black text-amber-600">${w.amount.toLocaleString("es-AR")}</p>
+                    <p className={`text-2xl font-black ${w.daysOld >= 15 ? "text-red-600" : "text-amber-600"}`}>
+                      ${w.amount.toLocaleString("es-AR")}
+                    </p>
                     <p className="text-xs text-gray-400 mt-1">
                       Solicitado el {new Date(w.createdAt).toLocaleDateString("es-AR")}
                     </p>
                   </div>
-                  <span className="rounded-full px-3 py-1 text-xs font-bold bg-amber-100 text-amber-700 shrink-0">
-                    En proceso
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold shrink-0 ${w.daysOld >= 15 ? "bg-red-100 text-red-700" : w.daysOld >= 7 ? "bg-orange-100 text-orange-700" : "bg-amber-100 text-amber-700"}`}>
+                    {w.daysOld === 0 ? "hoy" : `hace ${w.daysOld}d`}
                   </span>
                 </div>
                 {w.notes && (
@@ -196,7 +216,7 @@ export default async function VendedorasPage() {
           { label: "Pendientes", value: pending.length, icon: Clock, color: "text-yellow-600 bg-yellow-50" },
           { label: "Activos", value: active.length, icon: UserCheck, color: "text-indigo-600 bg-indigo-50" },
           { label: "Ventas confirmadas", value: ventasConfirmadas, icon: TrendingUp, color: "text-green-600 bg-green-50" },
-          { label: "Comisiones pendientes", value: money(totalComisionesPendientes), icon: DollarSign, color: "text-purple-600 bg-purple-50" },
+          { label: "Retiros en proceso", value: money(pendingWithdrawalsDetail.reduce((s, w) => s + w.amount, 0)), icon: DollarSign, color: "text-purple-600 bg-purple-50" },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="bg-white rounded-xl border border-gray-100 p-5">
             <div className={`inline-flex p-2 rounded-lg ${color} mb-3`}>
@@ -332,9 +352,7 @@ export default async function VendedorasPage() {
             {teamAffiliates.map((affiliate) => {
               const confirmedOrders = affiliate.orders.filter((order) => ["CONFIRMED", "SHIPPED", "DELIVERED"].includes(order.status));
               const grossSales = confirmedOrders.reduce((sum, order) => sum + order.total, 0);
-              const pendingCommission = affiliate.commissions
-                .filter((commission) => commission.status === "PENDING")
-                .reduce((sum, commission) => sum + commission.amount, 0);
+              const walletBalance = affiliate.wallet?.balance ?? 0;
               const paidCommission = affiliate.commissions
                 .filter((commission) => commission.status === "PAID")
                 .reduce((sum, commission) => sum + commission.amount, 0);
@@ -423,9 +441,9 @@ export default async function VendedorasPage() {
                       <div className="rounded-xl border border-gray-100 p-3">
                         <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400">
                           <DollarSign className="h-3.5 w-3.5" />
-                          Pendiente
+                          Saldo wallet
                         </div>
-                        <p className="font-black text-purple-700">{money(pendingCommission)}</p>
+                        <p className="font-black text-purple-700">{money(walletBalance)}</p>
                       </div>
                       <div className="rounded-xl border border-gray-100 p-3">
                         <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400">

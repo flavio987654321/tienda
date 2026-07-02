@@ -26,6 +26,16 @@ const STEPS_DEFAULT: Step[] = [
     body: "Cuando un cliente compre, el pedido aparece acá. Confirmá, marcá como enviado y entregado.",
   },
   {
+    tourId: "cupones",
+    title: "Cupones de descuento",
+    body: "Creá códigos de descuento para tus clientes: monto fijo o porcentaje, límite de usos y fecha de vencimiento.",
+  },
+  {
+    tourId: "carritos-abandonados",
+    title: "Carritos abandonados",
+    body: "Cuando alguien agrega productos pero no termina la compra, aparece acá. Podés enviarle un recordatorio automático por email.",
+  },
+  {
     tourId: "pagos",
     title: "Pagos y envíos",
     body: "Configurá cómo cobrar (CBU, alias o efectivo) y definí tus opciones de envío — precio fijo o 'a coordinar'. Los clientes ven todo esto al finalizar su compra.",
@@ -33,7 +43,7 @@ const STEPS_DEFAULT: Step[] = [
   {
     tourId: "afiliados",
     title: "Afiliados",
-    body: "Invitá vendedores que promocionen tu tienda. Vos definís el porcentaje de comisión.",
+    body: "Invitá vendedoras que promocionen tu tienda y cobrá por cada venta que generen. Requiere tener MercadoPago conectado — las comisiones se acreditan automáticamente.",
   },
   {
     tourId: "notificaciones",
@@ -76,7 +86,7 @@ const STEPS_AUTOS: Step[] = [
   {
     tourId: "afiliados",
     title: "Afiliados",
-    body: "Invitá vendedores externos que traigan clientes. Vos definís la comisión por venta concretada.",
+    body: "Invitá vendedores externos que traigan clientes. Vos definís la comisión por venta concretada. Requiere MercadoPago conectado para acreditar comisiones automáticamente.",
   },
   {
     tourId: "notificaciones",

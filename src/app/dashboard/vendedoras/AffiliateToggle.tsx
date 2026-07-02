@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, AlertTriangle, X, ShieldCheck, ExternalLink, Ticket } from "lucide-react";
+import { Loader2, AlertTriangle, X, ShieldCheck, ExternalLink, Ticket, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -13,12 +13,14 @@ export default function AffiliateToggle({
   acceptsRewardCoupons: initialAcceptsRewardCoupons,
   activeAffiliatesCount,
   pendingBalance,
+  hasMercadoPago,
 }: {
   enabled: boolean;
   commissionRate: number;
   acceptsRewardCoupons: boolean;
   activeAffiliatesCount: number;
   pendingBalance: number;
+  hasMercadoPago: boolean;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -75,6 +77,50 @@ export default function AffiliateToggle({
         save(false, rate);
       }
     }
+  }
+
+  if (!hasMercadoPago) {
+    return (
+      <div className={`rounded-2xl border p-5 mb-6 flex items-start gap-4 ${enabled ? "border-amber-300 bg-amber-50" : "border-orange-200 bg-orange-50"}`}>
+        <div className={`shrink-0 rounded-xl p-2.5 ${enabled ? "bg-amber-100" : "bg-orange-100"}`}>
+          {enabled
+            ? <AlertTriangle className="h-5 w-5 text-amber-600" />
+            : <Lock className="h-5 w-5 text-orange-600" />
+          }
+        </div>
+        <div className="flex-1">
+          {enabled ? (
+            <>
+              <p className="font-semibold text-amber-900">El programa de afiliados está pausado</p>
+              <p className="text-sm text-amber-700 mt-1">
+                Desconectaste MercadoPago.
+                {activeAffiliatesCount > 0 && (
+                  <> Tus <strong>{activeAffiliatesCount} afiliada{activeAffiliatesCount !== 1 ? "s" : ""}</strong> no {activeAffiliatesCount !== 1 ? "pueden" : "puede"} generar comisiones nuevas hasta que vuelvas a conectarlo.</>
+                )}
+                {pendingBalance > 0 && (
+                  <> El saldo pendiente de <strong>${pendingBalance.toLocaleString("es-AR")}</strong> sigue disponible para retirar.</>
+                )}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold text-orange-900">Afiliados requiere MercadoPago</p>
+              <p className="text-sm text-orange-700 mt-1">
+                Para activar el programa de afiliados necesitás conectar tu cuenta de MercadoPago.
+                Así las comisiones se acreditan automáticamente en cada venta, sin que tengas que hacer nada.
+              </p>
+            </>
+          )}
+          <Link
+            href="/dashboard/ajustes"
+            className={`inline-flex items-center gap-1.5 mt-3 text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors ${enabled ? "text-amber-700 bg-amber-100 hover:bg-amber-200" : "text-orange-700 bg-orange-100 hover:bg-orange-200"}`}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Ir a Ajustes → Conectar MercadoPago
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -180,15 +226,15 @@ export default function AffiliateToggle({
 
               <p><strong className="text-gray-900">Tus obligaciones como titular</strong></p>
               <ul className="list-disc pl-4 space-y-1.5">
-                <li>Pagar las comisiones a las afiliadas al confirmar el pago de cada pedido. La plataforma las acredita automáticamente en la billetera de la afiliada.</li>
-                <li>Procesar los retiros de billetera solicitados por las afiliadas en un plazo de <strong className="text-gray-800">1 a 3 días hábiles</strong>.</li>
+                <li>Mantener tu cuenta de MercadoPago conectada. Las comisiones se descuentan automáticamente de cada venta y TiendaApps las acredita en la billetera de la afiliada — no tenés que hacer nada manualmente.</li>
+                <li>Los retiros de billetera los gestiona directamente TiendaApps. No tenés responsabilidad sobre la transferencia de fondos a las afiliadas.</li>
                 <li>No pausar ni dar de baja a una afiliada con el fin de no pagarle comisiones ya devengadas.</li>
                 <li>Notificar con al menos <strong className="text-gray-800">48 horas de anticipación</strong> antes de dar de baja a una afiliada activa, salvo caso de fraude comprobado.</li>
-                <li>Informar a las afiliadas de cualquier cambio en la tasa de comisión con al menos 7 días de anticipación.</li>
+                <li>Informar a las afiliadas de cualquier cambio en la tasa de comisión. El nuevo porcentaje aplica a pedidos futuros, nunca de forma retroactiva.</li>
               </ul>
 
               <p><strong className="text-gray-900">Responsabilidades de la plataforma</strong><br />
-                TiendaApps provee la infraestructura de tracking y billetera. Actúa como intermediaria tecnológica y no garantiza un volumen mínimo de ventas. El pago de comisiones es responsabilidad exclusiva del titular.</p>
+                TiendaApps provee la infraestructura de tracking y billetera. Al confirmarse cada venta por MercadoPago, TiendaApps retiene automáticamente la comisión y la acredita en la billetera de la afiliada. <strong className="text-gray-800">TiendaApps es el responsable directo del pago de comisiones — no el titular de la tienda.</strong> TiendaApps no garantiza un volumen mínimo de ventas.</p>
 
               <p><strong className="text-gray-900">Cambios en la comisión</strong><br />
                 Podés cambiar el porcentaje de comisión en cualquier momento. El nuevo valor aplica a pedidos futuros. Los pedidos ya realizados conservan la tasa original.</p>

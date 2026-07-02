@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft, Loader2, MousePointerClick, ShoppingBag,
   TrendingUp, BarChart3, Package, Star, Zap,
+  TrendingDown, DollarSign, Receipt,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -33,8 +34,11 @@ interface AffiliateStats {
   storeSlug: string;
   totalClicks: number;
   totalOrders: number;
-  totalCommissions: number;
+  totalCommissionsAmount: number;
+  avgTicket: number;
   clicksLast30: number;
+  clicksThisWeek: number;
+  weekTrend: number;
   ordersLast30: number;
   conversionRate: number;
   clicksTimeline: ClickDay[];
@@ -82,15 +86,24 @@ function MiniBarChart({ data }: { data: ClickDay[] }) {
   );
 }
 
-function StatCard({ icon, label, value, sub, color }: {
-  icon: React.ReactNode; label: string; value: string | number; sub?: string; color: string;
+function StatCard({ icon, label, value, sub, color, trend, trendLabel }: {
+  icon: React.ReactNode; label: string; value: string | number;
+  sub?: string; color: string; trend?: number; trendLabel?: string;
 }) {
+  const showTrend = trend !== undefined && trend !== 0;
+  const isUp = (trend ?? 0) > 0;
   return (
     <div className="bg-white dark:bg-gray-900/80 rounded-xl border border-gray-100 dark:border-white/10 p-4">
       <div className={`inline-flex p-2 rounded-lg mb-3 ${color}`}>{icon}</div>
       <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
       <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
       {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      {showTrend && (
+        <div className={`flex items-center gap-1 mt-1.5 text-xs font-semibold ${isUp ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+          {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+          {isUp ? "+" : ""}{trend}% {trendLabel}
+        </div>
+      )}
     </div>
   );
 }
@@ -168,6 +181,8 @@ export default function EstadisticasPage() {
                     value={current.totalClicks.toLocaleString("es-AR")}
                     sub={`${current.clicksLast30} en los últimos 30 días`}
                     color="bg-indigo-50 dark:bg-indigo-900/30"
+                    trend={current.weekTrend}
+                    trendLabel="vs semana anterior"
                   />
                   <StatCard
                     icon={<ShoppingBag className="h-4 w-4 text-green-600" />}
@@ -184,11 +199,27 @@ export default function EstadisticasPage() {
                     color="bg-amber-50 dark:bg-amber-900/30"
                   />
                   <StatCard
-                    icon={<TrendingUp className="h-4 w-4 text-purple-600" />}
-                    label="Comisiones acumuladas"
-                    value={current.totalCommissions.toLocaleString("es-AR")}
-                    sub="Total histórico de comisiones"
+                    icon={<DollarSign className="h-4 w-4 text-purple-600" />}
+                    label="Comisiones ganadas"
+                    value={`$${current.totalCommissionsAmount.toLocaleString("es-AR")}`}
+                    sub="Total histórico en pesos"
                     color="bg-purple-50 dark:bg-purple-900/30"
+                  />
+                  <StatCard
+                    icon={<Receipt className="h-4 w-4 text-sky-600" />}
+                    label="Ticket promedio"
+                    value={current.avgTicket > 0 ? `$${current.avgTicket.toLocaleString("es-AR")}` : "—"}
+                    sub="Promedio por venta confirmada"
+                    color="bg-sky-50 dark:bg-sky-900/30"
+                  />
+                  <StatCard
+                    icon={<TrendingUp className="h-4 w-4 text-emerald-600" />}
+                    label="Clicks esta semana"
+                    value={current.clicksThisWeek.toLocaleString("es-AR")}
+                    sub="Últimos 7 días"
+                    color="bg-emerald-50 dark:bg-emerald-900/30"
+                    trend={current.weekTrend}
+                    trendLabel="vs semana anterior"
                   />
                 </div>
 

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { sendReviewRequestEmail, sendCommissionEarnedEmail, sendAffiliateOrderNotificationEmail, sendOrderShippedEmail, sendOrderPaymentConfirmedEmail, sendOrderCancelledEmail } from "@/lib/email";
+import { sendReviewRequestEmail, sendCommissionEarnedEmail, sendOrderShippedEmail, sendOrderPaymentConfirmedEmail, sendOrderCancelledEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import { recordStockMovement, wentBackAboveThreshold, dispatchLowStockAlerts, DEFAULT_LOW_STOCK_THRESHOLD, type LowStockItem } from "@/lib/stockMovements";
 import { ORDER_ACTION_TRANSITIONS } from "@/lib/orders";
@@ -121,23 +121,6 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
           }).catch((err) => console.error("[email] sendCommissionEarnedEmail failed:", err));
         }
 
-        const owner = await tx.user.findUnique({
-          where: { id: ownerId },
-          select: { email: true, name: true },
-        });
-        if (owner?.email && affiliateUser) {
-          sendAffiliateOrderNotificationEmail({
-            ownerEmail: owner.email,
-            ownerName: owner.name || "titular",
-            storeName: order.store.name,
-            affiliateName: affiliateUser.name || "afiliada",
-            affiliateEmail: affiliateUser.email,
-            orderTotal: order.total,
-            commissionAmount: amount,
-            commissionRate: rate,
-            itemCount: order.items.length,
-          }).catch((err) => console.error("[email] sendAffiliateOrderNotificationEmail failed:", err));
-        }
       }
 
       await tx.payment.updateMany({

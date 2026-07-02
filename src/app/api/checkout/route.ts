@@ -87,12 +87,21 @@ export async function POST(req: NextRequest) {
   const { storeId, affiliateId, couponId, rewardCouponCode, items, customer, shippingMethod } = body;
   // Whitelist para evitar que el frontend inyecte un proveedor falso (ej: "mp" en pedido manual)
   const VALID_PROVIDERS = ["mp", "mercadopago", "transferencia", "efectivo", "transfer"] as const;
-  const paymentProvider = VALID_PROVIDERS.includes(body.paymentProvider as typeof VALID_PROVIDERS[number])
+  const rawProvider = VALID_PROVIDERS.includes(body.paymentProvider as typeof VALID_PROVIDERS[number])
     ? body.paymentProvider
     : "transfer";
+  // Normalizar "mercadopago" → "mp" para que el template de email use la rama correcta
+  const paymentProvider = rawProvider === "mercadopago" ? "mp" : rawProvider;
 
   if (!storeId || !items?.length) {
     return NextResponse.json({ error: "El carrito esta vacio" }, { status: 400 });
+  }
+
+  if (affiliateId && paymentProvider !== "mp") {
+    return NextResponse.json(
+      { error: "Los pedidos con link de afiliado solo pueden pagarse con MercadoPago." },
+      { status: 400 }
+    );
   }
 
   if (!customer?.name || typeof customer.name !== "string" || customer.name.trim().length < 2) {

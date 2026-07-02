@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import MercadoPagoConfig, { Payment } from "mercadopago";
 import { createNotification } from "@/lib/notifications";
-import { sendOrderPaymentConfirmedEmail } from "@/lib/email";
+import { sendOrderPaymentConfirmedEmail, sendCommissionEarnedEmail } from "@/lib/email";
 
 function verifyMPSignature(req: NextRequest, dataId: string): boolean {
   const secret = process.env.MP_WEBHOOK_SECRET;
@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
     if (!order || order.status !== "PENDING") return NextResponse.json({ ok: true });
 
     // Confirmar pago y acreditar comisión si hay afiliada
+    let earnedCommission: { amount: number; rate: number; newBalance: number } | null = null as { amount: number; rate: number; newBalance: number } | null;
     await prisma.$transaction(async (tx) => {
       await tx.payment.updateMany({
         where: { orderId: order.id },
@@ -108,32 +109,36 @@ export async function POST(req: NextRequest) {
         const commissionBase = Math.max(0, (order.subtotal ?? order.total) - (order.discountAmount ?? 0));
         const amount = Math.round((commissionBase * rate) / 100);
 
-        await tx.commission.create({
-          data: {
-            orderId: order.id,
-            affiliateId: order.affiliateId,
-            amount,
-            rate,
-            status: "PAID",
-            paidAt: new Date(),
-          },
-        });
-
-        await tx.wallet.upsert({
-          where: { affiliateId: order.affiliateId },
-          update: { balance: { increment: amount }, totalEarned: { increment: amount } },
-          create: { affiliateId: order.affiliateId, balance: amount, totalEarned: amount, totalWithdrawn: 0 },
-        });
-
-        const affUserId = order.affiliate?.userId;
-        if (affUserId) {
-          await createNotification({
-            userId: affUserId,
-            type: "COMMISSION_EARNED",
-            title: "¡Ganaste una comisión!",
-            body: `Tu comisión de $${amount.toLocaleString("es-AR")} fue acreditada automáticamente.`,
-            link: "/afiliados/billetera",
+        if (amount > 0) {
+          await tx.commission.create({
+            data: {
+              orderId: order.id,
+              affiliateId: order.affiliateId,
+              amount,
+              rate,
+              status: "PAID",
+              paidAt: new Date(),
+            },
           });
+
+          const updatedWallet = await tx.wallet.upsert({
+            where: { affiliateId: order.affiliateId },
+            update: { balance: { increment: amount }, totalEarned: { increment: amount } },
+            create: { affiliateId: order.affiliateId, balance: amount, totalEarned: amount, totalWithdrawn: 0 },
+          });
+
+          earnedCommission = { amount, rate, newBalance: updatedWallet.balance };
+
+          const affUserId = order.affiliate?.userId;
+          if (affUserId) {
+            await createNotification({
+              userId: affUserId,
+              type: "COMMISSION_EARNED",
+              title: "¡Ganaste una comisión!",
+              body: `Tu comisión de $${amount.toLocaleString("es-AR")} fue acreditada automáticamente.`,
+              link: "/afiliados/billetera",
+            });
+          }
         }
       }
 
@@ -145,6 +150,19 @@ export async function POST(req: NextRequest) {
         link: `/dashboard/pedidos/${order.id}`,
       });
     });
+
+    // Email al afiliado cuando gana una comisión via MP
+    if (earnedCommission && order.affiliate?.user?.email) {
+      sendCommissionEarnedEmail({
+        affiliateEmail: order.affiliate.user.email,
+        affiliateName: order.affiliate.user.name || "afiliada",
+        storeName: order.store.name,
+        commissionAmount: earnedCommission.amount,
+        orderTotal: order.total,
+        commissionRate: earnedCommission.rate,
+        newBalance: earnedCommission.newBalance,
+      }).catch((err) => console.error("[email] sendCommissionEarnedEmail (mp webhook) failed:", err));
+    }
 
     // Notificar al comprador que el pago fue procesado por MP
     if (order.buyer?.email) {

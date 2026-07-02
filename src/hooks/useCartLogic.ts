@@ -31,6 +31,7 @@ function resolveVariantStock(product: StorefrontProduct, selectedSize: string, s
 type StorefrontDeps = {
   products: StorefrontProduct[];
   storeId?: string | null;
+  affiliateId?: string | null;
   resolveVariantId: (product: StorefrontProduct, size: string, color: string) => string | null;
   validateCoupon: (code: string, subtotal: number) => Promise<{ coupon: ValidatedCoupon; discount: number } | { error: string }>;
   placeOrder: (params: PlaceOrderParams) => Promise<{ ok: boolean; orderId?: string; donationId?: string; error?: string }>;
@@ -45,7 +46,7 @@ type StorefrontDeps = {
   lockScrollOnModal?: boolean;
 };
 
-export function useCartLogic({ products, storeId, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, lockScrollOnModal = true }: StorefrontDeps) {
+export function useCartLogic({ products, storeId, affiliateId = null, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, lockScrollOnModal = true }: StorefrontDeps) {
   const [cartItems,      setCartItems]      = useState<CartItem[]>([]);
   const [cartOpen,       setCartOpen]       = useState(false);
   const [modalProduct,   setModalProduct]   = useState<StorefrontProduct | null>(null);
@@ -91,6 +92,11 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
   const { status } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Si el comprador llegó por link de afiliado, forzar MP como único método de pago
+  useEffect(() => {
+    if (affiliateId) setPagoId("mercadopago");
+  }, [affiliateId]);
 
   useEffect(() => {
     fetch("/api/canasta/campaign")
@@ -603,7 +609,7 @@ export function useCartLogic({ products, storeId, resolveVariantId, validateCoup
     cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     searchResults, favoriteProducts, selectedVariantStock, outOfStockSizes,
     checkoutMode, isWholesale, wholesaleWarnings,
-    pagoOptions: getPagoOptions(hasMercadoPago),
+    pagoOptions: getPagoOptions(hasMercadoPago, !!affiliateId),
     fmtEnvioPrice, fmtLiveQuote,
     // Functions
     fmt, showToast, openModal, addToCart, removeFromCart, updateQty,

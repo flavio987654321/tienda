@@ -432,7 +432,7 @@ export default async function PrivacidadPage({
           </div>
 
           <h1 className="text-4xl font-black mb-2">Política de Privacidad</h1>
-          <p className="text-gray-500 text-sm mb-6">Última actualización: junio 2026</p>
+          <p className="text-gray-500 text-sm mb-6">Última actualización: julio 2026</p>
 
           {/* Responsable del tratamiento */}
           <div className="rounded-xl border border-white/10 bg-white/5 p-5 mb-8 text-sm text-gray-300 space-y-1">
