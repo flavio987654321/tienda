@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut,
-  BarChart2, Tag, UserCircle, Loader2, MessageCircle, BadgeCheck,
+  BarChart2, Tag, Loader2, MessageCircle, BadgeCheck, ChevronRight,
   CreditCard, Menu, X, Wallet, AlertTriangle, Bell, ShoppingCart,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
@@ -376,23 +376,27 @@ export default function DashboardLayout({
               {signingOut ? "Cerrando..." : "Cerrar sesión"}
             </span>
           </button>
-          <Link href="/dashboard/perfil" title={isVerified ? "Perfil — Verificado" : "Perfil — Sin verificar"} className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors">
+          <Link
+            href="/dashboard/perfil"
+            title={isVerified ? "Mi perfil — Verificado" : "Mi perfil"}
+            className="flex items-center gap-2.5 mx-1 px-2.5 py-2.5 rounded-xl bg-gray-50 border border-gray-100 hover:bg-indigo-50 hover:border-indigo-100 transition-colors"
+          >
             <div className="relative shrink-0">
-              <UserCircle className="h-4 w-4" />
-              <BadgeCheck className={`absolute -bottom-1 -right-1 h-3 w-3 bg-white rounded-full ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
+              <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
+                {(userName ?? "U")[0].toUpperCase()}
+              </div>
+              <BadgeCheck className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white rounded-full ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
             </div>
-            <div className={`flex-1 overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
+            <div className={`flex-1 min-w-0 overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
               <div className="flex items-center gap-1">
-                <p className="text-xs font-medium text-gray-700 truncate whitespace-nowrap">{userName}</p>
-                <BadgeCheck className={`h-3 w-3 shrink-0 ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
+                <p className="text-xs font-semibold text-gray-800 truncate whitespace-nowrap">{userName}</p>
                 {warnings?.notVerified && (
-                  <span title="Cuenta sin verificar">
-                    <AlertTriangle className="h-3 w-3 shrink-0 text-amber-400" />
-                  </span>
+                  <span title="Cuenta sin verificar"><AlertTriangle className="h-3 w-3 shrink-0 text-amber-400" /></span>
                 )}
               </div>
-              <p className="text-xs text-gray-400 truncate whitespace-nowrap">{userEmail}</p>
+              <p className="text-[10px] text-indigo-400 font-medium whitespace-nowrap">Ver perfil →</p>
             </div>
+            <ChevronRight className={`h-3.5 w-3.5 text-gray-300 shrink-0 overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`} />
           </Link>
           {!isOnline && (
             <div className="mx-2 mb-2 rounded-xl bg-orange-50 border border-orange-200 px-3 py-2">
@@ -489,19 +493,24 @@ export default function DashboardLayout({
               <Link
                 href="/dashboard/perfil"
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-indigo-50 hover:border-indigo-100 active:bg-indigo-100 transition-colors"
               >
                 <div className="relative shrink-0">
-                  <UserCircle className="h-5 w-5" />
-                  <BadgeCheck className={`absolute -bottom-1 -right-1 h-3 w-3 bg-white rounded-full ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
+                  <div className="h-9 w-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-base">
+                    {(userName ?? "U")[0].toUpperCase()}
+                  </div>
+                  <BadgeCheck className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white rounded-full ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
-                    <p className="text-xs font-medium text-gray-700 truncate">{userName}</p>
-                    <BadgeCheck className={`h-3 w-3 shrink-0 ${isVerified ? "text-blue-500" : "text-gray-300"}`} />
+                    <p className="text-sm font-semibold text-gray-800 truncate">{userName}</p>
+                    {warnings?.notVerified && (
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                    )}
                   </div>
-                  <p className="text-xs text-gray-400 truncate">{userEmail}</p>
+                  <p className="text-xs text-indigo-400 font-medium">Ver mi perfil →</p>
                 </div>
+                <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
               </Link>
               {!isOnline && (
                 <div className="mt-1 rounded-xl bg-orange-50 border border-orange-200 px-3 py-2.5">

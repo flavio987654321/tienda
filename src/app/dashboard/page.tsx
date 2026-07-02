@@ -116,18 +116,20 @@ export default async function DashboardPage() {
       href: "/dashboard/productos/nuevo",
       tip: "Con al menos un producto ya podés compartir tu tienda.",
     },
-    {
-      done: !!storeExtra?.mpConnectedAt,
-      label: "Conectá MercadoPago para cobrar",
-      href: "/dashboard/ajustes",
-      tip: "Necesario para recibir pagos con tarjeta o débito.",
-    },
-    {
-      done: hasPaymentData,
-      label: "Completá tus datos de cobro",
-      href: "/dashboard/pagos",
-      tip: "CBU, alias o efectivo — para que los clientes sepan cómo pagarte.",
-    },
+    ...(!isAutos ? [
+      {
+        done: !!storeExtra?.mpConnectedAt,
+        label: "Conectá MercadoPago para cobrar",
+        href: "/dashboard/ajustes",
+        tip: "Necesario para recibir pagos con tarjeta o débito.",
+      },
+      {
+        done: hasPaymentData,
+        label: "Completá tus datos de cobro",
+        href: "/dashboard/pagos",
+        tip: "CBU, alias o efectivo — para que los clientes sepan cómo pagarte.",
+      },
+    ] : []),
     ...(!isAutos ? [{
       done: hasShippingConfigured,
       label: "Configurá tus métodos de envío",

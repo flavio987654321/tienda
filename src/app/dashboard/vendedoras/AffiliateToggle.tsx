@@ -14,6 +14,7 @@ export default function AffiliateToggle({
   activeAffiliatesCount,
   pendingBalance,
   hasMercadoPago,
+  storeType,
 }: {
   enabled: boolean;
   commissionRate: number;
@@ -21,6 +22,7 @@ export default function AffiliateToggle({
   activeAffiliatesCount: number;
   pendingBalance: number;
   hasMercadoPago: boolean;
+  storeType?: string;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -79,7 +81,11 @@ export default function AffiliateToggle({
     }
   }
 
-  if (!hasMercadoPago) {
+  // Tiendas de consulta (AUTOS, INMOB) no usan MP — las comisiones se acreditan
+  // manualmente cuando el dueño confirma una consulta en Dashboard → Consultas.
+  const isInquiryStore = storeType === "AUTOS";
+
+  if (!hasMercadoPago && !isInquiryStore) {
     return (
       <div className={`rounded-2xl border p-5 mb-6 flex items-start gap-4 ${enabled ? "border-amber-300 bg-amber-50" : "border-orange-200 bg-orange-50"}`}>
         <div className={`shrink-0 rounded-xl p-2.5 ${enabled ? "bg-amber-100" : "bg-orange-100"}`}>
@@ -226,7 +232,11 @@ export default function AffiliateToggle({
 
               <p><strong className="text-gray-900">Tus obligaciones como titular</strong></p>
               <ul className="list-disc pl-4 space-y-1.5">
-                <li>Mantener tu cuenta de MercadoPago conectada. Las comisiones se descuentan automáticamente de cada venta y TiendaApps las acredita en la billetera de la afiliada — no tenés que hacer nada manualmente.</li>
+                {isInquiryStore ? (
+                  <li>Confirmar cada consulta como venta en <strong className="text-gray-800">Dashboard → Consultas</strong> para que la comisión se acredite automáticamente en la billetera de la afiliada.</li>
+                ) : (
+                  <li>Mantener tu cuenta de MercadoPago conectada. Las comisiones se descuentan automáticamente de cada venta y TiendaApps las acredita en la billetera de la afiliada — no tenés que hacer nada manualmente.</li>
+                )}
                 <li>Los retiros de billetera los gestiona directamente TiendaApps. No tenés responsabilidad sobre la transferencia de fondos a las afiliadas.</li>
                 <li>No pausar ni dar de baja a una afiliada con el fin de no pagarle comisiones ya devengadas.</li>
                 <li>Notificar con al menos <strong className="text-gray-800">48 horas de anticipación</strong> antes de dar de baja a una afiliada activa, salvo caso de fraude comprobado.</li>
@@ -234,7 +244,12 @@ export default function AffiliateToggle({
               </ul>
 
               <p><strong className="text-gray-900">Responsabilidades de la plataforma</strong><br />
-                TiendaApps provee la infraestructura de tracking y billetera. Al confirmarse cada venta por MercadoPago, TiendaApps retiene automáticamente la comisión y la acredita en la billetera de la afiliada. <strong className="text-gray-800">TiendaApps es el responsable directo del pago de comisiones — no el titular de la tienda.</strong> TiendaApps no garantiza un volumen mínimo de ventas.</p>
+                TiendaApps provee la infraestructura de tracking y billetera.{" "}
+                {isInquiryStore
+                  ? "Al confirmar una consulta como venta, TiendaApps acredita automáticamente la comisión en la billetera de la afiliada."
+                  : "Al confirmarse cada venta por MercadoPago, TiendaApps retiene automáticamente la comisión y la acredita en la billetera de la afiliada."
+                }{" "}
+                <strong className="text-gray-800">TiendaApps es el responsable directo del pago de comisiones — no el titular de la tienda.</strong> TiendaApps no garantiza un volumen mínimo de ventas.</p>
 
               <p><strong className="text-gray-900">Cambios en la comisión</strong><br />
                 Podés cambiar el porcentaje de comisión en cualquier momento. El nuevo valor aplica a pedidos futuros. Los pedidos ya realizados conservan la tasa original.</p>

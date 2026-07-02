@@ -95,34 +95,75 @@ export default async function VendedorasPage() {
   const startLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const endLastMonth   = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  // Para tiendas de consulta (AUTOS), las comisiones vienen de Leads, no de Orders/Commissions
+  const isInquiryStore = store?.tipoTienda === "AUTOS";
+
+  // Leads por afiliado — solo para AUTOS
+  type LeadStats = { total: number; confirmed: number; earned: number };
+  const leadsMap = new Map<string, LeadStats>();
+  if (isInquiryStore && store) {
+    const affiliateLeads = await prisma.lead.findMany({
+      where: { storeId: store.id, affiliateId: { not: null } },
+      select: { affiliateId: true, status: true, commissionAmount: true, createdAt: true },
+    });
+    for (const lead of affiliateLeads) {
+      if (!lead.affiliateId) continue;
+      const prev = leadsMap.get(lead.affiliateId) ?? { total: 0, confirmed: 0, earned: 0 };
+      prev.total++;
+      if (lead.status === "CONFIRMED") {
+        prev.confirmed++;
+        prev.earned += lead.commissionAmount ?? 0;
+      }
+      leadsMap.set(lead.affiliateId, prev);
+    }
+  }
+
   const rankingData = approved
     .map((a) => {
-      const thisMonth = a.commissions
-        .filter((c) => c.status === "PAID" && new Date(c.createdAt) >= startThisMonth)
-        .reduce((s, c) => s + c.amount, 0);
-      const lastMonth = a.commissions
-        .filter((c) => c.status === "PAID" && new Date(c.createdAt) >= startLastMonth && new Date(c.createdAt) < endLastMonth)
-        .reduce((s, c) => s + c.amount, 0);
-      const confirmedOrders = a.orders.filter((o) =>
-        ["CONFIRMED", "SHIPPED", "DELIVERED"].includes(o.status)
-      );
+      let thisMonth: number;
+      let lastMonth: number;
+      let confirmedCount: number;
+      let grossSales: number;
+
+      if (isInquiryStore) {
+        // AUTOS: sin granularidad mensual en wallet, se usa totalEarned como aproximación
+        thisMonth = a.wallet?.totalEarned ?? 0;
+        lastMonth = 0;
+        confirmedCount = leadsMap.get(a.id)?.confirmed ?? 0;
+        grossSales = leadsMap.get(a.id)?.earned ?? 0;
+      } else {
+        thisMonth = a.commissions
+          .filter((c) => c.status === "PAID" && new Date(c.createdAt) >= startThisMonth)
+          .reduce((s, c) => s + c.amount, 0);
+        lastMonth = a.commissions
+          .filter((c) => c.status === "PAID" && new Date(c.createdAt) >= startLastMonth && new Date(c.createdAt) < endLastMonth)
+          .reduce((s, c) => s + c.amount, 0);
+        const confirmedOrders = a.orders.filter((o) => ["CONFIRMED", "SHIPPED", "DELIVERED"].includes(o.status));
+        confirmedCount = confirmedOrders.length;
+        grossSales = confirmedOrders.reduce((s, o) => s + o.total, 0);
+      }
+
       return {
         id: a.id,
         name: a.user.name || a.user.email,
         thisMonth,
         lastMonth,
         change: lastMonth > 0 ? Math.round(((thisMonth - lastMonth) / lastMonth) * 100) : null,
-        confirmedOrders: confirmedOrders.length,
-        grossSales: confirmedOrders.reduce((s, o) => s + o.total, 0),
+        confirmedOrders: confirmedCount,
+        grossSales,
       };
     })
     .sort((a, b) => b.thisMonth - a.thisMonth);
   const topThisMonth = rankingData[0]?.thisMonth ?? 0;
 
-  const totalComisionesPagadas = affiliates.reduce(
-    (sum, affiliate) => sum + affiliate.commissions.filter((commission) => commission.status === "PAID").reduce((s, commission) => s + commission.amount, 0),
-    0
-  );
+  // Total comisiones pagadas: para AUTOS usa wallet.totalEarned; para ROPA usa Commission records
+  const totalComisionesPagadas = isInquiryStore
+    ? affiliates.reduce((sum, a) => sum + (a.wallet?.totalEarned ?? 0), 0)
+    : affiliates.reduce(
+        (sum, affiliate) => sum + affiliate.commissions.filter((c) => c.status === "PAID").reduce((s, c) => s + c.amount, 0),
+        0
+      );
+
   // Retiros pendientes enriquecidos con antigüedad en días
   const pendingWithdrawalsDetail = affiliates
     .flatMap((a) =>
@@ -137,10 +178,13 @@ export default async function VendedorasPage() {
     )
     .sort((a, b) => b.daysOld - a.daysOld);
 
-  const ventasConfirmadas = affiliates.reduce(
-    (sum, affiliate) => sum + affiliate.orders.filter((order) => ["CONFIRMED", "SHIPPED", "DELIVERED"].includes(order.status)).length,
-    0
-  );
+  // Para AUTOS: contar consultas confirmadas (ventas); para ROPA: órdenes confirmadas
+  const ventasConfirmadas = isInquiryStore
+    ? Array.from(leadsMap.values()).reduce((sum, l) => sum + l.confirmed, 0)
+    : affiliates.reduce(
+        (sum, affiliate) => sum + affiliate.orders.filter((order) => ["CONFIRMED", "SHIPPED", "DELIVERED"].includes(order.status)).length,
+        0
+      );
 
   return (
     <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pending.length}>
@@ -161,6 +205,7 @@ export default async function VendedorasPage() {
         activeAffiliatesCount={active.length}
         pendingBalance={affiliates.reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0)}
         hasMercadoPago={!!store?.mpAccessToken}
+        storeType={store?.tipoTienda}
       />
 
       {store?.affiliatesEnabled && <MetasWidget />}
@@ -215,7 +260,7 @@ export default async function VendedorasPage() {
         {[
           { label: "Pendientes", value: pending.length, icon: Clock, color: "text-yellow-600 bg-yellow-50" },
           { label: "Activos", value: active.length, icon: UserCheck, color: "text-indigo-600 bg-indigo-50" },
-          { label: "Ventas confirmadas", value: ventasConfirmadas, icon: TrendingUp, color: "text-green-600 bg-green-50" },
+          { label: isInquiryStore ? "Consultas vendidas" : "Ventas confirmadas", value: ventasConfirmadas, icon: TrendingUp, color: "text-green-600 bg-green-50" },
           { label: "Retiros en proceso", value: money(pendingWithdrawalsDetail.reduce((s, w) => s + w.amount, 0)), icon: DollarSign, color: "text-purple-600 bg-purple-50" },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="bg-white rounded-xl border border-gray-100 p-5">
@@ -356,6 +401,7 @@ export default async function VendedorasPage() {
               const paidCommission = affiliate.commissions
                 .filter((commission) => commission.status === "PAID")
                 .reduce((sum, commission) => sum + commission.amount, 0);
+              const affLeads = isInquiryStore ? (leadsMap.get(affiliate.id) ?? { total: 0, confirmed: 0, earned: 0 }) : null;
               const sharePath = store ? `/tienda/${store.slug}?ref=${affiliate.id}` : "/";
               const displayName = affiliate.user.name || affiliate.user.email;
 
@@ -423,12 +469,17 @@ export default async function VendedorasPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-px bg-gray-100 md:grid-cols-4">
-                    {[
+                    {(isInquiryStore ? [
+                      { label: "Consultas", value: affLeads!.total },
+                      { label: "Ventas", value: affLeads!.confirmed },
+                      { label: "Comisiones", value: money(affLeads!.earned) },
+                      { label: "Saldo", value: money(walletBalance) },
+                    ] : [
                       { label: "Ventas", value: affiliate._count.orders },
                       { label: "Confirmadas", value: confirmedOrders.length },
                       { label: "Generado", value: money(grossSales) },
-                      { label: "Saldo", value: money(affiliate.wallet?.balance ?? 0) },
-                    ].map((item) => (
+                      { label: "Saldo", value: money(walletBalance) },
+                    ]).map((item) => (
                       <div key={item.label} className="bg-white p-4">
                         <p className="text-xs font-semibold text-gray-400">{item.label}</p>
                         <p className="mt-1 text-lg font-black text-gray-950">{item.value}</p>
@@ -448,9 +499,13 @@ export default async function VendedorasPage() {
                       <div className="rounded-xl border border-gray-100 p-3">
                         <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400">
                           <Wallet className="h-3.5 w-3.5" />
-                          Pagado
+                          {isInquiryStore ? "Retirado" : "Pagado"}
                         </div>
-                        <p className="font-black text-gray-950">{money(paidCommission)}</p>
+                        <p className="font-black text-gray-950">
+                          {isInquiryStore
+                            ? money(affiliate.wallet?.totalWithdrawn ?? 0)
+                            : money(paidCommission)}
+                        </p>
                       </div>
                       <div className="rounded-xl border border-gray-100 p-3">
                         <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400">

@@ -80,13 +80,13 @@ const STEPS_AUTOS: Step[] = [
   },
   {
     tourId: "pagos",
-    title: "Pagos y cobros",
-    body: "Configurá tus datos de cobro (CBU, alias o efectivo). Los clientes los reciben por email al confirmar una seña o consulta.",
+    title: "Legal y políticas",
+    body: "Cargá tus términos y condiciones y política de devoluciones. Tus clientes pueden acceder desde el pie de página de tu sitio.",
   },
   {
     tourId: "afiliados",
     title: "Afiliados",
-    body: "Invitá vendedores externos que traigan clientes. Vos definís la comisión por venta concretada. Requiere MercadoPago conectado para acreditar comisiones automáticamente.",
+    body: "Invitá vendedores externos que traigan clientes. Vos definís la comisión por venta concretada. La comisión se acredita automáticamente cuando confirmás la venta en Consultas — sin necesitar MercadoPago.",
   },
   {
     tourId: "notificaciones",

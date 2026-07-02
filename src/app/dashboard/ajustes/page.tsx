@@ -21,6 +21,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
       select: {
         id: true, slug: true, customDomain: true, mpConnectedAt: true, mpSellerId: true,
         name: true, logo: true, logoColor: true, primaryColor: true, description: true,
+        tipoTienda: true,
       },
     }),
   ]);
@@ -79,16 +80,18 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
             />
           </section>
 
-          <section>
-            <SectionLabel>Pagos</SectionLabel>
-            <MpConnectButton
-              connected={!!store?.mpConnectedAt}
-              connectedAt={store?.mpConnectedAt?.toISOString() ?? null}
-              mpSellerId={store?.mpSellerId ?? null}
-              mpStatus={mp === "connected" ? "connected" : mp === "error" ? "error" : undefined}
-              activeAffiliatesCount={activeAffiliateCount}
-            />
-          </section>
+          {store?.tipoTienda !== "AUTOS" && (
+            <section>
+              <SectionLabel>Pagos</SectionLabel>
+              <MpConnectButton
+                connected={!!store?.mpConnectedAt}
+                connectedAt={store?.mpConnectedAt?.toISOString() ?? null}
+                mpSellerId={store?.mpSellerId ?? null}
+                mpStatus={mp === "connected" ? "connected" : mp === "error" ? "error" : undefined}
+                activeAffiliatesCount={activeAffiliateCount}
+              />
+            </section>
+          )}
 
           <section>
             <SectionLabel>Zona de peligro</SectionLabel>
