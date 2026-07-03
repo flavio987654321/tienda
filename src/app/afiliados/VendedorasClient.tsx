@@ -2575,7 +2575,7 @@ export default function VendedorasClient() {
       <Link
         href="/afiliados/soporte"
         title="Soporte"
-        className="fixed bottom-6 right-6 z-[90] w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-2xl shadow-indigo-900/40 transition-all hover:scale-105"
+        className="fixed bottom-24 right-6 z-[90] w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-2xl shadow-indigo-900/40 transition-all hover:scale-105"
       >
         <Headset className="h-6 w-6" />
       </Link>

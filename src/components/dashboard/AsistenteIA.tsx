@@ -237,7 +237,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
           y: { delay: 0.8, duration: 2.6, repeat: Infinity, ease: "easeInOut" },
           boxShadow: { delay: 0.8, duration: 2.6, repeat: Infinity, ease: "easeInOut" },
         }}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full hover:scale-110 transition-transform"
+        className="fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full hover:scale-110 transition-transform"
       >
         <AsistentePersonaje estado={estadoBurbuja} size={56} />
       </motion.button>

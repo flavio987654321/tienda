@@ -1536,22 +1536,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* ── Floating contact button ── */}
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ delay: 1.5, type: "spring" }}
-        className="fixed bottom-6 right-6 z-40"
-      >
-        <Link
-          href="/contacto"
-          className="fab-float fab-ring-orange bg-orange-600 hover:bg-orange-500 text-white w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110"
-          title="Contacto"
-        >
-          <MessageCircle className="h-6 w-6" />
-        </Link>
-      </motion.div>
-
       {/* ── Floating canasta solidaria button ── */}
       <motion.div
         initial={{ scale: 0 }}
