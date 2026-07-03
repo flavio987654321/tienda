@@ -28,11 +28,10 @@ export default function CrispWidget() {
     };
   }, []);
 
-  // En dashboard y afiliados hay FABs a la derecha — mover Crisp a la izquierda
   useEffect(() => {
     if (!window.$crisp) return;
-    const onLeft = pathname.startsWith("/dashboard") || pathname.startsWith("/afiliados");
-    window.$crisp.push(["config", "position:reverse", [onLeft]]);
+    const hidden = pathname.startsWith("/dashboard") || pathname.startsWith("/afiliados");
+    window.$crisp.push(["do", hidden ? "chat:hide" : "chat:show"]);
   }, [pathname]);
 
   return null;
