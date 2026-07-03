@@ -428,7 +428,7 @@ export async function sendCommissionEarnedEmail({
 
         <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(affiliateName) || "afiliada"}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:24px;">
-          Una venta que generaste en <strong>${escapeHtml(storeName)}</strong> fue confirmada y tu comisión ya está en tu billetera.
+          Una venta que generaste en <strong>${escapeHtml(storeName)}</strong> fue confirmada y tu comisión ya está disponible en tu panel de comisiones.
         </p>
 
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin-bottom:24px;">
@@ -442,7 +442,7 @@ export async function sendCommissionEarnedEmail({
           </div>
           <hr style="border:none;border-top:1px solid #bbf7d0;margin:12px 0;" />
           <div style="display:flex;justify-content:space-between;">
-            <span style="font-size:14px;color:#6b7280;">Saldo en billetera</span>
+            <span style="font-size:14px;color:#6b7280;">Saldo en comisiones</span>
             <span style="font-size:14px;font-weight:700;color:#111827;">${fmt(newBalance)}</span>
           </div>
         </div>
@@ -450,12 +450,12 @@ export async function sendCommissionEarnedEmail({
         <div style="text-align:center;">
           <a href="${appUrl}/afiliados/billetera"
              style="display:inline-block;background:#16a34a;color:#fff;padding:12px 28px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;">
-            Ver mi billetera
+            Ver mis comisiones
           </a>
         </div>
 
         <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
-          Podés solicitar un retiro cuando quieras desde tu billetera · ${storeName}
+          Podés solicitar un retiro cuando quieras desde tu panel de comisiones · ${storeName}
         </p>
       </div>
     `,
@@ -1185,7 +1185,7 @@ export async function sendOrderPaymentConfirmedEmail({
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const shortId = orderId.slice(-8).toUpperCase();
-  void storeSlug;
+  const storeUrl = `${appUrl}/tienda/${storeSlug}`;
 
   await transporter.sendMail({
     from: `"${storeName}" <${process.env.SMTP_USER}>`,
@@ -1219,7 +1219,7 @@ export async function sendOrderPaymentConfirmedEmail({
         </div>
 
         <p style="color:#d1d5db;font-size:11px;text-align:center;margin:0;">
-          ${escapeHtml(storeName)} · Pedido <strong>#${shortId}</strong>
+          <a href="${storeUrl}" style="color:#9ca3af;text-decoration:none;">${escapeHtml(storeName)}</a> · Pedido <strong>#${shortId}</strong>
         </p>
       </div>
     `,
@@ -1369,7 +1369,7 @@ export async function sendMpDisconnectedEmail({
         <div style="background:#fefce8;border:1px solid #fde68a;border-radius:12px;padding:20px;margin-bottom:24px;">
           <p style="font-size:13px;font-weight:700;color:#92400e;margin:0 0 12px;text-transform:uppercase;letter-spacing:0.05em;">Lo que no cambia</p>
           <ul style="margin:0;padding-left:18px;color:#374151;font-size:14px;line-height:1.8;">
-            <li>Tu saldo acumulado en la billetera <strong>sigue disponible</strong> para retirar.</li>
+            <li>Tu saldo acumulado en tu panel de comisiones <strong>sigue disponible</strong> para retirar.</li>
             <li>Podés solicitar un retiro normalmente desde tu panel.</li>
             <li>Cuando la tienda reconecte MP, el programa se <strong>reactiva automáticamente</strong>.</li>
           </ul>
@@ -1378,13 +1378,212 @@ export async function sendMpDisconnectedEmail({
         <div style="text-align:center;margin-bottom:24px;">
           <a href="${appUrl}/afiliados/billetera"
              style="display:inline-block;background:#6366f1;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
-            Ver mi billetera
+            Ver mis comisiones
           </a>
         </div>
 
         <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
           TiendaApps · Programa de Afiliadas
         </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendAdminAlertEmail({
+  subject,
+  title,
+  reason,
+  actions,
+}: {
+  subject: string;
+  title: string;
+  reason: string;
+  actions: string[];
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  const actionItems = actions.map(a => `<li>${escapeHtml(a)}</li>`).join("");
+  await transporter.sendMail({
+    from: `"TiendaApps Alerta" <${process.env.SMTP_USER}>`,
+    to: "marketplacemitienda@gmail.com",
+    subject,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;">
+        <div style="background:#7f1d1d;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center;">
+          <h1 style="color:#fff;font-size:18px;margin:0;font-weight:700;">⚠️ ${escapeHtml(title)}</h1>
+        </div>
+        <p style="color:#374151;font-size:15px;"><strong>Detalle:</strong> ${escapeHtml(reason)}</p>
+        <p style="color:#374151;font-size:15px;"><strong>Hora de detección:</strong> ${new Date().toLocaleString("es-AR")}</p>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-top:20px;">
+          <p style="font-size:13px;color:#991b1b;margin:0 0 6px;font-weight:700;">Acciones recomendadas:</p>
+          <ul style="margin:0;padding-left:18px;color:#991b1b;font-size:13px;line-height:1.8;">${actionItems}</ul>
+        </div>
+        <p style="font-size:11px;color:#9ca3af;margin-top:20px;">Alerta automática de TiendaApps · tiendaapps.com</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendMpHealthAlertEmail({
+  reason,
+  lastEventAt,
+}: {
+  reason: string;
+  lastEventAt: string;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  await transporter.sendMail({
+    from: `"TiendaApps Alerta" <${process.env.SMTP_USER}>`,
+    to: "marketplacemitienda@gmail.com",
+    subject: `⚠️ ALERTA: Problema detectado con MercadoPago — ${new Date().toLocaleString("es-AR")}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;">
+        <div style="background:#7f1d1d;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center;">
+          <h1 style="color:#fff;font-size:18px;margin:0;font-weight:700;">⚠️ Alerta de sistema — TiendaApps</h1>
+        </div>
+        <p style="color:#374151;font-size:15px;"><strong>Motivo:</strong> ${escapeHtml(reason)}</p>
+        <p style="color:#374151;font-size:15px;"><strong>Último evento MP registrado:</strong> ${escapeHtml(lastEventAt)}</p>
+        <p style="color:#374151;font-size:15px;"><strong>Hora de detección:</strong> ${new Date().toLocaleString("es-AR")}</p>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-top:20px;">
+          <p style="font-size:13px;color:#991b1b;margin:0;font-weight:700;">Acciones recomendadas:</p>
+          <ul style="margin:8px 0 0;padding-left:18px;color:#991b1b;font-size:13px;line-height:1.8;">
+            <li>Verificar el panel de MercadoPago Developers</li>
+            <li>Revisar la cuenta MP por posibles restricciones</li>
+            <li>Si la suspensión se confirma, notificar a tiendas y afiliados</li>
+          </ul>
+        </div>
+        <p style="font-size:11px;color:#9ca3af;margin-top:20px;">Este email fue enviado automáticamente por el sistema de monitoreo de TiendaApps.</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendServiceInterruptionEmail({
+  recipients,
+  subject,
+  title,
+  body,
+  estimatedResolution,
+}: {
+  recipients: string[];
+  subject: string;
+  title: string;
+  body: string;
+  estimatedResolution?: string;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  const results = await Promise.allSettled(
+    recipients.map((to) =>
+      transporter.sendMail({
+        from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+        to,
+        subject: escapeHtml(subject),
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+            <div style="background:#1e293b;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+              <p style="color:rgba(255,255,255,0.5);font-size:12px;margin:0 0 4px;">TiendaApps</p>
+              <h1 style="color:#fff;font-size:18px;margin:0;font-weight:700;">${escapeHtml(title)}</h1>
+            </div>
+            <div style="color:#374151;font-size:15px;line-height:1.7;margin-bottom:24px;">${escapeHtml(body)}</div>
+            ${estimatedResolution ? `
+            <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:14px;margin-bottom:24px;">
+              <p style="font-size:13px;color:#92400e;margin:0;"><strong>Resolución estimada:</strong> ${escapeHtml(estimatedResolution)}</p>
+            </div>` : ""}
+            <p style="font-size:12px;color:#9ca3af;">Para consultas escribinos a marketplacemitienda@gmail.com</p>
+            <p style="font-size:11px;color:#d1d5db;text-align:center;margin-top:24px;">TiendaApps · tiendaapps.com</p>
+          </div>
+        `,
+      })
+    )
+  );
+  return results;
+}
+
+export async function sendCommissionRateChangedEmail({
+  affiliateEmail,
+  affiliateName,
+  storeName,
+  oldRate,
+  newRate,
+}: {
+  affiliateEmail: string;
+  affiliateName: string;
+  storeName: string;
+  oldRate: number;
+  newRate: number;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  const direction = newRate < oldRate ? "bajó" : "subió";
+  const color = newRate < oldRate ? "#dc2626" : "#16a34a";
+
+  await transporter.sendMail({
+    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    to: affiliateEmail,
+    subject: `Cambio de comisión en ${escapeHtml(storeName)} — ${oldRate}% → ${newRate}%`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#1e293b;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.7);font-size:13px;margin:0 0 4px;">${escapeHtml(storeName)}</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Cambio de comisión</h1>
+        </div>
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(affiliateName)}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:24px;">
+          La tienda <strong>${escapeHtml(storeName)}</strong> modificó su porcentaje de comisión:
+        </p>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center;">
+          <div style="display:flex;justify-content:center;align-items:center;gap:16px;">
+            <div>
+              <p style="font-size:12px;color:#64748b;margin:0 0 4px;">Antes</p>
+              <p style="font-size:28px;font-weight:900;color:#64748b;margin:0;">${oldRate}%</p>
+            </div>
+            <p style="font-size:24px;color:${color};font-weight:900;margin:0;">→</p>
+            <div>
+              <p style="font-size:12px;color:${color};margin:0 0 4px;font-weight:600;">Ahora</p>
+              <p style="font-size:28px;font-weight:900;color:${color};margin:0;">${newRate}%</p>
+            </div>
+          </div>
+          <p style="font-size:13px;color:#64748b;margin:12px 0 0;">La comisión ${direction} ${Math.abs(newRate - oldRate).toFixed(1)} puntos porcentuales.</p>
+        </div>
+        <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:14px;margin-bottom:24px;">
+          <p style="font-size:13px;color:#92400e;margin:0 0 6px;font-weight:700;">¿Qué cambia para vos?</p>
+          <ul style="margin:0;padding-left:18px;color:#92400e;font-size:13px;line-height:1.7;">
+            <li>Las ventas confirmadas a partir de ahora usarán el nuevo porcentaje de <strong>${newRate}%</strong>.</li>
+            <li>Las comisiones ya acreditadas no se ven afectadas.</li>
+          </ul>
+        </div>
+        <p style="font-size:12px;color:#9ca3af;margin-bottom:16px;">
+          Según los Términos de TiendaApps, el/la Titular debía notificarte con al menos 5 días corridos de anticipación antes de realizar este cambio.
+          Si considerás que no se respetó ese plazo, podés escribirnos a marketplacemitienda@gmail.com.
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendOtpEmail({
+  to,
+  name,
+  code,
+}: {
+  to: string;
+  name: string | null;
+  code: string;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  await transporter.sendMail({
+    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    to,
+    subject: `Tu código de verificación: ${code}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0f172a;padding:32px;border-radius:16px;color:#f8fafc;">
+        <p style="font-size:14px;color:#94a3b8;margin:0 0 24px;">Hola${name ? ` ${escapeHtml(name)}` : ""},</p>
+        <p style="font-size:14px;color:#cbd5e1;margin:0 0 24px;">Solicitaste acceder a tus datos bancarios en TiendaApps. Ingresá este código para continuar:</p>
+        <div style="background:#1e293b;border:2px solid #6366f1;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
+          <p style="font-size:42px;font-weight:900;letter-spacing:12px;color:#a5b4fc;margin:0;font-family:monospace;">${escapeHtml(code)}</p>
+          <p style="font-size:12px;color:#64748b;margin:8px 0 0;">Válido por 10 minutos</p>
+        </div>
+        <p style="font-size:12px;color:#64748b;margin:0 0 8px;">Si no fuiste vos, ignorá este email. Nadie puede acceder a tus datos sin el código.</p>
+        <p style="font-size:11px;color:#475569;text-align:center;margin-top:24px;">TiendaApps · tiendaapps.com</p>
       </div>
     `,
   });

@@ -312,7 +312,7 @@ function PreciosContent() {
                 {[
                   { icon: Store, text: "Acceso a todas las tiendas" },
                   { icon: Zap, text: "Link de afiliado con tracking en tiempo real" },
-                  { icon: ShoppingBag, text: "Billetera digital para cobrar comisiones" },
+                  { icon: ShoppingBag, text: "Panel de comisiones para cobrar" },
                   { icon: Star, text: "Panel de ventas y estadísticas" },
                   { icon: Crown, text: "Premios por volumen de ventas" },
                   { icon: Mail, text: "Soporte por email" },

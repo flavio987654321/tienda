@@ -97,17 +97,27 @@ export default function AffiliateActions({
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
 
       {status === "PENDING" && (
-        <div className="flex gap-2">
-          <button type="button" onClick={() => run("approve")} disabled={Boolean(loading)}
-            className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
-            {loading === "approve" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-            Aprobar
-          </button>
-          <button type="button" onClick={() => run("reject")} disabled={Boolean(loading)}
-            className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-50">
-            {loading === "reject" ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
-            Rechazar
-          </button>
+        <div className="space-y-2.5">
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5 text-xs text-blue-800 leading-relaxed space-y-1">
+            <p className="font-semibold">¿Qué pasa si aprobás a {name}?</p>
+            <ul className="space-y-0.5 text-blue-700">
+              <li>• Podrá compartir tus productos con un link propio y cobrar comisión por cada venta.</li>
+              <li>• Podrá crear un catálogo en WhatsApp Business o Facebook con tus fotos y precios. <strong>No puede modificarlos</strong> — siempre se muestran los valores reales de tu tienda.</li>
+              <li>• Si la das de baja, su link y catálogo se desactivan en menos de 24 hs. Todas las ventas siguen llegando a vos.</li>
+            </ul>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => run("approve")} disabled={Boolean(loading)}
+              className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">
+              {loading === "approve" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+              Aprobar
+            </button>
+            <button type="button" onClick={() => run("reject")} disabled={Boolean(loading)}
+              className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-50">
+              {loading === "reject" ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
+              Rechazar
+            </button>
+          </div>
         </div>
       )}
 
@@ -165,7 +175,7 @@ export default function AffiliateActions({
               <p>Su link de afiliada dejará de funcionar hasta que la reactives.</p>
               {hasPendingBalance && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-amber-800 text-xs font-medium">
-                  ⚠️ Tiene <strong>{fmt(walletBalance)}</strong> en billetera pendiente de retiro. Pausarla no cancela ese saldo — seguís debiéndoselo.
+                  ⚠️ Tiene <strong>{fmt(walletBalance)}</strong> en comisiones pendientes de retiro. Pausarla no cancela ese saldo — seguís debiéndoselo.
                 </div>
               )}
             </div>
@@ -185,7 +195,7 @@ export default function AffiliateActions({
               <p>Su link quedará desactivado y no podrá postularse de nuevo a menos que la reincorpores.</p>
               {hasPendingBalance && (
                 <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 text-red-800 text-xs font-medium">
-                  ⚠️ Tiene <strong>{fmt(walletBalance)}</strong> en billetera pendiente de retiro. Dar de baja no cancela ese saldo — seguís debiéndoselo.
+                  ⚠️ Tiene <strong>{fmt(walletBalance)}</strong> en comisiones pendientes de retiro. Dar de baja no cancela ese saldo — seguís debiéndoselo.
                 </div>
               )}
             </div>

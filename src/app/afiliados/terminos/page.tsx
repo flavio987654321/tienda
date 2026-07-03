@@ -19,14 +19,14 @@ export default function TerminosAfiliados() {
           Términos y Condiciones del Programa de Afiliados
         </h1>
         <p className="text-gray-500 text-sm mb-6">
-          Versión 1.8 — Vigente desde julio de 2026
+          Versión 1.9 — Vigente desde julio de 2026
         </p>
 
         <div className="rounded-xl border border-white/10 bg-white/5 p-5 mb-10 text-sm text-gray-300 space-y-1">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Responsable de la plataforma</p>
           <p><span className="text-gray-500">Nombre:</span> Flavio Cesar Soltero Legoas</p>
           <p><span className="text-gray-500">CUIL:</span> 20-94992405-0</p>
-          <p><span className="text-gray-500">Domicilio:</span> Buenos Aires, Argentina</p>
+          <p><span className="text-gray-500">Domicilio:</span> Bacota 1833 (entre Apolo y Juno), Pinamar, Buenos Aires, CP 7167</p>
           <p><span className="text-gray-500">Email:</span>{" "}
             <a href="mailto:marketplacemitienda@gmail.com" className="text-indigo-400 hover:underline">marketplacemitienda@gmail.com</a>
           </p>
@@ -71,24 +71,9 @@ export default function TerminosAfiliados() {
                 (estado <em>Confirmado</em>). Pedidos en estado Pendiente no generan comisión.
               </li>
               <li>
-                <strong className="text-gray-300">Destino de la comisión según el medio de pago:</strong>
-                <ul className="mt-2 ml-4 space-y-1.5 list-none">
-                  <li className="flex items-start gap-2">
-                    <span className="text-indigo-400 font-bold shrink-0 mt-0.5">→</span>
-                    <span>
-                      <strong className="text-gray-300">Tiendas con pago online (MercadoPago) y MP conectado:</strong>{" "}
-                      la comisión se transfiere directamente desde la cuenta de TiendaApps a tu cuenta de MercadoPago
-                      de forma automática, en minutos, sin que intervenga ningún intermediario humano.
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-indigo-400 font-bold shrink-0 mt-0.5">→</span>
-                    <span>
-                      <strong className="text-gray-300">Tiendas con pago online sin MP conectado, o tiendas por WhatsApp:</strong>{" "}
-                      la comisión se acredita en tu billetera de TiendaApps. Podés solicitar un retiro cuando quieras desde el panel.
-                    </span>
-                  </li>
-                </ul>
+                La comisión se acredita en tu <strong className="text-gray-300">panel de comisiones de TiendaApps</strong>.
+                Desde ahí podés solicitar un retiro a tu cuenta bancaria (CBU/alias) cuando quieras, sin vencimiento de saldo.
+                El mínimo de retiro es de $100 ARS y se procesa en 1 a 3 días hábiles.
               </li>
               <li>
                 Una vez acreditada, la comisión <strong className="text-gray-300">no se revierte</strong> aunque
@@ -102,11 +87,13 @@ export default function TerminosAfiliados() {
                 </span>
               </li>
               <li>
-                El porcentaje de comisión es el vigente al momento de la venta y puede ser
-                modificado por el/la Titular en cualquier momento. El nuevo porcentaje aplica
-                desde la próxima venta confirmada en adelante — nunca de forma retroactiva
-                sobre comisiones ya generadas. Ante un cambio, se te notifica de inmediato
-                desde el panel de afiliados.
+                El porcentaje de comisión es el vigente al momento de la venta. El/la Titular
+                está obligado/a a notificarte con al menos <strong className="text-gray-300">5 días corridos de anticipación</strong> antes
+                de realizar cualquier cambio. TiendaApps enviará la notificación por email y en el panel
+                en el momento en que el/la Titular aplique el cambio. El nuevo porcentaje aplica a ventas
+                confirmadas a partir del cambio — nunca de forma retroactiva sobre comisiones ya generadas.
+                Si el/la Titular no respetó el preaviso de 5 días, podés iniciar el procedimiento
+                de la Sección 10.
               </li>
             </ul>
 
@@ -122,12 +109,15 @@ export default function TerminosAfiliados() {
               </li>
               <li>
                 La comisión se calcula sobre el precio del producto al momento de la consulta y se
-                acredita automáticamente en tu billetera al ser confirmada.
+                acredita en tu panel de comisiones al ser confirmada.
               </li>
               <li>
-                El/la Titular tiene la facultad exclusiva de decidir si una consulta representa
-                una venta válida. La Plataforma no interviene en esta decisión salvo en caso de
-                disputa formal conforme a la Sección 10.
+                El/la Titular tiene la facultad de decidir si una consulta representa
+                una venta válida, pero <strong className="text-gray-300">no puede rechazar sistemáticamente
+                consultas para evitar el pago de comisiones</strong>. El rechazo debe estar fundado
+                en la no concreción real de la venta. En caso de patrones de rechazo injustificados,
+                el/la Afiliado/a puede iniciar el procedimiento de disputa de la Sección 10.
+                La Plataforma no interviene en decisiones individuales salvo en caso de disputa formal.
               </li>
               <li>
                 Los datos del consultante (nombre, teléfono, mensaje) son accesibles para el/la
@@ -139,33 +129,16 @@ export default function TerminosAfiliados() {
 
           <section>
             <h2 className="text-lg font-bold text-white mb-3">4. Retiros y pagos</h2>
-
-            <h3 className="text-base font-bold text-white mt-4 mb-2">4a. Pago automático a tu MercadoPago</h3>
             <ul className="list-disc list-inside space-y-2 text-gray-400">
               <li>
-                Si conectaste tu cuenta de MercadoPago en el panel de afiliados y la tienda procesa pagos online,
-                la comisión se transfiere <strong className="text-gray-300">automáticamente</strong> a tu cuenta de MP
-                en el momento en que el pago se confirma. No hay que solicitar retiro.
+                Las comisiones acreditadas pueden retirarse desde el panel de comisiones en cualquier momento.
+                El monto mínimo de retiro es de <strong className="text-gray-300">$100 ARS</strong>.
               </li>
-              <li>
-                El acreditamiento en tu cuenta MP puede demorar algunos minutos dependiendo del procesamiento interno de MercadoPago.
-              </li>
-              <li>
-                Podés desconectar tu MercadoPago desde el panel en cualquier momento; en ese caso,
-                las comisiones futuras pasarán al sistema de billetera (4b).
-              </li>
-            </ul>
-
-            <h3 className="text-base font-bold text-white mt-5 mb-2">4b. Billetera y retiros manuales</h3>
-            <ul className="list-disc list-inside space-y-2 text-gray-400">
-              <li>
-                Aplica a: (i) tiendas por WhatsApp (AUTOS); (ii) tiendas con MP pero sin tu cuenta MP conectada;
-                (iii) saldo previo acumulado antes de conectar tu MP.
-              </li>
-              <li>El monto mínimo de retiro es de <strong className="text-gray-300">$500 ARS</strong>.</li>
               <li>
                 Una vez aprobada la solicitud de retiro, TiendaApps realizará la transferencia bancaria
                 dentro de los <strong className="text-gray-300">1 a 3 días hábiles</strong> siguientes.
+                Si el retiro no se procesa dentro de los 5 días hábiles por causas imputables a TiendaApps,
+                el/la Afiliado/a puede iniciar el procedimiento de disputa de la Sección 10 o reclamar ante la Dirección Nacional de Defensa del Consumidor.
               </li>
               <li>
                 El/la Afiliado/a es responsable de ingresar correctamente sus datos bancarios
@@ -177,6 +150,23 @@ export default function TerminosAfiliados() {
                 modificar los datos bancarios.
               </li>
             </ul>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-white mb-3">4 bis. Saldo acumulado e inflación</h2>
+            <p>
+              Los saldos en el panel de comisiones se expresan en <strong className="text-white">pesos argentinos (ARS)</strong> y no
+              se ajustan por inflación ni por variación del tipo de cambio.
+            </p>
+            <p className="mt-3">
+              TiendaApps recomienda realizar retiros de forma periódica y no acumular saldos
+              por períodos prolongados, a fin de reducir la exposición al riesgo inflacionario.
+              La plataforma no tiene obligación legal de actualizar el valor de los saldos acumulados.
+            </p>
+            <p className="mt-3">
+              Para facilitar retiros frecuentes, el monto mínimo de retiro fue reducido a{" "}
+              <strong className="text-white">$100 ARS</strong>. Podés retirar en cualquier momento desde tu panel de comisiones.
+            </p>
           </section>
 
           <section>
@@ -209,10 +199,49 @@ export default function TerminosAfiliados() {
               </li>
               <li>
                 No acordar ni recibir pagos, comisiones o compensaciones de parte del/la Titular
-                por fuera del sistema de billetera de la Plataforma. Toda comisión derivada de ventas
+                por fuera del sistema de comisiones de la Plataforma. Toda comisión derivada de ventas
                 generadas a través del enlace de referido debe procesarse exclusivamente a través de TiendaApps.
               </li>
+              <li>
+                El/la Afiliado/a es libre de prestar servicios similares a otras plataformas, marcas o personas
+                simultáneamente. <strong className="text-gray-300">TiendaApps no impone exclusividad.</strong>
+              </li>
             </ul>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-white mb-3">5 bis. Fraude y pedidos ficticios</h2>
+            <p className="mb-3">
+              TiendaApps monitorea el comportamiento de los/las Afiliados/as para detectar conductas fraudulentas.
+              Se consideran señales de alerta, entre otras:
+            </p>
+            <ul className="list-disc list-inside space-y-2 text-gray-400">
+              <li>
+                Tasa de <em>chargeback</em> (devoluciones de cargo) superior al{" "}
+                <strong className="text-gray-300">5%</strong> del total de comisiones generadas en los últimos 30 días.
+              </li>
+              <li>
+                Pedidos originados desde la misma dirección IP o dispositivo que el del comprador (autocompra).
+              </li>
+              <li>
+                Patrones de pedidos repetidos de bajo monto por el mismo comprador a través del mismo link, sin historial de compras.
+              </li>
+              <li>
+                Indicios de coordinación para generar pedidos ficticios (uso de múltiples cuentas, variantes de email, etc.).
+              </li>
+            </ul>
+            <p className="mt-3">
+              Ante la detección de cualquiera de estas señales, TiendaApps puede:{" "}
+              (a) suspender preventivamente los retiros pendientes mientras dure la investigación;{" "}
+              (b) revertir las comisiones generadas por pedidos fraudulentos y generar el saldo deudor correspondiente;{" "}
+              (c) dar de baja definitiva la cuenta del/la Afiliado/a sin previo aviso y sin derecho a reembolso de comisiones comprometidas en el fraude;{" "}
+              (d) denunciar los hechos ante las autoridades competentes conforme a la legislación argentina vigente.
+            </p>
+            <p className="mt-3">
+              El/la Afiliado/a puede contestar la suspensión iniciando el procedimiento de la Sección 10 dentro
+              de los 5 días hábiles de recibida la notificación, adjuntando evidencia que demuestre la legitimidad
+              de las ventas cuestionadas.
+            </p>
           </section>
 
           <section>
@@ -229,7 +258,7 @@ export default function TerminosAfiliados() {
               </li>
               <li>
                 Las comisiones ya acreditadas por ventas confirmadas previas a la baja
-                permanecerán disponibles para retiro en la billetera del/la Afiliado/a.
+                permanecerán disponibles para retiro en el panel de comisiones del/la Afiliado/a.
               </li>
               <li>
                 El/la Titular no puede dar de baja ni pausar a un/a Afiliado/a con el exclusivo
@@ -256,20 +285,19 @@ export default function TerminosAfiliados() {
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-400 mt-3">
               <li>
-                <strong className="text-gray-300">Con MP conectado:</strong> cuando el comprador paga con MercadoPago,
-                el importe de la comisión (marketplace_fee) queda retenido en la cuenta de TiendaApps.
-                En el mismo instante de confirmación, la Plataforma transfiere ese importe directamente
-                a la cuenta de MercadoPago del/la Afiliado/a mediante la Transfer API de MercadoPago.
-                El dinero nunca queda retenido en TiendaApps más allá del tiempo de procesamiento técnico.
+                Cuando el comprador paga, el importe de la comisión queda registrado en la cuenta de TiendaApps.
+                La Plataforma acredita ese importe en el <strong className="text-gray-300">panel de comisiones del/la Afiliado/a</strong>
+                de forma automática en el momento de confirmación del pago.
+                El/la Afiliado/a puede solicitar el retiro a su cuenta bancaria en cualquier momento desde el panel.
               </li>
               <li>
-                <strong className="text-gray-300">Sin MP conectado o tiendas por WhatsApp:</strong> la comisión
-                se acredita en la billetera de TiendaApps y el/la Afiliado/a puede solicitarla en retiro
-                cuando lo desee.
-              </li>
-              <li>
-                Si la transferencia automática a MP falla por causas técnicas, la comisión es acreditada
-                en la billetera de forma inmediata como contingencia.
+                En caso de devolución de cargo (chargeback) aprobada por MercadoPago, el/la Afiliado/a acepta
+                que TiendaApps puede: (a) deducir el importe de la comisión revertida de comisiones pendientes
+                en tu panel, o (b) generar un saldo deudor en tu panel de comisiones que deberá ser saldado
+                dentro de los 30 días corridos. Si el/la Afiliado/a ya retiró los fondos correspondientes a
+                esa comisión, la deuda subsiste igualmente y TiendaApps puede reclamarla a través de las vías
+                correspondientes. De no regularizarse en el plazo indicado, TiendaApps puede suspender la cuenta
+                hasta la cancelación total del saldo deudor.
               </li>
             </ul>
             <p className="mt-3">
@@ -285,13 +313,64 @@ export default function TerminosAfiliados() {
             <h2 className="text-lg font-bold text-white mb-3">8. Cancelación de suscripción con saldos pendientes</h2>
             <p>
               Si el/la Titular cancela su suscripción a TiendaApps teniendo saldos pendientes de retiro
-              en billeteras de Afiliados/as, dichas comisiones ya acreditadas siguen siendo exigibles.
-              La cancelación de la suscripción no extingue las obligaciones de pago ya devengadas.
+              en el panel de comisiones de los/las Afiliados/as,{" "}
+              <strong className="text-white">TiendaApps garantiza el pago de las comisiones ya acreditadas y confirmadas</strong>,
+              aun cuando la tienda cancele su suscripción. La cancelación de la suscripción no extingue
+              las obligaciones de pago ya devengadas.
             </p>
             <p className="mt-3">
               En este escenario, el/la Afiliado/a puede iniciar el procedimiento de disputa descripto
               en la Sección 10 dentro de los 30 días posteriores a la cancelación.
             </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-white mb-3">8 quáter. Afiliados/as menores de edad</h2>
+            <p>
+              Si al momento de la desvinculación o del cierre de cuenta se detecta que el/la Afiliado/a
+              es menor de edad o actuó sin la debida representación legal, cualquier saldo pendiente de retiro
+              en el panel de comisiones será retenido hasta tanto se acredite la identidad del{" "}
+              <strong className="text-white">representante legal (padre, madre o tutor/a con DNI vigente)</strong>.
+            </p>
+            <p className="mt-3">
+              Una vez acreditada la representación, los fondos serán transferidos exclusivamente
+              al titular de la cuenta bancaria indicada por dicho representante legal.
+              TiendaApps no realiza transferencias a cuentas a nombre del/la menor de edad
+              sin la conformidad expresa del representante legal.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-white mb-3">8 bis. Cierre de la plataforma e interrupciones de infraestructura</h2>
+            <p>
+              En caso de cierre definitivo de TiendaApps, se otorgará un período mínimo de
+              <strong className="text-white"> 60 días corridos</strong> para que los/las Afiliados/as
+              retiren todos sus saldos disponibles antes del cese de operaciones.
+              TiendaApps notificará por email con al menos 60 días de anticipación.
+              La cancelación de la plataforma no extingue las obligaciones de pago de comisiones ya acreditadas.
+            </p>
+            <p className="mt-3">
+              Si la plataforma experimentara una interrupción técnica grave por causas ajenas a su control
+              (suspensión de la cuenta de Supabase, Vercel u otro proveedor de infraestructura por impago,
+              violación de TOS u otro motivo), TiendaApps notificará a los/las Afiliados/as activos/as
+              dentro de las 24 horas de conocida la situación, indicando el plazo estimado de restauración
+              y el estado de sus saldos. En ningún caso esa interrupción extingue los saldos acreditados.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-white mb-3">8 ter. Interrupciones de Mercado Pago</h2>
+            <p>
+              Si la cuenta de MercadoPago de TiendaApps fuera suspendida o limitada por decisión de MercadoPago
+              (por revisión de compliance, chargebacks, error administrativo u otro motivo):
+            </p>
+            <ul className="list-disc list-inside space-y-2 text-gray-400 mt-3">
+              <li>Ningún nuevo pago podrá procesarse mientras dure la suspensión.</li>
+              <li>TiendaApps notificará a todos los/las Afiliados/as activos/as dentro de las 24 horas de conocida la situación.</li>
+              <li>Las comisiones ya acreditadas en tu panel de comisiones siguen siendo válidas y exigibles — la suspensión no las cancela ni las reduce.</li>
+              <li>TiendaApps trabajará para restablecer el servicio o habilitar un método de pago alternativo en el menor tiempo posible.</li>
+              <li>Si la suspensión se extendiera más de 30 días corridos, podés iniciar el procedimiento de disputa de la Sección 10 para exigir el retiro de tus comisiones acreditadas por un canal alternativo.</li>
+            </ul>
           </section>
 
           <section>
@@ -339,7 +418,7 @@ export default function TerminosAfiliados() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/5 text-xs text-gray-600 text-center">
-          <p>TiendaApps — Programa de Afiliados · Versión 1.8</p>
+          <p>TiendaApps — Programa de Afiliados · Versión 1.9</p>
           <p className="mt-1">Para consultas escribí a soporte desde tu panel de afiliado/a.</p>
         </div>
       </div>

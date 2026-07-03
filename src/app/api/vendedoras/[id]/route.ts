@@ -210,7 +210,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           userId: affiliate.userId,
           type: "AFFILIATE_REMOVED",
           title: `Fuiste dado/a de baja en ${affiliate.store.name}`,
-          body: "Tu link de afiliado fue desactivado. Los saldos ya acreditados en tu billetera siguen disponibles para retirar.",
+          body: "Tu link de afiliado fue desactivado. Los saldos ya acreditados en tu panel de comisiones siguen disponibles para retirar.",
           link: "/afiliados",
         }),
       ]);

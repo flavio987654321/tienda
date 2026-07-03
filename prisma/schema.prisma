@@ -36,6 +36,11 @@ model User {
   affiliateCuil        String?
   affiliateBankHolder  String?
   affiliateBankUpdatedAt DateTime?
+  // OTP para verificación de identidad antes de acceder/modificar datos bancarios
+  otpCode      String?
+  otpExpiresAt DateTime?
+  otpPurpose   String?
+  otpAttempts  Int       @default(0) // intentos fallidos; se resetea al verificar o al generar nuevo código
 
   accounts           Account[]
   sessions           Session[]

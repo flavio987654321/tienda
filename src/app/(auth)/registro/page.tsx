@@ -62,7 +62,7 @@ const TYPES = [
       "Sin inversión inicial requerida",
       "Acceso a todas las tiendas activas",
       "Link de afiliado con tracking en tiempo real",
-      "Billetera digital para cobrar comisiones",
+      "Panel de comisiones para cobrar",
       "Panel de ventas y estadísticas",
       "Premios por volumen de ventas",
     ],

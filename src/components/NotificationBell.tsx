@@ -32,7 +32,9 @@ const ICONS: Record<string, string> = {
   COMMISSION_EARNED: "💰",
   COMMISSION_RATE_CHANGED: "📊",
   WITHDRAWAL_REQUESTED: "💸",
+  WITHDRAWAL_PROCESSING: "🔄",
   WITHDRAWAL_COMPLETED: "💳",
+  WITHDRAWAL_REJECTED: "⛔",
   REWARD_COUPON_EARNED: "🎁",
   // Afiliados — productos de la tienda
   NEW_PRODUCT: "✨",

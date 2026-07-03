@@ -1013,6 +1013,11 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                 )}
               </div>
             </div>
+            {(config.analytics?.googleAnalyticsId?.trim() || config.analytics?.facebookPixelId?.trim()) && (
+              <div style={{ marginTop: 14, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 12px", fontSize: 11, color: "#92400e", lineHeight: 1.6 }}>
+                <strong>Obligación legal:</strong> Al activar Google Analytics o Meta Pixel, estás instalando cookies de terceros en tu tienda. Según la Ley 25.326 de Protección de Datos Personales, debés informarlo en la política de privacidad de tu tienda y obtener el consentimiento de tus compradores. TiendaApps no es responsable por el incumplimiento de esta obligación.
+              </div>
+            )}
           </div>
 
         </div>

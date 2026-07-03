@@ -256,7 +256,7 @@ export default function EstadisticasPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Wallet className="h-3.5 w-3.5 text-indigo-500" />
-                        <span className="text-sm text-gray-600 dark:text-gray-400">En billetera (a retirar)</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">En comisiones (a retirar)</span>
                       </div>
                       <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
                         ${fmt(current.commissionsToCollect)}

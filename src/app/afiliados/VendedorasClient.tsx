@@ -85,19 +85,24 @@ function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, x: number, 
   }
 
   lines.forEach((item, index) => ctx.fillText(item, x, y + index * lineHeight));
+  return lines.length;
 }
 
 function formatCategory(value: string) {
   return value.split("-").filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
-function loadCardImage(src: string) {
+async function loadCardImage(src: string): Promise<HTMLImageElement> {
+  // Usar fetch para evitar que el caché del navegador envenene el canvas (tainted canvas).
+  // Si el servidor no tiene CORS para este origen, fetch lanza TypeError y se propaga al .catch(() => null) del llamador.
+  const res = await fetch(src, { mode: "cors", credentials: "omit" });
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new window.Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => resolve(image);
-    image.onerror = reject;
-    image.src = src;
+    image.onload = () => { URL.revokeObjectURL(objectUrl); resolve(image); };
+    image.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("img load failed")); };
+    image.src = objectUrl;
   });
 }
 
@@ -193,11 +198,13 @@ function drawClasicaTemplate(
 ) {
   const isStory  = size.h >= 1800;
   const isSquare = size.h <= 1100;
-  const imgH = isStory ? px(1080) : isSquare ? px(500) : px(760);
+  const imgH = isStory ? px(1100) : isSquare ? px(520) : px(790);
 
+  // Fondo oscuro para el área de texto
   ctx.fillStyle = "#070b18";
   ctx.fillRect(0, 0, size.w, size.h);
 
+  // Imagen limpia sin efecto — toda la ropa se ve
   if (image) {
     const s = Math.max(size.w / image.width, imgH / image.height);
     ctx.drawImage(image, (size.w - image.width * s) / 2, 0, image.width * s, image.height * s);
@@ -205,47 +212,47 @@ function drawClasicaTemplate(
     ctx.fillStyle = "#111827"; ctx.fillRect(0, 0, size.w, imgH);
   }
 
-  const gradStart = isStory ? px(650) : isSquare ? px(280) : px(420);
-  const grad = ctx.createLinearGradient(0, gradStart, 0, size.h);
-  grad.addColorStop(0, "rgba(7,11,24,0)");
-  grad.addColorStop(0.28, "rgba(7,11,24,.88)");
-  grad.addColorStop(1, "#070b18");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, gradStart - px(60), size.w, size.h);
+  // Degradado solo en el borde inferior de la foto (último 15%)
+  const fadeH = px(120);
+  const fade = ctx.createLinearGradient(0, imgH - fadeH, 0, imgH);
+  fade.addColorStop(0, "rgba(7,11,24,0)");
+  fade.addColorStop(1, "#070b18");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, imgH - fadeH, size.w, fadeH);
 
   drawBadgesRow(ctx, px, product, px(60), px(60));
 
-  let y = imgH + px(44);
+  let y = imgH + px(40);
   ctx.fillStyle = "#a5b4fc";
-  ctx.font = `700 ${px(32)}px Arial`;
+  ctx.font = `700 ${px(30)}px Arial`;
   ctx.fillText(storeName.toUpperCase(), px(72), y);
-  y += px(56);
+  y += px(52);
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = `900 ${px(74)}px Arial`;
-  wrapCanvasText(ctx, product.name, px(72), y, px(930), px(82), 2);
-  y += px(82) * 2 + px(16);
+  ctx.font = `900 ${px(70)}px Arial`;
+  const nameLines = wrapCanvasText(ctx, product.name, px(72), y, px(930), px(78), 2);
+  y += px(78) * nameLines + px(16);
 
   const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
   if (hasDisc) {
     const oldTxt = money(product.comparePrice!);
-    ctx.fillStyle = "#64748b"; ctx.font = `500 ${px(34)}px Arial`;
+    ctx.fillStyle = "#64748b"; ctx.font = `500 ${px(32)}px Arial`;
     ctx.fillText(oldTxt, px(72), y);
     const ow = ctx.measureText(oldTxt).width;
     ctx.strokeStyle = "#64748b"; ctx.lineWidth = px(2);
-    ctx.beginPath(); ctx.moveTo(px(72), y - px(12)); ctx.lineTo(px(72) + ow, y - px(12)); ctx.stroke();
-    y += px(48);
+    ctx.beginPath(); ctx.moveTo(px(72), y - px(11)); ctx.lineTo(px(72) + ow, y - px(11)); ctx.stroke();
+    y += px(46);
   }
-  ctx.fillStyle = "#34d399"; ctx.font = `900 ${px(68)}px Arial`;
+  ctx.fillStyle = "#34d399"; ctx.font = `900 ${px(66)}px Arial`;
   ctx.fillText(money(product.price), px(72), y);
-  y += px(78);
+  y += px(76);
 
   y = drawCuotas(ctx, px, product, px(72), y, "#94a3b8");
 
-  if (product.description && y < size.h - px(180)) {
-    ctx.fillStyle = "#cbd5e1"; ctx.font = `400 ${px(29)}px Arial`;
-    wrapCanvasText(ctx, product.description, px(72), y, px(780), px(40), 2);
-    y += px(40) * 2 + px(14);
+  if (product.description && y < size.h - px(170)) {
+    ctx.fillStyle = "#cbd5e1"; ctx.font = `400 ${px(28)}px Arial`;
+    const dLines = wrapCanvasText(ctx, product.description, px(72), y, px(800), px(40), 2);
+    y += px(40) * dLines + px(14);
   }
 
   if (y < size.h - px(80)) {
@@ -291,8 +298,8 @@ function drawMinimalTemplate(
   y += px(46);
 
   ctx.fillStyle = "#0f172a"; ctx.font = `900 ${px(62)}px Arial`;
-  wrapCanvasText(ctx, product.name, margin, y, size.w - margin * 2, px(70), 2);
-  y += px(70) * 2 + px(16);
+  const nameLines = wrapCanvasText(ctx, product.name, margin, y, size.w - margin * 2, px(70), 2);
+  y += px(70) * nameLines + px(16);
 
   const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
   if (hasDisc) {
@@ -312,8 +319,8 @@ function drawMinimalTemplate(
 
   if (product.description && y < size.h - px(170)) {
     ctx.fillStyle = "#64748b"; ctx.font = `400 ${px(28)}px Arial`;
-    wrapCanvasText(ctx, product.description, margin, y, size.w - margin * 2, px(40), 2);
-    y += px(40) * 2 + px(14);
+    const dLines = wrapCanvasText(ctx, product.description, margin, y, size.w - margin * 2, px(40), 2);
+    y += px(40) * dLines + px(14);
   }
 
   if (y < size.h - px(70)) {
@@ -335,10 +342,11 @@ function drawOfertaTemplate(
 ) {
   const isStory  = size.h >= 1800;
   const isSquare = size.h <= 1100;
-  const imgH = isStory ? px(1080) : isSquare ? px(500) : px(820);
+  const imgH = isStory ? px(1100) : isSquare ? px(520) : px(800);
 
   ctx.fillStyle = "#1a0a05"; ctx.fillRect(0, 0, size.w, size.h);
 
+  // Imagen limpia — ropa completamente visible
   if (image) {
     const s = Math.max(size.w / image.width, imgH / image.height);
     ctx.drawImage(image, (size.w - image.width * s) / 2, 0, image.width * s, image.height * s);
@@ -346,52 +354,52 @@ function drawOfertaTemplate(
     ctx.fillStyle = "#3f1d0a"; ctx.fillRect(0, 0, size.w, imgH);
   }
 
-  const gradStart = isStory ? px(680) : isSquare ? px(290) : px(480);
-  const grad = ctx.createLinearGradient(0, gradStart, 0, size.h);
-  grad.addColorStop(0, "rgba(26,10,5,0)");
-  grad.addColorStop(0.3, "rgba(26,10,5,.9)");
-  grad.addColorStop(1, "#1a0a05");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, gradStart - px(80), size.w, size.h);
+  // Degradado solo al borde inferior de la foto
+  const fadeH = px(110);
+  const fade = ctx.createLinearGradient(0, imgH - fadeH, 0, imgH);
+  fade.addColorStop(0, "rgba(26,10,5,0)");
+  fade.addColorStop(1, "#1a0a05");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, imgH - fadeH, size.w, fadeH);
 
   const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
   if (hasDisc) {
     const pct = Math.round((1 - product.price / product.comparePrice!) * 100);
     ctx.fillStyle = "#f97316";
-    ctx.beginPath(); ctx.roundRect(px(56), px(56), px(160), px(66), px(16)); ctx.fill();
-    ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(36)}px Arial`;
-    ctx.fillText(`-${pct}%`, px(80), px(106));
+    ctx.beginPath(); ctx.roundRect(px(56), px(52), px(150), px(62), px(14)); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(34)}px Arial`;
+    ctx.fillText(`-${pct}%`, px(76), px(98));
   }
-  drawBadgesRow(ctx, px, product, hasDisc ? px(230) : px(56), px(56));
+  drawBadgesRow(ctx, px, product, hasDisc ? px(220) : px(56), px(52));
 
-  let y = imgH + px(40);
-  ctx.fillStyle = "#fdba74"; ctx.font = `800 ${px(32)}px Arial`;
+  let y = imgH + px(38);
+  ctx.fillStyle = "#fdba74"; ctx.font = `800 ${px(30)}px Arial`;
   ctx.fillText(storeName.toUpperCase(), px(72), y);
-  y += px(52);
+  y += px(50);
 
-  ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(72)}px Arial`;
-  wrapCanvasText(ctx, product.name, px(72), y, px(930), px(80), 2);
-  y += px(80) * 2 + px(18);
+  ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(70)}px Arial`;
+  const nameLines = wrapCanvasText(ctx, product.name, px(72), y, px(930), px(78), 2);
+  y += px(78) * nameLines + px(18);
 
   if (hasDisc) {
     const oldTxt = money(product.comparePrice!);
-    ctx.fillStyle = "#94a3b8"; ctx.font = `500 ${px(34)}px Arial`;
+    ctx.fillStyle = "#94a3b8"; ctx.font = `500 ${px(32)}px Arial`;
     ctx.fillText(oldTxt, px(72), y);
     const ow = ctx.measureText(oldTxt).width;
     ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = px(2);
-    ctx.beginPath(); ctx.moveTo(px(72), y - px(12)); ctx.lineTo(px(72) + ow, y - px(12)); ctx.stroke();
-    y += px(50);
+    ctx.beginPath(); ctx.moveTo(px(72), y - px(11)); ctx.lineTo(px(72) + ow, y - px(11)); ctx.stroke();
+    y += px(48);
   }
-  ctx.fillStyle = "#fb923c"; ctx.font = `900 ${px(70)}px Arial`;
+  ctx.fillStyle = "#fb923c"; ctx.font = `900 ${px(68)}px Arial`;
   ctx.fillText(money(product.price), px(72), y);
-  y += px(82);
+  y += px(80);
 
   y = drawCuotas(ctx, px, product, px(72), y, "#fdba74");
 
   if (product.description && y < size.h - px(160)) {
-    ctx.fillStyle = "#d4846a"; ctx.font = `400 ${px(29)}px Arial`;
-    wrapCanvasText(ctx, product.description, px(72), y, px(780), px(40), 2);
-    y += px(40) * 2 + px(14);
+    ctx.fillStyle = "#d4846a"; ctx.font = `400 ${px(28)}px Arial`;
+    const dLines = wrapCanvasText(ctx, product.description, px(72), y, px(800), px(40), 2);
+    y += px(40) * dLines + px(14);
   }
 
   if (y < size.h - px(80)) {
@@ -413,69 +421,70 @@ function drawNeonTemplate(
 ) {
   const isStory  = size.h >= 1800;
   const isSquare = size.h <= 1100;
-  const imgH = isStory ? px(1080) : isSquare ? px(500) : px(760);
+  const imgH = isStory ? px(1100) : isSquare ? px(520) : px(790);
 
   ctx.fillStyle = "#07040f"; ctx.fillRect(0, 0, size.w, size.h);
 
+  // Imagen a opacidad completa — la ropa se ve clara
   if (image) {
-    ctx.save(); ctx.globalAlpha = 0.72;
     const s = Math.max(size.w / image.width, imgH / image.height);
     ctx.drawImage(image, (size.w - image.width * s) / 2, 0, image.width * s, image.height * s);
-    ctx.restore();
   } else {
     ctx.fillStyle = "#1a0829"; ctx.fillRect(0, 0, size.w, imgH);
   }
 
-  const gradStart = isStory ? px(600) : isSquare ? px(260) : px(380);
-  const grad = ctx.createLinearGradient(0, gradStart, 0, size.h);
-  grad.addColorStop(0, "rgba(7,4,15,0)");
-  grad.addColorStop(0.25, "rgba(7,4,15,0.92)");
-  grad.addColorStop(1, "#07040f");
-  ctx.fillStyle = grad; ctx.fillRect(0, gradStart - px(60), size.w, size.h);
+  // Degradado solo en el borde inferior (último 15%)
+  const fadeH = px(120);
+  const fade = ctx.createLinearGradient(0, imgH - fadeH, 0, imgH);
+  fade.addColorStop(0, "rgba(7,4,15,0)");
+  fade.addColorStop(1, "#07040f");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, imgH - fadeH, size.w, fadeH);
 
+  // Línea neon divisoria
   const lineGrad = ctx.createLinearGradient(0, 0, size.w, 0);
   lineGrad.addColorStop(0, "transparent");
   lineGrad.addColorStop(0.3, "#b026ff");
   lineGrad.addColorStop(0.6, "#ff0099");
   lineGrad.addColorStop(1, "transparent");
   ctx.strokeStyle = lineGrad; ctx.lineWidth = px(3);
-  ctx.beginPath(); ctx.moveTo(0, imgH + px(8)); ctx.lineTo(size.w, imgH + px(8)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, imgH + px(6)); ctx.lineTo(size.w, imgH + px(6)); ctx.stroke();
 
-  drawBadgesRow(ctx, px, product, px(60), px(60));
+  drawBadgesRow(ctx, px, product, px(60), px(56));
 
-  let y = imgH + px(48);
+  let y = imgH + px(44);
   const sg = ctx.createLinearGradient(px(72), 0, px(72) + px(400), 0);
   sg.addColorStop(0, "#b026ff"); sg.addColorStop(1, "#ff0099");
   ctx.fillStyle = sg; ctx.font = `800 ${px(30)}px Arial`;
   ctx.fillText(storeName.toUpperCase(), px(72), y);
-  y += px(52);
+  y += px(50);
 
-  ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(72)}px Arial`;
-  wrapCanvasText(ctx, product.name, px(72), y, px(930), px(80), 2);
-  y += px(80) * 2 + px(18);
+  ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(70)}px Arial`;
+  const nameLines = wrapCanvasText(ctx, product.name, px(72), y, px(930), px(78), 2);
+  y += px(78) * nameLines + px(18);
 
   const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
   if (hasDisc) {
     const oldTxt = money(product.comparePrice!);
-    ctx.fillStyle = "#6b21a8"; ctx.font = `500 ${px(34)}px Arial`;
+    ctx.fillStyle = "#6b21a8"; ctx.font = `500 ${px(32)}px Arial`;
     ctx.fillText(oldTxt, px(72), y);
     const ow = ctx.measureText(oldTxt).width;
     ctx.strokeStyle = "#6b21a8"; ctx.lineWidth = px(2);
-    ctx.beginPath(); ctx.moveTo(px(72), y - px(12)); ctx.lineTo(px(72) + ow, y - px(12)); ctx.stroke();
-    y += px(48);
+    ctx.beginPath(); ctx.moveTo(px(72), y - px(11)); ctx.lineTo(px(72) + ow, y - px(11)); ctx.stroke();
+    y += px(46);
   }
   const pg = ctx.createLinearGradient(px(72), 0, px(72) + px(500), 0);
   pg.addColorStop(0, "#b026ff"); pg.addColorStop(1, "#ff0099");
-  ctx.fillStyle = pg; ctx.font = `900 ${px(70)}px Arial`;
+  ctx.fillStyle = pg; ctx.font = `900 ${px(68)}px Arial`;
   ctx.fillText(money(product.price), px(72), y);
-  y += px(80);
+  y += px(78);
 
   y = drawCuotas(ctx, px, product, px(72), y, "#a855f7");
 
   if (product.description && y < size.h - px(170)) {
-    ctx.fillStyle = "#c4b5fd"; ctx.font = `400 ${px(29)}px Arial`;
-    wrapCanvasText(ctx, product.description, px(72), y, px(780), px(40), 2);
-    y += px(40) * 2 + px(14);
+    ctx.fillStyle = "#c4b5fd"; ctx.font = `400 ${px(28)}px Arial`;
+    const dLines = wrapCanvasText(ctx, product.description, px(72), y, px(800), px(40), 2);
+    y += px(40) * dLines + px(14);
   }
 
   if (y < size.h - px(80)) {
@@ -532,8 +541,8 @@ function drawLuxuryTemplate(
   y += px(48);
 
   ctx.fillStyle = "#f5f0e8"; ctx.font = `700 ${px(60)}px Arial`;
-  wrapCanvasText(ctx, product.name, margin, y, size.w - margin * 2, px(68), 2);
-  y += px(68) * 2 + px(20);
+  const nameLines = wrapCanvasText(ctx, product.name, margin, y, size.w - margin * 2, px(68), 2);
+  y += px(68) * nameLines + px(20);
 
   const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
   if (hasDisc) {
@@ -553,8 +562,8 @@ function drawLuxuryTemplate(
 
   if (product.description && y < size.h - px(160)) {
     ctx.fillStyle = "#8a8070"; ctx.font = `400 ${px(27)}px Arial`;
-    wrapCanvasText(ctx, product.description, margin, y, size.w - margin * 2, px(38), 2);
-    y += px(38) * 2 + px(16);
+    const dLines = wrapCanvasText(ctx, product.description, margin, y, size.w - margin * 2, px(38), 2);
+    y += px(38) * dLines + px(16);
   }
 
   if (y < size.h - px(70)) {
@@ -606,8 +615,8 @@ function drawDuoTemplate(
   y += px(48);
 
   ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(64)}px Arial`;
-  wrapCanvasText(ctx, product.name, pad, y, size.w - pad * 2, px(72), 2);
-  y += px(72) * 2 + px(16);
+  const nameLines = wrapCanvasText(ctx, product.name, pad, y, size.w - pad * 2, px(72), 2);
+  y += px(72) * nameLines + px(16);
 
   const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
   if (hasDisc) {
@@ -627,8 +636,8 @@ function drawDuoTemplate(
 
   if (product.description && y < size.h - px(160)) {
     ctx.fillStyle = "#9ca3af"; ctx.font = `400 ${px(28)}px Arial`;
-    wrapCanvasText(ctx, product.description, pad, y, size.w - pad * 2, px(40), 2);
-    y += px(40) * 2 + px(14);
+    const dLines = wrapCanvasText(ctx, product.description, pad, y, size.w - pad * 2, px(40), 2);
+    y += px(40) * dLines + px(14);
   }
 
   if (y < size.h - px(80)) {
@@ -686,8 +695,8 @@ function TemplatePreview({
   return (
     <canvas
       ref={canvasRef}
-      style={{ width: PREVIEW_W, height: previewH }}
-      className="w-full h-auto rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-gray-800"
+      style={{ display: "block", width: "100%", aspectRatio: `${PREVIEW_W} / ${previewH}` }}
+      className="rounded-xl border border-gray-200 dark:border-white/10"
     />
   );
 }
@@ -703,12 +712,24 @@ function TemplatePickerModal({
   onFormatChange: (f: PlacaFormat) => void;
   onClose: () => void;
 }) {
+  const [localSelected, setLocalSelected] = useState<PlacaTemplateId | null>(selected);
+  const [confirmed, setConfirmed] = useState(false);
+
   const pp: PlacaProduct & { images: string } = {
     name: product.name, price: product.price, comparePrice: product.comparePrice,
     description: product.description, cuotas: product.cuotas ?? 0,
     isNew: false, isLowStock: false, isBestSeller: false,
     images: product.images,
   };
+
+  function handleConfirm() {
+    if (!localSelected || confirmed) return;
+    setConfirmed(true);
+    setTimeout(() => onSelect(localSelected), 380);
+  }
+
+  const selectedLabel = PLACA_TEMPLATES.find((t) => t.id === localSelected)?.label;
+
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -747,19 +768,52 @@ function TemplatePickerModal({
         <div className="px-5 pb-1">
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Estilo</p>
         </div>
-        <div className="px-3 sm:px-5 grid grid-cols-3 gap-2 sm:gap-3 overflow-y-auto pb-5">
-          {PLACA_TEMPLATES.map((t) => (
-            <button key={t.id} onClick={() => onSelect(t.id)}
-              className={`flex flex-col gap-1.5 rounded-2xl p-1.5 border-2 transition-all text-left ${selected === t.id ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10" : "border-transparent hover:border-gray-200 dark:hover:border-white/10"}`}>
-              <TemplatePreview templateId={t.id} format={selectedFormat} product={pp} storeName={storeName} />
-              <div>
-                <p className="text-[11px] sm:text-xs font-bold text-gray-900 dark:text-white leading-tight">{t.label}</p>
-                <p className="hidden sm:block text-[10px] text-gray-400 dark:text-gray-500 leading-tight mt-0.5">{t.description}</p>
-              </div>
-            </button>
-          ))}
+        <div className="px-3 sm:px-5 grid grid-cols-3 gap-2 sm:gap-3 overflow-y-auto pb-3 flex-1 min-h-0">
+          {PLACA_TEMPLATES.map((t) => {
+            const isSelected = localSelected === t.id;
+            return (
+              <button key={t.id} onClick={() => setLocalSelected(t.id)}
+                className={`relative flex flex-col gap-1.5 rounded-2xl p-1.5 border-2 transition-all text-left ${isSelected ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 scale-[1.03] shadow-md shadow-indigo-200 dark:shadow-indigo-900/40" : "border-transparent hover:border-gray-200 dark:hover:border-white/10"}`}>
+                <div className="relative">
+                  <TemplatePreview templateId={t.id} format={selectedFormat} product={pp} storeName={storeName} />
+                  {isSelected && (
+                    <div className="absolute top-1.5 right-1.5 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center shadow-lg">
+                      <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className={`text-[11px] sm:text-xs font-bold leading-tight transition-colors ${isSelected ? "text-indigo-600 dark:text-indigo-400" : "text-gray-900 dark:text-white"}`}>{t.label}</p>
+                  <p className="hidden sm:block text-[10px] text-gray-400 dark:text-gray-500 leading-tight mt-0.5">{t.description}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
-        <p className="px-5 pb-4 text-xs text-gray-400 dark:text-gray-600">Tu elección se guarda para la próxima vez.</p>
+
+        {/* Confirm button */}
+        <div className="px-5 py-4 border-t border-gray-100 dark:border-white/5">
+          <button
+            onClick={handleConfirm}
+            disabled={!localSelected}
+            className={`w-full py-3.5 rounded-2xl font-black text-sm transition-all duration-300 ${
+              confirmed
+                ? "bg-green-500 text-white scale-95"
+                : localSelected
+                  ? "bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white shadow-lg shadow-indigo-500/30"
+                  : "bg-gray-100 dark:bg-white/5 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            {confirmed
+              ? `✓ Aplicando ${selectedLabel}…`
+              : localSelected
+                ? `Generar placa · ${selectedLabel}`
+                : "Elegí un estilo"}
+          </button>
+          <p className="mt-2 text-center text-[10px] text-gray-400 dark:text-gray-600">Tu elección se guarda para la próxima vez.</p>
+        </div>
       </motion.div>
     </motion.div>
   );
@@ -1781,7 +1835,7 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
       }
       const err = await res.json().catch(() => ({}));
       setDeleteError(err.error === "Bloqueado"
-        ? "Tenés saldo pendiente en tu billetera. Retiralo antes de eliminar tu cuenta."
+        ? "Tenés saldo pendiente en tu panel de comisiones. Retiralo antes de eliminar tu cuenta."
         : (err.error ?? "Ocurrió un error. Intentá de nuevo."));
     } catch {
       setDeleteError("Error de conexión. Intentá de nuevo.");
@@ -1946,9 +2000,9 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
                 <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                    Tenés ${pendingBalance.toLocaleString("es-AR")} pendientes en tu billetera
+                    Tenés ${pendingBalance.toLocaleString("es-AR")} pendientes en tu panel de comisiones
                   </p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400/80 mt-0.5">Retiralos desde &ldquo;Mi billetera&rdquo; antes de eliminar tu cuenta.</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400/80 mt-0.5">Retiralos desde &ldquo;Mis comisiones&rdquo; antes de eliminar tu cuenta.</p>
                 </div>
               </div>
             ) : (
@@ -2103,7 +2157,7 @@ const STATUS: Record<string, { label: string; cls: string; dot: string }> = {
 const HELP_SECTIONS: { icon: React.ElementType; iconColor: string; title: string; body: string }[] = [
   { icon: Store, iconColor: "text-indigo-500", title: "Tiendas disponibles", body: "Postulate a las tiendas que te interesen. Cuando el dueño te acepte, vas a poder compartir tus productos y ganar comisión por cada venta." },
   { icon: Share2, iconColor: "text-purple-500", title: "Compartir", body: "Desde cada producto generás tu link de afiliada, un código QR o una placa lista para redes (Instagram, WhatsApp, etc). Todo lleva tu identificador para que la venta te quede asignada." },
-  { icon: Wallet, iconColor: "text-emerald-500", title: "Mi billetera", body: "Ahí ves tu saldo disponible y tus comisiones pendientes de aprobación. Podés pedir el retiro cuando quieras; el dueño de la tienda te transfiere directamente." },
+  { icon: Wallet, iconColor: "text-emerald-500", title: "Mis comisiones", body: "Ahí ves tu saldo disponible y tus comisiones pendientes de aprobación. Podés pedir el retiro cuando quieras a tu cuenta bancaria." },
   { icon: Award, iconColor: "text-amber-500", title: "Mis premios", body: "Cupones de descuento que ganás automáticamente según tu nivel (Plata, Oro, Diamante) calculado por tus ventas del mes. Se usan en cualquier tienda de TiendaApps." },
   { icon: BarChart3, iconColor: "text-blue-500", title: "Estadísticas", body: "Pedidos generados, clicks en tus links y de qué canal vienen (WhatsApp, Instagram, etc), para que sepas qué te está funcionando mejor." },
   { icon: Trophy, iconColor: "text-amber-500", title: "Ranking", body: "Tu posición comparada con las demás afiliadas de cada tienda, según comisiones generadas." },
@@ -2288,7 +2342,7 @@ export default function VendedorasClient() {
                 { label: "Tiendas activas", value: activeStores.length, icon: CheckCircle, color: "text-emerald-400" },
                 { label: "Solicitudes pendientes", value: pendingStores.length, icon: Clock, color: "text-yellow-400" },
                 { label: "Tiendas disponibles", value: availableStores.length > 0 ? `${availableStores.length} →` : "0", icon: Store, color: "text-indigo-400", link: availableStores.length > 0 ? "/afiliados/tiendas" : undefined },
-                { label: "Mi billetera", value: "Ver →", icon: Wallet, color: "text-purple-400", link: "/afiliados/billetera" },
+                { label: "Mis comisiones", value: "Ver →", icon: Wallet, color: "text-purple-400", link: "/afiliados/billetera" },
               ].map(({ label, value, icon: Icon, color, link }) => (
                 link ? (
                   <Link key={label} href={link} className="bg-white dark:bg-gray-900/80 hover:bg-gray-50 dark:hover:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-2xl p-4 transition-all group shadow-sm">
@@ -2357,7 +2411,7 @@ export default function VendedorasClient() {
                       <div className="p-5 space-y-4">
                         {paused ? (
                           <div className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/8 rounded-2xl p-4 text-center">
-                            <p className="text-sm text-gray-500 dark:text-gray-400">La dueña pausó el programa de afiliados temporalmente. Tu saldo en billetera sigue disponible para retirar.</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">La dueña pausó el programa de afiliados temporalmente. Tu saldo en comisiones sigue disponible para retirar.</p>
                           </div>
                         ) : mpDisconnected ? (
                           <div className="bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20 rounded-2xl p-4 text-center">

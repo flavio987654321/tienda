@@ -30,6 +30,7 @@
     "@tiptap/starter-kit": "^3.23.4",
     "@types/web-push": "^3.6.4",
     "@upstash/redis": "^1.38.0",
+    "@vercel/functions": "^3.7.5",
     "better-sqlite3": "^12.9.0",
     "file-type": "^22.0.1",
     "framer-motion": "^12.38.0",

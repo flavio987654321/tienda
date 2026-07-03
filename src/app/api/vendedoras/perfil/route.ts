@@ -11,7 +11,7 @@ const MAX_LENGTHS: Record<string, number> = {
   phone: 30,
 };
 
-const PLACA_TEMPLATE_IDS = ["clasica", "minimal", "oferta"];
+const PLACA_TEMPLATE_IDS = ["clasica", "minimal", "oferta", "neon", "luxury", "duo"];
 
 const PROFILE_SELECT = {
   id: true, name: true, email: true, image: true, bio: true, city: true,

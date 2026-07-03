@@ -162,7 +162,7 @@ export async function DELETE(req: NextRequest) {
             userId,
             type: "STORE_CLOSED",
             title: `${storeData.name} cerró su tienda`,
-            body: "Tu link de afiliado fue desactivado. Los saldos ya acreditados en tu billetera siguen disponibles para retirar.",
+            body: "Tu link de afiliado fue desactivado. Los saldos ya acreditados en tu panel de comisiones siguen disponibles para retirar.",
             link: "/afiliados",
           }))
         );

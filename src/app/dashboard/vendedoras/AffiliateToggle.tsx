@@ -233,21 +233,21 @@ export default function AffiliateToggle({
               <p><strong className="text-gray-900">Tus obligaciones como titular</strong></p>
               <ul className="list-disc pl-4 space-y-1.5">
                 {isInquiryStore ? (
-                  <li>Confirmar cada consulta como venta en <strong className="text-gray-800">Dashboard → Consultas</strong> para que la comisión se acredite automáticamente en la billetera de la afiliada.</li>
+                  <li>Confirmar cada consulta como venta en <strong className="text-gray-800">Dashboard → Consultas</strong> para que la comisión se acredite automáticamente en el panel de comisiones de la afiliada.</li>
                 ) : (
-                  <li>Mantener tu cuenta de MercadoPago conectada. Las comisiones se descuentan automáticamente de cada venta y TiendaApps las acredita en la billetera de la afiliada — no tenés que hacer nada manualmente.</li>
+                  <li>Mantener tu cuenta de MercadoPago conectada. Las comisiones se descuentan automáticamente de cada venta y TiendaApps las acredita en el panel de comisiones de la afiliada — no tenés que hacer nada manualmente.</li>
                 )}
-                <li>Los retiros de billetera los gestiona directamente TiendaApps. No tenés responsabilidad sobre la transferencia de fondos a las afiliadas.</li>
+                <li>Los retiros los gestiona directamente TiendaApps. No tenés responsabilidad sobre la transferencia de fondos a las afiliadas.</li>
                 <li>No pausar ni dar de baja a una afiliada con el fin de no pagarle comisiones ya devengadas.</li>
-                <li>Notificar con al menos <strong className="text-gray-800">48 horas de anticipación</strong> antes de dar de baja a una afiliada activa, salvo caso de fraude comprobado.</li>
+                <li>Notificar con al menos <strong className="text-gray-800">5 días corridos de anticipación</strong> antes de modificar la tasa de comisión, o con <strong className="text-gray-800">48 horas</strong> antes de dar de baja a una afiliada activa sin causa de fraude.</li>
                 <li>Informar a las afiliadas de cualquier cambio en la tasa de comisión. El nuevo porcentaje aplica a pedidos futuros, nunca de forma retroactiva.</li>
               </ul>
 
               <p><strong className="text-gray-900">Responsabilidades de la plataforma</strong><br />
-                TiendaApps provee la infraestructura de tracking y billetera.{" "}
+                TiendaApps provee la infraestructura de tracking y panel de comisiones.{" "}
                 {isInquiryStore
-                  ? "Al confirmar una consulta como venta, TiendaApps acredita automáticamente la comisión en la billetera de la afiliada."
-                  : "Al confirmarse cada venta por MercadoPago, TiendaApps retiene automáticamente la comisión y la acredita en la billetera de la afiliada."
+                  ? "Al confirmar una consulta como venta, TiendaApps acredita automáticamente la comisión en el panel de la afiliada."
+                  : "Al confirmarse cada venta por MercadoPago, TiendaApps retiene automáticamente la comisión y la acredita en el panel de la afiliada."
                 }{" "}
                 <strong className="text-gray-800">TiendaApps es el responsable directo del pago de comisiones — no el titular de la tienda.</strong> TiendaApps no garantiza un volumen mínimo de ventas.</p>
 
@@ -255,10 +255,10 @@ export default function AffiliateToggle({
                 Podés cambiar el porcentaje de comisión en cualquier momento. El nuevo valor aplica a pedidos futuros. Los pedidos ya realizados conservan la tasa original.</p>
 
               <p><strong className="text-gray-900">Desactivación del programa</strong><br />
-                Si desactivás el programa, los links de afiliadas dejan de funcionar inmediatamente. Los saldos pendientes en billetera siguen siendo válidos y debés honrarlos. Si cancelás tu suscripción a TiendaApps teniendo saldos pendientes, las comisiones ya acreditadas siguen siendo exigibles.</p>
+                Si desactivás el programa, los links de afiliadas dejan de funcionar inmediatamente. Las comisiones pendientes siguen siendo válidas y debés honrarlas. Si cancelás tu suscripción a TiendaApps teniendo comisiones pendientes, las ya acreditadas siguen siendo exigibles.</p>
 
               <p><strong className="text-gray-900">Acuerdos fuera de la plataforma</strong><br />
-                Queda prohibido acordar pagos o compensaciones con afiliadas por fuera de la plataforma para evitar el sistema de billetera. Toda comisión debe procesarse a través de TiendaApps.</p>
+                Queda prohibido acordar pagos o compensaciones con afiliadas por fuera de la plataforma. Toda comisión debe procesarse a través de TiendaApps.</p>
 
               <Link href="/terminos?role=owner" target="_blank" className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-xs font-medium mt-1">
                 Ver términos completos para dueños <ExternalLink className="h-3 w-3" />
@@ -380,7 +380,7 @@ export default function AffiliateToggle({
                 {pendingBalance > 0 && (
                   <li className="flex items-start gap-2">
                     <span className="text-red-500 font-bold mt-0.5">•</span>
-                    Hay <strong className="text-red-600">{fmt(pendingBalance)} en billeteras pendientes</strong> de retiro que seguís debiendo honrar.
+                    Hay <strong className="text-red-600">{fmt(pendingBalance)} en comisiones pendientes</strong> de retiro que seguís debiendo honrar.
                   </li>
                 )}
               </ul>

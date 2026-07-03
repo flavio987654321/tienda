@@ -56,6 +56,19 @@ const CONTENT = {
         ],
       },
       {
+        title: "2 bis a. Base legal de cada tratamiento (Ley 25.326)",
+        body: "Conforme al art. 5 de la Ley 25.326, cada tratamiento de datos tiene la siguiente base legal:",
+        list: [
+          "Datos de cuenta y operación de la tienda (nombre, email, productos, pedidos): ejecución del contrato de servicio entre vos y TiendaApps (art. 5 inc. b).",
+          "Datos bancarios de afiliados (CBU, CUIL, alias): ejecución del contrato de afiliación y liquidación de comisiones (art. 5 inc. b).",
+          "Datos de verificación de identidad (DNI, selfie): consentimiento expreso del titular (art. 5 inc. a y art. 7). Es voluntario y revocable.",
+          "Datos de suscriptores push: consentimiento expreso del visitante al suscribirse (art. 5 inc. a).",
+          "Logs de auditoría y seguridad: interés legítimo en la prevención de fraudes y obligación legal (art. 5 inc. c y f).",
+          "Historial de pedidos conservado post-cancelación: obligación legal para resolución de disputas (Ley 24.240 art. 10 bis) e interés legítimo (art. 5 inc. f).",
+          "Datos de contacto para envío de emails transaccionales: ejecución del contrato (art. 5 inc. b).",
+        ],
+      },
+      {
         title: "2 ter. Sasha, asistente con inteligencia artificial",
         body: "Sasha es un asistente conversacional que te ayuda a entender cómo viene tu tienda y a usar el panel. Funciona con un modelo de inteligencia artificial de un tercero:",
         list: [
@@ -84,6 +97,7 @@ const CONTENT = {
         title: "4. Procesadores de datos (terceros que procesan tus datos)",
         body: "No vendemos tus datos. Trabajamos con los siguientes proveedores que procesan datos en tu nombre:",
         list: [
+          "Transferencias internacionales: los proveedores detallados a continuación procesan datos en servidores fuera de Argentina (principalmente EE.UU.). Al usar TiendaApps, aceptás estas transferencias internacionales conforme al art. 12 de la Ley 25.326.",
           "Supabase (supabase.com): gestión de autenticación, base de datos y almacenamiento de archivos (incluyendo documentos de verificación en bucket privado). Servidores en AWS us-east-1. Política de privacidad: supabase.com/privacy",
           "Vercel (vercel.com): hosting y ejecución de la plataforma. Servidores en AWS/Cloudflare. Política de privacidad: vercel.com/legal/privacy-policy",
           "Mercado Pago (mercadopago.com.ar): procesamiento de pagos de suscripción. Nunca almacenamos datos de tarjetas — Mercado Pago gestiona todo con cumplimiento PCI-DSS nivel 1. Política de privacidad: mercadopago.com.ar/privacidad",
@@ -112,6 +126,7 @@ const CONTENT = {
           "Historial de pedidos: 12 meses adicionales tras el cierre de cuenta para resolver disputas o reclamaciones de garantía.",
           "Datos bancarios cifrados (CBU/CUIL): eliminados junto con la cuenta. No se conservan post-cancelación.",
           "Backups automáticos de base de datos: 30 días de retención gestionados por Supabase. Los backups no permiten recuperar una cuenta eliminada.",
+          "Logs técnicos del servidor (Vercel): hasta 24 horas, gestionados automáticamente por la infraestructura de Vercel. Incluyen registros de webhooks de MercadoPago y errores de sistema.",
           "Logs de auditoría y seguridad: 90 días máximo.",
           "Para solicitar eliminación anticipada escribí a marketplacemitienda@gmail.com con el asunto 'Eliminación de datos — [tu email de cuenta]'.",
         ],
@@ -150,7 +165,7 @@ const CONTENT = {
         list: [
           "Datos de cuenta: nombre, email y contraseña (almacenada con hash bcrypt).",
           "Datos de actividad: ventas generadas, clicks en tu link, comisiones acumuladas.",
-          "Datos de cobro: información necesaria para liquidar comisiones (puede incluir CUIT/CUIL, CBU/alias). Si conectás tu cuenta de MercadoPago, almacenamos un token de acceso de MP (cifrado con AES-256-GCM) que usamos exclusivamente para transferirte comisiones automáticamente. Nunca usamos ese token para otro fin.",
+          "Datos de cobro: información necesaria para liquidar comisiones (puede incluir CUIT/CUIL, CBU/alias), almacenada cifrada con AES-256-GCM.",
           "Datos de uso: acciones en el panel y tiendas visitadas.",
         ],
       },
@@ -182,7 +197,7 @@ const CONTENT = {
         body: "No vendemos tus datos. Los compartimos únicamente con:",
         list: [
           "Los dueños de tiendas a las que estés afiliado (solo tus estadísticas de ventas, no tus datos personales).",
-          "MercadoPago: si conectaste tu cuenta de MP, el token de acceso se usa para transferirte comisiones via la Transfer API de MercadoPago. TiendaApps no comparte tu token con terceros distintos de MercadoPago.",
+          "MercadoPago: procesamos cobros a través de la cuenta de MercadoPago del dueño de la tienda. TiendaApps no almacena tokens de acceso de MP de los afiliados.",
           "Supabase y Vercel como proveedores de infraestructura.",
           "Autoridades competentes cuando sea requerido por ley.",
         ],
@@ -282,8 +297,8 @@ const CONTENT = {
         ],
       },
       {
-        title: "6. Cookies",
-        body: "Usamos cookies de sesión para mantenerte autenticado. No usamos cookies de tracking de terceros ni publicidad comportamental.",
+        title: "6. Cookies y tecnologías de seguimiento",
+        body: "TiendaApps (la plataforma) usa únicamente cookies de sesión estrictamente necesarias para mantenerte autenticado (cookies técnicas, gestionadas por NextAuth.js). TiendaApps no instala Google Analytics, Meta Pixel, TikTok Pixel, Hotjar, ni ninguna herramienta propia de analítica comportamental. Sin embargo, cada dueño de tienda puede configurar de forma opcional su propio Google Analytics (GA4) y/o Meta Pixel (Facebook Pixel) dentro de su tienda. Si una tienda tiene estos trackers activados, cuando visitás esa tienda los scripts de Google o Meta se ejecutan en tu navegador bajo las políticas de privacidad de esas empresas — no de TiendaApps. El dueño de la tienda es el único responsable de informar a sus compradores sobre el uso de esas herramientas en sus propios términos y política de privacidad. Si querés saber si una tienda específica usa trackers, consultá su política de privacidad o escribile directamente.",
       },
       {
         title: "6 bis. Notificaciones push de tiendas",
@@ -441,7 +456,7 @@ export default async function PrivacidadPage({
             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Responsable del tratamiento de datos</p>
             <p><span className="text-gray-500">Nombre:</span> Flavio Cesar Soltero Legoas</p>
             <p><span className="text-gray-500">CUIL:</span> 20-94992405-0</p>
-            <p><span className="text-gray-500">Domicilio:</span> Buenos Aires, Argentina</p>
+            <p><span className="text-gray-500">Domicilio:</span> Bacota 1833 (entre Apolo y Juno), Pinamar, Buenos Aires, CP 7167</p>
             <p><span className="text-gray-500">Email:</span>{" "}
               <a href="mailto:marketplacemitienda@gmail.com" className="text-indigo-400 hover:underline">marketplacemitienda@gmail.com</a>
             </p>

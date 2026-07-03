@@ -70,11 +70,12 @@ const CONTENT = {
           "No podés incluir cláusulas que restrinjan derechos irrenunciables del consumidor ni que contradigan la legislación argentina.",
           "TiendaApps no es parte en la relación contractual entre vos y tus clientes. Los acuerdos establecidos en los términos de tu tienda son exclusivamente entre vos y el comprador.",
           "En caso de que tus términos o políticas sean utilizados para perjudicar a compradores o infringir la ley, TiendaApps puede suspender tu tienda sin previo aviso.",
+          "Tracking y analítica: si configurás Google Analytics (GA4) o Meta Pixel en tu tienda, sos el único responsable de informarlo a tus compradores en tu política de privacidad y de obtener el consentimiento que corresponda según la legislación aplicable.",
         ],
       },
       {
         title: "6. Gestión de afiliados y comisiones",
-        body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. El funcionamiento del programa varía según el tipo de negocio: (a) Tiendas con venta online: para activar el programa necesitás tener conectada tu cuenta de MercadoPago. Cuando se confirma un pago, la plataforma retiene automáticamente la comisión. Si el afiliado tiene su propia cuenta de MercadoPago conectada en TiendaApps, la plataforma le transfiere la comisión directamente a su MP en minutos — sin intervención tuya. Si el afiliado no tiene MP conectado, la comisión se acredita en su billetera de TiendaApps. En ningún caso tenés que realizar transferencias ni intervenir en el pago de comisiones. TiendaApps es el responsable directo del pago de comisiones a los afiliados. (b) Tiendas de consultas (autos, motos y rubros similares): no se requiere MercadoPago. Cuando un potencial cliente consulta a través del link de un afiliado, la plataforma registra esa consulta en tu panel. Si confirmás la consulta como venta, la comisión se acredita automáticamente en la billetera del afiliado. Si la rechazás, no se genera comisión. En ambos casos, el titular de la tienda no tiene intervención ni responsabilidad sobre la transferencia de fondos a los afiliados. Los datos del consultante (nombre, teléfono, mensaje) quedan registrados y son de tu responsabilidad conforme a la Ley 25.326.",
+        body: "Podés aceptar o rechazar solicitudes de afiliados para tu tienda. El funcionamiento del programa varía según el tipo de negocio: (a) Tiendas con venta online: para activar el programa necesitás tener conectada tu cuenta de MercadoPago. Cuando se confirma un pago, la plataforma retiene automáticamente la comisión y la acredita en el panel de comisiones del afiliado. El afiliado puede solicitar el retiro a su cuenta bancaria desde su panel. En ningún caso tenés que realizar transferencias ni intervenir en el pago de comisiones. TiendaApps es el responsable directo del pago de comisiones a los afiliados. (b) Tiendas de consultas (autos, motos y rubros similares): no se requiere MercadoPago. Cuando un potencial cliente consulta a través del link de un afiliado, la plataforma registra esa consulta en tu panel. Si confirmás la consulta como venta, la comisión se acredita automáticamente en el panel de comisiones del afiliado. Si la rechazás, no se genera comisión. En ambos casos, el titular de la tienda no tiene intervención ni responsabilidad sobre el pago de fondos a los afiliados. Los datos del consultante (nombre, teléfono, mensaje) quedan registrados y son de tu responsabilidad conforme a la Ley 25.326.",
       },
       {
         title: "6 bis. Programa de Verificación de identidad",
@@ -106,7 +107,18 @@ const CONTENT = {
       },
       {
         title: "7. Cancelación y acceso",
-        body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tu tienda permanecerá visible hasta el fin del período abonado. Tras el vencimiento y período de gracia, la tienda se ocultará pero tus datos no se borran — podés reactivarla en cualquier momento. La cancelación no extingue las obligaciones de pago de comisiones ya acreditadas en billeteras de afiliados activos.",
+        body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tu tienda permanecerá visible hasta el fin del período abonado. Tras el vencimiento y período de gracia, la tienda se ocultará pero tus datos no se borran — podés reactivarla en cualquier momento. La cancelación no extingue las obligaciones de pago de comisiones ya acreditadas en el panel de comisiones de afiliados activos.",
+      },
+      {
+        title: "7 bis. Fallecimiento o incapacidad del titular",
+        body: null,
+        list: [
+          "Si el/la Dueño/a de una tienda fallece o queda incapacitado/a de forma permanente, la tienda puede seguir procesando ventas y los/las Afiliados/as siguen generando comisiones mientras la cuenta permanezca activa.",
+          "Para que el/la representante legal, heredero/a o albacea asuma el control de la cuenta, deberá contactarse con TiendaApps en marketplacemitienda@gmail.com con el asunto 'Sucesión de cuenta — [nombre de la tienda]', adjuntando: (a) acta de defunción o resolución judicial de incapacidad; (b) documentación que acredite la representación legal (declaratoria de herederos, escritura de mandato o equivalente); (c) DNI del/la representante.",
+          "Mientras se tramita la transferencia de control, TiendaApps suspenderá el acceso a la cuenta para evitar usos no autorizados. Las comisiones ya acreditadas en paneles de afiliados activos siguen siendo exigibles durante este período.",
+          "Una vez verificada la representación legal, TiendaApps transferirá el control de la cuenta al representante acreditado. Si no se inicia el trámite dentro de los 90 días corridos desde el fallecimiento o incapacidad declarada, TiendaApps puede cancelar la tienda tras notificar a los afiliados activos con 30 días de anticipación.",
+          "Las comisiones acreditadas en los paneles de afiliados activos no se extinguen por el fallecimiento del/la Titular ni por la cancelación de la cuenta.",
+        ],
       },
       {
         title: "8. Propiedad intelectual",
@@ -120,7 +132,7 @@ const CONTENT = {
         title: "8 ter. Contenido robado o que infringe derechos de terceros",
         body: "Sos el único responsable de las imágenes, videos, descripciones y demás contenido que cargues en tu tienda. No podés usar fotos, videos o textos tomados de otros sitios, marcas o personas sin su autorización.",
         list: [
-          "Indemnidad: si un tercero reclama o demanda a TiendaApps por contenido que vos subiste (por ejemplo, imágenes o videos de otro sitio o de otra marca), te comprometés a cubrir los gastos, honorarios y daños que esto le genere a TiendaApps, en la medida que el reclamo se origine en contenido cargado por vos.",
+          "Indemnidad: si un tercero reclama a TiendaApps por contenido que vos subiste (por ejemplo, imágenes o videos de otro sitio o de otra marca), te comprometés a notificar a TiendaApps de inmediato y a colaborar activamente en la defensa. La responsabilidad económica final será proporcional a la efectiva participación de cada parte en los hechos que originaron el reclamo, conforme la legislación argentina vigente. Esta cláusula no implica renuncia a ningún derecho reconocido por la Ley 24.240.",
           "Denuncia de contenido robado: cualquier persona o empresa que considere que una imagen, video o texto de una tienda infringe sus derechos puede denunciarlo a marketplacemitienda@gmail.com con el asunto 'Denuncia de contenido — [nombre de la tienda]', adjuntando prueba de la titularidad.",
           "Ante una denuncia con prueba suficiente, TiendaApps puede dar de baja el contenido denunciado de forma preventiva mientras se resuelve el reclamo, sin necesidad de orden judicial previa.",
           "La reiteración de denuncias confirmadas contra una misma tienda puede derivar en la suspensión de la cuenta sin derecho a reembolso.",
@@ -128,11 +140,25 @@ const CONTENT = {
         ],
       },
       {
-        title: "9. Modificaciones",
+        title: "9. Disponibilidad del servicio",
+        body: "TiendaApps realiza esfuerzos razonables para mantener la plataforma disponible. No se garantiza disponibilidad ininterrumpida. Las tareas de mantenimiento programado serán comunicadas con al menos 24 horas de anticipación. TiendaApps no asume responsabilidad por pérdida de ventas derivada de interrupciones del servicio no imputables a dolo o negligencia grave de su parte.",
+      },
+      {
+        title: "9 bis. Fuerza mayor e interrupciones de Mercado Pago",
+        body: null,
+        list: [
+          "TiendaApps no será responsable por interrupciones causadas por eventos fuera de su control razonable, incluyendo sin limitación: fallas de infraestructura de terceros (Mercado Pago, Supabase, Vercel, proveedores de red), desastres naturales, actos de autoridad gubernamental o cortes de internet.",
+          "Suspensión de cuenta Mercado Pago: si la cuenta de MercadoPago de TiendaApps fuera suspendida o limitada por decisión de MercadoPago (por revisión de compliance, chargebacks, error administrativo u otro motivo), ningún nuevo pago podrá procesarse mientras dure la suspensión. TiendaApps notificará a todas las tiendas y afiliados activos dentro de las 24 horas de conocida la situación.",
+          "Durante una suspensión de MP: las comisiones ya acreditadas en paneles de afiliados siguen siendo válidas y exigibles. TiendaApps trabajará para restablecer el servicio o habilitar un método de pago alternativo en el menor tiempo posible.",
+          "TiendaApps no asume responsabilidad por pérdida de ventas durante el período de interrupción, pero en ningún caso la suspensión extingue las obligaciones de pago de comisiones ya devengadas.",
+        ],
+      },
+      {
+        title: "10. Modificaciones",
         body: "Podemos actualizar estos términos. Ante cambios significativos te avisaremos por el canal que consideremos más adecuado (email, aviso en tu panel u otro medio de contacto que nos hayas dejado), con razonable anticipación. La fecha de 'última actualización' al inicio de esta página siempre refleja la versión vigente.",
       },
       {
-        title: "10. Contacto",
+        title: "11. Contacto",
         body: "Para consultas escribinos a marketplacemitienda@gmail.com",
       },
     ],
@@ -152,7 +178,7 @@ const CONTENT = {
         list: [
           "Para usar TiendaApps como Vendedor/Afiliado debés tener al menos 18 años de edad.",
           "Al registrarte, declarás bajo responsabilidad propia que cumplís con este requisito. TiendaApps no es responsable por declaraciones falsas.",
-          "Dado que el rol de Afiliado implica percibir ingresos económicos y manejar una billetera digital, la mayoría de edad es un requisito irrenunciable.",
+          "Dado que el rol de Afiliado implica percibir ingresos económicos y manejar un panel de comisiones, la mayoría de edad es un requisito irrenunciable.",
           "Si tomamos conocimiento de que una cuenta pertenece a una persona menor de 18 años, procederemos a suspenderla y retener los fondos disponibles hasta verificar la situación ante las autoridades competentes.",
           "Para reportar una cuenta de menor de edad escribinos a marketplacemitienda@gmail.com con el asunto 'Cuenta de menor de edad'.",
         ],
@@ -168,8 +194,9 @@ const CONTENT = {
           "El plan de Afiliado/a es gratuito, sin costo de suscripción y sin límite de tiempo.",
           "No se requiere tarjeta de crédito para usar la plataforma como afiliado/a.",
           "Una vez aprobado/a por una tienda, podés generar y usar tu link de afiliado de inmediato, sin necesidad de pagar ni de período de prueba.",
-          "Las comisiones ganadas se acreditan automáticamente. Si conectaste tu cuenta de MercadoPago en TiendaApps, las comisiones de tiendas con pago online te llegan directamente a tu MP en minutos, sin que tengas que hacer nada. Si no conectaste MP o la tienda es de consultas (AUTOS), la comisión se acredita en tu billetera dentro de la plataforma, desde donde podés solicitar un retiro cuando quieras.",
+          "Las comisiones se acreditan automáticamente en tu panel de comisiones dentro de TiendaApps cuando se confirma un pago. Desde ahí podés solicitar un retiro a tu cuenta bancaria (CBU/alias) cuando quieras, sin vencimiento de saldo. Para tiendas por consulta (AUTOS), la comisión se acredita cuando el dueño de la tienda confirma la venta.",
           "Podés afiliarte a múltiples tiendas simultáneamente según las disponibilidades de cada una.",
+          "Podés prestar servicios similares a otras plataformas o marcas al mismo tiempo. TiendaApps no impone exclusividad.",
         ],
       },
       {
@@ -186,7 +213,7 @@ const CONTENT = {
       },
       {
         title: "5. Comisiones",
-        body: "Las comisiones son definidas por cada dueño de tienda y pueden variar. TiendaApps no garantiza un monto mínimo de comisión ni un volumen de ventas. Las comisiones se calculan sobre el subtotal del pedido menos descuentos, sin incluir el costo de envío. Se acreditan automáticamente cuando se confirma el pago: si conectaste tu MercadoPago, la comisión se transfiere directamente a tu cuenta MP; si no conectaste MP o la tienda es de consultas (AUTOS), se acredita en tu billetera de TiendaApps. Pedidos en estado Pendiente no generan comisión. En caso de devolución de cargo (chargeback) iniciada por el comprador en MercadoPago, TiendaApps se reserva el derecho de revertir la comisión acreditada o ya transferida.",
+        body: "Las comisiones son definidas por cada dueño de tienda y pueden variar. TiendaApps no garantiza un monto mínimo de comisión ni un volumen de ventas. Las comisiones se calculan sobre el subtotal del pedido menos descuentos, sin incluir el costo de envío. Se acreditan en tu panel de comisiones cuando se confirma el pago. Pedidos en estado Pendiente no generan comisión. El dueño de la tienda está obligado a notificar a sus afiliados con al menos 5 días corridos de anticipación antes de modificar el porcentaje de comisión. TiendaApps enviará la notificación por email y en el panel en el momento en que el titular aplique el cambio — el nuevo porcentaje nunca aplica de forma retroactiva sobre comisiones ya generadas. En caso de devolución de cargo (chargeback) aprobada por MercadoPago, TiendaApps se reserva el derecho de descontar la comisión correspondiente de futuros acreditamientos.",
       },
       {
         title: "6. Premios y beneficios",
@@ -194,7 +221,7 @@ const CONTENT = {
       },
       {
         title: "7. Baja de la cuenta",
-        body: "Podés dejar de usar la plataforma como afiliado/a en cualquier momento, sin necesidad de cancelar ninguna suscripción. Tus comisiones ya acreditadas en billetera siguen disponibles para retirar. Si una tienda te da de baja como afiliado/a, perdés acceso a tu link para esa tienda, pero tu cuenta sigue activa para postularte a otras.",
+        body: "Podés dejar de usar la plataforma como afiliado/a en cualquier momento, sin necesidad de cancelar ninguna suscripción. Tus comisiones ya acreditadas en tu panel de comisiones siguen disponibles para retirar. Si una tienda te da de baja como afiliado/a, perdés acceso a tu link para esa tienda, pero tu cuenta sigue activa para postularte a otras.",
       },
       {
         title: "7 bis. Donaciones a la Canasta Solidaria o a una Causa Libre",
@@ -245,7 +272,8 @@ const CONTENT = {
           "Los precios y condiciones de venta los define cada tienda de forma independiente.",
           "TiendaApps actúa como plataforma tecnológica y no es parte en la relación de compraventa.",
           "Las disputas sobre productos, envíos o devoluciones deben resolverse directamente con el dueño de la tienda.",
-          "TiendaApps puede mediar en casos de conflicto pero no garantiza resultados.",
+          "TiendaApps puede mediar en casos de conflicto pero no garantiza resultados. Ante incumplimientos graves y comprobados (no entrega del producto, fraude, abandono del comprador), TiendaApps puede suspender o cancelar la cuenta de la tienda infractora, sin perjuicio de las acciones legales que correspondan.",
+          "Para contactar al equipo de TiendaApps podés usar el chat de soporte disponible en tiendaapps.com (ícono en la esquina inferior derecha) o escribir a marketplacemitienda@gmail.com. Todas las consultas quedan registradas con historial.",
         ],
       },
       {
@@ -308,7 +336,7 @@ const CONTENT = {
       },
       {
         title: "10. Contacto y reclamos",
-        body: "Para consultas o reclamos escribinos a marketplacemitienda@gmail.com. También podés contactar a Defensa del Consumidor de tu provincia si considerás que tus derechos fueron vulnerados.",
+        body: "Para consultas o reclamos escribinos a marketplacemitienda@gmail.com. También podés contactar a Defensa del Consumidor de tu provincia si considerás que tus derechos fueron vulnerados. Como alternativa a la justicia ordinaria, podés recurrir al Sistema Nacional de Arbitraje de Consumo (SNAC), un servicio gratuito y voluntario de mediación entre consumidores y empresas — más info en argentina.gob.ar/produccion/defensadelconsumidor/snac",
       },
     ],
   },
@@ -356,7 +384,7 @@ export default async function TerminosPage({
             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Datos del prestador del servicio</p>
             <p><span className="text-gray-500">Nombre:</span> Flavio Cesar Soltero Legoas</p>
             <p><span className="text-gray-500">CUIL:</span> 20-94992405-0</p>
-            <p><span className="text-gray-500">Domicilio:</span> Buenos Aires, Argentina</p>
+            <p><span className="text-gray-500">Domicilio:</span> Bacota 1833 (entre Apolo y Juno), Pinamar, Buenos Aires, CP 7167</p>
             <p><span className="text-gray-500">Email:</span>{" "}
               <a href="mailto:marketplacemitienda@gmail.com" className="text-indigo-400 hover:underline">marketplacemitienda@gmail.com</a>
             </p>

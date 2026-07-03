@@ -5,8 +5,9 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { encryptIfNeeded, decryptIfNeeded } from "@/lib/crypto";
 import { sendWithdrawalRequestEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
+import { verifyOtpToken } from "./otp/route";
 
-const MIN_WITHDRAWAL = 500;
+const MIN_WITHDRAWAL = 100;
 const BANK_LOCKOUT_HOURS = 72;
 
 function isWithinLockout(bankUpdatedAt: Date | null): boolean {
@@ -16,15 +17,34 @@ function isWithinLockout(bankUpdatedAt: Date | null): boolean {
 }
 
 function isValidCbu(cbu: string): boolean {
-  return /^\d{22}$/.test(cbu.trim());
+  const c = cbu.trim().replace(/\s/g, "");
+  if (!/^\d{22}$/.test(c)) return false;
+  // Bloque 1: dígitos 0-6 × pesos [7,1,3,9,7,1,3], dígito verificador en posición 7
+  const w1 = [7, 1, 3, 9, 7, 1, 3];
+  let s1 = 0;
+  for (let i = 0; i < 7; i++) s1 += parseInt(c[i]) * w1[i];
+  if ((10 - (s1 % 10)) % 10 !== parseInt(c[7])) return false;
+  // Bloque 2: dígitos 8-20 × pesos [3,9,7,1,3,9,7,1,3,9,7,1,3], dígito verificador en posición 21
+  const w2 = [3, 9, 7, 1, 3, 9, 7, 1, 3, 9, 7, 1, 3];
+  let s2 = 0;
+  for (let i = 0; i < 13; i++) s2 += parseInt(c[8 + i]) * w2[i];
+  if ((10 - (s2 % 10)) % 10 !== parseInt(c[21])) return false;
+  return true;
 }
 
 function isValidCuil(cuil: string): boolean {
-  return /^\d{2}-?\d{8}-?\d{1}$/.test(cuil.trim());
+  const c = cuil.trim().replace(/[-\s]/g, "");
+  if (!/^\d{11}$/.test(c)) return false;
+  const mult = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  const sum = mult.reduce((acc, m, i) => acc + parseInt(c[i]) * m, 0);
+  const rem = sum % 11;
+  if (rem === 1) return false; // CUIL inválido por definición
+  const check = rem === 0 ? 0 : 11 - rem;
+  return parseInt(c[10]) === check;
 }
 
 function isValidAlias(alias: string): boolean {
-  return /^[a-zA-Z0-9.\-]{6,20}$/.test(alias.trim());
+  return /^[a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9.\-]{6,20}$/.test(alias.trim());
 }
 
 // GET - ver billetera
@@ -46,7 +66,7 @@ export async function GET() {
         commissions: {
           orderBy: { createdAt: "desc" },
           take: 20,
-          include: { order: { select: { total: true, createdAt: true } } },
+          include: { order: { select: { id: true, total: true, createdAt: true } } },
         },
         _count: { select: { commissions: true, orders: true } },
       },
@@ -114,6 +134,11 @@ export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
+  const otpToken = req.headers.get("x-otp-token");
+  if (!verifyOtpToken(otpToken, user.id)) {
+    return NextResponse.json({ error: "Se requiere verificación de identidad. Solicitá un código por email.", code: "OTP_REQUIRED" }, { status: 403 });
+  }
+
   const body = await req.json();
   const { cbu, alias, cuil, bankHolder } = body;
 
@@ -126,7 +151,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Ingresá un CBU/CVU o un alias" }, { status: 400 });
   }
   if (cbuClean && !isValidCbu(cbuClean)) {
-    return NextResponse.json({ error: "CBU/CVU inválido: debe tener exactamente 22 dígitos" }, { status: 400 });
+    return NextResponse.json({ error: "CBU/CVU inválido: verificá que los 22 dígitos sean correctos" }, { status: 400 });
   }
   if (aliasClean && !isValidAlias(aliasClean)) {
     return NextResponse.json({ error: "Alias inválido: solo letras, números, puntos y guiones (6-20 caracteres)" }, { status: 400 });
@@ -165,6 +190,12 @@ export async function PUT(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const otpToken = req.headers.get("x-otp-token");
+  if (!verifyOtpToken(otpToken, user.id)) {
+    return NextResponse.json({ error: "Se requiere verificación de identidad. Solicitá un código por email.", code: "OTP_REQUIRED" }, { status: 403 });
+  }
+
   const userId = user.id;
 
   const body = await req.json();
@@ -223,6 +254,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Fraud check: tasa de chargeback >5% con al menos 5 comisiones confirmadas
+  const affiliateIds = affiliatesData.map((a) => a.id);
+  if (affiliateIds.length > 0) {
+    const commStats = await prisma.commission.groupBy({
+      by: ["status"],
+      where: { affiliateId: { in: affiliateIds }, status: { in: ["PAID", "REVERSED", "DISBURSED"] } },
+      _count: { id: true },
+    });
+    const total = commStats.reduce((s, r) => s + r._count.id, 0);
+    const reversed = commStats.find((r) => r.status === "REVERSED")?._count.id ?? 0;
+    if (total >= 5 && reversed / total > 0.05) {
+      return NextResponse.json(
+        { error: `Tu cuenta tiene una tasa de devoluciones de cargo elevada (${Math.round((reversed / total) * 100)}%). Los retiros están suspendidos preventivamente. Escribí a marketplacemitienda@gmail.com para resolverlo.` },
+        { status: 403 }
+      );
+    }
+  }
+
   // Wallets con saldo, ordenadas de mayor a menor
   const walletsWithBalance = affiliatesData
     .filter((a) => a.wallet && a.wallet.balance > 0)
@@ -268,7 +317,7 @@ export async function POST(req: NextRequest) {
           }
 
           const pendingCount = await tx.walletWithdrawal.count({
-            where: { walletId: alloc.walletId, status: "PENDING" },
+            where: { walletId: alloc.walletId, status: { in: ["PENDING", "PROCESSING"] } },
           });
           if (pendingCount > 0) throw new Error(`PENDING_EXISTS:${alloc.storeName}`);
 

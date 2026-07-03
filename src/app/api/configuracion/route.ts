@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { revalidatePath } from "next/cache";
 import { createNotificationMany } from "@/lib/notifications";
 import { isSafeUrl } from "@/lib/url-utils";
-import { sendNewStorePublishedEmail, sendStoreOfflineEmail } from "@/lib/email";
+import { sendNewStorePublishedEmail, sendStoreOfflineEmail, sendCommissionRateChangedEmail } from "@/lib/email";
 import { z } from "zod";
 
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
@@ -330,7 +330,7 @@ export async function PUT(req: NextRequest) {
           userId,
           type: "STORE_PROGRAM_PAUSED",
           title: `${store.name} pausó su programa de afiliados`,
-          body: "Por ahora no podés generar nuevas ventas con tu link. Tu saldo en billetera sigue disponible para retirar.",
+          body: "Por ahora no podés generar nuevas ventas con tu link. Tu saldo en comisiones sigue disponible para retirar.",
           link: "/afiliados",
         }))
       );
@@ -373,7 +373,7 @@ export async function PUT(req: NextRequest) {
   if (prevStore && prevStore.commissionRate !== newRate) {
     const affiliates = await prisma.affiliate.findMany({
       where: { storeId: prevStore.id, isActive: true },
-      select: { userId: true },
+      select: { userId: true, user: { select: { email: true, name: true } } },
     });
     if (affiliates.length > 0) {
       const now = new Date();
@@ -387,6 +387,17 @@ export async function PUT(req: NextRequest) {
           body: `La comisión pasó de ${prevStore.commissionRate}% a ${newRate}%. · ${dateStr}, ${timeStr}`,
           link: "/afiliados",
         }))
+      );
+      await Promise.allSettled(
+        affiliates.map(({ user }) =>
+          sendCommissionRateChangedEmail({
+            affiliateEmail: user.email,
+            affiliateName: user.name ?? "afiliado/a",
+            storeName: store.name,
+            oldRate: prevStore.commissionRate,
+            newRate,
+          })
+        )
       );
     }
   }

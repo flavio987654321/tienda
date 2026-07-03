@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createNotification } from "@/lib/notifications";
+import { sendAdminAlertEmail } from "@/lib/email";
 
 // PATCH /api/leads/[id] — el dueño confirma o rechaza una consulta
 export async function PATCH(
@@ -73,7 +74,7 @@ export async function PATCH(
         userId: lead.affiliate.userId,
         type: "COMMISSION_EARNED",
         title: "¡Ganaste una comisión!",
-        body: `Tu consulta sobre "${lead.productName}" fue confirmada. Comisión: $${commissionAmount.toLocaleString("es-AR")} acreditada en tu billetera.`,
+        body: `Tu consulta sobre "${lead.productName}" fue confirmada. Comisión: $${commissionAmount.toLocaleString("es-AR")} acreditada en tu panel de comisiones.`,
         link: "/afiliados/billetera",
       }).catch(() => {});
     }
@@ -85,6 +86,32 @@ export async function PATCH(
         confirmedAt: status === "CONFIRMED" ? new Date() : null,
       },
     });
+
+    // Detectar patrón de rechazo sistemático para alertar al admin
+    if (status === "REJECTED" && lead.affiliateId) {
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const [rejected, confirmed] = await Promise.all([
+        prisma.lead.count({
+          where: { storeId: store.id, affiliateId: lead.affiliateId, status: "REJECTED", confirmedAt: null, createdAt: { gte: since } },
+        }),
+        prisma.lead.count({
+          where: { storeId: store.id, affiliateId: lead.affiliateId, status: "CONFIRMED", createdAt: { gte: since } },
+        }),
+      ]);
+
+      if (rejected >= 5 && confirmed === 0) {
+        sendAdminAlertEmail({
+          subject: `⚠️ Posible rechazo sistemático de leads — tienda "${store.name}"`,
+          title: "Patrón de rechazo sistemático detectado",
+          reason: `La tienda "${store.name}" rechazó ${rejected} consultas del mismo afiliado en los últimos 30 días sin confirmar ninguna. Esto puede indicar un intento de evadir el pago de comisiones.`,
+          actions: [
+            "Revisar el historial de leads de esta tienda en el panel de admin",
+            "Contactar al dueño de la tienda para pedir explicación",
+            "Si se confirma el patrón, suspender la tienda o mediar la disputa",
+          ],
+        }).catch(() => {});
+      }
+    }
   }
 
   return NextResponse.json({ ok: true });

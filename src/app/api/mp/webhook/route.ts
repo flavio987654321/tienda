@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
+import { waitUntil } from "@vercel/functions";
 import { prisma } from "@/lib/prisma";
 import MercadoPagoConfig, { Payment } from "mercadopago";
 import { createNotification } from "@/lib/notifications";
@@ -35,28 +36,14 @@ function verifyMPSignature(req: NextRequest, dataId: string): boolean {
   }
 }
 
-// Webhook de MercadoPago — confirma pagos automáticamente
-export async function POST(req: NextRequest) {
+async function processPaymentWebhook(paymentId: string) {
   try {
-    const body = await req.json();
-
-    if (body.type !== "payment") {
-      return NextResponse.json({ ok: true });
-    }
-
-    const paymentId = body.data?.id;
-    if (!paymentId) return NextResponse.json({ ok: true });
-
-    // Verificar firma criptográfica para prevenir requests falsas
-    if (!verifyMPSignature(req, String(paymentId))) {
-      console.warn("MP webhook: firma inválida — request ignorada", { paymentId });
-      return NextResponse.json({ ok: true }); // 200 para que MP no reintente
-    }
 
     // Obtener detalles del pago desde MP
     const client = new MercadoPagoConfig({
       accessToken: process.env.MP_ACCESS_TOKEN ?? "",
     });
+
     const mpPayment = new Payment(client);
     const payment = await mpPayment.get({ id: paymentId });
 
@@ -70,6 +57,41 @@ export async function POST(req: NextRequest) {
             prisma.order.update({ where: { id: orderId }, data: { status: "CANCELLED" } }),
             prisma.orderStatusLog.create({ data: { orderId, fromStatus: "PENDING", toStatus: "CANCELLED", changedBy: "mp_webhook" } }),
           ]);
+        }
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    // Chargeback: descontar comisión ya acreditada al afiliado
+    if (payment.status === "charged_back" || payment.status === "in_mediation") {
+      const orderId = payment.external_reference;
+      if (orderId) {
+        const commission = await prisma.commission.findUnique({
+          where: { orderId },
+          include: { affiliate: { select: { userId: true } } },
+        });
+        if (commission && commission.status === "PAID") {
+          const updatedWallet = await prisma.$transaction(async (tx) => {
+            await tx.commission.update({
+              where: { orderId },
+              data: { status: "REVERSED" },
+            });
+            return tx.wallet.update({
+              where: { affiliateId: commission.affiliateId },
+              data: { balance: { decrement: commission.amount } },
+            });
+          });
+
+          const newBalance = updatedWallet.balance;
+          await createNotification({
+            userId: commission.affiliate.userId,
+            type: "COMMISSION_REVERSED",
+            title: "Comisión revertida por chargeback",
+            body: newBalance < 0
+              ? `Se descontó $${commission.amount.toLocaleString("es-AR")} de tu panel por una devolución de cargo. Tu saldo quedó en -$${Math.abs(newBalance).toLocaleString("es-AR")} — regularizá dentro de los 30 días.`
+              : `Se descontó $${commission.amount.toLocaleString("es-AR")} de tu panel por una devolución de cargo aprobada por MercadoPago. Saldo actual: $${newBalance.toLocaleString("es-AR")}.`,
+            link: "/afiliados/billetera",
+          });
         }
       }
       return NextResponse.json({ ok: true });
@@ -179,7 +201,7 @@ export async function POST(req: NextRequest) {
           userId: affUserId,
           type: "COMMISSION_EARNED",
           title: "¡Ganaste una comisión!",
-          body: `Tu comisión de $${commissionResult.amount.toLocaleString("es-AR")} fue acreditada en tu billetera.`,
+          body: `Tu comisión de $${commissionResult.amount.toLocaleString("es-AR")} fue acreditada en tu panel de comisiones.`,
           link: "/afiliados/billetera",
         });
       }
@@ -210,15 +232,35 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[mp/webhook] pago confirmado — paymentId=${paymentId} orderId=${orderId}`);
-    return NextResponse.json({ ok: true });
   } catch (err) {
-    // P2002 = unique constraint: webhook llegó dos veces para la misma orden.
-    // La primera ya creó la comisión correctamente — devolver 200 para que MP no reintente.
     if ((err as { code?: string })?.code === "P2002") {
       console.warn("[mp/webhook] duplicate webhook ignored (P2002)");
+      return;
+    }
+    console.error("[mp/webhook] error procesando pago:", err);
+  }
+}
+
+// Webhook de MercadoPago — acepta inmediatamente y procesa en background
+export async function POST(req: NextRequest) {
+  let paymentId: string | undefined;
+  try {
+    const body = await req.json();
+    if (body.type !== "payment") return NextResponse.json({ ok: true });
+
+    paymentId = body.data?.id ? String(body.data.id) : undefined;
+    if (!paymentId) return NextResponse.json({ ok: true });
+
+    if (!verifyMPSignature(req, paymentId)) {
+      console.warn("MP webhook: firma inválida — request ignorada", { paymentId });
       return NextResponse.json({ ok: true });
     }
-    console.error("MP webhook error:", err);
-    return NextResponse.json({ error: "Error procesando webhook" }, { status: 500 });
+  } catch {
+    return NextResponse.json({ ok: true });
   }
+
+  // Responder a MP inmediatamente (evita retries por timeout)
+  // y procesar en background con waitUntil
+  waitUntil(processPaymentWebhook(paymentId));
+  return NextResponse.json({ ok: true });
 }

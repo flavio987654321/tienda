@@ -14,7 +14,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
   const { id } = await context.params;
   const body = await req.json().catch(() => ({}));
-  const action: "APPROVE" | "REJECT" = body.action ?? "APPROVE";
+  const action: "APPROVE" | "REJECT" | "PROCESSING" = body.action ?? "APPROVE";
   const notes: string | undefined = body.notes;
   const rejectionReason: string | undefined = body.rejectionReason;
 
@@ -45,7 +45,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   });
 
   if (!withdrawal) return NextResponse.json({ error: "Retiro no encontrado" }, { status: 404 });
-  if (withdrawal.status !== "PENDING") return NextResponse.json({ error: "Este retiro ya fue procesado" }, { status: 400 });
+  const allowedFrom: Record<string, string[]> = {
+    APPROVE: ["PENDING", "PROCESSING"],
+    REJECT: ["PENDING", "PROCESSING"],
+    PROCESSING: ["PENDING"],
+  };
+  if (!allowedFrom[action]?.includes(withdrawal.status)) {
+    return NextResponse.json({ error: "Este retiro ya fue procesado" }, { status: 400 });
+  }
   if (user.role === "OWNER" && withdrawal.wallet.affiliate.store.ownerId !== user.id) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
@@ -54,7 +61,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const result = await prisma.$transaction(async (tx) => {
       // Re-check status inside tx to avoid race conditions
       const fresh = await tx.walletWithdrawal.findUnique({ where: { id }, select: { status: true } });
-      if (!fresh || fresh.status !== "PENDING") throw new Error("Este retiro ya fue procesado");
+      if (!fresh) throw new Error("Retiro no encontrado");
+      const validFrom = allowedFrom[action] ?? [];
+      if (!validFrom.includes(fresh.status)) throw new Error("Este retiro ya fue procesado");
 
       const affiliateUserId = withdrawal.wallet.affiliate.userId;
 
@@ -72,7 +81,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           userId: affiliateUserId,
           type: "WITHDRAWAL_REJECTED",
           title: "Tu retiro fue rechazado",
-          body: `Tu retiro de $${withdrawal.amount.toLocaleString("es-AR")} fue rechazado. Motivo: ${rejectionReason}. El saldo fue devuelto a tu billetera.`,
+          body: `Tu retiro de $${withdrawal.amount.toLocaleString("es-AR")} fue rechazado. Motivo: ${rejectionReason}. El saldo fue devuelto a tu panel de comisiones.`,
           link: "/afiliados/billetera",
         }).catch((err) => console.error("[notify] withdrawal rejected", err));
 
@@ -84,6 +93,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             rejectionReason: rejectionReason!.trim(),
             notes: notes || null,
           },
+        });
+      }
+
+      // PROCESSING
+      if (action === "PROCESSING") {
+        await createNotification({
+          userId: affiliateUserId,
+          type: "WITHDRAWAL_PROCESSING",
+          title: "Tu retiro está en proceso",
+          body: `Tu retiro de $${withdrawal.amount.toLocaleString("es-AR")} está siendo transferido. En breve se acreditará en tu cuenta.`,
+          link: "/afiliados/billetera",
+        }).catch((err) => console.error("[notify] withdrawal processing", err));
+
+        return tx.walletWithdrawal.update({
+          where: { id },
+          data: { status: "PROCESSING" },
         });
       }
 

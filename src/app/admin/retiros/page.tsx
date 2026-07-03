@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, useState } from "react";
-import { CheckCircle, XCircle, Loader2, Copy, Wallet } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Copy, Wallet, Clock } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Withdrawal = {
@@ -18,6 +18,7 @@ type Withdrawal = {
   alias: string | null;
   cuil: string | null;
   bankHolder: string | null;
+  chargebackStats: { total: number; reversed: number; rate: number };
 };
 
 function copy(text: string) {
@@ -33,6 +34,7 @@ export default function AdminRetirosPage() {
   const [rejectOpen, setRejectOpen] = useState<Record<string, boolean>>({});
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
   const [rejectError, setRejectError] = useState<Record<string, string>>({});
+  const [actionError, setActionError] = useState<Record<string, string>>({});
 
   const fetchWithdrawals = useCallback(() => {
     fetch("/api/admin/retiros")
@@ -55,7 +57,7 @@ export default function AdminRetirosPage() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchWithdrawals]);
 
-  async function handleAction(id: string, action: "APPROVE" | "REJECT") {
+  async function handleAction(id: string, action: "APPROVE" | "REJECT" | "PROCESSING") {
     if (action === "REJECT") {
       const reason = rejectReason[id]?.trim();
       if (!reason) {
@@ -65,11 +67,12 @@ export default function AdminRetirosPage() {
     }
 
     setProcessing((p) => ({ ...p, [id]: true }));
+    setActionError((e) => ({ ...e, [id]: "" }));
     try {
       const body: Record<string, string> = { action };
       if (action === "APPROVE") {
         body.notes = "Transferencia procesada por admin.";
-      } else {
+      } else if (action === "REJECT") {
         body.rejectionReason = rejectReason[id]?.trim();
       }
 
@@ -82,10 +85,16 @@ export default function AdminRetirosPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "Error al procesar");
       }
-      setDone((d) => ({ ...d, [id]: action === "APPROVE" ? "approved" : "rejected" }));
-      setWithdrawals((prev) => prev.filter((w) => w.id !== id));
+      if (action === "PROCESSING") {
+        setWithdrawals((prev) => prev.map((w) => w.id === id ? { ...w, status: "PROCESSING" } : w));
+      } else {
+        setDone((d) => ({ ...d, [id]: action === "APPROVE" ? "approved" : "rejected" }));
+        setWithdrawals((prev) => prev.filter((w) => w.id !== id));
+      }
     } catch (err) {
-      setRejectError((e) => ({ ...e, [id]: err instanceof Error ? err.message : "Error" }));
+      const msg = err instanceof Error ? err.message : "Error al procesar";
+      setActionError((e) => ({ ...e, [id]: msg }));
+      if (action === "REJECT") setRejectError((e) => ({ ...e, [id]: msg }));
     } finally {
       setProcessing((p) => ({ ...p, [id]: false }));
     }
@@ -118,9 +127,28 @@ export default function AdminRetirosPage() {
           <div key={w.id} className="bg-gray-900 rounded-2xl border border-white/10 p-6">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
-                <p className="text-white font-bold text-lg">{w.affiliateName ?? w.affiliateEmail}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-white font-bold text-lg">{w.affiliateName ?? w.affiliateEmail}</p>
+                  {w.chargebackStats.total >= 5 && w.chargebackStats.rate > 5 && (
+                    <span className="inline-flex items-center gap-1 bg-red-900/50 border border-red-700/50 text-red-300 text-xs font-bold px-2 py-0.5 rounded-full">
+                      ⚠ {Math.round(w.chargebackStats.rate)}% chargebacks — REVISAR
+                    </span>
+                  )}
+                  {w.chargebackStats.total >= 3 && w.chargebackStats.rate > 0 && w.chargebackStats.rate <= 5 && (
+                    <span className="inline-flex items-center gap-1 bg-amber-900/40 border border-amber-700/40 text-amber-300 text-xs px-2 py-0.5 rounded-full">
+                      {Math.round(w.chargebackStats.rate)}% chargebacks
+                    </span>
+                  )}
+                </div>
                 <p className="text-gray-400 text-sm">{w.affiliateEmail}</p>
-                <p className="text-gray-500 text-xs mt-0.5">Tienda: {w.storeName}</p>
+                <p className="text-gray-500 text-xs mt-0.5">
+                  Tienda: {w.storeName}
+                  {w.chargebackStats.total > 0 && (
+                    <span className="ml-2 text-gray-600">
+                      · {w.chargebackStats.reversed}/{w.chargebackStats.total} comisiones revertidas
+                    </span>
+                  )}
+                </p>
                 <p className="text-gray-500 text-xs">
                   Solicitado: {new Date(w.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
@@ -173,6 +201,13 @@ export default function AdminRetirosPage() {
                 </div>
               )}
             </div>
+
+            {/* Error general de acción (APPROVE / PROCESSING) */}
+            {actionError[w.id] && !rejectOpen[w.id] && (
+              <div className="mt-4 bg-red-950/40 border border-red-800/50 rounded-xl px-4 py-3 text-sm text-red-300">
+                {actionError[w.id]}
+              </div>
+            )}
 
             {/* Form de rechazo (toggle) */}
             {rejectOpen[w.id] && (
@@ -227,15 +262,36 @@ export default function AdminRetirosPage() {
                 </div>
               )}
 
-              {/* Botón aprobar */}
-              <button
-                onClick={() => handleAction(w.id, "APPROVE")}
-                disabled={processing[w.id]}
-                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
-              >
-                {processing[w.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                Transferí — marcar como enviado
-              </button>
+              {/* Badge estado PROCESSING */}
+              {w.status === "PROCESSING" && (
+                <span className="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/30 text-blue-300 text-xs font-semibold px-3 py-1.5 rounded-xl">
+                  <Clock className="h-3.5 w-3.5" /> En proceso
+                </span>
+              )}
+
+              {/* Botón en proceso — solo desde PENDING */}
+              {w.status === "PENDING" && (
+                <button
+                  onClick={() => handleAction(w.id, "PROCESSING")}
+                  disabled={processing[w.id]}
+                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+                >
+                  {processing[w.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
+                  Marcar en proceso
+                </button>
+              )}
+
+              {/* Botón aprobar — disponible desde PENDING y PROCESSING */}
+              {(w.status === "PENDING" || w.status === "PROCESSING") && (
+                <button
+                  onClick={() => handleAction(w.id, "APPROVE")}
+                  disabled={processing[w.id]}
+                  className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+                >
+                  {processing[w.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                  Transferí — marcar como enviado
+                </button>
+              )}
             </div>
           </div>
         ))}

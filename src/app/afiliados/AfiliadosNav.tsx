@@ -18,7 +18,7 @@ import {
 const HELP_SECTIONS: { icon: React.ElementType; iconColor: string; title: string; body: string }[] = [
   { icon: Store,         iconColor: "text-indigo-500",  title: "Tiendas disponibles", body: "Postulate a las tiendas que te interesen. Cuando el dueño te acepte, vas a poder compartir sus productos y ganar comisión por cada venta." },
   { icon: Share2,        iconColor: "text-purple-500",  title: "Compartir",           body: "Desde cada producto generás tu link de afiliado, un código QR o una placa lista para redes (Instagram, WhatsApp, etc). Todo lleva tu identificador para que la venta te quede asignada." },
-  { icon: Wallet,        iconColor: "text-emerald-500", title: "Mi billetera",        body: "Acá ves tu saldo disponible y tus comisiones acreditadas. Podés pedir el retiro cuando quieras; el admin te transfiere directamente a tu cuenta bancaria." },
+  { icon: Wallet,        iconColor: "text-emerald-500", title: "Mis comisiones",       body: "Acá ves el total de comisiones acreditadas y tu historial de movimientos. Podés pedir el retiro cuando quieras; te transferimos directamente a tu cuenta bancaria." },
   { icon: Award,         iconColor: "text-amber-500",   title: "Mis premios",         body: "Cupones de descuento que ganás automáticamente según tu nivel (Plata, Oro, Diamante) calculado por tus ventas del mes. Se usan en cualquier tienda de TiendaApps." },
   { icon: BarChart3,     iconColor: "text-blue-500",    title: "Estadísticas",        body: "Pedidos generados, clicks en tus links y de qué canal vienen (WhatsApp, Instagram, etc), para que sepas qué te está funcionando mejor." },
   { icon: Trophy,        iconColor: "text-amber-500",   title: "Ranking",             body: "Tu posición comparada con los demás afiliados de cada tienda, según comisiones generadas." },
@@ -92,7 +92,7 @@ export default function AfiliadosNav() {
   const userInitial = userName.charAt(0).toUpperCase();
 
   const navLinks = [
-    { href: "/afiliados/billetera",    label: "Mi billetera",  icon: <Wallet className="h-4 w-4" /> },
+    { href: "/afiliados/billetera",    label: "Mis comisiones",icon: <Wallet className="h-4 w-4" /> },
     { href: "/afiliados/premios",      label: "Mis premios",   icon: <Award className="h-4 w-4" /> },
     { href: "/afiliados/estadisticas", label: "Estadísticas",  icon: <BarChart3 className="h-4 w-4" /> },
     { href: "/afiliados/ranking",      label: "Ranking",       icon: <Trophy className="h-4 w-4" /> },
@@ -100,7 +100,7 @@ export default function AfiliadosNav() {
   ];
 
   const mobileLinks = [
-    { href: "/afiliados/billetera",    label: "Mi billetera",    icon: <Wallet className="h-4 w-4 text-indigo-500" /> },
+    { href: "/afiliados/billetera",    label: "Mis comisiones",  icon: <Wallet className="h-4 w-4 text-indigo-500" /> },
     { href: "/afiliados/premios",      label: "Mis premios",     icon: <Award className="h-4 w-4 text-amber-500" /> },
     { href: "/afiliados/pedidos",      label: "Mis pedidos",     icon: <ShoppingCart className="h-4 w-4 text-green-500" /> },
     { href: "/afiliados/estadisticas", label: "Estadísticas",    icon: <BarChart3 className="h-4 w-4 text-blue-500" /> },

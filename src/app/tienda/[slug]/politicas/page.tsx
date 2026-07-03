@@ -48,7 +48,8 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
       policyReturns: true,
       policyShipping: true,
       policyTerms: true,
-      owner: { select: { email: true } },
+      owner: { select: { email: true, name: true, city: true } },
+      verificationRequest: { select: { cuit: true, status: true } },
     },
   });
   if (!store) notFound();
@@ -169,13 +170,23 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
 
           {/* Contacto */}
           <div className="mt-4 rounded-2xl border border-white/5 bg-white/[0.03] p-5">
-            <p className="text-xs font-bold text-gray-400 mb-1">📬 Contacto con la tienda</p>
-            <p className="text-xs text-gray-500">
-              Para consultas sobre devoluciones o envíos contactá directamente a <strong className="text-gray-300">{store.name}</strong>
-              {store.owner?.email ? (
-                <> · <a href={`mailto:${store.owner.email}`} className="text-gray-300 hover:underline">{store.owner.email}</a></>
-              ) : " desde el formulario de la tienda"}.
-            </p>
+            <p className="text-xs font-bold text-gray-400 mb-1">📬 Datos del vendedor (Ley 24.240 art. 4)</p>
+            <div className="text-xs text-gray-500 space-y-0.5">
+              {store.owner?.name && (
+                <p><span className="text-gray-600">Responsable:</span> <span className="text-gray-300">{store.owner.name}</span></p>
+              )}
+              {store.owner?.city && (
+                <p><span className="text-gray-600">Localidad:</span> <span className="text-gray-300">{store.owner.city}</span></p>
+              )}
+              {store.verificationRequest?.status === "APPROVED" && store.verificationRequest?.cuit && (
+                <p><span className="text-gray-600">CUIT/CUIL:</span> <span className="text-gray-300">{store.verificationRequest.cuit}</span></p>
+              )}
+              {store.owner?.email && (
+                <p><span className="text-gray-600">Email:</span>{" "}
+                  <a href={`mailto:${store.owner.email}`} className="text-gray-300 hover:underline">{store.owner.email}</a>
+                </p>
+              )}
+            </div>
             <p className="text-xs text-gray-700 mt-2">
               Plataforma: TiendaApps · Responsable: Flavio Cesar Soltero Legoas · soporte:{" "}
               <a href="mailto:marketplacemitienda@gmail.com" className="hover:underline">marketplacemitienda@gmail.com</a>

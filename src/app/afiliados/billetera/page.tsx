@@ -38,7 +38,7 @@ interface AffiliateData {
     rate: number;
     status: string;
     createdAt: string;
-    order: { total: number; createdAt: string };
+    order: { id: string; total: number; createdAt: string };
   }[];
 }
 
@@ -53,6 +53,7 @@ interface PageData {
   bankHolder: string | null;
   bankLocked: boolean;
   bankLockedUntil: string | null;
+  hasCuil: boolean;
 }
 
 type Movement =
@@ -62,6 +63,8 @@ type Movement =
       amount: number;
       rate: number;
       orderTotal: number;
+      orderId: string;
+      orderDate: string;
       status: string;
       createdAt: string;
       storeName: string;
@@ -94,9 +97,128 @@ function LockoutBanner({ until }: { until: string }) {
   );
 }
 
+// ── OtpModal ──────────────────────────────────────────────────────────────────
+
+const OTP_SESSION_KEY = "otp_wallet_token";
+
+function getStoredOtpToken(): string | null {
+  try {
+    const raw = sessionStorage.getItem(OTP_SESSION_KEY);
+    if (!raw) return null;
+    // token format: userId:timestamp:sig — check expiry client-side (30 min)
+    const parts = raw.split(":");
+    if (parts.length !== 3) return null;
+    const ts = parseInt(parts[1]);
+    if (Date.now() - ts > 30 * 60 * 1000) { sessionStorage.removeItem(OTP_SESSION_KEY); return null; }
+    return raw;
+  } catch { return null; }
+}
+
+function saveOtpToken(token: string) {
+  try { sessionStorage.setItem(OTP_SESSION_KEY, token); } catch { /* ignore */ }
+}
+
+function clearOtpToken() {
+  try { sessionStorage.removeItem(OTP_SESSION_KEY); } catch { /* ignore */ }
+}
+
+function OtpModal({ onVerified, onClose }: { onVerified: (token: string) => void; onClose: () => void }) {
+  const [step, setStep] = useState<"request" | "verify">("request");
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+
+  async function requestCode() {
+    setError("");
+    setLoading(true);
+    const res = await fetch("/api/vendedoras/wallet/otp", { method: "POST" });
+    const data = await res.json();
+    setLoading(false);
+    if (!res.ok) { setError(data.error || "Error al enviar el código"); return; }
+    setExpiresAt(data.expiresAt);
+    setStep("verify");
+  }
+
+  async function verifyCode() {
+    setError("");
+    if (!code.trim()) { setError("Ingresá el código"); return; }
+    setLoading(true);
+    const res = await fetch("/api/vendedoras/wallet/otp", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code.trim() }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (!res.ok) { setError(data.error || "Código incorrecto"); return; }
+    saveOtpToken(data.token);
+    onVerified(data.token);
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm shadow-xl border border-gray-100 dark:border-white/10">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/10">
+          <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5 text-indigo-500" /> Verificá tu identidad
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="p-6 space-y-4">
+          {step === "request" ? (
+            <>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Para acceder a tus datos bancarios necesitamos verificar tu identidad. Te enviaremos un código de 6 dígitos a tu email.
+              </p>
+              {error && <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-xl px-4 py-3 text-sm"><AlertTriangle className="h-4 w-4 shrink-0" />{error}</div>}
+              <div className="flex gap-3 pt-2">
+                <button onClick={onClose} className="flex-1 py-3 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Cancelar</button>
+                <button onClick={requestCode} disabled={loading}
+                  className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {loading ? "Enviando..." : "Enviar código"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Te enviamos el código a tu email. Ingresalo acá:
+                {expiresAt && <span className="text-xs text-gray-400 block mt-1">Válido hasta las {new Date(expiresAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</span>}
+              </p>
+              <input
+                type="text" inputMode="numeric" maxLength={6}
+                value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="000000"
+                className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-4 text-2xl font-mono text-center tracking-widest text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                autoFocus
+              />
+              {error && <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-xl px-4 py-3 text-sm"><AlertTriangle className="h-4 w-4 shrink-0" />{error}</div>}
+              <p className="text-xs text-gray-500 text-center">
+                ¿No llegó?{" "}
+                <button onClick={() => { setStep("request"); setCode(""); setError(""); }} className="text-indigo-600 hover:underline">Reenviar código</button>
+              </p>
+              <div className="flex gap-3">
+                <button onClick={onClose} className="flex-1 py-3 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Cancelar</button>
+                <button onClick={verifyCode} disabled={loading || code.length !== 6}
+                  className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {loading ? "Verificando..." : "Verificar"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ── BankForm modal ────────────────────────────────────────────────────────────
 
-function BankForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+function BankForm({ otpToken, onClose, onSaved }: { otpToken: string; onClose: () => void; onSaved: () => void }) {
   const [cbu, setCbu] = useState("");
   const [alias, setAlias] = useState("");
   const [cuil, setCuil] = useState("");
@@ -111,7 +233,7 @@ function BankForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => vo
     setSaving(true);
     const res = await fetch("/api/vendedoras/wallet", {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-otp-token": otpToken },
       body: JSON.stringify({ cbu, alias, cuil, bankHolder }),
     });
     const data = await res.json();
@@ -189,8 +311,9 @@ function BankForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => vo
 
 // ── WithdrawModal ─────────────────────────────────────────────────────────────
 
-function WithdrawModal({ totalBalance, onClose, onSuccess }: {
+function WithdrawModal({ totalBalance, otpToken, onClose, onSuccess }: {
   totalBalance: number;
+  otpToken: string;
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -201,12 +324,12 @@ function WithdrawModal({ totalBalance, onClose, onSuccess }: {
   async function handleSubmit() {
     setError("");
     const num = parseFloat(amount);
-    if (!num || num < 500) { setError("El monto mínimo es $500"); return; }
+    if (!num || num < 100) { setError("El monto mínimo es $100"); return; }
     if (num > totalBalance) { setError("No tenés suficiente saldo"); return; }
     setSubmitting(true);
     const res = await fetch("/api/vendedoras/wallet", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-otp-token": otpToken },
       body: JSON.stringify({ amount: num }),
     });
     const json = await res.json();
@@ -226,12 +349,12 @@ function WithdrawModal({ totalBalance, onClose, onSuccess }: {
         <div className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Monto <span className="text-gray-400 font-normal">(mín. $500)</span>
+              Monto <span className="text-gray-400 font-normal">(mín. $100)</span>
             </label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
               <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
-                min="500" max={totalBalance} placeholder="0"
+                min="100" max={totalBalance} placeholder="0"
                 className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl pl-8 pr-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
             <div className="flex justify-between mt-1">
@@ -277,6 +400,27 @@ export default function BilleteraPage() {
   const [loading, setLoading] = useState(true);
   const [showBankForm, setShowBankForm] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
+  // OTP: "bankform" | "withdraw" | null — acción pendiente hasta que se verifique identidad
+  const [pendingAction, setPendingAction] = useState<"bankform" | "withdraw" | null>(null);
+  const [otpToken, setOtpToken] = useState<string | null>(null);
+
+  function requireOtp(action: "bankform" | "withdraw") {
+    const stored = getStoredOtpToken();
+    if (stored) {
+      setOtpToken(stored);
+      if (action === "bankform") setShowBankForm(true);
+      else setShowWithdraw(true);
+    } else {
+      setPendingAction(action);
+    }
+  }
+
+  function onOtpVerified(token: string) {
+    setOtpToken(token);
+    setPendingAction(null);
+    if (pendingAction === "bankform") setShowBankForm(true);
+    else if (pendingAction === "withdraw") setShowWithdraw(true);
+  }
 
   function loadData() {
     fetch("/api/vendedoras/wallet")
@@ -311,6 +455,8 @@ export default function BilleteraPage() {
           amount: c.amount,
           rate: c.rate,
           orderTotal: c.order.total,
+          orderId: c.order.id,
+          orderDate: c.order.createdAt,
           status: c.status,
           createdAt: c.createdAt,
           storeName: affiliate.store.name,
@@ -354,7 +500,7 @@ export default function BilleteraPage() {
     );
   }
 
-  const canWithdraw = data?.hasBankData && !data?.bankLocked && (data?.totalBalance ?? 0) >= 500;
+  const canWithdraw = data?.hasBankData && !data?.bankLocked && (data?.totalBalance ?? 0) >= 100;
   const multiStore = (data?.affiliates.length ?? 0) > 1;
 
   return (
@@ -366,12 +512,21 @@ export default function BilleteraPage() {
           <Link href="/afiliados" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex-1">Mi billetera</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex-1">Mis comisiones</h1>
         </div>
 
         {/* Resumen total */}
+        {(data?.totalBalance ?? 0) < 0 && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-xl p-4 mb-4 text-sm text-red-700 dark:text-red-300">
+            <p className="font-bold mb-1">Saldo deudor por chargeback</p>
+            <p>Tenés un saldo negativo de ${Math.abs(data?.totalBalance ?? 0).toLocaleString("es-AR")} ARS por una devolución de cargo aprobada por MercadoPago. Debés regularizarlo dentro de los 30 días corridos o tu cuenta puede ser suspendida. Escribinos a marketplacemitienda@gmail.com.</p>
+
+          </div>
+        )}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white mb-4">
+          className={(data?.totalBalance ?? 0) < 0
+            ? "bg-gradient-to-br from-red-600 to-red-800 rounded-2xl p-6 text-white mb-4"
+            : "bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white mb-4"}>
           <p className="text-indigo-200 text-sm mb-1">Saldo disponible</p>
           <p className="text-4xl font-extrabold mb-4">${(data?.totalBalance ?? 0).toLocaleString("es-AR")}</p>
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
@@ -395,7 +550,7 @@ export default function BilleteraPage() {
               <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">Para poder solicitar retiros tenés que agregar tu CBU/CVU o alias. Es un paso único y solo te lleva un minuto.</p>
             </div>
             <button
-              onClick={() => setShowBankForm(true)}
+              onClick={() => requireOtp("bankform")}
               className="shrink-0 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/20 hover:bg-amber-200 dark:hover:bg-amber-500/30 px-3 py-1.5 rounded-lg transition-colors"
             >
               Agregar ahora
@@ -404,7 +559,7 @@ export default function BilleteraPage() {
         )}
 
         <div className="flex flex-col items-end mb-6 gap-2">
-          <button onClick={() => setShowWithdraw(true)} disabled={!canWithdraw}
+          <button onClick={() => requireOtp("withdraw")} disabled={!canWithdraw}
             className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-sm">
             <ArrowDownLeft className="h-4 w-4" />
             Solicitar retiro
@@ -414,7 +569,7 @@ export default function BilleteraPage() {
               <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
               {data.bankLocked
                 ? "Retiros bloqueados 72hs tras cambiar datos bancarios"
-                : "Necesitás al menos $500 en tu billetera"}
+                : "Necesitás al menos $100 en comisiones acreditadas"}
             </p>
           )}
         </div>
@@ -444,7 +599,7 @@ export default function BilleteraPage() {
                       </p>
                     </div>
                   </div>
-                  <button onClick={() => setShowBankForm(true)}
+                  <button onClick={() => requireOtp("bankform")}
                     className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors shrink-0">
                     <Pencil className="h-3 w-3" />
                     {data!.hasBankData ? "Editar" : "Agregar"}
@@ -476,6 +631,8 @@ export default function BilleteraPage() {
                     ? <CheckCircle className="h-4 w-4 text-blue-500 shrink-0" />
                     : m.status === "PAID"
                     ? <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                    : m.status === "REVERSED"
+                    ? <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
                     : <Clock className="h-4 w-4 text-yellow-400 shrink-0" />;
                   return (
                     <div key={`c-${m.id}`} className="flex items-center justify-between px-6 py-3 gap-3">
@@ -485,16 +642,30 @@ export default function BilleteraPage() {
                           <p className="text-sm text-gray-700 dark:text-gray-300 truncate">
                             Comisión {m.rate}% — venta ${m.orderTotal.toLocaleString("es-AR")}
                           </p>
-                          <p className="text-xs text-gray-400">
-                            {new Date(m.createdAt).toLocaleDateString("es-AR")}
-                            {multiStore && <span className="ml-1.5 text-gray-300 dark:text-gray-600">· {m.storeName}</span>}
-                            {m.status === "DISBURSED" && <span className="ml-1.5 text-blue-500 font-medium">→ MP</span>}
+                          <p className="text-xs text-gray-400 flex flex-wrap items-center gap-1.5">
+                            <span>Venta: {new Date(m.orderDate).toLocaleDateString("es-AR")}</span>
+                            <span>·</span>
+                            <span>Acreditada: {new Date(m.createdAt).toLocaleDateString("es-AR")}</span>
+                            {multiStore && <><span>·</span><span>{m.storeName}</span></>}
+                            {m.status === "DISBURSED" && <span className="text-blue-500 font-medium">→ MP</span>}
+                            {m.status === "REVERSED" && <span className="text-red-500 font-medium">Revertida</span>}
                           </p>
                         </div>
                       </div>
-                      <span className={`font-semibold text-sm shrink-0 ${m.status === "DISBURSED" ? "text-blue-600" : "text-green-600 dark:text-green-400"}`}>
-                        +${m.amount.toLocaleString("es-AR")}
-                      </span>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <a
+                          href={`/api/vendedoras/comision/${m.id}/comprobante`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 hover:underline"
+                          title="Descargar comprobante"
+                        >
+                          Comprobante
+                        </a>
+                        <span className={`font-semibold text-sm ${m.status === "REVERSED" ? "text-red-500" : m.status === "DISBURSED" ? "text-blue-600" : "text-green-600 dark:text-green-400"}`}>
+                          {m.status === "REVERSED" ? "-" : "+"}${m.amount.toLocaleString("es-AR")}
+                        </span>
+                      </div>
                     </div>
                   );
                 }
@@ -502,14 +673,22 @@ export default function BilleteraPage() {
                 // Retiro
                 const s = withdrawalStatus[m.status] ?? { label: m.status, color: "text-gray-600 bg-gray-50" };
                 const daysOld = Math.floor((Date.now() - new Date(m.createdAt).getTime()) / 86_400_000);
+                const withdrawalLabel: Record<string, string> = {
+                  PENDING: "Retiro solicitado",
+                  PROCESSING: "Retiro en proceso",
+                  APPROVED: "Retiro acreditado",
+                  PAID: "Retiro acreditado",
+                  REJECTED: "Retiro rechazado",
+                };
                 return (
                   <div key={`w-${m.id}`} className="flex items-center justify-between px-6 py-3 gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <ArrowDownLeft className="h-4 w-4 text-gray-400 shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-sm text-gray-700 dark:text-gray-300">Retiro solicitado</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{withdrawalLabel[m.status] ?? "Retiro"}</p>
                         <p className="text-xs text-gray-400 flex flex-wrap items-center gap-1.5">
                           {new Date(m.createdAt).toLocaleDateString("es-AR")}
+                          {m.notes && <span className="text-gray-500">· {m.notes}</span>}
                           {m.status === "PENDING" && daysOld >= 3 && (
                             <a
                               href={`mailto:marketplacemitienda@gmail.com?subject=${encodeURIComponent(`Consulta retiro — $${m.amount.toLocaleString("es-AR")} del ${new Date(m.createdAt).toLocaleDateString("es-AR")}`)}`}
@@ -548,13 +727,16 @@ export default function BilleteraPage() {
       </div>
 
       <AnimatePresence>
-        {showBankForm && (
-          <BankForm onClose={() => setShowBankForm(false)}
-            onSaved={() => { setShowBankForm(false); loadData(); }} />
+        {pendingAction && (
+          <OtpModal onVerified={onOtpVerified} onClose={() => setPendingAction(null)} />
         )}
-        {showWithdraw && data && (
-          <WithdrawModal totalBalance={data.totalBalance} onClose={() => setShowWithdraw(false)}
-            onSuccess={() => { setShowWithdraw(false); loadData(); }} />
+        {showBankForm && otpToken && (
+          <BankForm otpToken={otpToken} onClose={() => setShowBankForm(false)}
+            onSaved={() => { setShowBankForm(false); setOtpToken(""); clearOtpToken(); loadData(); }} />
+        )}
+        {showWithdraw && data && otpToken && (
+          <WithdrawModal totalBalance={data.totalBalance} otpToken={otpToken} onClose={() => setShowWithdraw(false)}
+            onSuccess={() => { setShowWithdraw(false); setOtpToken(""); clearOtpToken(); loadData(); }} />
         )}
       </AnimatePresence>
     </div>

@@ -752,7 +752,7 @@ export default function Home() {
             "✦ Comisiones automáticas o manuales",
             "✦ Sin inversión inicial",
             "✦ Mercado Pago",
-            "✦ Billetera digital",
+            "✦ Panel de comisiones",
             "✦ Sin stock propio",
             "✦ Panel en tiempo real",
             "✦ Para todos",
@@ -762,7 +762,7 @@ export default function Home() {
             "✦ Comisiones automáticas o manuales",
             "✦ Sin inversión inicial",
             "✦ Mercado Pago",
-            "✦ Billetera digital",
+            "✦ Panel de comisiones",
             "✦ Sin stock propio",
             "✦ Panel en tiempo real",
             "✦ Para todos",
@@ -796,7 +796,7 @@ export default function Home() {
               {
                 icon: Users, color: "#f59e0b", gradient: "from-amber-50 to-amber-50/40", border: "border-amber-200", metric: "$3.680 comisión cobrada",
                 title: "Afiliado", sub: "Plata por cada link que compartís, sin poner un peso.",
-                items: ["Elegís las tiendas que te interesan y te postulás", "Link propio con seguimiento de clics y ventas", "Sin stock, sin inversión, sin riesgo", "Metas mensuales con bono extra si las cumplís", "Billetera digital con historial de comisiones", "Retirá cuando quieras, por transferencia bancaria", "100% gratis, para siempre"],
+                items: ["Elegís las tiendas que te interesan y te postulás", "Link propio con seguimiento de clics y ventas", "Sin stock, sin inversión, sin riesgo", "Metas mensuales con bono extra si las cumplís", "Panel de comisiones con historial de ventas", "Retirá cuando quieras, por transferencia bancaria", "100% gratis, para siempre"],
                 cta: "Quiero ser afiliado", href: "/afiliados",
               },
               {
@@ -1522,7 +1522,7 @@ export default function Home() {
             <div>
               <p className="text-gray-900 font-semibold text-sm mb-4">Afiliados</p>
               <ul className="space-y-2.5">
-                {[["/afiliados", "Postularme"], ["/afiliados/billetera", "Mi billetera"], ["/quienes-somos", "Quiénes somos"]].map(([href, label]) => (
+                {[["/afiliados", "Postularme"], ["/afiliados/billetera", "Mis comisiones"], ["/quienes-somos", "Quiénes somos"]].map(([href, label]) => (
                   <li key={label}><a href={href} className="text-gray-500 hover:text-gray-900 text-sm transition-colors">{label}</a></li>
                 ))}
                 <li><Link href="/contacto" className="text-gray-500 hover:text-gray-900 text-sm transition-colors">Contacto</Link></li>

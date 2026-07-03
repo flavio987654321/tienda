@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/abandoned-carts",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/mp-health",
+      "schedule": "0 12 * * *"
     }
   ]
 }
