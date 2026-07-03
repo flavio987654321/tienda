@@ -19,7 +19,7 @@ export default function TerminosAfiliados() {
           Términos y Condiciones del Programa de Afiliados
         </h1>
         <p className="text-gray-500 text-sm mb-6">
-          Versión 1.7 — Vigente desde julio de 2026
+          Versión 1.8 — Vigente desde julio de 2026
         </p>
 
         <div className="rounded-xl border border-white/10 bg-white/5 p-5 mb-10 text-sm text-gray-300 space-y-1">
@@ -71,6 +71,26 @@ export default function TerminosAfiliados() {
                 (estado <em>Confirmado</em>). Pedidos en estado Pendiente no generan comisión.
               </li>
               <li>
+                <strong className="text-gray-300">Destino de la comisión según el medio de pago:</strong>
+                <ul className="mt-2 ml-4 space-y-1.5 list-none">
+                  <li className="flex items-start gap-2">
+                    <span className="text-indigo-400 font-bold shrink-0 mt-0.5">→</span>
+                    <span>
+                      <strong className="text-gray-300">Tiendas con pago online (MercadoPago) y MP conectado:</strong>{" "}
+                      la comisión se transfiere directamente desde la cuenta de TiendaApps a tu cuenta de MercadoPago
+                      de forma automática, en minutos, sin que intervenga ningún intermediario humano.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-indigo-400 font-bold shrink-0 mt-0.5">→</span>
+                    <span>
+                      <strong className="text-gray-300">Tiendas con pago online sin MP conectado, o tiendas por WhatsApp:</strong>{" "}
+                      la comisión se acredita en tu billetera de TiendaApps. Podés solicitar un retiro cuando quieras desde el panel.
+                    </span>
+                  </li>
+                </ul>
+              </li>
+              <li>
                 Una vez acreditada, la comisión <strong className="text-gray-300">no se revierte</strong> aunque
                 el pedido sea cancelado con posterioridad por el/la Titular. La afiliada cumplió su función al generar
                 la venta; cualquier cancelación posterior es responsabilidad del/la Titular.
@@ -78,7 +98,7 @@ export default function TerminosAfiliados() {
                 <span className="text-gray-500">
                   Excepción: si el comprador inicia una devolución de cargo (<em>chargeback</em>) a través de MercadoPago
                   y el pago es revertido por MercadoPago, TiendaApps se reserva el derecho de revertir la comisión
-                  acreditada en la billetera, dado que el ingreso que la sustenta fue devuelto.
+                  acreditada o ya transferida, dado que el ingreso que la sustenta fue devuelto.
                 </span>
               </li>
               <li>
@@ -119,16 +139,33 @@ export default function TerminosAfiliados() {
 
           <section>
             <h2 className="text-lg font-bold text-white mb-3">4. Retiros y pagos</h2>
+
+            <h3 className="text-base font-bold text-white mt-4 mb-2">4a. Pago automático a tu MercadoPago</h3>
             <ul className="list-disc list-inside space-y-2 text-gray-400">
+              <li>
+                Si conectaste tu cuenta de MercadoPago en el panel de afiliados y la tienda procesa pagos online,
+                la comisión se transfiere <strong className="text-gray-300">automáticamente</strong> a tu cuenta de MP
+                en el momento en que el pago se confirma. No hay que solicitar retiro.
+              </li>
+              <li>
+                El acreditamiento en tu cuenta MP puede demorar algunos minutos dependiendo del procesamiento interno de MercadoPago.
+              </li>
+              <li>
+                Podés desconectar tu MercadoPago desde el panel en cualquier momento; en ese caso,
+                las comisiones futuras pasarán al sistema de billetera (4b).
+              </li>
+            </ul>
+
+            <h3 className="text-base font-bold text-white mt-5 mb-2">4b. Billetera y retiros manuales</h3>
+            <ul className="list-disc list-inside space-y-2 text-gray-400">
+              <li>
+                Aplica a: (i) tiendas por WhatsApp (AUTOS); (ii) tiendas con MP pero sin tu cuenta MP conectada;
+                (iii) saldo previo acumulado antes de conectar tu MP.
+              </li>
               <li>El monto mínimo de retiro es de <strong className="text-gray-300">$500 ARS</strong>.</li>
               <li>
                 Una vez aprobada la solicitud de retiro, TiendaApps realizará la transferencia bancaria
                 dentro de los <strong className="text-gray-300">1 a 3 días hábiles</strong> siguientes.
-              </li>
-              <li>
-                Al momento del retiro se descuenta una <strong className="text-gray-300">comisión de procesamiento</strong>{" "}
-                correspondiente al costo del servicio de transferencia bancaria automática. Dicha comisión
-                se informa antes de confirmar el retiro.
               </li>
               <li>
                 El/la Afiliado/a es responsable de ingresar correctamente sus datos bancarios
@@ -214,17 +251,33 @@ export default function TerminosAfiliados() {
               es de naturaleza comercial independiente y no implica relación de dependencia laboral.
             </p>
             <p className="mt-3">
-              El programa de afiliados opera exclusivamente con tiendas que tienen MercadoPago conectado.
-              Cuando se confirma un pago, MercadoPago retiene automáticamente el importe de la comisión
-              y lo transfiere a TiendaApps, quien lo acredita en la billetera del/la Afiliado/a.
-              <strong className="text-white"> TiendaApps es el responsable directo del pago de comisiones</strong>,
-              no el/la Titular de la tienda.
+              <strong className="text-white">TiendaApps es el responsable directo del pago de comisiones</strong>,
+              no el/la Titular de la tienda. El flujo técnico funciona de la siguiente manera:
             </p>
+            <ul className="list-disc list-inside space-y-2 text-gray-400 mt-3">
+              <li>
+                <strong className="text-gray-300">Con MP conectado:</strong> cuando el comprador paga con MercadoPago,
+                el importe de la comisión (marketplace_fee) queda retenido en la cuenta de TiendaApps.
+                En el mismo instante de confirmación, la Plataforma transfiere ese importe directamente
+                a la cuenta de MercadoPago del/la Afiliado/a mediante la Transfer API de MercadoPago.
+                El dinero nunca queda retenido en TiendaApps más allá del tiempo de procesamiento técnico.
+              </li>
+              <li>
+                <strong className="text-gray-300">Sin MP conectado o tiendas por WhatsApp:</strong> la comisión
+                se acredita en la billetera de TiendaApps y el/la Afiliado/a puede solicitarla en retiro
+                cuando lo desee.
+              </li>
+              <li>
+                Si la transferencia automática a MP falla por causas técnicas, la comisión es acreditada
+                en la billetera de forma inmediata como contingencia.
+              </li>
+            </ul>
             <p className="mt-3">
               TiendaApps no será responsable por daños indirectos o imprevisibles derivados del uso de la
-              Plataforma. En caso de daño directo comprobable imputable a la Plataforma, la responsabilidad
-              se determinará según la legislación argentina vigente, sin perjuicio de los derechos
-              irrenunciables que la Ley 24.240 reconoce a los/las usuarios/as consumidores/as.
+              Plataforma ni por demoras atribuibles a la infraestructura de MercadoPago. En caso de daño
+              directo comprobable imputable a la Plataforma, la responsabilidad se determinará según la
+              legislación argentina vigente, sin perjuicio de los derechos irrenunciables que la Ley 24.240
+              reconoce a los/las usuarios/as consumidores/as.
             </p>
           </section>
 
@@ -286,7 +339,7 @@ export default function TerminosAfiliados() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/5 text-xs text-gray-600 text-center">
-          <p>TiendaApps — Programa de Afiliados · Versión 1.7</p>
+          <p>TiendaApps — Programa de Afiliados · Versión 1.8</p>
           <p className="mt-1">Para consultas escribí a soporte desde tu panel de afiliado/a.</p>
         </div>
       </div>

@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+const isDev = process.env.NODE_ENV === "development";
+
 const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
   : "*.supabase.co";
@@ -8,10 +10,10 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 const csp = [
   "default-src 'self'",
   `img-src 'self' data: blob: https: https://${supabaseHost} https://res.cloudinary.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com`,
-  `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.mercadopago.com https://api.mercadolibre.com https://*.mercadolibre.com`,
+  `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.mercadopago.com https://api.mercadolibre.com https://*.mercadolibre.com https://*.ingest.sentry.io`,
   "media-src 'self' blob: https: https://res.cloudinary.com https://www.youtube.com https://www.instagram.com https://*.cdninstagram.com",
   "frame-src 'self' https://www.youtube.com https://www.instagram.com https://sdk.mercadopago.com https://www.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com",
-  `script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://sdk.mercadopago.com`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   "object-src 'none'",
@@ -29,22 +31,16 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
 ];
 
-// MercadoPago SDK requiere unsafe-eval — solo en páginas de pago
-const cspPayment = csp.replace(
-  "script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com"
-);
+// MercadoPago SDK requiere unsafe-eval — solo en páginas de pago (en prod; en dev ya viene en csp base)
+const cspPaymentScript = `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com`;
+const cspPayment = csp.replace(/script-src[^;]+/, cspPaymentScript);
 const paymentHeaders = securityHeaders.map((h) =>
   h.key === "Content-Security-Policy" ? { key: h.key, value: cspPayment } : h
 );
 
 // Preview de templates — permite ser embebido en iframe same-origin (editor de diseño)
-const cspPreview = csp
-  .replace("frame-ancestors 'none'", "frame-ancestors 'self'")
-  .replace(
-    "script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com"
-  );
+const cspPreview = cspPayment
+  .replace("frame-ancestors 'none'", "frame-ancestors 'self'");
 const previewHeaders = securityHeaders.map((h) => {
   if (h.key === "Content-Security-Policy") return { key: h.key, value: cspPreview };
   if (h.key === "X-Frame-Options") return { key: h.key, value: "SAMEORIGIN" };
@@ -73,7 +69,9 @@ const nextConfig: NextConfig = {
         { key: "Service-Worker-Allowed", value: "/" },
         { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
       ]},
-      { source: "/((?!preview\\/).*)", headers: securityHeaders },
+      // Regla base: todo excepto las rutas que tienen su propio set de headers más permisivo
+      // (si no se excluyen, el browser recibe dos CSP headers y aplica la intersección — unsafe-eval se pierde)
+      { source: "/((?!preview\\/|tienda\\/|precios|dashboard).*)", headers: securityHeaders },
       // Páginas donde carga el SDK de MercadoPago (checkout de tienda + suscripciones + dashboard)
       { source: "/(precios|dashboard.*)", headers: paymentHeaders },
       // Tiendas públicas: pago habilitado + embebibles en iframe same-origin (para previews en cards)

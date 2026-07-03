@@ -51,7 +51,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
         <div className="border-b border-slate-200 bg-white px-6 py-8">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 mb-2">Mi tienda</p>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Configuración</h1>
-          <p className="text-slate-500 text-sm mt-1.5">Logo, dominio, pagos y opciones de cuenta.</p>
+          <p className="text-slate-500 text-sm mt-1.5">{store?.tipoTienda === "AUTOS" ? "Logo, dominio y opciones de cuenta." : "Logo, dominio, pagos y opciones de cuenta."}</p>
         </div>
 
         {/* Content */}
@@ -77,6 +77,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
               customDomain={store?.customDomain ?? null}
               isPremium={isPremium}
               description={store?.description ?? ""}
+              tipoTienda={store?.tipoTienda}
             />
           </section>
 

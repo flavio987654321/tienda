@@ -5,17 +5,14 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTheme } from "next-themes";
 import { useAuth } from "@/components/AuthProvider";
-import NotificationBell from "@/components/NotificationBell";
-import FavoritesDrawer from "@/components/FavoritesDrawer";
 import { QRCodeCanvas } from "qrcode.react";
 import {
   CheckCircle, Clock, Loader2, Send, Store, Wallet,
-  XCircle, Share2, Copy, Check, ExternalLink, LogOut, ShoppingBag,
+  XCircle, Share2, Copy, Check, ExternalLink, ShoppingBag,
   Star, Package, ArrowRight, ArrowLeft, ChevronLeft, ChevronRight, Eye, Edit3, MapPin, Phone, Save,
   DollarSign, ShoppingCart, Award, FileText, UploadCloud, Trash2, Download, Search,
-  Moon, Sun, Menu, X, BarChart3, MessageSquare, Target, Trophy, LayoutGrid, List,
+  X, BarChart3, MessageSquare, Target, Trophy, LayoutGrid, List,
   QrCode as QrCodeIcon, AlertTriangle, ShieldAlert, UserX, HelpCircle, Headset,
 } from "lucide-react";
 
@@ -36,6 +33,9 @@ interface ShareProduct {
   comparePrice: number | null;
   images: string;
   category: string;
+  cuotas: number;
+  createdAt: string;
+  variants: { id: string; stock: number }[];
   salesCount?: number;
 }
 interface ShareTarget { storeSlug: string; storeName: string; affiliateId: string; commissionRate: number; }
@@ -102,16 +102,87 @@ function loadCardImage(src: string) {
 }
 
 /* ── Plantillas de placa ── */
-type PlacaTemplateId = "clasica" | "minimal" | "oferta";
+type PlacaTemplateId = "clasica" | "minimal" | "oferta" | "neon" | "luxury" | "duo";
+type PlacaFormat    = "portrait" | "story" | "square";
+
+const FORMAT_SIZES: Record<PlacaFormat, { w: number; h: number }> = {
+  portrait: { w: 1080, h: 1350 },
+  story:    { w: 1080, h: 1920 },
+  square:   { w: 1080, h: 1080 },
+};
+
+const FORMAT_LABELS: Record<PlacaFormat, { label: string; sub: string }> = {
+  portrait: { label: "4:5",  sub: "Feed IG"  },
+  story:    { label: "9:16", sub: "Stories"  },
+  square:   { label: "1:1",  sub: "Cuadrada" },
+};
 
 const PLACA_TEMPLATES: { id: PlacaTemplateId; label: string; description: string }[] = [
-  { id: "clasica", label: "Clásica", description: "Fondo oscuro, foto completa" },
-  { id: "minimal", label: "Minimal", description: "Fondo blanco, estilo limpio" },
-  { id: "oferta", label: "Oferta", description: "Colores cálidos, ideal para descuentos" },
+  { id: "clasica", label: "Clásica", description: "Fondo oscuro, foto completa"       },
+  { id: "minimal", label: "Minimal", description: "Fondo blanco, estilo limpio"        },
+  { id: "oferta",  label: "Oferta",  description: "Colores cálidos, descuentos"        },
+  { id: "neon",    label: "Neon",    description: "Gradiente eléctrico, Gen-Z"         },
+  { id: "luxury",  label: "Luxury",  description: "Negro y dorado, premium"            },
+  { id: "duo",     label: "Duo",     description: "Collage de dos fotos"               },
 ];
 
-type PlacaProduct = Pick<ShareProduct, "name" | "price" | "comparePrice" | "description">;
+type PlacaProduct = {
+  name: string;
+  price: number;
+  comparePrice: number | null;
+  description: string | null;
+  cuotas: number;
+  isNew: boolean;
+  isLowStock: boolean;
+  isBestSeller: boolean;
+};
 
+// ── Badge row helper ─────────────────────────────────────────────────────────
+function drawBadgesRow(
+  ctx: CanvasRenderingContext2D,
+  px: (n: number) => number,
+  product: PlacaProduct,
+  x: number,
+  y: number,
+) {
+  const badges: { text: string; bg: string }[] = [];
+  if (product.isBestSeller) badges.push({ text: "🔥 Más vendido",    bg: "#f97316" });
+  if (product.isNew)        badges.push({ text: "✨ Nuevo",           bg: "#6366f1" });
+  if (product.isLowStock)   badges.push({ text: "⚡ Últimas unidades", bg: "#dc2626" });
+  if (badges.length === 0) return;
+  const fontSize = px(22);
+  ctx.font = `700 ${fontSize}px Arial`;
+  let cx = x;
+  for (const badge of badges.slice(0, 2)) {
+    const tw = ctx.measureText(badge.text).width;
+    const ph = px(11); const pv = px(8);
+    const bw = tw + ph * 2; const bh = fontSize + pv * 2;
+    ctx.fillStyle = badge.bg;
+    ctx.beginPath(); ctx.roundRect(cx, y, bw, bh, px(20)); ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.fillText(badge.text, cx + ph, y + bh - pv - px(2));
+    cx += bw + px(10);
+  }
+}
+
+// ── Cuotas helper — returns updated Y ────────────────────────────────────────
+function drawCuotas(
+  ctx: CanvasRenderingContext2D,
+  px: (n: number) => number,
+  product: PlacaProduct,
+  x: number,
+  y: number,
+  color: string,
+): number {
+  if (!product.cuotas || product.cuotas < 2) return y;
+  const amt = Math.round(product.price / product.cuotas).toLocaleString("es-AR");
+  ctx.fillStyle = color;
+  ctx.font = `400 ${px(26)}px Arial`;
+  ctx.fillText(`${product.cuotas} cuotas sin interés de $${amt}`, x, y);
+  return y + px(40);
+}
+
+// ── CLÁSICA ───────────────────────────────────────────────────────────────────
 function drawClasicaTemplate(
   ctx: CanvasRenderingContext2D,
   px: (n: number) => number,
@@ -120,106 +191,140 @@ function drawClasicaTemplate(
   product: PlacaProduct,
   storeName: string
 ) {
+  const isStory  = size.h >= 1800;
+  const isSquare = size.h <= 1100;
+  const imgH = isStory ? px(1080) : isSquare ? px(500) : px(760);
+
   ctx.fillStyle = "#070b18";
   ctx.fillRect(0, 0, size.w, size.h);
 
   if (image) {
-    const imgScale = Math.max(size.w / image.width, px(760) / image.height);
-    const width = image.width * imgScale;
-    const height = image.height * imgScale;
-    ctx.drawImage(image, (size.w - width) / 2, 0, width, height);
+    const s = Math.max(size.w / image.width, imgH / image.height);
+    ctx.drawImage(image, (size.w - image.width * s) / 2, 0, image.width * s, image.height * s);
   } else {
-    ctx.fillStyle = "#111827";
-    ctx.fillRect(0, 0, size.w, px(760));
+    ctx.fillStyle = "#111827"; ctx.fillRect(0, 0, size.w, imgH);
   }
 
-  const gradient = ctx.createLinearGradient(0, px(520), 0, size.h);
-  gradient.addColorStop(0, "rgba(7,11,24,0)");
-  gradient.addColorStop(0.24, "rgba(7,11,24,.86)");
-  gradient.addColorStop(1, "#070b18");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, px(420), size.w, size.h - px(420));
+  const gradStart = isStory ? px(650) : isSquare ? px(280) : px(420);
+  const grad = ctx.createLinearGradient(0, gradStart, 0, size.h);
+  grad.addColorStop(0, "rgba(7,11,24,0)");
+  grad.addColorStop(0.28, "rgba(7,11,24,.88)");
+  grad.addColorStop(1, "#070b18");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, gradStart - px(60), size.w, size.h);
 
+  drawBadgesRow(ctx, px, product, px(60), px(60));
+
+  let y = imgH + px(44);
   ctx.fillStyle = "#a5b4fc";
-  ctx.font = `700 ${px(34)}px Arial`;
-  ctx.fillText(storeName.toUpperCase(), px(72), px(785));
+  ctx.font = `700 ${px(32)}px Arial`;
+  ctx.fillText(storeName.toUpperCase(), px(72), y);
+  y += px(56);
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = `900 ${px(76)}px Arial`;
-  wrapCanvasText(ctx, product.name, px(72), px(875), px(930), px(84), 3);
+  ctx.font = `900 ${px(74)}px Arial`;
+  wrapCanvasText(ctx, product.name, px(72), y, px(930), px(82), 2);
+  y += px(82) * 2 + px(16);
 
-  ctx.fillStyle = "#34d399";
-  ctx.font = `900 ${px(68)}px Arial`;
-  ctx.fillText(money(product.price), px(72), px(1120));
+  const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
+  if (hasDisc) {
+    const oldTxt = money(product.comparePrice!);
+    ctx.fillStyle = "#64748b"; ctx.font = `500 ${px(34)}px Arial`;
+    ctx.fillText(oldTxt, px(72), y);
+    const ow = ctx.measureText(oldTxt).width;
+    ctx.strokeStyle = "#64748b"; ctx.lineWidth = px(2);
+    ctx.beginPath(); ctx.moveTo(px(72), y - px(12)); ctx.lineTo(px(72) + ow, y - px(12)); ctx.stroke();
+    y += px(48);
+  }
+  ctx.fillStyle = "#34d399"; ctx.font = `900 ${px(68)}px Arial`;
+  ctx.fillText(money(product.price), px(72), y);
+  y += px(78);
 
-  if (product.description) {
-    ctx.fillStyle = "#cbd5e1";
-    ctx.font = `400 ${px(30)}px Arial`;
-    wrapCanvasText(ctx, product.description, px(72), px(1180), px(780), px(40), 2);
+  y = drawCuotas(ctx, px, product, px(72), y, "#94a3b8");
+
+  if (product.description && y < size.h - px(180)) {
+    ctx.fillStyle = "#cbd5e1"; ctx.font = `400 ${px(29)}px Arial`;
+    wrapCanvasText(ctx, product.description, px(72), y, px(780), px(40), 2);
+    y += px(40) * 2 + px(14);
   }
 
-  ctx.fillStyle = "#4f46e5";
-  ctx.beginPath();
-  ctx.roundRect(px(72), px(1245), px(300), px(62), px(31));
-  ctx.fill();
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `800 ${px(26)}px Arial`;
-  ctx.fillText("Comprá ahora →", px(108), px(1285));
-
-  ctx.fillStyle = "#94a3b8";
-  ctx.font = `500 ${px(24)}px Arial`;
-  ctx.fillText("Link en bio / stories", px(620), px(1285));
+  if (y < size.h - px(80)) {
+    ctx.fillStyle = "#4f46e5";
+    ctx.beginPath(); ctx.roundRect(px(72), y, px(310), px(62), px(31)); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.font = `800 ${px(26)}px Arial`;
+    ctx.fillText("Comprá ahora →", px(108), y + px(40));
+  }
 }
 
+// ── MINIMAL ───────────────────────────────────────────────────────────────────
 function drawMinimalTemplate(
   ctx: CanvasRenderingContext2D,
   px: (n: number) => number,
   size: { w: number; h: number },
   image: HTMLImageElement | null,
-  product: PlacaProduct
+  product: PlacaProduct,
+  storeName: string,
 ) {
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, size.w, size.h);
+  const isStory  = size.h >= 1800;
+  const isSquare = size.h <= 1100;
+  const imgH   = isStory ? px(1060) : isSquare ? px(490) : px(750);
+  const margin = px(56);
+  const imgW   = size.w - margin * 2;
 
-  const margin = px(60);
-  const imgW = size.w - margin * 2;
-  const imgH = px(760);
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, size.w, size.h);
 
   ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(margin, margin, imgW, imgH, px(28));
-  ctx.clip();
-  ctx.fillStyle = "#f1f5f9";
-  ctx.fillRect(margin, margin, imgW, imgH);
+  ctx.beginPath(); ctx.roundRect(margin, margin, imgW, imgH, px(28)); ctx.clip();
+  ctx.fillStyle = "#f1f5f9"; ctx.fillRect(margin, margin, imgW, imgH);
   if (image) {
-    const imgScale = Math.max(imgW / image.width, imgH / image.height);
-    const width = image.width * imgScale;
-    const height = image.height * imgScale;
-    ctx.drawImage(image, margin + (imgW - width) / 2, margin + (imgH - height) / 2, width, height);
+    const s = Math.max(imgW / image.width, imgH / image.height);
+    ctx.drawImage(image, margin + (imgW - image.width * s) / 2, margin + (imgH - image.height * s) / 2, image.width * s, image.height * s);
   }
   ctx.restore();
 
-  let y = margin + imgH + px(90);
-  ctx.fillStyle = "#0f172a";
-  ctx.font = `900 ${px(60)}px Arial`;
-  wrapCanvasText(ctx, product.name, margin, y, size.w - margin * 2, px(68), 2);
+  drawBadgesRow(ctx, px, product, margin + px(14), margin + px(14));
 
-  y += px(150);
-  ctx.fillStyle = "#0f172a";
-  ctx.font = `900 ${px(70)}px Arial`;
+  let y = margin + imgH + px(50);
+
+  ctx.fillStyle = "#6366f1"; ctx.font = `700 ${px(26)}px Arial`;
+  ctx.fillText(storeName.toUpperCase(), margin, y);
+  y += px(46);
+
+  ctx.fillStyle = "#0f172a"; ctx.font = `900 ${px(62)}px Arial`;
+  wrapCanvasText(ctx, product.name, margin, y, size.w - margin * 2, px(70), 2);
+  y += px(70) * 2 + px(16);
+
+  const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
+  if (hasDisc) {
+    const oldTxt = money(product.comparePrice!);
+    ctx.fillStyle = "#94a3b8"; ctx.font = `500 ${px(32)}px Arial`;
+    ctx.fillText(oldTxt, margin, y);
+    const ow = ctx.measureText(oldTxt).width;
+    ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = px(2);
+    ctx.beginPath(); ctx.moveTo(margin, y - px(11)); ctx.lineTo(margin + ow, y - px(11)); ctx.stroke();
+    y += px(44);
+  }
+  ctx.fillStyle = "#0f172a"; ctx.font = `900 ${px(66)}px Arial`;
   ctx.fillText(money(product.price), margin, y);
+  y += px(76);
 
-  const btnY = size.h - px(140);
-  ctx.strokeStyle = "#0f172a";
-  ctx.lineWidth = px(3);
-  ctx.beginPath();
-  ctx.roundRect(margin, btnY, px(320), px(64), px(32));
-  ctx.stroke();
-  ctx.fillStyle = "#0f172a";
-  ctx.font = `800 ${px(26)}px Arial`;
-  ctx.fillText("Comprá ahora →", margin + px(34), btnY + px(40));
+  y = drawCuotas(ctx, px, product, margin, y, "#475569");
+
+  if (product.description && y < size.h - px(170)) {
+    ctx.fillStyle = "#64748b"; ctx.font = `400 ${px(28)}px Arial`;
+    wrapCanvasText(ctx, product.description, margin, y, size.w - margin * 2, px(40), 2);
+    y += px(40) * 2 + px(14);
+  }
+
+  if (y < size.h - px(70)) {
+    ctx.strokeStyle = "#0f172a"; ctx.lineWidth = px(3);
+    ctx.beginPath(); ctx.roundRect(margin, y, px(310), px(62), px(31)); ctx.stroke();
+    ctx.fillStyle = "#0f172a"; ctx.font = `800 ${px(26)}px Arial`;
+    ctx.fillText("Comprá ahora →", margin + px(36), y + px(40));
+  }
 }
 
+// ── OFERTA ────────────────────────────────────────────────────────────────────
 function drawOfertaTemplate(
   ctx: CanvasRenderingContext2D,
   px: (n: number) => number,
@@ -228,122 +333,382 @@ function drawOfertaTemplate(
   product: PlacaProduct,
   storeName: string
 ) {
-  ctx.fillStyle = "#1a0a05";
-  ctx.fillRect(0, 0, size.w, size.h);
+  const isStory  = size.h >= 1800;
+  const isSquare = size.h <= 1100;
+  const imgH = isStory ? px(1080) : isSquare ? px(500) : px(820);
+
+  ctx.fillStyle = "#1a0a05"; ctx.fillRect(0, 0, size.w, size.h);
 
   if (image) {
-    const imgScale = Math.max(size.w / image.width, px(820) / image.height);
-    const width = image.width * imgScale;
-    const height = image.height * imgScale;
-    ctx.drawImage(image, (size.w - width) / 2, 0, width, height);
+    const s = Math.max(size.w / image.width, imgH / image.height);
+    ctx.drawImage(image, (size.w - image.width * s) / 2, 0, image.width * s, image.height * s);
   } else {
-    ctx.fillStyle = "#3f1d0a";
-    ctx.fillRect(0, 0, size.w, px(820));
+    ctx.fillStyle = "#3f1d0a"; ctx.fillRect(0, 0, size.w, imgH);
   }
 
-  const gradient = ctx.createLinearGradient(0, px(480), 0, size.h);
-  gradient.addColorStop(0, "rgba(26,10,5,0)");
-  gradient.addColorStop(0.3, "rgba(26,10,5,.9)");
-  gradient.addColorStop(1, "#1a0a05");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, px(380), size.w, size.h - px(380));
+  const gradStart = isStory ? px(680) : isSquare ? px(290) : px(480);
+  const grad = ctx.createLinearGradient(0, gradStart, 0, size.h);
+  grad.addColorStop(0, "rgba(26,10,5,0)");
+  grad.addColorStop(0.3, "rgba(26,10,5,.9)");
+  grad.addColorStop(1, "#1a0a05");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, gradStart - px(80), size.w, size.h);
 
-  const hasDiscount = !!(product.comparePrice && product.comparePrice > product.price);
-  if (hasDiscount) {
+  const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
+  if (hasDisc) {
     const pct = Math.round((1 - product.price / product.comparePrice!) * 100);
     ctx.fillStyle = "#f97316";
-    ctx.beginPath();
-    ctx.roundRect(px(60), px(60), px(180), px(70), px(16));
-    ctx.fill();
-    ctx.fillStyle = "#ffffff";
-    ctx.font = `900 ${px(36)}px Arial`;
-    ctx.fillText(`-${pct}%`, px(90), px(108));
+    ctx.beginPath(); ctx.roundRect(px(56), px(56), px(160), px(66), px(16)); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(36)}px Arial`;
+    ctx.fillText(`-${pct}%`, px(80), px(106));
+  }
+  drawBadgesRow(ctx, px, product, hasDisc ? px(230) : px(56), px(56));
+
+  let y = imgH + px(40);
+  ctx.fillStyle = "#fdba74"; ctx.font = `800 ${px(32)}px Arial`;
+  ctx.fillText(storeName.toUpperCase(), px(72), y);
+  y += px(52);
+
+  ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(72)}px Arial`;
+  wrapCanvasText(ctx, product.name, px(72), y, px(930), px(80), 2);
+  y += px(80) * 2 + px(18);
+
+  if (hasDisc) {
+    const oldTxt = money(product.comparePrice!);
+    ctx.fillStyle = "#94a3b8"; ctx.font = `500 ${px(34)}px Arial`;
+    ctx.fillText(oldTxt, px(72), y);
+    const ow = ctx.measureText(oldTxt).width;
+    ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = px(2);
+    ctx.beginPath(); ctx.moveTo(px(72), y - px(12)); ctx.lineTo(px(72) + ow, y - px(12)); ctx.stroke();
+    y += px(50);
+  }
+  ctx.fillStyle = "#fb923c"; ctx.font = `900 ${px(70)}px Arial`;
+  ctx.fillText(money(product.price), px(72), y);
+  y += px(82);
+
+  y = drawCuotas(ctx, px, product, px(72), y, "#fdba74");
+
+  if (product.description && y < size.h - px(160)) {
+    ctx.fillStyle = "#d4846a"; ctx.font = `400 ${px(29)}px Arial`;
+    wrapCanvasText(ctx, product.description, px(72), y, px(780), px(40), 2);
+    y += px(40) * 2 + px(14);
   }
 
-  ctx.fillStyle = "#fdba74";
-  ctx.font = `800 ${px(34)}px Arial`;
-  ctx.fillText(storeName.toUpperCase(), px(72), px(880));
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `900 ${px(74)}px Arial`;
-  wrapCanvasText(ctx, product.name, px(72), px(965), px(930), px(82), 2);
-
-  let priceY = px(1130);
-  if (hasDiscount) {
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = `500 ${px(36)}px Arial`;
-    const oldPriceText = money(product.comparePrice!);
-    ctx.fillText(oldPriceText, px(72), priceY);
-    const oldW = ctx.measureText(oldPriceText).width;
-    ctx.strokeStyle = "#94a3b8";
-    ctx.lineWidth = px(2);
-    ctx.beginPath();
-    ctx.moveTo(px(72), priceY - px(12));
-    ctx.lineTo(px(72) + oldW, priceY - px(12));
-    ctx.stroke();
-    priceY += px(70);
+  if (y < size.h - px(80)) {
+    ctx.fillStyle = "#f97316";
+    ctx.beginPath(); ctx.roundRect(px(72), y, px(300), px(62), px(31)); ctx.fill();
+    ctx.fillStyle = "#1a0a05"; ctx.font = `800 ${px(26)}px Arial`;
+    ctx.fillText("¡Aprovechá! →", px(106), y + px(40));
   }
-  ctx.fillStyle = "#fb923c";
-  ctx.font = `900 ${px(72)}px Arial`;
-  ctx.fillText(money(product.price), px(72), priceY);
-
-  ctx.fillStyle = "#f97316";
-  ctx.beginPath();
-  ctx.roundRect(px(72), size.h - px(110), px(300), px(62), px(31));
-  ctx.fill();
-  ctx.fillStyle = "#1a0a05";
-  ctx.font = `800 ${px(26)}px Arial`;
-  ctx.fillText("¡Aprovechá! →", px(100), size.h - px(70));
 }
 
-const PLACA_PREVIEW_SIZE = { w: 220, h: 275 };
+// ── NEON ──────────────────────────────────────────────────────────────────────
+function drawNeonTemplate(
+  ctx: CanvasRenderingContext2D,
+  px: (n: number) => number,
+  size: { w: number; h: number },
+  image: HTMLImageElement | null,
+  product: PlacaProduct,
+  storeName: string
+) {
+  const isStory  = size.h >= 1800;
+  const isSquare = size.h <= 1100;
+  const imgH = isStory ? px(1080) : isSquare ? px(500) : px(760);
 
-function TemplatePreview({ templateId, product, storeName }: { templateId: PlacaTemplateId; product: PlacaProduct & { images: string }; storeName: string }) {
+  ctx.fillStyle = "#07040f"; ctx.fillRect(0, 0, size.w, size.h);
+
+  if (image) {
+    ctx.save(); ctx.globalAlpha = 0.72;
+    const s = Math.max(size.w / image.width, imgH / image.height);
+    ctx.drawImage(image, (size.w - image.width * s) / 2, 0, image.width * s, image.height * s);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = "#1a0829"; ctx.fillRect(0, 0, size.w, imgH);
+  }
+
+  const gradStart = isStory ? px(600) : isSquare ? px(260) : px(380);
+  const grad = ctx.createLinearGradient(0, gradStart, 0, size.h);
+  grad.addColorStop(0, "rgba(7,4,15,0)");
+  grad.addColorStop(0.25, "rgba(7,4,15,0.92)");
+  grad.addColorStop(1, "#07040f");
+  ctx.fillStyle = grad; ctx.fillRect(0, gradStart - px(60), size.w, size.h);
+
+  const lineGrad = ctx.createLinearGradient(0, 0, size.w, 0);
+  lineGrad.addColorStop(0, "transparent");
+  lineGrad.addColorStop(0.3, "#b026ff");
+  lineGrad.addColorStop(0.6, "#ff0099");
+  lineGrad.addColorStop(1, "transparent");
+  ctx.strokeStyle = lineGrad; ctx.lineWidth = px(3);
+  ctx.beginPath(); ctx.moveTo(0, imgH + px(8)); ctx.lineTo(size.w, imgH + px(8)); ctx.stroke();
+
+  drawBadgesRow(ctx, px, product, px(60), px(60));
+
+  let y = imgH + px(48);
+  const sg = ctx.createLinearGradient(px(72), 0, px(72) + px(400), 0);
+  sg.addColorStop(0, "#b026ff"); sg.addColorStop(1, "#ff0099");
+  ctx.fillStyle = sg; ctx.font = `800 ${px(30)}px Arial`;
+  ctx.fillText(storeName.toUpperCase(), px(72), y);
+  y += px(52);
+
+  ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(72)}px Arial`;
+  wrapCanvasText(ctx, product.name, px(72), y, px(930), px(80), 2);
+  y += px(80) * 2 + px(18);
+
+  const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
+  if (hasDisc) {
+    const oldTxt = money(product.comparePrice!);
+    ctx.fillStyle = "#6b21a8"; ctx.font = `500 ${px(34)}px Arial`;
+    ctx.fillText(oldTxt, px(72), y);
+    const ow = ctx.measureText(oldTxt).width;
+    ctx.strokeStyle = "#6b21a8"; ctx.lineWidth = px(2);
+    ctx.beginPath(); ctx.moveTo(px(72), y - px(12)); ctx.lineTo(px(72) + ow, y - px(12)); ctx.stroke();
+    y += px(48);
+  }
+  const pg = ctx.createLinearGradient(px(72), 0, px(72) + px(500), 0);
+  pg.addColorStop(0, "#b026ff"); pg.addColorStop(1, "#ff0099");
+  ctx.fillStyle = pg; ctx.font = `900 ${px(70)}px Arial`;
+  ctx.fillText(money(product.price), px(72), y);
+  y += px(80);
+
+  y = drawCuotas(ctx, px, product, px(72), y, "#a855f7");
+
+  if (product.description && y < size.h - px(170)) {
+    ctx.fillStyle = "#c4b5fd"; ctx.font = `400 ${px(29)}px Arial`;
+    wrapCanvasText(ctx, product.description, px(72), y, px(780), px(40), 2);
+    y += px(40) * 2 + px(14);
+  }
+
+  if (y < size.h - px(80)) {
+    const bg = ctx.createLinearGradient(px(72), 0, px(72) + px(310), 0);
+    bg.addColorStop(0, "#b026ff"); bg.addColorStop(1, "#ff0099");
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.roundRect(px(72), y, px(310), px(62), px(31)); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.font = `800 ${px(26)}px Arial`;
+    ctx.fillText("Comprá ahora →", px(108), y + px(40));
+  }
+}
+
+// ── LUXURY ────────────────────────────────────────────────────────────────────
+function drawLuxuryTemplate(
+  ctx: CanvasRenderingContext2D,
+  px: (n: number) => number,
+  size: { w: number; h: number },
+  image: HTMLImageElement | null,
+  product: PlacaProduct,
+  storeName: string
+) {
+  const isStory  = size.h >= 1800;
+  const isSquare = size.h <= 1100;
+  const imgH   = isStory ? px(1060) : isSquare ? px(490) : px(740);
+  const margin = px(56);
+  const imgW   = size.w - margin * 2;
+
+  ctx.fillStyle = "#000000"; ctx.fillRect(0, 0, size.w, size.h);
+
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(margin, margin, imgW, imgH, px(20)); ctx.clip();
+  ctx.fillStyle = "#111"; ctx.fillRect(margin, margin, imgW, imgH);
+  if (image) {
+    ctx.globalAlpha = 0.88;
+    const s = Math.max(imgW / image.width, imgH / image.height);
+    ctx.drawImage(image, margin + (imgW - image.width * s) / 2, margin + (imgH - image.height * s) / 2, image.width * s, image.height * s);
+  }
+  ctx.restore();
+
+  ctx.strokeStyle = "#C9A84C"; ctx.lineWidth = px(2);
+  ctx.beginPath(); ctx.roundRect(margin, margin, imgW, imgH, px(20)); ctx.stroke();
+
+  drawBadgesRow(ctx, px, product, margin + px(14), margin + px(14));
+
+  const sepY = margin + imgH + px(36);
+  ctx.strokeStyle = "#C9A84C"; ctx.lineWidth = px(1);
+  ctx.beginPath(); ctx.moveTo(margin, sepY); ctx.lineTo(size.w - margin, sepY); ctx.stroke();
+
+  let y = sepY + px(44);
+  ctx.fillStyle = "#C9A84C"; ctx.font = `400 ${px(24)}px Arial`;
+  ctx.letterSpacing = `${px(6)}px`;
+  ctx.fillText(storeName.toUpperCase(), margin, y);
+  ctx.letterSpacing = "0px";
+  y += px(48);
+
+  ctx.fillStyle = "#f5f0e8"; ctx.font = `700 ${px(60)}px Arial`;
+  wrapCanvasText(ctx, product.name, margin, y, size.w - margin * 2, px(68), 2);
+  y += px(68) * 2 + px(20);
+
+  const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
+  if (hasDisc) {
+    const oldTxt = money(product.comparePrice!);
+    ctx.fillStyle = "#555544"; ctx.font = `400 ${px(30)}px Arial`;
+    ctx.fillText(oldTxt, margin, y);
+    const ow = ctx.measureText(oldTxt).width;
+    ctx.strokeStyle = "#555544"; ctx.lineWidth = px(1.5);
+    ctx.beginPath(); ctx.moveTo(margin, y - px(10)); ctx.lineTo(margin + ow, y - px(10)); ctx.stroke();
+    y += px(44);
+  }
+  ctx.fillStyle = "#C9A84C"; ctx.font = `700 ${px(64)}px Arial`;
+  ctx.fillText(money(product.price), margin, y);
+  y += px(76);
+
+  y = drawCuotas(ctx, px, product, margin, y, "#8a7540");
+
+  if (product.description && y < size.h - px(160)) {
+    ctx.fillStyle = "#8a8070"; ctx.font = `400 ${px(27)}px Arial`;
+    wrapCanvasText(ctx, product.description, margin, y, size.w - margin * 2, px(38), 2);
+    y += px(38) * 2 + px(16);
+  }
+
+  if (y < size.h - px(70)) {
+    ctx.strokeStyle = "#C9A84C"; ctx.lineWidth = px(2);
+    ctx.beginPath(); ctx.roundRect(margin, y, px(300), px(58), px(4)); ctx.stroke();
+    ctx.fillStyle = "#C9A84C"; ctx.font = `700 ${px(23)}px Arial`;
+    ctx.letterSpacing = `${px(2)}px`;
+    ctx.fillText("COMPRÁ AHORA →", margin + px(28), y + px(37));
+    ctx.letterSpacing = "0px";
+  }
+}
+
+// ── DUO (collage 2 fotos) ─────────────────────────────────────────────────────
+function drawDuoTemplate(
+  ctx: CanvasRenderingContext2D,
+  px: (n: number) => number,
+  size: { w: number; h: number },
+  images: (HTMLImageElement | null)[],
+  product: PlacaProduct,
+  storeName: string
+) {
+  const isStory  = size.h >= 1800;
+  const isSquare = size.h <= 1100;
+  const collageH = isStory ? px(1060) : isSquare ? px(490) : px(730);
+  const gap      = px(6);
+  const halfW    = (size.w - gap) / 2;
+
+  ctx.fillStyle = "#111827"; ctx.fillRect(0, 0, size.w, size.h);
+
+  for (let i = 0; i < 2; i++) {
+    const ox = i === 0 ? 0 : halfW + gap;
+    const img = images[i] ?? images[0];
+    ctx.save();
+    ctx.beginPath(); ctx.rect(ox, 0, halfW, collageH); ctx.clip();
+    ctx.fillStyle = "#1f2937"; ctx.fillRect(ox, 0, halfW, collageH);
+    if (img) {
+      const s = Math.max(halfW / img.width, collageH / img.height);
+      ctx.drawImage(img, ox + (halfW - img.width * s) / 2, (collageH - img.height * s) / 2, img.width * s, img.height * s);
+    }
+    ctx.restore();
+  }
+
+  drawBadgesRow(ctx, px, product, px(20), px(20));
+
+  const pad = px(60);
+  let y = collageH + px(44);
+  ctx.fillStyle = "#6366f1"; ctx.font = `700 ${px(28)}px Arial`;
+  ctx.fillText(storeName.toUpperCase(), pad, y);
+  y += px(48);
+
+  ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(64)}px Arial`;
+  wrapCanvasText(ctx, product.name, pad, y, size.w - pad * 2, px(72), 2);
+  y += px(72) * 2 + px(16);
+
+  const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
+  if (hasDisc) {
+    const oldTxt = money(product.comparePrice!);
+    ctx.fillStyle = "#4b5563"; ctx.font = `500 ${px(32)}px Arial`;
+    ctx.fillText(oldTxt, pad, y);
+    const ow = ctx.measureText(oldTxt).width;
+    ctx.strokeStyle = "#4b5563"; ctx.lineWidth = px(2);
+    ctx.beginPath(); ctx.moveTo(pad, y - px(11)); ctx.lineTo(pad + ow, y - px(11)); ctx.stroke();
+    y += px(46);
+  }
+  ctx.fillStyle = "#34d399"; ctx.font = `900 ${px(64)}px Arial`;
+  ctx.fillText(money(product.price), pad, y);
+  y += px(76);
+
+  y = drawCuotas(ctx, px, product, pad, y, "#9ca3af");
+
+  if (product.description && y < size.h - px(160)) {
+    ctx.fillStyle = "#9ca3af"; ctx.font = `400 ${px(28)}px Arial`;
+    wrapCanvasText(ctx, product.description, pad, y, size.w - pad * 2, px(40), 2);
+    y += px(40) * 2 + px(14);
+  }
+
+  if (y < size.h - px(80)) {
+    ctx.fillStyle = "#4f46e5";
+    ctx.beginPath(); ctx.roundRect(pad, y, px(300), px(60), px(30)); ctx.fill();
+    ctx.fillStyle = "#ffffff"; ctx.font = `800 ${px(25)}px Arial`;
+    ctx.fillText("Comprá ahora →", pad + px(30), y + px(38));
+  }
+}
+
+const PREVIEW_W = 150;
+
+function TemplatePreview({
+  templateId, format, product, storeName,
+}: {
+  templateId: PlacaTemplateId;
+  format: PlacaFormat;
+  product: PlacaProduct & { images: string };
+  storeName: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const targetSize = FORMAT_SIZES[format];
+  const previewH   = Math.round(PREVIEW_W * (targetSize.h / targetSize.w));
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    canvas.width = PLACA_PREVIEW_SIZE.w;
-    canvas.height = PLACA_PREVIEW_SIZE.h;
+    canvas.width  = PREVIEW_W;
+    canvas.height = previewH;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const scale = PLACA_PREVIEW_SIZE.w / 1080;
-    const px = (n: number) => Math.round(n * scale);
-
+    const scale = PREVIEW_W / 1080;
+    const px    = (n: number) => Math.round(n * scale);
+    const sz    = { w: PREVIEW_W, h: previewH };
     let cancelled = false;
-    const imageUrl = parseImages(product.images)[0];
+    const imgs = parseImages(product.images);
 
     (async () => {
-      let image: HTMLImageElement | null = null;
-      if (imageUrl) {
-        try { image = await loadCardImage(imageUrl); } catch { image = null; }
-      }
+      const loaded = await Promise.all([0, 1].map((i) =>
+        imgs[i] ? loadCardImage(imgs[i]).catch(() => null) : Promise.resolve(null)
+      ));
       if (cancelled) return;
-      if (templateId === "minimal") drawMinimalTemplate(ctx, px, PLACA_PREVIEW_SIZE, image, product);
-      else if (templateId === "oferta") drawOfertaTemplate(ctx, px, PLACA_PREVIEW_SIZE, image, product, storeName);
-      else drawClasicaTemplate(ctx, px, PLACA_PREVIEW_SIZE, image, product, storeName);
+      switch (templateId) {
+        case "minimal": drawMinimalTemplate(ctx, px, sz, loaded[0], product, storeName); break;
+        case "oferta":  drawOfertaTemplate(ctx, px, sz, loaded[0], product, storeName); break;
+        case "neon":    drawNeonTemplate(ctx, px, sz, loaded[0], product, storeName);   break;
+        case "luxury":  drawLuxuryTemplate(ctx, px, sz, loaded[0], product, storeName); break;
+        case "duo":     drawDuoTemplate(ctx, px, sz, [loaded[0], loaded[1]], product, storeName); break;
+        default:        drawClasicaTemplate(ctx, px, sz, loaded[0], product, storeName);
+      }
     })();
-
     return () => { cancelled = true; };
-  }, [templateId, product, storeName]);
+  }, [templateId, format, previewH, product, storeName]);
 
-  return <canvas ref={canvasRef} className="w-full h-auto rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-gray-800" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width: PREVIEW_W, height: previewH }}
+      className="w-full h-auto rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-gray-800"
+    />
+  );
 }
 
 function TemplatePickerModal({
-  product,
-  storeName,
-  selected,
-  onSelect,
-  onClose,
+  product, storeName, selected, selectedFormat, onSelect, onFormatChange, onClose,
 }: {
   product: ShareProduct;
   storeName: string;
   selected: PlacaTemplateId | null;
+  selectedFormat: PlacaFormat;
   onSelect: (id: PlacaTemplateId) => void;
+  onFormatChange: (f: PlacaFormat) => void;
   onClose: () => void;
 }) {
+  const pp: PlacaProduct & { images: string } = {
+    name: product.name, price: product.price, comparePrice: product.comparePrice,
+    description: product.description, cuotas: product.cuotas ?? 0,
+    isNew: false, isLowStock: false, isBestSeller: false,
+    images: product.images,
+  };
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -354,20 +719,39 @@ function TemplatePickerModal({
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative bg-white dark:bg-gray-950 border border-gray-200 dark:border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl max-h-[85vh] flex flex-col"
+        className="relative bg-white dark:bg-gray-950 border border-gray-200 dark:border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
       >
         <div className="p-5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
           <div>
-            <p className="text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-widest mb-1">Elegí un estilo</p>
-            <h3 className="text-lg font-black text-gray-900 dark:text-white">¿Cómo querés tu placa?</h3>
+            <p className="text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-widest mb-1">Diseñá tu placa</p>
+            <h3 className="text-lg font-black text-gray-900 dark:text-white">Formato y estilo</h3>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X className="h-5 w-5" /></button>
         </div>
-        <div className="p-3 sm:p-5 grid grid-cols-3 gap-2 sm:gap-3 overflow-y-auto">
+
+        {/* Format selector */}
+        <div className="px-5 pt-4 pb-3">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Formato</p>
+          <div className="grid grid-cols-3 gap-2">
+            {(Object.keys(FORMAT_SIZES) as PlacaFormat[]).map((f) => (
+              <button key={f} onClick={() => onFormatChange(f)}
+                className={`flex flex-col items-center py-2.5 rounded-xl border-2 transition-all ${selectedFormat === f ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10" : "border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20"}`}>
+                <span className="text-sm font-bold text-gray-900 dark:text-white">{FORMAT_LABELS[f].label}</span>
+                <span className="text-[10px] text-gray-400">{FORMAT_LABELS[f].sub}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Style grid */}
+        <div className="px-5 pb-1">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Estilo</p>
+        </div>
+        <div className="px-3 sm:px-5 grid grid-cols-3 gap-2 sm:gap-3 overflow-y-auto pb-5">
           {PLACA_TEMPLATES.map((t) => (
             <button key={t.id} onClick={() => onSelect(t.id)}
-              className={`flex flex-col gap-1.5 sm:gap-2 rounded-2xl p-1.5 sm:p-2 border-2 transition-all text-left ${selected === t.id ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10" : "border-transparent hover:border-gray-200 dark:hover:border-white/10"}`}>
-              <TemplatePreview templateId={t.id} product={product} storeName={storeName} />
+              className={`flex flex-col gap-1.5 rounded-2xl p-1.5 border-2 transition-all text-left ${selected === t.id ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10" : "border-transparent hover:border-gray-200 dark:hover:border-white/10"}`}>
+              <TemplatePreview templateId={t.id} format={selectedFormat} product={pp} storeName={storeName} />
               <div>
                 <p className="text-[11px] sm:text-xs font-bold text-gray-900 dark:text-white leading-tight">{t.label}</p>
                 <p className="hidden sm:block text-[10px] text-gray-400 dark:text-gray-500 leading-tight mt-0.5">{t.description}</p>
@@ -375,7 +759,7 @@ function TemplatePickerModal({
             </button>
           ))}
         </div>
-        <p className="px-5 pb-5 text-xs text-gray-400 dark:text-gray-600">Guardamos tu elección para la próxima vez. Podés cambiarla cuando quieras.</p>
+        <p className="px-5 pb-4 text-xs text-gray-400 dark:text-gray-600">Tu elección se guarda para la próxima vez.</p>
       </motion.div>
     </motion.div>
   );
@@ -398,7 +782,7 @@ function ShareModal({
   const [tab, setTab] = useState<"tienda" | "productos">("tienda");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [cardLoading, setCardLoading] = useState<string | null>(null);
-  const [cardError, setCardError] = useState<string | null>(null);
+  const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
   const [productSearch, setProductSearch] = useState("");
   const [selectedImages, setSelectedImages] = useState<Record<string, number>>({});
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -409,6 +793,7 @@ function ShareModal({
   const [downloadingQr, setDownloadingQr] = useState(false);
   const [templatePicker, setTemplatePicker] = useState<{ product: ShareProduct; autoShare: boolean } | null>(null);
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState<PlacaFormat>("portrait");
   const touchStartX = useRef<number>(0);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -519,29 +904,51 @@ function ShareModal({
     product: ShareProduct,
     imageIndex = 0,
     template: PlacaTemplateId = "clasica",
-    size: { w: number; h: number } = { w: 1080, h: 1350 }
+    format: PlacaFormat = "portrait",
   ) {
-    const imageUrl = parseImages(product.images)[imageIndex];
+    const size = FORMAT_SIZES[format];
     const canvas = document.createElement("canvas");
     canvas.width = size.w;
     canvas.height = size.h;
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("No se pudo crear la placa");
-
     const scale = size.w / 1080;
     const px = (n: number) => Math.round(n * scale);
 
-    let image: HTMLImageElement | null = null;
-    if (imageUrl) {
-      try { image = await loadCardImage(imageUrl); } catch { image = null; }
-    }
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const topIds = new Set(
+      products.filter((p) => (p.salesCount ?? 0) > 0).slice(0, 3).map((p) => p.id)
+    );
+    const pp: PlacaProduct = {
+      name: product.name,
+      price: product.price,
+      comparePrice: product.comparePrice,
+      description: product.description,
+      cuotas: product.cuotas ?? 0,
+      isNew: new Date(product.createdAt).getTime() > thirtyDaysAgo,
+      isLowStock: product.variants.length > 0 && product.variants.reduce((s, v) => s + v.stock, 0) < 5,
+      isBestSeller: topIds.has(product.id),
+    };
 
-    if (template === "minimal") {
-      drawMinimalTemplate(ctx, px, size, image, product);
-    } else if (template === "oferta") {
-      drawOfertaTemplate(ctx, px, size, image, product, target.storeName);
+    const imgs = parseImages(product.images);
+    if (template === "duo") {
+      const [img1, img2] = await Promise.all([
+        imgs[imageIndex] ? loadCardImage(imgs[imageIndex]).catch(() => null) : Promise.resolve(null),
+        imgs[(imageIndex + 1) % Math.max(imgs.length, 1)] ? loadCardImage(imgs[(imageIndex + 1) % Math.max(imgs.length, 1)]).catch(() => null) : Promise.resolve(null),
+      ]);
+      drawDuoTemplate(ctx, px, size, [img1, img2], pp, target.storeName);
     } else {
-      drawClasicaTemplate(ctx, px, size, image, product, target.storeName);
+      let image: HTMLImageElement | null = null;
+      if (imgs[imageIndex]) {
+        try { image = await loadCardImage(imgs[imageIndex]); } catch { image = null; }
+      }
+      switch (template) {
+        case "minimal": drawMinimalTemplate(ctx, px, size, image, pp, target.storeName); break;
+        case "oferta":  drawOfertaTemplate(ctx, px, size, image, pp, target.storeName);  break;
+        case "neon":    drawNeonTemplate(ctx, px, size, image, pp, target.storeName);    break;
+        case "luxury":  drawLuxuryTemplate(ctx, px, size, image, pp, target.storeName); break;
+        default:        drawClasicaTemplate(ctx, px, size, image, pp, target.storeName);
+      }
     }
 
     return new Promise<Blob>((resolve, reject) => {
@@ -549,14 +956,14 @@ function ShareModal({
     });
   }
 
-  async function shareCard(product: ShareProduct, template: PlacaTemplateId) {
+  async function shareCard(product: ShareProduct, template: PlacaTemplateId, format: PlacaFormat = selectedFormat) {
     setCardLoading(product.id);
-    setCardError(null);
+    setCardErrors((prev) => { const n = { ...prev }; delete n[product.id]; return n; });
     try {
       const imageIndex = selectedImages[product.id] ?? 0;
-      const blob = await makeProductCard(product, imageIndex, template);
+      const blob = await makeProductCard(product, imageIndex, template, format);
       const file = new File([blob], `${product.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-placa.png`, { type: "image/png" });
-      const text = productShareText(product, productUrl(product.id));
+      const text = productShareText(product, productShortUrl(product.id));
 
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ title: product.name, text, files: [file] });
@@ -568,16 +975,15 @@ function ShareModal({
         URL.revokeObjectURL(link.href);
       }
     } catch {
-      setCardError("No se pudo generar la placa. Copiá el link y compartilo manualmente.");
+      setCardErrors((prev) => ({ ...prev, [product.id]: "No se pudo generar la placa. Copiá el link y compartilo manualmente." }));
     } finally {
       setCardLoading(null);
     }
   }
 
-  // Si ya hay un estilo guardado lo usa directo; si no, abre el selector y comparte apenas elige uno
   function handleGenerateClick(product: ShareProduct) {
     if (preferredTemplate) {
-      shareCard(product, preferredTemplate);
+      shareCard(product, preferredTemplate, selectedFormat);
     } else {
       setTemplatePicker({ product, autoShare: true });
     }
@@ -601,7 +1007,7 @@ function ShareModal({
       if (res.ok) onTemplatePreferenceSaved(id);
     } catch { /* no bloquea el compartir si falla el guardado */ }
     setSavingTemplate(false);
-    if (picker.autoShare) shareCard(picker.product, id);
+    if (picker.autoShare) shareCard(picker.product, id, selectedFormat);
   }
 
   return (
@@ -854,12 +1260,17 @@ function ShareModal({
                       </p>
                     </div>
 
-                    {/* Estilo de placa elegido */}
+                    {/* Placa: estilo + formato actuales */}
                     {products.length > 0 && (
                       <div className="flex items-center justify-between gap-3 bg-gray-50 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-2xl px-4 py-3">
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Estilo de placa: <span className="font-bold text-gray-900 dark:text-white">
+                          Placa:{" "}
+                          <span className="font-bold text-gray-900 dark:text-white">
                             {PLACA_TEMPLATES.find((t) => t.id === preferredTemplate)?.label ?? "Sin elegir"}
+                          </span>
+                          {" · "}
+                          <span className="text-gray-600 dark:text-gray-300">
+                            {FORMAT_LABELS[selectedFormat].label} {FORMAT_LABELS[selectedFormat].sub}
                           </span>
                         </p>
                         <button onClick={() => openTemplatePicker(filteredProducts[0] ?? products[0])}
@@ -1052,18 +1463,36 @@ function ShareModal({
                                     : <><Star className="h-4 w-4" /> Generar placa{imgs.length > 1 ? ` · foto ${selectedIdx + 1}` : ""}</>
                                   }
                                 </button>
-                                {cardError && <p className="text-xs text-red-400 text-center">{cardError}</p>}
+                                {cardErrors[p.id] && <p className="text-xs text-red-400 text-center">{cardErrors[p.id]}</p>}
 
-                                {/* Acciones secundarias */}
+                                {/* Link del producto — copiable */}
+                                <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/8 rounded-xl px-3 py-2">
+                                  <p className="flex-1 text-[10px] text-indigo-600 dark:text-indigo-400 font-mono truncate">{shortUrl}</p>
+                                  <button onClick={() => copy(shortUrl, `url-${p.id}`)}
+                                    className="flex-shrink-0 flex items-center gap-1 text-[10px] font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                                    {copied === `url-${p.id}` ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                                    {copied === `url-${p.id}` ? "¡Copiado!" : "Copiar"}
+                                  </button>
+                                </div>
+
+                                {/* Acciones de compartir */}
                                 <div className="grid grid-cols-4 gap-1.5">
-                                  <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name} — ${money(p.price)}\n${shortUrl}`)}`, "_blank")}
+                                  <button onClick={() => {
+                                    const waText = [
+                                      `🛍️ *${p.name}*`,
+                                      p.comparePrice ? `~~${money(p.comparePrice)}~~ → *${money(p.price)}*` : `*${money(p.price)}*`,
+                                      p.description ? p.description.slice(0, 100) + (p.description.length > 100 ? "…" : "") : "",
+                                      `👉 ${shortUrl}`,
+                                    ].filter(Boolean).join("\n");
+                                    window.open(`https://wa.me/?text=${encodeURIComponent(waText)}`, "_blank");
+                                  }}
                                     className="flex flex-col items-center gap-1 py-2 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/15 text-[#25D366] rounded-xl text-[9px] font-bold transition-all">
                                     <WaIcon /> WhatsApp
                                   </button>
                                   <button onClick={() => copy(shortUrl, p.id)}
                                     className="flex flex-col items-center gap-1 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl text-[9px] font-bold transition-all">
                                     {copied === p.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                                    {copied === p.id ? "¡Listo!" : "Copiar"}
+                                    {copied === p.id ? "¡Listo!" : "Placa+Link"}
                                   </button>
                                   <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shortUrl)}`, "_blank")}
                                     className="flex flex-col items-center gap-1 py-2 bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/15 text-[#1877F2] rounded-xl text-[9px] font-bold transition-all">
@@ -1092,7 +1521,9 @@ function ShareModal({
             product={templatePicker.product}
             storeName={target.storeName}
             selected={preferredTemplate}
+            selectedFormat={selectedFormat}
             onSelect={confirmTemplate}
+            onFormatChange={setSelectedFormat}
             onClose={() => setTemplatePicker(null)}
           />
         )}
@@ -1727,9 +2158,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
 
 export default function VendedorasClient() {
   const { user, status: sessionStatus, signOut } = useAuth();
-  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [, setLoadingStores] = useState(true);
   const [applyStore, setApplyStore] = useState<StoreItem | null>(null);
@@ -1807,8 +2236,6 @@ export default function VendedorasClient() {
       window.history.replaceState({}, "", "/afiliados");
     }
   }, [stores, sessionStatus]);
-
-  const isDark = theme === "dark";
 
   if (!mounted || sessionStatus === "loading") {
     return (

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { BadgeCheck, Clock, ShieldAlert, X, Loader2, ExternalLink } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BadgeCheck, Clock, ShieldAlert, X, Loader2, ExternalLink, ShieldX } from "lucide-react";
 import Image from "next/image";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -10,6 +10,7 @@ type VerifRequest = {
   status: string;
   reviewNote: string | null;
   createdAt: string;
+  cuit: string | null;
   dniFrontUrl: string | null;
   dniBackUrl: string | null;
   selfieUrl: string | null;
@@ -61,24 +62,45 @@ function ImagePreview({ url, label }: { url: string | null; label: string }) {
 
 function RequestCard({ req, onAction }: { req: VerifRequest; onAction: () => void }) {
   const [note, setNote] = useState("");
-  const [loading, setLoading] = useState<"APPROVE" | "REJECT" | null>(null);
+  const [loading, setLoading] = useState<"APPROVE" | "REJECT" | "REVOKE" | null>(null);
   const [error, setError] = useState("");
+  const [showRevoke, setShowRevoke] = useState(false);
+  const [banOnRevoke, setBanOnRevoke] = useState(false);
+  const inFlight = useRef(false);
 
-  async function handleAction(action: "APPROVE" | "REJECT") {
-    if (action === "REJECT" && !note.trim()) { setError("Escribí el motivo del rechazo."); return; }
+  function handleNoteChange(val: string) {
+    setNote(val);
+    if (error) setError("");
+  }
+
+  async function handleAction(action: "APPROVE" | "REJECT" | "REVOKE") {
+    if (inFlight.current) return;
+
+    if (action === "APPROVE") {
+      if (!confirm(`¿Aprobar la verificación de "${req.store.name}"?\n\nSe enviará un email y una notificación al dueño de la tienda.`)) return;
+    }
+    if (action === "REJECT") {
+      if (!note.trim()) { setError("Escribí el motivo del rechazo."); return; }
+      if (!confirm(`¿Rechazar la verificación de "${req.store.name}"?\n\nEl dueño recibirá una notificación con el motivo indicado.`)) return;
+    }
+    if (action === "REVOKE") {
+      if (!note.trim()) { setError("Escribí el motivo de la revocación."); return; }
+    }
+
+    inFlight.current = true;
     setLoading(action);
     setError("");
     try {
       const res = await fetch(`/api/admin/verificacion/${req.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, note: note.trim() }),
+        body: JSON.stringify({ action, note: note.trim(), ...(action === "REVOKE" && { ban: banOnRevoke }) }),
       });
       const d = await res.json();
       if (res.ok) { onAction(); }
       else { setError(d.error || "Error al procesar."); }
-    } catch { setError("Error de conexión."); }
-    finally { setLoading(null); }
+    } catch { setError("Error de conexión. Intentá de nuevo."); }
+    finally { setLoading(null); inFlight.current = false; }
   }
 
   const memberSince = new Date(req.store.owner.createdAt).toLocaleDateString("es-AR", { month: "long", year: "numeric" });
@@ -98,6 +120,13 @@ function RequestCard({ req, onAction }: { req: VerifRequest; onAction: () => voi
           {req.store.owner.name && <p className="text-gray-500 text-xs">{req.store.owner.name}</p>}
           {req.store.owner.city && <p className="text-gray-500 text-xs">{req.store.owner.city}</p>}
           <p className="text-gray-600 text-xs mt-0.5">Miembro desde {memberSince}</p>
+          {req.cuit && (
+            <p className="text-xs mt-1">
+              <span className="text-gray-500 font-medium">CUIT:</span>{" "}
+              <span className="font-mono text-indigo-400">{req.cuit}</span>
+              <span className="text-gray-600"> · verificar en afip.gob.ar</span>
+            </p>
+          )}
         </div>
         <a
           href={`/tienda/${req.store.slug}`}
@@ -124,12 +153,16 @@ function RequestCard({ req, onAction }: { req: VerifRequest; onAction: () => voi
         <div className="space-y-2 pt-1">
           <textarea
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(e) => handleNoteChange(e.target.value)}
             placeholder="Motivo de rechazo (requerido si rechazás)"
             rows={2}
+            maxLength={500}
             className="w-full bg-gray-800 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
           />
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          <div className="flex items-center justify-between">
+            {error ? <p className="text-xs text-red-400">{error}</p> : <span />}
+            <span className="text-xs text-gray-600">{note.length}/500</span>
+          </div>
           <div className="flex gap-2">
             <button
               onClick={() => handleAction("APPROVE")}
@@ -148,6 +181,66 @@ function RequestCard({ req, onAction }: { req: VerifRequest; onAction: () => voi
               Rechazar
             </button>
           </div>
+        </div>
+      )}
+
+      {req.status === "APPROVED" && (
+        <div className="pt-1">
+          {!showRevoke ? (
+            <button
+              onClick={() => { setShowRevoke(true); setNote(""); setError(""); setBanOnRevoke(false); }}
+              className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 border border-red-800/40 hover:border-red-600/60 bg-red-900/10 hover:bg-red-900/20 px-3 py-2 rounded-xl transition-colors"
+            >
+              <ShieldX className="h-3.5 w-3.5" />
+              Revocar verificación
+            </button>
+          ) : (
+            <div className="space-y-2 bg-red-900/10 border border-red-800/30 rounded-xl p-3">
+              <p className="text-xs text-red-400 font-semibold">Revocar badge — esto quitará el verificado y notificará al dueño.</p>
+              <textarea
+                value={note}
+                onChange={(e) => handleNoteChange(e.target.value)}
+                placeholder="Motivo de la revocación (requerido)"
+                rows={2}
+                maxLength={500}
+                className="w-full bg-gray-800 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-red-500 resize-none"
+                autoFocus
+              />
+              <div className="flex items-center justify-between">
+                {error ? <p className="text-xs text-red-400">{error}</p> : <span />}
+                <span className="text-xs text-gray-600">{note.length}/500</span>
+              </div>
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={banOnRevoke}
+                  onChange={(e) => setBanOnRevoke(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-red-600 cursor-pointer"
+                />
+                <div>
+                  <p className="text-xs font-semibold text-red-300">Prohibir futuros reenvíos (fraude / documentación falsa)</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">El dueño no podrá volver a enviar solicitudes de verificación. Se le notificará por email y panel.</p>
+                </div>
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleAction("REVOKE")}
+                  disabled={!!loading}
+                  className={`flex-1 flex items-center justify-center gap-1.5 text-white text-sm font-semibold py-2 rounded-xl disabled:opacity-50 transition-colors ${banOnRevoke ? "bg-gray-800 hover:bg-gray-700 border border-red-700" : "bg-red-700 hover:bg-red-600"}`}
+                >
+                  {loading === "REVOKE" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldX className="h-4 w-4" />}
+                  {banOnRevoke ? "Revocar e inhabilitar" : "Confirmar revocación"}
+                </button>
+                <button
+                  onClick={() => { setShowRevoke(false); setNote(""); setError(""); setBanOnRevoke(false); }}
+                  disabled={!!loading}
+                  className="px-4 py-2 rounded-xl border border-white/10 text-gray-400 hover:text-white text-sm transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -192,7 +285,7 @@ export default function VerificacionesAdmin() {
 
   return (
     <div>
-      <div className="flex gap-1 mb-6 bg-gray-900 border border-white/10 rounded-2xl p-1 w-fit">
+      <div className="flex gap-1 mb-6 bg-gray-900 border border-white/10 rounded-2xl p-1 w-fit mx-auto">
         {TABS.map(({ value, label, icon }) => (
           <button
             key={value}

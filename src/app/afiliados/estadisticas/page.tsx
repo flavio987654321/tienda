@@ -1,11 +1,12 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft, Loader2, MousePointerClick, ShoppingBag,
   TrendingUp, BarChart3, Package, Star, Zap,
-  TrendingDown, DollarSign, Receipt,
+  TrendingDown, DollarSign, Receipt, CalendarDays, Store,
+  Clock, Wallet, CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -35,6 +36,11 @@ interface AffiliateStats {
   totalClicks: number;
   totalOrders: number;
   totalCommissionsAmount: number;
+  commissionsPending: number;
+  commissionsToCollect: number;
+  commissionsDisbursed: number;
+  commissionsThisMonth: number;
+  revenueGenerated: number;
   avgTicket: number;
   clicksLast30: number;
   clicksThisWeek: number;
@@ -65,6 +71,10 @@ function parseFirstImage(images: string): string | null {
     if (!Array.isArray(arr) || arr.length === 0) return null;
     return typeof arr[0] === "string" ? arr[0] : arr[0]?.url ?? null;
   } catch { return null; }
+}
+
+function fmt(n: number) {
+  return n.toLocaleString("es-AR");
 }
 
 function MiniBarChart({ data }: { data: ClickDay[] }) {
@@ -178,17 +188,15 @@ export default function EstadisticasPage() {
                   <StatCard
                     icon={<MousePointerClick className="h-4 w-4 text-indigo-600" />}
                     label="Clicks totales"
-                    value={current.totalClicks.toLocaleString("es-AR")}
-                    sub={`${current.clicksLast30} en los últimos 30 días`}
+                    value={fmt(current.totalClicks)}
+                    sub={`${fmt(current.clicksLast30)} en los últimos 30 días`}
                     color="bg-indigo-50 dark:bg-indigo-900/30"
-                    trend={current.weekTrend}
-                    trendLabel="vs semana anterior"
                   />
                   <StatCard
                     icon={<ShoppingBag className="h-4 w-4 text-green-600" />}
                     label="Ventas generadas"
-                    value={current.totalOrders.toLocaleString("es-AR")}
-                    sub={`${current.ordersLast30} en los últimos 30 días`}
+                    value={fmt(current.totalOrders)}
+                    sub={`${fmt(current.ordersLast30)} en los últimos 30 días`}
                     color="bg-green-50 dark:bg-green-900/30"
                   />
                   <StatCard
@@ -199,28 +207,80 @@ export default function EstadisticasPage() {
                     color="bg-amber-50 dark:bg-amber-900/30"
                   />
                   <StatCard
-                    icon={<DollarSign className="h-4 w-4 text-purple-600" />}
-                    label="Comisiones ganadas"
-                    value={`$${current.totalCommissionsAmount.toLocaleString("es-AR")}`}
-                    sub="Total histórico en pesos"
-                    color="bg-purple-50 dark:bg-purple-900/30"
-                  />
-                  <StatCard
-                    icon={<Receipt className="h-4 w-4 text-sky-600" />}
-                    label="Ticket promedio"
-                    value={current.avgTicket > 0 ? `$${current.avgTicket.toLocaleString("es-AR")}` : "—"}
-                    sub="Promedio por venta confirmada"
-                    color="bg-sky-50 dark:bg-sky-900/30"
-                  />
-                  <StatCard
                     icon={<TrendingUp className="h-4 w-4 text-emerald-600" />}
                     label="Clicks esta semana"
-                    value={current.clicksThisWeek.toLocaleString("es-AR")}
+                    value={fmt(current.clicksThisWeek)}
                     sub="Últimos 7 días"
                     color="bg-emerald-50 dark:bg-emerald-900/30"
                     trend={current.weekTrend}
                     trendLabel="vs semana anterior"
                   />
+                  <StatCard
+                    icon={<CalendarDays className="h-4 w-4 text-purple-600" />}
+                    label="Comisiones este mes"
+                    value={`$${fmt(current.commissionsThisMonth)}`}
+                    sub="Lo que ganaste en el mes actual"
+                    color="bg-purple-50 dark:bg-purple-900/30"
+                  />
+                  <StatCard
+                    icon={<Store className="h-4 w-4 text-sky-600" />}
+                    label="Volumen generado"
+                    value={current.revenueGenerated > 0 ? `$${fmt(current.revenueGenerated)}` : "—"}
+                    sub="Total facturado gracias a vos"
+                    color="bg-sky-50 dark:bg-sky-900/30"
+                  />
+                </div>
+
+                {/* Desglose de comisiones */}
+                <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm">Tus comisiones</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Total histórico y estado de cada parte</p>
+                    </div>
+                    <DollarSign className="h-4 w-4 text-gray-300" />
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                    ${fmt(current.totalCommissionsAmount)}
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5 text-amber-500" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Pendientes de confirmación</span>
+                      </div>
+                      <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                        ${fmt(current.commissionsPending)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Wallet className="h-3.5 w-3.5 text-indigo-500" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">En billetera (a retirar)</span>
+                      </div>
+                      <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                        ${fmt(current.commissionsToCollect)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Enviadas a tu Mercado Pago</span>
+                      </div>
+                      <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                        ${fmt(current.commissionsDisbursed)}
+                      </span>
+                    </div>
+                    <div className="pt-2 border-t border-gray-100 dark:border-white/10 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Receipt className="h-3.5 w-3.5 text-gray-400" />
+                        <span className="text-sm text-gray-500">Ticket promedio por venta</span>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        {current.avgTicket > 0 ? `$${fmt(current.avgTicket)}` : "—"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Gráfico de clicks últimos 14 días */}
@@ -241,7 +301,7 @@ export default function EstadisticasPage() {
                   </div>
                 </div>
 
-                {/* Desglose por canal (de dónde vienen los clicks) */}
+                {/* Desglose por canal */}
                 {current.channelBreakdown.length > 0 && (
                   <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
                     <div className="flex items-center gap-2 mb-4">
@@ -271,7 +331,7 @@ export default function EstadisticasPage() {
                   </div>
                 )}
 
-                {/* Productos que más convierten */}
+                {/* Productos más vendidos */}
                 {current.topProducts.length > 0 && (
                   <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-white/10 p-5">
                     <div className="flex items-center gap-2 mb-4">
@@ -299,7 +359,7 @@ export default function EstadisticasPage() {
                               <p className="text-xs text-gray-400">{tp.orderCount} {tp.orderCount === 1 ? "venta" : "ventas"}</p>
                             </div>
                             <p className="text-sm font-semibold text-gray-900 dark:text-white shrink-0">
-                              ${tp.totalRevenue.toLocaleString("es-AR")}
+                              ${fmt(tp.totalRevenue)}
                             </p>
                           </div>
                         );

@@ -120,13 +120,13 @@ export async function sendVerificationRejectedEmail({
           <p style="color:#e5e7eb;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
           <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Verificación no aprobada</h1>
         </div>
-        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${userName || "ahí"}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(userName) || "ahí"}</strong>,</p>
         <p style="font-size:15px;color:#374151;margin-bottom:24px;">
           Revisamos tus documentos pero no pudimos completar la verificación. Te contamos el motivo para que puedas reenviarlos corregidos.
         </p>
         <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:20px;margin-bottom:24px;">
           <p style="font-size:13px;color:#991b1b;margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Motivo del rechazo</p>
-          <p style="font-size:15px;color:#374151;margin:0;">${reason}</p>
+          <p style="font-size:15px;color:#374151;margin:0;">${escapeHtml(reason)}</p>
         </div>
         <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
           Podés volver a enviar tus documentos desde tu perfil en cualquier momento. Si tenés dudas sobre qué imágenes subir, escribinos.
@@ -139,6 +139,87 @@ export async function sendVerificationRejectedEmail({
         </div>
         <p style="color:#9ca3af;font-size:12px;text-align:center;">
           Si creés que fue un error, escribinos a soporte@tiendaapps.com
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendVerificationRevokedEmail({
+  to,
+  userName,
+  reason,
+}: {
+  to: string;
+  userName: string;
+  reason: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Tu verificación fue revocada en TiendaApps",
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#991b1b;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#fecaca;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Badge de verificación revocado</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(userName) || "ahí"}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">
+          El equipo de TiendaApps revisó tu cuenta y decidió revocar el badge azul de verificación. El badge ya no aparecerá en tu tienda ni en tu perfil.
+        </p>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:13px;color:#991b1b;margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Motivo</p>
+          <p style="font-size:15px;color:#374151;margin:0;">${escapeHtml(reason)}</p>
+        </div>
+        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
+          Si creés que esta decisión fue un error o querés más información, escribinos a <a href="mailto:soporte@tiendaapps.com" style="color:#6366f1;">soporte@tiendaapps.com</a> con el asunto <em>"Revocación de verificación"</em>.
+        </p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">
+          TiendaApps — tu tienda online profesional
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendVerificationBannedEmail({
+  to,
+  userName,
+  reason,
+}: {
+  to: string;
+  userName: string;
+  reason: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Tu cuenta fue inhabilitada para verificación en TiendaApps",
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#1f2937;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#9ca3af;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Cuenta inhabilitada para verificación</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(userName) || "ahí"}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">
+          El equipo de TiendaApps detectó una irregularidad grave en tu solicitud de verificación de identidad. Como resultado, tu cuenta fue <strong>inhabilitada permanentemente</strong> para enviar nuevas solicitudes de verificación y tu badge fue removido.
+        </p>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:13px;color:#991b1b;margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Motivo</p>
+          <p style="font-size:15px;color:#374151;margin:0;">${escapeHtml(reason)}</p>
+        </div>
+        <p style="font-size:14px;color:#6b7280;margin-bottom:8px;">
+          Tu tienda puede seguir operando con normalidad, pero no podrás obtener el badge de identidad verificada.
+        </p>
+        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
+          Si creés que fue un error podés escribirnos a <a href="mailto:soporte@tiendaapps.com" style="color:#6366f1;">soporte@tiendaapps.com</a> con el asunto <em>"Impugnar inhabilitación de verificación"</em>.
+        </p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">
+          TiendaApps — tu tienda online profesional
         </p>
       </div>
     `,

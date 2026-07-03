@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,8 @@ export default async function ProductShortLinkPage({ params, searchParams }: Pro
     const rawIp = headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
     const ip = rawIp && rawIp !== "unknown" ? rawIp : null;
 
-    const shouldTrack = !ip || !(await prisma.affiliateClick.findFirst({
+    // Sin IP no podemos deduplicar — saltear para no inflar el contador con bots/proxies
+    const shouldTrack = !!ip && !(await prisma.affiliateClick.findFirst({
       where: {
         affiliateId: affiliate.id,
         productId: product.id,
@@ -90,5 +92,17 @@ export default async function ProductShortLinkPage({ params, searchParams }: Pro
   } catch { /* no cortar el redirect si falla el tracking */ }
 
   const utmSuffix = utm_source ? `&utm_source=${encodeURIComponent(utm_source)}` : "";
-  redirect(`${baseUrl}/tienda/${affiliate.store.slug}?ref=${affiliate.id}&p=${product.id}${utmSuffix}`);
+  const dest = `${baseUrl}/tienda/${affiliate.store.slug}?ref=${affiliate.id}&p=${product.id}${utmSuffix}`;
+
+  // Renderizamos HTML real (no redirect HTTP) para que WhatsApp/Facebook lean los
+  // OG meta tags de generateMetadata y muestren preview con foto + nombre + precio.
+  // El script redirige al usuario al instante; los bots no ejecutan JS y ven los OG tags.
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: "12px", fontFamily: "sans-serif" }}>
+      {/* eslint-disable-next-line react/no-danger */}
+      <script dangerouslySetInnerHTML={{ __html: `(function(){window.location.replace(${JSON.stringify(dest)})})()` }} />
+      <p style={{ color: "#6b7280", fontSize: "14px" }}>Redirigiendo al producto…</p>
+      <Link href={dest} style={{ color: "#4f46e5", fontSize: "14px" }}>Ir al producto →</Link>
+    </div>
+  );
 }

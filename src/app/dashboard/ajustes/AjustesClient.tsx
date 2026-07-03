@@ -10,9 +10,11 @@ type Props = {
   customDomain: string | null;
   isPremium: boolean;
   description: string;
+  tipoTienda?: string;
 };
 
-export default function AjustesClient({ slug, customDomain, isPremium, description }: Props) {
+export default function AjustesClient({ slug, customDomain, isPremium, description, tipoTienda }: Props) {
+  const isAutos = tipoTienda === "AUTOS";
   const [copied, setCopied] = useState(false);
   const [desc, setDesc] = useState(description);
   const [savedDesc, setSavedDesc] = useState(description);
@@ -63,7 +65,7 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
             onChange={(e) => setDesc(e.target.value)}
             maxLength={150}
             rows={2}
-            placeholder="Ej: Ropa femenina para todas las tallas, con envíos a todo el país."
+            placeholder={isAutos ? "Ej: Concesionaria oficial en Córdoba. Autos, motos y camionetas nuevos y usados." : "Ej: Ropa femenina para todas las tallas, con envíos a todo el país."}
             className="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 resize-none"
           />
           <div className="flex items-center justify-between">
@@ -124,7 +126,7 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <Smartphone className="h-4 w-4 text-slate-400 shrink-0" />
-            <h2 className="text-sm font-semibold text-slate-900">Tu tienda como app</h2>
+            <h2 className="text-sm font-semibold text-slate-900">{isAutos ? "Tu sitio como app" : "Tu tienda como app"}</h2>
           </div>
           {isPremium ? (
             <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md flex items-center gap-1">
@@ -139,7 +141,9 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
         {isPremium ? (
           <div className="px-5 py-4 space-y-4">
             <p className="text-sm text-slate-500">
-              Tus clientes pueden instalar tu tienda en su celular como si fuera una app, sin pasar por el App Store ni Google Play.
+              {isAutos
+                ? "Tus clientes pueden instalar tu sitio en su celular como si fuera una app, sin pasar por el App Store ni Google Play."
+                : "Tus clientes pueden instalar tu tienda en su celular como si fuera una app, sin pasar por el App Store ni Google Play."}
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5">
@@ -258,7 +262,9 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
         </div>
         <div className="px-5 py-4 space-y-3">
           <p className="text-sm text-slate-500">
-            Recibí alertas en este dispositivo cuando llegue un nuevo pedido o solicitud de afiliada, incluso con el panel cerrado.
+            {isAutos
+              ? "Recibí alertas en este dispositivo cuando llegue una nueva consulta o solicitud de afiliado, incluso con el panel cerrado."
+              : "Recibí alertas en este dispositivo cuando llegue un nuevo pedido o solicitud de afiliada, incluso con el panel cerrado."}
           </p>
           <PushNotificationToggle />
         </div>

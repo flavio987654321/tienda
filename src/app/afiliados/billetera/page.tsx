@@ -1,30 +1,20 @@
-﻿"use client";
+"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTheme } from "next-themes";
 import {
   Wallet, ArrowDownLeft, Clock, CheckCircle, Loader2,
   ArrowLeft, ShieldAlert, AlertTriangle, Pencil, X, Info,
-  Copy, Check, Share2, TrendingUp, ShoppingBag, ExternalLink,
-  Moon, Sun,
+  CreditCard, ArrowUpRight,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
-import NotificationBell from "@/components/NotificationBell";
 
 interface WalletData {
   id: string;
   balance: number;
   totalEarned: number;
   totalWithdrawn: number;
-  hasBankData: boolean;
-  bankLocked: boolean;
-  bankLockedUntil: string | null;
-  alias: string | null;
-  cbu: string | null;
-  cuil: string | null;
-  bankHolder: string | null;
   withdrawals: {
     id: string;
     amount: number;
@@ -57,91 +47,56 @@ interface PageData {
   totalBalance: number;
   totalEarned: number;
   totalWithdrawn: number;
+  hasBankData: boolean;
+  bankAlias: string | null;
+  bankCbu: string | null;
+  bankHolder: string | null;
+  bankLocked: boolean;
+  bankLockedUntil: string | null;
 }
 
-// ── helpers ──────────────────────────────────────────────────────────────────
-
-function affiliateUrl(id: string) {
-  if (typeof window === "undefined") return `/v/${id}`;
-  return `${window.location.origin}/v/${id}`;
-}
-
-function CopyLinkButton({ url }: { url: string }) {
-  const [copied, setCopied] = useState(false);
-  function copy() {
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
-      try {
-        const el = document.createElement("textarea");
-        el.value = url;
-        el.style.position = "fixed";
-        el.style.opacity = "0";
-        document.body.appendChild(el);
-        el.select();
-        document.execCommand("copy");
-        document.body.removeChild(el);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch { /* silencioso */ }
-    });
-  }
-  return (
-    <button
-      onClick={copy}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-        copied
-          ? "bg-green-100 text-green-700"
-          : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
-      }`}
-    >
-      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-      {copied ? "¡Copiado!" : "Copiar link"}
-    </button>
-  );
-}
-
-function WhatsAppButton({ url, storeName }: { url: string; storeName: string }) {
-  const shareUrl = `${url}${url.includes("?") ? "&" : "?"}utm_source=whatsapp`;
-  const text = encodeURIComponent(`¡Mirá los productos de ${storeName}! ${shareUrl}`);
-  return (
-    <a
-      href={`https://wa.me/?text=${text}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
-    >
-      <Share2 className="h-3.5 w-3.5" />
-      WhatsApp
-    </a>
-  );
-}
+type Movement =
+  | {
+      type: "commission";
+      id: string;
+      amount: number;
+      rate: number;
+      orderTotal: number;
+      status: string;
+      createdAt: string;
+      storeName: string;
+    }
+  | {
+      type: "withdrawal";
+      id: string;
+      amount: number;
+      status: string;
+      createdAt: string;
+      notes: string | null;
+      storeName: string;
+    };
 
 // ── LockoutBanner ─────────────────────────────────────────────────────────────
 
 function LockoutBanner({ until }: { until: string }) {
   const date = new Date(until);
-  // eslint-disable-next-line react-hooks/purity -- estimación de horas restantes para mostrar en UI, no afecta el bloqueo real (eso lo valida el backend)
+  // eslint-disable-next-line react-hooks/purity -- estimación de horas restantes para mostrar en UI
   const hoursLeft = Math.ceil((date.getTime() - Date.now()) / 3600000);
   return (
-    <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
-      <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-      <div>
-        <p className="font-semibold text-amber-800">Retiros bloqueados por seguridad</p>
-        <p className="text-amber-700 mt-0.5">
-          Cambiaste los datos bancarios hace poco. Se habilitan en{" "}
-          <span className="font-bold">{hoursLeft}hs</span>{" "}
-          ({date.toLocaleDateString("es-AR", { weekday: "long", hour: "2-digit", minute: "2-digit" })}).
-        </p>
-      </div>
+    <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm mt-3">
+      <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+      <p className="text-amber-700">
+        Retiros bloqueados{" "}
+        <span className="font-bold">{hoursLeft}hs</span>{" "}
+        por cambio de datos bancarios.
+      </p>
     </div>
   );
 }
 
 // ── BankForm modal ────────────────────────────────────────────────────────────
 
-function BankForm({ walletId, onClose, onSaved }: { walletId: string; onClose: () => void; onSaved: () => void }) {
+function BankForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [cbu, setCbu] = useState("");
   const [alias, setAlias] = useState("");
   const [cuil, setCuil] = useState("");
@@ -157,7 +112,7 @@ function BankForm({ walletId, onClose, onSaved }: { walletId: string; onClose: (
     const res = await fetch("/api/vendedoras/wallet", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ walletId, cbu, alias, cuil, bankHolder }),
+      body: JSON.stringify({ cbu, alias, cuil, bankHolder }),
     });
     const data = await res.json();
     setSaving(false);
@@ -234,32 +189,29 @@ function BankForm({ walletId, onClose, onSaved }: { walletId: string; onClose: (
 
 // ── WithdrawModal ─────────────────────────────────────────────────────────────
 
-function WithdrawModal({ affiliates, onClose, onSuccess }: { affiliates: AffiliateData[]; onClose: () => void; onSuccess: () => void }) {
-  const eligible = affiliates.filter(
-    (a) => a.wallet && a.wallet.hasBankData && !a.wallet.bankLocked && (a.wallet.balance ?? 0) >= 500
-  );
-  const [selectedWalletId, setSelectedWalletId] = useState(eligible[0]?.wallet?.id ?? "");
+function WithdrawModal({ totalBalance, onClose, onSuccess }: {
+  totalBalance: number;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  const selected = affiliates.find((a) => a.wallet?.id === selectedWalletId);
-  const maxAmount = selected?.wallet?.balance ?? 0;
 
   async function handleSubmit() {
     setError("");
     const num = parseFloat(amount);
     if (!num || num < 500) { setError("El monto mínimo es $500"); return; }
-    if (num > maxAmount) { setError("No tenés suficiente saldo"); return; }
+    if (num > totalBalance) { setError("No tenés suficiente saldo"); return; }
     setSubmitting(true);
     const res = await fetch("/api/vendedoras/wallet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ walletId: selectedWalletId, amount: num }),
+      body: JSON.stringify({ amount: num }),
     });
-    const data = await res.json();
+    const json = await res.json();
     setSubmitting(false);
-    if (!res.ok) { setError(data.error || "Error al solicitar"); return; }
+    if (!res.ok) { setError(json.error || "Error al solicitar"); return; }
     onSuccess();
   }
 
@@ -272,45 +224,22 @@ function WithdrawModal({ affiliates, onClose, onSuccess }: { affiliates: Affilia
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X className="h-5 w-5" /></button>
         </div>
         <div className="p-6 space-y-4">
-          {eligible.length === 0 ? (
-            <div className="text-center py-4">
-              <AlertTriangle className="h-8 w-8 text-amber-400 mx-auto mb-2" />
-              <p className="text-gray-600 dark:text-gray-400 text-sm">No hay billeteras disponibles para retirar.</p>
-              <p className="text-gray-400 text-xs mt-1">Asegurate de tener saldo, datos bancarios cargados y sin bloqueo de 72hs.</p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Monto <span className="text-gray-400 font-normal">(mín. $500)</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+              <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
+                min="500" max={totalBalance} placeholder="0"
+                className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl pl-8 pr-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
-          ) : (
-            <>
-              {eligible.length > 1 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Tienda</label>
-                  <select value={selectedWalletId} onChange={(e) => { setSelectedWalletId(e.target.value); setAmount(""); }}
-                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    {eligible.map((a) => (
-                      <option key={a.id} value={a.wallet!.id}>
-                        {a.store.name} — ${(a.wallet!.balance).toLocaleString("es-AR")} disponible
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Monto <span className="text-gray-400 font-normal">(mín. $500)</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
-                  <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
-                    min="500" max={maxAmount} placeholder="0"
-                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl pl-8 pr-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                </div>
-                <div className="flex justify-between mt-1">
-                  <span className="text-xs text-gray-400">Disponible: ${maxAmount.toLocaleString("es-AR")}</span>
-                  <button onClick={() => setAmount(String(maxAmount))} className="text-xs text-indigo-600 hover:underline">Retirar todo</button>
-                </div>
-              </div>
-              <p className="text-xs text-gray-400">Se transfiere al CBU/alias cargado. Procesamos en 1-3 días hábiles.</p>
-            </>
-          )}
+            <div className="flex justify-between mt-1">
+              <span className="text-xs text-gray-400">Disponible: ${totalBalance.toLocaleString("es-AR")}</span>
+              <button onClick={() => setAmount(String(totalBalance))} className="text-xs text-indigo-600 hover:underline">Retirar todo</button>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400">Se transfiere al CBU/alias cargado. Procesamos en 1-3 días hábiles.</p>
           {error && (
             <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-xl px-4 py-3 text-sm">
               <AlertTriangle className="h-4 w-4 shrink-0" />{error}
@@ -319,22 +248,20 @@ function WithdrawModal({ affiliates, onClose, onSuccess }: { affiliates: Affilia
         </div>
         <div className="flex gap-3 p-6 pt-0">
           <button onClick={onClose} className="flex-1 py-3 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Cancelar</button>
-          {eligible.length > 0 && (
-            <button onClick={handleSubmit} disabled={submitting || !amount}
-              className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50">
-              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {submitting ? "Solicitando..." : "Confirmar retiro"}
-            </button>
-          )}
+          <button onClick={handleSubmit} disabled={submitting || !amount}
+            className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50">
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {submitting ? "Solicitando..." : "Confirmar retiro"}
+          </button>
         </div>
       </motion.div>
     </div>
   );
 }
 
-// ── status badge ──────────────────────────────────────────────────────────────
+// ── withdrawal status badge ────────────────────────────────────────────────────
 
-const statusLabel: Record<string, { label: string; color: string }> = {
+const withdrawalStatus: Record<string, { label: string; color: string }> = {
   PENDING: { label: "Pendiente", color: "text-yellow-600 bg-yellow-50" },
   PROCESSING: { label: "Procesando", color: "text-blue-600 bg-blue-50" },
   APPROVED: { label: "Acreditado", color: "text-green-600 bg-green-50" },
@@ -342,81 +269,82 @@ const statusLabel: Record<string, { label: string; color: string }> = {
   REJECTED: { label: "Rechazado", color: "text-red-600 bg-red-50" },
 };
 
-// ── guía de 3 pasos ───────────────────────────────────────────────────────────
-
-function StarterGuide({ url, storeName, walletId, onAddBank }: { url: string; storeName: string; walletId: string | null; onAddBank: () => void }) {
-  const steps = [
-    {
-      n: "1",
-      title: "Copiá tu link",
-      desc: "Es tu link único de vendedora para esta tienda.",
-      done: true,
-      action: <CopyLinkButton url={url} />,
-    },
-    {
-      n: "2",
-      title: "Compartilo por WhatsApp, Instagram y TikTok",
-      desc: "Cada compra que entre por tu link genera una comisión para vos.",
-      done: false,
-      action: <WhatsAppButton url={url} storeName={storeName} />,
-    },
-    {
-      n: "3",
-      title: "Cargá tu CBU para cobrar",
-      desc: "Necesitás cargar tus datos bancarios antes de poder retirar tu saldo.",
-      done: !walletId,
-      action: walletId ? (
-        <button onClick={onAddBank}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
-          <Pencil className="h-3.5 w-3.5" />Agregar cuenta
-        </button>
-      ) : null,
-    },
-  ];
-
-  return (
-    <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 space-y-3">
-      <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">Cómo empezar</p>
-      {steps.map((s) => (
-        <div key={s.n} className="flex items-start gap-3">
-          <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${s.done ? "bg-indigo-600 text-white" : "bg-indigo-200 text-indigo-600"}`}>
-            {s.n}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-indigo-900">{s.title}</p>
-            <p className="text-xs text-indigo-600 mt-0.5 mb-2">{s.desc}</p>
-            {s.action}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ── page ──────────────────────────────────────────────────────────────────────
 
 export default function BilleteraPage() {
   const { status: sessionStatus, user } = useAuth();
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showBankForm, setShowBankForm] = useState<string | null>(null);
+  const [showBankForm, setShowBankForm] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
-
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- mounted flag estándar para evitar mismatch de hidratación SSR/cliente (mismo patrón en todo el proyecto)
-  useEffect(() => { setMounted(true); }, []);
 
   function loadData() {
     fetch("/api/vendedoras/wallet")
       .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); });
+      .then((d) => {
+        if (!d.affiliates) { setLoading(false); return; } // respuesta de error (401, 500)
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }
 
   useEffect(() => {
-    if (sessionStatus !== "authenticated") return;
+    if (sessionStatus === "loading") return;
+    if (sessionStatus !== "authenticated") { setLoading(false); return; }
     loadData();
   }, [sessionStatus]);
+
+  // Movimientos unificados (comisiones + retiros) ordenados por fecha.
+  // Los retiros se agrupan por timestamp (misma transacción = mismo segundo) para mostrar
+  // una sola línea aunque internamente se hayan dividido entre billeteras de distintas tiendas.
+  const movements = useMemo<Movement[]>(() => {
+    if (!data) return [];
+    const list: Movement[] = [];
+
+    // Comisiones (una por tienda, se muestran con nombre de tienda si hay varias)
+    for (const affiliate of data.affiliates) {
+      for (const c of affiliate.commissions) {
+        list.push({
+          type: "commission",
+          id: c.id,
+          amount: c.amount,
+          rate: c.rate,
+          orderTotal: c.order.total,
+          status: c.status,
+          createdAt: c.createdAt,
+          storeName: affiliate.store.name,
+        });
+      }
+    }
+
+    // Retiros: agrupar por segundo (todos los registros del mismo pedido tienen igual createdAt)
+    const withdrawalMap = new Map<string, Movement & { type: "withdrawal" }>();
+    for (const affiliate of data.affiliates) {
+      for (const w of affiliate.wallet?.withdrawals ?? []) {
+        const key = w.createdAt.slice(0, 19);
+        const existing = withdrawalMap.get(key);
+        if (existing) {
+          existing.amount += w.amount;
+          if (w.status === "PENDING") existing.status = "PENDING";
+          else if (w.status === "PROCESSING" && existing.status !== "PENDING") existing.status = "PROCESSING";
+        } else {
+          withdrawalMap.set(key, {
+            type: "withdrawal",
+            id: w.id,
+            amount: w.amount,
+            status: w.status,
+            createdAt: w.createdAt,
+            notes: w.notes,
+            storeName: "",
+          });
+        }
+      }
+    }
+    list.push(...withdrawalMap.values());
+
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [data]);
 
   if (loading) {
     return (
@@ -426,9 +354,8 @@ export default function BilleteraPage() {
     );
   }
 
-  const canWithdraw = data?.affiliates.some(
-    (a) => a.wallet && a.wallet.hasBankData && !a.wallet.bankLocked && (a.wallet.balance ?? 0) >= 500
-  );
+  const canWithdraw = data?.hasBankData && !data?.bankLocked && (data?.totalBalance ?? 0) >= 500;
+  const multiStore = (data?.affiliates.length ?? 0) > 1;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#030712]">
@@ -440,22 +367,12 @@ export default function BilleteraPage() {
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex-1">Mi billetera</h1>
-          {user?.id && <NotificationBell userId={user.id} />}
-          {mounted && (
-            <button
-              type="button"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
-            >
-              {theme === "dark" ? <Sun className="h-4 w-4 text-yellow-400" /> : <Moon className="h-4 w-4" />}
-            </button>
-          )}
         </div>
 
         {/* Resumen total */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white mb-4">
-          <p className="text-indigo-200 text-sm mb-1">Saldo total disponible</p>
+          <p className="text-indigo-200 text-sm mb-1">Saldo disponible</p>
           <p className="text-4xl font-extrabold mb-4">${(data?.totalBalance ?? 0).toLocaleString("es-AR")}</p>
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
             <div>
@@ -469,203 +386,152 @@ export default function BilleteraPage() {
           </div>
         </motion.div>
 
-        <div className="flex justify-end mb-6">
+        {/* Banner: sin datos bancarios */}
+        {data && !data.hasBankData && (
+          <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-4 mb-4">
+            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Necesitás cargar tu cuenta bancaria</p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">Para poder solicitar retiros tenés que agregar tu CBU/CVU o alias. Es un paso único y solo te lleva un minuto.</p>
+            </div>
+            <button
+              onClick={() => setShowBankForm(true)}
+              className="shrink-0 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/20 hover:bg-amber-200 dark:hover:bg-amber-500/30 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Agregar ahora
+            </button>
+          </div>
+        )}
+
+        <div className="flex flex-col items-end mb-6 gap-2">
           <button onClick={() => setShowWithdraw(true)} disabled={!canWithdraw}
             className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-sm">
             <ArrowDownLeft className="h-4 w-4" />
             Solicitar retiro
           </button>
+          {!canWithdraw && data && data.hasBankData && (
+            <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {data.bankLocked
+                ? "Retiros bloqueados 72hs tras cambiar datos bancarios"
+                : "Necesitás al menos $500 en tu billetera"}
+            </p>
+          )}
         </div>
 
-        {/* Tarjetas por afiliación */}
-        {data?.affiliates.map((affiliate) => {
-          const url = affiliateUrl(affiliate.id);
-          const isActive = affiliate.status === "APPROVED" && affiliate.isActive;
-          const hasActivity = affiliate.totalCommissions > 0 || affiliate.totalOrders > 0;
+        {/* Configuración de cobro */}
+        {(data?.affiliates.length ?? 0) > 0 && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-white/10 mb-4 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-white/10">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Configuración de cobro</p>
+            </div>
 
-          return (
-            <motion.div key={affiliate.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-white/10 p-6 mb-4 space-y-4 shadow-sm">
-
-              {/* Cabecera tienda */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white">{affiliate.store.name}</h3>
-                  <a href={`/tienda/${affiliate.store.slug}`} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mt-0.5">
-                    Ver tienda <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">
-                    ${(affiliate.wallet?.balance ?? 0).toLocaleString("es-AR")}
-                  </p>
-                  <p className="text-xs text-gray-400">disponible</p>
-                </div>
-              </div>
-
-              {/* Stats de actividad */}
-              <div className="grid grid-cols-3 gap-2">
-                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <ShoppingBag className="h-3.5 w-3.5 text-indigo-400" />
-                  </div>
-                  <p className="text-base font-bold text-gray-900 dark:text-white">{affiliate.totalOrders}</p>
-                  <p className="text-xs text-gray-400">ventas</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <TrendingUp className="h-3.5 w-3.5 text-green-400" />
-                  </div>
-                  <p className="text-base font-bold text-gray-900 dark:text-white">{affiliate.totalCommissions}</p>
-                  <p className="text-xs text-gray-400">comisiones</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center">
-                  <p className="text-base font-bold text-gray-900 dark:text-white">
-                    ${(affiliate.wallet?.totalEarned ?? 0).toLocaleString("es-AR")}
-                  </p>
-                  <p className="text-xs text-gray-400">ganado total</p>
-                </div>
-              </div>
-
-              {/* Link de venta */}
-              {isActive ? (
-                <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-500/20 p-4">
-                  <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 mb-2">Tu link de venta</p>
-                  <p className="break-all text-xs text-indigo-500 dark:text-indigo-300 font-mono mb-3">
-                    /v/{affiliate.id}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <CopyLinkButton url={url} />
-                    <WhatsAppButton url={url} storeName={affiliate.store.name} />
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-xl bg-yellow-50 border border-yellow-100 p-3 text-xs text-yellow-700">
-                  Solicitud pendiente de aprobación. El link de venta aparece cuando la dueña te da acceso.
-                </div>
-              )}
-
-              {/* Guía de inicio si no tiene actividad */}
-              {isActive && !hasActivity && (
-                <StarterGuide
-                  url={url}
-                  storeName={affiliate.store.name}
-                  walletId={affiliate.wallet?.id ?? null}
-                  onAddBank={() => setShowBankForm(affiliate.wallet?.id ?? null)}
-                />
-              )}
-
+            <div className="px-6 py-4">
               {/* Cuenta bancaria */}
-              {affiliate.wallet && (
-                <div className={`rounded-xl p-4 border ${affiliate.wallet.hasBankData ? "border-gray-100 dark:border-white/10 bg-white dark:bg-white/5" : "border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-500/30"}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className={`text-xs font-semibold uppercase tracking-wider ${affiliate.wallet.hasBankData ? "text-gray-400" : "text-amber-700 dark:text-amber-400"}`}>
-                      Cuenta bancaria para retiros
-                    </p>
-                    <button onClick={() => setShowBankForm(affiliate.wallet!.id)}
-                      className={`flex items-center gap-1 text-xs font-medium transition-colors ${affiliate.wallet.hasBankData ? "text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300" : "text-amber-700 hover:text-amber-900 dark:text-amber-400"}`}>
-                      <Pencil className="h-3 w-3" />
-                      {affiliate.wallet.hasBankData ? "Editar" : "Agregar cuenta"}
-                    </button>
-                  </div>
-
-                  {affiliate.wallet.hasBankData ? (
-                    <div className="space-y-1 text-sm">
-                      {affiliate.wallet.cbu && <p className="font-mono text-gray-700 dark:text-gray-300">CBU: {affiliate.wallet.cbu}</p>}
-                      {affiliate.wallet.alias && <p className="text-gray-700 dark:text-gray-300">Alias: <span className="font-mono">{affiliate.wallet.alias}</span></p>}
-                      {affiliate.wallet.bankHolder && <p className="text-gray-500 dark:text-gray-400 text-xs">Titular: {affiliate.wallet.bankHolder}</p>}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-white/10 flex items-center justify-center shrink-0">
+                      <CreditCard className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     </div>
-                  ) : (
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-amber-800">Sin cuenta bancaria cargada</p>
-                        <p className="text-xs text-amber-600 mt-0.5">Necesitás agregarla para poder retirar tu saldo cuando ganes comisiones.</p>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Cuenta bancaria</p>
+                      <p className="text-xs text-gray-400">
+                        {data!.hasBankData
+                          ? (data!.bankAlias ?? (data!.bankCbu ? `CBU ···${data!.bankCbu.slice(-4)}` : "Datos cargados"))
+                          : "Necesaria para solicitar retiros"}
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowBankForm(true)}
+                    className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors shrink-0">
+                    <Pencil className="h-3 w-3" />
+                    {data!.hasBankData ? "Editar" : "Agregar"}
+                  </button>
+                </div>
+                {data!.bankLocked && data!.bankLockedUntil && (
+                  <LockoutBanner until={data!.bankLockedUntil} />
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Movimientos */}
+        {movements.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-white/10 flex items-center justify-between">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Movimientos</p>
+              <Link href="/afiliados/estadisticas"
+                className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
+                Ver estadísticas <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-white/5">
+              {movements.slice(0, 20).map((m) => {
+                if (m.type === "commission") {
+                  const icon = m.status === "DISBURSED"
+                    ? <CheckCircle className="h-4 w-4 text-blue-500 shrink-0" />
+                    : m.status === "PAID"
+                    ? <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                    : <Clock className="h-4 w-4 text-yellow-400 shrink-0" />;
+                  return (
+                    <div key={`c-${m.id}`} className="flex items-center justify-between px-6 py-3 gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {icon}
+                        <div className="min-w-0">
+                          <p className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                            Comisión {m.rate}% — venta ${m.orderTotal.toLocaleString("es-AR")}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(m.createdAt).toLocaleDateString("es-AR")}
+                            {multiStore && <span className="ml-1.5 text-gray-300 dark:text-gray-600">· {m.storeName}</span>}
+                            {m.status === "DISBURSED" && <span className="ml-1.5 text-blue-500 font-medium">→ MP</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`font-semibold text-sm shrink-0 ${m.status === "DISBURSED" ? "text-blue-600" : "text-green-600 dark:text-green-400"}`}>
+                        +${m.amount.toLocaleString("es-AR")}
+                      </span>
+                    </div>
+                  );
+                }
+
+                // Retiro
+                const s = withdrawalStatus[m.status] ?? { label: m.status, color: "text-gray-600 bg-gray-50" };
+                const daysOld = Math.floor((Date.now() - new Date(m.createdAt).getTime()) / 86_400_000);
+                return (
+                  <div key={`w-${m.id}`} className="flex items-center justify-between px-6 py-3 gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <ArrowDownLeft className="h-4 w-4 text-gray-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">Retiro solicitado</p>
+                        <p className="text-xs text-gray-400 flex flex-wrap items-center gap-1.5">
+                          {new Date(m.createdAt).toLocaleDateString("es-AR")}
+                          {m.status === "PENDING" && daysOld >= 3 && (
+                            <a
+                              href={`mailto:marketplacemitienda@gmail.com?subject=${encodeURIComponent(`Consulta retiro — $${m.amount.toLocaleString("es-AR")} del ${new Date(m.createdAt).toLocaleDateString("es-AR")}`)}`}
+                              className={`font-semibold underline ${daysOld >= 15 ? "text-red-500" : daysOld >= 7 ? "text-amber-500" : "text-gray-500"}`}>
+                              {daysOld}d · Consultar
+                            </a>
+                          )}
+                        </p>
                       </div>
                     </div>
-                  )}
-
-                  {affiliate.wallet.bankLocked && affiliate.wallet.bankLockedUntil && (
-                    <div className="mt-3"><LockoutBanner until={affiliate.wallet.bankLockedUntil} /></div>
-                  )}
-                </div>
-              )}
-
-              {/* Últimas comisiones */}
-              {affiliate.commissions.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Últimas comisiones</p>
-                    <Link href="/afiliados/pedidos"
-                      className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
-                      Ver todos <ExternalLink className="h-3 w-3" />
-                    </Link>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${s.color}`}>{s.label}</span>
+                      <span className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+                        -${m.amount.toLocaleString("es-AR")}
+                      </span>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    {affiliate.commissions.slice(0, 5).map((c) => (
-                      <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/5 last:border-0">
-                        <div className="flex items-center gap-2">
-                          {c.status === "PAID"
-                            ? <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
-                            : <Clock className="h-4 w-4 text-yellow-400 shrink-0" />}
-                          <div>
-                            <p className="text-sm text-gray-700 dark:text-gray-300">
-                              Venta ${c.order.total.toLocaleString("es-AR")} — {c.rate}% comisión
-                            </p>
-                            <p className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString("es-AR")}</p>
-                          </div>
-                        </div>
-                        <span className="font-semibold text-green-600 text-sm">+${c.amount.toLocaleString("es-AR")}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Historial retiros */}
-              {(affiliate.wallet?.withdrawals?.length ?? 0) > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Retiros</p>
-                  <div className="space-y-2">
-                    {affiliate.wallet!.withdrawals.map((w) => {
-                      const s = statusLabel[w.status] ?? { label: w.status, color: "text-gray-600 bg-gray-50" };
-                      const daysOld = Math.floor((Date.now() - new Date(w.createdAt).getTime()) / 86_400_000);
-                      const supportSubject = encodeURIComponent(`Consulta retiro — $${w.amount.toLocaleString("es-AR")} del ${new Date(w.createdAt).toLocaleDateString("es-AR")}`);
-                      return (
-                        <div key={w.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-white/5 last:border-0 gap-2">
-                          <div className="min-w-0">
-                            <p className="text-sm text-gray-700 dark:text-gray-300">${w.amount.toLocaleString("es-AR")}</p>
-                            <p className="text-xs text-gray-400">
-                              {new Date(w.createdAt).toLocaleDateString("es-AR")}
-                              {w.status === "PENDING" && daysOld >= 3 && (
-                                <span className={`ml-1 font-semibold ${daysOld >= 15 ? "text-red-500" : daysOld >= 7 ? "text-amber-500" : "text-gray-400"}`}>
-                                  · {daysOld}d
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {w.status === "PENDING" && daysOld >= 3 && (
-                              <a
-                                href={`mailto:marketplacemitienda@gmail.com?subject=${supportSubject}`}
-                                className="flex items-center gap-1 px-2 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-lg text-[10px] font-bold transition-colors dark:bg-amber-900/20 dark:border-amber-500/30 dark:text-amber-400"
-                              >
-                                <Info className="h-3 w-3" />
-                                Consultar
-                              </a>
-                            )}
-                            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${s.color}`}>{s.label}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          );
-        })}
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
 
         {/* Empty state */}
         {data?.affiliates.length === 0 && (
@@ -683,11 +549,11 @@ export default function BilleteraPage() {
 
       <AnimatePresence>
         {showBankForm && (
-          <BankForm walletId={showBankForm} onClose={() => setShowBankForm(null)}
-            onSaved={() => { setShowBankForm(null); loadData(); }} />
+          <BankForm onClose={() => setShowBankForm(false)}
+            onSaved={() => { setShowBankForm(false); loadData(); }} />
         )}
         {showWithdraw && data && (
-          <WithdrawModal affiliates={data.affiliates} onClose={() => setShowWithdraw(false)}
+          <WithdrawModal totalBalance={data.totalBalance} onClose={() => setShowWithdraw(false)}
             onSuccess={() => { setShowWithdraw(false); loadData(); }} />
         )}
       </AnimatePresence>

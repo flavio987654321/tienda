@@ -16,7 +16,7 @@ const CONTENT = {
           "Datos de operación: pedidos, afiliados, estadísticas de ventas.",
           "Datos de pago: procesados por Mercado Pago. No almacenamos datos de tarjetas.",
           "Datos de uso: sesiones, acciones en el panel y eventos de la plataforma.",
-          "Datos de verificación de identidad (voluntario y con consentimiento explícito): imágenes de DNI y selfie. Ver sección 3 bis para el detalle completo.",
+          "Datos de verificación de identidad (voluntario y con consentimiento explícito): imágenes de DNI y selfie; número de CUIT/CUIL si lo informás voluntariamente. Ver sección 3 bis para el detalle completo.",
         ],
       },
       {
@@ -32,8 +32,9 @@ const CONTENT = {
         title: "3 bis. Verificación de identidad — datos sensibles",
         body: "El programa de Verificación de identidad es completamente voluntario. Si decidís participar, recopilamos documentos que constituyen datos sensibles según el art. 2 de la Ley 25.326 de Protección de Datos Personales:",
         list: [
-          "Qué recopilamos: imagen del frente de tu DNI, imagen del dorso de tu DNI y una fotografía (selfie) sosteniéndolo.",
-          "Finalidad exclusiva: confirmar que sos una persona física real, para mostrar el badge azul de verificación en tu tienda pública.",
+          "Qué recopilamos: imagen del frente de tu DNI, imagen del dorso de tu DNI y una fotografía (selfie) sosteniéndolo. Adicionalmente, si lo informás de forma voluntaria, tu número de CUIT o CUIL.",
+          "CUIT/CUIL (opcional): es un dato de carácter público, verificable en el sitio oficial de AFIP. TiendaApps lo usa únicamente para cotejar actividad comercial registrada. No almacenamos documentos fiscales ni constancias — solo el número ingresado.",
+          "Finalidad exclusiva: confirmar que sos una persona física real (y, si informás tu CUIT/CUIL, que tenés actividad comercial registrada), para mostrar el badge azul de verificación en tu tienda pública.",
           "Quién accede: únicamente el equipo de administración de TiendaApps, a través de URLs temporales con vencimiento de 1 hora. No se comparten con terceros, otros usuarios ni socios comerciales.",
           "Dónde se almacenan: en un bucket privado de Supabase Storage (servidores AWS us-east-1) con acceso restringido. No son accesibles públicamente.",
           "Retención: si la verificación es aprobada, los documentos se conservan mientras el badge esté activo. Si es rechazada o solicitás la eliminación, los archivos se eliminan dentro de los 30 días.",
@@ -98,7 +99,7 @@ const CONTENT = {
         list: [
           "TiendaApps NO almacena datos de tarjetas de crédito o débito. Todo el procesamiento de pagos lo realiza Mercado Pago, certificado PCI-DSS nivel 1 (el estándar de seguridad más alto para pagos).",
           "Las comunicaciones entre tu navegador y nuestros servidores usan HTTPS con TLS 1.2 o superior.",
-          "Los datos de acceso bancario de las afiliadas (CBU, CUIL) se almacenan cifrados con AES-256-GCM.",
+          "Los datos de acceso bancario de las afiliadas (CBU, CUIL) y los tokens de MercadoPago de afiliados se almacenan cifrados con AES-256-GCM.",
           "Las contraseñas se almacenan con hash bcrypt. Nunca las vemos ni podemos recuperarlas.",
         ],
       },
@@ -149,7 +150,7 @@ const CONTENT = {
         list: [
           "Datos de cuenta: nombre, email y contraseña (almacenada con hash bcrypt).",
           "Datos de actividad: ventas generadas, clicks en tu link, comisiones acumuladas.",
-          "Datos de cobro: información necesaria para liquidar comisiones (puede incluir CUIT/CUIL).",
+          "Datos de cobro: información necesaria para liquidar comisiones (puede incluir CUIT/CUIL, CBU/alias). Si conectás tu cuenta de MercadoPago, almacenamos un token de acceso de MP (cifrado con AES-256-GCM) que usamos exclusivamente para transferirte comisiones automáticamente. Nunca usamos ese token para otro fin.",
           "Datos de uso: acciones en el panel y tiendas visitadas.",
         ],
       },
@@ -181,6 +182,7 @@ const CONTENT = {
         body: "No vendemos tus datos. Los compartimos únicamente con:",
         list: [
           "Los dueños de tiendas a las que estés afiliado (solo tus estadísticas de ventas, no tus datos personales).",
+          "MercadoPago: si conectaste tu cuenta de MP, el token de acceso se usa para transferirte comisiones via la Transfer API de MercadoPago. TiendaApps no comparte tu token con terceros distintos de MercadoPago.",
           "Supabase y Vercel como proveedores de infraestructura.",
           "Autoridades competentes cuando sea requerido por ley.",
         ],
@@ -252,8 +254,8 @@ const CONTENT = {
         title: "3 bis. Política de privacidad de cada tienda",
         body: null,
         list: [
-          "Cada tienda dentro de TiendaApps puede publicar su propia Política de Privacidad, redactada por el dueño de esa tienda.",
-          "TiendaApps no redacta, revisa ni avala el contenido de esas políticas individuales. Son responsabilidad exclusiva del dueño de cada tienda.",
+          "Cada tienda dentro de TiendaApps puede publicar su propia Política de Privacidad. TiendaApps puede proporcionar un borrador de ejemplo generado automáticamente como punto de partida, pero el contenido final es responsabilidad exclusiva del dueño de cada tienda.",
+          "TiendaApps no valida ni avala el contenido definitivo de esas políticas individuales. El borrador generado es orientativo y no garantiza su adecuación a la actividad específica de cada negocio.",
           "Al comprar en una tienda, tus datos pueden ser tratados también según la política de privacidad de esa tienda en particular.",
           "Te recomendamos leer la política de privacidad de cada tienda antes de realizar una compra.",
           "Si una tienda usa tus datos de manera inapropiada o contraria a lo declarado, podés reportarlo a marketplacemitienda@gmail.com",

@@ -379,7 +379,7 @@ export default function DashboardLayout({
           <Link
             href="/dashboard/perfil"
             title={isVerified ? "Mi perfil — Verificado" : "Mi perfil"}
-            className="flex items-center gap-2.5 mx-1 px-2.5 py-2.5 rounded-xl bg-gray-50 border border-gray-100 hover:bg-indigo-50 hover:border-indigo-100 transition-colors"
+            className="flex items-center gap-2.5 px-1 py-2.5 rounded-xl bg-gray-50 border border-gray-100 hover:bg-indigo-50 hover:border-indigo-100 transition-colors"
           >
             <div className="relative shrink-0">
               <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">

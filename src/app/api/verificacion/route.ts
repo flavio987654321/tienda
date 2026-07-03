@@ -13,6 +13,7 @@ export async function GET() {
     select: {
       id: true,
       isVerified: true,
+      verificationBanned: true,
       verifiedShowName: true,
       verifiedShowCity: true,
       verifiedShowPhone: true,
@@ -34,11 +35,12 @@ export async function POST(req: Request) {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, isVerified: true, verificationRequest: { select: { status: true } } },
+    select: { id: true, isVerified: true, verificationBanned: true, verificationRequest: { select: { status: true } } },
   });
 
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
   if (store.isVerified) return NextResponse.json({ error: "La tienda ya está verificada" }, { status: 400 });
+  if (store.verificationBanned) return NextResponse.json({ error: "Tu cuenta no puede enviar solicitudes de verificación." }, { status: 403 });
   if (store.verificationRequest?.status === "PENDING") {
     return NextResponse.json({ error: "Ya tenés una solicitud en revisión" }, { status: 400 });
   }
@@ -47,9 +49,19 @@ export async function POST(req: Request) {
   const dniFrontFile = formData.get("dniFront") as File | null;
   const dniBackFile = formData.get("dniBack") as File | null;
   const selfieFile = formData.get("selfie") as File | null;
+  const rawCuit = (formData.get("cuit") as string | null)?.trim() ?? "";
 
   if (!dniFrontFile || !dniBackFile || !selfieFile) {
     return NextResponse.json({ error: "Se requieren las 3 imágenes: DNI frente, DNI dorso y selfie" }, { status: 400 });
+  }
+
+  let normalizedCuit: string | null = null;
+  if (rawCuit) {
+    const digits = rawCuit.replace(/-/g, "");
+    if (!/^\d{11}$/.test(digits)) {
+      return NextResponse.json({ error: "Formato de CUIT/CUIL inválido. Ingresá los 11 dígitos (ej: 20-12345678-9)." }, { status: 400 });
+    }
+    normalizedCuit = `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`;
   }
 
   const MAX_SIZE = 5 * 1024 * 1024;
@@ -92,11 +104,11 @@ export async function POST(req: Request) {
     if (existing) {
       await prisma.verificationRequest.update({
         where: { storeId: store.id },
-        data: { status: "PENDING", dniFront: dniFrontPath, dniBack: dniBackPath, selfie: selfiePath, reviewNote: null, reviewedAt: null },
+        data: { status: "PENDING", dniFront: dniFrontPath, dniBack: dniBackPath, selfie: selfiePath, cuit: normalizedCuit, reviewNote: null, reviewedAt: null },
       });
     } else {
       await prisma.verificationRequest.create({
-        data: { storeId: store.id, dniFront: dniFrontPath, dniBack: dniBackPath, selfie: selfiePath },
+        data: { storeId: store.id, dniFront: dniFrontPath, dniBack: dniBackPath, selfie: selfiePath, cuit: normalizedCuit },
       });
     }
 

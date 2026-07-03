@@ -14,6 +14,7 @@ interface Profile {
 
 interface VerifStore {
   isVerified: boolean;
+  verificationBanned: boolean;
   verifiedShowName: boolean;
   verifiedShowCity: boolean;
   verifiedShowPhone: boolean;
@@ -313,6 +314,8 @@ export default function PerfilPage() {
   const [dniFront, setDniFront] = useState<File | null>(null);
   const [dniBack, setDniBack] = useState<File | null>(null);
   const [selfie, setSelfie] = useState<File | null>(null);
+  const [cuit, setCuit] = useState("");
+  const [cuitError, setCuitError] = useState("");
   const [fileErrors, setFileErrors] = useState({ dniFront: "", dniBack: "", selfie: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -355,10 +358,15 @@ export default function PerfilPage() {
   }
 
   async function doSubmitVerification() {
+    if (cuit.trim()) {
+      const digits = cuit.replace(/-/g, "").trim();
+      if (!/^\d{11}$/.test(digits)) { setCuitError("El CUIT debe tener 11 dígitos (ej: 20-12345678-9)."); return; }
+    }
     if (!dniFront || !dniBack || !selfie) { setSubmitError("Necesitás subir las 3 imágenes."); return; }
     setSubmitting(true); setSubmitError("");
     const fd = new FormData();
     fd.append("dniFront", dniFront); fd.append("dniBack", dniBack); fd.append("selfie", selfie);
+    if (cuit.trim()) fd.append("cuit", cuit.trim());
     try {
       const res = await fetch("/api/verificacion", { method: "POST", body: fd });
       const d = await res.json();
@@ -376,6 +384,7 @@ export default function PerfilPage() {
   const req = verifStore?.verificationRequest;
   const verifStatus = req?.status ?? "NONE";
   const isVerified = verifStore?.isVerified ?? false;
+  const verificationBanned = verifStore?.verificationBanned ?? false;
 
   const toggleDisabled = !!togglingKey || !isVerified;
 
@@ -565,15 +574,29 @@ export default function PerfilPage() {
                     </div>
                   </div>
                 </div>
+              ) : verificationBanned ? (
+                <div className="px-6 py-5">
+                  <div className="flex items-start gap-2.5 bg-gray-100 border border-gray-200 rounded-xl px-4 py-4">
+                    <ShieldAlert className="h-5 w-5 text-gray-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">Cuenta inhabilitada para verificación</p>
+                      {req?.reviewNote && <p className="text-xs text-gray-600 mt-0.5">{req.reviewNote}</p>}
+                      <p className="text-xs text-gray-500 mt-1">
+                        Tu cuenta no puede enviar nuevas solicitudes de verificación. Si creés que fue un error escribinos a{" "}
+                        <a href="mailto:soporte@tiendaapps.com" className="text-indigo-500 underline">soporte@tiendaapps.com</a>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="px-6 py-5 space-y-4">
                   {verifStatus === "REJECTED" && (
                     <div className="flex items-start gap-2.5 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
                       <ShieldAlert className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-sm font-semibold text-red-800">Solicitud rechazada</p>
+                        <p className="text-sm font-semibold text-red-800">Verificación no activa</p>
                         {req?.reviewNote && <p className="text-xs text-red-600 mt-0.5">{req.reviewNote}</p>}
-                        <p className="text-xs text-red-500 mt-1">Podés reenviar las imágenes corregidas.</p>
+                        <p className="text-xs text-red-500 mt-1">Podés volver a enviar una solicitud. Si tenés dudas escribinos a soporte@tiendaapps.com.</p>
                       </div>
                     </div>
                   )}
@@ -581,6 +604,24 @@ export default function PerfilPage() {
                   {verifStatus === "NONE" && (
                     <p className="text-sm text-gray-500">Subí una foto de tu DNI (frente y dorso) y una selfie sosteniéndolo. Solo lo ve el equipo de TiendaApps.</p>
                   )}
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      CUIT / CUIL <span className="text-gray-400 font-normal">(opcional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={cuit}
+                      onChange={(e) => { setCuit(e.target.value); setCuitError(""); }}
+                      placeholder="20-12345678-9"
+                      maxLength={13}
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${cuitError ? "border-red-300 bg-red-50" : "border-gray-200"}`}
+                    />
+                    {cuitError
+                      ? <p className="text-xs text-red-600 mt-1">{cuitError}</p>
+                      : <p className="text-xs text-gray-400 mt-1">Tu número de contribuyente. Lo usamos para confirmar actividad comercial ante AFIP.</p>
+                    }
+                  </div>
 
                   <FileInput label="DNI — frente" file={dniFront} onChange={setDniFront} error={fileErrors.dniFront} onError={(m) => setFileError("dniFront", m)} facingMode="environment" />
                   <FileInput label="DNI — dorso" file={dniBack} onChange={setDniBack} error={fileErrors.dniBack} onError={(m) => setFileError("dniBack", m)} facingMode="environment" />
@@ -599,7 +640,7 @@ export default function PerfilPage() {
 
                   <button
                     type="button"
-                    disabled={submitting || !dniFront || !dniBack || !selfie || Object.values(fileErrors).some(Boolean)}
+                    disabled={submitting || !dniFront || !dniBack || !selfie || Object.values(fileErrors).some(Boolean) || !!cuitError}
                     onClick={() => setShowSubmitConfirm(true)}
                     className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                   >

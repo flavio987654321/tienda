@@ -34,11 +34,11 @@ export async function GET(req: Request) {
 
   const result = withdrawals.map((w) => {
     const aff = w.wallet.affiliate;
-    // Preferir snapshot del momento del retiro; fallback a datos actuales de wallet
-    const rawCbu = decryptIfNeeded(w.snapshotCbu ?? w.wallet.cbu);
-    const rawCuil = decryptIfNeeded(w.snapshotCuil ?? w.wallet.cuil);
-    const rawHolder = decryptIfNeeded(w.snapshotHolder ?? w.wallet.bankHolder);
-    const alias = w.snapshotAlias ?? w.wallet.alias;
+    // Datos bancarios del momento del retiro (snapshot)
+    const rawCbu = decryptIfNeeded(w.snapshotCbu);
+    const rawCuil = decryptIfNeeded(w.snapshotCuil);
+    const rawHolder = decryptIfNeeded(w.snapshotHolder);
+    const alias = w.snapshotAlias;
     return {
       id: w.id,
       amount: w.amount,

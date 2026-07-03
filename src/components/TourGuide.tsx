@@ -86,7 +86,7 @@ const STEPS_AUTOS: Step[] = [
   {
     tourId: "afiliados",
     title: "Afiliados",
-    body: "Invitá vendedores externos que traigan clientes. Vos definís la comisión por venta concretada. La comisión se acredita automáticamente cuando confirmás la venta en Consultas — sin necesitar MercadoPago.",
+    body: "Invitá vendedores externos que traigan clientes. Vos definís la comisión por venta concretada. La comisión se acredita automáticamente cuando confirmás la consulta en el panel.",
   },
   {
     tourId: "notificaciones",

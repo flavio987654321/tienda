@@ -15,17 +15,14 @@ function isWithinLockout(bankUpdatedAt: Date | null): boolean {
   return ms < BANK_LOCKOUT_HOURS * 60 * 60 * 1000;
 }
 
-// Valida CBU/CVU: exactamente 22 dígitos
 function isValidCbu(cbu: string): boolean {
   return /^\d{22}$/.test(cbu.trim());
 }
 
-// Valida CUIL: formato XX-XXXXXXXX-X o XXXXXXXXXXXXXX (11 dígitos)
 function isValidCuil(cuil: string): boolean {
   return /^\d{2}-?\d{8}-?\d{1}$/.test(cuil.trim());
 }
 
-// Alias: solo letras, números, puntos y guiones, 6-20 chars
 function isValidAlias(alias: string): boolean {
   return /^[a-zA-Z0-9.\-]{6,20}$/.test(alias.trim());
 }
@@ -36,78 +33,90 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const userId = user.id;
 
-  const affiliates = await prisma.affiliate.findMany({
-    where: { userId },
-    include: {
-      store: { select: { name: true, slug: true, commissionRate: true } },
-      wallet: {
-        include: {
-          withdrawals: { orderBy: { createdAt: "desc" }, take: 20 },
+  const [affiliates, userWithBank] = await Promise.all([
+    prisma.affiliate.findMany({
+      where: { userId },
+      include: {
+        store: { select: { name: true, slug: true, commissionRate: true } },
+        wallet: {
+          include: {
+            withdrawals: { orderBy: { createdAt: "desc" }, take: 20 },
+          },
         },
+        commissions: {
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          include: { order: { select: { total: true, createdAt: true } } },
+        },
+        _count: { select: { commissions: true, orders: true } },
       },
-      commissions: {
-        orderBy: { createdAt: "desc" },
-        take: 20,
-        include: { order: { select: { total: true, createdAt: true } } },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        affiliateCbu: true,
+        affiliateAlias: true,
+        affiliateCuil: true,
+        affiliateBankHolder: true,
+        affiliateBankUpdatedAt: true,
       },
-      _count: { select: { commissions: true, orders: true } },
-    },
-  });
+    }),
+  ]);
 
   const totalBalance = affiliates.reduce((s, a) => s + (a.wallet?.balance ?? 0), 0);
   const totalEarned = affiliates.reduce((s, a) => s + (a.wallet?.totalEarned ?? 0), 0);
   const totalWithdrawn = affiliates.reduce((s, a) => s + (a.wallet?.totalWithdrawn ?? 0), 0);
 
-  // No exponer datos bancarios completos en el GET general
-  const affiliatesSafe = affiliates.map((a) => ({
-    ...a,
-    totalCommissions: a._count.commissions,
-    totalOrders: a._count.orders,
-    wallet: a.wallet
-      ? (() => {
-          const rawCbu = decryptIfNeeded(a.wallet.cbu);
-          return {
-            ...a.wallet,
-            cbu: rawCbu ? `${"•".repeat(18)}${rawCbu.slice(-4)}` : null,
-            cuil: null, // nunca exponer CUIL al frontend
-            bankHolder: a.wallet.bankHolder ? decryptIfNeeded(a.wallet.bankHolder) : null,
-            hasBankData: !!(a.wallet.cbu || a.wallet.alias),
-            bankLocked: isWithinLockout(a.wallet.bankUpdatedAt),
-            bankLockedUntil: a.wallet.bankUpdatedAt
-              ? new Date(a.wallet.bankUpdatedAt.getTime() + BANK_LOCKOUT_HOURS * 3600000).toISOString()
-              : null,
-          };
-        })()
-      : null,
-  }));
+  const affiliatesSafe = affiliates.map((a) => {
+    const { _count, ...affiliateRest } = a;
+    return {
+      ...affiliateRest,
+      totalCommissions: _count.commissions,
+      totalOrders: _count.orders,
+      wallet: a.wallet
+        ? {
+            id: a.wallet.id,
+            balance: a.wallet.balance,
+            totalEarned: a.wallet.totalEarned,
+            totalWithdrawn: a.wallet.totalWithdrawn,
+            withdrawals: a.wallet.withdrawals,
+          }
+        : null,
+    };
+  });
 
-  return NextResponse.json({ affiliates: affiliatesSafe, totalBalance, totalEarned, totalWithdrawn });
+  // Datos bancarios globales (del usuario, no de la wallet)
+  const rawCbu = decryptIfNeeded(userWithBank?.affiliateCbu ?? null);
+  const bankLocked = isWithinLockout(userWithBank?.affiliateBankUpdatedAt ?? null);
+
+  return NextResponse.json({
+    affiliates: affiliatesSafe,
+    totalBalance,
+    totalEarned,
+    totalWithdrawn,
+    // Datos bancarios globales
+    hasBankData: !!(userWithBank?.affiliateCbu || userWithBank?.affiliateAlias),
+    bankAlias: userWithBank?.affiliateAlias ?? null,
+    bankCbu: rawCbu ? `${"•".repeat(18)}${rawCbu.slice(-4)}` : null,
+    bankHolder: userWithBank?.affiliateBankHolder
+      ? decryptIfNeeded(userWithBank.affiliateBankHolder)
+      : null,
+    hasCuil: !!userWithBank?.affiliateCuil,
+    bankLocked,
+    bankLockedUntil: userWithBank?.affiliateBankUpdatedAt && bankLocked
+      ? new Date(userWithBank.affiliateBankUpdatedAt.getTime() + BANK_LOCKOUT_HOURS * 3600000).toISOString()
+      : null,
+  });
 }
 
-// PUT - actualizar datos bancarios
+// PUT - actualizar datos bancarios (globales: se guarda en User, no en Wallet)
 export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  const userId = user.id;
 
   const body = await req.json();
-  const { walletId, cbu, alias, cuil, bankHolder } = body;
+  const { cbu, alias, cuil, bankHolder } = body;
 
-  if (!walletId || typeof walletId !== "string") {
-    return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
-  }
-
-  // Verificar que la billetera pertenece al usuario
-  const wallet = await prisma.wallet.findUnique({
-    where: { id: walletId },
-    include: { affiliate: { select: { userId: true } } },
-  });
-
-  if (!wallet || wallet.affiliate.userId !== userId) {
-    return NextResponse.json({ error: "Billetera no encontrada" }, { status: 404 });
-  }
-
-  // Validar que tenga al menos CBU o alias
   const cbuClean = cbu?.trim() || null;
   const aliasClean = alias?.trim() || null;
   const cuilClean = cuil?.replace(/[-\s]/g, "") || null;
@@ -116,19 +125,15 @@ export async function PUT(req: NextRequest) {
   if (!cbuClean && !aliasClean) {
     return NextResponse.json({ error: "Ingresá un CBU/CVU o un alias" }, { status: 400 });
   }
-
   if (cbuClean && !isValidCbu(cbuClean)) {
     return NextResponse.json({ error: "CBU/CVU inválido: debe tener exactamente 22 dígitos" }, { status: 400 });
   }
-
   if (aliasClean && !isValidAlias(aliasClean)) {
     return NextResponse.json({ error: "Alias inválido: solo letras, números, puntos y guiones (6-20 caracteres)" }, { status: 400 });
   }
-
   if (cuilClean && !isValidCuil(cuilClean)) {
     return NextResponse.json({ error: "CUIL inválido: formato XX-XXXXXXXX-X" }, { status: 400 });
   }
-
   if (!holderClean || holderClean.length < 3) {
     return NextResponse.json({ error: "Ingresá el nombre del titular de la cuenta" }, { status: 400 });
   }
@@ -136,36 +141,34 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "El nombre del titular no puede superar 100 caracteres" }, { status: 400 });
   }
 
-  const updated = await prisma.wallet.update({
-    where: { id: walletId },
+  const updatedAt = new Date();
+  await prisma.user.update({
+    where: { id: user.id },
     data: {
-      cbu: encryptIfNeeded(cbuClean),
-      alias: aliasClean, // el alias es semi-público, no se cifra
-      cuil: encryptIfNeeded(cuilClean),
-      bankHolder: encryptIfNeeded(holderClean),
-      bankUpdatedAt: new Date(),
+      affiliateCbu: encryptIfNeeded(cbuClean),
+      affiliateAlias: aliasClean,
+      // Solo sobreescribir CUIL si vino un valor nuevo — evita borrar el guardado al editar otros campos
+      ...(cuilClean ? { affiliateCuil: encryptIfNeeded(cuilClean) } : {}),
+      affiliateBankHolder: encryptIfNeeded(holderClean),
+      affiliateBankUpdatedAt: updatedAt,
     },
   });
 
   return NextResponse.json({
     ok: true,
     bankLocked: true,
-    bankLockedUntil: new Date(updated.bankUpdatedAt!.getTime() + BANK_LOCKOUT_HOURS * 3600000).toISOString(),
+    bankLockedUntil: new Date(updatedAt.getTime() + BANK_LOCKOUT_HOURS * 3600000).toISOString(),
   });
 }
 
-// POST - solicitar retiro
+// POST - solicitar retiro (se auto-distribuye entre wallets del usuario, mayor saldo primero)
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const userId = user.id;
 
   const body = await req.json();
-  const { walletId, amount: rawAmount } = body;
-
-  if (!walletId || typeof walletId !== "string") {
-    return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
-  }
+  const { amount: rawAmount } = body;
 
   const MAX_WITHDRAWAL = 10_000_000;
   const amount = Math.round(parseFloat(rawAmount) * 100) / 100;
@@ -182,87 +185,117 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const walletFull = await prisma.wallet.findUnique({
-    where: { id: walletId },
-    include: {
-      affiliate: {
-        include: {
-          store: { select: { name: true } },
-        },
+  // Leer datos bancarios y todas las wallets del usuario en paralelo
+  const [affiliatesData, userBank] = await Promise.all([
+    prisma.affiliate.findMany({
+      where: { userId },
+      include: {
+        wallet: true,
+        store: { select: { name: true } },
       },
-    },
-  });
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        name: true,
+        email: true,
+        affiliateCbu: true,
+        affiliateAlias: true,
+        affiliateCuil: true,
+        affiliateBankHolder: true,
+        affiliateBankUpdatedAt: true,
+      },
+    }),
+  ]);
 
-  if (!walletFull || walletFull.affiliate.userId !== userId) {
-    return NextResponse.json({ error: "Billetera no encontrada" }, { status: 404 });
-  }
-
-  // Verificar datos bancarios
-  if (!walletFull.cbu && !walletFull.alias) {
+  if (!userBank?.affiliateCbu && !userBank?.affiliateAlias) {
     return NextResponse.json(
       { error: "Debés cargar tu CBU/CVU o alias antes de solicitar un retiro" },
       { status: 400 }
     );
   }
 
-  // 72h lockout tras cambiar datos bancarios
-  if (isWithinLockout(walletFull.bankUpdatedAt)) {
-    const unlocksAt = new Date(walletFull.bankUpdatedAt!.getTime() + BANK_LOCKOUT_HOURS * 3600000);
+  if (isWithinLockout(userBank?.affiliateBankUpdatedAt ?? null)) {
+    const unlocksAt = new Date(userBank!.affiliateBankUpdatedAt!.getTime() + BANK_LOCKOUT_HOURS * 3600000);
     return NextResponse.json(
-      {
-        error: `Por seguridad, los retiros están bloqueados 72hs después de cambiar datos bancarios. Podés retirar a partir del ${unlocksAt.toLocaleString("es-AR")}`,
-      },
+      { error: `Por seguridad, los retiros están bloqueados 72hs después de cambiar datos bancarios. Podés retirar a partir del ${unlocksAt.toLocaleString("es-AR")}` },
       { status: 403 }
     );
   }
 
-  // Snapshot de datos bancarios al momento de solicitar (antes de la tx para el email; dentro de la tx para el registro)
-  const rawCbuSnap = decryptIfNeeded(walletFull.cbu);
-  const rawCuilSnap = decryptIfNeeded(walletFull.cuil);
-  const rawHolderSnap = decryptIfNeeded(walletFull.bankHolder);
+  // Wallets con saldo, ordenadas de mayor a menor
+  const walletsWithBalance = affiliatesData
+    .filter((a) => a.wallet && a.wallet.balance > 0)
+    .map((a) => ({
+      walletId: a.wallet!.id,
+      balance: a.wallet!.balance,
+      storeName: a.store.name,
+    }))
+    .sort((a, b) => b.balance - a.balance);
 
-  // Transacción serializable — balance check, pending check, snapshot y decremento DENTRO de la tx
-  let withdrawal;
+  const totalAvailable = walletsWithBalance.reduce((s, w) => s + w.balance, 0);
+  if (totalAvailable < amount) {
+    return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
+  }
+
+  // Distribuir el monto entre wallets (de mayor saldo a menor)
+  const allocations: { walletId: string; amount: number; storeName: string }[] = [];
+  let remaining = amount;
+  for (const w of walletsWithBalance) {
+    if (remaining <= 0) break;
+    const take = Math.min(remaining, w.balance);
+    allocations.push({ walletId: w.walletId, amount: take, storeName: w.storeName });
+    remaining -= take;
+  }
+
+  // Snapshot de datos bancarios del momento del retiro
+  const rawCbuSnap = decryptIfNeeded(userBank?.affiliateCbu ?? null);
+  const rawCuilSnap = decryptIfNeeded(userBank?.affiliateCuil ?? null);
+  const rawHolderSnap = decryptIfNeeded(userBank?.affiliateBankHolder ?? null);
+
+  let withdrawals: { id: string }[];
   try {
-    [withdrawal] = await prisma.$transaction(
+    withdrawals = await prisma.$transaction(
       async (tx) => {
-        // Re-leer el balance dentro de la tx para evitar TOCTOU
-        const freshWallet = await tx.wallet.findUnique({
-          where: { id: walletId },
-          select: { balance: true },
-        });
-        if (!freshWallet || freshWallet.balance < amount) throw new Error("INSUFFICIENT_BALANCE");
+        const created: { id: string }[] = [];
+        for (const alloc of allocations) {
+          const freshWallet = await tx.wallet.findUnique({
+            where: { id: alloc.walletId },
+            select: { balance: true },
+          });
+          if (!freshWallet || freshWallet.balance < alloc.amount) {
+            throw new Error("INSUFFICIENT_BALANCE");
+          }
 
-        const pendingCount = await tx.walletWithdrawal.count({
-          where: { walletId, status: "PENDING" },
-        });
-        if (pendingCount > 0) throw new Error("PENDING_EXISTS");
+          const pendingCount = await tx.walletWithdrawal.count({
+            where: { walletId: alloc.walletId, status: "PENDING" },
+          });
+          if (pendingCount > 0) throw new Error(`PENDING_EXISTS:${alloc.storeName}`);
 
-        const newWithdrawal = await tx.walletWithdrawal.create({
-          data: {
-            walletId,
-            amount,
-            status: "PENDING",
-            // Snapshot cifrado de los datos bancarios del momento exacto del retiro
-            snapshotCbu: walletFull.cbu ?? null,
-            snapshotAlias: walletFull.alias ?? null,
-            snapshotCuil: walletFull.cuil ?? null,
-            snapshotHolder: walletFull.bankHolder ?? null,
-          },
-        });
+          const newWithdrawal = await tx.walletWithdrawal.create({
+            data: {
+              walletId: alloc.walletId,
+              amount: alloc.amount,
+              status: "PENDING",
+              snapshotCbu: userBank?.affiliateCbu ?? null,
+              snapshotAlias: userBank?.affiliateAlias ?? null,
+              snapshotCuil: userBank?.affiliateCuil ?? null,
+              snapshotHolder: userBank?.affiliateBankHolder ?? null,
+            },
+          });
 
-        const updated = await tx.wallet.update({
-          where: { id: walletId },
-          data: {
-            balance: { decrement: amount },
-            totalWithdrawn: { increment: amount },
-          },
-        });
+          const updated = await tx.wallet.update({
+            where: { id: alloc.walletId },
+            data: {
+              balance: { decrement: alloc.amount },
+              totalWithdrawn: { increment: alloc.amount },
+            },
+          });
+          if (updated.balance < 0) throw new Error("BALANCE_NEGATIVE");
 
-        // Guardaría negativo si dos solicitudes corrieron en paralelo — abortar
-        if (updated.balance < 0) throw new Error("BALANCE_NEGATIVE");
-
-        return [newWithdrawal];
+          created.push({ id: newWithdrawal.id });
+        }
+        return created;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
     );
@@ -271,13 +304,13 @@ export async function POST(req: NextRequest) {
     if (message === "INSUFFICIENT_BALANCE" || message === "BALANCE_NEGATIVE") {
       return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
     }
-    if (message === "PENDING_EXISTS") {
+    if (message.startsWith("PENDING_EXISTS:")) {
+      const storeName = message.slice("PENDING_EXISTS:".length);
       return NextResponse.json(
-        { error: "Ya tenés un retiro pendiente. Esperá que sea procesado antes de solicitar otro" },
+        { error: `Tenés un retiro pendiente en ${storeName}. Esperá que sea procesado antes de solicitar otro.` },
         { status: 400 }
       );
     }
-    // P2034 = serialization failure de Postgres (dos requests simultáneas a la misma wallet)
     if ((e as { code?: string })?.code === "P2034") {
       return NextResponse.json(
         { error: "Solicitud en conflicto. Intentá de nuevo en unos segundos." },
@@ -287,40 +320,34 @@ export async function POST(req: NextRequest) {
     throw e;
   }
 
-  // Buscar al afiliado y al admin (fire-and-forget: ambas queries en paralelo)
-  const [affiliateUser, admin] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } }),
-    prisma.user.findFirst({ where: { role: "ADMIN" }, select: { id: true, email: true, name: true } }),
-  ]);
+  const storeNames = allocations.map((a) => a.storeName).join(" + ");
+  const admin = await prisma.user.findFirst({ where: { role: "ADMIN" }, select: { id: true, email: true, name: true } });
 
-  // Email al admin con los datos bancarios para transferir
   if (admin?.email) {
     sendWithdrawalRequestEmail({
       ownerEmail: admin.email,
       ownerName: admin.name ?? "Admin",
-      storeName: walletFull.affiliate.store.name,
-      affiliateName: affiliateUser?.name ?? "Afiliada",
-      affiliateEmail: affiliateUser?.email ?? "",
+      storeName: storeNames,
+      affiliateName: userBank?.name ?? "Afiliada",
+      affiliateEmail: userBank?.email ?? "",
       amount,
       cbu: rawCbuSnap ?? null,
-      alias: walletFull.alias ?? null,
+      alias: userBank?.affiliateAlias ?? null,
       cuil: rawCuilSnap ?? null,
       bankHolder: rawHolderSnap ?? null,
     }).catch((err) => console.error("[email] sendWithdrawalRequestEmail failed:", err));
   }
 
-  // Notificación in-app al admin
   if (admin?.id) {
     createNotification({
       userId: admin.id,
       type: "WITHDRAWAL_REQUESTED",
       title: "Nueva solicitud de retiro",
-      body: `${affiliateUser?.name ?? "Una afiliada"} solicitó retirar $${amount.toLocaleString("es-AR")} — ${walletFull.affiliate.store.name}`,
+      body: `${userBank?.name ?? "Una afiliada"} solicitó retirar $${amount.toLocaleString("es-AR")} — ${storeNames}`,
       link: "/admin/retiros",
     }).catch((err) => console.error("[notify] admin withdrawal:", err));
   }
 
-  // Notificación in-app a la afiliada confirmando la solicitud
   createNotification({
     userId,
     type: "WITHDRAWAL_REQUESTED",
@@ -330,7 +357,7 @@ export async function POST(req: NextRequest) {
   }).catch((err) => console.error("[notify] affiliate withdrawal:", err));
 
   return NextResponse.json({
-    withdrawal,
+    withdrawals,
     message: "Retiro solicitado. Lo procesaremos en 1 a 3 días hábiles.",
   });
 }

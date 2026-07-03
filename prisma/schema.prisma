@@ -30,6 +30,12 @@ model User {
   termsAcceptedAt DateTime?
   termsVersion    String?
   termsAcceptedIp String?
+  // Datos bancarios para retiros de comisiones (únicos por persona, aplican a todas sus afiliaciones)
+  affiliateCbu         String?
+  affiliateAlias       String?
+  affiliateCuil        String?
+  affiliateBankHolder  String?
+  affiliateBankUpdatedAt DateTime?
 
   accounts           Account[]
   sessions           Session[]
@@ -202,11 +208,12 @@ model Store {
   originProvince        String? // código de provincia (ej: "B", "X", "C")
   originPostalCode      String?
   // Verificación de identidad
-  isVerified            Boolean   @default(false)
-  verifiedShowName      Boolean   @default(false)
-  verifiedShowCity      Boolean   @default(false)
-  verifiedShowPhone     Boolean   @default(false)
-  verifiedShowSince     Boolean   @default(false)
+  isVerified              Boolean   @default(false)
+  verificationBanned      Boolean   @default(false)
+  verifiedShowName        Boolean   @default(false)
+  verifiedShowCity        Boolean   @default(false)
+  verifiedShowPhone       Boolean   @default(false)
+  verifiedShowSince       Boolean   @default(false)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -290,6 +297,7 @@ model VerificationRequest {
   dniFront   String
   dniBack    String
   selfie     String
+  cuit       String?
   reviewNote String?
   reviewedAt DateTime?
   createdAt  DateTime  @default(now())
@@ -565,12 +573,14 @@ model AffiliateClick {
 }
 
 model Commission {
-  id        String    @id @default(cuid())
-  amount    Float
-  rate      Float
-  status    String    @default("PENDING")
-  paidAt    DateTime?
-  createdAt DateTime  @default(now())
+  id             String    @id @default(cuid())
+  amount         Float
+  rate           Float
+  status         String    @default("PENDING") // PENDING | PAID (wallet) | DISBURSED (MP directo)
+  paidAt         DateTime?
+  disbursedAt    DateTime?
+  disbursementId String?   // ID del pago en MP cuando status = DISBURSED
+  createdAt      DateTime  @default(now())
 
   affiliateId String
   affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
@@ -586,12 +596,6 @@ model Wallet {
   balance        Float     @default(0)
   totalEarned    Float     @default(0)
   totalWithdrawn Float     @default(0)
-  // Datos bancarios para retiros
-  cbu            String?
-  alias          String?
-  cuil           String?
-  bankHolder     String?
-  bankUpdatedAt  DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
