@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 declare global {
   interface Window {
@@ -12,6 +13,8 @@ declare global {
 const CRISP_WEBSITE_ID = process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID ?? "";
 
 export default function CrispWidget() {
+  const pathname = usePathname();
+
   useEffect(() => {
     if (!CRISP_WEBSITE_ID) return;
     window.$crisp = [];
@@ -24,6 +27,13 @@ export default function CrispWidget() {
       if (document.head.contains(script)) document.head.removeChild(script);
     };
   }, []);
+
+  // En dashboard y afiliados hay FABs a la derecha — mover Crisp a la izquierda
+  useEffect(() => {
+    if (!window.$crisp) return;
+    const onLeft = pathname.startsWith("/dashboard") || pathname.startsWith("/afiliados");
+    window.$crisp.push(["config", "position:reverse", [onLeft]]);
+  }, [pathname]);
 
   return null;
 }
