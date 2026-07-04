@@ -2,10 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { PRICES } from "@/lib/subscription";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
+  // Max 5 intentos de pago por usuario cada 10 minutos
+  try {
+    const allowed = await checkRateLimit(`sub-pay:${user.id}`, 5, 10 * 60 * 1000);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Demasiados intentos de pago. Esperá 10 minutos e intentá de nuevo." },
+        { status: 429 }
+      );
+    }
+  } catch {
+    // Si Redis no está disponible, permitir el pago pero loguear
+    console.error("[rate-limit] Redis no disponible en /suscripcion/pagar");
+  }
 
   const { plan, billing, cardToken, paymentMethodId, rewardCouponCode, prorated } = await req.json();
   // plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"
@@ -96,7 +111,9 @@ export async function POST(req: NextRequest) {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
-        "X-Idempotency-Key": `sub-${user.id}-${Date.now()}`,
+        // Clave determinista por minuto: previene doble cobro por doble-click
+        // pero permite reintentar luego de un minuto si el anterior falló
+        "X-Idempotency-Key": `sub-${user.id}-${plan}-${billing}-${Math.floor(Date.now() / 60000)}`,
       },
       body: JSON.stringify({
         transaction_amount: amount,
@@ -106,7 +123,7 @@ export async function POST(req: NextRequest) {
         payment_method_id: paymentMethodId || "visa",
         payer: { email: user.email },
         notification_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/suscripcion/webhook`,
-        metadata: { userId: user.id, plan, billing, role, tier },
+        metadata: { userId: user.id, plan, billing, role, tier, expectedAmount: amount },
       }),
     });
 

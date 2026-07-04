@@ -324,7 +324,7 @@ function PreciosContent() {
                 ))}
               </ul>
 
-              {userName ? (
+              {userSub?.role === "OWNER" ? null : userName ? (
                 <Link
                   href="/afiliados"
                   className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-amber-500 hover:bg-amber-400 text-white hover:scale-[1.02] transition-all shadow-lg shadow-amber-500/25"
@@ -516,12 +516,14 @@ function PreciosContent() {
                 ))}
               </ul>
 
-              <Link
-                href="/registro?plan=buyer"
-                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 transition-all"
-              >
-                Crear cuenta gratis <ArrowRight className="h-4 w-4" />
-              </Link>
+              {!userName && (
+                <Link
+                  href="/registro?plan=buyer"
+                  className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 transition-all"
+                >
+                  Crear cuenta gratis <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
               <p className="text-center text-xs text-gray-400 mt-3">Sin tarjeta · Sin límite de tiempo</p>
             </div>
           </div>

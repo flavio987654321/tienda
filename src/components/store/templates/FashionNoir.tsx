@@ -1853,7 +1853,7 @@ export default function FashionNoir() {
       )}
 
       {/* ── FLOATING CART BUTTON ────────────────────────────── */}
-      {(() => {
+      {!cart.cartOpen && !cart.checkoutOpen && (() => {
         const cartIconIdx = (Math.abs(parseInt(textOverrides["cartIcon"]?.text ?? "0") || 0)) % CART_ICON_OPTIONS.length;
         const nextCartIconIdx = (cartIconIdx + 1) % CART_ICON_OPTIONS.length;
         return (
@@ -1875,7 +1875,7 @@ export default function FashionNoir() {
       })()}
 
       {/* ── WHATSAPP BUTTON ────────────────────────────────── */}
-      {(!storeConfig || storeConfig.whatsapp.enabled) && (
+      {!cart.cartOpen && !cart.checkoutOpen && (!storeConfig || storeConfig.whatsapp.enabled) && (
         <button
           className="fn-wa-fab"
           onClick={() => { if (editMode) return; window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`, "_blank"); }}

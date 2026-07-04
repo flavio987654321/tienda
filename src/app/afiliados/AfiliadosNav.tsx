@@ -11,7 +11,7 @@ import FavoritesDrawer from "@/components/FavoritesDrawer";
 import {
   ShoppingBag, Wallet, Award, BarChart3, Trophy, Store,
   X, XCircle, Menu, LogOut, HelpCircle, Sun, Moon,
-  Download, MessageSquare, Target, ShoppingCart, Share2,
+  Download, MessageSquare, Target, ShoppingCart, Share2, Home,
 } from "lucide-react";
 
 // ── Modal de ayuda para afiliados ─────────────────────────────────────────────
@@ -116,8 +116,8 @@ export default function AfiliadosNav() {
       <nav className="sticky top-0 z-40 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5">
         <div className="max-w-6xl mx-auto px-6 py-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
 
-          {/* Logo */}
-          <Link href="/afiliados" className="flex items-center gap-2.5">
+          {/* Logo → página principal */}
+          <Link href="/" className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
               <ShoppingBag className="h-4 w-4 text-white" />
             </div>
@@ -146,6 +146,13 @@ export default function AfiliadosNav() {
 
           {/* Desktop íconos */}
           <div className="hidden sm:flex items-center justify-end gap-1">
+            <Link
+              href="/"
+              title="Ir al sitio principal"
+              className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
+            >
+              <Home className="h-4 w-4" />
+            </Link>
             <FavoritesDrawer buttonClassName="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all" />
             {user?.id && <NotificationBell userId={user.id} />}
             {mounted && (
@@ -259,7 +266,14 @@ export default function AfiliadosNav() {
                   </button>
                 )}
 
-                <div className="mt-auto pt-4 border-t border-gray-100 dark:border-white/10">
+                <div className="mt-auto pt-4 border-t border-gray-100 dark:border-white/10 flex flex-col gap-1">
+                  <Link
+                    href="/"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                  >
+                    <Home className="h-4 w-4 text-gray-400" /> Ir al sitio principal
+                  </Link>
                   <button
                     onClick={() => { signOut("/"); setMobileOpen(false); }}
                     className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors w-full"

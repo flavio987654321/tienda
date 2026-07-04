@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { PRICES } from "@/lib/subscription";
 import { platformClient } from "@/lib/mp";
 import { Preference } from "mercadopago";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,19 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
+  // Max 10 creaciones de preferencia por usuario por hora
+  try {
+    const allowed = await checkRateLimit(`sub-pref:${user.id}`, 10, 60 * 60 * 1000);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Demasiados intentos. Esperá un momento e intentá de nuevo." },
+        { status: 429 }
+      );
+    }
+  } catch {
+    console.error("[rate-limit] Redis no disponible en /suscripcion/preferencia");
+  }
 
   const { plan, billing, rewardCouponCode } = await req.json();
 
@@ -96,7 +110,7 @@ export async function POST(req: NextRequest) {
       },
       auto_return: "approved",
       notification_url: `${APP_URL}/api/suscripcion/webhook`,
-      metadata: { userId: user.id, plan, billing, role, tier, couponId },
+      metadata: { userId: user.id, plan, billing, role, tier, couponId, expectedAmount: finalAmount },
     },
   });
 

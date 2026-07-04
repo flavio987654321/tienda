@@ -1747,7 +1747,7 @@ export default function ChicParis() {
       )}
 
       {/* ── FLOATING CART BUTTON ────────────────────────────── */}
-      {(() => {
+      {!cart.cartOpen && !cart.checkoutOpen && (() => {
         const cartIconIdx = (Math.abs(parseInt(textOverrides["cartIcon"]?.text ?? "0") || 0)) % CART_ICON_OPTIONS.length;
         const nextCartIconIdx = (cartIconIdx + 1) % CART_ICON_OPTIONS.length;
         return (
@@ -1769,7 +1769,7 @@ export default function ChicParis() {
       })()}
 
       {/* ── WHATSAPP BUTTON ────────────────────────────────── */}
-      {hasWA && (
+      {!cart.cartOpen && !cart.checkoutOpen && hasWA && (
         <button
           className="cp-wa-fab"
           onClick={() => { if (editMode) return; window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`, "_blank"); }}

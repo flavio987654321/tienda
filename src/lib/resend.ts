@@ -353,6 +353,8 @@ export async function sendSubscriptionConfirmationEmail({
   billingLabel,
   amount,
   periodEnd,
+  paymentId,
+  planKey,
 }: {
   to: string;
   userName: string;
@@ -360,6 +362,8 @@ export async function sendSubscriptionConfirmationEmail({
   billingLabel: string;
   amount: number;
   periodEnd: Date;
+  paymentId?: string;
+  planKey?: string;
 }) {
   if (!process.env.RESEND_API_KEY) return;
 
@@ -367,52 +371,102 @@ export async function sendSubscriptionConfirmationEmail({
     day: "numeric", month: "long", year: "numeric",
   });
 
+  const isPremium = planKey === "OWNER_PREMIUM";
+  const features = isPremium
+    ? ["Afiliados ilimitados", "Dominio propio configurado por nosotros", "PWA + notificaciones push", "Flyer de bienvenida en la tienda", "Soporte prioritario"]
+    : ["Productos y variantes ilimitados", "Hasta 6 afiliados", "Panel de pedidos y estadísticas", "Soporte por email"];
+
+  const txId = paymentId ? `#${String(paymentId).slice(-8).toUpperCase()}` : null;
+
   await resend.emails.send({
     from: FROM,
     to,
-    subject: "Tu suscripción en TiendaApps está activa",
+    subject: `¡Tu suscripción ${planLabel} está activa! — TiendaApps`,
     html: `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
-        <div style="background:#6366f1;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
-          <p style="color:#c7d2fe;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
-          <h1 style="color:#fff;font-size:24px;margin:0;font-weight:800;">¡Suscripción confirmada!</h1>
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:24px 16px;background:#f8fafc;">
+
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#ea580c 0%,#c2410c 100%);border-radius:20px;padding:36px 28px;margin-bottom:20px;text-align:center;">
+          <div style="width:52px;height:52px;background:rgba(255,255,255,0.2);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">
+            <span style="font-size:26px;">🛍️</span>
+          </div>
+          <p style="color:#fed7aa;font-size:12px;margin:0 0 6px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:26px;margin:0;font-weight:900;line-height:1.2;">¡Suscripción activa!</h1>
+          <p style="color:#fed7aa;font-size:14px;margin:10px 0 0;">Todo listo para empezar a vender</p>
         </div>
 
-        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${userName || "ahí"}</strong>,</p>
-        <p style="font-size:15px;color:#374151;margin-bottom:28px;">
-          Tu suscripción está activa. Ya podés usar todas las herramientas de tu tienda sin límites.
-        </p>
+        <!-- Saludo -->
+        <div style="background:#fff;border-radius:16px;padding:24px 24px 20px;margin-bottom:16px;border:1px solid #e2e8f0;">
+          <p style="font-size:15px;color:#374151;margin:0 0 8px;">Hola <strong>${escapeHtml(userName) || "ahí"}</strong> 👋</p>
+          <p style="font-size:14px;color:#6b7280;margin:0;line-height:1.6;">
+            Tu plan <strong style="color:#ea580c;">${escapeHtml(planLabel)}</strong> está activo.
+            Ya podés crear tu tienda, agregar productos y gestionar tus afiliados.
+          </p>
+        </div>
 
-        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:28px;">
-          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-            <span style="font-size:14px;color:#6b7280;">Plan</span>
-            <span style="font-size:14px;font-weight:600;color:#111827;">${planLabel}</span>
+        <!-- Comprobante / Ticket -->
+        <div style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:16px;">
+          <div style="background:#f1f5f9;padding:12px 20px;border-bottom:1px solid #e2e8f0;">
+            <p style="margin:0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:1.5px;text-transform:uppercase;">Comprobante de pago</p>
           </div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-            <span style="font-size:14px;color:#6b7280;">Facturación</span>
-            <span style="font-size:14px;font-weight:600;color:#111827;">${billingLabel}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-            <span style="font-size:14px;color:#6b7280;">Monto pagado</span>
-            <span style="font-size:14px;font-weight:700;color:#6366f1;">${fmt(amount)}</span>
-          </div>
-          <hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0;" />
-          <div style="display:flex;justify-content:space-between;">
-            <span style="font-size:14px;color:#6b7280;">Próxima renovación</span>
-            <span style="font-size:14px;font-weight:600;color:#111827;">${nextRenewal}</span>
+          <div style="padding:20px;">
+            ${txId ? `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:14px;border-bottom:1px dashed #e2e8f0;">
+              <span style="font-size:13px;color:#9ca3af;">N° transacción</span>
+              <span style="font-size:13px;font-weight:700;color:#374151;font-family:monospace;background:#f1f5f9;padding:3px 8px;border-radius:6px;">${txId}</span>
+            </div>
+            ` : ""}
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+              <span style="font-size:14px;color:#6b7280;">Plan</span>
+              <span style="font-size:14px;font-weight:600;color:#111827;">${escapeHtml(planLabel)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+              <span style="font-size:14px;color:#6b7280;">Facturación</span>
+              <span style="font-size:14px;font-weight:600;color:#111827;">${escapeHtml(billingLabel)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+              <span style="font-size:14px;color:#6b7280;">Monto pagado</span>
+              <span style="font-size:15px;font-weight:800;color:#ea580c;">${fmt(amount)}</span>
+            </div>
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:13px;color:#15803d;font-weight:600;">Próxima renovación</span>
+              <span style="font-size:13px;font-weight:700;color:#15803d;">${nextRenewal}</span>
+            </div>
           </div>
         </div>
 
-        <div style="text-align:center;margin-bottom:28px;">
+        <!-- Qué incluye -->
+        <div style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:20px;">
+          <div style="background:#fff7ed;padding:12px 20px;border-bottom:1px solid #fed7aa;">
+            <p style="margin:0;font-size:11px;font-weight:700;color:#c2410c;letter-spacing:1.5px;text-transform:uppercase;">Lo que incluye tu plan</p>
+          </div>
+          <div style="padding:16px 20px;">
+            ${features.map(f => `
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 0;">
+              <span style="color:#ea580c;font-size:15px;flex-shrink:0;">✓</span>
+              <span style="font-size:14px;color:#374151;">${escapeHtml(f)}</span>
+            </div>`).join("")}
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div style="text-align:center;margin-bottom:24px;">
           <a href="${APP_URL}/dashboard"
-             style="display:inline-block;background:#6366f1;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
-            Ir a mi panel
+             style="display:inline-block;background:#ea580c;color:#fff;padding:16px 40px;border-radius:12px;font-weight:800;font-size:15px;text-decoration:none;letter-spacing:0.3px;">
+            Ir a mi panel →
           </a>
+          <p style="font-size:12px;color:#9ca3af;margin:12px 0 0;">tiendaapps.com/dashboard</p>
         </div>
 
-        <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
-          Si tenés alguna duda escribinos a soporte@tiendaapps.com
-        </p>
+        <!-- Footer -->
+        <div style="border-top:1px solid #e2e8f0;padding-top:20px;text-align:center;">
+          <p style="color:#9ca3af;font-size:12px;margin:0 0 4px;">
+            ¿Tenés alguna duda? Escribinos a
+            <a href="mailto:soporte@tiendaapps.com" style="color:#ea580c;text-decoration:none;">soporte@tiendaapps.com</a>
+          </p>
+          <p style="color:#cbd5e1;font-size:11px;margin:0;">TiendaApps · Argentina</p>
+        </div>
+
       </div>
     `,
   });

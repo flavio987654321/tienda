@@ -73,16 +73,53 @@ export default function PaymentModal({ plan, billing, amount, onClose, onSuccess
   const planLabel = plan === "OWNER_PREMIUM" ? "Dueño Premium" : plan === "OWNER_BASIC" ? "Dueño Básico" : "Afiliado";
   const billingLabel = billing === "MONTHLY" ? "mensual" : "anual";
 
+  const renewalDate = (() => {
+    const d = new Date();
+    if (billing === "ANNUAL") d.setFullYear(d.getFullYear() + 1);
+    else d.setDate(d.getDate() + 30);
+    return d.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+  })();
+
   if (success) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-100/90 backdrop-blur-md p-4">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 max-w-xs w-full text-center">
-          <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-6 w-6 text-emerald-600" />
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
+          {/* Header naranja */}
+          <div className="bg-gradient-to-br from-orange-500 to-orange-600 px-6 py-8 text-center">
+            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-xl font-black text-white mb-1">¡Suscripción activa!</h2>
+            <p className="text-orange-100 text-sm">Todo listo para empezar a vender</p>
           </div>
-          <h2 className="text-lg font-bold text-gray-900 mb-1">¡Suscripción activa!</h2>
-          <p className="text-gray-500 text-sm">Redirigiendo al panel...</p>
-          <Loader2 className="h-4 w-4 animate-spin text-indigo-500 mx-auto mt-4" />
+
+          {/* Detalle */}
+          <div className="px-6 py-5 space-y-3">
+            <div className="rounded-2xl bg-gray-50 border border-gray-200 overflow-hidden">
+              <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
+                <span className="text-xs text-gray-500">Plan</span>
+                <span className="text-sm font-bold text-gray-900">{planLabel}</span>
+              </div>
+              <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
+                <span className="text-xs text-gray-500">Facturación</span>
+                <span className="text-sm font-semibold text-gray-700">{billingLabel}</span>
+              </div>
+              <div className="flex justify-between items-center px-4 py-3">
+                <span className="text-xs text-gray-500">Próxima renovación</span>
+                <span className="text-xs font-semibold text-emerald-700">{renewalDate}</span>
+              </div>
+            </div>
+
+            <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1.5">
+              <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
+              Confirmación enviada a tu email
+            </p>
+
+            <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Redirigiendo al panel...
+            </div>
+          </div>
         </div>
       </div>
     );

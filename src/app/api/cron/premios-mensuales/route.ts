@@ -5,8 +5,8 @@ import { generarCuponesMensuales, expirarCuponesVencidos } from "@/lib/rewards";
 // Corre el día 1 de cada mes — genera los premios del mes que acaba de cerrar
 // para todas las afiliadas activas, y vence los cupones que ya pasaron su fecha límite.
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get("x-cron-secret");
-  if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
+  const authHeader = req.headers.get("authorization");
+  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -656,7 +656,7 @@ export default function Home() {
               <span className="flex gap-0.5">
                 {[1,2,3,4,5].map(s => <Star key={s} className="h-3 w-3 fill-orange-500 text-orange-500" />)}
               </span>
-              Más de 50 tiendas activas en Argentina
+              Plataforma nueva · Sumate de los primeros
             </motion.div>
 
             <motion.h1 variants={fadeUp} className="text-5xl lg:text-7xl font-black leading-[1.05] mb-6 tracking-tight text-gray-950">

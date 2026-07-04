@@ -1288,7 +1288,7 @@ export default function UrbanPulse() {
       )}
 
       {/* ── FLOATING CART BUTTON ────────────────────────────── */}
-      {(() => {
+      {!cart.cartOpen && !cart.checkoutOpen && (() => {
         const cartIconIdx = (Math.abs(parseInt(textOverrides["cartIcon"]?.text ?? "0") || 0)) % CART_ICON_OPTIONS.length;
         const nextCartIconIdx = (cartIconIdx + 1) % CART_ICON_OPTIONS.length;
         return (
@@ -1310,7 +1310,7 @@ export default function UrbanPulse() {
       })()}
 
       {/* WHATSAPP */}
-      {(!storeConfig || storeConfig.whatsapp.enabled) && (
+      {!cart.cartOpen && !cart.checkoutOpen && (!storeConfig || storeConfig.whatsapp.enabled) && (
         <a href={`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`} target="_blank" rel="noopener noreferrer"
           onClick={e => { if (editMode) e.preventDefault(); }}
           className="up-wa-fab"

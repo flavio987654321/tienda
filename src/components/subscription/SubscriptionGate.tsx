@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AlertTriangle, Clock, CreditCard } from "lucide-react";
 import PaymentModal from "./PaymentModal";
 import { useAuth } from "@/components/AuthProvider";
+import { PRICES } from "@/lib/subscription";
 
 type Props = {
   status: "TRIAL" | "ACTIVE" | "GRACE" | "EXPIRED" | "CANCELLED";
@@ -48,7 +49,7 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
           <PaymentModal
             plan={planKey}
             billing={plan}
-            amount={planKey === "OWNER_PREMIUM" ? (plan === "MONTHLY" ? 25000 : 225000) : (plan === "MONTHLY" ? 20000 : 180000)}
+            amount={PRICES[planKey as keyof typeof PRICES][plan]}
             onClose={() => setPayModal(false)}
             onSuccess={() => { setPayModal(false); window.location.reload(); }}
           />
@@ -90,7 +91,7 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
           <PaymentModal
             plan={planKey}
             billing={plan}
-            amount={planKey === "OWNER_PREMIUM" ? (plan === "MONTHLY" ? 25000 : 225000) : (plan === "MONTHLY" ? 20000 : 180000)}
+            amount={PRICES[planKey as keyof typeof PRICES][plan]}
             onClose={() => setPayModal(false)}
             onSuccess={() => { setPayModal(false); window.location.reload(); }}
           />
@@ -138,7 +139,7 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
           <PaymentModal
             plan={planKey}
             billing={plan}
-            amount={planKey === "OWNER_PREMIUM" ? (plan === "MONTHLY" ? 25000 : 225000) : (plan === "MONTHLY" ? 20000 : 180000)}
+            amount={PRICES[planKey as keyof typeof PRICES][plan]}
             onClose={() => setPayModal(false)}
             onSuccess={() => { setPayModal(false); window.location.reload(); }}
           />

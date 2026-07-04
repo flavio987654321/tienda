@@ -1,23 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/cron/publish-scheduled",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/cleanup",
-      "schedule": "0 3 * * 1"
-    },
-    {
-      "path": "/api/cron/premios-mensuales",
-      "schedule": "0 6 1 * *"
-    },
-    {
-      "path": "/api/cron/abandoned-carts",
-      "schedule": "0 12 * * *"
-    },
-    {
-      "path": "/api/cron/mp-health",
+      "path": "/api/cron/daily",
       "schedule": "0 12 * * *"
     }
   ]

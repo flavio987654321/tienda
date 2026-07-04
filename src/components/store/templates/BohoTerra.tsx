@@ -744,8 +744,8 @@ export default function BohoTerra() {
       )}
 
       {/* ── HERO — fondo crema con tipografía grande + foto al costado */}
-      <section id="inicio" style={{ paddingTop: isPreview ? 0 : 60 + announcementBarHeight, minHeight:"100vh", display:"flex", alignItems:"stretch", flexDirection: isMobile ? "column" : "row" }}>
-        <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding: isMobile ? "20px 20px 40px" : "80px 80px 80px 80px", maxWidth: isMobile ? "100%" : 600, background:heroLeftBg, position:"relative" }}>
+      <section id="inicio" style={{ paddingTop: isPreview ? 0 : 60 + announcementBarHeight, minHeight: isMobile ? "auto" : "100vh", display:"flex", alignItems:"stretch", flexDirection: isMobile ? "column" : "row" }}>
+        <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent: isMobile ? "flex-start" : "center", padding: isMobile ? "40px 20px 48px" : "80px 80px 80px 80px", maxWidth: isMobile ? "100%" : 600, background:heroLeftBg, position:"relative" }}>
           <EditableSectionBg field="bgHeroLeft" label="Fondo hero" />
           <p style={{ fontSize:11, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:24 }}>
             <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva temporada · 2025"}</EditableZone>
@@ -1012,7 +1012,7 @@ export default function BohoTerra() {
                 </div>
                 {hasMore && (
                   <div style={{ textAlign:"center", marginTop:32 }}>
-                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}&destacado=true`; }}
+                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}${featured.length > 0 ? "&destacado=true" : ""}`; }}
                       style={{ display:"inline-block", border:`1px solid ${masVistoText}`, color:masVistoText, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontFamily:"Georgia, serif", fontStyle:"italic", cursor:"pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
                   </div>
                 )}
@@ -1644,7 +1644,7 @@ export default function BohoTerra() {
 
       {/* ── FLOATING CART BUTTON ────────────────────────────── */}
       {/* Cuando WA está activo, el carrito se apila encima (bottom:84) para evitar posición left:24 que queda fuera del frame en preview */}
-      {(() => {
+      {!cart.cartOpen && !cart.checkoutOpen && (() => {
         const cartIconIdx = (Math.abs(parseInt(textOverrides["cartIcon"]?.text ?? "0") || 0)) % CART_ICON_OPTIONS.length;
         const nextCartIconIdx = (cartIconIdx + 1) % CART_ICON_OPTIONS.length;
         return (
@@ -1666,7 +1666,7 @@ export default function BohoTerra() {
       })()}
 
       {/* ── WHATSAPP BUTTON ────────────────────────────────── */}
-      {(!storeConfig || storeConfig.whatsapp.enabled) && (
+      {!cart.cartOpen && !cart.checkoutOpen && (!storeConfig || storeConfig.whatsapp.enabled) && (
         <button
           className="bt-wa-fab"
           onClick={() => { if (editMode) return; window.open(`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`, "_blank"); }}

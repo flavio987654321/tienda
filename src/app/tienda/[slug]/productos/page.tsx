@@ -1561,7 +1561,7 @@ function ProductosPageInner() {
       {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
 
       {/* ── WHATSAPP FLOTANTE ─────────────────────────────────────────── */}
-      {whatsapp?.enabled && (
+      {!cartOpen && !checkoutOpen && whatsapp?.enabled && (
         <>
           <style>{`
             @keyframes pp-wa-pulse { 0% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0.55); } 70% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 14px rgba(37,211,102,0); } 100% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0); } }
