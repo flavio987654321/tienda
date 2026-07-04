@@ -642,11 +642,13 @@ model Review {
 }
 
 model PublicReview {
-  id        String   @id @default(cuid())
-  rating    Int
-  comment   String?
-  reviewer  String
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  rating     Int
+  comment    String?
+  reviewer   String
+  verified   Boolean  @default(false)
+  verifiedBy String?  // "auto" = cruzado con Order DB | "owner" = dueño lo marcó manualmente
+  createdAt  DateTime @default(now())
 
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)

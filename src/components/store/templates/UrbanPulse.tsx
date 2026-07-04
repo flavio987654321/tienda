@@ -89,11 +89,11 @@ export default function UrbanPulse() {
   const [mobileMenuOpen,   setMobileMenuOpen]   = useState(false);
   const [mobileCatsOpen,   setMobileCatsOpen]   = useState(false);
   const [mobileOpenCat,    setMobileOpenCat]    = useState<string | null>(null);
-  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
+  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; verified: boolean; verifiedBy: string | null; createdAt: string; product?: { name: string; image: string | null } };
   const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
+  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
@@ -208,7 +208,8 @@ export default function UrbanPulse() {
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.width = "";
-      window.scrollTo(0, y);
+      if (y) window.scrollTo(0, y);
+      document.body.dataset.scrollY = "";
     }
     return () => {
       const y = parseInt(document.body.dataset.scrollY || "0");
@@ -357,12 +358,12 @@ export default function UrbanPulse() {
     const res = await fetch(`/api/public/${slug}/reviews`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer }),
+      body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined }),
     });
     if (res.ok) {
       const data = await res.json();
       setReviews(p => [data.review, ...p]);
-      setReviewForm({ reviewer: "", rating: 5, comment: "" });
+      setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
       setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
     }
     setReviewSubmitting(false);
@@ -1017,7 +1018,10 @@ export default function UrbanPulse() {
                       </div>
                       <div style={{ padding:"10px 0 0" }}>
                         <p style={{ margin:"0 0 4px", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1, color:masVistoTextUp, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                        <span style={{ fontSize:13, fontWeight:900, color:ACC }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                        <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
+                          <span style={{ fontSize:13, fontWeight:900, color:ACC }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                          {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <span style={{ fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(p.comparePrice)}</span>}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1354,7 +1358,10 @@ export default function UrbanPulse() {
                     <div style={{ flex:1 }}>
                       <p style={{ margin:0, fontSize:10, color:MID, fontWeight:800, letterSpacing:2, textTransform:"uppercase" }}>{p.category}</p>
                       <p style={{ margin:"4px 0 6px", fontSize:13, fontWeight:800 }}>{p.name}</p>
-                      <p style={{ margin:"0 0 10px", fontSize:14, fontWeight:900 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
+                      <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:10 }}>
+                        <p style={{ margin:0, fontSize:14, fontWeight:900 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
+                        {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <p style={{ margin:0, fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(p.comparePrice)}</p>}
+                      </div>
                       <button onClick={() => openModal(p)} style={{ background:DARK, color:ACC, border:"none", padding:"7px 14px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>Ver</button>
                     </div>
                     <button onClick={() => toggleFavorite(p.id)} style={{ background:"none", border:"none", fontSize:16, cursor:"pointer", alignSelf:"flex-start", padding:4, color:MID }}>✕</button>
@@ -1536,7 +1543,7 @@ export default function UrbanPulse() {
                     </div>
                   </div>
                 )}
-                {isInquiryMode ? (
+                {!isMobile && (isInquiryMode ? (
                   <button onClick={() => openInquiry(modalProduct)}
                     style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
                     Consultar disponibilidad
@@ -1546,7 +1553,7 @@ export default function UrbanPulse() {
                     style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginBottom:10 }}>
                     {selectedVariantStock === 0 ? "Sin stock" : `Agregar · ${fmt(modalProduct.price * qty)}`}
                   </button>
-                )}
+                ))}
                 <button onClick={() => toggleFavorite(modalProduct.id)}
                   style={{ width:"100%", background:"none", border:`2px solid ${DARK}`, color:DARK, padding:"12px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
                   <svg width={14} height={14} viewBox="0 0 24 24" fill={favorites.includes(modalProduct.id) ? DARK : "none"} stroke={DARK} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -1563,12 +1570,25 @@ export default function UrbanPulse() {
                   ) : reviews.length > 0 ? (
                     <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:20 }}>
                       {reviews.slice(0, reviewsShown).map(r => (
-                        <div key={r.id} style={{ borderBottom:`1px solid ${DARK}`, paddingBottom:14 }}>
-                          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-                            <span style={{ fontSize:12, fontWeight:900, textTransform:"uppercase" }}>{r.reviewer}</span>
-                            <span style={{ fontSize:14, color:ACC }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
+                        <div key={r.id} style={{ borderBottom:`1px solid ${DARK}`, paddingBottom:14, display:"flex", gap:10 }}>
+                          {r.product?.image && (
+                            <img src={r.product.image} alt={r.product?.name ?? ""} style={{ width:44, height:44, objectFit:"cover", borderRadius:2, border:`1px solid ${DARK}`, flexShrink:0 }} />
+                          )}
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                              <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                                <span style={{ fontSize:12, fontWeight:900, textTransform:"uppercase" }}>{r.reviewer}</span>
+                                {r.product?.name && <span style={{ fontSize:10, color:MID, textTransform:"uppercase", letterSpacing:0.5 }}>{r.product.name}</span>}
+                                {r.verified && (
+                                  <span style={{ fontSize:9, fontWeight:900, color:ACC, border:`1px solid ${ACC}`, padding:"1px 5px", borderRadius:2, letterSpacing:0.5, textTransform:"uppercase" }}>
+                                    ✓ Verificada
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize:14, color:ACC }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
+                            </div>
+                            {r.comment && <p style={{ fontSize:12, color:MID, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
                           </div>
-                          {r.comment && <p style={{ fontSize:12, color:MID, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
                         </div>
                       ))}
                       {reviews.length > reviewsShown && (
@@ -1591,6 +1611,14 @@ export default function UrbanPulse() {
                         <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
                           placeholder="Tu nombre" readOnly={isPreview}
                           style={{ background:"none", border:`2px solid ${DARK}`, padding:"9px 12px", fontSize:12, fontWeight:600, outline:"none" }} />
+                        <div>
+                          <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
+                            placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email"
+                            style={{ width:"100%", boxSizing:"border-box", background:"none", border:`2px solid ${DARK}`, padding:"9px 12px", fontSize:12, fontWeight:600, outline:"none" }} />
+                          <p style={{ fontSize:9, color:MID, margin:"3px 0 0", fontWeight:700, letterSpacing:0.5, textTransform:"uppercase", lineHeight:1.4 }}>
+                            Si compraste acá, tu reseña mostrará ✓ VERIFICADA. El email no se publica.
+                          </p>
+                        </div>
                         <div style={{ display:"flex", gap:4 }}>
                           {[1,2,3,4,5].map(s => (
                             <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
@@ -1630,6 +1658,26 @@ export default function UrbanPulse() {
                 );
               })()}
             </div>
+            {isMobile && (
+              <div style={{ borderTop:`2px solid ${DARK}`, padding:"12px 16px 16px", background:WHITE, flexShrink:0 }}>
+                <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
+                  <span style={{ fontSize:20, fontWeight:900, color:DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price * qty)}</span>
+                  {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  {qty > 1 && <span style={{ fontSize:11, color:MID }}>× {qty}</span>}
+                </div>
+                {isInquiryMode ? (
+                  <button onClick={() => openInquiry(modalProduct)}
+                    style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                    Consultar disponibilidad
+                  </button>
+                ) : (
+                  <button onClick={addToCart} disabled={selectedVariantStock === 0}
+                    style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                    {selectedVariantStock === 0 ? "Sin stock" : "Agregar al Carrito"}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           </div>
         </div>

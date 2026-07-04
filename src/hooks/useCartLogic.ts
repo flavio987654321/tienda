@@ -213,22 +213,31 @@ export function useCartLogic({ products, storeId, affiliateId = null, resolveVar
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  const savedScrollY = useRef(0);
+  // true solo mientras el modal estuvo abierto en esta instancia — evita
+  // que el scrollTo(0,0) se dispare en el montaje inicial o en previews
+  const modalWasOpen = useRef(false);
+
   // Bloquear scroll del body cuando el modal está abierto (fix iOS Safari)
   useEffect(() => {
     if (!lockScrollOnModal) return;
     if (modalProduct) {
-      const scrollY = window.scrollY;
+      modalWasOpen.current = true;
+      savedScrollY.current = window.scrollY;
       document.body.style.overflow = "hidden";
       document.body.style.position = "fixed";
-      document.body.style.top = `-${scrollY}px`;
+      document.body.style.top = `-${savedScrollY.current}px`;
       document.body.style.width = "100%";
     } else {
-      const top = document.body.style.top;
       document.body.style.overflow = "";
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.width = "";
-      if (top) window.scrollTo(0, parseInt(top) * -1);
+      // solo restaura si el modal realmente estuvo abierto en esta instancia
+      if (modalWasOpen.current) {
+        window.scrollTo(0, savedScrollY.current);
+        modalWasOpen.current = false;
+      }
     }
     return () => {
       document.body.style.overflow = "";

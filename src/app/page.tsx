@@ -13,7 +13,7 @@ import {
   ShoppingBag, Star, Zap, Send, MessageCircle, Mail, HeartHandshake,
   Package, ShoppingCart, Eye, ChevronRight, ChevronLeft, Menu,
   BadgeCheck, Shirt, Car, Home as HomeIcon, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, LayoutGrid,
-  ExternalLink, Info, Bell, Tag,
+  ExternalLink, Info, Bell, Tag, Shield, Clock,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { TEMPLATE_CATEGORIES } from "@/lib/templateRegistry";
@@ -298,15 +298,16 @@ const TEMPLATE_ITEMS = TEMPLATE_CATEGORIES.flatMap((cat) =>
 
 const THUMB_W = 320;
 const VIRTUAL_W = 1080;
-const THUMB_SCALE = THUMB_W / VIRTUAL_W;
 const THUMB_H = 210;
-const VIRTUAL_H = THUMB_H / THUMB_SCALE;
 
-function TemplateGalleryCard({ item, onInfo }: { item: typeof TEMPLATE_ITEMS[number]; onInfo: () => void }) {
+function TemplateGalleryCard({ item, onInfo, inView, thumbW: tw = 320 }: { item: typeof TEMPLATE_ITEMS[number]; onInfo: () => void; inView: boolean; thumbW?: number }) {
   const Component = item.component;
+  const scale = tw / VIRTUAL_W;
+  const thumbH = Math.round(THUMB_H * (tw / THUMB_W));
+  const virtualH = Math.round(thumbH / scale);
   return (
     <Card3D className="group">
-      <div className="w-[320px] bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
+      <div style={{ width: tw }} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
         {/* Barra tipo navegador */}
         <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-100">
           <div className="flex items-center gap-1.5">
@@ -317,15 +318,17 @@ function TemplateGalleryCard({ item, onInfo }: { item: typeof TEMPLATE_ITEMS[num
           <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Demo</span>
         </div>
 
-        {/* Vista del template real, escalada y sin clicks */}
-        <div className="relative" style={{ width: THUMB_W, height: THUMB_H, overflow: "hidden", background: "#f8fafc" }}>
+        {/* Vista del template real, escalada y sin interacción */}
+        <div className="relative" style={{ width: tw, height: thumbH, overflow: "hidden", background: "#f8fafc" }}>
           <div style={{
             position: "absolute", top: 0, left: 0,
-            width: VIRTUAL_W, height: VIRTUAL_H,
-            transform: `scale(${THUMB_SCALE})`, transformOrigin: "top left",
+            width: VIRTUAL_W, height: virtualH,
+            transform: `scale(${scale})`, transformOrigin: "top left",
             pointerEvents: "none", userSelect: "none",
           }}>
-            <Component />
+            {inView ? <Component /> : (
+              <div style={{ width: "100%", height: "100%", background: item.palette[0] ? item.palette[0] + "18" : "#f3f4f6" }} />
+            )}
           </div>
 
           {/* Overlay con acciones, aparece en hover */}
@@ -408,9 +411,12 @@ function TemplateInfoModal({ item, onClose }: { item: typeof TEMPLATE_ITEMS[numb
   );
 }
 
+const ANNOUNCEMENT_H = 40;
+
 export default function Home() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
+  const [announcementClosed, setAnnouncementClosed] = useState(true);
   const [realStores, setRealStores] = useState<RealStore[]>([]);
   const [realTestimonials, setRealTestimonials] = useState<RealTestimonial[]>([]);
   const [testimonioModal, setTestimonioModal] = useState(false);
@@ -418,11 +424,24 @@ export default function Home() {
   const [templateFilter, setTemplateFilter] = useState("todo");
   const [templateInfoModal, setTemplateInfoModal] = useState<typeof TEMPLATE_ITEMS[number] | null>(null);
   const [templatePage, setTemplatePage] = useState(0);
+  const [templateNavDir, setTemplateNavDir] = useState(1);
+  const [thumbW, setThumbW] = useState(320);
   const [rotatingWordIdx, setRotatingWordIdx] = useState(0);
   const [featureSlide, setFeatureSlide] = useState<[number, number]>([0, 1]);
+  const [templatesInView, setTemplatesInView] = useState(false);
+  const templatesSectionRef = useRef<HTMLElement>(null);
   const { user: sessionUser } = useAuth();
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (v) => setNavScrolled(v > 50));
+
+  useEffect(() => {
+    if (!localStorage.getItem("announcement_v2")) setAnnouncementClosed(false);
+  }, []);
+
+  function dismissAnnouncement() {
+    setAnnouncementClosed(true);
+    localStorage.setItem("announcement_v2", "1");
+  }
 
   useEffect(() => {
     fetch("/api/stores?featured=true&limit=6")
@@ -433,13 +452,21 @@ export default function Home() {
       .then((r) => r.json())
       .then((d) => { if (Array.isArray(d)) setRealTestimonials(d); })
       .catch(() => {});
-    // El botón flotante de Comunidad Solidaria sabe de antemano si hay una
-    // campaña activa, para llevar directo a esa página en vez de pasar por
-    // /comunidad y depender de su redirect interno.
     fetch("/api/canasta/campaign")
       .then((r) => r.json())
       .then((d) => { if (d?.campaign) setComunidadHref("/comunidad/campana"); })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const el = templatesSectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setTemplatesInView(true); observer.disconnect(); } },
+      { rootMargin: "300px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -452,6 +479,13 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const update = () => setThumbW(window.innerWidth < 640 ? 160 : 320);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   const role = sessionUser?.role;
   const panelHref = role === "ADMIN" ? "/admin" : role === "OWNER" ? "/dashboard" : role === "SELLER" ? "/afiliados" : "/mi-cuenta";
   const panelLabel = role === "ADMIN" ? "Admin" : role === "OWNER" ? "Mi tienda" : role === "SELLER" ? "Mi panel" : "Mi cuenta";
@@ -459,6 +493,34 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900 overflow-x-hidden">
+
+      {/* ── ANNOUNCEMENT BAR ── */}
+      {!announcementClosed && (
+        <div
+          className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-center gap-2 sm:gap-4 px-10"
+          style={{ height: ANNOUNCEMENT_H, background: "linear-gradient(90deg,#ea580c,#e11d48)" }}
+        >
+          <span className="text-white text-xs sm:text-sm font-semibold whitespace-nowrap">
+            ✨ 7 días de prueba gratis
+          </span>
+          <span className="text-orange-200 hidden sm:inline text-sm">·</span>
+          <span className="text-orange-100 hidden sm:inline text-xs sm:text-sm">Sin tarjeta · Sin compromisos</span>
+          <Link
+            href="/registro"
+            className="ml-1 text-white text-xs sm:text-sm font-black underline underline-offset-2 decoration-white/50 hover:decoration-white transition-all whitespace-nowrap"
+          >
+            Crear mi tienda →
+          </Link>
+          <button
+            onClick={dismissAnnouncement}
+            aria-label="Cerrar anuncio"
+            className="absolute right-3 sm:right-5 text-white/60 hover:text-white transition-colors p-1"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       <style>{`
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
         @keyframes gradient-shift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
@@ -485,7 +547,8 @@ export default function Home() {
 
       {/* ── NAVBAR ── */}
       <motion.nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navScrolled ? "bg-white/90 backdrop-blur-xl border-b border-gray-200 shadow-sm" : "bg-transparent"}`}
+        style={{ top: announcementClosed ? 0 : ANNOUNCEMENT_H }}
+        className={`fixed left-0 right-0 z-50 transition-all duration-300 ${navScrolled ? "bg-white/90 backdrop-blur-xl border-b border-gray-200 shadow-sm" : "bg-transparent"}`}
       >
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
@@ -587,11 +650,13 @@ export default function Home() {
         <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-rose-200/30 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-100/30 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative max-w-7xl mx-auto px-6 pt-28 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center w-full">
+        <div className="relative max-w-7xl mx-auto px-6 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center w-full" style={{ paddingTop: announcementClosed ? 112 : 152 }}>
           <motion.div initial="hidden" animate="show" variants={stagger}>
             <motion.div variants={fadeUp} className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 text-orange-700 px-4 py-1.5 rounded-full text-sm font-medium mb-8">
-              <Star className="h-3.5 w-3.5 fill-orange-500 text-orange-500" />
-              La plataforma que crece con vos
+              <span className="flex gap-0.5">
+                {[1,2,3,4,5].map(s => <Star key={s} className="h-3 w-3 fill-orange-500 text-orange-500" />)}
+              </span>
+              Más de 50 tiendas activas en Argentina
             </motion.div>
 
             <motion.h1 variants={fadeUp} className="text-5xl lg:text-7xl font-black leading-[1.05] mb-6 tracking-tight text-gray-950">
@@ -611,10 +676,10 @@ export default function Home() {
             </motion.h1>
 
             <motion.p variants={fadeUp} className="text-lg text-gray-600 mb-10 leading-relaxed max-w-lg">
-              Creá tu tienda online en minutos, cargá tus productos y empezá a vender. Diseño profesional, pagos conectados, pedidos organizados — y todo lo que necesitás para crecer, en un solo lugar.
+              Tienda online + Mercado Pago integrado + afiliados que venden por vos — todo en un panel, sin técnicos ni inversión inicial.
             </motion.p>
 
-            <motion.div variants={fadeUp} className="flex flex-wrap gap-4 mb-14">
+            <motion.div variants={fadeUp} className="flex flex-wrap gap-4 mb-5">
               <Link
                 href="/registro"
                 className="group flex items-center gap-2.5 bg-orange-600 hover:bg-orange-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105"
@@ -629,6 +694,29 @@ export default function Home() {
                 <Users className="h-5 w-5" />
                 Quiero ser afiliado
               </Link>
+            </motion.div>
+
+            {/* ── TRUST STACK ── */}
+            <motion.div variants={fadeUp} className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-10 text-gray-500 text-xs">
+              <span className="flex items-center gap-1.5 font-medium">
+                <Shield className="h-3.5 w-3.5 text-emerald-500" />
+                Pago seguro
+              </span>
+              <span className="text-gray-300 hidden sm:inline">|</span>
+              <span className="flex items-center gap-1.5 font-medium">
+                <CheckCircle className="h-3.5 w-3.5 text-blue-500" />
+                Mercado Pago incluido
+              </span>
+              <span className="text-gray-300 hidden sm:inline">|</span>
+              <span className="flex items-center gap-1.5 font-medium">
+                <Clock className="h-3.5 w-3.5 text-orange-400" />
+                7 días gratis · sin tarjeta
+              </span>
+              <span className="text-gray-300 hidden sm:inline">|</span>
+              <span className="flex items-center gap-1.5 font-medium">
+                <BadgeCheck className="h-3.5 w-3.5 text-orange-500" />
+                Cancelás cuando quieras
+              </span>
             </motion.div>
 
             <motion.div variants={fadeUp} className="grid grid-cols-3 gap-4 sm:gap-6">
@@ -951,7 +1039,7 @@ export default function Home() {
       </section>
 
       {/* ── RUBROS Y DISEÑOS (galería de plantillas) ── */}
-      <section id="como-funciona" className="relative py-24 bg-gray-50">
+      <section id="como-funciona" ref={templatesSectionRef} className="relative py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} variants={stagger} className="text-center mb-10">
             <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Diseño según tu rubro</motion.p>
@@ -987,19 +1075,17 @@ export default function Home() {
             const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
             const page = Math.min(templatePage, totalPages - 1);
             const pageItems = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
-            // Rellena hasta PAGE_SIZE con espacios vacíos para que todos los bloques
-            // tengan siempre la misma altura — así nunca hay un salto de layout
-            // (y el navegador no "corrige" el scroll) al cambiar de bloque.
             const slots: (typeof pageItems[number] | null)[] = [...pageItems];
             while (slots.length < PAGE_SIZE) slots.push(null);
 
             return (
               <div className="px-0 md:px-14">
+                {/* relative: contexto para las flechas absolutas — sin overflow-hidden para no clipearlas */}
                 <div className="relative">
                   {totalPages > 1 && (
                     <button
                       type="button"
-                      onClick={(e) => { e.preventDefault(); if (page === 0) return; setTemplatePage((p) => p - 1); }}
+                      onClick={(e) => { e.preventDefault(); if (page === 0) return; setTemplateNavDir(-1); setTemplatePage((p) => p - 1); }}
                       aria-disabled={page === 0}
                       aria-label="Bloque anterior"
                       className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 w-9 items-center justify-center bg-transparent border-none text-gray-400 hover:text-orange-600 transition-colors ${page === 0 ? "opacity-20 pointer-events-none" : "cursor-pointer"}`}
@@ -1011,7 +1097,7 @@ export default function Home() {
                   {totalPages > 1 && (
                     <button
                       type="button"
-                      onClick={(e) => { e.preventDefault(); if (page === totalPages - 1) return; setTemplatePage((p) => p + 1); }}
+                      onClick={(e) => { e.preventDefault(); if (page === totalPages - 1) return; setTemplateNavDir(1); setTemplatePage((p) => p + 1); }}
                       aria-disabled={page === totalPages - 1}
                       aria-label="Siguiente bloque"
                       className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 w-9 items-center justify-center bg-transparent border-none text-gray-400 hover:text-orange-600 transition-colors ${page === totalPages - 1 ? "opacity-20 pointer-events-none" : "cursor-pointer"}`}
@@ -1021,20 +1107,24 @@ export default function Home() {
                     </button>
                   )}
 
-                  <motion.div
-                    key={`${templateFilter}-${page}`}
-                    initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
-                    className="flex flex-wrap justify-center gap-6 w-full"
-                  >
-                    {slots.map((item, i) =>
-                      item ? (
-                        <TemplateGalleryCard key={item.id} item={item} onInfo={() => setTemplateInfoModal(item)} />
-                      ) : (
-                        <div key={`empty-${i}`} aria-hidden style={{ width: THUMB_W }} />
-                      )
-                    )}
-                  </motion.div>
+                  {/* overflow-hidden solo en el wrapper de la animación, no afecta las flechas */}
+                  <div className="overflow-hidden">
+                    <motion.div
+                      key={`${templateFilter}-${page}`}
+                      initial={{ opacity: 0, x: templateNavDir * 32 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                      className="flex flex-wrap justify-center gap-3 sm:gap-6 w-full"
+                    >
+                      {slots.map((item, i) =>
+                        item ? (
+                          <TemplateGalleryCard key={item.id} item={item} onInfo={() => setTemplateInfoModal(item)} inView={templatesInView} thumbW={thumbW} />
+                        ) : (
+                          <div key={`empty-${i}`} aria-hidden style={{ width: thumbW }} />
+                        )
+                      )}
+                    </motion.div>
+                  </div>
                 </div>
 
                 {totalPages > 1 && (
@@ -1043,7 +1133,7 @@ export default function Home() {
                       <button
                         key={i}
                         type="button"
-                        onClick={() => setTemplatePage(i)}
+                        onClick={() => { setTemplateNavDir(i >= page ? 1 : -1); setTemplatePage(i); }}
                         aria-label={`Ir al bloque ${i + 1}`}
                         className="h-2 rounded-full transition-all duration-300"
                         style={{ width: i === page ? 26 : 8, backgroundColor: i === page ? "#ea580c" : "#e5e7eb" }}
@@ -1086,22 +1176,19 @@ export default function Home() {
                     {store ? (
                       <Link href={`/tienda/${store.slug}`} className="block bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 group">
                         <div className="relative overflow-hidden h-32 sm:h-44 bg-gray-50">
-                          <iframe
-                            src={`/tienda/${store.slug}`}
-                            className="absolute border-0 pointer-events-none"
-                            style={{
-                              top: "-20px",
-                              left: "calc(50% - 211px)",
-                              width: "1280px",
-                              height: "800px",
-                              transform: "scale(0.33)",
-                              transformOrigin: "top left",
-                            }}
-                            loading="lazy"
-                            tabIndex={-1}
-                            aria-hidden="true"
-                            title=""
-                          />
+                          {(store.coverImg || store.heroImg) ? (
+                            <Image
+                              src={(store.coverImg ?? store.heroImg)!}
+                              alt={store.name ?? ""}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-500"
+                              sizes="(max-width: 1024px) 50vw, 33vw"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center" style={{ background: store.primaryColor + "18" }}>
+                              {(() => { const Icon = TYPE_ICONS[store.tipoTienda] ?? Store; return <Icon className="h-10 w-10 opacity-30" style={{ color: store.primaryColor }} />; })()}
+                            </div>
+                          )}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
                           {store.isVerified && (
                             <div className="absolute top-2.5 right-2.5">

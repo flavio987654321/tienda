@@ -27,7 +27,7 @@ const BANNER_COUNT = 3;
 
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 
-const CP_SECTION_IDS = ["cp-strip", "cp-mayorista", "cp-productos", "cp-ofertas", "cp-masvisto", "cp-nosotros", "cp-contacto"];
+const CP_SECTION_IDS = ["cp-strip", "cp-mayorista", "cp-productos", "cp-ofertas", "cp-masvisto", "cp-prueba-social", "cp-nosotros", "cp-contacto"];
 
 /* ── Ícono de carrito flotante — variantes para elegir en modo edición ── */
 const CART_ICON_OPTIONS: React.ReactNode[] = [
@@ -88,13 +88,17 @@ export default function ChicParis() {
   const [announcementIdx,  setAnnouncementIdx]  = useState(0);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
+  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; verified: boolean; verifiedBy: string | null; createdAt: string; product?: { name: string; image: string | null } };
+  type HomeReview = PReview;
   const [reviews,        setReviews]        = useState<PReview[]>([]);
+  const [homeReviews,    setHomeReviews]    = useState<HomeReview[]>([]);
+  const [reviewCarouselPage, setReviewCarouselPage] = useState(0);
   const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
+  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
+  const [reviewHoneypot, setReviewHoneypot] = useState("");
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
   useEffect(() => {
@@ -191,7 +195,8 @@ export default function ChicParis() {
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.width = "";
-      window.scrollTo(0, y);
+      if (y) window.scrollTo(0, y);
+      document.body.dataset.scrollY = "";
     }
     return () => {
       const y = parseInt(document.body.dataset.scrollY || "0");
@@ -283,6 +288,17 @@ export default function ChicParis() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
 
+  // Cargar reseñas de la home (prueba social)
+  useEffect(() => {
+    const slug = storeConfig?.slug;
+    if (!slug) return;
+    fetch(`/api/public/${slug}/reviews`)
+      .then(r => r.ok ? r.json() : { reviews: [] })
+      .then(d => setHomeReviews(d.reviews ?? []))
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeConfig?.slug]);
+
   // Cargar reseñas al abrir modal (D-04)
   useEffect(() => {
     const slug = storeConfig?.slug;
@@ -366,19 +382,19 @@ export default function ChicParis() {
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
-    if (isPreview || isOwner) return;
+    if (isPreview || isOwner || reviewHoneypot) return;
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
     setReviewSubmitting(true);
     const res = await fetch(`/api/public/${slug}/reviews`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer }),
+      body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined }),
     });
     if (res.ok) {
       const data = await res.json();
       setReviews(p => [data.review, ...p]);
-      setReviewForm({ reviewer: "", rating: 5, comment: "" });
+      setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
       setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
     }
     setReviewSubmitting(false);
@@ -991,7 +1007,10 @@ export default function ChicParis() {
                       </div>
                       <div style={{ padding: "10px 0 0" }}>
                         <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: masVistoText }}>{p.name}</p>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: ACC }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: ACC }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                          {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <span style={{ fontSize: 11, color: "#aaa", textDecoration: "line-through" }}>{fmt(p.comparePrice)}</span>}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1003,6 +1022,70 @@ export default function ChicParis() {
                   </div>
                 )}
               </div>
+            </section>
+          );
+        })()}
+      </SectionBlock>
+
+      <SectionBlock id="cp-prueba-social" label="Prueba social" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
+        {(() => {
+          const PREVIEW_REVIEWS: HomeReview[] = [
+            { id:"p1", rating:5, comment:"Calidad increíble y llegó rapidísimo. Ya compré tres veces y siempre perfecta.", reviewer:"María L.", verified:true, verifiedBy:"auto", createdAt:"", product:{ name:"Vestido lino", image:null } },
+            { id:"p2", rating:5, comment:"El diseño es exactamente como en las fotos. Me enamoré cuando lo vi puesto.", reviewer:"Sofía M.", verified:false, verifiedBy:null, createdAt:"", product:{ name:"Blazer oversize", image:null } },
+            { id:"p3", rating:5, comment:"Excelente atención y envío super rápido. La recomiendo sin dudarlo.", reviewer:"Valentina R.", verified:true, verifiedBy:"owner", createdAt:"", product:{ name:"Jean wide leg", image:null } },
+            { id:"p4", rating:5, comment:"Super recomendada, el packaging es hermoso y llegó antes de lo esperado.", reviewer:"Camila F.", verified:false, verifiedBy:null, createdAt:"", product:{ name:"Remera seda", image:null } },
+          ];
+          const allReviews = isPreview ? PREVIEW_REVIEWS : homeReviews;
+          if (allReviews.length === 0) return null;
+          async function deleteHomeReview(reviewId: string) {
+            if (!storeConfig?.slug) return;
+            await fetch(`/api/public/${storeConfig.slug}/reviews`, {
+              method:"DELETE", headers:{"Content-Type":"application/json"},
+              body: JSON.stringify({ reviewId }),
+            });
+            setHomeReviews(prev => prev.filter(r => r.id !== reviewId));
+          }
+          return (
+            <section data-reveal style={{ position:"relative", background: sc["bgPruebaSocial"] ?? "#fff", padding: isMobile ? "56px 0" : "72px 0", borderTop: "1px solid #f0f0f0" }}>
+              <EditableSectionBg field="bgPruebaSocial" label="Fondo prueba social" />
+              <div style={{ padding: isMobile ? "0 20px" : "0 40px", marginBottom: 32 }}>
+                <p style={{ fontSize: 10, letterSpacing: 4, color: ACC, textTransform: "uppercase", fontWeight: 700, margin: "0 0 8px" }}>{"★ ★ ★ ★ ★"}</p>
+                <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "clamp(22px,2.5vw,34px)", fontWeight: 300, fontStyle: "italic", margin: 0, color: "#111" }}>
+                  <EditableZone field="pruebaSocialTitle" label="Título prueba social">Lo que dicen nuestras clientas</EditableZone>
+                </h2>
+              </div>
+              <div style={{ display: "flex", gap: 16, overflowX: "auto", scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", paddingLeft: isMobile ? 20 : 40, paddingRight: isMobile ? 20 : 40, paddingBottom: 8, scrollbarWidth: "none" }}>
+                {allReviews.map(r => (
+                  <div key={r.id} style={{ flexShrink: 0, width: isMobile ? "85vw" : 300, scrollSnapAlign: "start", background: "#fafafa", border: "1px solid #f0f0f0", padding: "24px 24px 20px", display: "flex", flexDirection: "column", gap: 12, position: "relative" }}>
+                    {isOwner && !isPreview && (
+                      <button onClick={() => deleteHomeReview(r.id)}
+                        style={{ position:"absolute", top:8, right:8, background:"none", border:"none", color:"#e0e0e0", cursor:"pointer", fontSize:15, lineHeight:1, padding:4 }}
+                        onMouseEnter={e => (e.currentTarget.style.color="#dc2626")}
+                        onMouseLeave={e => (e.currentTarget.style.color="#e0e0e0")}
+                        title="Eliminar reseña">×</button>
+                    )}
+                    <div style={{ display: "flex", gap: 2 }}>
+                      {[1,2,3,4,5].map(s => <span key={s} style={{ color: s <= r.rating ? ACC : "#e8e8e8", fontSize: 13 }}>★</span>)}
+                    </div>
+                    {r.comment && <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontStyle: "italic", fontSize: 13, color: "#444", lineHeight: 1.75, margin: 0, flex: 1 }}>&ldquo;{r.comment}&rdquo;</p>}
+                    <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 12, display:"flex", alignItems:"center", gap:10 }}>
+                      {r.product?.image && (
+                        <img src={r.product.image} alt={r.product?.name ?? ""} style={{ width:36, height:36, objectFit:"cover", borderRadius:4, border:"1px solid #f0f0f0", flexShrink:0 }} />
+                      )}
+                      <div>
+                        <p style={{ fontSize: 10, fontWeight: 700, color: "#111", margin: "0 0 2px", letterSpacing: 1.5, textTransform: "uppercase" }}>{r.reviewer}</p>
+                        {r.product?.name && <p style={{ fontSize: 10, color: "#bbb", margin: 0 }}>{r.product.name}</p>}
+                        {r.verified && (
+                          <p style={{ fontSize: 9, fontWeight: 700, color: "#16a34a", margin: "4px 0 0", letterSpacing: 0.5 }}>✓ Compra verificada</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {allReviews.length > (isMobile ? 1 : 3) && (
+                <p style={{ textAlign: "center", fontSize: 10, color: "#ccc", letterSpacing: 2, marginTop: 16, textTransform: "uppercase" }}>← deslizá →</p>
+              )}
             </section>
           );
         })()}
@@ -1283,7 +1366,10 @@ export default function ChicParis() {
                   <FadeImage src={p.images[0] ?? "/placeholder.jpg"} alt={p.name} width={48} height={60} style={{ objectFit: "cover", flexShrink: 0 }} />
                   <div>
                     <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600 }}>{p.name}</p>
-                    <p style={{ margin: 0, fontSize: 13, color: ACC, fontWeight: 700 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                      <p style={{ margin: 0, fontSize: 13, color: ACC, fontWeight: 700 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
+                      {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <p style={{ margin: 0, fontSize: 11, color: "#aaa", textDecoration: "line-through" }}>{fmt(p.comparePrice)}</p>}
+                    </div>
                   </div>
                 </div>
               )) : searchQuery ? (
@@ -1476,7 +1562,7 @@ export default function ChicParis() {
                   </div>
                 </div>
               )}
-              {isInquiryMode ? (
+              {!isMobile && (isInquiryMode ? (
                 <button onClick={() => openInquiry(modalProduct)} style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", marginTop: "auto" }}>
                   Consultar disponibilidad
                 </button>
@@ -1485,7 +1571,7 @@ export default function ChicParis() {
                   style={{ background: selectedVariantStock === 0 ? "#ccc" : ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop: "auto" }}>
                   {selectedVariantStock === 0 ? "Sin stock" : "Agregar al carrito"}
                 </button>
-              )}
+              ))}
 
               {/* Reseñas — D-04 */}
               <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 20, marginTop: 20 }}>
@@ -1497,12 +1583,25 @@ export default function ChicParis() {
                 ) : reviews.length > 0 ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 20 }}>
                     {reviews.slice(0, reviewsShown).map(r => (
-                      <div key={r.id} style={{ borderBottom: "1px solid #f5f5f5", paddingBottom: 14 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700 }}>{r.reviewer}</span>
-                          <span style={{ fontSize: 14, color: ACC }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
+                      <div key={r.id} style={{ borderBottom: "1px solid #f5f5f5", paddingBottom: 14, display:"flex", gap:10 }}>
+                        {r.product?.image && (
+                          <img src={r.product.image} alt={r.product?.name ?? ""} style={{ width:44, height:44, objectFit:"cover", borderRadius:6, border:"1px solid #f0f0f0", flexShrink:0 }} />
+                        )}
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 12, fontWeight: 700 }}>{r.reviewer}</span>
+                              {r.product?.name && <span style={{ fontSize:11, color:"#bbb" }}>{r.product.name}</span>}
+                              {r.verified && (
+                                <span style={{ fontSize: 10, fontWeight: 700, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "1px 6px", borderRadius: 20 }}>
+                                  ✓ Compra verificada
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ fontSize: 14, color: ACC }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
+                          </div>
+                          {r.comment && <p style={{ fontSize: 13, color: "#666", margin: 0, lineHeight: 1.6 }}>{r.comment}</p>}
                         </div>
-                        {r.comment && <p style={{ fontSize: 13, color: "#666", margin: 0, lineHeight: 1.6 }}>{r.comment}</p>}
                       </div>
                     ))}
                     {reviews.length > reviewsShown && (
@@ -1522,9 +1621,18 @@ export default function ChicParis() {
                   <div style={{ position: "relative" }}>
                     {isPreview && <div style={{ position: "absolute", inset: 0, zIndex: 10, cursor: "default" }} onClick={e => e.stopPropagation()} />}
                     <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display: "flex", flexDirection: "column", gap: 10, opacity: isPreview ? 0.55 : 1 }}>
+                      <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ opacity:0, height:0, position:"absolute", pointerEvents:"none" }} />
                       <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
                         placeholder="Tu nombre" readOnly={isPreview}
                         style={{ border: "1px solid #e5e7eb", padding: "9px 12px", fontSize: 12, outline: "none" }} />
+                      <div>
+                        <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
+                          placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email"
+                          style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb", padding: "9px 12px", fontSize: 12, outline: "none" }} />
+                        <p style={{ fontSize: 10, color: "#aaa", margin: "3px 0 0", lineHeight: 1.4 }}>
+                          Si compraste acá, tu reseña mostrará &ldquo;✓ Compra verificada&rdquo;. El email no se publica.
+                        </p>
+                      </div>
                       <div style={{ display: "flex", gap: 4 }}>
                         {[1,2,3,4,5].map(s => (
                           <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
@@ -1562,6 +1670,26 @@ export default function ChicParis() {
               </div>
             )}
             </div>
+            {isMobile && (
+              <div style={{ borderTop: "1px solid #f0f0f0", padding: "12px 16px 16px", background: "#fff", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
+                  <span style={{ fontSize: 20, fontWeight: 700, color: ACC }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price * qty)}</span>
+                  {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize: 12, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  {qty > 1 && <span style={{ fontSize: 11, color: "#bbb" }}>× {qty}</span>}
+                </div>
+                {isInquiryMode ? (
+                  <button onClick={() => openInquiry(modalProduct)}
+                    style={{ width: "100%", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
+                    Consultar disponibilidad
+                  </button>
+                ) : (
+                  <button onClick={addToCart} disabled={selectedVariantStock === 0}
+                    style={{ width: "100%", background: selectedVariantStock === 0 ? "#ccc" : ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                    {selectedVariantStock === 0 ? "Sin stock" : "Agregar al carrito"}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1586,7 +1714,10 @@ export default function ChicParis() {
                   <FadeImage src={product.images[0] ?? "/placeholder.jpg"} alt={product.name} width={64} height={80} style={{ objectFit: "cover" }} />
                   <div style={{ flex: 1 }}>
                     <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600 }}>{product.name}</p>
-                    <p style={{ margin: "0 0 8px", fontSize: 13, color: ACC, fontWeight: 700 }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+                      <p style={{ margin: 0, fontSize: 13, color: ACC, fontWeight: 700 }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
+                      {!ocultarPrecios && product.comparePrice && product.comparePrice > product.price && <p style={{ margin: 0, fontSize: 11, color: "#aaa", textDecoration: "line-through" }}>{fmt(product.comparePrice)}</p>}
+                    </div>
                     <button onClick={() => { setFavoritesOpen(false); openModal(product); }}
                       style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "6px 16px", fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
                       Ver

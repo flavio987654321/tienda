@@ -42,14 +42,14 @@ export default function PlantillaDemoPage() {
   return (
     <div className="min-h-screen">
       {!bannerClosed && (
-        <div className="fixed top-0 left-0 right-0 z-[200] bg-gray-950 text-white text-sm flex items-center justify-between gap-3 px-4 py-2.5 shadow-lg">
-          <Link href="/#como-funciona" className="flex items-center gap-1.5 font-medium hover:text-orange-300 transition-colors">
+        <div className="fixed top-0 left-0 right-0 z-[200] bg-gray-950 text-white text-sm flex items-center gap-3 px-4 py-2.5 shadow-lg">
+          <Link href="/#como-funciona" className="flex items-center gap-1.5 font-medium hover:text-orange-300 transition-colors flex-shrink-0">
             <ArrowLeft className="h-4 w-4" /> Volver a TiendaApps
           </Link>
-          <span className="text-gray-300 truncate">
+          <span className="hidden sm:block flex-1 text-center text-gray-300 truncate">
             Estás viendo solo el diseño de <strong className="text-white">{info.name}</strong>, no es una tienda real ni se puede comprar.
           </span>
-          <button onClick={() => setBannerClosed(true)} aria-label="Cerrar aviso" className="text-gray-400 hover:text-white flex-shrink-0">
+          <button onClick={() => setBannerClosed(true)} aria-label="Cerrar aviso" className="text-gray-400 hover:text-white flex-shrink-0 ml-auto">
             <X className="h-4 w-4" />
           </button>
         </div>

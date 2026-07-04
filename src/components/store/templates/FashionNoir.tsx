@@ -85,7 +85,7 @@ const GARANTIAS = [
   },
 ];
 
-const FN_SECTION_IDS = ["fn-garantias", "fn-mayorista", "fn-categorias", "fn-statement", "fn-banner", "fn-productos", "fn-ofertas", "fn-masvisto", "fn-nosotros", "fn-contacto"];
+const FN_SECTION_IDS = ["fn-garantias", "fn-mayorista", "fn-categorias", "fn-statement", "fn-banner", "fn-productos", "fn-ofertas", "fn-masvisto", "fn-prueba-social", "fn-nosotros", "fn-contacto"];
 
 /* ── Component ─────────────────────────────────────────── */
 export default function FashionNoir() {
@@ -103,13 +103,17 @@ export default function FashionNoir() {
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [announcementIdx,    setAnnouncementIdx]    = useState(0);
   const [activeSubcategory,  setActiveSubcategory]  = useState<string | null>(null);
-  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
+  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; verified: boolean; verifiedBy: string | null; createdAt: string; product?: { name: string; image: string | null } };
+  type HomeReview = PReview;
   const [reviews,        setReviews]        = useState<PReview[]>([]);
+  const [homeReviews,    setHomeReviews]    = useState<HomeReview[]>([]);
+  const [reviewCarouselPage, setReviewCarouselPage] = useState(0);
   const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
+  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
+  const [reviewHoneypot, setReviewHoneypot] = useState("");
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
   const ofertasScrollRef = useRef<HTMLDivElement>(null);
@@ -220,6 +224,17 @@ export default function FashionNoir() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
 
+  // Cargar reseñas de la home (prueba social)
+  useEffect(() => {
+    const slug = storeConfig?.slug;
+    if (!slug) return;
+    fetch(`/api/public/${slug}/reviews`)
+      .then(r => r.ok ? r.json() : { reviews: [] })
+      .then(d => setHomeReviews(d.reviews ?? []))
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeConfig?.slug]);
+
   // Cargar reseñas al abrir modal (D-04)
   useEffect(() => {
     const slug = storeConfig?.slug;
@@ -236,19 +251,19 @@ export default function FashionNoir() {
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
-    if (isPreview || isOwner) return;
+    if (isPreview || isOwner || reviewHoneypot) return;
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
     setReviewSubmitting(true);
     const res = await fetch(`/api/public/${slug}/reviews`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer }),
+      body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined }),
     });
     if (res.ok) {
       const data = await res.json();
       setReviews(p => [data.review, ...p]);
-      setReviewForm({ reviewer: "", rating: 5, comment: "" });
+      setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
       setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
     }
     setReviewSubmitting(false);
@@ -291,7 +306,8 @@ export default function FashionNoir() {
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.width = "";
-      window.scrollTo(0, y);
+      if (y) window.scrollTo(0, y);
+      document.body.dataset.scrollY = "";
     }
     return () => {
       const y = parseInt(document.body.dataset.scrollY || "0");
@@ -535,7 +551,10 @@ export default function FashionNoir() {
                     </div>
                     <div style={{ padding:"10px 12px" }}>
                       <p style={{ fontSize:12, margin:"0 0 4px", fontWeight:500 }}>{p.name}</p>
-                      <p style={{ fontSize:13, color:G, fontWeight:700, margin:0 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
+                      <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
+                        <p style={{ fontSize:13, color:G, fontWeight:700, margin:0 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
+                        {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <p style={{ fontSize:11, color:"rgba(240,235,227,0.4)", textDecoration:"line-through", margin:0 }}>{fmt(p.comparePrice)}</p>}
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -1083,7 +1102,10 @@ export default function FashionNoir() {
                       </div>
                       <div style={{ padding:"10px 0 0" }}>
                         <p style={{ margin:"0 0 4px", fontSize:12, color:masVistoText, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                        <span style={{ fontSize:14, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                        <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
+                          <span style={{ fontSize:14, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                          {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <span style={{ fontSize:11, color:"rgba(240,235,227,0.4)", textDecoration:"line-through" }}>{fmt(p.comparePrice)}</span>}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1092,6 +1114,92 @@ export default function FashionNoir() {
                   <div style={{ textAlign:"center", marginTop:32 }}>
                     <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&destacado=true`; }}
                       style={{ background:"none", border:`1px solid rgba(201,168,76,0.4)`, color:G, padding:"12px 32px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })()}
+      </SectionBlock>
+
+      <SectionBlock id="fn-prueba-social" label="Prueba social" isPreview={isPreview} defaultOrder={FN_SECTION_IDS}>
+        {(() => {
+          const PREVIEW_REVIEWS: HomeReview[] = [
+            { id:"p1", rating:5, comment:"Calidad increíble y llegó rapidísimo. Ya compré tres veces y siempre perfecta.", reviewer:"María L.", verified:true, verifiedBy:"auto", createdAt:"", product:{ name:"Vestido lino", image:null } },
+            { id:"p2", rating:5, comment:"El diseño es exactamente como en las fotos. Me enamoré cuando lo vi puesto.", reviewer:"Sofía M.", verified:false, verifiedBy:null, createdAt:"", product:{ name:"Blazer oversize", image:null } },
+            { id:"p3", rating:5, comment:"Excelente atención y envío super rápido. La recomiendo sin dudarlo.", reviewer:"Valentina R.", verified:true, verifiedBy:"owner", createdAt:"", product:{ name:"Jeans wide leg", image:null } },
+          ];
+          const allReviews = isPreview ? PREVIEW_REVIEWS : homeReviews;
+          if (allReviews.length === 0) return null;
+          const perPage = isMobile ? 1 : 3;
+          const totalPages = Math.ceil(allReviews.length / perPage);
+          const safePage = Math.min(reviewCarouselPage, totalPages - 1);
+          const pageReviews = allReviews.slice(safePage * perPage, (safePage + 1) * perPage);
+          async function deleteHomeReview(reviewId: string) {
+            if (!storeConfig?.slug) return;
+            await fetch(`/api/public/${storeConfig.slug}/reviews`, {
+              method:"DELETE", headers:{"Content-Type":"application/json"},
+              body: JSON.stringify({ reviewId }),
+            });
+            setHomeReviews(prev => prev.filter(r => r.id !== reviewId));
+            setReviewCarouselPage(0);
+          }
+          return (
+            <section data-reveal style={{ position:"relative", background: scn["bgPruebaSocial"] ?? BG, padding: isMobile ? "56px 20px" : "80px 32px", borderTop:`1px solid rgba(201,168,76,0.1)` }}>
+              <EditableSectionBg field="bgPruebaSocial" label="Fondo prueba social" />
+              <div style={{ maxWidth:1280, margin:"0 auto" }}>
+                <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", marginBottom:44, flexWrap:"wrap", gap:16 }}>
+                  <div>
+                    <p style={{ fontSize:12, letterSpacing:5, color:G, margin:"0 0 12px" }}>{"★ ★ ★ ★ ★"}</p>
+                    <h2 style={{ fontFamily:"'Playfair Display', Georgia, serif", fontSize:"clamp(24px,3vw,38px)", fontWeight:400, fontStyle:"italic", margin:0, color:T }}>
+                      <EditableZone field="pruebaSocialTitle" label="Título prueba social">Lo dicen nuestras clientas</EditableZone>
+                    </h2>
+                  </div>
+                  {totalPages > 1 && (
+                    <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                      <button onClick={() => setReviewCarouselPage(p => Math.max(0, p - 1))} disabled={safePage === 0}
+                        style={{ width:36, height:36, background:"none", border:`1px solid rgba(201,168,76,0.3)`, color:G, cursor: safePage === 0 ? "default" : "pointer", opacity: safePage === 0 ? 0.3 : 1, fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+                      <span style={{ fontSize:12, color:"rgba(240,235,227,0.4)", letterSpacing:1 }}>{safePage + 1} / {totalPages}</span>
+                      <button onClick={() => setReviewCarouselPage(p => Math.min(totalPages - 1, p + 1))} disabled={safePage === totalPages - 1}
+                        style={{ width:36, height:36, background:"none", border:`1px solid rgba(201,168,76,0.3)`, color:G, cursor: safePage === totalPages - 1 ? "default" : "pointer", opacity: safePage === totalPages - 1 ? 0.3 : 1, fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+                    </div>
+                  )}
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:20 }}>
+                  {pageReviews.map(r => (
+                    <div key={r.id} style={{ background:S, border:`1px solid rgba(201,168,76,0.12)`, padding:28, display:"flex", flexDirection:"column", gap:14, position:"relative" }}>
+                      {isOwner && !isPreview && (
+                        <button onClick={() => deleteHomeReview(r.id)}
+                          style={{ position:"absolute", top:10, right:10, background:"none", border:"none", color:"rgba(240,235,227,0.25)", cursor:"pointer", fontSize:16, lineHeight:1, padding:4 }}
+                          onMouseEnter={e => (e.currentTarget.style.color="#f87171")}
+                          onMouseLeave={e => (e.currentTarget.style.color="rgba(240,235,227,0.25)")}
+                          title="Eliminar reseña">×</button>
+                      )}
+                      <div style={{ display:"flex", gap:3 }}>
+                        {[1,2,3,4,5].map(s => <span key={s} style={{ color: s <= r.rating ? G : "rgba(201,168,76,0.2)", fontSize:15 }}>★</span>)}
+                      </div>
+                      {r.comment && <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:14, color:T, lineHeight:1.8, margin:0, flex:1 }}>&ldquo;{r.comment}&rdquo;</p>}
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        {r.product?.image && (
+                          <img src={r.product.image} alt={r.product?.name ?? ""} style={{ width:38, height:38, objectFit:"cover", borderRadius:4, border:"1px solid rgba(201,168,76,0.18)", flexShrink:0 }} />
+                        )}
+                        <div>
+                          <p style={{ fontSize:11, fontWeight:700, color:G, margin:"0 0 2px", letterSpacing:1, textTransform:"uppercase" }}>{r.reviewer}</p>
+                          {r.product?.name && <p style={{ fontSize:11, color:"rgba(240,235,227,0.35)", margin:0 }}>{r.product.name}</p>}
+                          {r.verified && (
+                            <p style={{ fontSize:10, fontWeight:700, color:"#34d399", margin:"4px 0 0", letterSpacing:0.3 }}>✓ Compra verificada</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {totalPages > 1 && (
+                  <div style={{ display:"flex", justifyContent:"center", gap:6, marginTop:28 }}>
+                    {Array.from({length:totalPages}).map((_,i) => (
+                      <button key={i} onClick={() => setReviewCarouselPage(i)}
+                        style={{ width:6, height:6, borderRadius:"50%", background: i === safePage ? G : "rgba(201,168,76,0.2)", border:"none", cursor:"pointer", padding:0, transition:"background 0.2s" }} />
+                    ))}
                   </div>
                 )}
               </div>
@@ -1547,7 +1655,7 @@ export default function FashionNoir() {
                 </div>
               )}
 
-              {isInquiryMode ? (
+              {!isMobile && (isInquiryMode ? (
                 <button onClick={() => openInquiry(modalProduct)}
                   style={{ background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginTop:"auto" }}>
                   Consultar disponibilidad
@@ -1558,7 +1666,7 @@ export default function FashionNoir() {
                   style={{ background: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
                   {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(modalProduct.price * qty)}`}
                 </button>
-              )}
+              ))}
 
               {/* Reseñas — D-04 */}
               <div style={{ borderTop:`1px solid rgba(240,235,227,0.08)`, paddingTop:20, marginTop:20 }}>
@@ -1570,12 +1678,25 @@ export default function FashionNoir() {
                 ) : reviews.length > 0 ? (
                   <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:20 }}>
                     {reviews.slice(0, reviewsShown).map(r => (
-                      <div key={r.id} style={{ borderBottom:`1px solid rgba(240,235,227,0.06)`, paddingBottom:14 }}>
-                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-                          <span style={{ fontSize:12, fontWeight:600, color:T }}>{r.reviewer}</span>
-                          <span style={{ fontSize:13, color:G }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
+                      <div key={r.id} style={{ borderBottom:`1px solid rgba(240,235,227,0.06)`, paddingBottom:14, display:"flex", gap:10 }}>
+                        {r.product?.image && (
+                          <img src={r.product.image} alt={r.product?.name ?? ""} style={{ width:44, height:44, objectFit:"cover", borderRadius:4, border:"1px solid rgba(201,168,76,0.15)", flexShrink:0 }} />
+                        )}
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                              <span style={{ fontSize:12, fontWeight:600, color:T }}>{r.reviewer}</span>
+                              {r.product?.name && <span style={{ fontSize:11, color:"rgba(240,235,227,0.35)" }}>{r.product.name}</span>}
+                              {r.verified && (
+                                <span style={{ fontSize:10, fontWeight:700, color:"#34d399", background:"rgba(52,211,153,0.1)", border:"1px solid rgba(52,211,153,0.2)", padding:"1px 6px", borderRadius:20, letterSpacing:0.5 }}>
+                                  ✓ Compra verificada
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ fontSize:13, color:G }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
+                          </div>
+                          {r.comment && <p style={{ fontSize:12, opacity:0.6, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
                         </div>
-                        {r.comment && <p style={{ fontSize:12, opacity:0.6, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
                       </div>
                     ))}
                     {reviews.length > reviewsShown && (
@@ -1595,9 +1716,18 @@ export default function FashionNoir() {
                   <div style={{ position:"relative" }}>
                     {isPreview && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
                     <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display:"flex", flexDirection:"column", gap:10, opacity: isPreview ? 0.55 : 1 }}>
+                      <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ opacity:0, height:0, position:"absolute", pointerEvents:"none" }} />
                       <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
                         placeholder="Tu nombre" readOnly={isPreview}
                         style={{ background:"rgba(240,235,227,0.06)", border:"1px solid rgba(240,235,227,0.12)", color:T, padding:"9px 12px", fontSize:12, outline:"none" }} />
+                      <div>
+                        <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
+                          placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email"
+                          style={{ width:"100%", boxSizing:"border-box", background:"rgba(240,235,227,0.06)", border:"1px solid rgba(240,235,227,0.12)", color:T, padding:"9px 12px", fontSize:12, outline:"none" }} />
+                        <p style={{ fontSize:10, color:"rgba(240,235,227,0.3)", margin:"3px 0 0", lineHeight:1.4 }}>
+                          Si compraste en esta tienda, tu reseña aparecerá con el badge &ldquo;✓ Compra verificada&rdquo;. No se muestra públicamente.
+                        </p>
+                      </div>
                       <div style={{ display:"flex", gap:4 }}>
                         {[1,2,3,4,5].map(s => (
                           <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
@@ -1637,6 +1767,26 @@ export default function FashionNoir() {
               );
             })()}
             </div>
+            {isMobile && (
+              <div style={{ borderTop:`1px solid rgba(201,168,76,0.2)`, padding:"12px 16px 16px", background:S, flexShrink:0 }}>
+                <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
+                  <span style={{ fontSize:20, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price * qty)}</span>
+                  {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:"rgba(240,235,227,0.4)", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  {qty > 1 && <span style={{ fontSize:11, color:"rgba(240,235,227,0.4)" }}>× {qty}</span>}
+                </div>
+                {isInquiryMode ? (
+                  <button onClick={() => openInquiry(modalProduct)}
+                    style={{ width:"100%", background:G, color:BG, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                    Consultar disponibilidad
+                  </button>
+                ) : (
+                  <button onClick={addToCart} disabled={selectedVariantStock === 0}
+                    style={{ width:"100%", background: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                    {selectedVariantStock === 0 ? "Sin stock" : "Agregar al Carrito"}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1663,7 +1813,10 @@ export default function FashionNoir() {
                   {product.images[0] ? <FadeImage src={product.images[0]} alt={product.name} width={70} height={93} style={{ objectFit:"cover", flexShrink:0 }}/> : <div style={{ width:70, height:93, flexShrink:0, background:S }}/>}
                   <div style={{ flex:1 }}>
                     <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500 }}>{product.name}</p>
-                    <p style={{ fontSize:13, color:G, fontWeight:700, margin:"0 0 10px" }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
+                    <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:10 }}>
+                      <p style={{ fontSize:13, color:G, fontWeight:700, margin:0 }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
+                      {!ocultarPrecios && product.comparePrice && product.comparePrice > product.price && <p style={{ fontSize:11, color:"rgba(240,235,227,0.4)", textDecoration:"line-through", margin:0 }}>{fmt(product.comparePrice)}</p>}
+                    </div>
                     <div style={{ display:"flex", gap:8 }}>
                       <button onClick={() => { setFavoritesOpen(false); openModal(product); }}
                         style={{ background:G, color:BG, border:"none", padding:"7px 14px", fontSize:10, letterSpacing:2, fontWeight:700, textTransform:"uppercase", cursor:"pointer" }}>

@@ -45,16 +45,20 @@ const announcementMessages_DEFAULT = [
 
 const scrollTo = (id:string) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
 
-const BT_SECTION_IDS = ["bt-mayorista", "bt-banner", "bt-coleccion", "bt-ofertas", "bt-masvisto", "bt-nosotros", "bt-contacto"];
+const BT_SECTION_IDS = ["bt-mayorista", "bt-banner", "bt-coleccion", "bt-ofertas", "bt-masvisto", "bt-prueba-social", "bt-nosotros", "bt-contacto"];
 
 export default function BohoTerra() {
-  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
+  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; verified: boolean; verifiedBy: string | null; createdAt: string; product?: { name: string; image: string | null } };
+  type HomeReview = PReview;
   const [reviews,        setReviews]        = useState<PReview[]>([]);
+  const [homeReviews,    setHomeReviews]    = useState<HomeReview[]>([]);
+  const [reviewCarouselPage, setReviewCarouselPage] = useState(0);
   const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "" });
+  const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
+  const [reviewHoneypot, setReviewHoneypot] = useState("");
 
   const storeConfig = useStoreConfig();
   const pushBell = usePushBell();
@@ -192,6 +196,17 @@ export default function BohoTerra() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
 
+  // Cargar reseñas de la home (prueba social)
+  useEffect(() => {
+    const slug = storeConfig?.slug;
+    if (!slug) return;
+    fetch(`/api/public/${slug}/reviews`)
+      .then(r => r.ok ? r.json() : { reviews: [] })
+      .then(d => setHomeReviews(d.reviews ?? []))
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeConfig?.slug]);
+
   // Cargar reseñas al abrir modal (D-04): sincroniza el estado de reseñas con el modalProduct.id actual (fetch + reset), patrón estándar de "fetch on id change"
   useEffect(() => {
     const slug = storeConfig?.slug;
@@ -209,19 +224,19 @@ export default function BohoTerra() {
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
-    if (isPreview || isOwner) return;
+    if (isPreview || isOwner || reviewHoneypot) return;
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
     setReviewSubmitting(true);
     const res = await fetch(`/api/public/${slug}/reviews`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer }),
+      body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined }),
     });
     if (res.ok) {
       const data = await res.json();
       setReviews(p => [data.review, ...p]);
-      setReviewForm({ reviewer: "", rating: 5, comment: "" });
+      setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
       setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
     }
     setReviewSubmitting(false);
@@ -264,7 +279,8 @@ export default function BohoTerra() {
       document.body.style.position = "";
       document.body.style.top = "";
       document.body.style.width = "";
-      window.scrollTo(0, y);
+      if (y) window.scrollTo(0, y);
+      document.body.dataset.scrollY = "";
     }
     return () => {
       const y = parseInt(document.body.dataset.scrollY || "0");
@@ -470,7 +486,10 @@ export default function BohoTerra() {
                     </div>
                     <div style={{ padding:"10px 12px" }}>
                       <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:12, margin:"0 0 4px" }}>{p.name}</p>
-                      <p style={{ fontSize:13, color:A, fontWeight:700, margin:0 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
+                      <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
+                        <p style={{ fontSize:13, color:A, fontWeight:700, margin:0 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
+                        {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <p style={{ fontSize:11, color:MID, textDecoration:"line-through", margin:0 }}>{fmt(p.comparePrice)}</p>}
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -979,7 +998,10 @@ export default function BohoTerra() {
                       </div>
                       <div style={{ padding:"10px 0 0" }}>
                         <p style={{ margin:"0 0 4px", fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:14, color:masVistoText }}>{p.name}</p>
-                        <span style={{ fontSize:14, fontWeight:700, color:masVistoText }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                        <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
+                          <span style={{ fontSize:14, fontWeight:700, color:masVistoText }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
+                          {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <span style={{ fontSize:11, color:masVistoText, opacity:0.45, textDecoration:"line-through" }}>{fmt(p.comparePrice)}</span>}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -989,6 +1011,73 @@ export default function BohoTerra() {
                     <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}&destacado=true`; }}
                       style={{ display:"inline-block", border:`1px solid ${masVistoText}`, color:masVistoText, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontFamily:"Georgia, serif", fontStyle:"italic", cursor:"pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
                   </div>
+                )}
+              </div>
+            </section>
+          );
+        })()}
+      </SectionBlock>
+
+      <SectionBlock id="bt-prueba-social" label="Prueba social" isPreview={isPreview} defaultOrder={BT_SECTION_IDS}>
+        {(() => {
+          const PREVIEW_REVIEWS: HomeReview[] = [
+            { id:"p1", rating:5, comment:"Calidad increíble y llegó rapidísimo. Ya compré tres veces y siempre perfecta.", reviewer:"María L.", verified:true, verifiedBy:"auto", createdAt:"", product:{ name:"Vestido lino", image:null } },
+            { id:"p2", rating:5, comment:"El diseño es exactamente como en las fotos. Me enamoré cuando lo vi puesto.", reviewer:"Sofía M.", verified:false, verifiedBy:null, createdAt:"", product:{ name:"Blazer oversize", image:null } },
+            { id:"p3", rating:5, comment:"Excelente atención y envío super rápido. La recomiendo sin dudarlo.", reviewer:"Valentina R.", verified:true, verifiedBy:"owner", createdAt:"", product:{ name:"Bolso tejido", image:null } },
+          ];
+          const allReviews = isPreview ? PREVIEW_REVIEWS : homeReviews;
+          if (allReviews.length === 0) return null;
+          const idx = Math.min(reviewCarouselPage, allReviews.length - 1);
+          const r = allReviews[idx];
+          async function deleteHomeReview(reviewId: string) {
+            if (!storeConfig?.slug) return;
+            await fetch(`/api/public/${storeConfig.slug}/reviews`, {
+              method:"DELETE", headers:{"Content-Type":"application/json"},
+              body: JSON.stringify({ reviewId }),
+            });
+            setHomeReviews(prev => prev.filter(x => x.id !== reviewId));
+            setReviewCarouselPage(0);
+          }
+          return (
+            <section data-reveal style={{ position:"relative", background: sc["bgPruebaSocial"] ?? BG, padding: isMobile ? "64px 24px" : "96px 40px", borderTop:`1px solid rgba(44,34,24,0.08)`, textAlign:"center" }}>
+              <EditableSectionBg field="bgPruebaSocial" label="Fondo prueba social" />
+              <div style={{ maxWidth:720, margin:"0 auto" }}>
+                <p style={{ fontFamily:"Georgia, serif", fontSize:isMobile ? 52 : 72, color:A, lineHeight:0.6, margin:"0 0 16px", opacity:0.35 }}>&ldquo;</p>
+                <div style={{ display:"flex", justifyContent:"center", gap:4, marginBottom:20 }}>
+                  {[1,2,3,4,5].map(s => <span key={s} style={{ color: s <= r.rating ? A : "rgba(44,34,24,0.12)", fontSize:14 }}>★</span>)}
+                </div>
+                <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize: isMobile ? 17 : 20, color:T, lineHeight:1.85, margin:"0 0 28px" }}>{r.comment}</p>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
+                  {r.product?.image && (
+                    <img src={r.product.image} alt={r.product?.name ?? ""} style={{ width:44, height:44, objectFit:"cover", borderRadius:6, border:`1px solid rgba(44,34,24,0.12)` }} />
+                  )}
+                  <p style={{ fontSize:12, fontWeight:600, color:T, margin:0, letterSpacing:2, textTransform:"uppercase" }}>{r.reviewer}</p>
+                  {r.product?.name && <p style={{ fontSize:11, color:MID, margin:0 }}>{r.product.name}</p>}
+                  {r.verified && (
+                    <p style={{ fontSize:10, fontWeight:600, color:"#16a34a", margin:"4px 0 0", letterSpacing:0.5 }}>✓ Compra verificada</p>
+                  )}
+                </div>
+                {allReviews.length > 1 && (
+                  <div style={{ display:"flex", justifyContent:"center", alignItems:"center", gap:10, marginTop:36 }}>
+                    <button onClick={() => setReviewCarouselPage(p => Math.max(0, p - 1))} disabled={idx === 0}
+                      style={{ background:"none", border:`1px solid rgba(44,34,24,0.2)`, color:T, width:32, height:32, borderRadius:"50%", cursor: idx === 0 ? "default" : "pointer", opacity: idx === 0 ? 0.25 : 1, fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+                    <div style={{ display:"flex", gap:6 }}>
+                      {allReviews.map((_,i) => (
+                        <button key={i} onClick={() => setReviewCarouselPage(i)}
+                          style={{ width: i === idx ? 18 : 6, height:6, borderRadius:3, background: i === idx ? A : "rgba(44,34,24,0.15)", border:"none", cursor:"pointer", padding:0, transition:"all 0.25s" }} />
+                      ))}
+                    </div>
+                    <button onClick={() => setReviewCarouselPage(p => Math.min(allReviews.length - 1, p + 1))} disabled={idx === allReviews.length - 1}
+                      style={{ background:"none", border:`1px solid rgba(44,34,24,0.2)`, color:T, width:32, height:32, borderRadius:"50%", cursor: idx === allReviews.length - 1 ? "default" : "pointer", opacity: idx === allReviews.length - 1 ? 0.25 : 1, fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+                  </div>
+                )}
+                {isOwner && !isPreview && (
+                  <button onClick={() => deleteHomeReview(r.id)}
+                    style={{ marginTop:16, background:"none", border:"none", color:"rgba(44,34,24,0.25)", cursor:"pointer", fontSize:11, letterSpacing:1 }}
+                    onMouseEnter={e => (e.currentTarget.style.color="#dc2626")}
+                    onMouseLeave={e => (e.currentTarget.style.color="rgba(44,34,24,0.25)")}>
+                    Eliminar esta reseña
+                  </button>
                 )}
               </div>
             </section>
@@ -1357,16 +1446,16 @@ export default function BohoTerra() {
                   </div>
                 </div>
               )}
-              {isInquiryMode ? (
+              {!isMobile && (isInquiryMode ? (
                 <button onClick={() => openInquiry(modalProduct)} style={{ background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", marginTop:"auto" }}>
                   Consultar disponibilidad
                 </button>
               ) : (
-              <button onClick={addToCart} disabled={selectedVariantStock === 0}
-                style={{ background: selectedVariantStock === 0 ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
-                {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(modalProduct.price*qty)}`}
-              </button>
-              )}
+                <button onClick={addToCart} disabled={selectedVariantStock === 0}
+                  style={{ background: selectedVariantStock === 0 ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
+                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(modalProduct.price*qty)}`}
+                </button>
+              ))}
 
               {/* Reseñas — D-04 */}
               <div style={{ borderTop:`1px solid rgba(44,34,24,0.1)`, paddingTop:20, marginTop:20 }}>
@@ -1378,12 +1467,25 @@ export default function BohoTerra() {
                 ) : reviews.length > 0 ? (
                   <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:20 }}>
                     {reviews.slice(0, reviewsShown).map(r => (
-                      <div key={r.id} style={{ borderBottom:`1px solid rgba(44,34,24,0.07)`, paddingBottom:14 }}>
-                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-                          <span style={{ fontSize:12, fontWeight:600, color:T }}>{r.reviewer}</span>
-                          <span style={{ fontSize:14, color:A }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
+                      <div key={r.id} style={{ borderBottom:`1px solid rgba(44,34,24,0.07)`, paddingBottom:14, display:"flex", gap:10 }}>
+                        {r.product?.image && (
+                          <img src={r.product.image} alt={r.product?.name ?? ""} style={{ width:44, height:44, objectFit:"cover", borderRadius:6, border:`1px solid rgba(44,34,24,0.10)`, flexShrink:0 }} />
+                        )}
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                              <span style={{ fontSize:12, fontWeight:600, color:T }}>{r.reviewer}</span>
+                              {r.product?.name && <span style={{ fontSize:11, color:MID }}>{r.product.name}</span>}
+                              {r.verified && (
+                                <span style={{ fontSize:10, fontWeight:600, color:"#16a34a", background:"#f0fdf4", border:"1px solid #bbf7d0", padding:"1px 6px", borderRadius:20 }}>
+                                  ✓ Compra verificada
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ fontSize:14, color:A }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
+                          </div>
+                          {r.comment && <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:12, color:MID, margin:0, lineHeight:1.7 }}>{r.comment}</p>}
                         </div>
-                        {r.comment && <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:12, color:MID, margin:0, lineHeight:1.7 }}>{r.comment}</p>}
                       </div>
                     ))}
                     {reviews.length > reviewsShown && (
@@ -1403,9 +1505,18 @@ export default function BohoTerra() {
                   <div style={{ position:"relative" }}>
                     {isPreview && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
                     <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display:"flex", flexDirection:"column", gap:10, opacity: isPreview ? 0.55 : 1 }}>
+                      <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ opacity:0, height:0, position:"absolute", pointerEvents:"none" }} />
                       <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
                         placeholder="Tu nombre" readOnly={isPreview}
                         style={{ border:`1px solid rgba(44,34,24,0.2)`, padding:"9px 12px", fontSize:12, outline:"none", background:"#faf7f2" }} />
+                      <div>
+                        <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
+                          placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email"
+                          style={{ width:"100%", boxSizing:"border-box", border:`1px solid rgba(44,34,24,0.2)`, padding:"9px 12px", fontSize:12, outline:"none", background:"#faf7f2" }} />
+                        <p style={{ fontSize:10, color:"rgba(44,34,24,0.4)", margin:"3px 0 0", fontFamily:"Georgia, serif", fontStyle:"italic", lineHeight:1.4 }}>
+                          Si compraste acá, tu reseña aparecerá con el sello &ldquo;✓ Compra verificada&rdquo;. El email no se muestra.
+                        </p>
+                      </div>
                       <div style={{ display:"flex", gap:4 }}>
                         {[1,2,3,4,5].map(s => (
                           <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
@@ -1445,6 +1556,26 @@ export default function BohoTerra() {
               );
             })()}
             </div>
+            {isMobile && (
+              <div style={{ borderTop:`1px solid rgba(44,34,24,0.12)`, padding:"12px 16px 16px", background:"#fff", flexShrink:0 }}>
+                <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
+                  <span style={{ fontSize:20, fontWeight:700, color:A }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price * qty)}</span>
+                  {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  {qty > 1 && <span style={{ fontSize:11, color:MID }}>× {qty}</span>}
+                </div>
+                {isInquiryMode ? (
+                  <button onClick={() => openInquiry(modalProduct)}
+                    style={{ width:"100%", background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
+                    Consultar disponibilidad
+                  </button>
+                ) : (
+                  <button onClick={addToCart} disabled={selectedVariantStock === 0}
+                    style={{ width:"100%", background: selectedVariantStock === 0 ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                    {selectedVariantStock === 0 ? "Sin stock" : "Agregar al Carrito"}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1470,7 +1601,10 @@ export default function BohoTerra() {
                   {product.images[0] ? <FadeImage src={product.images[0]} alt={product.name} width={64} height={86} style={{ objectFit:"cover", flexShrink:0 }}/> : <div style={{ width:64, height:86, flexShrink:0, background:S }}/>}
                   <div style={{ flex:1 }}>
                     <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:14, margin:"0 0 4px", color:T }}>{product.name}</p>
-                    <p style={{ fontSize:13, color:A, fontWeight:700, margin:"0 0 10px" }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
+                    <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:10 }}>
+                      <p style={{ fontSize:13, color:A, fontWeight:700, margin:0 }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
+                      {!ocultarPrecios && product.comparePrice && product.comparePrice > product.price && <p style={{ fontSize:11, color:MID, textDecoration:"line-through", margin:0 }}>{fmt(product.comparePrice)}</p>}
+                    </div>
                     <div style={{ display:"flex", gap:8 }}>
                       <button onClick={() => { setFavoritesOpen(false); openModal(product); }}
                         style={{ background:A, color:"#fff", border:"none", padding:"7px 14px", fontSize:10, letterSpacing:2, fontWeight:600, textTransform:"uppercase", cursor:"pointer" }}>
