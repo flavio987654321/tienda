@@ -20,6 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
             price: true,
             comparePrice: true,
             featured: true,
+            viewCount: true,
             precioMayorista: true,
             cantMinMayorista: true,
             preciosEscalonados: true,

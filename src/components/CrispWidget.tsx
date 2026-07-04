@@ -30,7 +30,7 @@ export default function CrispWidget() {
 
   useEffect(() => {
     if (!window.$crisp) return;
-    const hidden = pathname.startsWith("/dashboard") || pathname.startsWith("/afiliados") || pathname.startsWith("/tienda/");
+    const hidden = pathname.startsWith("/dashboard") || pathname.startsWith("/afiliados") || pathname.startsWith("/tienda/") || pathname.startsWith("/plantillas/") || pathname.startsWith("/preview/");
     window.$crisp.push(["do", hidden ? "chat:hide" : "chat:show"]);
   }, [pathname]);
 

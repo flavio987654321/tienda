@@ -21,6 +21,7 @@ export type StorefrontProduct = {
   price: number;
   comparePrice: number | null;
   featured?: boolean;
+  viewCount?: number;
   precioMayorista: number | null;
   cantMinMayorista: number | null;
   preciosEscalonados: PrecioEscalonFront[];
@@ -154,6 +155,7 @@ type RawProduct = {
   price: number;
   comparePrice?: number | null;
   featured?: boolean;
+  viewCount?: number;
   precioMayorista?: number | null;
   cantMinMayorista?: number | null;
   preciosEscalonados?: string;
@@ -234,6 +236,7 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     price: raw.price,
     comparePrice: raw.comparePrice ?? null,
     featured: raw.featured ?? false,
+    viewCount: raw.viewCount ?? 0,
     precioMayorista: raw.precioMayorista ?? null,
     cantMinMayorista: raw.cantMinMayorista ?? null,
     preciosEscalonados,
@@ -377,5 +380,5 @@ export function useStorefront() {
   const hasMercadoPago     = config?.hasMercadoPago ?? false;
   const shippingMethods    = config?.shippingMethods ?? null;
 
-  return { products, loadingProducts, affiliateId, storeId, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories, hasMercadoPago, shippingMethods };
+  return { products, loadingProducts, affiliateId, storeId, slug, isOwner: config?.isOwner ?? false, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories, hasMercadoPago, shippingMethods };
 }

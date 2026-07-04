@@ -318,6 +318,7 @@ model Product {
   price            Float
   comparePrice     Float?
   featured         Boolean   @default(false)
+  viewCount        Int       @default(0)
   images           String    @default("[]")
   category         String    @default("general")
   subcategory      String?

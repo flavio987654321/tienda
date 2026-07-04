@@ -57,6 +57,7 @@ type RawProduct = {
   price: number;
   comparePrice?: number | null;
   featured?: boolean;
+  viewCount?: number;
   precioMayorista?: number | null;
   cantMinMayorista?: number | null;
   preciosEscalonados?: string;
@@ -113,6 +114,7 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     id: raw.id, name: raw.name, price: raw.price,
     comparePrice: raw.comparePrice ?? null,
     featured: raw.featured ?? false,
+    viewCount: raw.viewCount ?? 0,
     precioMayorista: raw.precioMayorista ?? null,
     cantMinMayorista: raw.cantMinMayorista ?? null,
     preciosEscalonados: (() => { try { const p = JSON.parse(raw.preciosEscalonados || "[]"); return Array.isArray(p) ? p : []; } catch { return []; } })(),
@@ -297,7 +299,7 @@ function ProductosPageInner() {
     } catch { return { ok: false, error: "Error de conexión" }; }
   }, []);
 
-  const cart = useCartLogic({ products, resolveVariantId, validateCoupon, placeOrder });
+  const cart = useCartLogic({ products, slug, isOwner, resolveVariantId, validateCoupon, placeOrder });
   const {
     cartItems, cartOpen, setCartOpen, cartCount, cartTotal, envioPrice, couponDiscount, orderTotal,
     modalProduct, setModalProduct, modalImg, setModalImg,
@@ -502,9 +504,10 @@ function ProductosPageInner() {
       }
       if (priceRange && (p.price < priceRange[0] || p.price > priceRange[1])) return false;
       if (onlyOfertas && !(p.comparePrice && p.comparePrice > p.price)) return false;
-      if (onlyDestacados && !p.featured) return false;
       return true;
     });
+    // "Lo más buscado" ordena por vistas reales de compradores (mayor a menor)
+    if (onlyDestacados) return [...r].sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0));
     if (sortBy === "price_asc")  r = [...r].sort((a, b) => a.price - b.price);
     if (sortBy === "price_desc") r = [...r].sort((a, b) => b.price - a.price);
     if (sortBy === "name_az")    r = [...r].sort((a, b) => a.name.localeCompare(b.name));

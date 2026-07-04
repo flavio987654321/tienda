@@ -66,7 +66,7 @@ export default function PlantillaDemoPage() {
 
       {/* Toast "Es una demo" */}
       <div
-        className="fixed bottom-6 left-1/2 z-[300] pointer-events-none"
+        className="fixed bottom-24 sm:bottom-6 left-1/2 z-[300] pointer-events-none"
         style={{
           transition: "opacity 0.25s ease, transform 0.25s ease",
           opacity: toast ? 1 : 0,
@@ -96,6 +96,12 @@ export default function PlantillaDemoPage() {
       <div
         className={bannerClosed ? "" : "pt-10"}
         onClickCapture={(e) => {
+          // Flechas de carrusel (< >) deben funcionar normalmente en la demo
+          const btn = (e.target as Element).closest("button");
+          if (btn) {
+            const label = (btn.getAttribute("aria-label") ?? "").toLowerCase();
+            if (label === "anterior" || label === "siguiente") return;
+          }
           e.preventDefault();
           e.stopPropagation();
           showToast();

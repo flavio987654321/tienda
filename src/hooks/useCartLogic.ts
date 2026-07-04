@@ -32,6 +32,8 @@ type StorefrontDeps = {
   products: StorefrontProduct[];
   storeId?: string | null;
   affiliateId?: string | null;
+  slug?: string | null;
+  isOwner?: boolean;
   resolveVariantId: (product: StorefrontProduct, size: string, color: string) => string | null;
   validateCoupon: (code: string, subtotal: number) => Promise<{ coupon: ValidatedCoupon; discount: number } | { error: string }>;
   placeOrder: (params: PlaceOrderParams) => Promise<{ ok: boolean; orderId?: string; donationId?: string; error?: string }>;
@@ -46,7 +48,7 @@ type StorefrontDeps = {
   lockScrollOnModal?: boolean;
 };
 
-export function useCartLogic({ products, storeId, affiliateId = null, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, lockScrollOnModal = true }: StorefrontDeps) {
+export function useCartLogic({ products, storeId, affiliateId = null, slug = null, isOwner = false, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, lockScrollOnModal = true }: StorefrontDeps) {
   const [cartItems,      setCartItems]      = useState<CartItem[]>([]);
   const [cartOpen,       setCartOpen]       = useState(false);
   const [modalProduct,   setModalProduct]   = useState<StorefrontProduct | null>(null);
@@ -393,6 +395,19 @@ export function useCartLogic({ products, storeId, affiliateId = null, resolveVar
     setSelectedColor(p.colors[0] ?? "");
     setQty(isWholesale && p.cantMinMayorista ? p.cantMinMayorista : 1);
     setSearchOpen(false);
+    // Registrar vista real del comprador: una vez por producto por sesión.
+    // Se omite si es el dueño, si está en preview, o si no hay slug real.
+    if (!isOwner && slug && typeof sessionStorage !== "undefined") {
+      const key = `pview_${p.id}`;
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, "1");
+        fetch(`/api/public/${slug}/product-view`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: p.id }),
+        }).catch(() => {});
+      }
+    }
   };
 
   // Deep link a un producto puntual (ej: ?producto=ID desde favoritos en otro panel)

@@ -37,6 +37,7 @@ function PreciosContent() {
   const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL"; amount: number; prorated?: boolean } | null>(null);
   const [userSub, setUserSub] = useState<UserSub | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [userMetaRole, setUserMetaRole] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const isRegistered = searchParams.get("registered") === "true";
@@ -61,7 +62,9 @@ function PreciosContent() {
     const supabase = createSupabaseBrowserClient();
     supabase.auth.getUser().then(({ data }) => {
       const name = data.user?.user_metadata?.name ?? data.user?.user_metadata?.full_name ?? null;
+      const metaRole = data.user?.user_metadata?.role ?? null;
       setUserName(name);
+      setUserMetaRole(metaRole);
     });
   }, []);
 
@@ -448,8 +451,10 @@ function PreciosContent() {
                     </div>
                   );
                 }
-                // Los afiliados no ven opciones de pago para el plan de dueño
-                if (userSub?.role === "AFFILIATE") {
+                // Los afiliados no ven opciones de pago para el plan de dueño.
+                // userMetaRole cubre el caso de afiliados sin Subscription en DB (plan gratuito).
+                const isAffiliate = userSub?.role === "AFFILIATE" || (!userSub && userMetaRole === "SELLER");
+                if (isAffiliate) {
                   return (
                     <div className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-gray-100 border border-gray-200 text-gray-400 cursor-default">
                       <BadgeCheck className="h-4 w-4" /> Ya tenés cuenta activa

@@ -1085,7 +1085,8 @@ export default function FashionNoir() {
       <SectionBlock id="fn-masvisto" label="Lo más visto" isPreview={isPreview} defaultOrder={FN_SECTION_IDS}>
         {(() => {
           const featured = products.filter(p => p.featured);
-          const pool = featured.length > 0 ? featured : products;
+          const base = featured.length > 0 ? featured : products;
+          const pool = [...base].sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0));
           const displayList = pool.slice(0, 8);
           const hasMore = pool.length > 8;
           if (displayList.length === 0) return null;
