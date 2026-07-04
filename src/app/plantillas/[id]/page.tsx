@@ -90,16 +90,15 @@ export default function PlantillaDemoPage() {
         </div>
       </div>
 
-      {/* Demo interactiva: hover, carruseles y dropdowns funcionan.
-          Solo se bloquean los clicks en <a> para que no naveguen. */}
+      {/* Demo de solo vista: hover, carruseles por drag/swipe y dropdowns funcionan.
+          Se bloquean todos los clicks para evitar modales, navegación por <a>
+          y navegación programática (window.location.href en botones de categoría). */}
       <div
         className={bannerClosed ? "" : "pt-10"}
         onClickCapture={(e) => {
-          if ((e.target as HTMLElement).closest("a")) {
-            e.preventDefault();
-            e.stopPropagation();
-            showToast();
-          }
+          e.preventDefault();
+          e.stopPropagation();
+          showToast();
         }}
       >
         <StorefrontTemplateRenderer config={config} />

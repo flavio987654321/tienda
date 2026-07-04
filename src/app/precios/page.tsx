@@ -448,6 +448,14 @@ function PreciosContent() {
                     </div>
                   );
                 }
+                // Los afiliados no ven opciones de pago para el plan de dueño
+                if (userSub?.role === "AFFILIATE") {
+                  return (
+                    <div className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-gray-100 border border-gray-200 text-gray-400 cursor-default">
+                      <BadgeCheck className="h-4 w-4" /> Ya tenés cuenta activa
+                    </div>
+                  );
+                }
                 if (isUpgradeToAnnual("OWNER", cardTier)) {
                   const proratedAmt = getProratedAmount(planKey);
                   const credit = ownerPrice - proratedAmt;
