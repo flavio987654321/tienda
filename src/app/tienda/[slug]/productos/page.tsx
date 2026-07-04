@@ -372,13 +372,12 @@ function ProductosPageInner() {
   const [page,              setPage]              = useState(1);
   const [activeAttrFilters, setActiveAttrFilters] = useState<Record<string, string[]>>({});
   const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
-  // Tech Nova usa una barra lateral de filtros tipo "ficha técnica" en vez de
-  // las pestañas horizontales que usan los demás templates.
-  const isSidebarLayout = template === "tech-nova";
-  // Home Studio usa categorías como tarjetas con foto (estilo boutique/editorial)
-  // y un botón "Filtrar y ordenar" que abre un panel lateral, en vez de la fila
-  // de pestañas + filtros siempre visible de los demás templates.
-  const isCardLayout = template === "home-studio";
+  // Tech Nova y Urban Pulse usan sidebar de filtros a la izquierda (solo desktop).
+  // En mobile caen al layout minimal (dropdown) que funciona bien en touch.
+  const isSidebarTemplate = template === "tech-nova" || template === "urban-pulse";
+  const isSidebarLayout = isSidebarTemplate && !isMobile;
+  // Home Studio y Boho Terra usan categorías como tarjetas con foto + panel de filtros.
+  const isCardLayout = template === "home-studio" || template === "boho-terra";
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   useEffect(() => {
     if (!filterDrawerOpen) return;
@@ -391,9 +390,9 @@ function ProductosPageInner() {
     if (!el) return;
     el.scrollBy({ left: dir * el.clientWidth * 0.6, behavior: "smooth" });
   }
-  // Casa Clara usa una navegación tipo "breadcrumb" minimalista (todo texto,
-  // sin pills ni cajas) con los filtros escondidos detrás de un link "+ Filtros".
-  const isMinimalLayout = template === "casa-clara";
+  // Casa Clara y Chic Paris usan navegación tipo "breadcrumb" minimalista.
+  // En mobile, los templates de sidebar también caen aquí.
+  const isMinimalLayout = template === "casa-clara" || template === "chic-paris" || (isSidebarTemplate && isMobile);
   const [catDropdownOpen, setCatDropdownOpen] = useState(false);
   const [subDropdownOpen, setSubDropdownOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -1267,7 +1266,7 @@ function ProductosPageInner() {
                   return (
                     <button key={cat} onClick={() => changeCategory(cat)}
                       style={{ position:"relative", flexShrink:0, width:118, height:140, border:`1px solid ${isActive ? G : border}`,
-                        borderRadius:14, overflow:"hidden", cursor:"pointer", padding:0, background: img ? "#00000010" : (isActive ? G : "transparent") }}>
+                        borderRadius: cardRadius > 0 ? cardRadius + 4 : 14, overflow:"hidden", cursor:"pointer", padding:0, background: img ? "#00000010" : (isActive ? G : "transparent") }}>
                       {img && (
                         <>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1307,7 +1306,7 @@ function ProductosPageInner() {
             <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:32, paddingBottom:24, borderBottom:`1px solid ${borderFaint}` }}>
               {(priceBounds[1] > priceBounds[0] || availableAttrFilters.length > 0) && (
                 <button onClick={() => setFilterDrawerOpen(true)}
-                  style={{ display:"flex", alignItems:"center", gap:8, background:"none", border:`1px solid ${border}`, color:T, padding:"10px 18px", fontSize:11.5, letterSpacing:1, textTransform:"uppercase", cursor:"pointer" }}>
+                  style={{ display:"flex", alignItems:"center", gap:8, background:"none", border:`1px solid ${border}`, color:T, padding:"10px 18px", fontSize:11.5, letterSpacing:1, textTransform:"uppercase", cursor:"pointer", borderRadius:inputRadius }}>
                   Filtrar y ordenar
                   {(Object.keys(activeAttrFilters).length > 0 || priceRange) && (
                     <span style={{ background:G, color: accentDark?"#000":"#fff", borderRadius:"50%", width:18, height:18, fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700 }}>
@@ -1622,6 +1621,26 @@ function ProductosPageInner() {
                   {modalProduct.category}{modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
                 </p>
                 <h2 style={{ fontFamily:serif, fontSize:24, margin:0, lineHeight:1.2, color:T }}>{modalProduct.name}</h2>
+              </div>
+              <div style={{ display:"flex", gap:6, marginBottom:2 }}>
+                <button onClick={() => { const url = `${window.location.origin}${window.location.pathname}?p=${modalProduct.id}`; navigator.clipboard.writeText(url).catch(()=>{}); }}
+                  style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:`1px solid ${border}`, color:MID, padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer" }}>
+                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  Copiar link
+                </button>
+                {whatsapp?.enabled && whatsapp.number && (
+                  <button onClick={() => {
+                    const phone = whatsapp.number.replace(/\D/g, "");
+                    const h = new Date().getHours();
+                    const saludo = h < 12 ? "Buenos días" : h < 20 ? "Buenas tardes" : "Buenas noches";
+                    const text = `${saludo}! Me interesa el producto "${modalProduct.name}". ¿Me podés dar más información?`;
+                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank");
+                  }}
+                    style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"1px solid rgba(37,211,102,0.3)", color:"rgba(37,211,102,0.7)", padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer" }}>
+                    <svg width={11} height={11} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M11.897 0C5.395 0 .13 5.266.13 11.767c0 2.078.545 4.03 1.495 5.727L.057 24l6.7-1.757A11.71 11.71 0 0 0 11.897 23.534c6.503 0 11.768-5.265 11.768-11.767C23.67 5.266 18.4 0 11.897 0zm0 21.536h-.004a9.726 9.726 0 0 1-4.96-1.358l-.356-.211-3.678.965.982-3.581-.232-.368A9.73 9.73 0 0 1 2.158 11.767C2.158 6.355 6.551 2 11.897 2c2.581 0 5.007 1.007 6.831 2.831a9.604 9.604 0 0 1 2.828 6.83c0 5.347-4.393 9.875-9.659 9.875z"/></svg>
+                    WhatsApp
+                  </button>
+                )}
               </div>
               <div style={{ display:"flex", gap:10, alignItems:"baseline" }}>
                 <span style={{ fontSize:22, fontWeight:700, color:GT }}>{fmt(modalProduct.price)}</span>

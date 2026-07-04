@@ -88,7 +88,7 @@ function seccionesDelPanel(tipoTienda: string): string {
   const esConsultas = tipoTienda === "AUTOS";
   return esConsultas
     ? `Inicio, Consultas (leads de interesados), Vehículos (el catálogo), Afiliados, Notificaciones, Diseño, Configuración, Pagos, Estadísticas, Mi Plan, Perfil. Esta tienda no usa Pedidos ni Cupones (es de tipo consultas, no de carrito de compra).`
-    : `Inicio, Pedidos, Productos, Cupones, Carritos abandonados, Afiliados, Notificaciones, Diseño, Configuración, Pagos, Estadísticas, Mi Plan, Perfil.`;
+    : `Inicio, Pedidos, Productos, Reseñas, Cupones, Carritos abandonados, Afiliados, Notificaciones, Diseño, Configuración, Pagos, Estadísticas, Mi Plan, Perfil.`;
 }
 
 /**
@@ -142,7 +142,7 @@ Se hace desde "Configuración" (no desde "Diseño") — ahí está la opción pa
 6. Si preguntan por qué alguien aparece ahí sin haber comprado nunca: es justamente el objetivo de la sección, gente que llegó a escribir sus datos en el checkout pero no llegó a confirmar la compra.
 
 ### Reseñas — cómo se entera el dueño cuando llega una
-Cuando un comprador deja una reseña en algún producto, al dueño le llega un aviso por dos vías al mismo tiempo: una notificación en la campanita del panel (arriba a la derecha) y un email — ambos con un link directo al producto reseñado. Hoy no hay una sección que junte todas las reseñas de la tienda en un solo lugar: se ven una por una, dentro de la página de cada producto en la tienda.
+Cuando un comprador deja una reseña en algún producto, al dueño le llega un aviso por dos vías al mismo tiempo: una notificación en la campanita del panel (arriba a la derecha) con un link directo a "Reseñas", y un email con el nombre del comprador, el puntaje, el comentario y un link al producto en la tienda. Para ver todas las reseñas juntas: la sección "Reseñas" en el menú de la izquierda muestra todas las reseñas recibidas, con la foto del producto, el comentario, el puntaje y si la compra fue verificada. Desde ahí el dueño puede aprobar o eliminar cada reseña.
 
 ### Crear un cupón
 1. Ir a "Cupones" en el menú de la izquierda.

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getCurrentUser } from "@/lib/auth-session";
+import { sendNewReviewToOwnerEmail } from "@/lib/email";
 
 export async function GET(
   _req: NextRequest,
@@ -82,7 +83,13 @@ export async function POST(
 
   const store = await prisma.store.findUnique({
     where: { slug },
-    select: { id: true, products: { where: { id: productId }, select: { id: true } } },
+    select: {
+      id: true,
+      name: true,
+      ownerId: true,
+      owner: { select: { email: true, name: true } },
+      products: { where: { id: productId }, select: { id: true, name: true } },
+    },
   });
   if (!store || !store.products.length) {
     return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
@@ -123,6 +130,30 @@ export async function POST(
       verified: true, verifiedBy: true, createdAt: true,
     },
   });
+
+  const productName = store.products[0].name;
+  const reviewerTrimmed = reviewer.trim().slice(0, 80);
+  void Promise.all([
+    prisma.notification.create({
+      data: {
+        userId:  store.ownerId,
+        type:    "NEW_REVIEW",
+        title:   "Nueva reseña recibida",
+        body:    `${reviewerTrimmed} dejó ${Math.round(rating)}★ en ${productName}`,
+        link:    "/dashboard/reseñas",
+      },
+    }),
+    sendNewReviewToOwnerEmail({
+      ownerEmail:   store.owner.email!,
+      storeName:    store.name,
+      storeSlug:    slug,
+      productId,
+      productName,
+      reviewerName: reviewerTrimmed,
+      rating:       Math.round(rating),
+      comment:      comment?.trim() || null,
+    }),
+  ]).catch(() => {});
 
   return NextResponse.json({ review }, { status: 201 });
 }

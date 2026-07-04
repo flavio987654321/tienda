@@ -1174,7 +1174,7 @@ function ShareModal({
 
               {/* WhatsApp — hero */}
               <button
-                onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá esta tienda! 🛍️\n${target.storeName}\n${shareLink("whatsapp")}`)}`, "_blank")}
+                onClick={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`¡Mirá esta tienda! 🛍️\n${target.storeName}\n${shareLink("whatsapp")}`)}`, "_blank")}
                 className="w-full flex items-center justify-center gap-3 bg-[#25D366] hover:bg-[#20b85a] text-white font-black py-4 rounded-2xl text-base transition-all shadow-lg shadow-[#25D366]/20"
               >
                 <WaIcon /> Compartir por WhatsApp
@@ -1374,7 +1374,7 @@ function ShareModal({
                               </div>
                               {/* Actions */}
                               <div className="flex items-center gap-1.5 flex-shrink-0">
-                                <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name} — ${money(p.price)}\n${shortUrl}`)}`, "_blank")}
+                                <button onClick={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`¡Mirá este producto! 🛍️\n${p.name} — ${money(p.price)}\n${shortUrl}`)}`, "_blank")}
                                   className="p-2 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/15 text-[#25D366] rounded-lg transition-all">
                                   <WaIcon />
                                 </button>
@@ -1538,7 +1538,7 @@ function ShareModal({
                                       p.description ? p.description.slice(0, 100) + (p.description.length > 100 ? "…" : "") : "",
                                       `👉 ${shortUrl}`,
                                     ].filter(Boolean).join("\n");
-                                    window.open(`https://wa.me/?text=${encodeURIComponent(waText)}`, "_blank");
+                                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(waText)}`, "_blank");
                                   }}
                                     className="flex flex-col items-center gap-1 py-2 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/15 text-[#25D366] rounded-xl text-[9px] font-bold transition-all">
                                     <WaIcon /> WhatsApp

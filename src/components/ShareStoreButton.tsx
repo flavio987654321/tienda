@@ -94,7 +94,7 @@ export default function ShareStoreButton({
     setHint(null);
 
     if (id === "whatsapp") {
-      openDirect(`https://wa.me/?text=${encodeURIComponent(`¡Mirá mi tienda! 🛍️\n${storeName}\n${url}`)}`);
+      openDirect(`https://api.whatsapp.com/send?text=${encodeURIComponent(`¡Mirá mi tienda! 🛍️\n${storeName}\n${url}`)}`);
     } else if (id === "facebook") {
       openDirect(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`);
     } else if (id === "telegram") {
