@@ -61,11 +61,15 @@ export function CartDrawer({
             </div>
           ) : cartItems.map((item, idx) => (
             <div key={idx} style={{ display:"flex", gap:14, padding:"16px 0", borderBottom:`1px solid ${border}` }}>
-              {item.product.images[0] ? (
-                <FadeImage src={item.product.images[0]} alt="" width={70} height={70} style={{ objectFit:"cover", flexShrink:0, borderRadius:6 }} />
-              ) : (
-                <div style={{ width:70, height:70, flexShrink:0, borderRadius:6, background:"#f0f0f0" }} />
-              )}
+              {(() => {
+                const colorSrc = item.color
+                  ? item.product.imageItems.find(img => img.variantValue && img.variantValue.toLowerCase() === item.color.toLowerCase())?.url
+                  : null;
+                const src = colorSrc ?? item.product.images[0];
+                return src
+                  ? <FadeImage src={src} alt="" width={70} height={70} style={{ objectFit:"cover", flexShrink:0, borderRadius:6 }} />
+                  : <div style={{ width:70, height:70, flexShrink:0, borderRadius:6, background:"#f0f0f0" }} />;
+              })()}
               <div style={{ flex:1, minWidth:0 }}>
                 <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500, color:T }}>{item.product.name}</p>
                 {(item.size || item.color) && (
