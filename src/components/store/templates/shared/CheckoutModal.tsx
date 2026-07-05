@@ -169,10 +169,22 @@ export function CheckoutModal({
               )}
 
               <div style={{ borderTop:`1px solid ${border}`, paddingTop:20 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
-                  <span style={{ fontSize:13, opacity:0.6, color:T }}>Subtotal</span>
-                  <span style={{ fontSize:13, opacity:0.6, color:T }}>{fmt(cartTotal)}</span>
-                </div>
+                {(() => {
+                  const fullTotal = cartItems.reduce((s, i) => s + itemEffectiveUnitPrice(i.product, i.qty) * i.qty, 0);
+                  const promoSavings = fullTotal - cartTotal;
+                  return <>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                      <span style={{ fontSize:13, opacity:0.6, color:T }}>Subtotal</span>
+                      <span style={{ fontSize:13, opacity:0.6, color:T }}>{fmt(promoSavings > 0.01 ? fullTotal : cartTotal)}</span>
+                    </div>
+                    {promoSavings > 0.01 && (
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                        <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>Descuento promo</span>
+                        <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>-{fmt(promoSavings)}</span>
+                      </div>
+                    )}
+                  </>;
+                })()}
                 {couponDiscount > 0 && (
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
                     <span style={{ fontSize:13, color:accent }}>Descuento cupón</span>
