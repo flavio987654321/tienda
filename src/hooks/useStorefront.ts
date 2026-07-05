@@ -30,6 +30,7 @@ export type StorefrontProduct = {
   promoQtyDiscount: number | null;
   promoType?: string;
   promoPayQty?: number | null;
+  offerBadge?: string | null;
   // Cuotas sin interés informativas (0/undefined = no mostrar). No conectado
   // a ninguna API bancaria ni de Mercado Pago — solo se usa para calcular
   // precio/N en la página de producto.
@@ -168,6 +169,7 @@ type RawProduct = {
   promoQtyDiscount?: number | null;
   promoType?: string;
   promoPayQty?: number | null;
+  offerBadge?: string | null;
   cuotas?: number;
   category?: string;
   subcategory?: string;
@@ -253,6 +255,7 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     promoQtyDiscount: raw.promoQtyDiscount ?? null,
     promoType: raw.promoType ?? "PERCENT",
     promoPayQty: raw.promoPayQty ?? null,
+    offerBadge: raw.offerBadge ?? null,
     cuotas: raw.cuotas ?? 0,
     category: raw.category ?? "general",
     subcategory: raw.subcategory ?? undefined,

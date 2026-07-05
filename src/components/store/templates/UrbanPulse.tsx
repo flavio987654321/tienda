@@ -12,6 +12,7 @@ import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
+import { OfferBadge } from "@/components/store/OfferBadge";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
@@ -879,6 +880,9 @@ export default function UrbanPulse() {
                 style={{ gridColumn: big ? "span 2" : "span 1", cursor:"pointer", position:"relative", overflow:"hidden", background:WHITE }}>
                 <div style={{ position:"relative", width:"100%", overflow:"hidden", aspectRatio: big ? "16/9" : "3/4" }}>
                   {product.images[0] && <FadeImage className="up-prod-img" src={product.images[0]} alt={product.name} fill sizes={big ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 50vw, 33vw"} style={{ objectFit:"cover" }} />}
+                  {product.comparePrice && product.comparePrice > product.price && (
+                    <OfferBadge badge={product.offerBadge || "SALE"} pct={discountPercent(product.price, product.comparePrice)} size="sm" />
+                  )}
                 </div>
                 <div style={{ padding:"14px 16px" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>

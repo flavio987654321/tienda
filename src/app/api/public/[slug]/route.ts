@@ -29,6 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
             promoQtyDiscount: true,
             promoType: true,
             promoPayQty: true,
+            offerBadge: true,
             cuotas: true,
             images: true,
             category: true,

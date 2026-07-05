@@ -12,6 +12,7 @@ import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
+import { OfferBadge } from "@/components/store/OfferBadge";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
@@ -990,7 +991,9 @@ export default function FashionNoir() {
                 <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"flex-end", justifyContent:"center", padding:16, opacity: hoveredId===product.id ? 1 : 0, transition:"opacity 0.3s", background:"linear-gradient(to top, rgba(10,10,10,0.65) 30%, transparent)", pointerEvents:"none" }}>
                   <span style={{ color:T, fontSize:11, letterSpacing:3, textTransform:"uppercase", borderBottom:`1px solid ${G}`, paddingBottom:3 }}>Ver detalle</span>
                 </div>
-                {discountPercent(product.price, product.comparePrice) !== null && <div style={{ position:"absolute", top:12, left:12, background:G, color:BG, fontSize:9, fontWeight:800, letterSpacing:2, padding:"4px 10px", textTransform:"uppercase" }}>Oferta -{discountPercent(product.price, product.comparePrice)}%</div>}
+                {product.comparePrice && product.comparePrice > product.price && (
+                  <OfferBadge badge={product.offerBadge || "OFERTA"} pct={discountPercent(product.price, product.comparePrice)} size="sm" />
+                )}
                 <div style={{ position:"absolute", top:12, right:12, background:"rgba(10,10,10,0.7)", color:T, fontSize:9, letterSpacing:2, padding:"4px 10px", textTransform:"uppercase" }}>{product.category}</div>
                 {/* Favorite button */}
                 <button

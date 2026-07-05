@@ -12,6 +12,7 @@ import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
+import { OfferBadge } from "@/components/store/OfferBadge";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
@@ -853,8 +854,8 @@ export default function BohoTerra() {
                     onMouseEnter={e=>{ const img = e.currentTarget.querySelector("img") as HTMLImageElement; if(img) img.style.transform="scale(1.05)"; }}
                     onMouseLeave={e=>{ const img = e.currentTarget.querySelector("img") as HTMLImageElement; if(img) img.style.transform="scale(1)"; }}>
                     {product.images[0] && <FadeImage src={product.images[0]} alt={product.name} fill sizes={isMobile ? "85vw" : "30vw"} style={{ objectFit:"cover", transition:"transform 0.55s ease" }}/>}
-                    {discountPercent(product.price, product.comparePrice) !== null && (
-                      <div style={{ position:"absolute", top:14, left:14, background:A, color:"#fff", fontSize:9, fontWeight:600, letterSpacing:2, padding:"4px 10px", textTransform:"uppercase" }}>Oferta -{discountPercent(product.price, product.comparePrice)}%</div>
+                    {product.comparePrice && product.comparePrice > product.price && (
+                      <OfferBadge badge={product.offerBadge || "OFERTA"} pct={discountPercent(product.price, product.comparePrice)} size="sm" />
                     )}
                     <div style={{ position:"absolute", bottom:14, left:0, right:0, textAlign:"center" }}>
                       <span style={{ background:"rgba(250,247,242,0.92)", color:T, fontSize:10, letterSpacing:2, textTransform:"uppercase", padding:"7px 18px" }}>Ver pieza</span>

@@ -74,6 +74,7 @@ type ProductBodyRaw = {
   promoQtyDiscount?: unknown;
   promoType?: unknown;
   promoPayQty?: unknown;
+  offerBadge?: unknown;
 };
 
 type ValidatedProductBody = {
@@ -96,12 +97,15 @@ type ValidatedProductBody = {
   parsedPromoQtyDiscount: number | null;
   parsedPromoType: string;
   parsedPromoPayQty: number | null;
+  parsedOfferBadge: string | null;
 };
+
+const VALID_OFFER_BADGES = new Set(["OFERTA", "SALE", "PROMO", "HOT", "PCT", "2X1", "NUEVO"]);
 
 export function validateProductBody(
   body: ProductBodyRaw
 ): { error: NextResponse } | ValidatedProductBody {
-  const { name, price, comparePrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, promoQtyMin, promoQtyDiscount, promoType, promoPayQty } = body;
+  const { name, price, comparePrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, promoQtyMin, promoQtyDiscount, promoType, promoPayQty, offerBadge } = body;
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     return { error: NextResponse.json({ error: "Nombre requerido (mínimo 2 caracteres)" }, { status: 400 }) };
@@ -319,6 +323,10 @@ export function validateProductBody(
     return { error: NextResponse.json({ error: "Si configurás una promo, completá el descuento o el tipo N pagá M" }, { status: 400 }) };
   }
 
+  const parsedOfferBadge = typeof offerBadge === "string" && VALID_OFFER_BADGES.has(offerBadge)
+    ? offerBadge
+    : null;
+
   return {
     name: (name as string).trim(),
     sanitizedDescription,
@@ -339,6 +347,7 @@ export function validateProductBody(
     parsedPromoQtyDiscount,
     parsedPromoType,
     parsedPromoPayQty,
+    parsedOfferBadge,
   };
 }
 

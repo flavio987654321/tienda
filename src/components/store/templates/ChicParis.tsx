@@ -12,6 +12,7 @@ import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
+import { OfferBadge } from "@/components/store/OfferBadge";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
@@ -881,8 +882,8 @@ export default function ChicParis() {
                       <div className="cp-overlay" style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <span style={{ color: "#fff", fontSize: 11, letterSpacing: 3, fontWeight: 700, textTransform: "uppercase", border: "1px solid #fff", padding: "10px 20px" }}>Ver detalle</span>
                       </div>
-                      {discountPercent(product.price, product.comparePrice) !== null && (
-                        <span style={{ position: "absolute", top: 12, left: 12, background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", fontSize: 10, fontWeight: 800, padding: "4px 10px", letterSpacing: 1 }}>SALE -{discountPercent(product.price, product.comparePrice)}%</span>
+                      {product.comparePrice && product.comparePrice > product.price && (
+                        <OfferBadge badge={product.offerBadge || "SALE"} pct={discountPercent(product.price, product.comparePrice)} size="sm" />
                       )}
                       <button onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
                         style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.9)", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>

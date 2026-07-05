@@ -14,6 +14,7 @@ import { getStoreType } from "@/lib/storeTypes";
 import StockHistoryPanel from "../StockHistoryPanel";
 import RichTextEditor from "@/components/RichTextEditor";
 import { VariantBuilder } from "@/components/dashboard/VariantBuilder";
+import { OfferBadgePreview } from "@/components/store/OfferBadge";
 
 type ImageItem = { url: string; variantValue?: string };
 
@@ -338,10 +339,12 @@ function ProductoFormPage() {
     description: "",
     price: "",
     comparePrice: "",
+    offerBadge: "",
     category: "ropa",
     subcategory: "",
     tags: "",
   });
+  const [isOnSale, setIsOnSale] = useState(false);
   const [featured, setFeatured] = useState(false);
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [productSubcategories, setProductSubcategories] = useState<Record<string, string[]>>({});
@@ -362,6 +365,7 @@ function ProductoFormPage() {
   // Escalones: array de {desde, precio} como strings para los inputs controlados
   const [escalones, setEscalones] = useState<Array<{ desde: string; precio: string }>>([]);
   const [soloMayorista, setSoloMayorista] = useState(false);
+  const [promoEnabled, setPromoEnabled] = useState(false);
   const [promoQtyMin, setPromoQtyMin] = useState("");
   const [promoQtyDiscount, setPromoQtyDiscount] = useState("");
   const [promoType, setPromoType] = useState<"PERCENT" | "N_PAY_M">("PERCENT");
@@ -457,6 +461,7 @@ function ProductoFormPage() {
           description: product.description || "",
           price: product.price?.toString() || "",
           comparePrice: product.comparePrice?.toString() || "",
+          offerBadge: product.offerBadge || "",
           category: knownCategory ? product.category : "otro",
           subcategory: product.subcategory ? (productSubcategories[product.category] || []).includes(product.subcategory) ? product.subcategory : "otro" : "",
           tags: safeJsonArray(product.tags).join(", "),
@@ -538,6 +543,8 @@ function ProductoFormPage() {
         setPromoQtyDiscount(product.promoQtyDiscount?.toString() || "");
         setPromoType((product.promoType as "PERCENT" | "N_PAY_M") || "PERCENT");
         setPromoPayQty(product.promoPayQty?.toString() || "");
+        setPromoEnabled(!!product.promoQtyMin);
+        setIsOnSale(!!product.comparePrice);
         setCuotas(product.cuotas || 0);
         setWeightKg(product.weightKg?.toString() || "");
         setWidthCm(product.widthCm?.toString() || "");
@@ -834,6 +841,8 @@ function ProductoFormPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
+        comparePrice: isOnSale ? (form.comparePrice || null) : null,
+        offerBadge: isOnSale ? (form.offerBadge || null) : null,
         category,
         subcategory,
         gender,
@@ -849,10 +858,10 @@ function ProductoFormPage() {
           .filter((e) => e.desde.trim() !== "" && e.precio.trim() !== "")
           .map((e) => ({ desde: parseInt(e.desde), precio: parseFloat(e.precio) })),
         soloMayorista,
-        promoQtyMin: promoQtyMin || null,
-        promoQtyDiscount: promoType === "PERCENT" ? (promoQtyDiscount || null) : null,
-        promoType,
-        promoPayQty: promoType === "N_PAY_M" ? (promoPayQty || null) : null,
+        promoQtyMin: promoEnabled ? (promoQtyMin || null) : null,
+        promoQtyDiscount: promoEnabled && promoType === "PERCENT" ? (promoQtyDiscount || null) : null,
+        promoType: promoEnabled ? promoType : "PERCENT",
+        promoPayQty: promoEnabled && promoType === "N_PAY_M" ? (promoPayQty || null) : null,
         cuotas,
         publishAt: publishAt || null,
         weightKg: weightKg || null,
@@ -1302,68 +1311,122 @@ function ProductoFormPage() {
 
             {/* Precio */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-              <h2 className="font-semibold text-gray-900">Precio</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Precio de venta *</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
-                    <input
-                      type="number"
-                      value={form.price}
-                      onChange={(e) => updateForm("price", e.target.value)}
-                      required
-                      min="0"
-                      step="0.01"
-                      placeholder="0"
-                      className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1.5">
-                    <span>Precio tachado (opcional)</span>
-                    <Tip text="Precio original antes del descuento. Se muestra tachado junto al precio de venta y el cliente ve el % de ahorro automáticamente." />
-                    {discount > 0 && (
-                      <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                        -{discount}% OFF
-                      </span>
-                    )}
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
-                    <input
-                      type="number"
-                      value={form.comparePrice}
-                      onChange={(e) => updateForm("comparePrice", e.target.value)}
-                      min="0"
-                      step="0.01"
-                      placeholder="0"
-                      className={`w-full border rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                        form.comparePrice && parseFloat(form.comparePrice) > 0 && parseFloat(form.comparePrice) <= parseFloat(form.price || "0")
-                          ? "border-amber-400 bg-amber-50"
-                          : "border-gray-200"
-                      }`}
-                    />
-                  </div>
-                  {form.comparePrice && parseFloat(form.comparePrice) > 0 && parseFloat(form.comparePrice) <= parseFloat(form.price || "0") && (
-                    <p className="mt-1 text-xs text-amber-600 flex items-center gap-1">
-                      <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                      El precio tachado debe ser mayor al precio de venta para mostrar descuento.
-                    </p>
-                  )}
+              {/* Precio de venta */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Precio de venta *</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+                  <input
+                    type="number"
+                    value={form.price}
+                    onChange={(e) => updateForm("price", e.target.value)}
+                    required min="0" step="0.01" placeholder="0"
+                    className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
                 </div>
               </div>
-              {discount > 0 ? (
-                <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-4 py-2 rounded-xl">
-                  <Tag className="h-4 w-4" />
-                  El cliente vera un descuento del <strong>{discount}%</strong> y el producto va a aparecer automáticamente en los bloques de <strong>&quot;Ofertas destacadas&quot;</strong> de tu tienda.
+
+              {/* Toggle ¿En oferta? */}
+              <div className="border border-gray-100 rounded-2xl p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">¿Está en oferta?</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {isOnSale
+                        ? "Activa — el cliente ve el precio original tachado y el badge elegido"
+                        : "No — se muestra solo el precio de venta"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setIsOnSale(v => !v); markDirty(); }}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${isOnSale ? "bg-indigo-600" : "bg-gray-200"}`}
+                    role="switch" aria-checked={isOnSale}
+                  >
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${isOnSale ? "translate-x-5" : "translate-x-0"}`} />
+                  </button>
                 </div>
-              ) : (
-                <p className="text-xs text-gray-400">
-                  Tip: completá el <strong>precio tachado</strong> con un valor mayor al precio de venta para que este producto aparezca solo, sin tocar nada más, en los bloques de &quot;Ofertas destacadas&quot; de tu tienda.
-                </p>
-              )}
+
+                {isOnSale && (
+                  <div className="space-y-4">
+                    {/* Precio original */}
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1.5">
+                        <span>Precio original (antes del descuento)</span>
+                        {discount > 0 && (
+                          <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                            -{discount}% OFF
+                          </span>
+                        )}
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+                        <input
+                          type="number"
+                          value={form.comparePrice}
+                          onChange={(e) => { updateForm("comparePrice", e.target.value); markDirty(); }}
+                          min="0" step="0.01" placeholder="ej: 60000"
+                          className={`w-full border rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                            form.comparePrice && parseFloat(form.comparePrice) > 0 && parseFloat(form.comparePrice) <= parseFloat(form.price || "0")
+                              ? "border-amber-400 bg-amber-50"
+                              : "border-gray-200"
+                          }`}
+                        />
+                      </div>
+                      {form.comparePrice && parseFloat(form.comparePrice) > 0 && parseFloat(form.comparePrice) <= parseFloat(form.price || "0") && (
+                        <p className="mt-1 text-xs text-amber-600 flex items-center gap-1">
+                          <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                          El precio original debe ser mayor al precio de venta.
+                        </p>
+                      )}
+                      {discount > 0 && (
+                        <div className="mt-2 flex items-center gap-3 text-sm">
+                          <span className="text-gray-400 line-through">${parseFloat(form.comparePrice).toLocaleString("es-AR")}</span>
+                          <span className="font-semibold text-gray-900">${parseFloat(form.price).toLocaleString("es-AR")}</span>
+                          <span className="text-green-600 font-bold">-{discount}%</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Badge picker */}
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-2">Badge en la imagen <span className="text-xs text-gray-400 font-normal">(opcional)</span></p>
+                      <div className="flex flex-wrap gap-2">
+                        {(["OFERTA", "SALE", "PROMO", "HOT", "PCT", "2X1", "NUEVO"] as const).map(key => (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => { updateForm("offerBadge", form.offerBadge === key ? "" : key); markDirty(); }}
+                            className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 transition-all ${form.offerBadge === key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-gray-50 hover:border-indigo-200"}`}
+                          >
+                            {form.offerBadge === key && (
+                              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px]">✓</span>
+                            )}
+                            <OfferBadgePreview badge={key} pct={key === "PCT" ? discount || null : null} />
+                          </button>
+                        ))}
+                        {form.offerBadge && (
+                          <button
+                            type="button"
+                            onClick={() => { updateForm("offerBadge", ""); markDirty(); }}
+                            className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl border-2 border-gray-100 bg-gray-50 hover:border-red-200 text-xs text-gray-400 hover:text-red-500 transition-all min-w-[48px]"
+                          >
+                            <span className="text-base">✕</span>
+                            <span>Ninguno</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {discount > 0 && (
+                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-4 py-2 rounded-xl">
+                        <Tag className="h-4 w-4" />
+                        Este producto aparecerá automáticamente en los bloques de <strong>&quot;Ofertas destacadas&quot;</strong> de tu tienda.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               {storeTypeConfig.supportsFeatured && (
                 <label className="flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all"
                   style={{ borderColor: featured ? "#6366f1" : "#f3f4f6", background: featured ? "#eef2ff" : "#fafafa" }}>
@@ -1518,14 +1581,27 @@ function ProductoFormPage() {
 
             {/* Promoción por cantidad — descuento automático al comprar N o más unidades */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-              <div>
-                <div className="flex items-center gap-1">
-                  <h2 className="font-semibold text-gray-900">Promoción por cantidad</h2>
-                  <Tip align="left" text="Elegí el tipo de promoción: «% de descuento» aplica un porcentaje de rebaja al comprar N o más unidades; «Llevá N, pagá M» cobra solo M unidades aunque el cliente lleve N (ej: llevá 3, pagá 2). El descuento se aplica automático en el carrito." />
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-1">
+                    <h2 className="font-semibold text-gray-900">Promoción por cantidad</h2>
+                    <Tip align="left" text="Elegí el tipo de promoción: «% de descuento» aplica un porcentaje de rebaja al comprar N o más unidades; «Llevá N, pagá M» cobra solo M unidades aunque el cliente lleve N (ej: llevá 3, pagá 2). El descuento se aplica automático en el carrito." />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">{promoEnabled ? "Activa — se aplica automáticamente en el carrito" : "Desactivada — no se aplica ningún descuento"}</p>
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5">Opcional — dejá vacío si no querés usar esta función</p>
+                {/* Toggle on/off */}
+                <button
+                  type="button"
+                  onClick={() => { setPromoEnabled(v => !v); markDirty(); }}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${promoEnabled ? "bg-indigo-600" : "bg-gray-200"}`}
+                  role="switch"
+                  aria-checked={promoEnabled}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${promoEnabled ? "translate-x-5" : "translate-x-0"}`} />
+                </button>
               </div>
 
+              {promoEnabled && <>
               {/* Tipo de promo */}
               <div className="grid grid-cols-2 gap-3">
                 <button type="button"
@@ -1597,6 +1673,7 @@ function ProductoFormPage() {
                   }
                 </div>
               )}
+              </>}
             </div>
 
             {/* Cuotas sin interés — informativo, no conectado a ningún banco ni a Mercado Pago */}
