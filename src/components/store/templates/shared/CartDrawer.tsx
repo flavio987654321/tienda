@@ -79,19 +79,39 @@ export function CartDrawer({
                     <span style={{ width:24, textAlign:"center", fontSize:13, color:T }}>{item.qty}</span>
                     <button onClick={() => updateQty(idx, 1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>+</button>
                   </div>
-                  <span style={{ color:accent, fontWeight:700, fontSize:14 }}>{fmt(itemEffectiveUnitPrice(item.product, item.qty) * item.qty)}</span>
+                  {item.discountPct ? (
+                    <div style={{ textAlign:"right" }}>
+                      <span style={{ fontSize:11, color:MID, textDecoration:"line-through", display:"block", lineHeight:1.3 }}>
+                        {fmt(itemEffectiveUnitPrice(item.product, item.qty) * item.qty)}
+                      </span>
+                      <span style={{ color:accent, fontWeight:700, fontSize:14 }}>
+                        {fmt(itemEffectiveUnitPrice(item.product, item.qty) * item.qty * (1 - item.discountPct / 100))}
+                      </span>
+                    </div>
+                  ) : (
+                    <span style={{ color:accent, fontWeight:700, fontSize:14 }}>{fmt(itemEffectiveUnitPrice(item.product, item.qty) * item.qty)}</span>
+                  )}
                 </div>
               </div>
               <button onClick={() => removeFromCart(idx)} aria-label="Quitar del carrito" style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:18, alignSelf:"flex-start" }}>×</button>
             </div>
           ))}
         </div>
-        {cartItems.length > 0 && (
+        {cartItems.length > 0 && (() => {
+          const fullTotal = cartItems.reduce((s, i) => s + itemEffectiveUnitPrice(i.product, i.qty) * i.qty, 0);
+          const promoSavings = fullTotal - cartTotal;
+          return (
           <div style={{ padding:"16px 24px 28px", borderTop:`1px solid ${border}`, flexShrink:0 }}>
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
               <span style={{ fontSize:11, opacity:0.6, letterSpacing:1, textTransform:"uppercase", color:T }}>Subtotal</span>
               <span style={{ fontSize:11, opacity:0.6, color:T }}>{cartCount} {cartCount === 1 ? "producto" : "productos"}</span>
             </div>
+            {promoSavings > 0.01 && (
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>Descuento promo</span>
+                <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>-{fmt(promoSavings)}</span>
+              </div>
+            )}
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:20 }}>
               <span style={{ fontSize:13, opacity:0.7, color:T }}>Total</span>
               <span style={{ fontSize:22, fontWeight:700, color:accent }}>{fmt(cartTotal)}</span>
@@ -126,7 +146,8 @@ export function CartDrawer({
               </a>
             )}
           </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import sanitizeHtml from "sanitize-html";
+
+const DESCRIPTION_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: ["p", "strong", "em", "u", "s", "ul", "ol", "li", "br"],
+  allowedAttributes: {
+    p: ["style"],
+  },
+  allowedStyles: {
+    p: { "text-align": [/^(left|center|right|justify)$/] },
+  },
+};
 
 export const MAX_PRODUCT_REELS = 3;
 const SINGLE_VARIANT_FALLBACK_VALUE = "Unico";
@@ -59,10 +70,13 @@ type ProductBodyRaw = {
   widthCm?: unknown;
   heightCm?: unknown;
   depthCm?: unknown;
+  promoQtyMin?: unknown;
+  promoQtyDiscount?: unknown;
 };
 
 type ValidatedProductBody = {
   name: string;
+  sanitizedDescription: string;
   parsedPrice: number;
   parsedComparePrice: number | null;
   parsedFeatured: boolean;
@@ -76,12 +90,14 @@ type ValidatedProductBody = {
   parsedWidthCm: number | null;
   parsedHeightCm: number | null;
   parsedDepthCm: number | null;
+  parsedPromoQtyMin: number | null;
+  parsedPromoQtyDiscount: number | null;
 };
 
 export function validateProductBody(
   body: ProductBodyRaw
 ): { error: NextResponse } | ValidatedProductBody {
-  const { name, price, comparePrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm } = body;
+  const { name, price, comparePrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, promoQtyMin, promoQtyDiscount } = body;
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     return { error: NextResponse.json({ error: "Nombre requerido (mínimo 2 caracteres)" }, { status: 400 }) };
@@ -96,6 +112,9 @@ export function validateProductBody(
   if (description && typeof description === "string" && description.length > 8000) {
     return { error: NextResponse.json({ error: "La descripción no puede superar 8000 caracteres" }, { status: 400 }) };
   }
+  const sanitizedDescription = typeof description === "string"
+    ? sanitizeHtml(description, DESCRIPTION_SANITIZE_OPTIONS)
+    : "";
   if (category && typeof category === "string" && category.length > 100) {
     return { error: NextResponse.json({ error: "La categoría no puede superar 100 caracteres" }, { status: 400 }) };
   }
@@ -274,8 +293,22 @@ export function validateProductBody(
     return { error: NextResponse.json({ error: `Podes subir hasta ${MAX_PRODUCT_REELS} reels por producto` }, { status: 400 }) };
   }
 
+  // ── Promoción por cantidad (retail) ───────────────────────────────────────
+  const parsedPromoQtyMin = promoQtyMin ? parseInt(promoQtyMin as string) : null;
+  if (promoQtyMin && (isNaN(parsedPromoQtyMin!) || parsedPromoQtyMin! < 2)) {
+    return { error: NextResponse.json({ error: "La cantidad mínima de la promo debe ser 2 o más" }, { status: 400 }) };
+  }
+  const parsedPromoQtyDiscount = promoQtyDiscount ? parseFloat(promoQtyDiscount as string) : null;
+  if (promoQtyDiscount && (isNaN(parsedPromoQtyDiscount!) || parsedPromoQtyDiscount! <= 0 || parsedPromoQtyDiscount! > 80)) {
+    return { error: NextResponse.json({ error: "El descuento de la promo debe ser entre 1 y 80%" }, { status: 400 }) };
+  }
+  if ((parsedPromoQtyMin !== null) !== (parsedPromoQtyDiscount !== null)) {
+    return { error: NextResponse.json({ error: "Si configurás una promo, completá tanto la cantidad mínima como el descuento" }, { status: 400 }) };
+  }
+
   return {
     name: (name as string).trim(),
+    sanitizedDescription,
     parsedPrice,
     parsedComparePrice,
     parsedFeatured: featured === true,
@@ -289,6 +322,8 @@ export function validateProductBody(
     parsedHeightCm: heightResult.value,
     parsedWidthCm: widthResult.value,
     parsedDepthCm: depthResult.value,
+    parsedPromoQtyMin,
+    parsedPromoQtyDiscount,
   };
 }
 

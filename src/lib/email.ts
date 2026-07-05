@@ -527,6 +527,7 @@ export async function sendOrderConfirmationEmail({
   storeName,
   items,
   subtotal,
+  promoSavings,
   discountAmount,
   shippingCost,
   shippingMethod,
@@ -542,6 +543,7 @@ export async function sendOrderConfirmationEmail({
   storeName: string;
   items: { name: string; variant?: string | null; quantity: number; price: number }[];
   subtotal: number;
+  promoSavings?: number;
   discountAmount: number;
   shippingCost: number;
   shippingMethod: string;
@@ -622,6 +624,11 @@ export async function sendOrderConfirmationEmail({
             <span style="font-size:14px;color:#6b7280;">Subtotal</span>
             <span style="font-size:14px;color:#374151;">${fmt(subtotal)}</span>
           </div>
+          ${promoSavings && promoSavings > 0 ? `
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">🎉 Ahorro por promo cantidad</span>
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(promoSavings)} incluidos</span>
+          </div>` : ""}
           ${discountAmount > 0 ? `
           <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
             <span style="font-size:14px;color:#16a34a;font-weight:600;">Descuento aplicado</span>
@@ -686,6 +693,7 @@ export async function sendNewOrderToOwnerEmail({
   customer,
   items,
   subtotal,
+  promoSavings,
   discountAmount,
   shippingCost,
   shippingMethod,
@@ -705,6 +713,7 @@ export async function sendNewOrderToOwnerEmail({
   };
   items: { name: string; variant?: string | null; quantity: number; price: number }[];
   subtotal: number;
+  promoSavings?: number;
   discountAmount: number;
   shippingCost: number;
   shippingMethod: string;
@@ -808,9 +817,14 @@ export async function sendNewOrderToOwnerEmail({
             <span style="font-size:14px;color:#6b7280;">Subtotal</span>
             <span style="font-size:14px;color:#374151;">${fmt(subtotal)}</span>
           </div>
+          ${promoSavings && promoSavings > 0 ? `
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">Ahorro promo cantidad</span>
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(promoSavings)} incluidos</span>
+          </div>` : ""}
           ${discountAmount > 0 ? `
           <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-            <span style="font-size:14px;color:#16a34a;font-weight:600;">Descuento</span>
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">Descuento cupón</span>
             <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(discountAmount)}</span>
           </div>` : ""}
           <div style="display:flex;justify-content:space-between;margin-bottom:6px;">

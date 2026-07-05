@@ -162,7 +162,8 @@ export default function BohoTerra() {
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
     cartCount,
     searchResults, favoriteProducts,
-    fmt, showToast, openModal, addToCart,
+    fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem,
+    pendingItems, pendingTotal, promoActive, pendingPromoDiscount,
     handleContact, toggleFavorite,
   } = cart;
   const cartTheme: CartTheme = { BG:"#ffffff", S, T, MID, border:"rgba(44,34,24,0.1)", accent:A, accentText:"#fff", serif:"Georgia, serif" };
@@ -1337,7 +1338,7 @@ export default function BohoTerra() {
                 <span style={{ fontSize:22, fontWeight:700, color:A }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price)}</span>
                 {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
               </div>
-              <p style={{ fontSize:13, color:MID, lineHeight:1.8, borderTop:`1px solid rgba(44,34,24,0.07)`, paddingTop:14 }}>{modalProduct.description}</p>
+              <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description || "" }} style={{ fontSize:13, color:MID, lineHeight:1.8, borderTop:`1px solid rgba(44,34,24,0.07)`, paddingTop:14 }} />
               {(() => {
                 const attrs = modalProduct.attributes ?? [];
                 const condicionAttr = attrs.find(a => a.key === "Condición");
@@ -1457,6 +1458,35 @@ export default function BohoTerra() {
                 <button onClick={() => openInquiry(modalProduct)} style={{ background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", marginTop:"auto" }}>
                   Consultar disponibilidad
                 </button>
+              ) : modalProduct.promoQtyMin ? (
+                <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:"auto" }}>
+                  <div style={{ fontSize:11, fontWeight:600, padding:"8px 12px", borderRadius:4, background: promoActive ? "rgba(52,211,153,0.1)" : "rgba(181,101,42,0.08)", color: promoActive ? "#16a34a" : A, border:`1px solid ${promoActive ? "rgba(52,211,153,0.25)" : "rgba(181,101,42,0.2)"}` }}>
+                    {promoActive ? `¡${pendingPromoDiscount}% de descuento aplicado!` : `Llevá ${modalProduct.promoQtyMin - pendingTotal} más y obtenés ${modalProduct.promoQtyDiscount}% off`}
+                  </div>
+                  {pendingItems.length > 0 && (
+                    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                      {pendingItems.map((item, idx) => (
+                        <div key={idx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:11, color:T, padding:"5px 8px", background:"rgba(44,34,24,0.04)", borderRadius:3 }}>
+                          <span>{[item.color, item.size].filter(Boolean).join(" / ")} ×{item.qty}</span>
+                          <button onClick={() => removePendingItem(idx)} style={{ background:"none", border:"none", color:"rgba(44,34,24,0.4)", cursor:"pointer", fontSize:14, padding:"0 2px" }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button onClick={addToPending} disabled={selectedVariantStock === 0}
+                    style={{ background:"none", border:`1px solid ${selectedVariantStock === 0 ? "rgba(181,101,42,0.2)" : A}`, color: selectedVariantStock === 0 ? "rgba(181,101,42,0.3)" : A, padding:"12px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                    {selectedVariantStock === 0 ? "Sin stock" : "+ Agregar a mi selección"}
+                  </button>
+                  {pendingItems.length > 0 && (() => {
+                    const subtotal = pendingItems.reduce((s, i) => s + modalProduct.price * i.qty, 0);
+                    const total = promoActive ? subtotal * (1 - pendingPromoDiscount / 100) : subtotal;
+                    return (
+                      <button onClick={addAllToCart} style={{ background:A, color:"#fff", border:"none", padding:"14px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                        Agregar al Carrito ({pendingTotal} uds) · {fmt(total)}
+                      </button>
+                    );
+                  })()}
+                </div>
               ) : (
                 <button onClick={addToCart} disabled={selectedVariantStock === 0}
                   style={{ background: selectedVariantStock === 0 ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
@@ -1575,6 +1605,27 @@ export default function BohoTerra() {
                     style={{ width:"100%", background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
                     Consultar disponibilidad
                   </button>
+                ) : modalProduct.promoQtyMin ? (
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button onClick={addToPending} disabled={selectedVariantStock === 0}
+                      style={{ flex:1, background:"none", border:`1px solid ${selectedVariantStock === 0 ? "rgba(181,101,42,0.2)" : A}`, color: selectedVariantStock === 0 ? "rgba(181,101,42,0.3)" : A, padding:"13px 8px", fontSize:10, letterSpacing:1.5, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                      {selectedVariantStock === 0 ? "Sin stock" : `+ Selección${pendingTotal > 0 ? ` (${pendingTotal})` : ""}`}
+                    </button>
+                    {pendingItems.length > 0 && (() => {
+                      const subtotal = pendingItems.reduce((s, i) => s + modalProduct.price * i.qty, 0);
+                      const total = promoActive ? subtotal * (1 - pendingPromoDiscount / 100) : subtotal;
+                      return (
+                        <button onClick={addAllToCart} style={{ flex:2, background:A, color:"#fff", border:"none", padding:"13px 8px", fontSize:10, letterSpacing:1.5, textTransform:"uppercase", cursor:"pointer" }}>
+                          {promoActive ? `Confirmar · ${fmt(total)} (-${pendingPromoDiscount}%)` : `Confirmar · ${fmt(total)}`}
+                        </button>
+                      );
+                    })()}
+                    {pendingItems.length === 0 && (
+                      <div style={{ flex:2, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, color:MID, textAlign:"center" }}>
+                        {`${modalProduct.promoQtyMin}+ uds = ${modalProduct.promoQtyDiscount}% off`}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
                     style={{ width:"100%", background: selectedVariantStock === 0 ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>

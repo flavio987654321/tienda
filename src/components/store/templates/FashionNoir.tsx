@@ -191,7 +191,8 @@ export default function FashionNoir() {
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
     cartCount,
     searchResults, favoriteProducts,
-    fmt, showToast, openModal, addToCart,
+    fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem,
+    pendingItems, pendingTotal, promoActive, pendingPromoDiscount,
     handleContact, toggleFavorite,
   } = cart;
   const imgSwipe = useTouchSwipe(
@@ -1539,7 +1540,7 @@ export default function FashionNoir() {
                 <span style={{ fontSize:24, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price)}</span>
                 {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:15, color:"#444", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
               </div>
-              <p style={{ fontSize:13, opacity:0.58, lineHeight:1.75, borderTop:`1px solid rgba(240,235,227,0.08)`, paddingTop:16 }}>{modalProduct.description}</p>
+              <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description || "" }} style={{ fontSize:13, opacity:0.58, lineHeight:1.75, borderTop:`1px solid rgba(240,235,227,0.08)`, paddingTop:16 }} />
 
               {(() => {
                 const attrs = modalProduct.attributes ?? [];
@@ -1667,6 +1668,42 @@ export default function FashionNoir() {
                   style={{ background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginTop:"auto" }}>
                   Consultar disponibilidad
                 </button>
+              ) : modalProduct.promoQtyMin ? (
+                <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:"auto" }}>
+                  {/* Indicador de promo */}
+                  <div style={{ fontSize:11, fontWeight:600, letterSpacing:0.5, padding:"8px 12px", borderRadius:4, background: promoActive ? "rgba(52,211,153,0.12)" : "rgba(201,168,76,0.08)", color: promoActive ? "#34d399" : G, border:`1px solid ${promoActive ? "rgba(52,211,153,0.25)" : "rgba(201,168,76,0.2)"}` }}>
+                    {promoActive
+                      ? `¡${pendingPromoDiscount}% de descuento aplicado!`
+                      : `Llevá ${modalProduct.promoQtyMin - pendingTotal} más y obtenés ${modalProduct.promoQtyDiscount}% off`}
+                  </div>
+                  {/* Lista de selección pendiente */}
+                  {pendingItems.length > 0 && (
+                    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                      {pendingItems.map((item, idx) => (
+                        <div key={idx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:11, color:"rgba(240,235,227,0.7)", padding:"5px 8px", background:"rgba(240,235,227,0.04)", borderRadius:3 }}>
+                          <span>{[item.color, item.size].filter(Boolean).join(" / ")} ×{item.qty}</span>
+                          <button onClick={() => removePendingItem(idx)} style={{ background:"none", border:"none", color:"rgba(240,235,227,0.4)", cursor:"pointer", fontSize:14, padding:"0 2px", lineHeight:1 }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Agregar variante a la selección */}
+                  <button onClick={addToPending} disabled={selectedVariantStock === 0}
+                    style={{ background:"none", border:`1px solid ${selectedVariantStock === 0 ? "rgba(201,168,76,0.2)" : G}`, color: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, padding:"12px 16px", fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                    {selectedVariantStock === 0 ? "Sin stock" : `+ Agregar a mi selección`}
+                  </button>
+                  {/* Confirmar todo al carrito */}
+                  {pendingItems.length > 0 && (() => {
+                    const subtotal = pendingItems.reduce((s, i) => s + modalProduct.price * i.qty, 0);
+                    const total = promoActive ? subtotal * (1 - pendingPromoDiscount / 100) : subtotal;
+                    return (
+                      <button onClick={addAllToCart}
+                        style={{ background:G, color:BG, border:"none", padding:"14px 16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                        Agregar al Carrito ({pendingTotal} uds) · {fmt(total)}
+                      </button>
+                    );
+                  })()}
+                </div>
               ) : (
                 <button onClick={addToCart}
                   disabled={selectedVariantStock === 0}
@@ -1786,6 +1823,28 @@ export default function FashionNoir() {
                     style={{ width:"100%", background:G, color:BG, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
                     Consultar disponibilidad
                   </button>
+                ) : modalProduct.promoQtyMin ? (
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button onClick={addToPending} disabled={selectedVariantStock === 0}
+                      style={{ flex:1, background:"none", border:`1px solid ${selectedVariantStock === 0 ? "rgba(201,168,76,0.2)" : G}`, color: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, padding:"13px 8px", fontSize:10, fontWeight:700, letterSpacing:1.5, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                      {selectedVariantStock === 0 ? "Sin stock" : `+ Selección${pendingTotal > 0 ? ` (${pendingTotal})` : ""}`}
+                    </button>
+                    {pendingItems.length > 0 && (() => {
+                      const subtotal = pendingItems.reduce((s, i) => s + modalProduct.price * i.qty, 0);
+                      const total = promoActive ? subtotal * (1 - pendingPromoDiscount / 100) : subtotal;
+                      return (
+                        <button onClick={addAllToCart}
+                          style={{ flex:2, background:G, color:BG, border:"none", padding:"13px 8px", fontSize:10, fontWeight:800, letterSpacing:1.5, textTransform:"uppercase", cursor:"pointer" }}>
+                          {promoActive ? `Confirmar · ${fmt(total)} (-${pendingPromoDiscount}%)` : `Confirmar · ${fmt(total)}`}
+                        </button>
+                      );
+                    })()}
+                    {pendingItems.length === 0 && (
+                      <div style={{ flex:2, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, color:"rgba(240,235,227,0.35)", letterSpacing:1 }}>
+                        {`Llevá ${modalProduct.promoQtyMin}+ y obtenés ${modalProduct.promoQtyDiscount}% off`}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
                     style={{ width:"100%", background: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>

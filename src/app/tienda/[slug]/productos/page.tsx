@@ -62,6 +62,8 @@ type RawProduct = {
   cantMinMayorista?: number | null;
   preciosEscalonados?: string;
   soloMayorista?: boolean;
+  promoQtyMin?: number | null;
+  promoQtyDiscount?: number | null;
   category?: string;
   subcategory?: string;
   gender?: string;
@@ -119,6 +121,8 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     cantMinMayorista: raw.cantMinMayorista ?? null,
     preciosEscalonados: (() => { try { const p = JSON.parse(raw.preciosEscalonados || "[]"); return Array.isArray(p) ? p : []; } catch { return []; } })(),
     soloMayorista: raw.soloMayorista ?? false,
+    promoQtyMin: raw.promoQtyMin ?? null,
+    promoQtyDiscount: raw.promoQtyDiscount ?? null,
     category: raw.category ?? "general",
     subcategory: raw.subcategory ?? undefined,
     gender: raw.gender ?? "unisex",

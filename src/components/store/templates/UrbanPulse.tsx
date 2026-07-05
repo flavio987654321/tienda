@@ -233,7 +233,8 @@ export default function UrbanPulse() {
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
     cartCount,
     searchResults, favoriteProducts,
-    fmt, showToast, openModal, addToCart,
+    fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem,
+    pendingItems, pendingTotal, promoActive, pendingPromoDiscount,
     handleContact, toggleFavorite,
   } = cart;
   const accentText = getContrastColor(ACC) === "light" ? DARK : "#fff";
@@ -1434,7 +1435,7 @@ export default function UrbanPulse() {
                   <span style={{ fontSize:28, fontWeight:900, color: modalProduct.comparePrice ? RED : DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price)}</span>
                   {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:15, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                 </div>
-                {modalProduct.description && <p style={{ fontSize:13, color:MID, lineHeight:1.7, marginBottom:22 }}>{modalProduct.description}</p>}
+                {modalProduct.description && <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.7, marginBottom:22 }} />}
                 {(() => {
                   const attrs = modalProduct.attributes ?? [];
                   const condicionAttr = attrs.find(a => a.key === "Condición");
@@ -1555,6 +1556,35 @@ export default function UrbanPulse() {
                     style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
                     Consultar disponibilidad
                   </button>
+                ) : modalProduct.promoQtyMin ? (
+                  <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:10 }}>
+                    <div style={{ fontSize:11, fontWeight:700, padding:"8px 12px", background: promoActive ? "rgba(52,211,153,0.1)" : `${ACC}22`, color: promoActive ? "#34d399" : DARK, border:`2px solid ${promoActive ? "rgba(52,211,153,0.3)" : DARK}` }}>
+                      {promoActive ? `¡${pendingPromoDiscount}% de descuento aplicado!` : `Llevá ${modalProduct.promoQtyMin - pendingTotal} más y obtenés ${modalProduct.promoQtyDiscount}% off`}
+                    </div>
+                    {pendingItems.length > 0 && (
+                      <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                        {pendingItems.map((item, idx) => (
+                          <div key={idx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:11, fontWeight:700, color:DARK, padding:"5px 8px", background:`${ACC}11`, border:`1px solid ${DARK}22` }}>
+                            <span>{[item.color, item.size].filter(Boolean).join(" / ")} ×{item.qty}</span>
+                            <button onClick={() => removePendingItem(idx)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:14, padding:"0 2px", fontWeight:900 }}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button onClick={addToPending} disabled={selectedVariantStock === 0}
+                      style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : "none", border:`2px solid ${selectedVariantStock === 0 ? "#555" : DARK}`, color: selectedVariantStock === 0 ? "#999" : DARK, padding:"13px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                      {selectedVariantStock === 0 ? "Sin stock" : "+ Agregar a mi selección"}
+                    </button>
+                    {pendingItems.length > 0 && (() => {
+                      const subtotal = pendingItems.reduce((s, i) => s + modalProduct.price * i.qty, 0);
+                      const total = promoActive ? subtotal * (1 - pendingPromoDiscount / 100) : subtotal;
+                      return (
+                        <button onClick={addAllToCart} style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"14px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                          Agregar ({pendingTotal} uds) · {fmt(total)}
+                        </button>
+                      );
+                    })()}
+                  </div>
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
                     style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginBottom:10 }}>

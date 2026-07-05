@@ -46,9 +46,10 @@ export async function POST(req: NextRequest) {
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;
   const {
-    name, parsedPrice, parsedComparePrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista,
+    name, sanitizedDescription, parsedPrice, parsedComparePrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista,
     parsedPreciosEscalonados, parsedSoloMayorista, parsedCuotas, normalizedVariants,
     parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
+    parsedPromoQtyMin, parsedPromoQtyDiscount,
   } = validated;
 
   // Guard de seguridad: escalones y soloMayorista solo aplican a tiendas mayoristas
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
   const product = await prisma.product.create({
     data: {
       name,
-      description,
+      description: sanitizedDescription,
       price: parsedPrice,
       comparePrice: parsedComparePrice,
       featured: parsedFeatured,
@@ -81,6 +82,8 @@ export async function POST(req: NextRequest) {
       cantMinMayorista: parsedCantMinMayorista,
       preciosEscalonados: safeEscalonados,
       soloMayorista: safeSoloMayorista,
+      promoQtyMin: parsedPromoQtyMin,
+      promoQtyDiscount: parsedPromoQtyDiscount,
       cuotas: parsedCuotas,
       weightKg: parsedWeightKg,
       widthCm: parsedWidthCm,

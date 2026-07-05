@@ -416,9 +416,11 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
           ))}
         </div>
         {tab === "desc" ? (
-          <p style={{ margin: 0, fontSize: 13.5, color: theme.muted, lineHeight: 1.85, whiteSpace: "pre-line" }}>
-            {product.description || "Sin descripción disponible."}
-          </p>
+          <div
+            className="product-rte"
+            dangerouslySetInnerHTML={{ __html: product.description || "<p>Sin descripción disponible.</p>" }}
+            style={{ margin: 0, fontSize: 13.5, color: theme.muted, lineHeight: 1.85 }}
+          />
         ) : product.attributes.length > 0 ? (
           <div style={{ borderRadius: theme.radius, overflow: "hidden" }}>
             {product.attributes.map((a, i) => (

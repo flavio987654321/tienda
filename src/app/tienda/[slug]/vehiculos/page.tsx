@@ -42,7 +42,7 @@ function mapVehicle(raw: RawVehicle): StorefrontProduct {
   return {
     id: raw.id, name: raw.name, price: raw.price,
     comparePrice: raw.comparePrice ?? null,
-    precioMayorista: null, cantMinMayorista: null, preciosEscalonados: [], soloMayorista: false,
+    precioMayorista: null, cantMinMayorista: null, preciosEscalonados: [], soloMayorista: false, promoQtyMin: null, promoQtyDiscount: null,
     category: raw.category ?? "general",
     gender: "unisex",
     description: raw.description ?? null,

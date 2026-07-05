@@ -101,6 +101,16 @@ body {
 .policy-content em { font-style: italic; }
 .policy-content u  { text-decoration: underline; }
 
+/* ── Descripción de producto (Tiptap HTML) en modales de tienda ── */
+.product-rte p  { margin: 0 0 0.5em; }
+.product-rte p:last-child { margin-bottom: 0; }
+.product-rte ul { list-style: disc; padding-left: 1.4em; margin: 0 0 0.5em; }
+.product-rte ol { list-style: decimal; padding-left: 1.4em; margin: 0 0 0.5em; }
+.product-rte li { margin-bottom: 0.2em; }
+.product-rte strong { font-weight: 700; }
+.product-rte em { font-style: italic; }
+.product-rte u  { text-decoration: underline; }
+
 /* ── Scroll reveal ── */
 [data-reveal] {
   opacity: 0;

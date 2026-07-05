@@ -77,13 +77,34 @@ async function resolveShipping(
   return { label: pickup.label, cost: 0 };
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-  if (!(await checkRateLimit(`checkout:${ip}`, 10, 60_000))) {
+  // Límite estricto por IP: 5 intentos por minuto
+  if (!(await checkRateLimit(`checkout:${ip}`, 5, 60_000))) {
     return NextResponse.json({ error: "Demasiados pedidos. Esperá un momento." }, { status: 429 });
   }
 
-  const body = (await req.json()) as CheckoutBody;
+  // Leer el body como texto para medir el tamaño real — no confiar en Content-Length
+  // (un cliente puede omitirlo o falsificarlo para eludir el guard)
+  let rawBody: string;
+  try {
+    rawBody = await req.text();
+  } catch {
+    return NextResponse.json({ error: "Formato de solicitud inválido" }, { status: 400 });
+  }
+  if (rawBody.length > 32_768) {
+    return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
+  }
+
+  let body: CheckoutBody;
+  try {
+    body = JSON.parse(rawBody) as CheckoutBody;
+  } catch {
+    return NextResponse.json({ error: "Formato de solicitud inválido" }, { status: 400 });
+  }
+
   const { storeId, affiliateId, couponId, rewardCouponCode, items, customer, shippingMethod } = body;
   // Whitelist para evitar que el frontend inyecte un proveedor falso (ej: "mp" en pedido manual)
   const VALID_PROVIDERS = ["mp", "mercadopago", "transferencia", "efectivo", "transfer"] as const;
@@ -95,6 +116,23 @@ export async function POST(req: NextRequest) {
 
   if (!storeId || !items?.length) {
     return NextResponse.json({ error: "El carrito esta vacio" }, { status: 400 });
+  }
+
+  // Validar formato UUID para prevenir inyecciones
+  if (!UUID_RE.test(String(storeId))) {
+    return NextResponse.json({ error: "Tienda inválida" }, { status: 400 });
+  }
+  if (items.length > 20) {
+    return NextResponse.json({ error: "El carrito no puede tener más de 20 líneas" }, { status: 400 });
+  }
+  if (items.some(i => !UUID_RE.test(String(i.productId ?? "")))) {
+    return NextResponse.json({ error: "Formato de producto inválido" }, { status: 400 });
+  }
+  if (couponId && !UUID_RE.test(String(couponId))) {
+    return NextResponse.json({ error: "Cupón inválido" }, { status: 400 });
+  }
+  if (affiliateId && !UUID_RE.test(String(affiliateId))) {
+    return NextResponse.json({ error: "Afiliado inválido" }, { status: 400 });
   }
 
   if (affiliateId && paymentProvider !== "mp") {
@@ -110,6 +148,10 @@ export async function POST(req: NextRequest) {
   const emailNorm = customer?.email?.toLowerCase().trim() ?? "";
   if (!emailNorm || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
     return NextResponse.json({ error: "Email inválido" }, { status: 400 });
+  }
+  // Límite por email: 3 pedidos cada 5 minutos (protege contra bots que rotan IPs)
+  if (!(await checkRateLimit(`checkout:email:${emailNorm}`, 3, 300_000))) {
+    return NextResponse.json({ error: "Demasiados intentos. Esperá unos minutos e intentá de nuevo." }, { status: 429 });
   }
 
   // Resolve shipping from store's config (dynamic per-store pricing)
@@ -144,7 +186,7 @@ export async function POST(req: NextRequest) {
 
   try {
     let usedRewardCouponId: string | null = null;
-    const order = await prisma.$transaction(async (tx) => {
+    const { createdOrder: order, promoSavings } = await prisma.$transaction(async (tx) => {
       const store = await tx.store.findUnique({
         where: { id: storeId },
         select: {
@@ -184,7 +226,14 @@ export async function POST(req: NextRequest) {
         include: { variants: true },
       });
 
+      // Pre-calcular cantidad total por producto para validar promos de cantidad
+      const totalQtyByProduct = new Map<string, number>();
+      for (const item of normalizedItems) {
+        totalQtyByProduct.set(item.productId, (totalQtyByProduct.get(item.productId) ?? 0) + item.quantity);
+      }
+
       const orderItems: { productId: string; variantId: string | null; quantity: number; price: number }[] = [];
+      let promoSavingsAcc = 0;
       for (const item of normalizedItems) {
         const product = products.find((p) => p.id === item.productId);
         if (!product) throw new Error("Producto no disponible");
@@ -231,7 +280,21 @@ export async function POST(req: NextRequest) {
         if (minQty && item.quantity < minQty) {
           throw new Error(`${product.name} requiere un mínimo de ${minQty} unidades`);
         }
-        const unitPrice = (wholesale && minQty && item.quantity >= minQty) ? wholesale : basePrice;
+        const wholesaleOrBasePrice = (wholesale && minQty && item.quantity >= minQty) ? wholesale : basePrice;
+
+        // Promo por cantidad: validada server-side desde la DB, nunca desde el cliente
+        const totalQtyForProduct = totalQtyByProduct.get(product.id) ?? item.quantity;
+        const promoApplies =
+          product.promoQtyMin != null &&
+          product.promoQtyDiscount != null &&
+          product.promoQtyMin >= 2 &&
+          product.promoQtyDiscount > 0 &&
+          product.promoQtyDiscount <= 80 &&
+          totalQtyForProduct >= product.promoQtyMin;
+        // Redondear a centavos para evitar punto flotante en totales
+        const unitPrice = promoApplies
+          ? Math.round(wholesaleOrBasePrice * (1 - product.promoQtyDiscount! / 100) * 100) / 100
+          : wholesaleOrBasePrice;
 
         orderItems.push({
           productId: product.id,
@@ -239,8 +302,10 @@ export async function POST(req: NextRequest) {
           quantity: item.quantity,
           price: unitPrice,
         });
+        promoSavingsAcc += promoApplies ? Math.round((wholesaleOrBasePrice - unitPrice) * item.quantity * 100) / 100 : 0;
       }
 
+      const promoSavings = Math.round(promoSavingsAcc * 100) / 100;
       const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
       let discountAmount = 0;
@@ -344,7 +409,6 @@ export async function POST(req: NextRequest) {
           items: true,
           payment: true,
           shipping: true,
-          affiliate: { include: { user: { select: { name: true, email: true } } } },
         },
       });
 
@@ -362,7 +426,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return createdOrder;
+      return { createdOrder, promoSavings };
     }, { timeout: 15_000 });
 
     // Donación opcional a la Canasta Solidaria (toggle del carrito) — un
@@ -502,6 +566,7 @@ export async function POST(req: NextRequest) {
         storeSlug: storeForEmail.slug ?? "",
         items: emailItems,
         subtotal: order.subtotal,
+        promoSavings: promoSavings > 0 ? promoSavings : undefined,
         discountAmount: order.discountAmount,
         shippingCost: order.shippingCost,
         shippingMethod: shipping.label,

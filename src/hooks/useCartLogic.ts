@@ -56,6 +56,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   const [selectedSize,   setSelectedSize]   = useState("");
   const [selectedColor,  setSelectedColor]  = useState("");
   const [qty,            setQty]            = useState(1);
+  const [pendingItems,   setPendingItems]   = useState<Array<{ size: string; color: string; qty: number; variantId: string | null; stock: number | null }>>([]);
   const [checkoutOpen,   setCheckoutOpen]   = useState(false);
   const [checkoutStatus, setCheckoutStatus] = useState<CheckoutStatus>("idle");
   const [checkoutError,  setCheckoutError]  = useState("");
@@ -355,10 +356,18 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     return product.precioMayorista ?? product.price;
   }
 
+  // Promo por cantidad: cantidad total en la selección pendiente del modal
+  const pendingTotal = pendingItems.reduce((s, i) => s + i.qty, 0);
+  const promoActive = Boolean(
+    modalProduct?.promoQtyMin && pendingTotal >= modalProduct.promoQtyMin
+  );
+  const pendingPromoDiscount = promoActive ? (modalProduct?.promoQtyDiscount ?? 0) : 0;
+
   // Derived values
   const cartTotal      = cartItems.reduce((s, i) => {
-    const price = isWholesale ? getEffectiveWholesalePrice(i.product, i.qty) : i.product.price;
-    return s + price * i.qty;
+    const basePrice = isWholesale ? getEffectiveWholesalePrice(i.product, i.qty) : i.product.price;
+    const effectivePrice = basePrice * (1 - (i.discountPct ?? 0) / 100);
+    return s + effectivePrice * i.qty;
   }, 0);
   const wholesaleWarnings = isWholesale ? cartItems.filter(i =>
     i.product.cantMinMayorista && i.qty < i.product.cantMinMayorista
@@ -391,6 +400,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   const openModal = (p: StorefrontProduct) => {
     setModalProduct(p);
     setModalImg(0);
+    setPendingItems([]);
     setSelectedSize(p.sizes[0] ?? "");
     setSelectedColor(p.colors[0] ?? "");
     setQty(isWholesale && p.cantMinMayorista ? p.cantMinMayorista : 1);
@@ -477,11 +487,90 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     addingToCartRef.current = false;
   };
 
+  const addToPending = () => {
+    if (!modalProduct) return;
+    const variantId = resolveVariantId(modalProduct, selectedSize, selectedColor);
+    const stock = resolveVariantStock(modalProduct, selectedSize, selectedColor);
+    if (stock === 0) return;
+    setPendingItems(prev => {
+      const existing = prev.find(i => i.size === selectedSize && i.color === selectedColor);
+      if (existing) {
+        const newQty = stock !== null ? Math.min(existing.qty + qty, stock) : existing.qty + qty;
+        return prev.map(i => i === existing ? { ...i, qty: newQty } : i);
+      }
+      const safeQty = stock !== null ? Math.min(qty, stock) : qty;
+      return [...prev, { size: selectedSize, color: selectedColor, qty: safeQty, variantId, stock }];
+    });
+    setQty(1);
+  };
+
+  const addAllToCart = () => {
+    if (!modalProduct || pendingItems.length === 0 || addingToCartRef.current) return;
+    addingToCartRef.current = true;
+    const discountPct = promoActive ? (modalProduct.promoQtyDiscount ?? 0) : 0;
+    setCartItems(prev => {
+      let updated = [...prev];
+      for (const item of pendingItems) {
+        const ex = updated.find(i =>
+          i.product.id === modalProduct.id && i.size === item.size && i.color === item.color
+        );
+        if (ex) {
+          const newQty = item.stock !== null ? Math.min(ex.qty + item.qty, item.stock) : ex.qty + item.qty;
+          updated = updated.map(i => i === ex ? { ...i, qty: newQty, discountPct: discountPct || undefined } : i);
+        } else {
+          updated = [...updated, {
+            product: modalProduct,
+            size: item.size,
+            color: item.color,
+            variantId: item.variantId,
+            qty: item.qty,
+            discountPct: discountPct || undefined,
+          }];
+        }
+      }
+      return updated;
+    });
+    const totalAdded = pendingItems.reduce((s, i) => s + i.qty, 0);
+    setPendingItems([]);
+    setModalProduct(null);
+    showToast(
+      `${totalAdded} unidad${totalAdded !== 1 ? "es" : ""} agregada${totalAdded !== 1 ? "s" : ""} al carrito${discountPct > 0 ? ` · ${discountPct}% off` : ""}`
+    );
+    setCartOpen(true);
+    addingToCartRef.current = false;
+  };
+
+  const removePendingItem = (idx: number) =>
+    setPendingItems(prev => prev.filter((_, i) => i !== idx));
+
   const removeFromCart = (idx: number) =>
-    setCartItems(prev => prev.filter((_, i) => i !== idx));
+    setCartItems(prev => {
+      const removed = prev[idx];
+      const filtered = prev.filter((_, i) => i !== idx);
+      if (!removed?.product.promoQtyMin || !removed.product.promoQtyDiscount) return filtered;
+      const totalQty = filtered.filter(i => i.product.id === removed.product.id).reduce((s, i) => s + i.qty, 0);
+      const promoActive = totalQty >= removed.product.promoQtyMin;
+      return filtered.map(i =>
+        i.product.id === removed.product.id
+          ? { ...i, discountPct: promoActive ? removed.product.promoQtyDiscount! : undefined }
+          : i
+      );
+    });
 
   const updateQty = (idx: number, delta: number) =>
-    setCartItems(prev => prev.map((item, i) => i === idx ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
+    setCartItems(prev => {
+      const updated = prev.map((item, i) => i === idx ? { ...item, qty: Math.max(1, item.qty + delta) } : item);
+      // Re-evaluar descuento promo para el producto afectado
+      const affected = updated[idx];
+      if (!affected?.product.promoQtyMin || !affected.product.promoQtyDiscount) return updated;
+      const totalQty = updated.filter(i => i.product.id === affected.product.id).reduce((s, i) => s + i.qty, 0);
+      const promoActive = totalQty >= affected.product.promoQtyMin;
+      return updated.map(i =>
+        i.product.id === affected.product.id
+          ? { ...i, discountPct: promoActive ? affected.product.promoQtyDiscount! : undefined }
+          : i
+      );
+    });
 
   const openCheckout = () => {
     setCartOpen(false);
@@ -635,8 +724,11 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     checkoutMode, isWholesale, wholesaleWarnings,
     pagoOptions: getPagoOptions(hasMercadoPago, !!affiliateId),
     fmtEnvioPrice, fmtLiveQuote,
+    // Multi-selección (promo por cantidad)
+    pendingItems, pendingTotal, promoActive, pendingPromoDiscount,
     // Functions
-    fmt, showToast, openModal, addToCart, removeFromCart, updateQty,
+    fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem,
+    removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
   };
 }

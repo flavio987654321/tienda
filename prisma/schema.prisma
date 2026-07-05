@@ -333,6 +333,9 @@ model Product {
   preciosEscalonados  String  @default("[]")
   // Producto exclusivo de catálogo mayorista: solo aparece en tiendas con tieneVentaMayorista=true.
   soloMayorista       Boolean @default(false)
+  // Descuento por cantidad (retail): aplica cuando el cliente suma promoQtyMin o más unidades del mismo producto.
+  promoQtyMin      Int?
+  promoQtyDiscount Float?
   // Cuotas sin interés informativas (no conectado a ninguna API bancaria ni
   // de Mercado Pago): 0 = no mostrar, o 3/6/12. Solo se muestra en la tienda
   // si además la tienda tiene Mercado Pago conectado.

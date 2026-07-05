@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef, useMemo } from "react";
+import { Suspense, useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
@@ -12,6 +12,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { getStoreType } from "@/lib/storeTypes";
 import StockHistoryPanel from "../StockHistoryPanel";
+import RichTextEditor from "@/components/RichTextEditor";
+import { VariantBuilder } from "@/components/dashboard/VariantBuilder";
 
 type ImageItem = { url: string; variantValue?: string };
 
@@ -241,6 +243,23 @@ function safeJsonArray(value: unknown) {
   }
 }
 
+function getBuilderConfig(tipoTienda: string): { sizeDim: string; sizeLabel: string; sizePlaceholder: string; sizeHint: string } {
+  const map: Record<string, { sizeDim: string; sizeLabel: string; sizePlaceholder: string; sizeHint: string }> = {
+    HOGAR_TECH: {
+      sizeDim: "Tamaño",
+      sizeLabel: "Tamaños / Capacidades",
+      sizePlaceholder: 'ej: 32", 128GB, 8kg',
+      sizeHint: "Ingresá el tamaño, capacidad o almacenamiento. Escribilo y apretá Enter.",
+    },
+  };
+  return map[tipoTienda] ?? {
+    sizeDim: "Talle",
+    sizeLabel: "Talles",
+    sizePlaceholder: "ej: 44, 3XL",
+    sizeHint: "Si no encontrás el talle podés crearlo. Escribilo y apretá Enter.",
+  };
+}
+
 function prepareVariantsForSubmit(variants: Variant[]) {
   const prepared = variants
     .map((v) => {
@@ -330,6 +349,12 @@ function ProductoFormPage() {
   const [customCategory, setCustomCategory] = useState("");
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [variants, setVariants] = useState<Variant[]>([{ attrs: { Talle: "" }, stock: "0", price: "", sku: "", lowStockThreshold: "" }]);
+  // Builder de variantes (ROPA / HOGAR_TECH)
+  const [builderColors, setBuilderColors] = useState<string[]>([]);
+  const [builderSizes, setBuilderSizes] = useState<string[]>([]);
+  const [useBuilder, setUseBuilder] = useState(false);
+  const variantStockRef = useRef<Map<string, { stock: string; price: string; sku: string; threshold: string }>>(new Map());
+  const skipBuilderEffect = useRef(false);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [condicion, setCondicion] = useState<string>("Usado");
   const [precioMayorista, setPrecioMayorista] = useState("");
@@ -337,6 +362,8 @@ function ProductoFormPage() {
   // Escalones: array de {desde, precio} como strings para los inputs controlados
   const [escalones, setEscalones] = useState<Array<{ desde: string; precio: string }>>([]);
   const [soloMayorista, setSoloMayorista] = useState(false);
+  const [promoQtyMin, setPromoQtyMin] = useState("");
+  const [promoQtyDiscount, setPromoQtyDiscount] = useState("");
   const [cuotas, setCuotas] = useState(0);
   const [weightKg, setWeightKg] = useState("");
   const [widthCm, setWidthCm] = useState("");
@@ -367,6 +394,8 @@ function ProductoFormPage() {
         const typeConfig = getStoreType(d.store.tipoTienda || "ROPA");
         setProductCategories(typeConfig.categorias);
         setProductSubcategories(typeConfig.subcategorias);
+        const supportsBuilder = ["ROPA", "HOGAR_TECH"].includes(d.store.tipoTienda || "");
+        if (supportsBuilder) setUseBuilder(true);
         if (!editingId) {
           setForm((p) => ({ ...p, category: typeConfig.categorias[0] || "general" }));
           if (typeConfig.extraFields.length > 0) {
@@ -375,8 +404,10 @@ function ProductoFormPage() {
           if (typeConfig.condicionOptions?.length) {
             setCondicion(typeConfig.condicionOptions[0]);
           }
-          const dims = getVariantOptions(d.store.tipoTienda || "ROPA").filter(o => o !== "Otro");
-          setVariants([makeDefaultVariant(dims)]);
+          if (!supportsBuilder) {
+            const dims = getVariantOptions(d.store.tipoTienda || "ROPA").filter(o => o !== "Otro");
+            setVariants([makeDefaultVariant(dims)]);
+          }
         }
       })
       .catch(() => {});
@@ -442,26 +473,46 @@ function ProductoFormPage() {
         setReelUrls(safeJsonArray(product.reelUrls || "[]").filter((url) => typeof url === "string") as string[]);
         setCarouselIdx(0);
         type RawVariant = { name: string; value: string; stock?: number; price?: number; sku?: string; lowStockThreshold?: number };
-        setVariants(
-          product.variants?.length
-            ? product.variants.map((v: RawVariant) => {
-                let attrs: Record<string, string> = {};
-                if (typeof v.name === "string" && v.name.startsWith("{")) {
-                  try { attrs = JSON.parse(v.name); } catch {}
-                }
-                if (Object.keys(attrs).length === 0) {
-                  attrs = { [v.name || "Variante"]: v.value || (product.variants.length === 1 ? SINGLE_VARIANT_FALLBACK_VALUE : "") };
-                }
-                return {
-                  attrs,
-                  stock: v.stock?.toString() || "0",
-                  price: v.price?.toString() || "",
-                  sku: v.sku || "",
-                  lowStockThreshold: v.lowStockThreshold?.toString() || "",
-                };
-              })
-            : [makeDefaultVariant(getVariantOptions(store.tipoTienda || "ROPA").filter(o => o !== "Otro"))]
-        );
+        const loadedVariants: Variant[] = product.variants?.length
+          ? product.variants.map((v: RawVariant) => {
+              let attrs: Record<string, string> = {};
+              if (typeof v.name === "string" && v.name.startsWith("{")) {
+                try { attrs = JSON.parse(v.name); } catch {}
+              }
+              if (Object.keys(attrs).length === 0) {
+                attrs = { [v.name || "Variante"]: v.value || (product.variants.length === 1 ? SINGLE_VARIANT_FALLBACK_VALUE : "") };
+              }
+              return {
+                attrs,
+                stock: v.stock?.toString() || "0",
+                price: v.price?.toString() || "",
+                sku: v.sku || "",
+                lowStockThreshold: v.lowStockThreshold?.toString() || "",
+              };
+            })
+          : [makeDefaultVariant(getVariantOptions(store.tipoTienda || "ROPA").filter(o => o !== "Outro"))];
+        setVariants(loadedVariants);
+
+        // Si la tienda usa builder, detectar colores y segunda dimensión de las variantes existentes
+        if (["ROPA", "HOGAR_TECH"].includes(store.tipoTienda || "")) {
+          const { sizeDim } = getBuilderConfig(store.tipoTienda || "ROPA");
+          const stockMap = new Map<string, { stock: string; price: string; sku: string; threshold: string }>();
+          const uniqueColors: string[] = [];
+          const uniqueSizes: string[] = [];
+          for (const v of loadedVariants) {
+            const c = v.attrs["Color"] || "";
+            const s = v.attrs[sizeDim] || "";
+            const key = `${c}|||${s}`;
+            stockMap.set(key, { stock: v.stock, price: v.price, sku: v.sku, threshold: v.lowStockThreshold });
+            if (c && !uniqueColors.includes(c)) uniqueColors.push(c);
+            if (s && !uniqueSizes.includes(s)) uniqueSizes.push(s);
+          }
+          variantStockRef.current = stockMap;
+          // Saltar el effect de regeneración — las variants ya están cargadas correctamente
+          skipBuilderEffect.current = true;
+          setBuilderColors(uniqueColors);
+          setBuilderSizes(uniqueSizes);
+        }
         const allAttrs = safeJsonArray(product.attributes).filter(
           (a: unknown): a is Attribute =>
             !!a && typeof a === "object" && typeof (a as Attribute).key === "string" && typeof (a as Attribute).value === "string"
@@ -481,6 +532,8 @@ function ProductoFormPage() {
           }
         } catch { /* si falla el parse dejamos el estado vacío inicial */ }
         setSoloMayorista(product.soloMayorista === true);
+        setPromoQtyMin(product.promoQtyMin?.toString() || "");
+        setPromoQtyDiscount(product.promoQtyDiscount?.toString() || "");
         setCuotas(product.cuotas || 0);
         setWeightKg(product.weightKg?.toString() || "");
         setWidthCm(product.widthCm?.toString() || "");
@@ -528,9 +581,66 @@ function ProductoFormPage() {
   }
 
   function updateVariantField(idx: number, field: "stock" | "price" | "sku" | "lowStockThreshold", value: string) {
-    setVariants((p) => p.map((v, i) => (i === idx ? { ...v, [field]: value } : v)));
+    setVariants((p) => {
+      const updated = p.map((v, i) => (i === idx ? { ...v, [field]: value } : v));
+      // Persiste en el ref para que el builder no pierda stock al agregar/quitar colores
+      if (useBuilder) {
+        const sd = builderCfg.sizeDim;
+        updated.forEach(v => {
+          const key = `${v.attrs["Color"] || ""}|||${v.attrs[sd] || ""}`;
+          variantStockRef.current.set(key, { stock: v.stock, price: v.price, sku: v.sku, threshold: v.lowStockThreshold });
+        });
+      }
+      return updated;
+    });
     markDirty();
   }
+
+  // Auto-generación de variantes cuando el builder cambia colores o talles
+  useEffect(() => {
+    if (!useBuilder) return;
+    if (skipBuilderEffect.current) { skipBuilderEffect.current = false; return; }
+    if (builderColors.length === 0 && builderSizes.length === 0) { setVariants([]); return; }
+
+    const get = (key: string) => variantStockRef.current.get(key);
+    const newVariants: Variant[] = [];
+
+    const sd = builderCfg.sizeDim;
+    if (builderColors.length > 0 && builderSizes.length > 0) {
+      for (const color of builderColors) {
+        for (const size of builderSizes) {
+          const key = `${color}|||${size}`;
+          const prev = get(key);
+          newVariants.push({ attrs: { Color: color, [sd]: size }, stock: prev?.stock ?? "0", price: prev?.price ?? "", sku: prev?.sku ?? "", lowStockThreshold: prev?.threshold ?? "" });
+        }
+      }
+    } else if (builderColors.length > 0) {
+      for (const color of builderColors) {
+        const key = `${color}|||`;
+        const prev = get(key);
+        newVariants.push({ attrs: { Color: color }, stock: prev?.stock ?? "0", price: prev?.price ?? "", sku: prev?.sku ?? "", lowStockThreshold: prev?.threshold ?? "" });
+      }
+    } else {
+      for (const size of builderSizes) {
+        const key = `|||${size}`;
+        const prev = get(key);
+        newVariants.push({ attrs: { [sd]: size }, stock: prev?.stock ?? "0", price: prev?.price ?? "", sku: prev?.sku ?? "", lowStockThreshold: prev?.threshold ?? "" });
+      }
+    }
+    setVariants(newVariants);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [builderColors, builderSizes, useBuilder]);
+
+  // Asignar foto a un color (desde el builder)
+  const assignPhotoToColor = useCallback((colorValue: string, imageUrl: string | undefined) => {
+    setImages(prev => prev.map(img => {
+      if (img.variantValue === colorValue) return { ...img, variantValue: undefined };
+      if (imageUrl && img.url === imageUrl) return { ...img, variantValue: colorValue };
+      return img;
+    }));
+    markDirty();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function addVariant() {
     const dims = getVariantOptions(store.tipoTienda || "ROPA").filter(o => o !== "Otro");
@@ -735,6 +845,8 @@ function ProductoFormPage() {
           .filter((e) => e.desde.trim() !== "" && e.precio.trim() !== "")
           .map((e) => ({ desde: parseInt(e.desde), precio: parseFloat(e.precio) })),
         soloMayorista,
+        promoQtyMin: promoQtyMin || null,
+        promoQtyDiscount: promoQtyDiscount || null,
         cuotas,
         publishAt: publishAt || null,
         weightKg: weightKg || null,
@@ -761,6 +873,7 @@ function ProductoFormPage() {
   const cardRadius = RADIUS_MAP[store.cardRadius] || "rounded-xl";
   const cardShadow = SHADOW_MAP[store.cardShadow] || "shadow-sm";
   const storeTypeConfig = getStoreType(store.tipoTienda || "ROPA");
+  const builderCfg = getBuilderConfig(store.tipoTienda || "ROPA");
   const previewCategory = form.category === "otro" ? customCategory.trim() || "otro" : form.category;
   const previewSubcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
   const availableSubcategories = form.category === "otro" ? [] : productSubcategories[form.category] || [];
@@ -847,13 +960,12 @@ function ProductoFormPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripcion</label>
-                <textarea
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label>
+                <RichTextEditor
                   value={form.description}
-                  onChange={(e) => updateForm("description", e.target.value)}
-                  rows={3}
-                  placeholder="Describi tu producto..."
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  onChange={(html) => { updateForm("description", html); markDirty(); }}
+                  placeholder="Describí tu producto..."
+                  maxLength={8000}
                 />
               </div>
               {!storeTypeConfig.hideGender && (
@@ -1203,10 +1315,15 @@ function ProductoFormPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Precio tachado (opcional)
-                  <Tip text="Precio original antes del descuento. Se muestra tachado junto al precio de venta y el cliente ve el % de ahorro automáticamente." />
-                </label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1.5">
+                    <span>Precio tachado (opcional)</span>
+                    <Tip text="Precio original antes del descuento. Se muestra tachado junto al precio de venta y el cliente ve el % de ahorro automáticamente." />
+                    {discount > 0 && (
+                      <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                        -{discount}% OFF
+                      </span>
+                    )}
+                  </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
                     <input
@@ -1216,9 +1333,19 @@ function ProductoFormPage() {
                       min="0"
                       step="0.01"
                       placeholder="0"
-                      className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className={`w-full border rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        form.comparePrice && parseFloat(form.comparePrice) > 0 && parseFloat(form.comparePrice) <= parseFloat(form.price || "0")
+                          ? "border-amber-400 bg-amber-50"
+                          : "border-gray-200"
+                      }`}
                     />
                   </div>
+                  {form.comparePrice && parseFloat(form.comparePrice) > 0 && parseFloat(form.comparePrice) <= parseFloat(form.price || "0") && (
+                    <p className="mt-1 text-xs text-amber-600 flex items-center gap-1">
+                      <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                      El precio tachado debe ser mayor al precio de venta para mostrar descuento.
+                    </p>
+                  )}
                 </div>
               </div>
               {discount > 0 ? (
@@ -1383,6 +1510,46 @@ function ProductoFormPage() {
               </div>
             )}
 
+            {/* Promoción por cantidad — descuento automático al comprar N o más unidades */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+              <div>
+                <div className="flex items-center gap-1">
+                  <h2 className="font-semibold text-gray-900">Promoción por cantidad</h2>
+                  <Tip align="left" text="Si el cliente suma esta cantidad o más de este producto (en distintos colores o talles), se aplica el descuento automáticamente en el carrito." />
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">Opcional — dejá vacío si no querés usar esta función</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Cantidad mínima</label>
+                  <input
+                    type="number"
+                    value={promoQtyMin}
+                    onChange={(e) => { setPromoQtyMin(e.target.value); markDirty(); }}
+                    min="2" step="1" placeholder="ej: 2"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <span className="text-xs text-gray-400 mt-1 block">Unidades (entre distintos colores/talles)</span>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Descuento (%)</label>
+                  <input
+                    type="number"
+                    value={promoQtyDiscount}
+                    onChange={(e) => { setPromoQtyDiscount(e.target.value); markDirty(); }}
+                    min="1" max="80" step="1" placeholder="ej: 10"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <span className="text-xs text-gray-400 mt-1 block">Máximo 80%</span>
+                </div>
+              </div>
+              {promoQtyMin && promoQtyDiscount && (
+                <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-sm text-indigo-700">
+                  Al comprar <strong>{promoQtyMin} o más unidades</strong> de este producto, el cliente obtiene <strong>{promoQtyDiscount}% de descuento</strong> automáticamente.
+                </div>
+              )}
+            </div>
+
             {/* Cuotas sin interés — informativo, no conectado a ningún banco ni a Mercado Pago */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-3">
               <div>
@@ -1470,113 +1637,125 @@ function ProductoFormPage() {
                     <h2 className="font-semibold text-gray-900">Variantes y stock</h2>
                     <Tip align="left" text={variantTip(store.tipoTienda || "ROPA")} />
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">Una fila por combinación — {variantExample(store.tipoTienda || "ROPA")}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {useBuilder ? `Elegí colores y ${builderCfg.sizeLabel.toLowerCase()} — las combinaciones se generan solas.` : `Una fila por combinación — ${variantExample(store.tipoTienda || "ROPA")}`}
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={addVariant}
-                  className="flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  Agregar
-                </button>
+                {/* Modo manual como escape hatch */}
+                {["ROPA", "HOGAR_TECH"].includes(store.tipoTienda || "") && (
+                  <button
+                    type="button"
+                    onClick={() => setUseBuilder(v => !v)}
+                    className="text-xs text-gray-400 hover:text-indigo-600 underline underline-offset-2 transition-colors"
+                  >
+                    {useBuilder ? "Modo manual" : "Modo constructor"}
+                  </button>
+                )}
+                {!useBuilder && (
+                  <button
+                    type="button"
+                    onClick={addVariant}
+                    className="flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Agregar
+                  </button>
+                )}
               </div>
 
-              {variants.map((variant, idx) => (
-                <div key={idx} className="flex flex-wrap gap-3 items-end p-4 bg-gray-50 rounded-xl">
-                  {Object.keys(variant.attrs).map(dim => {
-                    const isColor = dim === "Color" || dim === "Tono";
-                    const val = variant.attrs[dim] || "";
-                    const circle = isColor ? colorPreview(val) : null;
-                    return (
-                      <div key={dim} className="flex-1 min-w-[80px]">
-                        <label className="block text-xs font-medium text-gray-500 mb-1">
-                          {dim}
-                          {isColor && (
-                            <Tip text="Escribí el nombre del color (Rojo, Verde, Negro) o un código hex (#FF0000). Se muestra como círculo de color en tu tienda." />
-                          )}
-                        </label>
-                        <div className="relative">
-                          {circle && (
-                            <span
-                              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border border-gray-300"
-                              style={{ backgroundColor: circle }}
-                            />
-                          )}
-                          <input
-                            type="text"
-                            value={val}
-                            onChange={(e) => updateVariantAttr(idx, dim, e.target.value)}
-                            placeholder={variantPlaceholder(dim)}
-                            list={dim === "Talle" ? `talle-list-${idx}` : undefined}
-                            className={`w-full border border-gray-200 rounded-lg py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${circle ? "pl-8 pr-3" : "px-3"}`}
-                          />
-                          {dim === "Talle" && (
-                            <datalist id={`talle-list-${idx}`}>
-                              {getTalleSuggestions(form.category, form.subcategory).map(s => (
-                                <option key={s} value={s} />
-                              ))}
-                            </datalist>
-                          )}
-                        </div>
+              {/* ── BUILDER MODE ── */}
+              {useBuilder ? (
+                <VariantBuilder
+                  colors={builderColors}
+                  sizes={builderSizes}
+                  variants={variants}
+                  images={images}
+                  stdSizes={getTalleSuggestions(form.category, form.subcategory)}
+                  sizeDim={builderCfg.sizeDim}
+                  sizeLabel={builderCfg.sizeLabel}
+                  sizePlaceholder={builderCfg.sizePlaceholder}
+                  sizeHint={builderCfg.sizeHint}
+                  onColorsChange={(c) => { setBuilderColors(c); markDirty(); }}
+                  onSizesChange={(s) => { setBuilderSizes(s); markDirty(); }}
+                  onVariantChange={updateVariantField}
+                  onAssignPhoto={assignPhotoToColor}
+                />
+              ) : (
+                /* ── MANUAL MODE ── */
+                <>
+                  {variants.map((variant, idx) => (
+                    <div key={idx} className="flex flex-wrap gap-3 items-end p-4 bg-gray-50 rounded-xl">
+                      {Object.keys(variant.attrs).map(dim => {
+                        const isColor = dim === "Color" || dim === "Tono";
+                        const val = variant.attrs[dim] || "";
+                        const circle = isColor ? colorPreview(val) : null;
+                        return (
+                          <div key={dim} className="flex-1 min-w-[80px]">
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                              {dim}
+                              {isColor && (
+                                <Tip text="Escribí el nombre del color (Rojo, Verde, Negro) o un código hex (#FF0000). Se muestra como círculo de color en tu tienda." />
+                              )}
+                            </label>
+                            <div className="relative">
+                              {circle && (
+                                <span
+                                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border border-gray-300"
+                                  style={{ backgroundColor: circle }}
+                                />
+                              )}
+                              <input
+                                type="text"
+                                value={val}
+                                onChange={(e) => updateVariantAttr(idx, dim, e.target.value)}
+                                placeholder={variantPlaceholder(dim)}
+                                list={dim === "Talle" ? `talle-list-${idx}` : undefined}
+                                className={`w-full border border-gray-200 rounded-lg py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${circle ? "pl-8 pr-3" : "px-3"}`}
+                              />
+                              {dim === "Talle" && (
+                                <datalist id={`talle-list-${idx}`}>
+                                  {getTalleSuggestions(form.category, form.subcategory).map(s => (
+                                    <option key={s} value={s} />
+                                  ))}
+                                </datalist>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="w-20 shrink-0">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Stock</label>
+                        <input type="number" value={variant.stock} onChange={(e) => updateVariantField(idx, "stock", e.target.value)} min="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                       </div>
-                    );
-                  })}
-                  <div className="w-20 shrink-0">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Stock</label>
-                    <input
-                      type="number"
-                      value={variant.stock}
-                      onChange={(e) => updateVariantField(idx, "stock", e.target.value)}
-                      min="0"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div className="w-24 shrink-0">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Precio extra</label>
-                    <input
-                      type="number"
-                      value={variant.price}
-                      onChange={(e) => updateVariantField(idx, "price", e.target.value)}
-                      min="0"
-                      placeholder="0"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div className="w-24 shrink-0">
-                    <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center">
-                      Alerta stock
-                      <Tip align="right" text="Te avisamos por mail cuando el stock de esta variante baje a este número o menos. Dejalo vacío para usar el valor por defecto (5)." />
-                    </label>
-                    <input
-                      type="number"
-                      value={variant.lowStockThreshold}
-                      onChange={(e) => updateVariantField(idx, "lowStockThreshold", e.target.value)}
-                      min="0"
-                      placeholder="5"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div className="flex items-end pb-1 shrink-0">
-                    {variants.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeVariant(idx)}
-                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                      <div className="w-24 shrink-0">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Precio extra</label>
+                        <input type="number" value={variant.price} onChange={(e) => updateVariantField(idx, "price", e.target.value)} min="0" placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                      </div>
+                      <div className="w-24 shrink-0">
+                        <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center">
+                          Alerta stock
+                          <Tip align="right" text="Te avisamos por mail cuando el stock de esta variante baje a este número o menos. Dejalo vacío para usar el valor por defecto (5)." />
+                        </label>
+                        <input type="number" value={variant.lowStockThreshold} onChange={(e) => updateVariantField(idx, "lowStockThreshold", e.target.value)} min="0" placeholder="5" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                      </div>
+                      <div className="flex items-end pb-1 shrink-0">
+                        {variants.length > 1 && (
+                          <button type="button" onClick={() => removeVariant(idx)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
 
-              {/* Hint: tenés colores definidos pero hay fotos sin asignar */}
-              {colorValues.length > 0 && images.length > 0 && images.some(img => !img.variantValue) && (
-                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-700">
-                  <svg className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                  <span>Tenés colores definidos pero tus fotos no tienen color asignado. Scrolleá a <strong>Imágenes del producto</strong> (arriba) para asignar cada foto a su color — así el cliente ve la foto correcta al elegir un color.</span>
-                </div>
+                  {/* Hint: fotos sin color asignado */}
+                  {colorValues.length > 0 && images.length > 0 && images.some(img => !img.variantValue) && (
+                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-700">
+                      <svg className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                      <span>Tenés colores definidos pero tus fotos no tienen color asignado. Scrolleá a <strong>Imágenes del producto</strong> (arriba) para asignar cada foto a su color.</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>}
 
