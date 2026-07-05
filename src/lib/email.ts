@@ -528,6 +528,9 @@ export async function sendOrderConfirmationEmail({
   items,
   subtotal,
   promoSavings,
+  promoType,
+  promoQtyMin,
+  promoPayQty,
   discountAmount,
   shippingCost,
   shippingMethod,
@@ -544,6 +547,9 @@ export async function sendOrderConfirmationEmail({
   items: { name: string; variant?: string | null; quantity: number; price: number }[];
   subtotal: number;
   promoSavings?: number;
+  promoType?: string | null;
+  promoQtyMin?: number | null;
+  promoPayQty?: number | null;
   discountAmount: number;
   shippingCost: number;
   shippingMethod: string;
@@ -626,7 +632,7 @@ export async function sendOrderConfirmationEmail({
           </div>
           ${promoSavings && promoSavings > 0 ? `
           <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-            <span style="font-size:14px;color:#16a34a;font-weight:600;">🎉 Ahorro por promo cantidad</span>
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">${promoType === "N_PAY_M" && promoQtyMin && promoPayQty ? `🎉 Llevá ${promoQtyMin} pagá ${promoPayQty}` : "🎉 Ahorro por promo cantidad"}</span>
             <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(promoSavings)} incluidos</span>
           </div>` : ""}
           ${discountAmount > 0 ? `
@@ -694,6 +700,9 @@ export async function sendNewOrderToOwnerEmail({
   items,
   subtotal,
   promoSavings,
+  promoType,
+  promoQtyMin,
+  promoPayQty,
   discountAmount,
   shippingCost,
   shippingMethod,
@@ -714,6 +723,9 @@ export async function sendNewOrderToOwnerEmail({
   items: { name: string; variant?: string | null; quantity: number; price: number }[];
   subtotal: number;
   promoSavings?: number;
+  promoType?: string | null;
+  promoQtyMin?: number | null;
+  promoPayQty?: number | null;
   discountAmount: number;
   shippingCost: number;
   shippingMethod: string;
@@ -819,7 +831,7 @@ export async function sendNewOrderToOwnerEmail({
           </div>
           ${promoSavings && promoSavings > 0 ? `
           <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-            <span style="font-size:14px;color:#16a34a;font-weight:600;">Ahorro promo cantidad</span>
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">${promoType === "N_PAY_M" && promoQtyMin && promoPayQty ? `Llevá ${promoQtyMin} pagá ${promoPayQty}` : "Ahorro promo cantidad"}</span>
             <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(promoSavings)} incluidos</span>
           </div>` : ""}
           ${discountAmount > 0 ? `

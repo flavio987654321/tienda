@@ -48,7 +48,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
     name, sanitizedDescription, parsedPrice, parsedComparePrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista,
     parsedPreciosEscalonados, parsedSoloMayorista, parsedCuotas, normalizedVariants,
     parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
-    parsedPromoQtyMin, parsedPromoQtyDiscount,
+    parsedPromoQtyMin, parsedPromoQtyDiscount, parsedPromoType, parsedPromoPayQty,
   } = validated;
 
   // Guard de seguridad: escalones y soloMayorista solo aplican a tiendas mayoristas.
@@ -207,6 +207,8 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         soloMayorista: safeSoloMayorista,
         promoQtyMin: parsedPromoQtyMin,
         promoQtyDiscount: parsedPromoQtyDiscount,
+        promoType: parsedPromoType,
+        promoPayQty: parsedPromoPayQty,
         cuotas: parsedCuotas,
         weightKg: parsedWeightKg,
         widthCm: parsedWidthCm,
@@ -218,7 +220,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
       },
       include: { variants: true },
     });
-  });
+  }, { timeout: 30000 });
 
   if (lowStockItems.length > 0) {
     dispatchLowStockAlerts(auth.ownerId, auth.storeId, lowStockItems).catch((err) =>

@@ -17,6 +17,7 @@ import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { colorToSwatch } from "@/lib/colorSwatch";
+import { promoModalText } from "@/lib/promoLabel";
 import { discountPercent } from "@/lib/discount";
 
 type Product = StorefrontProduct;
@@ -253,8 +254,8 @@ export default function ChicParis() {
     toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
     cartCount,
     searchResults, favoriteProducts,
-    fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem,
-    pendingItems, pendingTotal, promoActive, pendingPromoDiscount,
+    fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, editPendingItem,
+    pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, editingIdx,
     handleContact, toggleFavorite,
   } = cart;
   const accentText = getContrastColor(ACC) === "light" ? "#fff" : "#111";
@@ -1569,28 +1570,32 @@ export default function ChicParis() {
               ) : modalProduct.promoQtyMin ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, padding: "8px 12px", borderRadius: 4, background: promoActive ? "rgba(22,163,74,0.08)" : `${ACC}11`, color: promoActive ? "#16a34a" : ACC, border: `1px solid ${promoActive ? "rgba(22,163,74,0.2)" : `${ACC}33`}` }}>
-                    {promoActive ? `¡${pendingPromoDiscount}% de descuento aplicado!` : `Llevá ${modalProduct.promoQtyMin - pendingTotal} más y obtenés ${modalProduct.promoQtyDiscount}% off`}
+                    {promoModalText(modalProduct.promoType, modalProduct.promoQtyMin!, modalProduct.promoQtyDiscount, modalProduct.promoPayQty, pendingTotal)}
                   </div>
                   {pendingItems.length > 0 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      {pendingItems.map((item, idx) => (
-                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "#555", padding: "5px 8px", background: "#f8f8f8", borderRadius: 3 }}>
-                          <span>{[item.color, item.size].filter(Boolean).join(" / ")} ×{item.qty}</span>
-                          <button onClick={() => removePendingItem(idx)} style={{ background: "none", border: "none", color: "#bbb", cursor: "pointer", fontSize: 14, padding: "0 2px" }}>×</button>
-                        </div>
-                      ))}
+                      {pendingItems.map((item, idx) => {
+                        const isEditing = editingIdx === idx;
+                        return (
+                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "#555", padding: "5px 8px", background: isEditing ? `${ACC}18` : "#f8f8f8", borderRadius: 3, border: isEditing ? `1px dashed ${ACC}88` : "1px solid transparent" }}>
+                            <button onClick={() => editPendingItem(idx)} title={isEditing ? "Editando..." : "Tocá para editar"} style={{ background: "none", border: "none", color: isEditing ? ACC : "#777", cursor: "pointer", fontSize: 11, fontWeight: 600, padding: 0, textAlign: "left", flex: 1, opacity: isEditing ? 0.7 : 1 }}>
+                              {isEditing ? "✎ " : ""}{[isEditing ? selectedColor : item.color, isEditing ? selectedSize : item.size].filter(Boolean).join(" / ")} ×{isEditing ? qty : item.qty}
+                            </button>
+                            {!isEditing && <button onClick={() => removePendingItem(idx)} style={{ background: "none", border: "none", color: "#bbb", cursor: "pointer", fontSize: 14, padding: "0 2px" }}>×</button>}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                   <button onClick={addToPending} disabled={selectedVariantStock === 0}
                     style={{ background: "none", border: `1px solid ${selectedVariantStock === 0 ? "#ccc" : ACC}`, color: selectedVariantStock === 0 ? "#ccc" : ACC, padding: "12px", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
-                    {selectedVariantStock === 0 ? "Sin stock" : "+ Agregar a mi selección"}
+                    {selectedVariantStock === 0 ? "Sin stock" : editingIdx !== null ? "✓ Confirmar cambios" : "+ Agregar a mi selección"}
                   </button>
                   {pendingItems.length > 0 && (() => {
-                    const subtotal = pendingItems.reduce((s, i) => s + modalProduct.price * i.qty, 0);
-                    const total = promoActive ? subtotal * (1 - pendingPromoDiscount / 100) : subtotal;
+                    const total = pendingCartValue;
                     return (
                       <button onClick={addAllToCart} style={{ background: ACC, color: accentText, border: "none", padding: "14px", fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
-                        Agregar al Carrito ({pendingTotal} uds) · {fmt(total)}
+                        Agregar al Carrito ({pendingTotal} unid.) · {fmt(total)}
                       </button>
                     );
                   })()}

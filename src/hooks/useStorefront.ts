@@ -28,6 +28,8 @@ export type StorefrontProduct = {
   soloMayorista: boolean;
   promoQtyMin: number | null;
   promoQtyDiscount: number | null;
+  promoType?: string;
+  promoPayQty?: number | null;
   // Cuotas sin interés informativas (0/undefined = no mostrar). No conectado
   // a ninguna API bancaria ni de Mercado Pago — solo se usa para calcular
   // precio/N en la página de producto.
@@ -164,6 +166,8 @@ type RawProduct = {
   soloMayorista?: boolean;
   promoQtyMin?: number | null;
   promoQtyDiscount?: number | null;
+  promoType?: string;
+  promoPayQty?: number | null;
   cuotas?: number;
   category?: string;
   subcategory?: string;
@@ -247,6 +251,8 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     soloMayorista: raw.soloMayorista ?? false,
     promoQtyMin: raw.promoQtyMin ?? null,
     promoQtyDiscount: raw.promoQtyDiscount ?? null,
+    promoType: raw.promoType ?? "PERCENT",
+    promoPayQty: raw.promoPayQty ?? null,
     cuotas: raw.cuotas ?? 0,
     category: raw.category ?? "general",
     subcategory: raw.subcategory ?? undefined,

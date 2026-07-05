@@ -1,6 +1,7 @@
 "use client";
 import { FadeImage } from "./FadeImage";
 import type { useCartLogic } from "@/hooks/useCartLogic";
+import { promoSavingsLabel } from "@/lib/promoLabel";
 
 // Un solo componente de carrito reutilizado por todos los templates de un mismo
 // tipo de negocio (hoy: Electro Prime, Tech Nova, Home Studio, Casa Clara) — así
@@ -35,7 +36,7 @@ export function CartDrawer({
   } = cart;
   const blockBuy = isOwner || isPreview;
 
-  function itemEffectiveUnitPrice(product: typeof cartItems[number]["product"], qty: number): number {
+  function itemBaseUnitPrice(product: typeof cartItems[number]["product"], qty: number): number {
     if (!isWholesale || !product.cantMinMayorista || qty < product.cantMinMayorista) return product.price;
     const escalones = product.preciosEscalonados ?? [];
     let best: number | null = null;
@@ -43,6 +44,27 @@ export function CartDrawer({
       if (qty >= band.desde && (best === null || band.precio < best)) best = band.precio;
     }
     return best ?? product.precioMayorista ?? product.price;
+  }
+
+  // Retorna el total con descuento para un ítem, considerando N_PAY_M proporcional
+  function itemDiscountedTotal(item: typeof cartItems[number]): number {
+    const product = item.product;
+    const N = product.promoQtyMin;
+    const M = product.promoPayQty;
+    if (product.promoType === "N_PAY_M" && N && M && item.discountPct) {
+      const totalQtyForProduct = cartItems
+        .filter(i => i.product.id === product.id)
+        .reduce((s, i) => s + i.qty, 0);
+      if (totalQtyForProduct >= N) {
+        // Use totalQtyForProduct (not item.qty) for wholesale tier lookup — the group unlocks the tier
+        const baseUnit = itemBaseUnitPrice(product, totalQtyForProduct);
+        const paidQty = Math.floor(totalQtyForProduct / N) * M + totalQtyForProduct % N;
+        const effectiveUnit = (paidQty / totalQtyForProduct) * baseUnit;
+        return Math.round(effectiveUnit * item.qty * 100) / 100;
+      }
+    }
+    const baseUnit = itemBaseUnitPrice(product, item.qty);
+    return Math.round(baseUnit * item.qty * (1 - (item.discountPct ?? 0) / 100) * 100) / 100;
   }
 
   return (
@@ -86,14 +108,14 @@ export function CartDrawer({
                   {item.discountPct ? (
                     <div style={{ textAlign:"right" }}>
                       <span style={{ fontSize:11, color:MID, textDecoration:"line-through", display:"block", lineHeight:1.3 }}>
-                        {fmt(itemEffectiveUnitPrice(item.product, item.qty) * item.qty)}
+                        {fmt(itemBaseUnitPrice(item.product, item.qty) * item.qty)}
                       </span>
                       <span style={{ color:accent, fontWeight:700, fontSize:14 }}>
-                        {fmt(itemEffectiveUnitPrice(item.product, item.qty) * item.qty * (1 - item.discountPct / 100))}
+                        {fmt(itemDiscountedTotal(item))}
                       </span>
                     </div>
                   ) : (
-                    <span style={{ color:accent, fontWeight:700, fontSize:14 }}>{fmt(itemEffectiveUnitPrice(item.product, item.qty) * item.qty)}</span>
+                    <span style={{ color:accent, fontWeight:700, fontSize:14 }}>{fmt(itemBaseUnitPrice(item.product, item.qty) * item.qty)}</span>
                   )}
                 </div>
               </div>
@@ -102,7 +124,7 @@ export function CartDrawer({
           ))}
         </div>
         {cartItems.length > 0 && (() => {
-          const fullTotal = cartItems.reduce((s, i) => s + itemEffectiveUnitPrice(i.product, i.qty) * i.qty, 0);
+          const fullTotal = cartItems.reduce((s, i) => s + itemBaseUnitPrice(i.product, i.qty) * i.qty, 0);
           const promoSavings = fullTotal - cartTotal;
           return (
           <div style={{ padding:"16px 24px 28px", borderTop:`1px solid ${border}`, flexShrink:0 }}>
@@ -110,12 +132,15 @@ export function CartDrawer({
               <span style={{ fontSize:11, opacity:0.6, letterSpacing:1, textTransform:"uppercase", color:T }}>Subtotal</span>
               <span style={{ fontSize:11, opacity:0.6, color:T }}>{cartCount} {cartCount === 1 ? "producto" : "productos"}</span>
             </div>
-            {promoSavings > 0.01 && (
-              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>Descuento promo</span>
-                <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>-{fmt(promoSavings)}</span>
-              </div>
-            )}
+            {promoSavings > 0.01 && (() => {
+              const pi = cartItems.find(i => i.discountPct && i.discountPct > 0);
+              return (
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>{promoSavingsLabel(pi?.product.promoType, pi?.product.promoQtyMin, pi?.product.promoPayQty)}</span>
+                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>-{fmt(promoSavings)}</span>
+                </div>
+              );
+            })()}
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:20 }}>
               <span style={{ fontSize:13, opacity:0.7, color:T }}>Total</span>
               <span style={{ fontSize:22, fontWeight:700, color:accent }}>{fmt(cartTotal)}</span>

@@ -334,8 +334,11 @@ model Product {
   // Producto exclusivo de catálogo mayorista: solo aparece en tiendas con tieneVentaMayorista=true.
   soloMayorista       Boolean @default(false)
   // Descuento por cantidad (retail): aplica cuando el cliente suma promoQtyMin o más unidades del mismo producto.
+  // promoType: "PERCENT" = porcentaje de descuento | "N_PAY_M" = llevá N pagá M
   promoQtyMin      Int?
   promoQtyDiscount Float?
+  promoType        String  @default("PERCENT")
+  promoPayQty      Int?
   // Cuotas sin interés informativas (no conectado a ninguna API bancaria ni
   // de Mercado Pago): 0 = no mostrar, o 3/6/12. Solo se muestra en la tienda
   // si además la tienda tiene Mercado Pago conectado.

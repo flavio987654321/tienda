@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
 
   try {
     let usedRewardCouponId: string | null = null;
-    const { createdOrder: order, promoSavings } = await prisma.$transaction(async (tx) => {
+    const { createdOrder: order, promoSavings, promoProductInfo } = await prisma.$transaction(async (tx) => {
       const store = await tx.store.findUnique({
         where: { id: storeId },
         select: {
@@ -286,14 +286,24 @@ export async function POST(req: NextRequest) {
         const totalQtyForProduct = totalQtyByProduct.get(product.id) ?? item.quantity;
         const promoApplies =
           product.promoQtyMin != null &&
-          product.promoQtyDiscount != null &&
           product.promoQtyMin >= 2 &&
-          product.promoQtyDiscount > 0 &&
-          product.promoQtyDiscount <= 80 &&
-          totalQtyForProduct >= product.promoQtyMin;
+          totalQtyForProduct >= product.promoQtyMin &&
+          (product.promoType === "N_PAY_M"
+            ? product.promoPayQty != null && product.promoPayQty >= 1 && product.promoPayQty < product.promoQtyMin
+            : product.promoQtyDiscount != null && product.promoQtyDiscount > 0 && product.promoQtyDiscount <= 80);
+        const effectiveDiscountPct = promoApplies
+          ? (product.promoType === "N_PAY_M" && product.promoQtyMin && product.promoPayQty
+              ? (() => {
+                  const N = product.promoQtyMin!;
+                  const M = product.promoPayQty!;
+                  const paidQty = Math.floor(totalQtyForProduct / N) * M + totalQtyForProduct % N;
+                  return (1 - paidQty / totalQtyForProduct) * 100;
+                })()
+              : product.promoQtyDiscount ?? 0)
+          : 0;
         // Redondear a centavos para evitar punto flotante en totales
         const unitPrice = promoApplies
-          ? Math.round(wholesaleOrBasePrice * (1 - product.promoQtyDiscount! / 100) * 100) / 100
+          ? Math.round(wholesaleOrBasePrice * (1 - effectiveDiscountPct / 100) * 100) / 100
           : wholesaleOrBasePrice;
 
         orderItems.push({
@@ -426,7 +436,11 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return { createdOrder, promoSavings };
+      // Capturar info del producto con promo para el email
+      const promoProduct = products.find(p => p.promoQtyMin && totalQtyByProduct.get(p.id) != null && totalQtyByProduct.get(p.id)! >= p.promoQtyMin);
+      const promoProductInfo = promoProduct ? { type: promoProduct.promoType, min: promoProduct.promoQtyMin!, payQty: promoProduct.promoPayQty } : null;
+
+      return { createdOrder, promoSavings, promoProductInfo };
     }, { timeout: 15_000 });
 
     // Donación opcional a la Canasta Solidaria (toggle del carrito) — un
@@ -567,6 +581,9 @@ export async function POST(req: NextRequest) {
         items: emailItems,
         subtotal: order.subtotal,
         promoSavings: promoSavings > 0 ? promoSavings : undefined,
+        promoType: promoProductInfo?.type,
+        promoQtyMin: promoProductInfo?.min,
+        promoPayQty: promoProductInfo?.payQty,
         discountAmount: order.discountAmount,
         shippingCost: order.shippingCost,
         shippingMethod: shipping.label,

@@ -364,6 +364,8 @@ function ProductoFormPage() {
   const [soloMayorista, setSoloMayorista] = useState(false);
   const [promoQtyMin, setPromoQtyMin] = useState("");
   const [promoQtyDiscount, setPromoQtyDiscount] = useState("");
+  const [promoType, setPromoType] = useState<"PERCENT" | "N_PAY_M">("PERCENT");
+  const [promoPayQty, setPromoPayQty] = useState("");
   const [cuotas, setCuotas] = useState(0);
   const [weightKg, setWeightKg] = useState("");
   const [widthCm, setWidthCm] = useState("");
@@ -534,6 +536,8 @@ function ProductoFormPage() {
         setSoloMayorista(product.soloMayorista === true);
         setPromoQtyMin(product.promoQtyMin?.toString() || "");
         setPromoQtyDiscount(product.promoQtyDiscount?.toString() || "");
+        setPromoType((product.promoType as "PERCENT" | "N_PAY_M") || "PERCENT");
+        setPromoPayQty(product.promoPayQty?.toString() || "");
         setCuotas(product.cuotas || 0);
         setWeightKg(product.weightKg?.toString() || "");
         setWidthCm(product.widthCm?.toString() || "");
@@ -846,7 +850,9 @@ function ProductoFormPage() {
           .map((e) => ({ desde: parseInt(e.desde), precio: parseFloat(e.precio) })),
         soloMayorista,
         promoQtyMin: promoQtyMin || null,
-        promoQtyDiscount: promoQtyDiscount || null,
+        promoQtyDiscount: promoType === "PERCENT" ? (promoQtyDiscount || null) : null,
+        promoType,
+        promoPayQty: promoType === "N_PAY_M" ? (promoPayQty || null) : null,
         cuotas,
         publishAt: publishAt || null,
         weightKg: weightKg || null,
@@ -1515,37 +1521,80 @@ function ProductoFormPage() {
               <div>
                 <div className="flex items-center gap-1">
                   <h2 className="font-semibold text-gray-900">Promoción por cantidad</h2>
-                  <Tip align="left" text="Si el cliente suma esta cantidad o más de este producto (en distintos colores o talles), se aplica el descuento automáticamente en el carrito." />
+                  <Tip align="left" text="Elegí el tipo de promoción: «% de descuento» aplica un porcentaje de rebaja al comprar N o más unidades; «Llevá N, pagá M» cobra solo M unidades aunque el cliente lleve N (ej: llevá 3, pagá 2). El descuento se aplica automático en el carrito." />
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5">Opcional — dejá vacío si no querés usar esta función</p>
               </div>
+
+              {/* Tipo de promo */}
+              <div className="grid grid-cols-2 gap-3">
+                <button type="button"
+                  onClick={() => { setPromoType("PERCENT"); markDirty(); }}
+                  className={`relative px-4 py-4 rounded-xl border-2 text-left transition-all ${promoType === "PERCENT" ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-gray-50 hover:border-indigo-200"}`}>
+                  {promoType === "PERCENT" && <span className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px]">✓</span>}
+                  <div className="text-xl mb-1.5">🏷️</div>
+                  <div className={`text-sm font-semibold ${promoType === "PERCENT" ? "text-indigo-700" : "text-gray-700"}`}>% de descuento</div>
+                  <div className="text-xs mt-0.5 text-gray-400">Comprá 3, obtenés 20% off</div>
+                </button>
+                <button type="button"
+                  onClick={() => { setPromoType("N_PAY_M"); markDirty(); }}
+                  className={`relative px-4 py-4 rounded-xl border-2 text-left transition-all ${promoType === "N_PAY_M" ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-gray-50 hover:border-indigo-200"}`}>
+                  {promoType === "N_PAY_M" && <span className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px]">✓</span>}
+                  <div className="text-xl mb-1.5">🎁</div>
+                  <div className={`text-sm font-semibold ${promoType === "N_PAY_M" ? "text-indigo-700" : "text-gray-700"}`}>Llevá N, pagá M</div>
+                  <div className="text-xs mt-0.5 text-gray-400">Llevá 3, pagá solo 2</div>
+                </button>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Cantidad mínima</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    {promoType === "N_PAY_M" ? "Llevá (N)" : "Cantidad mínima"}
+                  </label>
                   <input
                     type="number"
                     value={promoQtyMin}
                     onChange={(e) => { setPromoQtyMin(e.target.value); markDirty(); }}
-                    min="2" step="1" placeholder="ej: 2"
+                    min="2" step="1" placeholder="ej: 3"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <span className="text-xs text-gray-400 mt-1 block">Unidades (entre distintos colores/talles)</span>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Descuento (%)</label>
-                  <input
-                    type="number"
-                    value={promoQtyDiscount}
-                    onChange={(e) => { setPromoQtyDiscount(e.target.value); markDirty(); }}
-                    min="1" max="80" step="1" placeholder="ej: 10"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                  <span className="text-xs text-gray-400 mt-1 block">Máximo 80%</span>
+                  {promoType === "PERCENT" ? (
+                    <>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Descuento (%)</label>
+                      <input
+                        type="number"
+                        value={promoQtyDiscount}
+                        onChange={(e) => { setPromoQtyDiscount(e.target.value); markDirty(); }}
+                        min="1" max="80" step="1" placeholder="ej: 10"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <span className="text-xs text-gray-400 mt-1 block">Máximo 80%</span>
+                    </>
+                  ) : (
+                    <>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Pagá (M)</label>
+                      <input
+                        type="number"
+                        value={promoPayQty}
+                        onChange={(e) => { setPromoPayQty(e.target.value); markDirty(); }}
+                        min="1" max={promoQtyMin ? String(parseInt(promoQtyMin) - 1) : undefined} step="1" placeholder="ej: 2"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <span className="text-xs text-gray-400 mt-1 block">Debe ser menor que N {promoQtyMin && parseInt(promoQtyMin) > 1 ? `(máx ${parseInt(promoQtyMin) - 1})` : ""}</span>
+                    </>
+                  )}
                 </div>
               </div>
-              {promoQtyMin && promoQtyDiscount && (
+
+              {promoQtyMin && (promoType === "PERCENT" ? promoQtyDiscount : promoPayQty) && (
                 <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-sm text-indigo-700">
-                  Al comprar <strong>{promoQtyMin} o más unidades</strong> de este producto, el cliente obtiene <strong>{promoQtyDiscount}% de descuento</strong> automáticamente.
+                  {promoType === "PERCENT"
+                    ? <>Al comprar <strong>{promoQtyMin} o más unidades</strong> de este producto, el cliente obtiene <strong>{promoQtyDiscount}% de descuento</strong> automáticamente.</>
+                    : <>Al comprar <strong>{promoQtyMin} unidades</strong>, el cliente paga solo <strong>{promoPayQty}</strong> — {Math.round((Number(promoQtyMin) - Number(promoPayQty)) / Number(promoQtyMin) * 100)}% de ahorro automático.</>
+                  }
                 </div>
               )}
             </div>

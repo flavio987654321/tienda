@@ -10,6 +10,7 @@ import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
+import { promoModalText } from "@/lib/promoLabel";
 
 const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
   ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["pinterest", "Pinterest"],
@@ -1737,7 +1738,7 @@ function ProductosPageInner() {
               {modalProduct.promoQtyMin && modalProduct.promoQtyDiscount ? (
                 <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:"auto" }}>
                   <div style={{ fontSize:11, fontWeight:600, padding:"8px 12px", borderRadius:4, background: promoActive ? "rgba(52,211,153,0.1)" : `${G}10`, color: promoActive ? "#16a34a" : GT, border:`1px solid ${promoActive ? "rgba(52,211,153,0.25)" : `${G}30`}` }}>
-                    {promoActive ? `¡${pendingPromoDiscount}% de descuento aplicado!` : `Llevá ${modalProduct.promoQtyMin - pendingTotal} más y obtenés ${modalProduct.promoQtyDiscount}% off`}
+                    {promoModalText(modalProduct.promoType, modalProduct.promoQtyMin!, modalProduct.promoQtyDiscount, modalProduct.promoPayQty, pendingTotal)}
                   </div>
                   {pendingItems.length > 0 && (
                     <div style={{ display:"flex", flexDirection:"column", gap:4 }}>

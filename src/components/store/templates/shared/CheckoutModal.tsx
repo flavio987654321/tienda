@@ -4,6 +4,7 @@ import type { useCartLogic } from "@/hooks/useCartLogic";
 import type { CartTheme } from "./CartDrawer";
 import { FadeImage } from "./FadeImage";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
+import { promoSavingsLabel } from "@/lib/promoLabel";
 
 // Checkout completo (datos del comprador, envío, pago, cupón, donación opcional
 // y términos) compartido por todos los templates de un mismo tipo de negocio.
@@ -177,12 +178,15 @@ export function CheckoutModal({
                       <span style={{ fontSize:13, opacity:0.6, color:T }}>Subtotal</span>
                       <span style={{ fontSize:13, opacity:0.6, color:T }}>{fmt(promoSavings > 0.01 ? fullTotal : cartTotal)}</span>
                     </div>
-                    {promoSavings > 0.01 && (
-                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
-                        <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>Descuento promo</span>
-                        <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>-{fmt(promoSavings)}</span>
-                      </div>
-                    )}
+                    {promoSavings > 0.01 && (() => {
+                      const pi = cartItems.find(i => i.discountPct && i.discountPct > 0);
+                      return (
+                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>{promoSavingsLabel(pi?.product.promoType, pi?.product.promoQtyMin, pi?.product.promoPayQty)}</span>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>-{fmt(promoSavings)}</span>
+                        </div>
+                      );
+                    })()}
                   </>;
                 })()}
                 {couponDiscount > 0 && (
