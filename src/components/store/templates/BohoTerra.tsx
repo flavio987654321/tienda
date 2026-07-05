@@ -306,13 +306,15 @@ export default function BohoTerra() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAnnouncement]);
 
+  const colorSyncingRef = useRef(false);
+
   // Al cambiar color: sync imagen + talle disponible
   useEffect(() => {
     if (!modalProduct || !selectedColor) return;
     const imgIdx = modalProduct.imageItems.findIndex(
       img => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
     );
-    if (imgIdx !== -1) setModalImg(imgIdx);
+    if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
     const colorVariants = modalProduct.variants.filter(v => {
       const a = parseVariantAttrs(v.name);
       return !!a && Object.values(a).some((x: unknown) => String(x).toLowerCase() === selectedColor.toLowerCase());
@@ -356,7 +358,7 @@ export default function BohoTerra() {
           const imgIdx = modalProduct.imageItems.findIndex(
             img => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
           );
-          if (imgIdx !== -1) setModalImg(imgIdx);
+          if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
         }
       }
     }
@@ -366,16 +368,7 @@ export default function BohoTerra() {
   // Al cambiar de imagen (flechas/miniaturas): sync color si esa foto pertenece a otra variante
   useEffect(() => {
     if (!modalProduct) return;
-    const img = modalProduct.imageItems[modalImg];
-    if (img?.variantValue && img.variantValue.toLowerCase() !== selectedColor?.toLowerCase()) {
-      setSelectedColor(img.variantValue);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalImg]);
-
-  // Al cambiar de imagen (flechas/miniaturas): sync color si esa foto pertenece a otra variante
-  useEffect(() => {
-    if (!modalProduct) return;
+    if (colorSyncingRef.current) { colorSyncingRef.current = false; return; }
     const img = modalProduct.imageItems[modalImg];
     if (img?.variantValue && img.variantValue.toLowerCase() !== selectedColor?.toLowerCase()) {
       setSelectedColor(img.variantValue);
@@ -1305,13 +1298,53 @@ export default function BohoTerra() {
                     style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.85)", border:"none", width:32, height:32, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>›</button>
                 </>)}
               </div>
-              <div style={{ display:"flex", gap:8, padding:"10px 14px", background:S }}>
+              <div style={{ display:"flex", gap:8, padding:"10px 14px", background:S, overflowX:"auto" }}>
                 {modalProduct.images.map((img,i)=>(
-                  <button key={i} onClick={()=>setModalImg(i)} style={{ position:"relative", width:52, height:52, padding:2, border:i===modalImg?`2px solid ${A}`:"2px solid transparent", background:"none", cursor:"pointer" }}>
+                  <button key={i} onClick={()=>setModalImg(i)} style={{ position:"relative", width:52, height:52, flexShrink:0, padding:2, border:i===modalImg?`2px solid ${A}`:"2px solid transparent", background:"none", cursor:"pointer" }}>
                     <FadeImage src={img} alt="" fill sizes="52px" style={{ objectFit:"cover" }}/>
                   </button>
                 ))}
               </div>
+              {modalProduct.reelUrls.length > 0 && (
+                <div style={{ padding:"14px 14px 18px", background:"#fff", borderTop:`1px solid rgba(44,34,24,0.08)` }}>
+                  <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:MID, margin:"0 0 10px" }}>Videos</p>
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
+                    {(() => {
+                      const url = modalProduct.reelUrls[reelIndex];
+                      if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
+                        return <video controls style={{ width:"100%", maxWidth:180, aspectRatio:"9/16", objectFit:"cover", background:"#000", borderRadius:6 }}><source src={url} /></video>;
+                      }
+                      let embedUrl = "";
+                      if (url.includes("youtube.com/shorts/")) { const id = url.split("shorts/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
+                      else if (url.includes("youtu.be/")) { const id = url.split("youtu.be/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
+                      else if (url.includes("youtube.com/watch")) { try { const id = new URL(url).searchParams.get("v"); if (id) embedUrl = `https://www.youtube.com/embed/${id}`; } catch {} }
+                      if (embedUrl) return <iframe src={embedUrl} allow="autoplay; encrypted-media" allowFullScreen style={{ width:"100%", maxWidth:180, aspectRatio:"9/16", border:"none", borderRadius:6 }} />;
+                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : "Video";
+                      return (
+                        <a href={url} target="_blank" rel="noopener noreferrer"
+                          style={{ width:160, aspectRatio:"9/16", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, border:`1px solid rgba(44,34,24,0.14)`, textDecoration:"none", color:T, borderRadius:6, background:S }}>
+                          <svg width={22} height={22} viewBox="0 0 24 24" fill={A} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                          <span style={{ fontSize:10 }}>{platform}</span>
+                        </a>
+                      );
+                    })()}
+                    {modalProduct.reelUrls.length > 1 && (
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        <button onClick={() => setReelIndex(i => (i - 1 + modalProduct.reelUrls.length) % modalProduct.reelUrls.length)}
+                          style={{ background:"none", border:`1px solid rgba(44,34,24,0.2)`, color:T, width:28, height:28, borderRadius:"50%", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+                        <div style={{ display:"flex", gap:4 }}>
+                          {modalProduct.reelUrls.map((_, i) => (
+                            <button key={i} onClick={() => setReelIndex(i)}
+                              style={{ width:5, height:5, borderRadius:"50%", background: i === reelIndex ? A : "rgba(44,34,24,0.2)", border:"none", cursor:"pointer", padding:0 }} />
+                          ))}
+                        </div>
+                        <button onClick={() => setReelIndex(i => (i + 1) % modalProduct.reelUrls.length)}
+                          style={{ background:"none", border:`1px solid rgba(44,34,24,0.2)`, color:T, width:28, height:28, borderRadius:"50%", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{ padding: isMobile ? "20px 20px" : "40px 36px", display:"flex", flexDirection:"column", gap:18 }}>
               <div>
@@ -1353,9 +1386,12 @@ export default function BohoTerra() {
                       <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:600, color:A, border:`1px solid ${A}`, padding:"4px 10px", fontFamily:"Georgia, serif", fontStyle:"italic" }}>{condicionAttr.value}</span>
                     )}
                     {otherAttrs.length > 0 && (
-                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                        {otherAttrs.map(a => (
-                          <p key={a.key} style={{ fontSize:12, color:MID, margin:0 }}><span style={{ color:T, opacity:0.7 }}>{a.key}:</span> {a.value}</p>
+                      <div style={{ borderRadius:4, overflow:"hidden", border:`1px solid rgba(44,34,24,0.1)` }}>
+                        {otherAttrs.map((a, i) => (
+                          <div key={a.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 12px", background: i%2===0 ? "rgba(44,34,24,0.025)" : "transparent", borderBottom: i < otherAttrs.length-1 ? `1px solid rgba(44,34,24,0.07)` : "none" }}>
+                            <span style={{ fontSize:10, fontWeight:700, color:T, opacity:0.5, textTransform:"uppercase", letterSpacing:0.5 }}>{a.key}</span>
+                            <span style={{ fontSize:12, color:T, fontWeight:500 }}>{a.value}</span>
+                          </div>
                         ))}
                       </div>
                     )}
@@ -1413,53 +1449,14 @@ export default function BohoTerra() {
               {selectedVariantStock !== null && selectedVariantStock > 0 && selectedVariantStock <= 5 && (
                 <p style={{ fontSize:12, color:"#ef4444", fontWeight:600, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
               )}
-              {/* Videos del producto — carrusel vertical 9:16 */}
-              {modalProduct.reelUrls.length > 0 && (
-                <div style={{ borderTop:`1px solid rgba(44,34,24,0.1)`, paddingTop:14, marginBottom:4 }}>
-                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:10, color:MID }}>Videos</p>
-                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
-                    {(() => {
-                      const url = modalProduct.reelUrls[reelIndex];
-                      if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
-                        return <video controls style={{ width:160, aspectRatio:"9/16", objectFit:"cover", background:"#000", borderRadius:8 }}><source src={url} /></video>;
-                      }
-                      let embedUrl = "";
-                      if (url.includes("youtube.com/shorts/")) { const id = url.split("shorts/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
-                      else if (url.includes("youtu.be/")) { const id = url.split("youtu.be/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
-                      else if (url.includes("youtube.com/watch")) { try { const id = new URL(url).searchParams.get("v"); if (id) embedUrl = `https://www.youtube.com/embed/${id}`; } catch {} }
-                      if (embedUrl) return <iframe src={embedUrl} allow="autoplay; encrypted-media" allowFullScreen style={{ width:160, aspectRatio:"9/16", border:"none", borderRadius:8 }} />;
-                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : "Video";
-                      return (
-                        <a href={url} target="_blank" rel="noopener noreferrer"
-                          style={{ width:160, aspectRatio:"9/16", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, border:`1px solid rgba(44,34,24,0.14)`, textDecoration:"none", color:"#2c2218", borderRadius:8, background:S }}>
-                          <svg width={24} height={24} viewBox="0 0 24 24" fill={A} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                          <span style={{ fontSize:11 }}>{platform}</span>
-                        </a>
-                      );
-                    })()}
-                    {modalProduct.reelUrls.length > 1 && (
-                      <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                        <button onClick={() => setReelIndex(i => (i - 1 + modalProduct.reelUrls.length) % modalProduct.reelUrls.length)}
-                          style={{ background:"none", border:`1px solid rgba(44,34,24,0.2)`, color:"#2c2218", width:30, height:30, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-                        <div style={{ display:"flex", gap:5 }}>
-                          {modalProduct.reelUrls.map((_, i) => (
-                            <button key={i} onClick={() => setReelIndex(i)}
-                              style={{ width:6, height:6, borderRadius:"50%", background: i === reelIndex ? A : "rgba(44,34,24,0.2)", border:"none", cursor:"pointer", padding:0 }} />
-                          ))}
-                        </div>
-                        <button onClick={() => setReelIndex(i => (i + 1) % modalProduct.reelUrls.length)}
-                          style={{ background:"none", border:`1px solid rgba(44,34,24,0.2)`, color:"#2c2218", width:30, height:30, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {!isMobile && (isInquiryMode ? (
-                <button onClick={() => openInquiry(modalProduct)} style={{ background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", marginTop:"auto" }}>
+              {!isMobile && (
+                <div style={{ borderTop:`1px solid rgba(44,34,24,0.1)`, marginTop:4, paddingTop:16 }}>
+                  {isInquiryMode ? (
+                <button onClick={() => openInquiry(modalProduct)} style={{ background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", width:"100%" }}>
                   Consultar disponibilidad
                 </button>
               ) : modalProduct.promoQtyMin ? (
-                <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:"auto" }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                   <div style={{ fontSize:11, fontWeight:600, padding:"8px 12px", borderRadius:4, background: promoActive ? "rgba(52,211,153,0.1)" : "rgba(181,101,42,0.08)", color: promoActive ? "#16a34a" : A, border:`1px solid ${promoActive ? "rgba(52,211,153,0.25)" : "rgba(181,101,42,0.2)"}` }}>
                     {promoActive ? `¡${pendingPromoDiscount}% de descuento aplicado!` : `Llevá ${modalProduct.promoQtyMin - pendingTotal} más y obtenés ${modalProduct.promoQtyDiscount}% off`}
                   </div>
@@ -1489,10 +1486,10 @@ export default function BohoTerra() {
                 </div>
               ) : (
                 <button onClick={addToCart} disabled={selectedVariantStock === 0}
-                  style={{ background: selectedVariantStock === 0 ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
+                  style={{ background: selectedVariantStock === 0 ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width:"100%" }}>
                   {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(modalProduct.price*qty)}`}
                 </button>
-              ))}
+              )}</div>)}
 
               {/* Reseñas — D-04 */}
               <div style={{ borderTop:`1px solid rgba(44,34,24,0.1)`, paddingTop:20, marginTop:20 }}>

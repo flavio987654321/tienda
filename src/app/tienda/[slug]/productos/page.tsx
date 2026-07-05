@@ -312,7 +312,9 @@ function ProductosPageInner() {
     envioId, setEnvioId, pagoId, setPagoId,
     coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
     notas, setNotas, rememberData, setRememberData, buyerForm, setBuyerForm,
-    toastMsg, openModal, addToCart, removeFromCart, updateQty,
+    toastMsg, openModal, addToCart, addToPending, addAllToCart,
+    pendingItems, pendingTotal, promoActive, pendingPromoDiscount, removePendingItem,
+    removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, toggleFavorite, favorites,
   } = cart;
 
@@ -1654,7 +1656,7 @@ function ProductosPageInner() {
                 {modalProduct.comparePrice && <span style={{ fontSize:14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
               </div>
               {modalProduct.description && (
-                <p style={{ fontSize:13, opacity:0.55, lineHeight:1.75, borderTop:`1px solid ${borderFaint}`, paddingTop:14, margin:0 }}>{modalProduct.description}</p>
+                <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.75, borderTop:`1px solid ${borderFaint}`, paddingTop:14 }} />
               )}
 
               {(() => {
@@ -1732,11 +1734,42 @@ function ProductosPageInner() {
                 <p style={{ fontSize:12, color:"#fb923c", fontWeight:600, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
               )}
 
-              <button onClick={addToCart}
-                disabled={selectedVariantStock === 0}
-                style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
-                {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(modalProduct.price * qty)}`}
-              </button>
+              {modalProduct.promoQtyMin && modalProduct.promoQtyDiscount ? (
+                <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:"auto" }}>
+                  <div style={{ fontSize:11, fontWeight:600, padding:"8px 12px", borderRadius:4, background: promoActive ? "rgba(52,211,153,0.1)" : `${G}10`, color: promoActive ? "#16a34a" : GT, border:`1px solid ${promoActive ? "rgba(52,211,153,0.25)" : `${G}30`}` }}>
+                    {promoActive ? `¡${pendingPromoDiscount}% de descuento aplicado!` : `Llevá ${modalProduct.promoQtyMin - pendingTotal} más y obtenés ${modalProduct.promoQtyDiscount}% off`}
+                  </div>
+                  {pendingItems.length > 0 && (
+                    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                      {pendingItems.map((item, idx) => (
+                        <div key={idx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:11, color:T, padding:"5px 8px", background:`${G}08`, borderRadius:3 }}>
+                          <span>{[item.color, item.size].filter(Boolean).join(" / ") || "1 unidad"} ×{item.qty}</span>
+                          <button onClick={() => removePendingItem(idx)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:14, padding:"0 2px" }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button onClick={addToPending} disabled={selectedVariantStock === 0}
+                    style={{ background:"none", border:`1px solid ${selectedVariantStock === 0 ? `${G}30` : G}`, color: selectedVariantStock === 0 ? `${G}50` : GT, padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                    {selectedVariantStock === 0 ? "Sin stock" : `+ Agregar a mi selección${pendingTotal > 0 ? ` (${pendingTotal})` : ""}`}
+                  </button>
+                  {pendingItems.length > 0 && (() => {
+                    const subtotal = pendingItems.reduce((s, i) => s + modalProduct.price * i.qty, 0);
+                    const total = promoActive ? subtotal * (1 - pendingPromoDiscount / 100) : subtotal;
+                    return (
+                      <button onClick={addAllToCart} style={{ background:G, color:accentDark?"#000":"#fff", border:"none", padding:"14px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                        {promoActive ? `Agregar al carrito (${pendingTotal} uds) · ${fmt(total)} (-${pendingPromoDiscount}%)` : `Agregar al carrito (${pendingTotal} uds) · ${fmt(total)}`}
+                      </button>
+                    );
+                  })()}
+                </div>
+              ) : (
+                <button onClick={addToCart}
+                  disabled={selectedVariantStock === 0}
+                  style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
+                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(modalProduct.price * qty)}`}
+                </button>
+              )}
 
               {/* ── Reels / Videos — carrusel vertical 9:16 */}
               {modalProduct.reelUrls.length > 0 && (

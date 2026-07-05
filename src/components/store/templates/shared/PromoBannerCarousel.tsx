@@ -63,8 +63,10 @@ export function PromoBannerCarousel({
 
   useEffect(() => {
     if (editMode || filled.length <= 1) return;
-    intervalRef.current = setInterval(() => setPublicSlide(s => (s + 1) % filled.length), intervalMs);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    const len = filled.length;
+    const id = setInterval(() => setPublicSlide(s => (s + 1) % len), intervalMs);
+    intervalRef.current = id;
+    return () => clearInterval(id);
   }, [editMode, intervalMs, filled.length]);
 
   // Si el editor de imagen está abierto en algún banner y cambiás de slide

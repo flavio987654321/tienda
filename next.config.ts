@@ -32,7 +32,7 @@ const securityHeaders = [
 ];
 
 // MercadoPago SDK requiere unsafe-eval — solo en páginas de pago (en prod; en dev ya viene en csp base)
-const cspPaymentScript = `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com`;
+const cspPaymentScript = `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com https://client.crisp.chat`;
 const cspPayment = csp.replace(/script-src[^;]+/, cspPaymentScript);
 const paymentHeaders = securityHeaders.map((h) =>
   h.key === "Content-Security-Policy" ? { key: h.key, value: cspPayment } : h

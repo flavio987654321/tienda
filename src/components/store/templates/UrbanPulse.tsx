@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, Fragment } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
@@ -287,13 +287,15 @@ export default function UrbanPulse() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalProduct?.id]);
 
+  const colorSyncingRef = useRef(false);
+
   // Al cambiar color: sync imagen + talle disponible
   useEffect(() => {
     if (!modalProduct || !selectedColor) return;
     const imgIdx = modalProduct.imageItems.findIndex(
       (img) => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
     );
-    if (imgIdx !== -1) setModalImg(imgIdx);
+    if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
     const colorVariants = modalProduct.variants.filter((v) => {
       const a = parseVariantAttrs(v.name);
       return !!a && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase());
@@ -337,7 +339,7 @@ export default function UrbanPulse() {
           const imgIdx = modalProduct.imageItems.findIndex(
             (img) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
           );
-          if (imgIdx !== -1) setModalImg(imgIdx);
+          if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
         }
       }
     }
@@ -347,6 +349,7 @@ export default function UrbanPulse() {
   // Al cambiar de imagen (flechas/miniaturas): sync color si esa foto pertenece a otra variante
   useEffect(() => {
     if (!modalProduct) return;
+    if (colorSyncingRef.current) { colorSyncingRef.current = false; return; }
     const img = modalProduct.imageItems[modalImg];
     if (img?.variantValue && img.variantValue.toLowerCase() !== selectedColor?.toLowerCase()) {
       setSelectedColor(img.variantValue);
@@ -1411,6 +1414,46 @@ export default function UrbanPulse() {
                     ))}
                   </div>
                 )}
+                {modalProduct.reelUrls.length > 0 && (
+                  <div style={{ borderTop:`2px solid ${DARK}`, padding:"14px 8px 8px" }}>
+                    <p style={{ fontSize:9, letterSpacing:3, fontWeight:900, textTransform:"uppercase", marginBottom:10, color:DARK, opacity:0.4, paddingLeft:4 }}>Videos</p>
+                    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
+                      {(() => {
+                        const url = modalProduct.reelUrls[reelIndex];
+                        if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
+                          return <video controls style={{ width:"100%", maxWidth:180, aspectRatio:"9/16", objectFit:"cover", background:"#000" }}><source src={url} /></video>;
+                        }
+                        let embedUrl = "";
+                        if (url.includes("youtube.com/shorts/")) { const id = url.split("shorts/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
+                        else if (url.includes("youtu.be/")) { const id = url.split("youtu.be/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
+                        else if (url.includes("youtube.com/watch")) { try { const id = new URL(url).searchParams.get("v"); if (id) embedUrl = `https://www.youtube.com/embed/${id}`; } catch {} }
+                        if (embedUrl) return <iframe src={embedUrl} allow="autoplay; encrypted-media" allowFullScreen style={{ width:"100%", maxWidth:180, aspectRatio:"9/16", border:"none" }} />;
+                        const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : "Video";
+                        return (
+                          <a href={url} target="_blank" rel="noopener noreferrer"
+                            style={{ width:160, aspectRatio:"9/16", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, border:`2px solid ${DARK}`, textDecoration:"none", color:DARK }}>
+                            <svg width={24} height={24} viewBox="0 0 24 24" fill={ACC} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            <span style={{ fontSize:11, fontWeight:900, letterSpacing:1 }}>{platform}</span>
+                          </a>
+                        );
+                      })()}
+                      {modalProduct.reelUrls.length > 1 && (
+                        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                          <button onClick={() => setReelIndex(i => (i - 1 + modalProduct.reelUrls.length) % modalProduct.reelUrls.length)}
+                            style={{ background:"none", border:`2px solid ${DARK}`, color:DARK, width:28, height:28, borderRadius:"50%", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+                          <div style={{ display:"flex", gap:4 }}>
+                            {modalProduct.reelUrls.map((_, i) => (
+                              <button key={i} onClick={() => setReelIndex(i)}
+                                style={{ width:6, height:6, borderRadius:"50%", background: i === reelIndex ? ACC : `${DARK}44`, border:"none", cursor:"pointer", padding:0 }} />
+                            ))}
+                          </div>
+                          <button onClick={() => setReelIndex(i => (i + 1) % modalProduct.reelUrls.length)}
+                            style={{ background:"none", border:`2px solid ${DARK}`, color:DARK, width:28, height:28, borderRadius:"50%", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               <div style={{ padding:32 }}>
                 <p style={{ margin:"0 0 6px", fontSize:10, color:MID, fontWeight:800, letterSpacing:3, textTransform:"uppercase" }}>{modalProduct.category}</p>
@@ -1450,9 +1493,12 @@ export default function UrbanPulse() {
                         <span style={{ alignSelf:"flex-start", fontSize:9, letterSpacing:1.5, textTransform:"uppercase", fontWeight:900, color:DARK, background:ACC, padding:"5px 10px" }}>{condicionAttr.value}</span>
                       )}
                       {otherAttrs.length > 0 && (
-                        <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                          {otherAttrs.map(a => (
-                            <p key={a.key} style={{ fontSize:11, color:MID, margin:0, fontWeight:600 }}><span style={{ color:DARK }}>{a.key}:</span> {a.value}</p>
+                        <div style={{ borderRadius:2, overflow:"hidden", border:`2px solid ${DARK}` }}>
+                          {otherAttrs.map((a, i) => (
+                            <div key={a.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 12px", background: i%2===0 ? `${DARK}08` : WHITE, borderBottom: i < otherAttrs.length-1 ? `1px solid ${DARK}15` : "none" }}>
+                              <span style={{ fontSize:9, fontWeight:900, color:DARK, textTransform:"uppercase", letterSpacing:0.5 }}>{a.key}</span>
+                              <span style={{ fontSize:12, color:DARK, fontWeight:700 }}>{a.value}</span>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -1510,48 +1556,9 @@ export default function UrbanPulse() {
                 {selectedVariantStock !== null && selectedVariantStock > 0 && selectedVariantStock <= 5 && (
                   <p style={{ fontSize:12, color:"#ef4444", fontWeight:900, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
                 )}
-                {/* Videos del producto */}
-                {modalProduct.reelUrls.length > 0 && (
-                  <div style={{ borderTop:`2px solid ${DARK}`, paddingTop:14, marginBottom:8 }}>
-                    <p style={{ fontSize:9, letterSpacing:3, fontWeight:900, textTransform:"uppercase", marginBottom:10, color:DARK, opacity:0.4 }}>Videos</p>
-                    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
-                      {(() => {
-                        const url = modalProduct.reelUrls[reelIndex];
-                        if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
-                          return <video controls style={{ width:160, aspectRatio:"9/16", objectFit:"cover", background:"#000" }}><source src={url} /></video>;
-                        }
-                        let embedUrl = "";
-                        if (url.includes("youtube.com/shorts/")) { const id = url.split("shorts/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
-                        else if (url.includes("youtu.be/")) { const id = url.split("youtu.be/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
-                        else if (url.includes("youtube.com/watch")) { try { const id = new URL(url).searchParams.get("v"); if (id) embedUrl = `https://www.youtube.com/embed/${id}`; } catch {} }
-                        if (embedUrl) return <iframe src={embedUrl} allow="autoplay; encrypted-media" allowFullScreen style={{ width:160, aspectRatio:"9/16", border:"none" }} />;
-                        const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : "Video";
-                        return (
-                          <a href={url} target="_blank" rel="noopener noreferrer"
-                            style={{ width:160, aspectRatio:"9/16", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, border:`2px solid ${DARK}`, textDecoration:"none", color:DARK }}>
-                            <svg width={24} height={24} viewBox="0 0 24 24" fill={ACC} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                            <span style={{ fontSize:11, fontWeight:900, letterSpacing:1 }}>{platform}</span>
-                          </a>
-                        );
-                      })()}
-                      {modalProduct.reelUrls.length > 1 && (
-                        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                          <button onClick={() => setReelIndex(i => (i - 1 + modalProduct.reelUrls.length) % modalProduct.reelUrls.length)}
-                            style={{ background:"none", border:`2px solid ${DARK}`, color:DARK, width:30, height:30, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-                          <div style={{ display:"flex", gap:5 }}>
-                            {modalProduct.reelUrls.map((_, i) => (
-                              <button key={i} onClick={() => setReelIndex(i)}
-                                style={{ width:6, height:6, borderRadius:"50%", background: i === reelIndex ? ACC : `${DARK}44`, border:"none", cursor:"pointer", padding:0 }} />
-                            ))}
-                          </div>
-                          <button onClick={() => setReelIndex(i => (i + 1) % modalProduct.reelUrls.length)}
-                            style={{ background:"none", border:`2px solid ${DARK}`, color:DARK, width:30, height:30, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {!isMobile && (isInquiryMode ? (
+                {!isMobile && (
+                  <div style={{ borderTop:`2px solid ${DARK}`, marginTop:4, paddingTop:16 }}>
+                  {isInquiryMode ? (
                   <button onClick={() => openInquiry(modalProduct)}
                     style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
                     Consultar disponibilidad
@@ -1590,7 +1597,9 @@ export default function UrbanPulse() {
                     style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginBottom:10 }}>
                     {selectedVariantStock === 0 ? "Sin stock" : `Agregar · ${fmt(modalProduct.price * qty)}`}
                   </button>
-                ))}
+                )}
+                  </div>
+                )}
                 <button onClick={() => toggleFavorite(modalProduct.id)}
                   style={{ width:"100%", background:"none", border:`2px solid ${DARK}`, color:DARK, padding:"12px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
                   <svg width={14} height={14} viewBox="0 0 24 24" fill={favorites.includes(modalProduct.id) ? DARK : "none"} stroke={DARK} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>

@@ -25,6 +25,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
             cantMinMayorista: true,
             preciosEscalonados: true,
             soloMayorista: true,
+            promoQtyMin: true,
+            promoQtyDiscount: true,
             cuotas: true,
             images: true,
             category: true,
