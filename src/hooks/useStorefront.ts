@@ -31,6 +31,7 @@ export type StorefrontProduct = {
   promoType?: string;
   promoPayQty?: number | null;
   offerBadge?: string | null;
+  offerNote?: string | null;
   // Cuotas sin interés informativas (0/undefined = no mostrar). No conectado
   // a ninguna API bancaria ni de Mercado Pago — solo se usa para calcular
   // precio/N en la página de producto.
@@ -170,6 +171,8 @@ type RawProduct = {
   promoType?: string;
   promoPayQty?: number | null;
   offerBadge?: string | null;
+  offerNote?: string | null;
+  offerEndsAt?: string | Date | null;
   cuotas?: number;
   category?: string;
   subcategory?: string;
@@ -240,11 +243,13 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     }
   } catch { preciosEscalonados = []; }
 
+  const offerActive = !raw.offerEndsAt || new Date(raw.offerEndsAt as string | Date) > new Date();
+
   return {
     id: raw.id,
     name: raw.name,
     price: raw.price,
-    comparePrice: raw.comparePrice ?? null,
+    comparePrice: offerActive ? (raw.comparePrice ?? null) : null,
     featured: raw.featured ?? false,
     viewCount: raw.viewCount ?? 0,
     precioMayorista: raw.precioMayorista ?? null,
@@ -255,7 +260,8 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     promoQtyDiscount: raw.promoQtyDiscount ?? null,
     promoType: raw.promoType ?? "PERCENT",
     promoPayQty: raw.promoPayQty ?? null,
-    offerBadge: raw.offerBadge ?? null,
+    offerBadge: offerActive ? (raw.offerBadge ?? null) : null,
+    offerNote: offerActive ? (raw.offerNote ?? null) : null,
     cuotas: raw.cuotas ?? 0,
     category: raw.category ?? "general",
     subcategory: raw.subcategory ?? undefined,

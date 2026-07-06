@@ -5,6 +5,7 @@ import type { CartTheme } from "./CartDrawer";
 import { FadeImage } from "./FadeImage";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { promoSavingsLabel } from "@/lib/promoLabel";
+import { resolveVariantPrice } from "@/lib/variantPrice";
 
 // Checkout completo (datos del comprador, envío, pago, cupón, donación opcional
 // y términos) compartido por todos los templates de un mismo tipo de negocio.
@@ -30,14 +31,17 @@ export function CheckoutModal({
     isWholesale,
   } = cart;
 
-  function itemEffectiveUnitPrice(product: typeof cartItems[number]["product"], qty: number): number {
-    if (!isWholesale || !product.cantMinMayorista || qty < product.cantMinMayorista) return product.price;
+  function itemEffectiveUnitPrice(item: typeof cartItems[number], qty: number): number {
+    const product = item.product;
+    const vp = resolveVariantPrice(product.variants, item.size, item.color, item.variantId);
+    const effectiveBase = vp ?? product.price;
+    if (!isWholesale || !product.cantMinMayorista || qty < product.cantMinMayorista) return effectiveBase;
     const escalones = product.preciosEscalonados ?? [];
     let best: number | null = null;
     for (const band of escalones) {
       if (qty >= band.desde && (best === null || band.precio < best)) best = band.precio;
     }
-    return best ?? product.precioMayorista ?? product.price;
+    return best ?? product.precioMayorista ?? effectiveBase;
   }
 
   if (!checkoutOpen) return null;
@@ -94,7 +98,7 @@ export function CheckoutModal({
                         <p style={{ fontSize:11, opacity:0.5, margin:"0 0 6px", color:T }}>{[item.color, item.size].filter(Boolean).join(" · ")}</p>
                       )}
                       <p style={{ fontSize:13, color:accent, fontWeight:700, margin:0 }}>
-                        {fmt(itemEffectiveUnitPrice(item.product, item.qty))} × {item.qty}
+                        {fmt(itemEffectiveUnitPrice(item, item.qty))} × {item.qty}
                       </p>
                     </div>
                     <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}`, height:28, flexShrink:0 }}>
@@ -171,7 +175,7 @@ export function CheckoutModal({
 
               <div style={{ borderTop:`1px solid ${border}`, paddingTop:20 }}>
                 {(() => {
-                  const fullTotal = cartItems.reduce((s, i) => s + itemEffectiveUnitPrice(i.product, i.qty) * i.qty, 0);
+                  const fullTotal = cartItems.reduce((s, i) => s + itemEffectiveUnitPrice(i, i.qty) * i.qty, 0);
                   const promoSavings = fullTotal - cartTotal;
                   return <>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
@@ -182,7 +186,7 @@ export function CheckoutModal({
                       const pi = cartItems.find(i => i.discountPct && i.discountPct > 0);
                       return (
                         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
-                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>{promoSavingsLabel(pi?.product.promoType, pi?.product.promoQtyMin, pi?.product.promoPayQty)}</span>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>{promoSavingsLabel(pi?.product.promoType, pi?.product.promoQtyMin, pi?.product.promoPayQty, pi?.discountPct)}</span>
                           <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>-{fmt(promoSavings)}</span>
                         </div>
                       );

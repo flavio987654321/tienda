@@ -262,7 +262,7 @@ export function VariantBuilder({
             <span>Foto</span>
             <span>Variante</span>
             <span className="text-center">Stock</span>
-            <span>Precio extra</span>
+            <span>Precio propio</span>
             <span>Alerta</span>
           </div>
 
@@ -318,13 +318,13 @@ export function VariantBuilder({
                   className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center bg-white"
                 />
 
-                {/* Precio extra */}
+                {/* Precio propio */}
                 <input
                   type="number"
                   value={v.price}
                   onChange={e => onVariantChange(idx, "price", e.target.value)}
                   min="0"
-                  placeholder="0"
+                  placeholder="base"
                   className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                 />
 

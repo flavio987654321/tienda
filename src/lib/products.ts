@@ -75,6 +75,8 @@ type ProductBodyRaw = {
   promoType?: unknown;
   promoPayQty?: unknown;
   offerBadge?: unknown;
+  offerNote?: unknown;
+  offerEndsAt?: unknown;
 };
 
 type ValidatedProductBody = {
@@ -98,14 +100,16 @@ type ValidatedProductBody = {
   parsedPromoType: string;
   parsedPromoPayQty: number | null;
   parsedOfferBadge: string | null;
+  parsedOfferNote: string | null;
+  parsedOfferEndsAt: Date | null;
 };
 
-const VALID_OFFER_BADGES = new Set(["OFERTA", "SALE", "PROMO", "HOT", "PCT", "2X1", "NUEVO"]);
+const VALID_OFFER_BADGES = new Set(["OFERTA", "SALE", "PCT"]);
 
 export function validateProductBody(
   body: ProductBodyRaw
 ): { error: NextResponse } | ValidatedProductBody {
-  const { name, price, comparePrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, promoQtyMin, promoQtyDiscount, promoType, promoPayQty, offerBadge } = body;
+  const { name, price, comparePrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, promoQtyMin, promoQtyDiscount, promoType, promoPayQty, offerBadge, offerNote, offerEndsAt } = body;
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     return { error: NextResponse.json({ error: "Nombre requerido (mínimo 2 caracteres)" }, { status: 400 }) };
@@ -327,6 +331,22 @@ export function validateProductBody(
     ? offerBadge
     : null;
 
+  if (offerNote && typeof offerNote === "string" && offerNote.trim().length > 200) {
+    return { error: NextResponse.json({ error: "La nota de la oferta no puede superar 200 caracteres" }, { status: 400 }) };
+  }
+  const parsedOfferNote = typeof offerNote === "string" && offerNote.trim().length > 0
+    ? offerNote.trim().replace(/<[^>]*>/g, "").slice(0, 200)
+    : null;
+
+  let parsedOfferEndsAt: Date | null = null;
+  if (offerEndsAt && typeof offerEndsAt === "string" && offerEndsAt.trim()) {
+    const d = new Date(offerEndsAt.trim());
+    if (isNaN(d.getTime())) {
+      return { error: NextResponse.json({ error: "La fecha de vencimiento de la oferta no es válida" }, { status: 400 }) };
+    }
+    parsedOfferEndsAt = d;
+  }
+
   return {
     name: (name as string).trim(),
     sanitizedDescription,
@@ -348,6 +368,8 @@ export function validateProductBody(
     parsedPromoType,
     parsedPromoPayQty,
     parsedOfferBadge,
+    parsedOfferNote,
+    parsedOfferEndsAt,
   };
 }
 

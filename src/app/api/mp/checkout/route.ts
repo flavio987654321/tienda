@@ -43,12 +43,25 @@ export async function POST(req: NextRequest) {
     ? Math.round((commissionBase * order.lockedCommissionRate) / 100)
     : 0;
 
-  const items = order.items.map((item) => ({
-    id: item.id,
-    title: item.product.name,
-    unit_price: item.price,
-    quantity: item.quantity,
-  }));
+  // Si hay cupón o envío pago, el total difiere de la suma de ítems.
+  // MP no admite precios negativos, así que en esos casos consolidamos
+  // todo en un único ítem con el total exacto.
+  const hasAdjustments = (order.discountAmount ?? 0) > 0 || (order.shippingCost ?? 0) > 0;
+  const items = hasAdjustments
+    ? [{
+        id: order.id,
+        title: order.items.length === 1
+          ? order.items[0].product.name
+          : `${order.items.length} productos`,
+        unit_price: order.total,
+        quantity: 1,
+      }]
+    : order.items.map((item) => ({
+        id: item.id,
+        title: item.product.name,
+        unit_price: item.price,
+        quantity: item.quantity,
+      }));
 
   const MP_TIMEOUT_MS = 10_000;
   const timeout = new Promise<never>((_, reject) =>

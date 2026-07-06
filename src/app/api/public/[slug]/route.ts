@@ -30,6 +30,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
             promoType: true,
             promoPayQty: true,
             offerBadge: true,
+            offerNote: true,
+            offerEndsAt: true,
             cuotas: true,
             images: true,
             category: true,

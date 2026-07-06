@@ -24,8 +24,10 @@ export function promoSavingsLabel(
   type: string | null | undefined,
   min?: number | null,
   payQty?: number | null,
+  discount?: number | null,
 ): string {
   if (type === "N_PAY_M" && min && payQty) return `Llevá ${min} pagá ${payQty}`;
+  if (discount) return `Descuento promo (${Math.round(discount)}% off)`;
   return "Descuento promo";
 }
 

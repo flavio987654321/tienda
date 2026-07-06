@@ -21,6 +21,7 @@ import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { promoModalText } from "@/lib/promoLabel";
 import { discountPercent } from "@/lib/discount";
+import { resolveVariantPrice } from "@/lib/variantPrice";
 
 const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
@@ -436,6 +437,8 @@ export default function FashionNoir() {
   const T  = "#f0ebe3";  // text
   const accentText = getContrastColor(G) === "light" ? BG : T;
   const cartTheme: CartTheme = { BG, S, T, MID:"#555555", border:"rgba(240,235,227,0.1)", accent:G, accentText, serif:"Georgia, serif" };
+  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
+  const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
 
   /* ─ Hero image con override dinámico ─ */
   const heroImageOv        = storeConfig?.imageOverrides?.["heroBackground"];
@@ -985,15 +988,23 @@ export default function FashionNoir() {
         <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fill,minmax(260px,1fr))", gap: isMobile ? 12 : 24, marginBottom:48 }}>
           {!loadingProducts && filtered.map(product => (
             <div key={product.id} onClick={() => openModal(product)} onMouseEnter={() => setHoveredId(product.id)} onMouseLeave={() => setHoveredId(null)}
-              style={{ cursor:"pointer" }}>
+              style={{ cursor:"pointer", position:"relative" }}>
+              {(() => {
+                const hasNxM = product.promoType === "N_PAY_M" && !!product.promoQtyMin && !!product.promoPayQty;
+                const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
+                if (!hasNxM && !hasOffer) return null;
+                return <OfferBadge badge={hasNxM ? null : product.offerBadge} pct={hasOffer ? discountPercent(product.price, product.comparePrice) : null} nxm={hasNxM ? { n: product.promoQtyMin!, m: product.promoPayQty! } : undefined} size="sm" />;
+              })()}
               <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:16 }}>
                 {product.images[0] && <FadeImage src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover", transition:"transform 0.5s ease", transform: hoveredId===product.id ? "scale(1.05)" : "scale(1)" }} onError={e => { e.currentTarget.style.opacity="0"; }}/>}
+                {(() => {
+                  const isSoldOut = product.variants.length > 0 && product.variants.reduce((s, v) => s + (v.stock || 0), 0) === 0;
+                  if (!isSoldOut) return null;
+                  return <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"rgba(10,10,10,0.75)", display:"flex", alignItems:"center", justifyContent:"center", padding:"9px 0", zIndex:2 }}><span style={{ color:"#fff", fontSize:9, fontWeight:800, letterSpacing:4, textTransform:"uppercase" }}>Sin stock</span></div>;
+                })()}
                 <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"flex-end", justifyContent:"center", padding:16, opacity: hoveredId===product.id ? 1 : 0, transition:"opacity 0.3s", background:"linear-gradient(to top, rgba(10,10,10,0.65) 30%, transparent)", pointerEvents:"none" }}>
                   <span style={{ color:T, fontSize:11, letterSpacing:3, textTransform:"uppercase", borderBottom:`1px solid ${G}`, paddingBottom:3 }}>Ver detalle</span>
                 </div>
-                {product.comparePrice && product.comparePrice > product.price && (
-                  <OfferBadge badge={product.offerBadge || "OFERTA"} pct={discountPercent(product.price, product.comparePrice)} size="sm" />
-                )}
                 <div style={{ position:"absolute", top:12, right:12, background:"rgba(10,10,10,0.7)", color:T, fontSize:9, letterSpacing:2, padding:"4px 10px", textTransform:"uppercase" }}>{product.category}</div>
                 {/* Favorite button */}
                 <button
@@ -1486,6 +1497,12 @@ export default function FashionNoir() {
                     onError={e => { e.currentTarget.style.opacity="0"; }}
                     onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                 )}
+                {(() => {
+                  const hasNxM = modalProduct.promoType === "N_PAY_M" && !!modalProduct.promoQtyMin && !!modalProduct.promoPayQty;
+                  const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
+                  if (!hasNxM && !hasOffer) return null;
+                  return <OfferBadge badge={hasNxM ? null : modalProduct.offerBadge} pct={hasOffer ? discountPercent(modalProduct.price, modalProduct.comparePrice) : null} nxm={hasNxM ? { n: modalProduct.promoQtyMin!, m: modalProduct.promoPayQty! } : undefined} size="md" />;
+                })()}
                 {modalProduct.images.length > 1 && (
                   <>
                     <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
@@ -1569,10 +1586,19 @@ export default function FashionNoir() {
                 )}
               </div>
               <div style={{ display:"flex", gap:12, alignItems:"baseline" }}>
-                <span style={{ fontSize:24, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price)}</span>
-                {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:15, color:"#444", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                <span style={{ fontSize:24, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(displayPrice)}</span>
+                {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:15, color:"#444", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
               </div>
-              <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description || "" }} style={{ fontSize:13, opacity:0.58, lineHeight:1.75, borderTop:`1px solid rgba(240,235,227,0.08)`, paddingTop:16 }} />
+              {!ocultarPrecios && modalProduct.offerNote && (
+                <div style={{ fontSize:12, color:"#4ade80", background:"rgba(74,222,128,0.08)", border:"1px solid rgba(74,222,128,0.2)", borderRadius:4, padding:"5px 10px", display:"flex", alignItems:"center", gap:6 }}>
+                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>{modalProduct.offerNote}</span>
+                </div>
+              )}
+              <div style={{ borderTop:`1px solid rgba(240,235,227,0.08)`, paddingTop:16 }}>
+                <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:"rgba(240,235,227,0.35)", margin:"0 0 8px", fontWeight:600 }}>Descripción</p>
+                <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description || "" }} style={{ fontSize:13, opacity:0.58, lineHeight:1.75 }} />
+              </div>
 
               {(() => {
                 const attrs = modalProduct.attributes ?? [];
@@ -1665,7 +1691,7 @@ export default function FashionNoir() {
                 </button>
               ) : modalProduct.promoQtyMin ? (
                 <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                  {/* Indicador de promo */}
+                  <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:G, margin:0, fontWeight:600, opacity:0.7 }}>Promoción</p>
                   <div style={{ fontSize:11, fontWeight:600, letterSpacing:0.5, padding:"8px 12px", borderRadius:4, background: promoActive ? "rgba(52,211,153,0.12)" : "rgba(201,168,76,0.08)", color: promoActive ? "#34d399" : G, border:`1px solid ${promoActive ? "rgba(52,211,153,0.25)" : "rgba(201,168,76,0.2)"}` }}>
                     {promoModalText(modalProduct.promoType, modalProduct.promoQtyMin!, modalProduct.promoQtyDiscount, modalProduct.promoPayQty, pendingTotal)}
                   </div>
@@ -1705,7 +1731,7 @@ export default function FashionNoir() {
                 <button onClick={addToCart}
                   disabled={selectedVariantStock === 0}
                   style={{ background: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width:"100%" }}>
-                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(modalProduct.price * qty)}`}
+                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(displayPrice * qty)}`}
                 </button>
               )}
                 </div>
@@ -1813,8 +1839,8 @@ export default function FashionNoir() {
             {isMobile && (
               <div style={{ borderTop:`1px solid rgba(201,168,76,0.2)`, padding:"12px 16px 16px", background:S, flexShrink:0 }}>
                 <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
-                  <span style={{ fontSize:20, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price * qty)}</span>
-                  {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:"rgba(240,235,227,0.4)", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  <span style={{ fontSize:20, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(displayPrice * qty)}</span>
+                  {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:"rgba(240,235,227,0.4)", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   {qty > 1 && <span style={{ fontSize:11, color:"rgba(240,235,227,0.4)" }}>× {qty}</span>}
                 </div>
                 {isInquiryMode ? (

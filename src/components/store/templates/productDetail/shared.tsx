@@ -7,6 +7,8 @@ import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
+import { promoModalText } from "@/lib/promoLabel";
+import { resolveVariantPrice } from "@/lib/variantPrice";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 
@@ -201,6 +203,8 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
 
   const selectedVariantStock = useSelectedVariantStock(product, selectedSize, selectedColor);
   const outOfStock = selectedVariantStock === 0;
+  const variantPrice = resolveVariantPrice(product.variants, selectedSize, selectedColor);
+  const displayPrice = variantPrice ?? product.price;
 
   function goToImg(i: number) {
     setActiveImg((i + product.images.length) % product.images.length);
@@ -299,19 +303,29 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
           </h1>
 
           <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 2 }}>
-            {product.comparePrice && product.comparePrice > product.price && (
+            {!variantPrice && product.comparePrice && product.comparePrice > product.price && (
               <span style={{ fontSize: 15, color: theme.muted, textDecoration: "line-through" }}>{fmtPrice(product.comparePrice, currency)}</span>
             )}
-            {discount && (
+            {!variantPrice && discount && (
               <span style={{ background: theme.accent, color: theme.accentText, fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 6 }}>{discount}%OFF</span>
             )}
           </div>
-          <p style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, color: theme.text }}>{fmtPrice(product.price, currency)}</p>
+          <p style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, color: theme.text }}>{fmtPrice(displayPrice, currency)}</p>
+          {product.offerNote && (
+            <div style={{ fontSize: 13, color: "#059669", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "7px 12px", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+              <span>📋</span><span>{product.offerNote}</span>
+            </div>
+          )}
+          {product.promoQtyMin && product.promoQtyDiscount && (
+            <div style={{ fontSize: 12, fontWeight: 600, padding: "7px 12px", borderRadius: 8, background: `${theme.accent}11`, color: theme.accent, border: `1px solid ${theme.accent}30`, marginBottom: 12 }}>
+              {promoModalText(product.promoType, product.promoQtyMin, product.promoQtyDiscount, product.promoPayQty, 0)}
+            </div>
+          )}
           {hasMercadoPago ? (
             product.cuotas ? (
               <div style={{ margin: "0 0 24px" }}>
                 <p style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 700, color: theme.text }}>
-                  {product.cuotas} cuotas sin interés de {fmtPrice(product.price / product.cuotas, currency)}
+                  {product.cuotas} cuotas sin interés de {fmtPrice(displayPrice / product.cuotas, currency)}
                 </p>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
                   {["VISA", "MASTERCARD", "AMEX"].map(card => (

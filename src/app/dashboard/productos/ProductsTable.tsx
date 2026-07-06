@@ -724,6 +724,13 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                       className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
                       <Edit className="h-3 w-3" /> Editar
                     </Link>
+                    {storeSlug && product.isActive && (
+                      <a href={`/tienda/${storeSlug}?p=${product.id}`} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-emerald-500 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
+                        title="Ver en tienda">
+                        <Eye className="h-3 w-3" />
+                      </a>
+                    )}
                     {showStock && (
                       <button onClick={() => setStockModal(product)}
                         className="flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-emerald-500 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
@@ -801,6 +808,12 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                     <td className="px-6 py-4">
                       {!showStock ? (
                         <VehicleStatusBadge status={(product.vehicleStatus ?? "AVAILABLE") as VehicleStatus} />
+                      ) : product.isActive && storeSlug ? (
+                        <a href={`/tienda/${storeSlug}?p=${product.id}`} target="_blank" rel="noopener noreferrer"
+                          title="Ver en tienda"
+                          className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors">
+                          <Eye className="h-3 w-3" /> Activo
+                        </a>
                       ) : (
                         <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${product.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                           {product.isActive ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}

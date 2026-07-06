@@ -11,6 +11,9 @@ import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { promoModalText } from "@/lib/promoLabel";
+import { OfferBadge } from "@/components/store/OfferBadge";
+import { discountPercent } from "@/lib/discount";
+import { resolveVariantPrice } from "@/lib/variantPrice";
 
 const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
   ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["pinterest", "Pinterest"],
@@ -73,6 +76,11 @@ type RawProduct = {
   reelUrls?: string;
   variants?: StorefrontVariant[];
   attributes?: string;
+  promoType?: string | null;
+  promoPayQty?: number | null;
+  offerBadge?: string | null;
+  offerNote?: string | null;
+  offerEndsAt?: string | null;
 };
 
 function mapProduct(raw: RawProduct): StorefrontProduct {
@@ -113,9 +121,10 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     const parsed = JSON.parse(raw.attributes || "[]");
     attributes = Array.isArray(parsed) ? parsed.filter((a: unknown) => a && typeof a === "object") : [];
   } catch {}
+  const offerActive = !raw.offerEndsAt || new Date(raw.offerEndsAt) > new Date();
   return {
     id: raw.id, name: raw.name, price: raw.price,
-    comparePrice: raw.comparePrice ?? null,
+    comparePrice: offerActive ? (raw.comparePrice ?? null) : null,
     featured: raw.featured ?? false,
     viewCount: raw.viewCount ?? 0,
     precioMayorista: raw.precioMayorista ?? null,
@@ -124,6 +133,10 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     soloMayorista: raw.soloMayorista ?? false,
     promoQtyMin: raw.promoQtyMin ?? null,
     promoQtyDiscount: raw.promoQtyDiscount ?? null,
+    promoType: raw.promoType ?? "PERCENT",
+    promoPayQty: raw.promoPayQty ?? null,
+    offerBadge: offerActive ? (raw.offerBadge ?? null) : null,
+    offerNote: offerActive ? (raw.offerNote ?? null) : null,
     category: raw.category ?? "general",
     subcategory: raw.subcategory ?? undefined,
     gender: raw.gender ?? "unisex",
@@ -314,7 +327,7 @@ function ProductosPageInner() {
     coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
     notas, setNotas, rememberData, setRememberData, buyerForm, setBuyerForm,
     toastMsg, openModal, addToCart, addToPending, addAllToCart,
-    pendingItems, pendingTotal, promoActive, pendingPromoDiscount, removePendingItem,
+    pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, removePendingItem,
     removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, toggleFavorite, favorites,
   } = cart;
@@ -536,6 +549,9 @@ function ProductosPageInner() {
     // sigue activo aunque ya se haya limpiado arriba (activeAttrFilters).
     setOpenGroups(prev => new Set([...prev].filter(k => !k.startsWith("attr:"))));
   };
+
+  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
+  const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
 
   // ── Stock de la variante seleccionada en el modal ──────────────────────────
   const selectedVariantStock = useMemo(() => {
@@ -778,15 +794,16 @@ function ProductosPageInner() {
               else { el.style.borderColor="transparent"; el.style.transform=""; }
             };
 
-            // ── Badg de oferta per-template ──────────────────────────────────
-            const ofertaBadge = product.comparePrice ? (
-              tabStyle === "pill"
-                ? <div style={{ position:"absolute", top:10, left:10, background:G, color:accentDark?"#000":"#fff", fontSize:9, fontWeight:700, padding:"3px 10px", borderRadius:999, letterSpacing:1 }}>Oferta</div>
-                : tabStyle === "underline"
-                ? <div style={{ position:"absolute", top:10, left:10, background:"none", color:G, fontSize:10, fontStyle:"italic", fontFamily:serif, fontWeight:600 }}>Sale</div>
-                : tabStyle === "brutalist"
-                ? <div style={{ position:"absolute", top:0, left:0, background:G, color:accentDark?"#000":"#fff", fontSize:9, fontWeight:900, letterSpacing:2, padding:"4px 10px", textTransform:"uppercase" }}>SALE</div>
-                : <div style={{ position:"absolute", top:10, left:10, background:G, color:accentDark?"#000":"#fff", fontSize:9, fontWeight:800, letterSpacing:2, padding:"3px 8px", textTransform:"uppercase" }}>Oferta</div>
+            // ── Badge de oferta per-template ──────────────────────────────────
+            const hasCardNxM = product.promoType === "N_PAY_M" && !!product.promoQtyMin && !!product.promoPayQty;
+            const hasCardOffer = !!product.comparePrice && product.comparePrice > product.price;
+            const ofertaBadge = (hasCardNxM || hasCardOffer) ? (
+              <OfferBadge
+                badge={hasCardNxM ? null : (product.offerBadge ?? null)}
+                pct={hasCardOffer ? discountPercent(product.price, product.comparePrice) : null}
+                nxm={hasCardNxM ? { n: product.promoQtyMin!, m: product.promoPayQty! } : undefined}
+                size="sm"
+              />
             ) : null;
 
             // ── Contenedor de texto per-template ─────────────────────────────
@@ -1599,6 +1616,12 @@ function ProductosPageInner() {
             {/* Galería */}
             <div>
               <div style={{ position:"relative" }} {...imgSwipe}>
+                {(() => {
+                  const hasNxM = modalProduct.promoType === "N_PAY_M" && !!modalProduct.promoQtyMin && !!modalProduct.promoPayQty;
+                  const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
+                  if (!hasNxM && !hasOffer) return null;
+                  return <OfferBadge badge={hasNxM ? null : (modalProduct.offerBadge ?? null)} pct={hasOffer ? discountPercent(modalProduct.price, modalProduct.comparePrice) : null} nxm={hasNxM ? { n: modalProduct.promoQtyMin!, m: modalProduct.promoPayQty! } : undefined} size="md" />;
+                })()}
                 <img src={modalProduct.images[modalImg] ?? ""} alt={modalProduct.name}
                   style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block", cursor:"zoom-in" }}
                   onError={e => { e.currentTarget.style.opacity="0"; }}
@@ -1653,11 +1676,20 @@ function ProductosPageInner() {
                 )}
               </div>
               <div style={{ display:"flex", gap:10, alignItems:"baseline" }}>
-                <span style={{ fontSize:22, fontWeight:700, color:GT }}>{fmt(modalProduct.price)}</span>
-                {modalProduct.comparePrice && <span style={{ fontSize:14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                <span style={{ fontSize:22, fontWeight:700, color:GT }}>{fmt(displayPrice)}</span>
+                {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize:14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
               </div>
+              {modalProduct.offerNote && (
+                <div style={{ fontSize:12, color:"#059669", background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:4, padding:"5px 10px", display:"flex", alignItems:"center", gap:6 }}>
+                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>{modalProduct.offerNote}</span>
+                </div>
+              )}
               {modalProduct.description && (
-                <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.75, borderTop:`1px solid ${borderFaint}`, paddingTop:14 }} />
+                <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:14 }}>
+                  <p style={{ fontSize:9, letterSpacing:2, textTransform:"uppercase", color:MID, margin:"0 0 8px", fontWeight:600, opacity:0.7 }}>Descripción</p>
+                  <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.75 }} />
+                </div>
               )}
 
               {(() => {
@@ -1737,6 +1769,7 @@ function ProductosPageInner() {
 
               {modalProduct.promoQtyMin && modalProduct.promoQtyDiscount ? (
                 <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:"auto" }}>
+                  <p style={{ fontSize:9, letterSpacing:2, textTransform:"uppercase", color:GT, margin:0, fontWeight:600, opacity:0.7 }}>Promoción por cantidad</p>
                   <div style={{ fontSize:11, fontWeight:600, padding:"8px 12px", borderRadius:4, background: promoActive ? "rgba(52,211,153,0.1)" : `${G}10`, color: promoActive ? "#16a34a" : GT, border:`1px solid ${promoActive ? "rgba(52,211,153,0.25)" : `${G}30`}` }}>
                     {promoModalText(modalProduct.promoType, modalProduct.promoQtyMin!, modalProduct.promoQtyDiscount, modalProduct.promoPayQty, pendingTotal)}
                   </div>
@@ -1755,8 +1788,7 @@ function ProductosPageInner() {
                     {selectedVariantStock === 0 ? "Sin stock" : `+ Agregar a mi selección${pendingTotal > 0 ? ` (${pendingTotal})` : ""}`}
                   </button>
                   {pendingItems.length > 0 && (() => {
-                    const subtotal = pendingItems.reduce((s, i) => s + modalProduct.price * i.qty, 0);
-                    const total = promoActive ? subtotal * (1 - pendingPromoDiscount / 100) : subtotal;
+                    const total = pendingCartValue;
                     return (
                       <button onClick={addAllToCart} style={{ background:G, color:accentDark?"#000":"#fff", border:"none", padding:"14px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
                         {promoActive ? `Agregar al carrito (${pendingTotal} uds) · ${fmt(total)} (-${pendingPromoDiscount}%)` : `Agregar al carrito (${pendingTotal} uds) · ${fmt(total)}`}
@@ -1768,7 +1800,7 @@ function ProductosPageInner() {
                 <button onClick={addToCart}
                   disabled={selectedVariantStock === 0}
                   style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
-                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(modalProduct.price * qty)}`}
+                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(displayPrice * qty)}`}
                 </button>
               )}
 

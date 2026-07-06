@@ -540,7 +540,7 @@ export async function POST(req: NextRequest) {
       const [productNames, variantData] = await Promise.all([
         prisma.product.findMany({
           where: { id: { in: productIds } },
-          select: { id: true, name: true },
+          select: { id: true, name: true, comparePrice: true },
         }),
         variantIds.length > 0
           ? prisma.productVariant.findMany({
@@ -551,6 +551,7 @@ export async function POST(req: NextRequest) {
       ]);
 
       const nameMap = Object.fromEntries(productNames.map((p) => [p.id, p.name]));
+      const comparePriceMap = Object.fromEntries(productNames.map((p) => [p.id, p.comparePrice]));
       const variantMap = Object.fromEntries(variantData.map((v) => [v.id, `${v.name}: ${v.value}`]));
 
       const emailItems = order.items.map((item) => ({
@@ -558,6 +559,7 @@ export async function POST(req: NextRequest) {
         variant: item.variantId ? (variantMap[item.variantId] ?? null) : null,
         quantity: item.quantity,
         price: item.price,
+        comparePrice: comparePriceMap[item.productId] ?? null,
       }));
 
       let paymentInfo = null;

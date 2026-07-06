@@ -9,6 +9,7 @@ import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { promoEffectivePct } from "@/lib/promoLabel";
+import { resolveVariantPrice } from "@/lib/variantPrice";
 
 // Misma lógica de matching de variante por talle/color que usan los templates
 // para mostrar "Sin stock"/"Últimas unidades" — se centraliza acá (y se expone
@@ -370,7 +371,8 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   // PERCENT: descuento aplicado a todos los ítems cuando aplica la promo.
   const pendingCartValue = (() => {
     if (!modalProduct) return 0;
-    const price = modalProduct.price;
+    const variantPrice = resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor);
+    const price = variantPrice ?? modalProduct.price;
     const subtotal = pendingItems.reduce((s, i) => s + price * i.qty, 0);
     if (!promoActive) return subtotal;
     const N = modalProduct.promoQtyMin;
@@ -395,19 +397,22 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     let total = 0;
     for (const items of byProduct.values()) {
       const product = items[0].product;
-      const basePrice = isWholesale ? getEffectiveWholesalePrice(product, items.reduce((s,i)=>s+i.qty,0)) : product.price;
       const totalQty = items.reduce((s, i) => s + i.qty, 0);
       const N = product.promoQtyMin;
       const M = product.promoPayQty;
       if (product.promoType === "N_PAY_M" && N && M && totalQty >= N) {
-        // Literal: grupos completos pagan M, el resto precio normal
+        // Para N_PAY_M usamos el precio de la primera variante del grupo (o base)
+        const fi = items[0];
+        const fvp = resolveVariantPrice(fi.product.variants, fi.size, fi.color, fi.variantId);
+        const basePrice = isWholesale ? getEffectiveWholesalePrice(product, totalQty) : (fvp ?? product.price);
         const completeGroups = Math.floor(totalQty / N);
         const remainder = totalQty % N;
         total += (completeGroups * M + remainder) * basePrice;
       } else {
         // PERCENT u otras: usar discountPct almacenado por ítem
         for (const item of items) {
-          const bp = isWholesale ? getEffectiveWholesalePrice(item.product, item.qty) : item.product.price;
+          const vp = resolveVariantPrice(item.product.variants, item.size, item.color, item.variantId);
+          const bp = isWholesale ? getEffectiveWholesalePrice(item.product, item.qty) : (vp ?? item.product.price);
           const effectivePrice = Math.round(bp * (1 - (item.discountPct ?? 0) / 100) * 100) / 100;
           total += effectivePrice * item.qty;
         }
@@ -675,8 +680,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   const handleApplyCoupon = async () => {
     setCouponError("");
     if (!coupon.trim()) return;
-    const subtotal = cartItems.reduce((s, i) => s + i.product.price * i.qty, 0);
-    const res = await validateCoupon(coupon, subtotal);
+    const res = await validateCoupon(coupon, cartTotal);
     if ("error" in res) { setCouponError(res.error); return; }
     setAppliedCoupon({ id: res.coupon.id, code: res.coupon.code, discount: res.discount });
     setCoupon("");

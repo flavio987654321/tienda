@@ -21,6 +21,7 @@ import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { promoModalText } from "@/lib/promoLabel";
 import { discountPercent } from "@/lib/discount";
+import { resolveVariantPrice } from "@/lib/variantPrice";
 
 type Product = StorefrontProduct;
 
@@ -241,6 +242,8 @@ export default function UrbanPulse() {
   } = cart;
   const accentText = getContrastColor(ACC) === "light" ? DARK : "#fff";
   const cartTheme: CartTheme = { BG:"#ffffff", S:BG, T:DARK, MID, border:"#e0e0e0", accent:ACC, accentText };
+  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
+  const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
@@ -877,12 +880,20 @@ export default function UrbanPulse() {
             const big = !isMobile && (idx === 0 || idx === 5);
             return (
               <div key={product.id} className="up-prod" onClick={() => openModal(product)}
-                style={{ gridColumn: big ? "span 2" : "span 1", cursor:"pointer", position:"relative", overflow:"hidden", background:WHITE }}>
+                style={{ gridColumn: big ? "span 2" : "span 1", cursor:"pointer", position:"relative", background:WHITE }}>
+                {(() => {
+                  const hasNxM = product.promoType === "N_PAY_M" && !!product.promoQtyMin && !!product.promoPayQty;
+                  const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
+                  if (!hasNxM && !hasOffer) return null;
+                  return <OfferBadge badge={hasNxM ? null : product.offerBadge} pct={hasOffer ? discountPercent(product.price, product.comparePrice) : null} nxm={hasNxM ? { n: product.promoQtyMin!, m: product.promoPayQty! } : undefined} size={big ? "md" : "sm"} />;
+                })()}
                 <div style={{ position:"relative", width:"100%", overflow:"hidden", aspectRatio: big ? "16/9" : "3/4" }}>
                   {product.images[0] && <FadeImage className="up-prod-img" src={product.images[0]} alt={product.name} fill sizes={big ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 50vw, 33vw"} style={{ objectFit:"cover" }} />}
-                  {product.comparePrice && product.comparePrice > product.price && (
-                    <OfferBadge badge={product.offerBadge || "SALE"} pct={discountPercent(product.price, product.comparePrice)} size="sm" />
-                  )}
+                  {(() => {
+                    const isSoldOut = product.variants.length > 0 && product.variants.reduce((s, v) => s + (v.stock || 0), 0) === 0;
+                    if (!isSoldOut) return null;
+                    return <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"rgba(0,0,0,0.72)", display:"flex", alignItems:"center", justifyContent:"center", padding:"9px 0", zIndex:2 }}><span style={{ color:"#fff", fontSize:9, fontWeight:900, letterSpacing:4, textTransform:"uppercase" }}>Sin stock</span></div>;
+                  })()}
                 </div>
                 <div style={{ padding:"14px 16px" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
@@ -1401,6 +1412,12 @@ export default function UrbanPulse() {
                     <FadeImage src={modalProduct.images[modalImg]} alt={modalProduct.name} fill sizes="(max-width: 768px) 100vw, 420px" style={{ objectFit:"cover", cursor:"zoom-in" }}
                       onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                   )}
+                  {(() => {
+                    const hasNxM = modalProduct.promoType === "N_PAY_M" && !!modalProduct.promoQtyMin && !!modalProduct.promoPayQty;
+                    const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
+                    if (!hasNxM && !hasOffer) return null;
+                    return <OfferBadge badge={hasNxM ? null : modalProduct.offerBadge} pct={hasOffer ? discountPercent(modalProduct.price, modalProduct.comparePrice) : null} nxm={hasNxM ? { n: modalProduct.promoQtyMin!, m: modalProduct.promoPayQty! } : undefined} size="md" />;
+                  })()}
                   {modalProduct.images.length > 1 && (<>
                     <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
                       style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.55)", border:"none", color:"#fff", width:42, height:42, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, fontWeight:700, zIndex:2, borderRadius:2 }}>‹</button>
@@ -1479,11 +1496,22 @@ export default function UrbanPulse() {
                   </button>
                   )}
                 </div>
-                <div style={{ display:"flex", gap:14, alignItems:"baseline", marginBottom:22 }}>
-                  <span style={{ fontSize:28, fontWeight:900, color: modalProduct.comparePrice ? RED : DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price)}</span>
-                  {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:15, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                <div style={{ display:"flex", gap:14, alignItems:"baseline", marginBottom: modalProduct.offerNote ? 8 : 22 }}>
+                  <span style={{ fontSize:28, fontWeight:900, color: (!variantPrice && modalProduct.comparePrice) ? RED : DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(displayPrice)}</span>
+                  {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:15, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                 </div>
-                {modalProduct.description && <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.7, marginBottom:22 }} />}
+                {!ocultarPrecios && modalProduct.offerNote && (
+                  <div style={{ fontSize:12, color:"#f97316", background:"rgba(249,115,22,0.08)", border:"1px solid rgba(249,115,22,0.25)", borderRadius:4, padding:"5px 10px", display:"flex", alignItems:"center", gap:6 }}>
+                    <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>{modalProduct.offerNote}</span>
+                  </div>
+                )}
+                {modalProduct.description && (
+                  <div style={{ borderTop:`1px solid rgba(248,250,252,0.06)`, paddingTop:16 }}>
+                    <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:MID, margin:"0 0 8px", fontWeight:700 }}>Descripción</p>
+                    <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.7 }} />
+                  </div>
+                )}
                 {(() => {
                   const attrs = modalProduct.attributes ?? [];
                   const condicionAttr = attrs.find(a => a.key === "Condición");
@@ -1570,6 +1598,7 @@ export default function UrbanPulse() {
                   </button>
                 ) : modalProduct.promoQtyMin ? (
                   <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:10 }}>
+                    <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:ACC, margin:0, fontWeight:700 }}>Promoción</p>
                     <div style={{ fontSize:11, fontWeight:700, padding:"8px 12px", background: promoActive ? "rgba(52,211,153,0.1)" : `${ACC}22`, color: promoActive ? "#34d399" : DARK, border:`2px solid ${promoActive ? "rgba(52,211,153,0.3)" : DARK}` }}>
                       {promoModalText(modalProduct.promoType, modalProduct.promoQtyMin!, modalProduct.promoQtyDiscount, modalProduct.promoPayQty, pendingTotal)}
                     </div>
@@ -1604,7 +1633,7 @@ export default function UrbanPulse() {
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
                     style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginBottom:10 }}>
-                    {selectedVariantStock === 0 ? "Sin stock" : `Agregar · ${fmt(modalProduct.price * qty)}`}
+                    {selectedVariantStock === 0 ? "Sin stock" : `Agregar · ${fmt(displayPrice * qty)}`}
                   </button>
                 )}
                   </div>
@@ -1716,8 +1745,8 @@ export default function UrbanPulse() {
             {isMobile && (
               <div style={{ borderTop:`2px solid ${DARK}`, padding:"12px 16px 16px", background:WHITE, flexShrink:0 }}>
                 <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
-                  <span style={{ fontSize:20, fontWeight:900, color:DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price * qty)}</span>
-                  {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  <span style={{ fontSize:20, fontWeight:900, color:DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(displayPrice * qty)}</span>
+                  {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   {qty > 1 && <span style={{ fontSize:11, color:MID }}>× {qty}</span>}
                 </div>
                 {isInquiryMode ? (

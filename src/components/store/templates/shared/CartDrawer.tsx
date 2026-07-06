@@ -2,6 +2,7 @@
 import { FadeImage } from "./FadeImage";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import { promoSavingsLabel } from "@/lib/promoLabel";
+import { resolveVariantPrice } from "@/lib/variantPrice";
 
 // Un solo componente de carrito reutilizado por todos los templates de un mismo
 // tipo de negocio (hoy: Electro Prime, Tech Nova, Home Studio, Casa Clara) — así
@@ -36,14 +37,17 @@ export function CartDrawer({
   } = cart;
   const blockBuy = isOwner || isPreview;
 
-  function itemBaseUnitPrice(product: typeof cartItems[number]["product"], qty: number): number {
-    if (!isWholesale || !product.cantMinMayorista || qty < product.cantMinMayorista) return product.price;
+  function itemBaseUnitPrice(item: typeof cartItems[number], qty: number): number {
+    const product = item.product;
+    const vp = resolveVariantPrice(product.variants, item.size, item.color, item.variantId);
+    const effectiveBase = vp ?? product.price;
+    if (!isWholesale || !product.cantMinMayorista || qty < product.cantMinMayorista) return effectiveBase;
     const escalones = product.preciosEscalonados ?? [];
     let best: number | null = null;
     for (const band of escalones) {
       if (qty >= band.desde && (best === null || band.precio < best)) best = band.precio;
     }
-    return best ?? product.precioMayorista ?? product.price;
+    return best ?? product.precioMayorista ?? effectiveBase;
   }
 
   // Retorna el total con descuento para un ítem, considerando N_PAY_M proporcional
@@ -56,14 +60,13 @@ export function CartDrawer({
         .filter(i => i.product.id === product.id)
         .reduce((s, i) => s + i.qty, 0);
       if (totalQtyForProduct >= N) {
-        // Use totalQtyForProduct (not item.qty) for wholesale tier lookup — the group unlocks the tier
-        const baseUnit = itemBaseUnitPrice(product, totalQtyForProduct);
+        const baseUnit = itemBaseUnitPrice(item, totalQtyForProduct);
         const paidQty = Math.floor(totalQtyForProduct / N) * M + totalQtyForProduct % N;
         const effectiveUnit = (paidQty / totalQtyForProduct) * baseUnit;
         return Math.round(effectiveUnit * item.qty * 100) / 100;
       }
     }
-    const baseUnit = itemBaseUnitPrice(product, item.qty);
+    const baseUnit = itemBaseUnitPrice(item, item.qty);
     return Math.round(baseUnit * item.qty * (1 - (item.discountPct ?? 0) / 100) * 100) / 100;
   }
 
@@ -108,14 +111,14 @@ export function CartDrawer({
                   {item.discountPct ? (
                     <div style={{ textAlign:"right" }}>
                       <span style={{ fontSize:11, color:MID, textDecoration:"line-through", display:"block", lineHeight:1.3 }}>
-                        {fmt(itemBaseUnitPrice(item.product, item.qty) * item.qty)}
+                        {fmt(itemBaseUnitPrice(item, item.qty) * item.qty)}
                       </span>
                       <span style={{ color:accent, fontWeight:700, fontSize:14 }}>
                         {fmt(itemDiscountedTotal(item))}
                       </span>
                     </div>
                   ) : (
-                    <span style={{ color:accent, fontWeight:700, fontSize:14 }}>{fmt(itemBaseUnitPrice(item.product, item.qty) * item.qty)}</span>
+                    <span style={{ color:accent, fontWeight:700, fontSize:14 }}>{fmt(itemBaseUnitPrice(item, item.qty) * item.qty)}</span>
                   )}
                 </div>
               </div>
@@ -124,7 +127,7 @@ export function CartDrawer({
           ))}
         </div>
         {cartItems.length > 0 && (() => {
-          const fullTotal = cartItems.reduce((s, i) => s + itemBaseUnitPrice(i.product, i.qty) * i.qty, 0);
+          const fullTotal = cartItems.reduce((s, i) => s + itemBaseUnitPrice(i, i.qty) * i.qty, 0);
           const promoSavings = fullTotal - cartTotal;
           return (
           <div style={{ padding:"16px 24px 28px", borderTop:`1px solid ${border}`, flexShrink:0 }}>
@@ -136,7 +139,7 @@ export function CartDrawer({
               const pi = cartItems.find(i => i.discountPct && i.discountPct > 0);
               return (
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>{promoSavingsLabel(pi?.product.promoType, pi?.product.promoQtyMin, pi?.product.promoPayQty)}</span>
+                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>{promoSavingsLabel(pi?.product.promoType, pi?.product.promoQtyMin, pi?.product.promoPayQty, pi?.discountPct)}</span>
                   <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>-{fmt(promoSavings)}</span>
                 </div>
               );

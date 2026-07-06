@@ -544,7 +544,7 @@ export async function sendOrderConfirmationEmail({
   buyerName: string;
   orderId: string;
   storeName: string;
-  items: { name: string; variant?: string | null; quantity: number; price: number }[];
+  items: { name: string; variant?: string | null; quantity: number; price: number; comparePrice?: number | null }[];
   subtotal: number;
   promoSavings?: number;
   promoType?: string | null;
@@ -568,22 +568,30 @@ export async function sendOrderConfirmationEmail({
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
   const shortId = orderId.slice(-8).toUpperCase();
 
+  const ofertaSavings = items.reduce((acc, item) => {
+    if (item.comparePrice && item.comparePrice > item.price) {
+      return acc + (item.comparePrice - item.price) * item.quantity;
+    }
+    return acc;
+  }, 0);
+
   const itemRows = items
-    .map(
-      (item) => `
+    .map((item) => {
+      const hasOferta = item.comparePrice && item.comparePrice > item.price;
+      return `
         <tr>
           <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6;">
             <span style="font-size:14px;font-weight:600;color:#111827;display:block;">${escapeHtml(item.name)}</span>
             ${item.variant ? `<span style="font-size:12px;color:#9ca3af;display:block;margin-top:2px;">${escapeHtml(item.variant)}</span>` : ""}
           </td>
           <td style="padding:12px 16px;font-size:13px;color:#6b7280;text-align:center;border-bottom:1px solid #f3f4f6;white-space:nowrap;">
-            ${item.quantity} × ${fmt(item.price)}
+            ${hasOferta ? `<s style="color:#9ca3af;font-size:12px;">${fmt(item.comparePrice!)}</s> ` : ""}${item.quantity} × ${fmt(item.price)}
           </td>
           <td style="padding:12px 16px;font-size:14px;font-weight:600;color:#111827;text-align:right;border-bottom:1px solid #f3f4f6;white-space:nowrap;">
             ${fmt(item.price * item.quantity)}
           </td>
-        </tr>`
-    )
+        </tr>`;
+    })
     .join("");
 
   await transporter.sendMail({
@@ -604,7 +612,7 @@ export async function sendOrderConfirmationEmail({
         <p style="font-size:15px;color:#374151;margin:0 0 6px;">Hola <strong>${escapeHtml(buyerName)}</strong>,</p>
         <p style="font-size:15px;color:#6b7280;margin:0 0 28px;line-height:1.6;">
           ${paymentProvider === "mp"
-            ? "Tu pago fue procesado con éxito a través de MercadoPago. El vendedor preparará tu pedido y se pondrá en contacto para coordinar el envío."
+            ? "Tu pedido fue registrado. Completá el pago en MercadoPago para que el vendedor pueda prepararlo. Cuando se confirme el pago, te avisamos por email."
             : "Recibimos tu pedido. El vendedor lo revisará y se va a poner en contacto con vos para coordinar el pago y el envío."
           }
         </p>
@@ -630,6 +638,11 @@ export async function sendOrderConfirmationEmail({
             <span style="font-size:14px;color:#6b7280;">Subtotal</span>
             <span style="font-size:14px;color:#374151;">${fmt(subtotal)}</span>
           </div>
+          ${ofertaSavings > 0 ? `
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#dc2626;font-weight:600;">🏷️ Ahorro por oferta</span>
+            <span style="font-size:14px;color:#dc2626;font-weight:600;">− ${fmt(ofertaSavings)}</span>
+          </div>` : ""}
           ${promoSavings && promoSavings > 0 ? `
           <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
             <span style="font-size:14px;color:#16a34a;font-weight:600;">${promoType === "N_PAY_M" && promoQtyMin && promoPayQty ? `🎉 Llevá ${promoQtyMin} pagá ${promoPayQty}` : "🎉 Ahorro por promo cantidad"}</span>
@@ -660,9 +673,9 @@ export async function sendOrderConfirmationEmail({
         </div>
 
         ${paymentProvider === "mp"
-          ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px 20px;margin-bottom:28px;text-align:center;">
-              <p style="font-size:13px;font-weight:700;color:#15803d;margin:0 0 4px;">✅ Pago recibido con MercadoPago</p>
-              <p style="font-size:13px;color:#16a34a;margin:0;">El pago fue procesado exitosamente. No necesitás hacer ninguna transferencia.</p>
+          ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:18px 20px;margin-bottom:28px;text-align:center;">
+              <p style="font-size:13px;font-weight:700;color:#1d4ed8;margin:0 0 4px;">💳 Pago pendiente en MercadoPago</p>
+              <p style="font-size:13px;color:#2563eb;margin:0;">Completá el pago en MercadoPago para que el vendedor pueda preparar tu pedido. Cuando se confirme, te enviamos otro email.</p>
              </div>`
           : buildPaymentBlock(paymentInfo)
         }
@@ -720,7 +733,7 @@ export async function sendNewOrderToOwnerEmail({
     city?: string;
     province?: string;
   };
-  items: { name: string; variant?: string | null; quantity: number; price: number }[];
+  items: { name: string; variant?: string | null; quantity: number; price: number; comparePrice?: number | null }[];
   subtotal: number;
   promoSavings?: number;
   promoType?: string | null;
@@ -738,22 +751,30 @@ export async function sendNewOrderToOwnerEmail({
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
   const shortId = orderId.slice(-8).toUpperCase();
 
+  const ofertaSavings = items.reduce((acc, item) => {
+    if (item.comparePrice && item.comparePrice > item.price) {
+      return acc + (item.comparePrice - item.price) * item.quantity;
+    }
+    return acc;
+  }, 0);
+
   const itemRows = items
-    .map(
-      (item) => `
+    .map((item) => {
+      const hasOferta = item.comparePrice && item.comparePrice > item.price;
+      return `
         <tr>
           <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6;">
             <span style="font-size:14px;font-weight:600;color:#111827;display:block;">${escapeHtml(item.name)}</span>
             ${item.variant ? `<span style="font-size:12px;color:#9ca3af;display:block;margin-top:2px;">${escapeHtml(item.variant)}</span>` : ""}
           </td>
           <td style="padding:12px 16px;font-size:13px;color:#6b7280;text-align:center;border-bottom:1px solid #f3f4f6;white-space:nowrap;">
-            ${item.quantity} × ${fmt(item.price)}
+            ${hasOferta ? `<s style="color:#9ca3af;font-size:12px;">${fmt(item.comparePrice!)}</s> ` : ""}${item.quantity} × ${fmt(item.price)}
           </td>
           <td style="padding:12px 16px;font-size:14px;font-weight:600;color:#111827;text-align:right;border-bottom:1px solid #f3f4f6;white-space:nowrap;">
             ${fmt(item.price * item.quantity)}
           </td>
-        </tr>`
-    )
+        </tr>`;
+    })
     .join("");
 
   const addressParts = [customer.street, customer.city, customer.province].filter(Boolean);
@@ -829,6 +850,11 @@ export async function sendNewOrderToOwnerEmail({
             <span style="font-size:14px;color:#6b7280;">Subtotal</span>
             <span style="font-size:14px;color:#374151;">${fmt(subtotal)}</span>
           </div>
+          ${ofertaSavings > 0 ? `
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#dc2626;font-weight:600;">🏷️ Ahorro por oferta</span>
+            <span style="font-size:14px;color:#dc2626;font-weight:600;">− ${fmt(ofertaSavings)}</span>
+          </div>` : ""}
           ${promoSavings && promoSavings > 0 ? `
           <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
             <span style="font-size:14px;color:#16a34a;font-weight:600;">${promoType === "N_PAY_M" && promoQtyMin && promoPayQty ? `Llevá ${promoQtyMin} pagá ${promoPayQty}` : "Ahorro promo cantidad"}</span>

@@ -20,6 +20,7 @@ import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { promoModalText } from "@/lib/promoLabel";
 import { discountPercent } from "@/lib/discount";
+import { resolveVariantPrice } from "@/lib/variantPrice";
 
 type Product = StorefrontProduct;
 
@@ -261,6 +262,8 @@ export default function ChicParis() {
   } = cart;
   const accentText = getContrastColor(ACC) === "light" ? "#fff" : "#111";
   const cartTheme: CartTheme = { BG:"#ffffff", S:"#fafafa", T:"#111111", MID:"#999999", border:"#e5e5e5", accent:ACC, accentText };
+  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
+  const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
@@ -875,16 +878,24 @@ export default function ChicParis() {
             <>
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fill,minmax(260px,1fr))", gap: isMobile ? 12 : 24 }}>
                 {filtered.map(product => (
-                  <div key={product.id} className="cp-prod" onClick={() => openModal(product)} style={{ cursor: "pointer", background: "#fff", borderRadius: 4, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                  <div key={product.id} className="cp-prod" onClick={() => openModal(product)} style={{ cursor: "pointer", background: "#fff", borderRadius: 4, position: "relative", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                    {(() => {
+                      const hasNxM = product.promoType === "N_PAY_M" && !!product.promoQtyMin && !!product.promoPayQty;
+                      const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
+                      if (!hasNxM && !hasOffer) return null;
+                      return <OfferBadge badge={hasNxM ? null : product.offerBadge} pct={hasOffer ? discountPercent(product.price, product.comparePrice) : null} nxm={hasNxM ? { n: product.promoQtyMin!, m: product.promoPayQty! } : undefined} size="sm" />;
+                    })()}
                     <div style={{ position: "relative", width: "100%", overflow: "hidden", aspectRatio: "3/4" }}>
                       <FadeImage className="cp-img" src={product.images[0] ?? "/placeholder.jpg"} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw"
                         style={{ objectFit: "cover" }} />
+                      {(() => {
+                        const isSoldOut = product.variants.length > 0 && product.variants.reduce((s, v) => s + (v.stock || 0), 0) === 0;
+                        if (!isSoldOut) return null;
+                        return <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"rgba(0,0,0,0.62)", display:"flex", alignItems:"center", justifyContent:"center", padding:"9px 0", zIndex:2 }}><span style={{ color:"#fff", fontSize:9, fontWeight:800, letterSpacing:4, textTransform:"uppercase" }}>Sin stock</span></div>;
+                      })()}
                       <div className="cp-overlay" style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <span style={{ color: "#fff", fontSize: 11, letterSpacing: 3, fontWeight: 700, textTransform: "uppercase", border: "1px solid #fff", padding: "10px 20px" }}>Ver detalle</span>
                       </div>
-                      {product.comparePrice && product.comparePrice > product.price && (
-                        <OfferBadge badge={product.offerBadge || "SALE"} pct={discountPercent(product.price, product.comparePrice)} size="sm" />
-                      )}
                       <button onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
                         style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.9)", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                         <svg width={14} height={14} viewBox="0 0 24 24" fill={favorites.includes(product.id) ? ACC : "none"} stroke={favorites.includes(product.id) ? ACC : "#555"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -1407,6 +1418,12 @@ export default function ChicParis() {
               <FadeImage src={modalProduct.images[modalImg] ?? "/placeholder.jpg"} alt={modalProduct.name} fill sizes="(max-width: 768px) 100vw, 420px"
                 style={{ objectFit: "cover", cursor:"zoom-in" }}
                 onClick={() => setLightboxSrc(modalProduct.images[modalImg] ?? "/placeholder.jpg")} />
+              {(() => {
+                const hasNxM = modalProduct.promoType === "N_PAY_M" && !!modalProduct.promoQtyMin && !!modalProduct.promoPayQty;
+                const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
+                if (!hasNxM && !hasOffer) return null;
+                return <OfferBadge badge={hasNxM ? null : modalProduct.offerBadge} pct={hasOffer ? discountPercent(modalProduct.price, modalProduct.comparePrice) : null} nxm={hasNxM ? { n: modalProduct.promoQtyMin!, m: modalProduct.promoPayQty! } : undefined} size="md" />;
+              })()}
               {modalProduct.images.length > 1 && (<>
                 <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
                   style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", border: "none", width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, zIndex: 2 }}>‹</button>
@@ -1465,11 +1482,22 @@ export default function ChicParis() {
                 </button>
                 )}
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-                <span style={{ fontSize: 24, fontWeight: 900, color: ACC }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price)}</span>
-                {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize: 16, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                <span style={{ fontSize: 24, fontWeight: 900, color: ACC }}>{ocultarPrecios ? "Consultá precio" : fmt(displayPrice)}</span>
+                {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize: 16, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
               </div>
-              {modalProduct.description && <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize: 14, color: "#555", lineHeight: 1.7, marginBottom: 20 }} />}
+              {!ocultarPrecios && modalProduct.offerNote && (
+                <div style={{ fontSize: 12, color: "#059669", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 4, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 }}>
+                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>{modalProduct.offerNote}</span>
+                </div>
+              )}
+              {modalProduct.description && (
+                <div style={{ borderTop: "1px solid #eee", paddingTop: 14 }}>
+                  <p style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#aaa", margin: "0 0 8px", fontWeight: 600 }}>Descripción</p>
+                  <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize: 14, color: "#555", lineHeight: 1.7 }} />
+                </div>
+              )}
 
               {(() => {
                 const attrs = modalProduct.attributes ?? [];
@@ -1570,6 +1598,7 @@ export default function ChicParis() {
                 </button>
               ) : modalProduct.promoQtyMin ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <p style={{ fontSize:9, letterSpacing:2, textTransform:"uppercase", color:ACC, margin:0, fontWeight:600, opacity:0.7 }}>Promoción</p>
                   <div style={{ fontSize: 11, fontWeight: 600, padding: "8px 12px", borderRadius: 4, background: promoActive ? "rgba(22,163,74,0.08)" : `${ACC}11`, color: promoActive ? "#16a34a" : ACC, border: `1px solid ${promoActive ? "rgba(22,163,74,0.2)" : `${ACC}33`}` }}>
                     {promoModalText(modalProduct.promoType, modalProduct.promoQtyMin!, modalProduct.promoQtyDiscount, modalProduct.promoPayQty, pendingTotal)}
                   </div>
@@ -1708,8 +1737,8 @@ export default function ChicParis() {
             {isMobile && (
               <div style={{ borderTop: "1px solid #f0f0f0", padding: "12px 16px 16px", background: "#fff", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
-                  <span style={{ fontSize: 20, fontWeight: 700, color: ACC }}>{ocultarPrecios ? "Consultá precio" : fmt(modalProduct.price * qty)}</span>
-                  {!ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize: 12, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  <span style={{ fontSize: 20, fontWeight: 700, color: ACC }}>{ocultarPrecios ? "Consultá precio" : fmt(displayPrice * qty)}</span>
+                  {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize: 12, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   {qty > 1 && <span style={{ fontSize: 11, color: "#bbb" }}>× {qty}</span>}
                 </div>
                 {isInquiryMode ? (
@@ -1724,8 +1753,7 @@ export default function ChicParis() {
                       {selectedVariantStock === 0 ? "Sin stock" : `+ Selección${pendingTotal > 0 ? ` (${pendingTotal})` : ""}`}
                     </button>
                     {pendingItems.length > 0 && (() => {
-                      const subtotal = pendingItems.reduce((s, i) => s + modalProduct.price * i.qty, 0);
-                      const total = promoActive ? subtotal * (1 - pendingPromoDiscount / 100) : subtotal;
+                      const total = pendingCartValue;
                       return (
                         <button onClick={addAllToCart} style={{ flex: 2, background: ACC, color: accentText, border: "none", padding: "13px 8px", fontSize: 10, fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase", cursor: "pointer" }}>
                           {promoActive ? `Confirmar · ${fmt(total)} (-${pendingPromoDiscount}%)` : `Confirmar · ${fmt(total)}`}

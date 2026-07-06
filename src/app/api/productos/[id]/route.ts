@@ -48,7 +48,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
     name, sanitizedDescription, parsedPrice, parsedComparePrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista,
     parsedPreciosEscalonados, parsedSoloMayorista, parsedCuotas, normalizedVariants,
     parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
-    parsedPromoQtyMin, parsedPromoQtyDiscount, parsedPromoType, parsedPromoPayQty, parsedOfferBadge,
+    parsedPromoQtyMin, parsedPromoQtyDiscount, parsedPromoType, parsedPromoPayQty, parsedOfferBadge, parsedOfferNote, parsedOfferEndsAt,
   } = validated;
 
   // Guard de seguridad: escalones y soloMayorista solo aplican a tiendas mayoristas.
@@ -210,6 +210,8 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         promoType: parsedPromoType,
         promoPayQty: parsedPromoPayQty,
         offerBadge: parsedOfferBadge,
+        offerNote: parsedOfferNote,
+        offerEndsAt: parsedOfferEndsAt,
         cuotas: parsedCuotas,
         weightKg: parsedWeightKg,
         widthCm: parsedWidthCm,

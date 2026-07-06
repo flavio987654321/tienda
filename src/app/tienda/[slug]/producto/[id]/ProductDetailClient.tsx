@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ShoppingBag, MessageCircle, Check } from "lucide-react";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { getDemoPool, isDemoProductId, type StorefrontProduct, type StorefrontVariant, type PlaceOrderParams } from "@/hooks/useStorefront";
+import { promoModalText } from "@/lib/promoLabel";
+import { resolveVariantPrice } from "@/lib/variantPrice";
 import type { ProductDetailViewProps } from "@/components/store/templates/productDetail/shared";
 import ElectroPrimeDetail from "@/components/store/templates/productDetail/ElectroPrimeDetail";
 import TechNovaDetail from "@/components/store/templates/productDetail/TechNovaDetail";
@@ -39,6 +41,11 @@ type RawProduct = {
   reelUrls?: string;
   variants?: StorefrontVariant[];
   attributes?: string;
+  promoType?: string | null;
+  promoPayQty?: number | null;
+  offerBadge?: string | null;
+  offerNote?: string | null;
+  offerEndsAt?: string | null;
 };
 
 const SIZE_ATTRS  = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
@@ -80,15 +87,20 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     const parsed = JSON.parse(raw.attributes || "[]");
     attributes = Array.isArray(parsed) ? parsed.filter((a: unknown) => a && typeof a === "object") : [];
   } catch {}
+  const offerActive = !raw.offerEndsAt || new Date(raw.offerEndsAt) > new Date();
   return {
     id: raw.id, name: raw.name, price: raw.price,
-    comparePrice: raw.comparePrice ?? null,
+    comparePrice: offerActive ? (raw.comparePrice ?? null) : null,
     precioMayorista: raw.precioMayorista ?? null,
     cantMinMayorista: raw.cantMinMayorista ?? null,
     preciosEscalonados: (() => { try { const p = JSON.parse(raw.preciosEscalonados || "[]"); return Array.isArray(p) ? p : []; } catch { return []; } })(),
     soloMayorista: raw.soloMayorista ?? false,
     promoQtyMin: raw.promoQtyMin ?? null,
     promoQtyDiscount: raw.promoQtyDiscount ?? null,
+    promoType: raw.promoType ?? "PERCENT",
+    promoPayQty: raw.promoPayQty ?? null,
+    offerBadge: offerActive ? (raw.offerBadge ?? null) : null,
+    offerNote: offerActive ? (raw.offerNote ?? null) : null,
     cuotas: raw.cuotas ?? 0,
     category: raw.category ?? "general",
     subcategory: raw.subcategory ?? undefined,
@@ -229,7 +241,9 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
   const needsSize = product.sizes.length > 0;
   const needsColor = product.colors.length > 0;
   const canAdd = (!needsSize || !!selectedSize) && (!needsColor || !!selectedColor);
-  const discount = product.comparePrice && product.comparePrice > product.price
+  const variantPrice = resolveVariantPrice(product.variants, selectedSize, selectedColor);
+  const displayPrice = variantPrice ?? product.price;
+  const discount = !variantPrice && product.comparePrice && product.comparePrice > product.price
     ? Math.round((1 - product.price / product.comparePrice) * 100) : null;
   const catalogHref = `/tienda/${slug}/productos${isPreview ? "?from=editor" : ""}`;
 
@@ -284,11 +298,21 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
             <h1 className="text-2xl font-bold text-gray-900 mb-3">{product.name}</h1>
 
             <div className="flex items-baseline gap-3 mb-1">
-              <span className="text-3xl font-bold text-gray-900">{fmt(product.price)}</span>
-              {product.comparePrice && product.comparePrice > product.price && (
+              <span className="text-3xl font-bold text-gray-900">{fmt(displayPrice)}</span>
+              {!variantPrice && product.comparePrice && product.comparePrice > product.price && (
                 <span className="text-lg text-gray-400 line-through">{fmt(product.comparePrice)}</span>
               )}
             </div>
+            {product.offerNote && (
+              <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-2 flex items-center gap-2">
+                📋 {product.offerNote}
+              </p>
+            )}
+            {product.promoQtyMin && product.promoQtyDiscount && (
+              <p className="text-xs font-semibold px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-700 mb-2">
+                {promoModalText(product.promoType, product.promoQtyMin, product.promoQtyDiscount, product.promoPayQty, 0)}
+              </p>
+            )}
             <p className="text-xs text-gray-400 mb-6">Pagá en cuotas con tarjeta de crédito</p>
 
             {needsSize && (
