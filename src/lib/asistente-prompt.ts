@@ -135,20 +135,44 @@ Se hace desde "Configuración" (no desde "Diseño") — ahí está la opción pa
 
 ### Carritos abandonados — recuperar ventas que casi se pierden
 1. Ir a "Carritos abandonados" en el menú de la izquierda (no aparece en tiendas de tipo Autos, que no tienen carrito de compra).
-2. Ahí aparece cada persona que escribió su email (y a veces teléfono) en el checkout de la tienda pero se fue sin terminar de pagar, con los productos que tenía en el carrito, el total y hace cuánto que no hizo nada.
-3. El sistema le manda solo, automáticamente, un email recordándole su carrito (con un link para retomarlo) si pasó más de 1 hora sin actividad — no hace falta hacer nada para que se mande.
-4. El dueño puede además tocar el botón "Reenviar recordatorio" en cualquier momento para mandarle ese mismo email de nuevo a mano, por ejemplo si quiere insistir con un caso puntual.
-5. Si esa persona vuelve y completa la compra, el carrito sale solo de la lista (queda como recuperado). Los que quedan sin recuperar por más de 45 días se borran solos, no hay que limpiar nada a mano.
-6. Si preguntan por qué alguien aparece ahí sin haber comprado nunca: es justamente el objetivo de la sección, gente que llegó a escribir sus datos en el checkout pero no llegó a confirmar la compra.
+2. Arriba se ven 4 indicadores automáticos: cuántos carritos están pendientes de recuperar, cuántos ya se recuperaron, la tasa de recupero (% de los que terminaron comprando) y el revenue total recuperado gracias al sistema.
+3. Abajo hay una explicación del flujo en 3 pasos, y después la lista de personas con su email, teléfono (si lo dejaron), los productos que tenían, el total y hace cuánto abandonaron.
+4. El sistema le manda solo, automáticamente, un email recordándole su carrito (con un link para retomarlo) si pasó más de 1 hora sin actividad — no hace falta hacer nada para que se mande. Ese email ya aparece marcado como enviado en la tarjeta de cada persona.
+5. El dueño puede además tocar el botón "Enviar email" en cualquier momento para mandarle ese mismo email de nuevo a mano.
+6. Si la persona dejó teléfono, aparece también el botón verde "WhatsApp" — al tocarlo se abre un panel con el resumen del carrito, una vista previa del mensaje para WhatsApp (editable, el dueño lo puede modificar antes de enviar), y la opción de generar un cupón de descuento exclusivo para atraer más a esa persona. El cupón que se genera tiene 1 solo uso, vence en 7 días, y no se puede generar un segundo cupón para el mismo contacto — así queda claro quién lo recibió. Al tocar "Abrir WhatsApp" se abre el chat con el mensaje ya cargado (el dueño todavía tiene que tocar "Enviar" dentro de WhatsApp). La tarjeta muestra el badge "WA abierto" para que el dueño sepa que ya contactó a esa persona por WhatsApp.
+7. Los cupones generados desde el contacto por WhatsApp aparecen en la sección "Cupones" del panel, en el tab "WhatsApp", identificados con el badge "WA" para que no se confundan con los cupones regulares.
+8. Si esa persona vuelve y completa la compra (ya sea usando el cupón, el link de recuperación, o entrando directamente a la tienda con ese email), el carrito sale solo de la lista y suma al contador de recuperados. Los que quedan sin recuperar por más de 45 días se borran solos, no hay que limpiar nada a mano.
+9. Si preguntan por qué alguien aparece ahí sin haber comprado nunca: es justamente el objetivo de la sección, gente que llegó a escribir sus datos en el checkout pero no llegó a confirmar la compra.
 
 ### Reseñas — cómo se entera el dueño cuando llega una
 Cuando un comprador deja una reseña en algún producto, al dueño le llega un aviso por dos vías al mismo tiempo: una notificación en la campanita del panel (arriba a la derecha) con un link directo a "Reseñas", y un email con el nombre del comprador, el puntaje, el comentario y un link al producto en la tienda. Para ver todas las reseñas juntas: la sección "Reseñas" en el menú de la izquierda muestra todas las reseñas recibidas, con la foto del producto, el comentario, el puntaje y si la compra fue verificada. Desde ahí el dueño puede aprobar o eliminar cada reseña.
 
-### Crear un cupón
+### Cupones — crear, historial y tipos
+La sección "Cupones" tiene dos partes: el formulario para crear cupones nuevos arriba, y el historial de todos los cupones de la tienda abajo.
+
+Crear un cupón:
 1. Ir a "Cupones" en el menú de la izquierda.
 2. Botón "Nuevo cupón" → abre el formulario "Crear cupón".
 3. Campos exactos: "Código" (ej. OTOÑO20), "Tipo de descuento" (Porcentaje % o Monto fijo $), el campo de valor según el tipo elegido, "Compra mínima ($)", "Usos máximos (vacío = ilimitado)", "Fecha de vencimiento (opcional)".
 4. Botón "Crear cupón" para guardar.
+
+Historial de cupones (debajo del formulario):
+- Hay 4 indicadores de resumen arriba: cupones vigentes, vencidos, cupones de gamificación, y el total de descuento otorgado a los clientes en todos los pedidos.
+- Se puede filtrar por tab: "Todos", "Vigentes", "Vencidos", "Gamificación" (cupones de premios del widget de rueda/raspadita), "WhatsApp" (cupones generados desde el contacto de recuperación por WhatsApp en la sección "Carritos abandonados").
+- También hay una búsqueda por código.
+- Cada fila muestra el código, el tipo y valor de descuento, cuántas veces se usó vs el máximo, la fecha de vencimiento, y el estado (Vigente / Vencido / Agotado / Inactivo).
+- Los cupones de gamificación tienen el badge "🎡" — son personales, solo puede usarlos el cliente que lo ganó jugando al widget de la tienda.
+- Los cupones generados desde el WhatsApp de carritos abandonados tienen el badge "💬 WA" — son de 1 uso y vencen en 7 días.
+- Al tocar el botón de expandir en una fila (solo aparece si el cupón tiene usos), se ven los pedidos en que se usó ese cupón: comprador, email, total del pedido, descuento aplicado y fecha.
+
+Nota: en el plan Tienda Pro hay un máximo de 10 cupones activos. En Tienda Premium no hay límite.
+
+### Poner un producto en oferta (precio tachado + badge de descuento)
+Hay dos formas de mostrar un descuento en un producto:
+- "Precio tachado" (campo "Precio tachado" en el formulario del producto): es el precio original que aparece tachado al lado del precio actual. Si se carga este campo, el sistema calcula y muestra automáticamente el porcentaje de descuento como badge en la tarjeta del producto dentro de la tienda.
+- "Precio de oferta" (toggle "En oferta" dentro del formulario del producto): activa un precio especial de oferta además del precio tachado. Con este toggle activado, el producto puede mostrar un badge de color personalizable con el texto de la oferta (ej. "2x1", "Liquidación", "Hot Sale", etc.) — el dueño elige el badge y el color desde el mismo formulario. El precio de oferta tiene prioridad sobre el precio regular para el cobro, y el precio original queda tachado.
+- En el email de confirmación de compra (al cliente y al dueño), si el pedido incluía productos con precio tachado u oferta, se muestra el ahorro total en la sección de totales.
+- Consejo: el precio tachado sirve para descuentos simples. El toggle "En oferta" sirve para promos más llamativas (liquidación, black friday, 2x1) porque agrega el badge de color y permite más personalización visual.
 
 ### Perfil del dueño
 Sección "Perfil": campos Nombre, Email (solo lectura), Ciudad, Teléfono, y botones "Elegir foto" / "Usar cámara" para la foto de perfil.
