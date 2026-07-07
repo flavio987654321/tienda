@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import Link from "next/link";
 import { X, Send, Loader2, ShoppingCart, ArrowRight, ShoppingBag, PackageSearch, Store, Package, Wallet } from "lucide-react";
 import AsistentePersonaje, { type EstadoSasha } from "./AsistentePersonaje";
@@ -70,6 +70,33 @@ export default function AsistenteIA({ userId }: { userId: string }) {
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mensajesRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const dragX = useMotionValue(0);
+  const dragY = useMotionValue(0);
+  const [dragConstraints, setDragConstraints] = useState({ left: 0, right: 0, top: 0, bottom: 0 });
+
+  useEffect(() => {
+    const updateConstraints = () => setDragConstraints({
+      left: -(window.innerWidth - 80),
+      right: 0,
+      top: -(window.innerHeight - 80),
+      bottom: 0,
+    });
+    updateConstraints();
+    window.addEventListener("resize", updateConstraints);
+    return () => window.removeEventListener("resize", updateConstraints);
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("sasha-pos");
+    if (!saved) return;
+    try {
+      const { x, y } = JSON.parse(saved);
+      dragX.set(x);
+      dragY.set(y);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // El historial vive en el servidor (no en localStorage) para que sea el mismo en
   // cualquier dispositivo. yaSaludoHoy evita saludar dos veces mientras carga.
   const [yaSaludoHoy, setYaSaludoHoy] = useState(false);
@@ -217,30 +244,44 @@ export default function AsistenteIA({ userId }: { userId: string }) {
 
   return (
     <>
-      <motion.button
-        type="button"
-        onClick={abrirChat}
-        aria-label="Abrir asistente Sasha"
-        title="Sasha, tu asistente"
-        initial={{ scale: 0 }}
-        animate={{
-          scale: 1,
-          y: [0, -7, 0],
-          boxShadow: [
-            "0 8px 24px rgba(249,115,22,.45), 0 0 0 0 rgba(249,115,22,.45)",
-            "0 8px 24px rgba(249,115,22,.45), 0 0 0 10px rgba(249,115,22,0)",
-            "0 8px 24px rgba(249,115,22,.45), 0 0 0 0 rgba(249,115,22,.45)",
-          ],
+      <motion.div
+        drag
+        dragMomentum={false}
+        dragElastic={0.05}
+        dragConstraints={dragConstraints}
+        style={{ x: dragX, y: dragY }}
+        onDragStart={() => { isDragging.current = true; }}
+        onDragEnd={() => {
+          setTimeout(() => { isDragging.current = false; }, 50);
+          localStorage.setItem("sasha-pos", JSON.stringify({ x: dragX.get(), y: dragY.get() }));
         }}
-        transition={{
-          scale: { delay: 0.8, type: "spring" },
-          y: { delay: 0.8, duration: 2.6, repeat: Infinity, ease: "easeInOut" },
-          boxShadow: { delay: 0.8, duration: 2.6, repeat: Infinity, ease: "easeInOut" },
-        }}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full hover:scale-110 transition-transform"
+        className="fixed bottom-6 right-6 z-50 cursor-grab active:cursor-grabbing touch-none"
       >
-        <AsistentePersonaje estado={estadoBurbuja} size={56} />
-      </motion.button>
+        <motion.button
+          type="button"
+          onClick={() => { if (!isDragging.current) abrirChat(); }}
+          aria-label="Abrir asistente Sasha"
+          title="Sasha — arrastrá para mover"
+          initial={{ scale: 0 }}
+          animate={{
+            scale: 1,
+            y: [0, -7, 0],
+            boxShadow: [
+              "0 8px 24px rgba(249,115,22,.45), 0 0 0 0 rgba(249,115,22,.45)",
+              "0 8px 24px rgba(249,115,22,.45), 0 0 0 10px rgba(249,115,22,0)",
+              "0 8px 24px rgba(249,115,22,.45), 0 0 0 0 rgba(249,115,22,.45)",
+            ],
+          }}
+          transition={{
+            scale: { delay: 0.8, type: "spring" },
+            y: { delay: 0.8, duration: 2.6, repeat: Infinity, ease: "easeInOut" },
+            boxShadow: { delay: 0.8, duration: 2.6, repeat: Infinity, ease: "easeInOut" },
+          }}
+          className="h-14 w-14 rounded-full hover:scale-110 transition-transform"
+        >
+          <AsistentePersonaje estado={estadoBurbuja} size={56} />
+        </motion.button>
+      </motion.div>
 
       <AnimatePresence>
         {abierto && (
