@@ -62,14 +62,6 @@ export default async function CarritosAbandonadosPage({ searchParams }: Props) {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  function pageHref(targetPage: number) {
-    const params = new URLSearchParams();
-    if (search) params.set("q", search);
-    if (targetPage > 1) params.set("page", String(targetPage));
-    const qs = params.toString();
-    return qs ? `/dashboard/carritos-abandonados?${qs}` : "/dashboard/carritos-abandonados";
-  }
-
   const rows = carts.map((cart) => {
     let items: SnapshotItem[] = [];
     try {
@@ -110,7 +102,6 @@ export default async function CarritosAbandonadosPage({ searchParams }: Props) {
         storeSlug={store?.slug ?? ""}
         storeName={store?.name ?? ""}
         stats={stats}
-        pageHref={pageHref}
         page={page}
         totalPages={totalPages}
         total={total}

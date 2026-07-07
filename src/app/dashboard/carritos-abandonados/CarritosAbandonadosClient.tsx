@@ -32,7 +32,6 @@ type Props = {
   storeSlug: string;
   storeName: string;
   stats: Stats;
-  pageHref: (p: number) => string;
   page: number;
   totalPages: number;
   total: number;
@@ -344,8 +343,16 @@ function WhatsAppModal({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+function pageHref(targetPage: number, search?: string) {
+  const params = new URLSearchParams();
+  if (search) params.set("q", search);
+  if (targetPage > 1) params.set("page", String(targetPage));
+  const qs = params.toString();
+  return qs ? `/dashboard/carritos-abandonados?${qs}` : "/dashboard/carritos-abandonados";
+}
+
 export default function CarritosAbandonadosClient({
-  carts, search, storeSlug, storeName, stats, pageHref, page, totalPages, total,
+  carts, search, storeSlug, storeName, stats, page, totalPages, total,
 }: Props) {
   const router = useRouter();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -588,14 +595,14 @@ export default function CarritosAbandonadosClient({
       {totalPages > 1 && (
         <div className="flex items-center justify-between gap-3 pt-6">
           {page > 1 ? (
-            <Link href={pageHref(page - 1)}
+            <Link href={pageHref(page - 1, search)}
               className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
               <ChevronLeft className="h-4 w-4" /> Anterior
             </Link>
           ) : <span />}
           <p className="text-sm text-gray-400 tabular-nums">Página {page} de {totalPages}</p>
           {page < totalPages ? (
-            <Link href={pageHref(page + 1)}
+            <Link href={pageHref(page + 1, search)}
               className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
               Siguiente <ChevronRight className="h-4 w-4" />
             </Link>
