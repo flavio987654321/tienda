@@ -90,29 +90,41 @@ export async function POST(req: NextRequest) {
   const planLabel = plan === "OWNER_PREMIUM" ? "Dueño Premium" : plan === "OWNER_BASIC" ? "Dueño Básico" : "Afiliado";
   const billingLabel = billing === "MONTHLY" ? "Mensual" : "Anual";
 
+  const accessToken = process.env.MP_ACCESS_TOKEN;
+  if (!accessToken) {
+    console.error("[suscripcion/preferencia] MP_ACCESS_TOKEN no está configurado");
+    return NextResponse.json({ error: "El sistema de pagos no está configurado. Contactá soporte." }, { status: 503 });
+  }
+
   const client = platformClient();
   const preference = new Preference(client);
 
-  const pref = await preference.create({
-    body: {
-      items: [{
-        id: plan,
-        title: `Suscripción ${planLabel} - ${billingLabel}`,
-        unit_price: finalAmount,
-        quantity: 1,
-        currency_id: "ARS",
-      }],
-      external_reference: user.id,
-      back_urls: {
-        success: `${APP_URL}/dashboard?suscripcion=ok`,
-        failure: `${APP_URL}/dashboard/mi-plan?suscripcion=error`,
-        pending: `${APP_URL}/dashboard/mi-plan?suscripcion=pendiente`,
+  let pref;
+  try {
+    pref = await preference.create({
+      body: {
+        items: [{
+          id: plan,
+          title: `Suscripción ${planLabel} - ${billingLabel}`,
+          unit_price: finalAmount,
+          quantity: 1,
+          currency_id: "ARS",
+        }],
+        external_reference: user.id,
+        back_urls: {
+          success: `${APP_URL}/dashboard?suscripcion=ok`,
+          failure: `${APP_URL}/dashboard/mi-plan?suscripcion=error`,
+          pending: `${APP_URL}/dashboard/mi-plan?suscripcion=pendiente`,
+        },
+        auto_return: "approved",
+        notification_url: `${APP_URL}/api/suscripcion/webhook`,
+        metadata: { userId: user.id, plan, billing, role, tier, couponId, expectedAmount: finalAmount },
       },
-      auto_return: "approved",
-      notification_url: `${APP_URL}/api/suscripcion/webhook`,
-      metadata: { userId: user.id, plan, billing, role, tier, couponId, expectedAmount: finalAmount },
-    },
-  });
+    });
+  } catch (e) {
+    console.error("[suscripcion/preferencia] Error al crear preferencia MP:", e instanceof Error ? e.message : e);
+    return NextResponse.json({ error: "No se pudo conectar con Mercado Pago. Intentá de nuevo en unos minutos." }, { status: 502 });
+  }
 
   const checkoutUrl = process.env.NODE_ENV === "production"
     ? pref.init_point
