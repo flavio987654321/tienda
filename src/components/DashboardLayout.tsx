@@ -52,7 +52,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/dashboard/cupones",        label: "Cupones",        icon: Tag,   tourId: "cupones",   hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/carritos-abandonados", label: "Carritos abandonados", icon: ShoppingCart, tourId: "carritos-abandonados", hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/vendedoras",     label: "Afiliados",      icon: Users,         tourId: "afiliados" },
-      { href: "/dashboard/reseñas",         label: "Reseñas",        icon: Star,  tourId: "resenas", hiddenFor: LEADS_STORE_TYPES },
+      { href: "/dashboard/resenas",         label: "Reseñas",        icon: Star,  tourId: "resenas", hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/notificaciones", label: "Notificaciones", icon: Bell, tourId: "notificaciones" },
     ],
   },

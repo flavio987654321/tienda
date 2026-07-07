@@ -140,7 +140,7 @@ export async function POST(
         type:    "NEW_REVIEW",
         title:   "Nueva reseña recibida",
         body:    `${reviewerTrimmed} dejó ${Math.round(rating)}★ en ${productName}`,
-        link:    "/dashboard/reseñas",
+        link:    "/dashboard/resenas",
       },
     }),
     sendNewReviewToOwnerEmail({
