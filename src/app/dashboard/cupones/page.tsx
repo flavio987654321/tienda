@@ -200,8 +200,8 @@ function CouponHistory() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex rounded-xl border border-gray-200 bg-gray-50 p-1 gap-0.5">
+      <div className="overflow-x-auto mb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex rounded-xl border border-gray-200 bg-gray-50 p-1 gap-0.5 w-max min-w-full sm:w-auto sm:min-w-0">
           {TABS.map(tab => (
             <button key={tab.id}
               onClick={() => { setStatusFilter(tab.id); setPage(0); }}
