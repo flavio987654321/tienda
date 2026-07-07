@@ -74,7 +74,7 @@ type UseRow = {
   createdAt: string; buyerName: string; buyerEmail: string;
 };
 
-type HistoryStats = { total: number; active: number; expired: number; gamification: number; totalDiscount: number };
+type HistoryStats = { total: number; active: number; expired: number; gamification: number; whatsapp: number; totalDiscount: number };
 
 const HISTORY_PAGE = 20;
 
@@ -173,6 +173,7 @@ function CouponHistory() {
     { id: "active",       label: "Vigentes",       count: stats?.active },
     { id: "expired",      label: "Vencidos",       count: stats?.expired },
     { id: "gamification", label: "Gamificación",   count: stats?.gamification },
+    { id: "whatsapp",     label: "WhatsApp",       count: stats?.whatsapp },
   ];
 
   return (
@@ -271,6 +272,10 @@ function CouponHistory() {
                             {coupon.winnerEmail && (
                               <span title={`Personal de: ${coupon.winnerEmail}`}
                                 className="rounded-md bg-indigo-100 px-1.5 py-0.5 text-xs text-indigo-600 font-semibold cursor-default">🎡</span>
+                            )}
+                            {coupon.label?.includes("WhatsApp") && (
+                              <span title="Cupón creado para recuperación por WhatsApp"
+                                className="rounded-md bg-green-100 px-1.5 py-0.5 text-xs text-green-700 font-semibold cursor-default">💬 WA</span>
                             )}
                             <button onClick={() => copyCode(coupon.code)}
                               className="text-gray-300 hover:text-gray-500 transition-colors" aria-label="Copiar código">

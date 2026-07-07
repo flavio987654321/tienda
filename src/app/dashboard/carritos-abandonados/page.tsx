@@ -23,7 +23,7 @@ export default async function CarritosAbandonadosPage({ searchParams }: Props) {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true },
+    select: { id: true, slug: true, name: true },
   });
 
   const where = store
@@ -42,7 +42,7 @@ export default async function CarritosAbandonadosPage({ searchParams }: Props) {
       }
     : null;
 
-  const [carts, total] = store
+  const [carts, total, totalPending, recoveredCount, recoveredRevenue] = store
     ? await Promise.all([
         prisma.abandonedCart.findMany({
           where: where!,
@@ -51,8 +51,14 @@ export default async function CarritosAbandonadosPage({ searchParams }: Props) {
           skip: (page - 1) * PAGE_SIZE,
         }),
         prisma.abandonedCart.count({ where: where! }),
+        prisma.abandonedCart.count({ where: { storeId: store.id, recoveredAt: null } }),
+        prisma.abandonedCart.count({ where: { storeId: store.id, recoveredAt: { not: null } } }),
+        prisma.abandonedCart.aggregate({
+          where: { storeId: store.id, recoveredAt: { not: null } },
+          _sum: { total: true },
+        }),
       ])
-    : [[], 0];
+    : [[], 0, 0, 0, { _sum: { total: null } }];
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -81,48 +87,34 @@ export default async function CarritosAbandonadosPage({ searchParams }: Props) {
     };
   });
 
+  const stats = {
+    pending: totalPending,
+    recovered: recoveredCount,
+    recoveredRevenue: recoveredRevenue._sum.total ?? 0,
+  };
+
   return (
     <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id}>
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Carritos abandonados</h1>
-        <p className="text-gray-500 mt-1">
-          Personas que dejaron datos de contacto en el checkout pero no completaron la compra. Les mandamos un recordatorio automático; también podés reenviarlo manualmente.
+        <p className="text-gray-500 mt-1 max-w-2xl text-sm">
+          Personas que dejaron su contacto en el checkout pero no completaron la compra.
+          El sistema les manda un recordatorio automático por email al cabo de 1 hora.
+          También podés contactarlos vos directamente por email o WhatsApp, y opcionalmente ofrecerles un cupón de descuento para cerrar la venta.
         </p>
       </div>
 
-      <form action="/dashboard/carritos-abandonados" method="get" className="mb-5">
-        <input
-          type="text"
-          name="q"
-          defaultValue={search}
-          placeholder="Buscar por nombre, email o teléfono..."
-          className="w-full max-w-md rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none"
-        />
-      </form>
-
-      <CarritosAbandonadosClient carts={rows} search={search || undefined} />
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between gap-3 pt-6">
-          {page > 1 ? (
-            <Link
-              href={pageHref(page - 1)}
-              className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              <ChevronLeft className="h-4 w-4" /> Anterior
-            </Link>
-          ) : <span />}
-          <p className="text-sm text-gray-400">Página {page} de {totalPages}</p>
-          {page < totalPages ? (
-            <Link
-              href={pageHref(page + 1)}
-              className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              Siguiente <ChevronRight className="h-4 w-4" />
-            </Link>
-          ) : <span />}
-        </div>
-      )}
+      <CarritosAbandonadosClient
+        carts={rows}
+        search={search || undefined}
+        storeSlug={store?.slug ?? ""}
+        storeName={store?.name ?? ""}
+        stats={stats}
+        pageHref={pageHref}
+        page={page}
+        totalPages={totalPages}
+        total={total}
+      />
     </DashboardLayout>
   );
 }

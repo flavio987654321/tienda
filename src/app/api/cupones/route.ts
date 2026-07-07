@@ -20,10 +20,11 @@ export async function GET(req: NextRequest) {
 
   // Build status filter — all conditions scoped to the store
   const statusFilter = (() => {
-    if (status === "active")   return { isActive: true, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] };
-    if (status === "expired")  return { expiresAt: { lte: now } };
-    if (status === "inactive") return { isActive: false, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] };
-    if (status === "gamification") return { winnerEmail: { not: null } };
+    if (status === "active")        return { isActive: true, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] };
+    if (status === "expired")       return { expiresAt: { lte: now } };
+    if (status === "inactive")      return { isActive: false, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] };
+    if (status === "gamification")  return { winnerEmail: { not: null } };
+    if (status === "whatsapp")      return { label: { contains: "WhatsApp" } };
     return {};
   })();
 
@@ -33,13 +34,14 @@ export async function GET(req: NextRequest) {
     ...statusFilter,
   };
 
-  const [coupons, total, statsTotal, statsActive, statsExpired, statsGami, discountAgg] = await Promise.all([
+  const [coupons, total, statsTotal, statsActive, statsExpired, statsGami, statsWhatsapp, discountAgg] = await Promise.all([
     prisma.coupon.findMany({ where, orderBy: { createdAt: "desc" }, take, skip }),
     prisma.coupon.count({ where }),
     prisma.coupon.count({ where: { storeId: store.id } }),
     prisma.coupon.count({ where: { storeId: store.id, isActive: true, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] } }),
     prisma.coupon.count({ where: { storeId: store.id, expiresAt: { lte: now } } }),
     prisma.coupon.count({ where: { storeId: store.id, winnerEmail: { not: null } } }),
+    prisma.coupon.count({ where: { storeId: store.id, label: { contains: "WhatsApp" } } }),
     prisma.order.aggregate({ where: { storeId: store.id, discountAmount: { gt: 0 } }, _sum: { discountAmount: true } }),
   ]);
 
@@ -53,6 +55,7 @@ export async function GET(req: NextRequest) {
       active: statsActive,
       expired: statsExpired,
       gamification: statsGami,
+      whatsapp: statsWhatsapp,
       totalDiscount: discountAgg._sum.discountAmount ?? 0,
     },
   });
@@ -80,7 +83,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { code, discountType, discountValue, minOrderAmount, maxUses, expiresAt } = body;
+  const { code, discountType, discountValue, minOrderAmount, maxUses, expiresAt, label } = body;
 
   const codeClean = normalizeCouponCode(code);
   if (!codeClean || codeClean.length < 3 || codeClean.length > 20) {
@@ -107,6 +110,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Ya existe un cupón con ese código" }, { status: 409 });
   }
 
+  const labelClean = typeof label === "string" ? label.trim().slice(0, 60) || null : null;
+
   const coupon = await prisma.coupon.create({
     data: {
       code: codeClean,
@@ -115,6 +120,7 @@ export async function POST(req: NextRequest) {
       minOrderAmount: parseFloat(minOrderAmount) || 0,
       maxUses: maxUses ? parseInt(maxUses) : null,
       expiresAt: expiresAt ? new Date(expiresAt) : null,
+      label: labelClean,
       storeId: store.id,
     },
   });
