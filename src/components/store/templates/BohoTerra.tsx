@@ -22,6 +22,7 @@ import { colorToSwatch } from "@/lib/colorSwatch";
 import { promoModalText } from "@/lib/promoLabel";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
+import GamificationWidget from "@/components/store/GamificationWidget";
 
 const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
@@ -1758,6 +1759,7 @@ export default function BohoTerra() {
         </button>
       )}
 
+      <GamificationWidget />
     </div>
   );
 }

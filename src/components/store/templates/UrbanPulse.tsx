@@ -22,6 +22,7 @@ import { colorToSwatch } from "@/lib/colorSwatch";
 import { promoModalText } from "@/lib/promoLabel";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
+import GamificationWidget from "@/components/store/GamificationWidget";
 
 type Product = StorefrontProduct;
 
@@ -1778,6 +1779,7 @@ export default function UrbanPulse() {
           <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}
+      <GamificationWidget />
     </div>
   );
 }

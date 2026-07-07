@@ -21,6 +21,7 @@ import { colorToSwatch } from "@/lib/colorSwatch";
 import { promoModalText } from "@/lib/promoLabel";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
+import GamificationWidget from "@/components/store/GamificationWidget";
 
 type Product = StorefrontProduct;
 
@@ -1864,6 +1865,7 @@ export default function ChicParis() {
           {toastMsg}
         </div>
       )}
+      <GamificationWidget />
     </div>
   );
 }
