@@ -3,6 +3,7 @@
 import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { AppLogo } from "@/components/AppLogo";
 import { useSearchParams } from "next/navigation";
 import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Mail, X, BadgeCheck, Menu, Package, MessageCircle } from "lucide-react";
 import PaymentModal from "@/components/subscription/PaymentModal";
@@ -132,10 +133,8 @@ function PreciosContent() {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center">
-              <ShoppingBag className="h-5 w-5 text-white" />
-            </div>
+          <Link href="/" className="flex items-center gap-1.5">
+            <AppLogo size={72} />
             <span className="text-lg font-bold text-gray-950">TiendaApps</span>
           </Link>
           <div className="hidden md:flex items-center gap-8">

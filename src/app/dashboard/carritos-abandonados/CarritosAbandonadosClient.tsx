@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   Loader2, Mail, Phone, ShoppingCart, Search,
   MessageCircle, X, ChevronLeft, ChevronRight,
-  Tag, Check, AlertCircle, ShoppingBag, TrendingUp, RefreshCw,
+  Tag, Check, AlertCircle, ShoppingBag, TrendingUp, RefreshCw, Trash2,
 } from "lucide-react";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
@@ -100,7 +100,7 @@ function WhatsAppModal({
       .join("\n");
 
     const couponBlock = coupon
-      ? `\n🎁 Te preparé un cupón especial:\n*${coupon.code}* — ${fmtDiscount(coupon.discountType, coupon.discountValue)}\n`
+      ? `\n🎁 Te preparé un cupón especial:\n*${coupon.code}* — ${fmtDiscount(coupon.discountType, coupon.discountValue)} · válido 7 días\n`
       : "";
 
     return `Hola ${firstName}! 👋\n\nVi que te quedaron cosas en el carrito en *${storeName}* 🛒\n\n${itemLines}\n\n💰 Total: ${money(cart.total)}${couponBlock}\nCuando quieras terminás tu compra acá:\n${recoveryUrl}\n\n¿Te puedo ayudar con algo? 😊`;
@@ -162,12 +162,16 @@ function WhatsAppModal({
   }
 
   const [opened, setOpened] = useState(false);
+  const [waBlocked, setWaBlocked] = useState(false);
 
   function openWhatsApp() {
+    if (waBlocked) return;
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank", "noopener,noreferrer");
     setOpened(true);
     onWaOpened(cart.id);
+    setWaBlocked(true);
+    setTimeout(() => setWaBlocked(false), 3000);
   }
 
   // Close on Escape
@@ -329,11 +333,11 @@ function WhatsAppModal({
           <button
             type="button"
             onClick={openWhatsApp}
-            disabled={!phone}
+            disabled={!phone || waBlocked}
             className={`w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white disabled:opacity-40 transition-colors shadow-sm ${opened ? "bg-green-700 hover:bg-green-800" : "bg-green-500 hover:bg-green-600"}`}
           >
             {opened ? <Check className="h-4 w-4" /> : <MessageCircle className="h-4 w-4" />}
-            {opened ? "Abierto — volver a abrir" : "Abrir WhatsApp"}
+            {waBlocked ? "Abriendo…" : opened ? "Abierto — volver a abrir" : "Abrir WhatsApp"}
           </button>
         </div>
       </div>
@@ -359,6 +363,8 @@ export default function CarritosAbandonadosClient({
 
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [waCart, setWaCart] = useState<CartRow | null>(null);
   const [generatedCoupons, setGeneratedCoupons] = useState<Record<string, GeneratedCoupon>>({});
@@ -376,6 +382,26 @@ export default function CarritosAbandonadosClient({
 
   function handleWaOpened(cartId: string) {
     setWaOpenedIds((prev) => new Set(prev).add(cartId));
+  }
+
+  async function deleteCart(id: string) {
+    if (deletingId) return;
+    if (!confirm("¿Eliminar este carrito abandonado? Esta acción no se puede deshacer.")) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/dashboard/carritos-abandonados/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setDeletedIds((prev) => new Set(prev).add(id));
+        showToast("Carrito eliminado");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data?.error || "No se pudo eliminar el carrito", false);
+      }
+    } catch {
+      showToast("Error de conexión", false);
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   async function resend(id: string, email: string) {
@@ -496,9 +522,10 @@ export default function CarritosAbandonadosClient({
               {search ? ` para "${search}"` : ""}
             </p>
           )}
-          {carts.map((cart) => {
+          {carts.filter((c) => !deletedIds.has(c.id)).map((cart) => {
             const justSent = sentIds.has(cart.id);
             const isLoading = loadingId === cart.id;
+            const isDeleting = deletingId === cart.id;
             const hasPhone = Boolean(cart.customerPhone);
             const existingCoupon = generatedCoupons[cart.id] ?? null;
             const waOpened = waOpenedIds.has(cart.id);
@@ -583,6 +610,16 @@ export default function CarritosAbandonadosClient({
                     {waOpened ? <Check className="h-3.5 w-3.5" /> : <MessageCircle className="h-3.5 w-3.5" />}
                     {hasPhone ? (waOpened ? "WA enviado" : "WhatsApp") : "WhatsApp (sin tel.)"}
                     {existingCoupon && !waOpened && <span className="ml-0.5 opacity-70">· cupón listo</span>}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => deleteCart(cart.id)}
+                    disabled={isDeleting || !!deletingId}
+                    className="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 disabled:opacity-50 transition-colors"
+                    title="Eliminar carrito"
+                  >
+                    {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                   </button>
                 </div>
               </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AppLogo } from "@/components/AppLogo";
 import { Search, Package, ShoppingBag, Loader2, MessageCircle } from "lucide-react";
 
 export default function SeguimientoPage() {
@@ -25,10 +26,8 @@ export default function SeguimientoPage() {
       {/* Navbar */}
       <nav className="bg-white/90 backdrop-blur-xl border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center">
-              <ShoppingBag className="h-5 w-5 text-white" />
-            </div>
+          <Link href="/" className="flex items-center gap-1.5">
+            <AppLogo size={72} />
             <span className="text-lg font-bold text-gray-900">TiendaApps</span>
           </Link>
           <div className="hidden md:flex items-center gap-8">

@@ -2,12 +2,13 @@
 
 import { useState, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { AppLogo } from "@/components/AppLogo";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase/client";
 import { isPwa } from "@/lib/pwa";
 import {
-  ShoppingBag, Loader2, Eye, EyeOff, ArrowRight,
+  Loader2, Eye, EyeOff, ArrowRight,
   Users, CheckCircle, Store, Wallet,
 } from "lucide-react";
 
@@ -97,16 +98,12 @@ function LoginForm() {
 
         {inPwa ? (
           <div className="relative flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20">
-              <ShoppingBag className="h-5 w-5 text-white" />
-            </div>
+            <AppLogo size={72} />
             <span className="text-xl font-bold text-white">TiendaApps</span>
           </div>
         ) : (
           <Link href="/" className="relative flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20">
-              <ShoppingBag className="h-5 w-5 text-white" />
-            </div>
+            <AppLogo size={72} />
             <span className="text-xl font-bold text-white">TiendaApps</span>
           </Link>
         )}
@@ -171,16 +168,12 @@ function LoginForm() {
           {/* Mobile logo */}
           {inPwa ? (
             <div className="flex items-center gap-2.5 mb-10 lg:hidden">
-              <div className="w-9 h-9 bg-orange-600 rounded-xl flex items-center justify-center">
-                <ShoppingBag className="h-5 w-5 text-white" />
-              </div>
+              <AppLogo size={72} />
               <span className="text-xl font-bold text-gray-950">TiendaApps</span>
             </div>
           ) : (
             <Link href="/" className="flex items-center gap-2.5 mb-10 lg:hidden">
-              <div className="w-9 h-9 bg-orange-600 rounded-xl flex items-center justify-center">
-                <ShoppingBag className="h-5 w-5 text-white" />
-              </div>
+              <AppLogo size={72} />
               <span className="text-xl font-bold text-gray-950">TiendaApps</span>
             </Link>
           )}

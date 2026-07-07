@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { STORE_TYPES } from "@/lib/storeTypes";
 import PromotionsCarousel from "@/components/PromotionsCarousel";
 import AsistentePersonaje from "@/components/dashboard/AsistentePersonaje";
+import { AppLogo } from "@/components/AppLogo";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent } from "framer-motion";
 import {
   ArrowRight, X, Store, Users, TrendingUp, CheckCircle, Trophy,
@@ -551,10 +552,8 @@ export default function Home() {
         className={`fixed left-0 right-0 z-50 transition-all duration-300 ${navScrolled ? "bg-white/90 backdrop-blur-xl border-b border-gray-200 shadow-sm" : "bg-transparent"}`}
       >
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center">
-              <ShoppingBag className="h-4.5 w-4.5 text-white h-5 w-5" />
-            </div>
+          <Link href="/" className="flex items-center gap-1.5">
+            <AppLogo size={72} />
             <span className="text-lg font-bold text-gray-900">TiendaApps</span>
           </Link>
 
@@ -1584,9 +1583,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
             <div className="md:col-span-2">
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center">
-                  <ShoppingBag className="h-4 w-4 text-white" />
-                </div>
+                <AppLogo size={32} />
                 <span className="text-lg font-bold text-gray-900">TiendaApps</span>
               </div>
               <p className="text-gray-500 text-sm leading-relaxed max-w-xs">

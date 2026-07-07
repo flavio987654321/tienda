@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AppLogo } from "@/components/AppLogo";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/components/AuthProvider";
@@ -117,10 +118,8 @@ export default function AfiliadosNav() {
         <div className="max-w-6xl mx-auto px-6 py-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
 
           {/* Logo → página principal */}
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <ShoppingBag className="h-4 w-4 text-white" />
-            </div>
+          <Link href="/" className="flex items-center gap-1.5">
+            <AppLogo size={72} />
             <span className="text-lg font-bold text-gray-900 dark:text-white">TiendaApps</span>
           </Link>
 

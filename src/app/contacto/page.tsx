@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ShoppingBag, Package, MessageCircle, Send, Loader2, CheckCircle2, Mail, Clock, MapPin } from "lucide-react";
+import { Package, MessageCircle, Send, Loader2, CheckCircle2, Mail, Clock, MapPin } from "lucide-react";
+import { AppLogo } from "@/components/AppLogo";
 
 export default function ContactoPage() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
@@ -43,10 +44,8 @@ export default function ContactoPage() {
       {/* Navbar */}
       <nav className="bg-white/90 backdrop-blur-xl border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center">
-              <ShoppingBag className="h-5 w-5 text-white" />
-            </div>
+          <Link href="/" className="flex items-center gap-1.5">
+            <AppLogo size={72} />
             <span className="text-lg font-bold text-gray-950">TiendaApps</span>
           </Link>
           <div className="hidden md:flex items-center gap-8">

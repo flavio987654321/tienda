@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
@@ -191,7 +191,7 @@ export function resolveDetailTheme(theme: DetailTheme, accentOverride: string | 
 }
 
 export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: ProductDetailViewProps }) {
-  const { slug, currency, whatsapp, product, related, hasMercadoPago, isPreview, activeImg, setActiveImg,
+  const { slug, currency, whatsapp, product, related, hasMercadoPago, isPreview, isOwner, activeImg, setActiveImg,
     selectedSize, setSelectedSize, selectedColor, setSelectedColor,
     needsSize, needsColor, canAdd, qty, setQty, addToCart, discount } = view;
 
@@ -199,6 +199,47 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
   const [cp, setCp] = useState("");
   const [cpResult, setCpResult] = useState<string | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
+  const [reviews, setReviews] = useState<PReview[]>([]);
+  const [reviewsShown, setReviewsShown] = useState(5);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewForm, setReviewForm] = useState({ reviewer: "", rating: 5, comment: "", email: "" });
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewDone, setReviewDone] = useState(false);
+  const [reviewHoneypot, setReviewHoneypot] = useState("");
+
+  useEffect(() => {
+    if (!slug || !product.id) return;
+    setReviewsLoading(true);
+    setReviewDone(false);
+    setReviewsShown(5);
+    setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
+    fetch(`/api/public/${slug}/reviews?productId=${product.id}`)
+      .then(r => r.ok ? r.json() : { reviews: [] })
+      .then(d => setReviews(d.reviews ?? []))
+      .catch(() => setReviews([]))
+      .finally(() => setReviewsLoading(false));
+  }, [slug, product.id]);
+
+  async function submitReview(e: React.FormEvent) {
+    e.preventDefault();
+    if (isPreview || isOwner || reviewHoneypot || !reviewForm.reviewer.trim()) return;
+    setReviewSubmitting(true);
+    try {
+      const res = await fetch(`/api/public/${slug}/reviews`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, website: reviewHoneypot }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(p => [data.review, ...p]);
+        setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewDone(true);
+      }
+    } catch {}
+    finally { setReviewSubmitting(false); }
+  }
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const selectedVariantStock = useSelectedVariantStock(product, selectedSize, selectedColor);
@@ -449,6 +490,109 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
         )}
 
         <ProductReels theme={theme} reelUrls={product.reelUrls} />
+      </div>
+
+      {/* Reseñas */}
+      <div style={{ marginTop: 40, borderTop: `1px solid ${theme.cardBorder}`, paddingTop: 32 }}>
+        <h2 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 700, color: theme.text, fontFamily: theme.headingFont }}>
+          Reseñas{reviews.length > 0 && ` (${reviews.length})`}
+        </h2>
+        {reviewsLoading ? (
+          <p style={{ fontSize: 13, color: theme.muted }}>Cargando...</p>
+        ) : reviews.length > 0 ? (
+          <div style={{ marginBottom: 32 }}>
+            {(() => {
+              const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+              const dist = [5,4,3,2,1].map(s => ({ stars: s, count: reviews.filter(r => r.rating === s).length }));
+              return (
+                <div style={{ display: "flex", gap: 24, alignItems: "center", marginBottom: 24, padding: "16px 20px", background: `${theme.accent}08`, border: `1px solid ${theme.cardBorder}`, borderRadius: theme.radius }}>
+                  <div style={{ textAlign: "center", minWidth: 60 }}>
+                    <p style={{ fontSize: 36, fontWeight: 800, color: theme.text, margin: 0, lineHeight: 1 }}>{avg.toFixed(1)}</p>
+                    <div style={{ display: "flex", gap: 2, justifyContent: "center", margin: "6px 0 4px" }}>
+                      {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize: 12, color: s <= Math.round(avg) ? theme.accent : theme.cardBorder }}>★</span>)}
+                    </div>
+                    <p style={{ fontSize: 10, color: theme.muted, margin: 0 }}>{reviews.length} reseña{reviews.length !== 1 ? "s" : ""}</p>
+                  </div>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+                    {dist.map(d => (
+                      <div key={d.stars} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 10, color: theme.accentReadable, minWidth: 16, textAlign: "right", fontWeight: 600 }}>{d.stars}★</span>
+                        <div style={{ flex: 1, height: 5, background: theme.cardBorder, borderRadius: theme.radius, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${reviews.length ? (d.count / reviews.length) * 100 : 0}%`, background: theme.accent, borderRadius: theme.radius }} />
+                        </div>
+                        <span style={{ fontSize: 10, color: theme.muted, minWidth: 14, textAlign: "right" }}>{d.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {reviews.slice(0, reviewsShown).map((r, i) => (
+                <div key={r.id} style={{ display: "flex", gap: 14, padding: "18px 0", borderBottom: i < Math.min(reviewsShown, reviews.length) - 1 ? `1px solid ${theme.cardBorder}` : "none" }}>
+                  <div style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0, background: `${theme.accent}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: theme.accentReadable }}>
+                    {r.reviewer.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: theme.text }}>{r.reviewer}</span>
+                      <span style={{ fontSize: 11, color: theme.muted }}>{new Date(r.createdAt).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 1, marginBottom: r.comment ? 8 : 0 }}>
+                      {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize: 13, color: s <= r.rating ? theme.accent : theme.cardBorder }}>★</span>)}
+                    </div>
+                    {r.comment && <p style={{ fontSize: 13.5, color: theme.muted, margin: 0, lineHeight: 1.7 }}>{r.comment}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {reviews.length > reviewsShown && (
+              <button onClick={() => setReviewsShown(n => n + 10)} style={{ marginTop: 16, background: "none", border: `1.5px solid ${theme.cardBorder}`, color: theme.accentReadable, fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "9px 22px", borderRadius: theme.radius }}>
+                Ver más reseñas ({reviews.length - reviewsShown})
+              </button>
+            )}
+          </div>
+        ) : (
+          <p style={{ fontSize: 13, color: theme.muted, marginBottom: 24 }}>Todavía no hay reseñas para este producto.</p>
+        )}
+        {isOwner ? (
+          <p style={{ fontSize: 12, color: theme.muted, fontStyle: "italic" }}>El dueño no puede dejar reseñas en su propia tienda.</p>
+        ) : reviewDone ? (
+          <p style={{ fontSize: 13, color: theme.accent, fontWeight: 700 }}>¡Gracias por tu reseña!</p>
+        ) : (
+          <div style={{ position: "relative", maxWidth: 480 }}>
+            {isPreview && <div style={{ position: "absolute", inset: 0, zIndex: 10, cursor: "default" }} onClick={e => e.stopPropagation()} />}
+            <p style={{ fontSize: 13, fontWeight: 700, color: theme.text, margin: "0 0 12px" }}>Dejá tu reseña</p>
+            <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display: "flex", flexDirection: "column", gap: 10, opacity: isPreview ? 0.55 : 1 }}>
+              <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ opacity: 0, height: 0, position: "absolute", pointerEvents: "none" }} />
+              <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
+                placeholder="Tu nombre" readOnly={isPreview}
+                style={{ border: `1px solid ${theme.cardBorder}`, borderRadius: theme.radius, padding: "9px 12px", fontSize: 13, color: theme.text, background: "transparent", outline: "none" }} />
+              <div>
+                <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
+                  placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email"
+                  style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${theme.cardBorder}`, borderRadius: theme.radius, padding: "9px 12px", fontSize: 13, color: theme.text, background: "transparent", outline: "none" }} />
+                <p style={{ fontSize: 10, color: theme.muted, margin: "3px 0 0", lineHeight: 1.4 }}>
+                  Si compraste acá, tu reseña mostrará &ldquo;✓ Compra verificada&rdquo;. El email no se publica.
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 4 }}>
+                {[1,2,3,4,5].map(s => (
+                  <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
+                    style={{ background: "none", border: "none", fontSize: 24, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? theme.accent : theme.cardBorder, padding: "2px" }}>★</button>
+                ))}
+              </div>
+              <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
+                placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
+                style={{ border: `1px solid ${theme.cardBorder}`, borderRadius: theme.radius, padding: "9px 12px", fontSize: 13, color: theme.text, background: "transparent", resize: "none", outline: "none" }} />
+              <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim()}
+                style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? theme.cardBorder : theme.accent, color: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? theme.muted : theme.accentText, border: "none", padding: "12px", fontSize: 13, fontWeight: 700, borderRadius: theme.radius, cursor: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>
+                {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
+              </button>
+            </form>
+            {isPreview && <p style={{ fontSize: 10, color: theme.muted, fontStyle: "italic", marginTop: 6 }}>Vista previa — solo disponible en la tienda real.</p>}
+          </div>
+        )}
       </div>
 
       {/* Relacionados */}

@@ -1847,26 +1847,66 @@ function ProductosPageInner() {
               )}
 
               {/* ── Reseñas */}
-              <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:20, marginTop:8 }}>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.5, margin:"0 0 16px" }}>
+              <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:24, marginTop:8 }}>
+                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.5, margin:"0 0 20px" }}>
                   Reseñas{reviews.length > 0 && ` (${reviews.length})`}
                 </p>
                 {reviewsLoading ? (
                   <p style={{ fontSize:12, opacity:0.4 }}>Cargando...</p>
                 ) : reviews.length > 0 ? (
-                  <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:20 }}>
-                    {reviews.slice(0, reviewsShown).map(r => (
-                      <div key={r.id} style={{ borderBottom:`1px solid ${borderFaint}`, paddingBottom:14 }}>
-                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-                          <span style={{ fontSize:12, fontWeight:600, color:T }}>{r.reviewer}</span>
-                          <span style={{ fontSize:13, color:GT }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
+                  <div style={{ marginBottom:24 }}>
+                    {/* Resumen: promedio + distribución */}
+                    {(() => {
+                      const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+                      const dist = [5,4,3,2,1].map(s => ({ stars:s, count: reviews.filter(r => r.rating === s).length }));
+                      return (
+                        <div style={{ display:"flex", gap:20, alignItems:"center", marginBottom:20, padding:"14px 16px", background: dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)", borderRadius:6 }}>
+                          <div style={{ textAlign:"center", minWidth:56 }}>
+                            <p style={{ fontSize:34, fontWeight:800, color:T, margin:0, lineHeight:1 }}>{avg.toFixed(1)}</p>
+                            <div style={{ display:"flex", gap:2, justifyContent:"center", margin:"6px 0 4px" }}>
+                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? G : `${T}22` }}>★</span>)}
+                            </div>
+                            <p style={{ fontSize:9, opacity:0.4, margin:0, letterSpacing:0.5 }}>{reviews.length} reseña{reviews.length !== 1 ? "s" : ""}</p>
+                          </div>
+                          <div style={{ flex:1, display:"flex", flexDirection:"column", gap:5 }}>
+                            {dist.map(d => (
+                              <div key={d.stars} style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                <span style={{ fontSize:9, color:GT, minWidth:14, textAlign:"right", opacity:0.7 }}>{d.stars}★</span>
+                                <div style={{ flex:1, height:4, background: dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)", borderRadius:2, overflow:"hidden" }}>
+                                  <div style={{ height:"100%", width:`${reviews.length ? (d.count / reviews.length) * 100 : 0}%`, background:G, borderRadius:2 }} />
+                                </div>
+                                <span style={{ fontSize:9, opacity:0.35, minWidth:12, textAlign:"right" }}>{d.count}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        {r.comment && <p style={{ fontSize:12, opacity:0.6, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
-                      </div>
-                    ))}
+                      );
+                    })()}
+                    {/* Lista de reseñas */}
+                    <div style={{ display:"flex", flexDirection:"column" }}>
+                      {reviews.slice(0, reviewsShown).map((r, i) => (
+                        <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: i < Math.min(reviewsShown, reviews.length) - 1 ? `1px solid ${borderFaint}` : "none" }}>
+                          <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0, background:`${G}20`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:GT }}>
+                            {r.reviewer.charAt(0).toUpperCase()}
+                          </div>
+                          <div style={{ flex:1 }}>
+                            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
+                              <span style={{ fontSize:13, fontWeight:700, color:T }}>{r.reviewer}</span>
+                              <span style={{ fontSize:10, opacity:0.35 }}>
+                                {new Date(r.createdAt).toLocaleDateString("es-AR", { day:"numeric", month:"short", year:"numeric" })}
+                              </span>
+                            </div>
+                            <div style={{ display:"flex", gap:1, marginBottom: r.comment ? 8 : 0 }}>
+                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? G : `${T}20` }}>★</span>)}
+                            </div>
+                            {r.comment && <p style={{ fontSize:12, opacity:0.65, margin:0, lineHeight:1.65 }}>{r.comment}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                     {reviews.length > reviewsShown && (
-                      <button onClick={() => setReviewsShown(n => n + 10)} style={{ alignSelf:"flex-start", background:"none", border:"none", color:GT, fontSize:11, fontWeight:700, letterSpacing:1, cursor:"pointer", padding:0, textDecoration:"underline" }}>
-                        Ver más reseñas ({reviews.length - reviewsShown})
+                      <button onClick={() => setReviewsShown(n => n + 10)} style={{ marginTop:14, background:"none", border:`1px solid ${border}`, color:GT, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor:"pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
+                        Ver más ({reviews.length - reviewsShown})
                       </button>
                     )}
                   </div>

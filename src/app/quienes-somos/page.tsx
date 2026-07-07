@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AppLogo } from "@/components/AppLogo";
 import { motion } from "framer-motion";
 import {
   ShoppingBag, Users, Wallet, TrendingUp, Heart, Briefcase,
@@ -36,10 +37,8 @@ export default function QuienesSomosPage() {
       {/* ── NAVBAR ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center">
-              <ShoppingBag className="h-5 w-5 text-white" />
-            </div>
+          <Link href="/" className="flex items-center gap-1.5">
+            <AppLogo size={72} />
             <span className="text-lg font-bold text-gray-950">TiendaApps</span>
           </Link>
           <div className="hidden md:flex items-center gap-8">
@@ -516,10 +515,8 @@ export default function QuienesSomosPage() {
       {/* ── FOOTER ── */}
       <footer className="bg-white border-t border-gray-200 px-6 py-12">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center">
-              <ShoppingBag className="h-4 w-4 text-white" />
-            </div>
+          <div className="flex items-center gap-1.5">
+            <AppLogo size={72} />
             <span className="text-lg font-bold text-gray-950">TiendaApps</span>
           </div>
           <div className="flex flex-wrap gap-6 text-sm">

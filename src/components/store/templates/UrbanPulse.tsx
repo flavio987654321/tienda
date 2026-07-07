@@ -369,18 +369,19 @@ export default function UrbanPulse() {
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
     setReviewSubmitting(true);
-    const res = await fetch(`/api/public/${slug}/reviews`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setReviews(p => [data.review, ...p]);
-      setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
-      setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
-    }
-    setReviewSubmitting(false);
+    try {
+      const res = await fetch(`/api/public/${slug}/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(p => [data.review, ...p]);
+        setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
+      }
+    } catch {} finally { setReviewSubmitting(false); }
   }
 
   const subcategoriesFor = useMemo(() => {
@@ -1646,39 +1647,67 @@ export default function UrbanPulse() {
                 </button>
 
                 {/* Reseñas — D-04 */}
-                <div style={{ borderTop:`2px solid ${DARK}`, paddingTop:20, marginTop:20 }}>
-                  <p style={{ fontSize:9, letterSpacing:3, fontWeight:900, textTransform:"uppercase", color:MID, margin:"0 0 16px" }}>
+                <div style={{ borderTop:`2px solid ${DARK}`, paddingTop:24, marginTop:20 }}>
+                  <p style={{ fontSize:9, letterSpacing:3, fontWeight:900, textTransform:"uppercase", color:MID, margin:"0 0 20px" }}>
                     Reseñas{reviews.length > 0 && ` (${reviews.length})`}
                   </p>
                   {reviewsLoading ? (
                     <p style={{ fontSize:12, color:MID }}>Cargando...</p>
                   ) : reviews.length > 0 ? (
-                    <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:20 }}>
-                      {reviews.slice(0, reviewsShown).map(r => (
-                        <div key={r.id} style={{ borderBottom:`1px solid ${DARK}`, paddingBottom:14, display:"flex", gap:10 }}>
-                          {r.product?.image && (
-                            <img src={r.product.image} alt={r.product?.name ?? ""} style={{ width:44, height:44, objectFit:"cover", borderRadius:2, border:`1px solid ${DARK}`, flexShrink:0 }} />
-                          )}
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-                              <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-                                <span style={{ fontSize:12, fontWeight:900, textTransform:"uppercase" }}>{r.reviewer}</span>
-                                {r.product?.name && <span style={{ fontSize:10, color:MID, textTransform:"uppercase", letterSpacing:0.5 }}>{r.product.name}</span>}
-                                {r.verified && (
-                                  <span style={{ fontSize:9, fontWeight:900, color:ACC, border:`1px solid ${ACC}`, padding:"1px 5px", borderRadius:2, letterSpacing:0.5, textTransform:"uppercase" }}>
-                                    ✓ Verificada
-                                  </span>
-                                )}
+                    <div style={{ marginBottom:24 }}>
+                      {(() => {
+                        const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+                        const dist = [5,4,3,2,1].map(s => ({ stars:s, count: reviews.filter(r => r.rating === s).length }));
+                        return (
+                          <div style={{ display:"flex", gap:20, alignItems:"center", marginBottom:20, padding:"14px 16px", background:BG, border:`2px solid ${DARK}` }}>
+                            <div style={{ textAlign:"center", minWidth:56 }}>
+                              <p style={{ fontSize:34, fontWeight:900, color:DARK, margin:0, lineHeight:1 }}>{avg.toFixed(1)}</p>
+                              <div style={{ display:"flex", gap:2, justifyContent:"center", margin:"6px 0 4px" }}>
+                                {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? ACC : DARK }}>★</span>)}
                               </div>
-                              <span style={{ fontSize:14, color:ACC }}>{[1,2,3,4,5].map(s => s <= r.rating ? "★" : "☆").join("")}</span>
+                              <p style={{ fontSize:9, color:MID, margin:0, fontWeight:700, letterSpacing:0.5, textTransform:"uppercase" }}>{reviews.length} reseña{reviews.length !== 1 ? "s" : ""}</p>
                             </div>
-                            {r.comment && <p style={{ fontSize:12, color:MID, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
+                            <div style={{ flex:1, display:"flex", flexDirection:"column", gap:5 }}>
+                              {dist.map(d => (
+                                <div key={d.stars} style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                  <span style={{ fontSize:9, color:ACC, minWidth:14, textAlign:"right", fontWeight:900 }}>{d.stars}★</span>
+                                  <div style={{ flex:1, height:4, background:`${DARK}18`, borderRadius:0, overflow:"hidden" }}>
+                                    <div style={{ height:"100%", width:`${reviews.length ? (d.count / reviews.length) * 100 : 0}%`, background:ACC, borderRadius:0 }} />
+                                  </div>
+                                  <span style={{ fontSize:9, color:MID, minWidth:12, textAlign:"right", fontWeight:700 }}>{d.count}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })()}
+                      <div style={{ display:"flex", flexDirection:"column" }}>
+                        {reviews.slice(0, reviewsShown).map((r, i) => (
+                          <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: i < Math.min(reviewsShown, reviews.length) - 1 ? `1px solid ${DARK}` : "none" }}>
+                            <div style={{ width:34, height:34, borderRadius:0, flexShrink:0, background:`${ACC}18`, border:`1px solid ${ACC}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:900, color:ACC, textTransform:"uppercase" }}>
+                              {r.reviewer.charAt(0).toUpperCase()}
+                            </div>
+                            <div style={{ flex:1 }}>
+                              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
+                                <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                                  <span style={{ fontSize:12, fontWeight:900, textTransform:"uppercase" }}>{r.reviewer}</span>
+                                  {r.verified && (
+                                    <span style={{ fontSize:9, fontWeight:900, color:ACC, border:`1px solid ${ACC}`, padding:"1px 5px", letterSpacing:0.5, textTransform:"uppercase" }}>✓ Verificada</span>
+                                  )}
+                                </div>
+                                <span style={{ fontSize:9, color:MID, fontWeight:700 }}>{new Date(r.createdAt).toLocaleDateString("es-AR", { day:"numeric", month:"short", year:"numeric" })}</span>
+                              </div>
+                              <div style={{ display:"flex", gap:1, marginBottom: r.comment ? 8 : 0 }}>
+                                {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? ACC : `${DARK}30` }}>★</span>)}
+                              </div>
+                              {r.comment && <p style={{ fontSize:12, color:MID, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                       {reviews.length > reviewsShown && (
-                        <button onClick={() => setReviewsShown(n => n + 10)} style={{ alignSelf:"flex-start", background:"none", border:"none", color:ACC, fontSize:10, fontWeight:900, letterSpacing:1, textTransform:"uppercase", cursor:"pointer", padding:0, textDecoration:"underline" }}>
-                          Ver más reseñas ({reviews.length - reviewsShown})
+                        <button onClick={() => setReviewsShown(n => n + 10)} style={{ marginTop:14, background:"none", border:`2px solid ${DARK}`, color:ACC, fontSize:9, fontWeight:900, letterSpacing:2, cursor:"pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
+                          Ver más ({reviews.length - reviewsShown})
                         </button>
                       )}
                     </div>

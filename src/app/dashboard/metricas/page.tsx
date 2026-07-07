@@ -11,13 +11,11 @@ import {
   TrendingUp,
   ShoppingBag,
   Package,
-  Star,
-  Users,
   Eye,
   MousePointerClick,
-  Bell,
   MessageSquare,
 } from "lucide-react";
+import { ExportButtons } from "./ExportButtons";
 
 // ─── Rango de fechas ──────────────────────────────────────────────────────────
 // Todas las comparaciones usan ventanas de igual longitud (período actual vs.
@@ -86,55 +84,101 @@ function statusColor(status: string) {
 
 // ─── UI Components ────────────────────────────────────────────────────────────
 
-function BarChart({
+function shortMoney(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 10_000) return `$${Math.round(n / 1_000)}k`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}k`;
+  return `$${Math.round(n)}`;
+}
+
+function shortNum(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}k`;
+  return String(Math.round(n));
+}
+
+function LineChart({
   data,
   color = "#6366f1",
-  lightColor = "#c7d2fe",
+  gradId,
+  formatter = shortNum,
 }: {
   data: { label: string; value: number }[];
   color?: string;
-  lightColor?: string;
+  gradId: string;
+  formatter?: (n: number) => string;
 }) {
+  const W = 580, H = 180;
+  const padL = 46, padR = 12, padT = 24, padB = 26;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+
   const max = Math.max(...data.map((d) => d.value), 1);
-  const W = 600;
-  const H = 140;
-  const padL = 4;
-  const barW = Math.floor((W - padL * 2) / data.length) - 2;
-  const highlightFrom = Math.max(0, data.length - 7);
-  const labelStep = Math.max(1, Math.ceil(data.length / 12));
+  const GRID = 4;
+
+  const xs = data.map((_, i) =>
+    data.length === 1 ? padL + innerW / 2 : padL + (i / (data.length - 1)) * innerW
+  );
+  const ys = data.map((d) => padT + (1 - d.value / max) * innerH);
+
+  const linePath = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(" ");
+  const areaPath = `${linePath} L${xs[xs.length - 1].toFixed(1)},${(padT + innerH).toFixed(1)} L${xs[0].toFixed(1)},${(padT + innerH).toFixed(1)} Z`;
+
+  const labelStep = Math.max(1, Math.ceil(data.length / 9));
+  const peakIdx = data.reduce((best, d, i) => (d.value > data[best].value ? i : best), 0);
+  const hasData = data.some((d) => d.value > 0);
 
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H + 24}`} className="w-full min-w-[340px]">
-        {data.map((d, i) => {
-          const barH = Math.max(2, Math.round((d.value / max) * H));
-          const x = padL + i * ((W - padL * 2) / data.length);
-          const y = H - barH;
-          const isRecent = i >= highlightFrom;
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[320px]">
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.18" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.01" />
+          </linearGradient>
+        </defs>
+
+        {/* Grid horizontal */}
+        {Array.from({ length: GRID + 1 }, (_, i) => {
+          const v = (max / GRID) * i;
+          const y = padT + (1 - v / max) * innerH;
           return (
             <g key={i}>
-              <rect
-                x={x + 1}
-                y={y}
-                width={barW}
-                height={barH}
-                rx={3}
-                fill={isRecent ? color : lightColor}
-              />
-              {i % labelStep === 0 && (
-                <text
-                  x={x + barW / 2}
-                  y={H + 16}
-                  textAnchor="middle"
-                  fontSize={9}
-                  fill="#9ca3af"
-                >
-                  {d.label}
-                </text>
-              )}
+              <line x1={padL} y1={y} x2={padL + innerW} y2={y}
+                stroke={i === 0 ? "#e5e7eb" : "#f3f4f6"} strokeWidth={i === 0 ? 1 : 0.5} />
+              <text x={padL - 5} y={y + 3.5} textAnchor="end" fontSize={8.5} fill="#9ca3af">
+                {formatter(v)}
+              </text>
             </g>
           );
         })}
+
+        {/* Área rellena */}
+        {hasData && <path d={areaPath} fill={`url(#${gradId})`} />}
+
+        {/* Línea */}
+        <path d={linePath} fill="none" stroke={hasData ? color : "#e5e7eb"}
+          strokeWidth={hasData ? 2 : 1} strokeLinejoin="round" strokeLinecap="round" />
+
+        {/* Punto pico con etiqueta */}
+        {hasData && (
+          <g>
+            <circle cx={xs[peakIdx]} cy={ys[peakIdx]} r={4} fill={color} />
+            <text x={xs[peakIdx]} y={ys[peakIdx] - 9} textAnchor="middle"
+              fontSize={9} fontWeight="700" fill={color}>
+              {formatter(data[peakIdx].value)}
+            </text>
+          </g>
+        )}
+
+        {/* Etiquetas eje X */}
+        {data.map((d, i) =>
+          i % labelStep === 0 ? (
+            <text key={i} x={xs[i]} y={H - 4} textAnchor="middle" fontSize={8.5} fill="#9ca3af">
+              {d.label}
+            </text>
+          ) : null
+        )}
       </svg>
     </div>
   );
@@ -219,7 +263,6 @@ export default async function MetricasPage({
     : 30;
 
   const now = new Date();
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   // ── Ventanas de comparación: período actual vs. período anterior de igual duración ──
   const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
@@ -234,13 +277,7 @@ export default async function MetricasPage({
 
   const CONFIRMED_ORDER_STATUSES = ["CONFIRMED", "SHIPPED", "DELIVERED"];
 
-  // ── Queries compartidas ──
-  const [affiliateCount, pushSubscribers, pushCampaigns7d, pushCampaignsTotal] = await Promise.all([
-    prisma.affiliate.count({ where: { storeId: store.id, isActive: true } }),
-    prisma.storeSubscription.count({ where: { storeId: store.id } }),
-    prisma.pushCampaign.count({ where: { storeId: store.id, createdAt: { gte: weekAgo } } }),
-    prisma.pushCampaign.count({ where: { storeId: store.id } }),
-  ]);
+  // (queries compartidas eliminadas — Push/Reseñas/Afiliados tienen sus propios paneles)
 
   // ── Queries AUTOS ──
   let leadsPeriodRaw: { createdAt: Date }[] = [];
@@ -291,11 +328,10 @@ export default async function MetricasPage({
   let revenuePrevAgg: { _sum: { total: number | null } } = { _sum: { total: null } };
   let ordersPrevCount = 0;
   let topProducts: { productId: string; _sum: { quantity: number | null } }[] = [];
-  let reviewStats: { _avg: { rating: number | null }; _count: number } = { _avg: { rating: null }, _count: 0 };
   let ordersByStatus: { status: string; _count: number }[] = [];
 
   if (!isAutos) {
-    [ordersPeriod, revenuePrevAgg, ordersPrevCount, topProducts, reviewStats, ordersByStatus] = await Promise.all([
+    [ordersPeriod, revenuePrevAgg, ordersPrevCount, topProducts, ordersByStatus] = await Promise.all([
       prisma.order.findMany({
         where: { storeId: store.id, createdAt: { gte: periodStart, lt: periodEndExclusive }, status: { not: "CANCELLED" } },
         select: { total: true, status: true, createdAt: true },
@@ -319,7 +355,6 @@ export default async function MetricasPage({
         orderBy: { _sum: { quantity: "desc" } },
         take: 5,
       }),
-      prisma.review.aggregate({ where: { product: { storeId: store.id } }, _avg: { rating: true }, _count: true }),
       prisma.order.groupBy({ by: ["status"], where: { storeId: store.id }, _count: true }),
     ]);
   }
@@ -400,17 +435,29 @@ export default async function MetricasPage({
   // ── Render ──
   return (
     <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id}>
+      {/* Estilos de impresión — oculta sidebar y nav al guardar como PDF */}
+      <style>{`
+        @media print {
+          nav, aside, header, [data-sidebar], .print\\:hidden { display: none !important; }
+          body { background: white !important; }
+          .rounded-2xl { border-radius: 8px !important; }
+        }
+      `}</style>
+
       <div className="mx-auto w-full max-w-6xl space-y-6">
 
         {/* Header */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Métricas</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Rendimiento de <strong>{store.name}</strong> — comparado contra el período anterior de igual duración
+              <strong>{store.name}</strong> — últimos {rangeDays} días vs. período anterior de igual duración
             </p>
           </div>
-          <RangeSelector active={rangeDays} />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <RangeSelector active={rangeDays} />
+            <ExportButtons range={rangeDays} storeSlug={store.slug} />
+          </div>
         </div>
 
         {/* ── KPIs ── */}
@@ -488,51 +535,35 @@ export default async function MetricasPage({
         <div className="grid gap-6 lg:grid-cols-2">
           {isAutos ? (
             <div className="rounded-2xl border border-gray-100 bg-white p-6">
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-0.5">
                 <h2 className="font-bold text-gray-900">Consultas diarias</h2>
-                <p className="text-lg font-black text-indigo-600">{totalLeadsPeriod}</p>
+                <p className="text-xl font-black text-indigo-600">{totalLeadsPeriod}</p>
               </div>
-              <p className="text-xs text-gray-400 mb-5">Últimos {rangeDays} días · morado oscuro = últimos 7 días</p>
-              {totalLeadsPeriod > 0 ? (
-                <BarChart data={leadsChartData} color="#6366f1" lightColor="#c7d2fe" />
-              ) : (
-                <div className="flex h-32 items-center justify-center text-sm text-gray-400">
-                  Sin consultas en este período
-                </div>
-              )}
+              <p className="text-xs text-gray-400 mb-4">Últimos {rangeDays} días</p>
+              <LineChart data={leadsChartData} color="#6366f1" gradId="grad-indigo" formatter={shortNum} />
             </div>
           ) : (
             <div className="rounded-2xl border border-gray-100 bg-white p-6">
-              <div className="flex items-center justify-between mb-1">
-                <h2 className="font-bold text-gray-900">Ingresos diarios</h2>
-                <p className="text-lg font-black text-green-600">{money(totalRevenuePeriod)}</p>
+              <div className="flex items-center justify-between mb-0.5">
+                <h2 className="font-bold text-gray-900">Ingresos confirmados</h2>
+                <p className="text-xl font-black text-green-600">{money(totalRevenuePeriod)}</p>
               </div>
-              <p className="text-xs text-gray-400 mb-5">Últimos {rangeDays} días · verde oscuro = últimos 7 días</p>
-              {totalRevenuePeriod > 0 ? (
-                <BarChart data={revenueChartData} color="#16a34a" lightColor="#bbf7d0" />
-              ) : (
-                <div className="flex h-32 items-center justify-center text-sm text-gray-400">
-                  Sin ventas en este período
-                </div>
-              )}
+              <p className="text-xs text-gray-400 mb-4">Últimos {rangeDays} días</p>
+              <LineChart data={revenueChartData} color="#16a34a" gradId="grad-green" formatter={shortMoney} />
             </div>
           )}
 
           <div className="rounded-2xl border border-gray-100 bg-white p-6">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="font-bold text-gray-900">Visitas diarias</h2>
-              <p className="text-lg font-black text-blue-600">{totalViewsPeriod.toLocaleString("es-AR")}</p>
+            <div className="flex items-center justify-between mb-0.5">
+              <h2 className="font-bold text-gray-900">Visitas a tu tienda</h2>
+              <p className="text-xl font-black text-blue-600">{totalViewsPeriod.toLocaleString("es-AR")}</p>
             </div>
-            <p className="text-xs text-gray-400 mb-5">Últimos {rangeDays} días · azul oscuro = últimos 7 días</p>
-            {totalViewsPeriod > 0 ? (
-              <BarChart data={visitsChartData} color="#2563eb" lightColor="#bfdbfe" />
-            ) : (
-              <div className="flex h-32 flex-col items-center justify-center gap-2 text-gray-400">
-                <Eye className="h-8 w-8 opacity-20" />
-                <p className="text-sm">El registro de visitas acaba de activarse</p>
-                <p className="text-xs text-gray-300">Las visitas del propio dueño no se cuentan</p>
-              </div>
-            )}
+            <p className="text-xs text-gray-400 mb-4">
+              {totalViewsPeriod === 0
+                ? "Las visitas del propio dueño no se cuentan"
+                : `Últimos ${rangeDays} días`}
+            </p>
+            <LineChart data={visitsChartData} color="#2563eb" gradId="grad-blue" formatter={shortNum} />
           </div>
         </div>
 
@@ -560,9 +591,11 @@ export default async function MetricasPage({
             <div className="rounded-2xl border border-gray-100 bg-white p-6">
               <h2 className="mb-5 font-bold text-gray-900">Productos más vendidos</h2>
               {topProducts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                  <Package className="h-8 w-8 opacity-20 mb-2" />
-                  <p className="text-sm">Sin ventas confirmadas aún</p>
+                <div className="py-4">
+                  <p className="text-sm font-medium text-gray-600 mb-1">Sin ventas confirmadas aún</p>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    Los productos aparecen acá cuando tenés pedidos en estado Confirmado, Enviado o Entregado. Confirmá tus primeros pedidos para ver el ranking.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -597,9 +630,11 @@ export default async function MetricasPage({
                 <span className="text-sm font-semibold text-gray-400">{totalOrdersAllStatuses} total</span>
               </div>
               {ordersByStatus.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                  <ShoppingBag className="h-8 w-8 opacity-20 mb-2" />
-                  <p className="text-sm">Sin pedidos aún</p>
+                <div className="py-4">
+                  <p className="text-sm font-medium text-gray-600 mb-1">Sin pedidos aún</p>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    Cuando lleguen pedidos vas a ver acá cómo se distribuyen por estado — cuántos están pendientes, confirmados, enviados y entregados.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -629,114 +664,6 @@ export default async function MetricasPage({
           </div>
         )}
 
-        {/* ── Push · Reseñas · Afiliados ── */}
-        <div className={`grid gap-6 ${isAutos ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
-          {/* Push Notifications */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <Bell className="h-4 w-4 text-indigo-500" />
-              <h2 className="font-bold text-gray-900">Push Notifications</h2>
-            </div>
-            <div className="mb-4">
-              <p className="text-3xl font-black text-gray-900">{pushSubscribers}</p>
-              <p className="text-sm text-gray-500 mt-0.5">
-                {pushSubscribers === 1 ? "suscriptor activo" : "suscriptores activos"}
-              </p>
-            </div>
-            <div className="space-y-3 border-t border-gray-50 pt-4">
-              <div>
-                <div className="flex items-center justify-between text-sm mb-1.5">
-                  <span className="text-gray-500">Esta semana</span>
-                  <span className="font-bold text-gray-900">{pushCampaigns7d} / 3</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-gray-100">
-                  <div
-                    className={`h-1.5 rounded-full transition-all ${
-                      pushCampaigns7d >= 3 ? "bg-red-400" : "bg-indigo-500"
-                    }`}
-                    style={{ width: `${Math.min(100, (pushCampaigns7d / 3) * 100)}%` }}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Historial total</span>
-                <span className="font-bold text-gray-900">
-                  {pushCampaignsTotal} campaña{pushCampaignsTotal !== 1 ? "s" : ""}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Reseñas — solo para tiendas con carrito */}
-          {!isAutos && (
-            <div className="rounded-2xl border border-gray-100 bg-white p-6">
-              <div className="flex items-center gap-2 mb-5">
-                <Star className="h-4 w-4 text-yellow-500" />
-                <h2 className="font-bold text-gray-900">Reseñas</h2>
-              </div>
-              {reviewStats._count > 0 ? (
-                <div>
-                  <div className="flex items-end gap-2 mb-1">
-                    <p className="text-3xl font-black text-gray-900">
-                      {(reviewStats._avg.rating ?? 0).toFixed(1)}
-                    </p>
-                    <div className="flex gap-0.5 mb-1">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} className={`h-4 w-4 ${s <= Math.round(reviewStats._avg.rating ?? 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-500">{reviewStats._count} opinión{reviewStats._count !== 1 ? "es" : ""}</p>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-6 text-gray-400">
-                  <Star className="h-8 w-8 opacity-20 mb-2" />
-                  <p className="text-sm">Sin reseñas aún</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Afiliados + Leads */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <Users className="h-4 w-4 text-purple-500" />
-              <h2 className="font-bold text-gray-900">Afiliados</h2>
-            </div>
-            <div className="mb-4">
-              <p className="text-3xl font-black text-gray-900">{affiliateCount}</p>
-              <p className="text-sm text-gray-500 mt-0.5">
-                afiliado{affiliateCount !== 1 ? "s" : ""} activo{affiliateCount !== 1 ? "s" : ""}
-              </p>
-            </div>
-
-            {leadsTotal > 0 && (
-              <div className="border-t border-gray-50 pt-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <MessageSquare className="h-3.5 w-3.5 text-orange-500" />
-                  <p className="text-sm font-semibold text-gray-700">Consultas</p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">{RANGE_LABELS[rangeDays]}</span>
-                    <span className="font-bold text-gray-900">{totalLeadsPeriod}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Confirmadas (histórico)</span>
-                    <span className="font-bold text-green-600">
-                      {leadsConfirmedTotal}
-                      {leadsConversionRate !== null && (
-                        <span className="ml-1 text-xs font-normal text-gray-400">
-                          ({leadsConversionRate}%)
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
 
       </div>
     </DashboardLayout>

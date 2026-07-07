@@ -10,6 +10,7 @@ import {
   CreditCard, Menu, X, Wallet, AlertTriangle, Bell, ShoppingCart, Star,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import { AppLogo } from "@/components/AppLogo";
 import NotificationBell from "@/components/NotificationBell";
 import HelpButton from "@/components/HelpButton";
 import FavoritesDrawer from "@/components/FavoritesDrawer";
@@ -335,7 +336,7 @@ export default function DashboardLayout({
       {/* ── DESKTOP Sidebar (lg+) ─────────────────────────────────────────── */}
       <aside className={`group hidden lg:flex fixed left-0 top-0 h-full bg-white border-r border-gray-100 flex-col z-[60] transition-[width] duration-200 overflow-hidden ${showTour ? "w-60 shadow-xl" : "w-14 hover:w-60 hover:shadow-xl"}`}>
         <Link href="/" className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 shrink-0 hover:bg-gray-50 transition-colors">
-          <ShoppingBag className="h-6 w-6 text-indigo-600 shrink-0" />
+          <AppLogo size={52} className="shrink-0" />
           <span className={`font-bold text-gray-900 whitespace-nowrap overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
             TiendaApps
           </span>
@@ -422,7 +423,7 @@ export default function DashboardLayout({
         </button>
 
         <Link href="/" className="flex items-center gap-2">
-          <ShoppingBag className="h-5 w-5 text-indigo-600" />
+          <AppLogo size={52} />
           <span className="font-bold text-gray-900 text-sm">TiendaApps</span>
         </Link>
 

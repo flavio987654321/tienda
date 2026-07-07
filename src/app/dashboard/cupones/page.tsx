@@ -1230,21 +1230,18 @@ export default function CuponesPage() {
             </div>
 
             {/* Cómo funciona — barra inferior */}
-            <div className="border-t border-gray-100 pt-7">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest text-center mb-5">En 4 pasos</p>
-              <div className="flex flex-wrap justify-center gap-x-0 gap-y-3">
+            <div className="border-t border-gray-100 pt-6">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest text-center mb-4">Cómo funciona</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { n: "1", text: "Configurás los premios y probabilidades" },
                   { n: "2", text: "El widget aparece solo en tu tienda" },
                   { n: "3", text: "El cliente juega y gana un código" },
                   { n: "4", text: "Lo aplica en el checkout" },
-                ].map(({ n, text }, i, arr) => (
-                  <div key={n} className="flex items-center">
-                    <div className="flex items-center gap-2 px-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">{n}</span>
-                      <span className="text-xs text-gray-600">{text}</span>
-                    </div>
-                    {i < arr.length - 1 && <span className="text-gray-300 text-sm hidden sm:block">→</span>}
+                ].map(({ n, text }) => (
+                  <div key={n} className="flex items-start gap-2.5 rounded-xl bg-gray-50 px-3 py-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-900 text-[10px] font-bold text-white mt-0.5">{n}</span>
+                    <span className="text-xs text-gray-600 leading-snug">{text}</span>
                   </div>
                 ))}
               </div>

@@ -2,11 +2,12 @@
 
 import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AppLogo } from "@/components/AppLogo";
 import { isPwa } from "@/lib/pwa";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  ShoppingBag, Loader2, Eye, EyeOff, ArrowRight,
+  Loader2, Eye, EyeOff, ArrowRight,
   Store, Users, CheckCircle, ShoppingCart, Zap,
 } from "lucide-react";
 
@@ -298,9 +299,7 @@ function RegistroContent() {
           <div className="absolute top-16 -right-12 w-56 h-56 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
           <Link href="/" className="relative flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20">
-              <ShoppingBag className="h-5 w-5 text-white" />
-            </div>
+            <AppLogo size={72} />
             <span className="text-xl font-bold text-white">TiendaApps</span>
           </Link>
 
@@ -373,9 +372,7 @@ function RegistroContent() {
           >
             {/* Mobile logo */}
             <Link href="/" className="flex items-center gap-2.5 mb-10 lg:hidden">
-              <div className="w-9 h-9 bg-orange-600 rounded-xl flex items-center justify-center">
-                <ShoppingBag className="h-5 w-5 text-white" />
-              </div>
+              <AppLogo size={72} />
               <span className="text-xl font-bold text-gray-950">TiendaApps</span>
             </Link>
 
@@ -671,9 +668,7 @@ function RegistroContent() {
       <div className="relative w-full max-w-5xl">
         <div className="text-center mb-10">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-8">
-            <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
-              <ShoppingBag className="h-5 w-5 text-white" />
-            </div>
+            <AppLogo size={72} />
             <span className="text-2xl font-black text-gray-950">TiendaApps</span>
           </Link>
           <h1 className="text-4xl font-black text-gray-950 mb-3">Crear cuenta gratis</h1>
