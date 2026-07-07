@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { isValidCouponCode, normalizeCouponCode } from "@/lib/coupons";
 
-// GET - listar cupones de la tienda
+// GET - listar cupones con filtros y stats
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -12,20 +12,50 @@ export async function GET(req: NextRequest) {
   if (!store) return NextResponse.json({ coupons: [], total: 0 });
 
   const { searchParams } = new URL(req.url);
-  const take = Math.min(parseInt(searchParams.get("take") ?? "50"), 100);
+  const take = Math.min(Math.max(parseInt(searchParams.get("take") ?? "20"), 1), 50);
   const skip = Math.max(parseInt(searchParams.get("skip") ?? "0"), 0);
+  const status = searchParams.get("status") ?? "all";
+  const search = searchParams.get("search")?.trim().toUpperCase().slice(0, 30) ?? "";
+  const now = new Date();
 
-  const [coupons, total] = await prisma.$transaction([
-    prisma.coupon.findMany({
-      where: { storeId: store.id },
-      orderBy: { createdAt: "desc" },
-      take,
-      skip,
-    }),
+  // Build status filter — all conditions scoped to the store
+  const statusFilter = (() => {
+    if (status === "active")   return { isActive: true, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] };
+    if (status === "expired")  return { expiresAt: { lte: now } };
+    if (status === "inactive") return { isActive: false, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] };
+    if (status === "gamification") return { winnerEmail: { not: null } };
+    return {};
+  })();
+
+  const where = {
+    storeId: store.id,
+    ...(search ? { code: { contains: search } } : {}),
+    ...statusFilter,
+  };
+
+  const [coupons, total, statsTotal, statsActive, statsExpired, statsGami, discountAgg] = await Promise.all([
+    prisma.coupon.findMany({ where, orderBy: { createdAt: "desc" }, take, skip }),
+    prisma.coupon.count({ where }),
     prisma.coupon.count({ where: { storeId: store.id } }),
+    prisma.coupon.count({ where: { storeId: store.id, isActive: true, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] } }),
+    prisma.coupon.count({ where: { storeId: store.id, expiresAt: { lte: now } } }),
+    prisma.coupon.count({ where: { storeId: store.id, winnerEmail: { not: null } } }),
+    prisma.order.aggregate({ where: { storeId: store.id, discountAmount: { gt: 0 } }, _sum: { discountAmount: true } }),
   ]);
 
-  return NextResponse.json({ coupons, total, take, skip });
+  return NextResponse.json({
+    coupons,
+    total,
+    take,
+    skip,
+    stats: {
+      total: statsTotal,
+      active: statsActive,
+      expired: statsExpired,
+      gamification: statsGami,
+      totalDiscount: discountAgg._sum.discountAmount ?? 0,
+    },
+  });
 }
 
 // POST - crear cupón

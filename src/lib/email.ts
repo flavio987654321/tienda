@@ -532,6 +532,7 @@ export async function sendOrderConfirmationEmail({
   promoQtyMin,
   promoPayQty,
   discountAmount,
+  couponCode,
   shippingCost,
   shippingMethod,
   total,
@@ -544,13 +545,14 @@ export async function sendOrderConfirmationEmail({
   buyerName: string;
   orderId: string;
   storeName: string;
-  items: { name: string; variant?: string | null; quantity: number; price: number; comparePrice?: number | null }[];
+  items: { name: string; variant?: string | null; quantity: number; price: number; offerPrice?: number | null; comparePrice?: number | null }[];
   subtotal: number;
   promoSavings?: number;
   promoType?: string | null;
   promoQtyMin?: number | null;
   promoPayQty?: number | null;
   discountAmount: number;
+  couponCode?: string | null;
   shippingCost: number;
   shippingMethod: string;
   total: number;
@@ -569,8 +571,9 @@ export async function sendOrderConfirmationEmail({
   const shortId = orderId.slice(-8).toUpperCase();
 
   const ofertaSavings = items.reduce((acc, item) => {
-    if (item.comparePrice && item.comparePrice > item.price) {
-      return acc + (item.comparePrice - item.price) * item.quantity;
+    const ref = item.offerPrice ?? item.price;
+    if (item.comparePrice && item.comparePrice > ref) {
+      return acc + (item.comparePrice - ref) * item.quantity;
     }
     return acc;
   }, 0);
@@ -649,10 +652,11 @@ export async function sendOrderConfirmationEmail({
             <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(promoSavings)} incluidos</span>
           </div>` : ""}
           ${discountAmount > 0 ? `
-          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-            <span style="font-size:14px;color:#16a34a;font-weight:600;">Descuento aplicado</span>
+          <div style="display:flex;justify-content:space-between;margin-bottom:${couponCode ? "4px" : "10px"};">
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">Cupón${couponCode ? "" : " aplicado"}</span>
             <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(discountAmount)}</span>
-          </div>` : ""}
+          </div>
+          ${couponCode ? `<div style="text-align:right;margin-bottom:10px;"><span style="font-size:11px;font-family:monospace;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:2px 8px;color:#15803d;font-weight:700;letter-spacing:0.08em;">${escapeHtml(couponCode)}</span></div>` : ""}` : ""}
           <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
             <span style="font-size:14px;color:#6b7280;">Costo de envío</span>
             <span style="font-size:14px;color:#374151;">${shippingCost === 0 ? "Sin cargo" : fmt(shippingCost)}</span>
@@ -717,6 +721,7 @@ export async function sendNewOrderToOwnerEmail({
   promoQtyMin,
   promoPayQty,
   discountAmount,
+  couponCode,
   shippingCost,
   shippingMethod,
   total,
@@ -733,13 +738,14 @@ export async function sendNewOrderToOwnerEmail({
     city?: string;
     province?: string;
   };
-  items: { name: string; variant?: string | null; quantity: number; price: number; comparePrice?: number | null }[];
+  items: { name: string; variant?: string | null; quantity: number; price: number; offerPrice?: number | null; comparePrice?: number | null }[];
   subtotal: number;
   promoSavings?: number;
   promoType?: string | null;
   promoQtyMin?: number | null;
   promoPayQty?: number | null;
   discountAmount: number;
+  couponCode?: string | null;
   shippingCost: number;
   shippingMethod: string;
   total: number;
@@ -752,8 +758,9 @@ export async function sendNewOrderToOwnerEmail({
   const shortId = orderId.slice(-8).toUpperCase();
 
   const ofertaSavings = items.reduce((acc, item) => {
-    if (item.comparePrice && item.comparePrice > item.price) {
-      return acc + (item.comparePrice - item.price) * item.quantity;
+    const ref = item.offerPrice ?? item.price;
+    if (item.comparePrice && item.comparePrice > ref) {
+      return acc + (item.comparePrice - ref) * item.quantity;
     }
     return acc;
   }, 0);
@@ -861,20 +868,21 @@ export async function sendNewOrderToOwnerEmail({
             <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(promoSavings)} incluidos</span>
           </div>` : ""}
           ${discountAmount > 0 ? `
-          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-            <span style="font-size:14px;color:#16a34a;font-weight:600;">Descuento cupón</span>
+          <div style="display:flex;justify-content:space-between;margin-bottom:${couponCode ? "4px" : "10px"};">
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">Cupón${couponCode ? "" : " aplicado"}</span>
             <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(discountAmount)}</span>
-          </div>` : ""}
+          </div>
+          ${couponCode ? `<div style="text-align:right;margin-bottom:10px;"><span style="font-size:11px;font-family:monospace;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:2px 8px;color:#15803d;font-weight:700;letter-spacing:0.08em;">${escapeHtml(couponCode)}</span></div>` : ""}` : ""}
           <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
             <span style="font-size:14px;color:#6b7280;">Envío</span>
             <span style="font-size:14px;color:#374151;">${shippingCost === 0 ? "Sin cargo" : fmt(shippingCost)}</span>
           </div>
           <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">${escapeHtml(shippingMethod)}</div>
           <div style="border-top:1px solid #e5e7eb;padding-top:14px;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:15px;font-weight:700;color:#111827;">${paymentProvider === "mp" ? "Total cobrado (MercadoPago)" : "Total a cobrar"}</span>
-            <span style="font-size:22px;font-weight:800;color:${paymentProvider === "mp" ? "#16a34a" : "#111827"};">${fmt(total)}</span>
+            <span style="font-size:15px;font-weight:700;color:#111827;">Total a cobrar${paymentProvider === "mp" ? " (MercadoPago)" : ""}</span>
+            <span style="font-size:22px;font-weight:800;color:#111827;">${fmt(total)}</span>
           </div>
-          ${paymentProvider === "mp" ? `<div style="margin-top:10px;background:#f0fdf4;border-radius:8px;padding:8px 12px;font-size:12px;color:#15803d;font-weight:600;">✅ Pago ya recibido vía MercadoPago — no necesitás coordinar el pago con el comprador.</div>` : ""}
+          ${paymentProvider === "mp" ? `<div style="margin-top:10px;background:#fefce8;border-radius:8px;padding:8px 12px;font-size:12px;color:#854d0e;font-weight:600;">⏳ Pago pendiente — el cliente debe completar el pago en MercadoPago. Te avisamos cuando se confirme.</div>` : ""}
         </div>
 
         <!-- CTA -->

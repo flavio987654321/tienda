@@ -239,6 +239,7 @@ model Store {
   storeViews          StoreView[]
   storeFollows        StoreFollow[]
   abandonedCarts      AbandonedCart[]
+  gamificationWidget  GamificationWidget?
 }
 
 // Suscripciones push a tiendas. userId es null para suscriptores anónimos legacy;
@@ -672,6 +673,7 @@ model PublicReview {
 model Coupon {
   id             String    @id @default(cuid())
   code           String
+  label          String?   // etiqueta visible (ej: "20% OFF") — usada por el widget
   discountType   String    @default("percentage")
   discountValue  Float
   minOrderAmount Float     @default(0)
@@ -679,12 +681,14 @@ model Coupon {
   usedCount      Int       @default(0)
   expiresAt      DateTime?
   isActive       Boolean   @default(true)
+  winnerEmail    String?   // si no es null, solo este email puede usar el cupón (premios de gamificación)
   createdAt      DateTime  @default(now())
 
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
-  orders Order[]
+  orders              Order[]
+  gamificationPrizes  GamificationPrize[]
 
   @@unique([storeId, code])
 }
@@ -1000,4 +1004,71 @@ model DonationTestimonial {
   mediaType  String? // IMAGE | VIDEO
   text       String?
   createdAt  DateTime         @default(now())
+}
+
+// ─── GAMIFICACIÓN (Ruleta / Raspadita) ────────────────────────────────────────
+
+model GamificationWidget {
+  id            String   @id @default(cuid())
+  storeId       String   @unique
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  type          String   @default("SPIN")         // SPIN | SCRATCH
+  isActive      Boolean  @default(false)
+
+  title         String   @default("¡Girá y ganá!")
+  subtitle      String   @default("Probá tu suerte y ganá un premio")
+  buttonText    String   @default("¡Girá y ganá!")
+  reclaimText   String   @default("Reclamar premio")
+  legalText     String?
+  headerImage   String?
+  centerType    String   @default("text")          // text | logo
+  centerText    String?
+
+  triggerType   String   @default("FIRST_CLICK")   // FIRST_CLICK | ON_ENTER | DELAY
+  triggerDelay  Int?
+  showFrequency String   @default("ONCE_SESSION")  // ALWAYS | ONCE_SESSION | ONCE_EVER
+  emailRequired Boolean  @default(true)
+
+  styles        String   @default("{}")            // JSON de colores/estilos
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  prizes        GamificationPrize[]
+  spins         GamificationSpin[]
+}
+
+model GamificationPrize {
+  id          String             @id @default(cuid())
+  widgetId    String
+  widget      GamificationWidget @relation(fields: [widgetId], references: [id], onDelete: Cascade)
+
+  label       String             // "20% OFF", "Envío gratis", "Sin premio"
+  probability Int                // 0-100, deben sumar 100 por widget
+  isNoPrize   Boolean            @default(false)
+  order       Int                @default(0)       // orden en la ruleta/raspadita
+
+  couponId    String?
+  coupon      Coupon?            @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  @@index([widgetId])
+}
+
+model GamificationSpin {
+  id         String             @id @default(cuid())
+  widgetId   String
+  widget     GamificationWidget @relation(fields: [widgetId], references: [id], onDelete: Cascade)
+
+  email      String?
+  ip         String
+  prizeLabel String?
+  isNoPrize  Boolean            @default(false)
+  couponId   String?            // null si no hubo premio
+  couponCode String?            // código entregado (snapshot por si el cupón se borra)
+
+  createdAt  DateTime           @default(now())
+
+  @@index([widgetId])
+  @@unique([widgetId, email])  // previene doble giro por race condition; NULL != NULL → anónimos no se bloquean entre sí
 }

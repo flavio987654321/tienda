@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Demasiados intentos. Esperá un momento." }, { status: 429 });
   }
 
-  const { code, storeId, subtotal } = await req.json();
+  const { code, storeId, subtotal, email } = await req.json();
 
   if (!code || !storeId) {
     return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
@@ -26,6 +26,8 @@ export async function POST(req: NextRequest) {
   if (!coupon || !coupon.isActive) return INVALID;
   if (coupon.expiresAt && coupon.expiresAt < new Date()) return INVALID;
   if (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses) return INVALID;
+  // Cupón de gamificación: verificar que el email que valida es el ganador
+  if (coupon.winnerEmail && email && coupon.winnerEmail !== email.trim().toLowerCase()) return INVALID;
 
   if (subtotal !== undefined && subtotal < coupon.minOrderAmount) {
     return NextResponse.json({

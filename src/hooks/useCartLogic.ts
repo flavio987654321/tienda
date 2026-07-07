@@ -37,7 +37,7 @@ type StorefrontDeps = {
   slug?: string | null;
   isOwner?: boolean;
   resolveVariantId: (product: StorefrontProduct, size: string, color: string) => string | null;
-  validateCoupon: (code: string, subtotal: number) => Promise<{ coupon: ValidatedCoupon; discount: number } | { error: string }>;
+  validateCoupon: (code: string, subtotal: number, email?: string) => Promise<{ coupon: ValidatedCoupon; discount: number } | { error: string }>;
   placeOrder: (params: PlaceOrderParams) => Promise<{ ok: boolean; orderId?: string; donationId?: string; error?: string }>;
   checkoutMode?: "cart" | "inquiry";
   isWholesale?: boolean;
@@ -680,7 +680,8 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   const handleApplyCoupon = async () => {
     setCouponError("");
     if (!coupon.trim()) return;
-    const res = await validateCoupon(coupon, cartTotal);
+    const emailForValidation = buyerForm.email.trim() || undefined;
+    const res = await validateCoupon(coupon, cartTotal, emailForValidation);
     if ("error" in res) { setCouponError(res.error); return; }
     setAppliedCoupon({ id: res.coupon.id, code: res.coupon.code, discount: res.discount });
     setCoupon("");

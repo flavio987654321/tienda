@@ -286,12 +286,12 @@ function ProductosPageInner() {
     return match?.id ?? product.variants[0]?.id ?? null;
   }, []);
 
-  const validateCoupon = useCallback(async (code: string, subtotal: number) => {
+  const validateCoupon = useCallback(async (code: string, subtotal: number, email?: string) => {
     if (!storeIdRef.current) return { error: "Tienda no disponible" };
     try {
       const res = await fetch("/api/cupones/validar", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: code.trim().toUpperCase(), storeId: storeIdRef.current, subtotal }),
+        body: JSON.stringify({ code: code.trim().toUpperCase(), storeId: storeIdRef.current, subtotal, email }),
       });
       return res.json();
     } catch { return { error: "Error de conexión" }; }

@@ -51,12 +51,22 @@ async function processPaymentWebhook(paymentId: string) {
       // Cancelar la orden si todavía está pendiente
       const orderId = payment.external_reference;
       if (orderId) {
-        const order = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true, status: true } });
+        const order = await prisma.order.findUnique({
+          where: { id: orderId },
+          select: { id: true, status: true, couponId: true },
+        });
         if (order?.status === "PENDING") {
-          await prisma.$transaction([
-            prisma.order.update({ where: { id: orderId }, data: { status: "CANCELLED" } }),
-            prisma.orderStatusLog.create({ data: { orderId, fromStatus: "PENDING", toStatus: "CANCELLED", changedBy: "mp_webhook" } }),
-          ]);
+          await prisma.$transaction(async (tx) => {
+            await tx.order.update({ where: { id: orderId }, data: { status: "CANCELLED" } });
+            await tx.orderStatusLog.create({ data: { orderId, fromStatus: "PENDING", toStatus: "CANCELLED", changedBy: "mp_webhook" } });
+            // Devolver el uso del cupón para que el ganador pueda intentar pagar de nuevo
+            if (order.couponId) {
+              await tx.coupon.updateMany({
+                where: { id: order.couponId, usedCount: { gt: 0 } },
+                data: { usedCount: { decrement: 1 } },
+              });
+            }
+          });
         }
       }
       return NextResponse.json({ ok: true });

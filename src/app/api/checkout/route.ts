@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
 
   try {
     let usedRewardCouponId: string | null = null;
-    const { createdOrder: order, promoSavings, promoProductInfo } = await prisma.$transaction(async (tx) => {
+    const { createdOrder: order, promoSavings, promoProductInfo, appliedCouponCode } = await prisma.$transaction(async (tx) => {
       const store = await tx.store.findUnique({
         where: { id: storeId },
         select: {
@@ -320,6 +320,7 @@ export async function POST(req: NextRequest) {
 
       let discountAmount = 0;
       let validCouponId: string | null = null;
+      let appliedCouponCode: string | null = null;
       if (couponId) {
         const coupon = await tx.coupon.findFirst({
           where: { id: couponId, storeId, isActive: true },
@@ -327,14 +328,27 @@ export async function POST(req: NextRequest) {
         if (coupon) {
           const now = new Date();
           const expired = coupon.expiresAt && coupon.expiresAt < now;
-          const exhausted = coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses;
-          if (!expired && !exhausted && subtotal >= coupon.minOrderAmount) {
-            const MAX_COUPON_DISCOUNT = 50_000;
-            discountAmount = coupon.discountType === "percentage"
-              ? Math.min(Math.round((subtotal * coupon.discountValue) / 100), MAX_COUPON_DISCOUNT)
-              : Math.min(coupon.discountValue, subtotal);
-            validCouponId = coupon.id;
-            await tx.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } });
+          // Cupón de gamificación: solo lo puede usar el email ganador
+          const wrongOwner = coupon.winnerEmail && coupon.winnerEmail !== emailNorm;
+          if (!expired && !wrongOwner && subtotal >= coupon.minOrderAmount) {
+            // Incremento atómico: el WHERE previene race condition si dos checkouts llegan juntos
+            const updated = await tx.coupon.updateMany({
+              where: {
+                id: coupon.id,
+                storeId,
+                isActive: true,
+                OR: [{ maxUses: null }, { usedCount: { lt: coupon.maxUses ?? Number.MAX_SAFE_INTEGER } }],
+              },
+              data: { usedCount: { increment: 1 } },
+            });
+            if (updated.count > 0) {
+              const MAX_COUPON_DISCOUNT = 50_000;
+              discountAmount = coupon.discountType === "percentage"
+                ? Math.min(Math.round((subtotal * coupon.discountValue) / 100), MAX_COUPON_DISCOUNT)
+                : Math.min(coupon.discountValue, subtotal);
+              validCouponId = coupon.id;
+              appliedCouponCode = coupon.code;
+            }
           }
         }
       }
@@ -362,7 +376,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const total = subtotal - discountAmount + shipping.cost;
+      const total = Math.max(0, subtotal - discountAmount + shipping.cost);
 
       // Nunca actualizar un usuario existente desde checkout — podría sobreescribir datos de dueñas u otros roles
       const buyer =
@@ -440,7 +454,7 @@ export async function POST(req: NextRequest) {
       const promoProduct = products.find(p => p.promoQtyMin && totalQtyByProduct.get(p.id) != null && totalQtyByProduct.get(p.id)! >= p.promoQtyMin);
       const promoProductInfo = promoProduct ? { type: promoProduct.promoType, min: promoProduct.promoQtyMin!, payQty: promoProduct.promoPayQty } : null;
 
-      return { createdOrder, promoSavings, promoProductInfo };
+      return { createdOrder, promoSavings, promoProductInfo, appliedCouponCode };
     }, { timeout: 15_000 });
 
     // Donación opcional a la Canasta Solidaria (toggle del carrito) — un
@@ -540,7 +554,7 @@ export async function POST(req: NextRequest) {
       const [productNames, variantData] = await Promise.all([
         prisma.product.findMany({
           where: { id: { in: productIds } },
-          select: { id: true, name: true, comparePrice: true },
+          select: { id: true, name: true, price: true, comparePrice: true },
         }),
         variantIds.length > 0
           ? prisma.productVariant.findMany({
@@ -552,6 +566,7 @@ export async function POST(req: NextRequest) {
 
       const nameMap = Object.fromEntries(productNames.map((p) => [p.id, p.name]));
       const comparePriceMap = Object.fromEntries(productNames.map((p) => [p.id, p.comparePrice]));
+      const offerPriceMap = Object.fromEntries(productNames.map((p) => [p.id, p.price]));
       const variantMap = Object.fromEntries(variantData.map((v) => [v.id, `${v.name}: ${v.value}`]));
 
       const emailItems = order.items.map((item) => ({
@@ -559,6 +574,7 @@ export async function POST(req: NextRequest) {
         variant: item.variantId ? (variantMap[item.variantId] ?? null) : null,
         quantity: item.quantity,
         price: item.price,
+        offerPrice: offerPriceMap[item.productId] ?? null,
         comparePrice: comparePriceMap[item.productId] ?? null,
       }));
 
@@ -587,6 +603,7 @@ export async function POST(req: NextRequest) {
         promoQtyMin: promoProductInfo?.min,
         promoPayQty: promoProductInfo?.payQty,
         discountAmount: order.discountAmount,
+        couponCode: appliedCouponCode ?? undefined,
         shippingCost: order.shippingCost,
         shippingMethod: shipping.label,
         total: order.total,

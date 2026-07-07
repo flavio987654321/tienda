@@ -1,0 +1,1 @@
+ALTER TABLE "Coupon" ADD COLUMN "label" TEXT;

@@ -360,12 +360,12 @@ export function useStorefront() {
     return match?.id ?? product.variants[0]?.id ?? null;
   }
 
-  async function validateCoupon(code: string, subtotal: number): Promise<{ coupon: ValidatedCoupon; discount: number } | { error: string }> {
+  async function validateCoupon(code: string, subtotal: number, email?: string): Promise<{ coupon: ValidatedCoupon; discount: number } | { error: string }> {
     if (!storeId) return { error: "Tienda no disponible" };
     const res = await fetch("/api/cupones/validar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: code.trim().toUpperCase(), storeId, subtotal }),
+      body: JSON.stringify({ code: code.trim().toUpperCase(), storeId, subtotal, email }),
     });
     return res.json();
   }
