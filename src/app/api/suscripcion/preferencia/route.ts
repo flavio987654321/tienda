@@ -9,8 +9,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "")
-    || `https://${req.headers.get("host")}`;
+  const _configuredUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const APP_URL = (/^https?:\/\//.test(_configuredUrl) ? _configuredUrl : `https://${req.headers.get("host")}`).replace(/\/$/, "");
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
