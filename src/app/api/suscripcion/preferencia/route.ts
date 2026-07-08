@@ -8,9 +8,9 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
-
 export async function POST(req: NextRequest) {
+  const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "")
+    || `https://${req.headers.get("host")}`;
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
@@ -122,7 +122,9 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (e) {
-    console.error("[suscripcion/preferencia] Error al crear preferencia MP:", e instanceof Error ? e.message : e);
+    const errMsg = e instanceof Error ? e.message : JSON.stringify(e);
+    const errCause = (e as any)?.cause ?? (e as any)?.response ?? null;
+    console.error("[suscripcion/preferencia] Error al crear preferencia MP:", errMsg, errCause);
     return NextResponse.json({ error: "No se pudo conectar con Mercado Pago. Intentá de nuevo en unos minutos." }, { status: 502 });
   }
 
