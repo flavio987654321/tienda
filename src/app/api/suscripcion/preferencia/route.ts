@@ -11,7 +11,6 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   const _configuredUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").trim();
   const APP_URL = (/^https?:\/\//.test(_configuredUrl) ? _configuredUrl : `https://${req.headers.get("host")}`).replace(/\/$/, "");
-  console.log("[suscripcion/preferencia] APP_URL:", JSON.stringify(APP_URL), "| env:", JSON.stringify(_configuredUrl), "| host:", req.headers.get("host"));
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
@@ -101,11 +100,10 @@ export async function POST(req: NextRequest) {
   const preference = new Preference(client);
 
   const backUrls = {
-    success: `${APP_URL}/dashboard?suscripcion=ok`,
-    failure: `${APP_URL}/dashboard/mi-plan?suscripcion=error`,
-    pending: `${APP_URL}/dashboard/mi-plan?suscripcion=pendiente`,
+    success: `${APP_URL}/dashboard/mi-plan`,
+    failure: `${APP_URL}/dashboard/mi-plan`,
+    pending: `${APP_URL}/dashboard/mi-plan`,
   };
-  console.log("[suscripcion/preferencia] back_urls:", JSON.stringify(backUrls));
 
   let pref;
   try {
