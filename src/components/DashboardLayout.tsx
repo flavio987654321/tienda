@@ -15,6 +15,7 @@ import NotificationBell from "@/components/NotificationBell";
 import HelpButton from "@/components/HelpButton";
 import FavoritesDrawer from "@/components/FavoritesDrawer";
 import AsistenteIA from "@/components/dashboard/AsistenteIA";
+import CelebrationManager from "@/components/dashboard/CelebrationManager";
 import TourGuide, { TOUR_STORAGE_KEY } from "@/components/TourGuide";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
 
@@ -79,6 +80,7 @@ export default function DashboardLayout({
   userName,
   userEmail,
   userId,
+  storeId,
   initialPendingAffiliateCount = 0,
   initialLowStockCount = 0,
   fullHeight = false,
@@ -88,6 +90,7 @@ export default function DashboardLayout({
   userName?: string | null;
   userEmail?: string | null;
   userId?: string | null;
+  storeId?: string | null;
   initialPendingAffiliateCount?: number;
   initialLowStockCount?: number;
   fullHeight?: boolean;
@@ -544,6 +547,7 @@ export default function DashboardLayout({
       </main>
 
       {userId && <AsistenteIA userId={userId} />}
+      {storeId && <CelebrationManager storeId={storeId} />}
     </div>
   );
 }

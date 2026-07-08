@@ -504,11 +504,65 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Si este comprador tenía un carrito marcado como abandonado, ya se recuperó
-    prisma.abandonedCart.updateMany({
-      where: { storeId: order.storeId, customerEmail: emailNorm, recoveredAt: null },
-      data: { recoveredAt: new Date() },
-    }).catch((e) => console.error("[abandonedCart] recovered:", e));
+    // Actividad, recuperación de carrito y milestones — fire-and-forget
+    ;(async () => {
+      try {
+        await prisma.storeActivityEvent.create({
+          data: {
+            storeId: order.storeId,
+            type: "NEW_ORDER",
+            data: JSON.stringify({
+              total: order.total,
+              buyerName: customer.name.trim().slice(0, 50),
+            }),
+          },
+        });
+
+        const recovered = await prisma.abandonedCart.updateMany({
+          where: { storeId: order.storeId, customerEmail: emailNorm, recoveredAt: null },
+          data: { recoveredAt: new Date() },
+        });
+        if (recovered.count > 0) {
+          await prisma.storeActivityEvent.create({
+            data: {
+              storeId: order.storeId,
+              type: "CART_RECOVERED",
+              data: JSON.stringify({ buyerName: customer.name.trim().slice(0, 50) }),
+            },
+          });
+        }
+
+        const orderCount = await prisma.order.count({ where: { storeId: order.storeId } });
+        if (orderCount === 1) {
+          await prisma.storeMilestone.upsert({
+            where: { storeId_type: { storeId: order.storeId, type: "FIRST_ORDER" } },
+            create: { storeId: order.storeId, type: "FIRST_ORDER" },
+            update: {},
+          });
+        }
+
+        const revAgg = await prisma.order.aggregate({
+          where: { storeId: order.storeId, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+          _sum: { total: true },
+        });
+        const totalRev = revAgg._sum.total ?? 0;
+        for (const [threshold, type] of [
+          [1000, "REVENUE_1K"],
+          [10000, "REVENUE_10K"],
+          [50000, "REVENUE_50K"],
+        ] as [number, string][]) {
+          if (totalRev >= threshold) {
+            await prisma.storeMilestone.upsert({
+              where: { storeId_type: { storeId: order.storeId, type } },
+              create: { storeId: order.storeId, type },
+              update: {},
+            });
+          }
+        }
+      } catch (e) {
+        console.error("[activity/milestone] checkout:", e);
+      }
+    })();
 
     // Notificar al dueño de la tienda en tiempo real
     const storeOwner = await prisma.store.findUnique({

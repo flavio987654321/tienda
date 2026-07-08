@@ -5,6 +5,7 @@ import ShareStoreButton from "@/components/ShareStoreButton";
 import PublishToggle from "@/components/PublishToggle";
 import { getCurrentUser } from "@/lib/auth-session";
 import DashboardLayout from "@/components/DashboardLayout";
+import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import {
   ShoppingBag, Package, Users, TrendingUp,
   Store, Star, BadgeCheck, CheckCircle2, Circle,
@@ -35,6 +36,13 @@ export default async function DashboardPage() {
   });
 
   const isAutos = store.tipoTienda === "AUTOS";
+
+  const recentActivity = await prisma.storeActivityEvent.findMany({
+    where: { storeId: store.id },
+    orderBy: { createdAt: "desc" },
+    take: 15,
+    select: { id: true, type: true, data: true, createdAt: true },
+  });
 
   const recentOrders = !isAutos ? await prisma.order.findMany({
     where: { storeId: store.id },
@@ -158,6 +166,7 @@ export default async function DashboardPage() {
       userName={user.name}
       userEmail={user.email}
       userId={user.id}
+      storeId={store.id}
       initialPendingAffiliateCount={pendingAffiliateCount}
       initialLowStockCount={initialLowStockCount}
     >
@@ -470,6 +479,14 @@ export default async function DashboardPage() {
             )}
           </div>
         )}
+
+        <ActivityFeed
+          storeId={store.id}
+          initialEvents={recentActivity.map((e) => ({
+            ...e,
+            createdAt: e.createdAt.toISOString(),
+          }))}
+        />
       </div>
     </DashboardLayout>
   );

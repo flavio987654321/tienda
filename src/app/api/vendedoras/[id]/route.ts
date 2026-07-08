@@ -80,6 +80,33 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }),
     ]);
 
+    // Actividad y milestone — fire-and-forget
+    ;(async () => {
+      try {
+        await prisma.storeActivityEvent.create({
+          data: {
+            storeId: affiliate.storeId,
+            type: "NEW_AFFILIATE",
+            data: JSON.stringify({
+              affiliateName: (affiliate.user.name || "Afiliada").slice(0, 40),
+            }),
+          },
+        });
+        const activeCount = await prisma.affiliate.count({
+          where: { storeId: affiliate.storeId, isActive: true },
+        });
+        if (activeCount === 1) {
+          await prisma.storeMilestone.upsert({
+            where: { storeId_type: { storeId: affiliate.storeId, type: "FIRST_AFFILIATE" } },
+            create: { storeId: affiliate.storeId, type: "FIRST_AFFILIATE" },
+            update: {},
+          });
+        }
+      } catch (e) {
+        console.error("[activity/milestone] affiliate approve:", e);
+      }
+    })();
+
     return NextResponse.json({ affiliate: updated });
   }
 

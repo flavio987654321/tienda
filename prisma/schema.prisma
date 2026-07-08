@@ -240,6 +240,8 @@ model Store {
   storeFollows        StoreFollow[]
   abandonedCarts      AbandonedCart[]
   gamificationWidget  GamificationWidget?
+  activityEvents      StoreActivityEvent[]
+  milestones          StoreMilestone[]
 }
 
 // Suscripciones push a tiendas. userId es null para suscriptores anónimos legacy;
@@ -1071,4 +1073,35 @@ model GamificationSpin {
 
   @@index([widgetId])
   @@unique([widgetId, email])  // previene doble giro por race condition; NULL != NULL → anónimos no se bloquean entre sí
+}
+
+// ─── ACTIVITY FEED ────────────────────────────────────────────────────────────
+// Eventos de actividad de la tienda. Se escribe server-side desde los
+// endpoints de checkout, reviews y afiliados — nunca desde el cliente.
+// "data" es un JSON truncado y sanitizado (sin emails, sin datos sensibles).
+model StoreActivityEvent {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  type      String   // NEW_ORDER | NEW_REVIEW | NEW_AFFILIATE | CART_RECOVERED
+  data      String   @default("{}") // JSON: { total?, buyerName?, productName?, reviewerName?, rating?, affiliateName? }
+  createdAt DateTime @default(now())
+
+  @@index([storeId, createdAt(sort: Desc)])
+}
+
+// ─── MILESTONES (hitos de celebración) ───────────────────────────────────────
+// Registra hitos logrados por la tienda. @@unique garantiza que cada hito
+// se registra una sola vez por tienda a nivel de DB (upsert safe contra races).
+// shownAt null = aún no mostrado al dueño → el CelebrationManager lo pide.
+model StoreMilestone {
+  id         String    @id @default(cuid())
+  storeId    String
+  store      Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  type       String    // FIRST_ORDER | FIRST_REVIEW | FIRST_AFFILIATE | REVENUE_1K | REVENUE_10K | REVENUE_50K
+  achievedAt DateTime  @default(now())
+  shownAt    DateTime?
+
+  @@unique([storeId, type])
+  @@index([storeId, shownAt])
 }

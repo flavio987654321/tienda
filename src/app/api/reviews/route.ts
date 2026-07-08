@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
       where: { id: productId },
       select: {
         name: true,
-        store: { select: { slug: true, ownerId: true, name: true, owner: { select: { email: true } } } },
+        store: { select: { id: true, slug: true, ownerId: true, name: true, owner: { select: { email: true } } } },
       },
     })
     .then((product) => {
@@ -126,6 +126,30 @@ export async function POST(req: NextRequest) {
           comment,
         }).catch((e) => console.error("[email] nueva reseña:", e));
       }
+
+      prisma.storeActivityEvent.create({
+        data: {
+          storeId: product.store.id,
+          type: "NEW_REVIEW",
+          data: JSON.stringify({
+            rating,
+            productName: product.name.slice(0, 50),
+            reviewerName: reviewerName.slice(0, 30),
+          }),
+        },
+      }).catch((e) => console.error("[activity] review:", e));
+
+      prisma.review.count({ where: { product: { storeId: product.store.id } } })
+        .then((count) => {
+          if (count === 1) {
+            return prisma.storeMilestone.upsert({
+              where: { storeId_type: { storeId: product.store.id, type: "FIRST_REVIEW" } },
+              create: { storeId: product.store.id, type: "FIRST_REVIEW" },
+              update: {},
+            });
+          }
+        })
+        .catch((e) => console.error("[milestone] first review:", e));
     })
     .catch((e) => console.error("[reviews] aviso a dueña:", e));
 

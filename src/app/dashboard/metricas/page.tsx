@@ -16,6 +16,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { ExportButtons } from "./ExportButtons";
+import ShareStatsButton from "./ShareStatsButton";
 
 // ─── Rango de fechas ──────────────────────────────────────────────────────────
 // Todas las comparaciones usan ventanas de igual longitud (período actual vs.
@@ -456,7 +457,19 @@ export default async function MetricasPage({
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <RangeSelector active={rangeDays} />
-            <ExportButtons range={rangeDays} storeSlug={store.slug} />
+            <div className="flex items-center gap-2">
+              <ExportButtons range={rangeDays} storeSlug={store.slug} />
+              <ShareStatsButton
+                storeName={store.name}
+                period={rangeDays}
+                revenue={totalRevenuePeriod}
+                orders={totalOrdersPeriod}
+                visits={totalViewsPeriod}
+                isAutos={isAutos}
+                leads={totalLeadsPeriod}
+                confirmedSales={leadsConfirmedCurrent}
+              />
+            </div>
           </div>
         </div>
 
