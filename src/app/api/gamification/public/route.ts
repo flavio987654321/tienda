@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+const DEFAULT_STYLES = {
+  popupBg: "#191B1B", textColor: "#ffffff",
+  buttonBg: "#d77095", buttonText: "#ffffff",
+  couponBg: "#191B1B", couponText: "#d77095",
+  spinnerColors: ["#f472b6", "#ec4899", "#db2777", "#be185d", "#9d174d", "#831843"],
+  spinnerBorder: "#3A9A22",
+  centerBg: "#191B1B", centerBorder: "#3A9A22", centerText: "#d77095",
+};
+
 // GET /api/gamification/public?storeId=xxx
 // Retorna solo lo necesario para mostrar el widget en la tienda (sin datos privados)
 export async function GET(req: NextRequest) {
@@ -42,7 +51,13 @@ export async function GET(req: NextRequest) {
     select: { id: true, label: true, order: true, isNoPrize: true },
   });
 
+  let parsedStyles: Record<string, unknown> = {};
+  try {
+    parsedStyles = JSON.parse(widget.styles);
+  } catch {}
+  const styles = { ...DEFAULT_STYLES, ...parsedStyles };
+
   return NextResponse.json({
-    widget: { ...widget, prizes: allPrizes },
+    widget: { ...widget, styles, prizes: allPrizes },
   });
 }
