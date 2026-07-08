@@ -11,6 +11,7 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   const _configuredUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
   const APP_URL = (/^https?:\/\//.test(_configuredUrl) ? _configuredUrl : `https://${req.headers.get("host")}`).replace(/\/$/, "");
+  console.log("[suscripcion/preferencia] APP_URL:", APP_URL, "| env:", _configuredUrl, "| host:", req.headers.get("host"));
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
