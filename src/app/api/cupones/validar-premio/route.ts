@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
   // Buscar el cupón de premio del usuario
   const coupon = await prisma.affiliateRewardCoupon.findUnique({
-    where: { code: String(code).trim().toUpperCase() },
+    where: { code: String(code).trim().toUpperCase().slice(0, 30) },
   });
 
   if (!coupon) return INVALID;

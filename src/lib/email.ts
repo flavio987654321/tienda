@@ -86,8 +86,8 @@ export async function sendLowStockEmail({
         : `<span style="background:#fef3c7;color:#d97706;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:700;">${p.stock} u.</span>`;
       return `
         <tr style="border-bottom:1px solid #f3f4f6;">
-          <td style="padding:10px 16px;font-size:14px;color:#111827;">${p.name}</td>
-          <td style="padding:10px 16px;font-size:14px;color:#6b7280;">${p.variant}</td>
+          <td style="padding:10px 16px;font-size:14px;color:#111827;">${escapeHtml(p.name)}</td>
+          <td style="padding:10px 16px;font-size:14px;color:#6b7280;">${escapeHtml(p.variant)}</td>
           <td style="padding:10px 16px;">${badge}</td>
         </tr>`;
     })
@@ -108,7 +108,7 @@ export async function sendLowStockEmail({
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
         <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
-          <p style="color:#e0e7ff;font-size:13px;margin:0 0 4px;">Tu tienda · ${storeName}</p>
+          <p style="color:#e0e7ff;font-size:13px;margin:0 0 4px;">Tu tienda · ${escapeHtml(storeName)}</p>
           <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Alerta de stock</h1>
         </div>
 
@@ -162,9 +162,9 @@ export async function sendReviewRequestEmail({
   const productLinks = products
     .map(
       (p) =>
-        `<a href="${appUrl}/tienda/${storeSlug}?producto=${p.id}"
+        `<a href="${appUrl}/tienda/${storeSlug}?producto=${encodeURIComponent(p.id)}"
            style="display:block;padding:10px 16px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#6366f1;text-decoration:none;">
-          ⭐ Dejar reseña de <strong>${p.name}</strong>
+          ⭐ Dejar reseña de <strong>${escapeHtml(p.name)}</strong>
         </a>`
     )
     .join("");
@@ -176,7 +176,7 @@ export async function sendReviewRequestEmail({
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
         <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
-          <p style="color:#e0e7ff;font-size:13px;margin:0 0 4px;">${storeName}</p>
+          <p style="color:#e0e7ff;font-size:13px;margin:0 0 4px;">${escapeHtml(storeName)}</p>
           <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">¡Tu pedido fue entregado!</h1>
         </div>
 
@@ -275,7 +275,7 @@ export async function sendAffiliateStatusEmail({
     APPROVED: {
       subject: `Ya podés vender para ${storeName}`,
       title: "Afiliación aprobada",
-      body: `Tu solicitud para vender en <strong>${storeName}</strong> fue aprobada. Ya podés entrar a tu panel, copiar tu link y empezar a compartir productos.`,
+      body: `Tu solicitud para vender en <strong>${escapeHtml(storeName)}</strong> fue aprobada. Ya podés entrar a tu panel, copiar tu link y empezar a compartir productos.`,
       accent: "#16a34a",
       cta: "Ir a mi panel",
       ctaUrl: dashboardUrl,
@@ -283,7 +283,7 @@ export async function sendAffiliateStatusEmail({
     PAUSED: {
       subject: `Tu afiliación en ${storeName} fue pausada`,
       title: "Afiliación pausada",
-      body: `La tienda <strong>${storeName}</strong> pausó temporalmente tu acceso como afiliado. Tu link deja de estar activo hasta que te reactiven.`,
+      body: `La tienda <strong>${escapeHtml(storeName)}</strong> pausó temporalmente tu acceso como afiliado. Tu link deja de estar activo hasta que te reactiven.`,
       accent: "#6b7280",
       cta: "Ver mi estado",
       ctaUrl: dashboardUrl,
@@ -291,7 +291,7 @@ export async function sendAffiliateStatusEmail({
     REMOVED: {
       subject: `Tu afiliación en ${storeName} fue dada de baja`,
       title: "Afiliación dada de baja",
-      body: `La tienda <strong>${storeName}</strong> dio de baja tu afiliación. Tu link ya no está activo. Si vuelven a habilitarte o querés postularte otra vez, vas a verlo desde tu panel.`,
+      body: `La tienda <strong>${escapeHtml(storeName)}</strong> dio de baja tu afiliación. Tu link ya no está activo. Si vuelven a habilitarte o querés postularte otra vez, vas a verlo desde tu panel.`,
       accent: "#dc2626",
       cta: "Abrir mi panel",
       ctaUrl: dashboardUrl,
@@ -299,7 +299,7 @@ export async function sendAffiliateStatusEmail({
     REJECTED: {
       subject: `Tu solicitud en ${storeName} no fue aprobada`,
       title: "Solicitud rechazada",
-      body: `La tienda <strong>${storeName}</strong> no aprobó tu solicitud por ahora. Podés seguir explorando otras tiendas o volver a revisar tu panel más adelante.`,
+      body: `La tienda <strong>${escapeHtml(storeName)}</strong> no aprobó tu solicitud por ahora. Podés seguir explorando otras tiendas o volver a revisar tu panel más adelante.`,
       accent: "#dc2626",
       cta: "Explorar tiendas",
       ctaUrl: `${appUrl}/afiliados`,
@@ -328,7 +328,7 @@ export async function sendAffiliateStatusEmail({
         </div>
 
         <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
-          Estado de tu afiliación en ${storeName} · tienda/${storeSlug}
+          Estado de tu afiliación en ${escapeHtml(storeName)} · tienda/${escapeHtml(storeSlug)}
         </p>
       </div>
     `,
@@ -386,7 +386,7 @@ export async function sendNewAffiliateApplicationEmail({
         </div>
 
         <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
-          Panel de afiliados de ${storeName}
+          Panel de afiliados de ${escapeHtml(storeName)}
         </p>
       </div>
     `,
@@ -455,7 +455,7 @@ export async function sendCommissionEarnedEmail({
         </div>
 
         <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
-          Podés solicitar un retiro cuando quieras desde tu panel de comisiones · ${storeName}
+          Podés solicitar un retiro cuando quieras desde tu panel de comisiones · ${escapeHtml(storeName)}
         </p>
       </div>
     `,
@@ -1015,7 +1015,7 @@ export async function sendWithdrawalRequestEmail({
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
         <div style="background:#f59e0b;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
-          <p style="color:rgba(0,0,0,0.6);font-size:13px;margin:0 0 4px;">${storeName}</p>
+          <p style="color:rgba(0,0,0,0.6);font-size:13px;margin:0 0 4px;">${escapeHtml(storeName)}</p>
           <h1 style="color:#fff;font-size:22px;margin:0;font-weight:700;">Solicitud de retiro</h1>
           <p style="color:#fff;font-size:32px;font-weight:900;margin:8px 0 0;">${fmt(amount)}</p>
         </div>

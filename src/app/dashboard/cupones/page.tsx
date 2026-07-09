@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef, Fragment } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   Plus, Loader2, Settings, Palette, Gift, X, AlertCircle,
-  ToggleLeft, ToggleRight, Copy, Check, Search, ChevronDown, ChevronUp,
+  ToggleLeft, ToggleRight, Copy, Check, Search, ChevronDown, ChevronUp, Trash2,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ type UseRow = {
   createdAt: string; buyerName: string; buyerEmail: string;
 };
 
-type HistoryStats = { total: number; active: number; expired: number; gamification: number; whatsapp: number; totalDiscount: number };
+type HistoryStats = { total: number; active: number; expired: number; exhausted: number; gamification: number; whatsapp: number; totalDiscount: number };
 
 const HISTORY_PAGE = 20;
 
@@ -114,8 +114,50 @@ function CouponHistory() {
   const [uses, setUses] = useState<UseRow[]>([]);
   const [usesLoading, setUsesLoading] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const expandRef = useRef<string | null>(null);
   const now = new Date();
+
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3500); }
+
+  function toggleSelected(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelected(prev => prev.size === coupons.length ? new Set() : new Set(coupons.map(c => c.id)));
+  }
+
+  async function deleteCoupons(ids: string[]) {
+    const targets = coupons.filter(c => ids.includes(c.id));
+    const usedCount = targets.filter(c => c.usedCount > 0).length;
+    const legalRisk = targets.filter(c => c.winnerEmail && couponStatus(c, now) === "active");
+
+    let msg = `¿Eliminar ${ids.length} cupón${ids.length > 1 ? "es" : ""}? Esta acción no se puede deshacer.`;
+    if (usedCount > 0) {
+      msg += `\n\n${usedCount} ya se usaron en pedidos — esos pedidos van a dejar de mostrar qué código fue (el monto del descuento no se toca).`;
+    }
+    if (legalRisk.length > 0) {
+      msg += `\n\n⚠️ ${legalRisk.length} de estos cupones todavía son válidos y ya fueron entregados a alguien que ganó un premio. Apagarlos antes de que venzan podría generar un reclamo del cliente (Ley de Defensa del Consumidor). ¿Continuar igual?`;
+    }
+    if (!confirm(msg)) return;
+
+    setDeleting(true);
+    try {
+      await Promise.all(ids.map(id => fetch(`/api/cupones/${encodeURIComponent(id)}`, { method: "DELETE" })));
+      showToast(ids.length > 1 ? "Cupones eliminados" : "Cupón eliminado");
+      setSelected(new Set());
+      await load();
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(0); }, 400);
@@ -171,6 +213,7 @@ function CouponHistory() {
   const TABS = [
     { id: "all",          label: "Todos",         count: stats?.total },
     { id: "active",       label: "Vigentes",       count: stats?.active },
+    { id: "exhausted",    label: "Agotados",       count: stats?.exhausted },
     { id: "expired",      label: "Vencidos",       count: stats?.expired },
     { id: "gamification", label: "Gamificación",   count: stats?.gamification },
     { id: "whatsapp",     label: "WhatsApp",       count: stats?.whatsapp },
@@ -184,9 +227,10 @@ function CouponHistory() {
       </div>
 
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
           {([
             { label: "Vigentes",       value: String(stats.active),                icon: "✅" },
+            { label: "Agotados",       value: String(stats.exhausted),             icon: "🎯" },
             { label: "Vencidos",       value: String(stats.expired),               icon: "⏰" },
             { label: "Gamificación",   value: String(stats.gamification),          icon: "🎡" },
             { label: "Descuento total otorgado", value: fmtARS(stats.totalDiscount), icon: "💰" },
@@ -230,6 +274,21 @@ function CouponHistory() {
         </div>
       </div>
 
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-2.5 mb-3">
+          <span className="text-xs font-semibold text-indigo-700">{selected.size} seleccionado{selected.size > 1 ? "s" : ""}</span>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSelected(new Set())} className="text-xs font-semibold text-gray-500 hover:text-gray-700">
+              Cancelar
+            </button>
+            <button onClick={() => deleteCoupons([...selected])} disabled={deleting}
+              className="flex items-center gap-1.5 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-600 disabled:opacity-50 transition-colors">
+              <Trash2 className="h-3.5 w-3.5" /> Eliminar
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
@@ -253,6 +312,10 @@ function CouponHistory() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80">
+                  <th className="w-10 px-4 py-3">
+                    <input type="checkbox" checked={selected.size > 0 && selected.size === coupons.length}
+                      onChange={toggleSelectAll} className="rounded border-gray-300" aria-label="Seleccionar todos" />
+                  </th>
                   {(["Código", "Descuento", "Usos", "Vence", "Estado", ""] as const).map(h => (
                     <th key={h} className={`px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide ${h === "Vence" ? "hidden sm:table-cell" : ""}`}>{h}</th>
                   ))}
@@ -266,6 +329,10 @@ function CouponHistory() {
                   return (
                     <Fragment key={coupon.id}>
                       <tr className={`border-b border-gray-50 transition-colors ${isExp ? "bg-indigo-50/30" : "hover:bg-gray-50/60"}`}>
+                        <td className="px-4 py-3">
+                          <input type="checkbox" checked={selected.has(coupon.id)}
+                            onChange={() => toggleSelected(coupon.id)} className="rounded border-gray-300" aria-label={`Seleccionar ${coupon.code}`} />
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <code className="font-mono font-bold text-gray-900 text-xs tracking-wider">{coupon.code}</code>
@@ -302,18 +369,25 @@ function CouponHistory() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {coupon.usedCount > 0 && (
-                            <button onClick={() => handleExpand(coupon.id)}
-                              className="rounded-lg border border-gray-200 p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-                              aria-label={isExp ? "Ocultar usos" : "Ver usos"}>
-                              {isExp ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                          <div className="flex items-center justify-end gap-1.5">
+                            {coupon.usedCount > 0 && (
+                              <button onClick={() => handleExpand(coupon.id)}
+                                className="rounded-lg border border-gray-200 p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                                aria-label={isExp ? "Ocultar usos" : "Ver usos"}>
+                                {isExp ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                              </button>
+                            )}
+                            <button onClick={() => deleteCoupons([coupon.id])} disabled={deleting}
+                              className="rounded-lg border border-gray-200 p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors disabled:opacity-50"
+                              aria-label="Eliminar cupón">
+                              <Trash2 className="h-3.5 w-3.5" />
                             </button>
-                          )}
+                          </div>
                         </td>
                       </tr>
                       {isExp && (
                         <tr className="bg-indigo-50/20 border-b border-gray-50">
-                          <td colSpan={6} className="px-4 pt-1 pb-4">
+                          <td colSpan={7} className="px-4 pt-1 pb-4">
                             {usesLoading ? (
                               <div className="flex items-center gap-2 py-4 text-xs text-gray-400">
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando usos…
@@ -371,6 +445,14 @@ function CouponHistory() {
           </div>
         )}
       </div>
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] animate-fade-slide pointer-events-none">
+          <div className="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-2xl">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />{toast}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

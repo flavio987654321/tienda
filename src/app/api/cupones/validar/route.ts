@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   }
 
   const coupon = await prisma.coupon.findUnique({
-    where: { storeId_code: { storeId, code: normalizeCouponCode(code) } },
+    where: { storeId_code: { storeId, code: normalizeCouponCode(String(code).slice(0, 30)) } },
   });
 
   // Respuesta genérica para no revelar si existe, expiró o se agotó (evita enumeración)

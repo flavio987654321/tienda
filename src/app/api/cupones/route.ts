@@ -3,6 +3,17 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { isValidCouponCode, normalizeCouponCode } from "@/lib/coupons";
 
+type CouponRow = Awaited<ReturnType<typeof prisma.coupon.findMany>>[number];
+
+// Mismo criterio que couponStatus() en el dashboard (cupones/page.tsx) — se mantienen
+// en sync a propósito para que el badge de la fila y los contadores de arriba coincidan.
+function statusOf(c: CouponRow, now: Date): "expired" | "exhausted" | "inactive" | "active" {
+  if (c.expiresAt && c.expiresAt <= now) return "expired";
+  if (c.maxUses !== null && c.usedCount >= c.maxUses) return "exhausted";
+  if (!c.isActive) return "inactive";
+  return "active";
+}
+
 // GET - listar cupones con filtros y stats
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -18,44 +29,48 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get("search")?.trim().toUpperCase().slice(0, 30) ?? "";
   const now = new Date();
 
-  // Build status filter — all conditions scoped to the store
-  const statusFilter = (() => {
-    if (status === "active")        return { isActive: true, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] };
-    if (status === "expired")       return { expiresAt: { lte: now } };
-    if (status === "inactive")      return { isActive: false, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] };
-    if (status === "gamification")  return { winnerEmail: { not: null } };
-    if (status === "whatsapp")      return { label: { contains: "WhatsApp" } };
-    return {};
-  })();
-
-  const where = {
-    storeId: store.id,
-    ...(search ? { code: { contains: search } } : {}),
-    ...statusFilter,
-  };
-
-  const [coupons, total, statsTotal, statsActive, statsExpired, statsGami, statsWhatsapp, discountAgg] = await Promise.all([
-    prisma.coupon.findMany({ where, orderBy: { createdAt: "desc" }, take, skip }),
-    prisma.coupon.count({ where }),
-    prisma.coupon.count({ where: { storeId: store.id } }),
-    prisma.coupon.count({ where: { storeId: store.id, isActive: true, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] } }),
-    prisma.coupon.count({ where: { storeId: store.id, expiresAt: { lte: now } } }),
-    prisma.coupon.count({ where: { storeId: store.id, winnerEmail: { not: null } } }),
-    prisma.coupon.count({ where: { storeId: store.id, label: { contains: "WhatsApp" } } }),
+  // Volumen por tienda es chico (decenas/cientos) — se trae todo y se filtra/pagina en JS.
+  // Necesario porque "agotado" depende de comparar dos columnas (usedCount vs maxUses),
+  // algo que Prisma no puede expresar en un where sin SQL crudo.
+  const [allCoupons, discountAgg] = await Promise.all([
+    prisma.coupon.findMany({
+      where: { storeId: store.id, ...(search ? { code: { contains: search } } : {}) },
+      orderBy: { createdAt: "desc" },
+    }),
     prisma.order.aggregate({ where: { storeId: store.id, discountAmount: { gt: 0 } }, _sum: { discountAmount: true } }),
   ]);
 
+  const stats = allCoupons.reduce(
+    (acc, c) => {
+      acc.total++;
+      const st = statusOf(c, now);
+      if (st === "active") acc.active++;
+      else if (st === "expired") acc.expired++;
+      else if (st === "exhausted") acc.exhausted++;
+      if (c.winnerEmail) acc.gamification++;
+      if (c.label?.includes("WhatsApp")) acc.whatsapp++;
+      return acc;
+    },
+    { total: 0, active: 0, expired: 0, exhausted: 0, gamification: 0, whatsapp: 0 }
+  );
+
+  const filtered = allCoupons.filter((c) => {
+    if (status === "active")       return statusOf(c, now) === "active";
+    if (status === "expired")      return statusOf(c, now) === "expired";
+    if (status === "exhausted")    return statusOf(c, now) === "exhausted";
+    if (status === "inactive")     return statusOf(c, now) === "inactive";
+    if (status === "gamification") return !!c.winnerEmail;
+    if (status === "whatsapp")     return !!c.label?.includes("WhatsApp");
+    return true; // all
+  });
+
   return NextResponse.json({
-    coupons,
-    total,
+    coupons: filtered.slice(skip, skip + take),
+    total: filtered.length,
     take,
     skip,
     stats: {
-      total: statsTotal,
-      active: statsActive,
-      expired: statsExpired,
-      gamification: statsGami,
-      whatsapp: statsWhatsapp,
+      ...stats,
       totalDiscount: discountAgg._sum.discountAmount ?? 0,
     },
   });

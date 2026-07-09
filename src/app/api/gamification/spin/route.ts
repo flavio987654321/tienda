@@ -21,6 +21,21 @@ async function uniqueWinCode(storeId: string): Promise<string> {
   throw new Error("No se pudo generar un código único");
 }
 
+// Un email libera su giro anterior (puede volver a girar) cuando no ganó nada,
+// o cuando el cupón que ganó ya se usó o venció. Mientras el premio siga vigente
+// y sin usar, se lo sigue bloqueando para que no acumule cupones girando de nuevo.
+async function isSpinReleasable(spin: { isNoPrize: boolean; couponId: string | null }): Promise<boolean> {
+  if (spin.isNoPrize || !spin.couponId) return true;
+  const coupon = await prisma.coupon.findUnique({
+    where: { id: spin.couponId },
+    select: { usedCount: true, maxUses: true, expiresAt: true },
+  });
+  if (!coupon) return true; // el cupón fue borrado → nada que esperar
+  const expired = coupon.expiresAt ? coupon.expiresAt <= new Date() : false;
+  const exhausted = coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses;
+  return expired || exhausted;
+}
+
 // POST /api/gamification/spin
 // Determina el premio server-side. Nunca expone la lógica al cliente.
 export async function POST(req: NextRequest) {
@@ -72,12 +87,16 @@ export async function POST(req: NextRequest) {
       where: { widgetId_email: { widgetId, email: normalizedEmail } },
     });
     if (existingSpin) {
-      return NextResponse.json({
-        alreadySpun: true,
-        prizeLabel: existingSpin.prizeLabel,
-        couponCode: existingSpin.couponCode,
-        isNoPrize: existingSpin.isNoPrize,
-      });
+      if (!(await isSpinReleasable(existingSpin))) {
+        return NextResponse.json({
+          alreadySpun: true,
+          prizeLabel: existingSpin.prizeLabel,
+          couponCode: existingSpin.couponCode,
+          isNoPrize: existingSpin.isNoPrize,
+        });
+      }
+      // El premio anterior ya venció o se usó — se libera el giro para intentar de nuevo
+      await prisma.gamificationSpin.delete({ where: { id: existingSpin.id } }).catch(() => {});
     }
   }
 
