@@ -10,6 +10,7 @@ import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { promoEffectivePct } from "@/lib/promoLabel";
 import { resolveVariantPrice } from "@/lib/variantPrice";
+import { useTurnstile } from "@/components/Turnstile";
 
 // Misma lógica de matching de variante por talle/color que usan los templates
 // para mostrar "Sin stock"/"Últimas unidades" — se centraliza acá (y se expone
@@ -79,7 +80,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   const [toastMsg,       setToastMsg]       = useState<string | null>(null);
   const [contactStatus,  setContactStatus]  = useState<ContactStatus>("idle");
   const [contactForm,    setContactForm]    = useState({ nombre:"", email:"", mensaje:"" });
-  const [contactTurnstileToken, setContactTurnstileToken] = useState("");
+  const contactCaptcha = useTurnstile("contact");
   const [acceptedTerms,  setAcceptedTerms]  = useState(false);
   const [donationEnabled, setDonationEnabled] = useState(false);
   const [donationAmount,  setDonationAmount]  = useState(1000);
@@ -766,19 +767,19 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
           nombre: contactForm.nombre,
           email: contactForm.email,
           mensaje: contactForm.mensaje,
-          turnstileToken: contactTurnstileToken,
+          turnstileToken: contactCaptcha.token,
         }),
       });
       if (res.ok) {
         setContactStatus("sent");
         setContactForm({ nombre: "", email: "", mensaje: "" });
-        setContactTurnstileToken("");
       } else {
         setContactStatus("idle");
       }
     } catch {
       setContactStatus("idle");
     }
+    contactCaptcha.reset();
   };
 
   const toggleFavorite = async (id: string) => {
@@ -817,7 +818,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg,
     contactStatus, setContactStatus, contactForm, setContactForm,
-    contactTurnstileToken, setContactTurnstileToken,
+    contactCaptcha,
     acceptedTerms, setAcceptedTerms,
     donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
     // Derived

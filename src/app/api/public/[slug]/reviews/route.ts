@@ -76,15 +76,16 @@ export async function POST(
   // Honeypot: bot detectado, responder con 201 falso para no revelar que fue bloqueado
   if (website) return NextResponse.json({ review: null }, { status: 201 });
 
-  if (!(await verifyTurnstile(turnstileToken, ip))) {
-    return NextResponse.json({ error: "No pudimos verificar que sos una persona. Recargá la página e intentá de nuevo." }, { status: 400 });
-  }
-
   if (!productId || !rating || !reviewer?.trim()) {
     return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
   }
   if (typeof rating !== "number" || rating < 1 || rating > 5) {
     return NextResponse.json({ error: "Rating inválido" }, { status: 400 });
+  }
+
+  // Captcha al final: un error de campos no consume el token (es de un solo uso)
+  if (!(await verifyTurnstile(turnstileToken, ip, "review"))) {
+    return NextResponse.json({ error: "No pudimos verificar que sos una persona. Intentá de nuevo." }, { status: 400 });
   }
 
   const store = await prisma.store.findUnique({

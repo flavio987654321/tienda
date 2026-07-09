@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X, Copy, Check, Mail } from "lucide-react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { Turnstile } from "@/components/Turnstile";
+import { useTurnstile } from "@/components/Turnstile";
 
 // Se muestra cuando el dueño de la tienda no cargó su propio texto legal —
 // deja en claro que los sectores no tienen todos la misma chance de salir.
@@ -131,8 +131,7 @@ export default function GamificationWidget() {
   const [result, setResult] = useState<PlayResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const turnstileConfigured = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const captcha = useTurnstile("spin");
 
   const wheelRef = useRef<HTMLCanvasElement>(null);
   const scratchRef = useRef<HTMLCanvasElement>(null);
@@ -275,11 +274,20 @@ export default function GamificationWidget() {
       const res = await fetch("/api/gamification/spin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ widgetId: cfg.id, email: email.trim() || undefined, turnstileToken }),
+        body: JSON.stringify({ widgetId: cfg.id, email: email.trim() || undefined, turnstileToken: captcha.token }),
       });
       const data: PlayResult = await res.json();
+      captcha.reset();
 
-      // Mark as played (frequency tracking)
+      // Error del servidor (rate limit, captcha, email inválido): mostrarlo y permitir
+      // reintentar — sin esto caía al flujo de ganador con el premio vacío
+      if (!res.ok) {
+        setEmailErr((data as { error?: string }).error || "No se pudo girar. Intentá de nuevo.");
+        setBusy(false);
+        return;
+      }
+
+      // Mark as played (frequency tracking) — solo cuando el giro fue válido
       const key = `gw_${cfg.id}`;
       if (cfg.showFrequency === "ONCE_EVER") localStorage.setItem(key, "1");
       else if (cfg.showFrequency === "ONCE_SESSION") sessionStorage.setItem(key, "1");
@@ -297,6 +305,8 @@ export default function GamificationWidget() {
         setBusy(false);
       }
     } catch {
+      captcha.reset();
+      setEmailErr("Error de conexión. Intentá de nuevo.");
       setBusy(false);
     }
   }
@@ -507,11 +517,11 @@ export default function GamificationWidget() {
                     </div>
                   )}
 
-                  <Turnstile onVerify={setTurnstileToken} />
+                  {captcha.widget}
 
                   <button
                     onClick={handlePlay}
-                    disabled={busy || (turnstileConfigured && !turnstileToken)}
+                    disabled={busy || !captcha.ready}
                     className="w-full rounded-2xl py-3 font-bold transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ background: s.buttonBg, color: s.buttonText }}
                   >
@@ -556,11 +566,11 @@ export default function GamificationWidget() {
                     </div>
                   )}
 
-                  <Turnstile onVerify={setTurnstileToken} />
+                  {captcha.widget}
 
                   <button
                     onClick={handlePlay}
-                    disabled={busy || (turnstileConfigured && !turnstileToken)}
+                    disabled={busy || !captcha.ready}
                     className="w-full rounded-2xl py-3 font-bold transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ background: s.buttonBg, color: s.buttonText }}
                   >

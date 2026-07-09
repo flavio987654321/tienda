@@ -72,12 +72,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Demasiados intentos. Esperá unos minutos." }, { status: 429 });
   }
 
-  const { widgetId, email, turnstileToken } = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+  const { widgetId, email, turnstileToken } = body;
   if (!widgetId) return NextResponse.json({ error: "widgetId requerido" }, { status: 400 });
-
-  if (!(await verifyTurnstile(turnstileToken, ip))) {
-    return NextResponse.json({ error: "No pudimos verificar que sos una persona. Recargá la página e intentá de nuevo." }, { status: 400 });
-  }
 
   const widget = await prisma.gamificationWidget.findUnique({
     where: { id: widgetId },
@@ -103,6 +101,12 @@ export async function POST(req: NextRequest) {
   // cliente. Un request armado a mano desde la consola o un bot sin email cae acá.
   if (!normalizedEmail) return NextResponse.json({ error: "Email requerido" }, { status: 400 });
   if (!EMAIL_RE.test(normalizedEmail)) return NextResponse.json({ error: "Email inválido" }, { status: 400 });
+
+  // Captcha después de validar widget y email (un error de tipeo no gasta el token,
+  // que es de un solo uso) pero antes de tocar rate limits por email y el giro real.
+  if (!(await verifyTurnstile(turnstileToken, ip, "spin"))) {
+    return NextResponse.json({ error: "No pudimos verificar que sos una persona. Intentá de nuevo." }, { status: 400 });
+  }
 
   // Clave de deduplicación — colapsa variantes de Gmail al mismo email real.
   const dedupEmail = canonicalEmail(normalizedEmail);

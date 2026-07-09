@@ -26,10 +26,6 @@ export async function POST(req: NextRequest) {
 
     const { name, email, password, storeName, accountType, billing, tier, phone, termsAccepted, ageConfirmed, turnstileToken } = await req.json();
 
-    if (!(await verifyTurnstile(turnstileToken, ip))) {
-      return NextResponse.json({ error: "No pudimos verificar que sos una persona. Recargá la página e intentá de nuevo." }, { status: 400 });
-    }
-
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
     }
@@ -61,6 +57,12 @@ export async function POST(req: NextRequest) {
     }
     if (type === "OWNER" && typeof storeName === "string" && storeName.trim().length > 80) {
       return NextResponse.json({ error: "El nombre de la tienda no puede superar 80 caracteres" }, { status: 400 });
+    }
+
+    // Captcha después de validar campos (un error de tipeo no gasta el token, que es
+    // de un solo uso) pero antes de tocar la base (nadie enumera emails sin resolverlo).
+    if (!(await verifyTurnstile(turnstileToken, ip, "registro"))) {
+      return NextResponse.json({ error: "No pudimos verificar que sos una persona. Intentá de nuevo." }, { status: 400 });
     }
 
     const normalizedEmail = String(email).toLowerCase().trim();

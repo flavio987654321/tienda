@@ -22,7 +22,7 @@ import { colorToSwatch } from "@/lib/colorSwatch";
 import { promoModalText } from "@/lib/promoLabel";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
-import { Turnstile } from "@/components/Turnstile";
+import { useTurnstile } from "@/components/Turnstile";
 
 const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
@@ -60,7 +60,7 @@ export default function BohoTerra() {
   const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
-  const [reviewTurnstileToken, setReviewTurnstileToken] = useState("");
+  const reviewCaptcha = useTurnstile("review");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [reviewHoneypot, setReviewHoneypot] = useState("");
@@ -170,9 +170,8 @@ export default function BohoTerra() {
     fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, editPendingItem,
     pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, editingIdx,
     handleContact, toggleFavorite,
-    contactTurnstileToken, setContactTurnstileToken,
+    contactCaptcha,
   } = cart;
-  const turnstileConfigured = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const cartTheme: CartTheme = { BG:"#ffffff", S, T, MID, border:"rgba(44,34,24,0.1)", accent:A, accentText:"#fff", serif:"Georgia, serif" };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
@@ -246,16 +245,15 @@ export default function BohoTerra() {
       const res = await fetch(`/api/public/${slug}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, turnstileToken: reviewTurnstileToken }),
+        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, turnstileToken: reviewCaptcha.token }),
       });
       if (res.ok) {
         const data = await res.json();
         setReviews(p => [data.review, ...p]);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
-        setReviewTurnstileToken("");
         setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
       }
-    } catch {} finally { setReviewSubmitting(false); }
+    } catch {} finally { reviewCaptcha.reset(); setReviewSubmitting(false); }
   }
 
   const ANNOUNCEMENT_BAR_H = 36;
@@ -1185,8 +1183,8 @@ export default function BohoTerra() {
                 <textarea required rows={4} placeholder="Tu mensaje" value={contactForm.mensaje} onChange={e=>setContactForm(f=>({...f,mensaje:e.target.value}))}
                   style={{ display:"block", width:"100%", background:"#faf7f2", border:`1px solid #d5c9be`, color:T, padding:"11px 14px", fontSize:13, outline:"none", resize:"none", fontFamily:"inherit", boxSizing:"border-box", marginBottom:16 }}
                   onFocus={onFI} onBlur={onBI}/>
-                <Turnstile onVerify={setContactTurnstileToken} />
-                <button type="submit" disabled={contactStatus==="sending" || (turnstileConfigured && !contactTurnstileToken)}
+                {contactCaptcha.widget}
+                <button type="submit" disabled={contactStatus==="sending" || !contactCaptcha.ready}
                   style={{ width:"100%", background:A, color:"#fff", border:"none", padding:"14px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", opacity:contactStatus==="sending"?0.6:1 }}>
                   {contactStatus==="sending" ? "Enviando..." : "Enviar Mensaje"}
                 </button>
@@ -1628,8 +1626,8 @@ export default function BohoTerra() {
                       <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
                         placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
                         style={{ border:`1px solid rgba(44,34,24,0.2)`, padding:"9px 12px", fontSize:12, resize:"none", outline:"none", background:"#faf7f2" }} />
-                      {!isPreview && <Turnstile onVerify={setReviewTurnstileToken} />}
-                      <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || (turnstileConfigured && !reviewTurnstileToken)}
+                      {!isPreview && reviewCaptcha.widget}
+                      <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
                         style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"12px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
                         {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
                       </button>

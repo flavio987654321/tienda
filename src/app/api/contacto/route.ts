@@ -24,11 +24,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Demasiados intentos. Esperá un momento." }, { status: 429 });
   }
 
-  const body = await req.json();
-
-  if (!(await verifyTurnstile(body.turnstileToken, ip))) {
-    return NextResponse.json({ error: "No pudimos verificar que sos una persona. Recargá la página e intentá de nuevo." }, { status: 400 });
-  }
+  const body = await req.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
   const name = String(body.name ?? "").trim();
   const email = String(body.email ?? "").trim().toLowerCase();
@@ -46,6 +43,11 @@ export async function POST(req: NextRequest) {
   }
   if (message.length < 10) {
     return NextResponse.json({ error: "El mensaje es muy corto." }, { status: 400 });
+  }
+
+  // Captcha al final: un error de campos no consume el token (es de un solo uso)
+  if (!(await verifyTurnstile(body.turnstileToken, ip, "contacto"))) {
+    return NextResponse.json({ error: "No pudimos verificar que sos una persona. Intentá de nuevo." }, { status: 400 });
   }
 
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER) {

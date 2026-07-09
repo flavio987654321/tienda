@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { getUserSubscription } from "@/lib/subscription";
+import { syncTurnstileHostname } from "@/lib/turnstile";
+
+// El captcha (Turnstile) valida el hostname: sin esto, en una tienda con dominio
+// propio los formularios de contacto/reseñas/ruleta quedarían deshabilitados.
+// Antes de quitar un hostname, verificar que ninguna otra tienda use el mismo apex.
+async function removeTurnstileHostnameIfUnused(oldDomain: string, exceptOwnerId: string) {
+  const apex = oldDomain.replace(/^www\./, "");
+  const stillUsed = await prisma.store.findFirst({
+    where: { customDomain: { endsWith: apex }, NOT: { ownerId: exceptOwnerId } },
+    select: { id: true },
+  });
+  if (!stillUsed) await syncTurnstileHostname(oldDomain, "remove");
+}
 
 async function addDomainToVercel(domain: string) {
   const token = process.env.VERCEL_TOKEN;
@@ -51,12 +64,23 @@ export async function POST(req: NextRequest) {
   const existing = await prisma.store.findUnique({ where: { customDomain: cleaned } });
   if (existing) return NextResponse.json({ error: "Ese dominio ya está en uso por otra tienda" }, { status: 409 });
 
+  const previous = await prisma.store.findUnique({
+    where: { ownerId: user.id },
+    select: { customDomain: true },
+  });
+
   await addDomainToVercel(cleaned);
+  await syncTurnstileHostname(cleaned, "add");
 
   await prisma.store.update({
     where: { ownerId: user.id },
     data: { customDomain: cleaned },
   });
+
+  // Si la tienda tenía otro dominio conectado antes, liberar su hostname del widget
+  if (previous?.customDomain && previous.customDomain !== cleaned) {
+    await removeTurnstileHostnameIfUnused(previous.customDomain, user.id);
+  }
 
   return NextResponse.json({ success: true });
 }
@@ -66,10 +90,19 @@ export async function DELETE(_req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || user.role !== "OWNER") return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
+  const previous = await prisma.store.findUnique({
+    where: { ownerId: user.id },
+    select: { customDomain: true },
+  });
+
   await prisma.store.update({
     where: { ownerId: user.id },
     data: { customDomain: null },
   });
+
+  if (previous?.customDomain) {
+    await removeTurnstileHostnameIfUnused(previous.customDomain, user.id);
+  }
 
   return NextResponse.json({ success: true });
 }

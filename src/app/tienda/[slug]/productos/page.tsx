@@ -14,7 +14,7 @@ import { promoModalText } from "@/lib/promoLabel";
 import { OfferBadge } from "@/components/store/OfferBadge";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
-import { Turnstile } from "@/components/Turnstile";
+import { useTurnstile } from "@/components/Turnstile";
 
 const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
   ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["pinterest", "Pinterest"],
@@ -274,8 +274,7 @@ function ProductosPageInner() {
   const [reviewsLoading,   setReviewsLoading]   = useState(false);
   const [reviewForm,       setReviewForm]       = useState({ reviewer: "", rating: 5, comment: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [reviewTurnstileToken, setReviewTurnstileToken] = useState("");
-  const turnstileConfigured = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const reviewCaptcha = useTurnstile("review");
   const [reviewDone,       setReviewDone]       = useState(false);
   const [isMobile,         setIsMobile]         = useState(false);
   const [reelIndex,        setReelIndex]        = useState(0);
@@ -726,17 +725,16 @@ function ProductosPageInner() {
       const res = await fetch(`/api/public/${slug}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, turnstileToken: reviewTurnstileToken }),
+        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, turnstileToken: reviewCaptcha.token }),
       });
       if (res.ok) {
         const data = await res.json();
         setReviews(p => [data.review, ...p]);
         setReviewForm({ reviewer: "", rating: 5, comment: "" });
-        setReviewTurnstileToken("");
         setReviewDone(true);
       }
     } catch {}
-    finally { setReviewSubmitting(false); }
+    finally { reviewCaptcha.reset(); setReviewSubmitting(false); }
   };
 
   // ── Colores derivados para fondos semitransparentes ─────────────────────────
@@ -1939,8 +1937,8 @@ function ProductosPageInner() {
                         placeholder="Comentario (opcional)" rows={3} readOnly={fromEditor}
                         style={{ background:modalInputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none", fontFamily:sans }}
                         onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
-                      {!fromEditor && <Turnstile onVerify={setReviewTurnstileToken} />}
-                      <button type="submit" disabled={fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() || (turnstileConfigured && !reviewTurnstileToken)}
+                      {!fromEditor && reviewCaptcha.widget}
+                      <button type="submit" disabled={fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
                         style={{ background: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>
                         {reviewSubmitting ? "Enviando..." : "Publicar reseña"}
                       </button>

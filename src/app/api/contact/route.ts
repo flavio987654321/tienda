@@ -18,10 +18,6 @@ export async function POST(req: NextRequest) {
 
   const { storeId, nombre, email, mensaje, turnstileToken } = body as Record<string, unknown>;
 
-  if (!(await verifyTurnstile(turnstileToken, ip))) {
-    return NextResponse.json({ error: "No pudimos verificar que sos una persona. Recargá la página e intentá de nuevo." }, { status: 400 });
-  }
-
   if (
     typeof storeId !== "string" || storeId.length === 0 ||
     typeof nombre !== "string" || nombre.trim().length < 2 ||
@@ -29,6 +25,11 @@ export async function POST(req: NextRequest) {
     typeof mensaje !== "string" || mensaje.trim().length < 5
   ) {
     return NextResponse.json({ error: "Parámetros inválidos" }, { status: 400 });
+  }
+
+  // Captcha al final: un error de campos no consume el token (es de un solo uso)
+  if (!(await verifyTurnstile(turnstileToken, ip, "contact"))) {
+    return NextResponse.json({ error: "No pudimos verificar que sos una persona. Intentá de nuevo." }, { status: 400 });
   }
 
   const store = await prisma.store.findFirst({

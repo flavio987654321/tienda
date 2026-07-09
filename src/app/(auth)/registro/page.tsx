@@ -3,7 +3,7 @@
 import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
-import { Turnstile } from "@/components/Turnstile";
+import { useTurnstile } from "@/components/Turnstile";
 import { isPwa } from "@/lib/pwa";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -179,8 +179,7 @@ function RegistroContent() {
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [step1Tier, setStep1Tier] = useState<"BASIC" | "PREMIUM">("BASIC");
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const turnstileConfigured = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const captcha = useTurnstile("registro");
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
@@ -236,9 +235,10 @@ function RegistroContent() {
     const res = await fetch("/api/auth/registro", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, accountType, billing, tier: ownerTier, phone: form.phone.trim(), termsAccepted, ageConfirmed, turnstileToken }),
+      body: JSON.stringify({ ...form, accountType, billing, tier: ownerTier, phone: form.phone.trim(), termsAccepted, ageConfirmed, turnstileToken: captcha.token }),
     });
     const data = await res.json();
+    captcha.reset();
     if (!res.ok) {
       setError(data.error || "Error al registrarse");
       setLoading(false);
@@ -635,11 +635,11 @@ function RegistroContent() {
                 </label>
               </div>
 
-              <Turnstile onVerify={setTurnstileToken} />
+              {captcha.widget}
 
               <button
                 type="submit"
-                disabled={loading || !ageConfirmed || !termsAccepted || (turnstileConfigured && !turnstileToken)}
+                disabled={loading || !ageConfirmed || !termsAccepted || !captcha.ready}
                 className={`w-full text-white py-4 rounded-2xl font-bold text-base transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] disabled:hover:scale-100 ${colors.btn}`}
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
