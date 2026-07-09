@@ -28,7 +28,8 @@ export async function POST(req: NextRequest) {
   if (coupon.expiresAt && coupon.expiresAt < new Date()) return INVALID;
   if (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses) return INVALID;
   // Cupón de gamificación: verificar que el email que valida es el ganador
-  if (coupon.winnerEmail && email && coupon.winnerEmail !== email.trim().toLowerCase()) return INVALID;
+  // (si el cupón es personal y no llegó email, tratamos como no coincide — no alcanza con omitirlo)
+  if (coupon.winnerEmail && coupon.winnerEmail !== String(email ?? "").trim().toLowerCase()) return INVALID;
 
   if (subtotal !== undefined && subtotal < coupon.minOrderAmount) {
     return NextResponse.json({

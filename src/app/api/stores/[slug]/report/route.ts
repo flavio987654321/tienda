@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendStoreReportAdminEmail } from "@/lib/resend";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 
 const REASONS = [
   "Estafa o fraude",
@@ -14,7 +15,7 @@ const REASONS = [
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const ip = getClientIp(req);
   if (!(await checkRateLimit(`report:${ip}`, 3, 10 * 60_000))) {
     return NextResponse.json({ error: "Demasiados reportes. Esperá un momento." }, { status: 429 });
   }

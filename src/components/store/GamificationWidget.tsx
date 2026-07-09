@@ -414,7 +414,7 @@ export default function GamificationWidget() {
                       <button onClick={copyCode}
                         className="flex w-full items-center justify-center gap-2 rounded-2xl py-3 font-bold transition-opacity hover:opacity-90"
                         style={{ background: s.buttonBg, color: s.buttonText }}>
-                        {copied ? <><Check className="h-4 w-4" /> ¡Copiado!</> : <><Copy className="h-4 w-4" /> Copiar código</>}
+                        {copied ? <><Check className="h-4 w-4" /> ¡Copiado!</> : <><Copy className="h-4 w-4" /> {cfg.reclaimText || "Copiar código"}</>}
                       </button>
                       {result.expiresAt && (
                         <p className="text-xs text-center opacity-50" style={{ color: s.textColor }}>Válido hasta el {formatExpiry(result.expiresAt)}</p>

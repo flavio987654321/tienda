@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendPasswordResetEmail } from "@/lib/resend";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const ip = getClientIp(req);
   if (!(await checkRateLimit(`reset-password:${ip}`, 3, 60_000))) {
     return NextResponse.json({ ok: true }); // respuesta genérica para no revelar el bloqueo
   }

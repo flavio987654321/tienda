@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { logAdminAction } from "@/lib/admin-log";
+import { getClientIp } from "@/lib/request-ip";
 
 export async function PATCH(
   req: NextRequest,
@@ -36,7 +37,7 @@ export async function PATCH(
     targetId: id,
     targetType: "STORE",
     details: data as Record<string, unknown>,
-    ip: req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip"),
+    ip: getClientIp(req),
   });
 
   return NextResponse.json(store);
@@ -74,7 +75,7 @@ export async function DELETE(
     targetId: id,
     targetType: "STORE",
     details: { storeName: store.name, slug: store.slug },
-    ip: req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip"),
+    ip: getClientIp(req),
   });
 
   return NextResponse.json({ ok: true });

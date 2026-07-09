@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createNotificationMany } from "@/lib/notifications";
 import { isSafeUrl } from "@/lib/url-utils";
 import { sendNewStorePublishedEmail, sendStoreOfflineEmail, sendCommissionRateChangedEmail } from "@/lib/email";
+import { getClientIp } from "@/lib/request-ip";
 import { z } from "zod";
 
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
@@ -309,7 +310,7 @@ export async function PUT(req: NextRequest) {
 
   // Registrar aceptación del dueño la primera vez que activa el programa (raw SQL para compatibilidad)
   if (b.affiliatesEnabled && !prevStore?.affiliatesEnabled) {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+    const ip = getClientIp(req);
     const version = (b.tcOwnerVersion as string) ?? "1.0";
     prisma.$executeRaw`
       UPDATE "Store"

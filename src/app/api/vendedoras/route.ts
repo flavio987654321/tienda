@@ -5,6 +5,7 @@ import { sendNewAffiliateApplicationEmail } from "@/lib/email";
 import { isSafeExternalUrl } from "@/lib/url-utils";
 import { sendPushToUser } from "@/lib/push";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 
 // GET - afiliado: ver tiendas disponibles / tienda: ver sus afiliados
 export async function GET(req: NextRequest) {
@@ -105,7 +106,7 @@ const TC_VERSION = "1.7";
 
 // POST - afiliado se une a una tienda
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const ip = getClientIp(req);
   if (!(await checkRateLimit(`affiliate-apply:${ip}`, 5, 60 * 60_000))) {
     return NextResponse.json({ error: "Demasiadas solicitudes. Esperá un momento." }, { status: 429 });
   }
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest) {
   }
 
   const tcAcceptedAt = new Date();
-  const tcAcceptedIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip") ?? "unknown";
+  const tcAcceptedIp = getClientIp(req);
 
   if (!storeId || typeof storeId !== "string") {
     return NextResponse.json({ error: "ID de tienda inválido" }, { status: 400 });

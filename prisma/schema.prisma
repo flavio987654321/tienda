@@ -1023,7 +1023,6 @@ model GamificationWidget {
   buttonText    String   @default("¡Girá y ganá!")
   reclaimText   String   @default("Reclamar premio")
   legalText     String?
-  headerImage   String?
   centerType    String   @default("text")          // text | logo
   centerText    String?
 

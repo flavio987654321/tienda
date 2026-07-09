@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 
 export async function GET(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const ip = getClientIp(req);
   if (!(await checkRateLimit(`seguimiento:${ip}`, 30, 60_000))) {
     return NextResponse.json({ error: "Demasiadas consultas. Esperá un momento." }, { status: 429 });
   }

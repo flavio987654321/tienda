@@ -26,7 +26,6 @@ export async function GET(req: NextRequest) {
       buttonText: true,
       reclaimText: true,
       legalText: true,
-      headerImage: true,
       centerType: true,
       centerText: true,
       triggerType: true,

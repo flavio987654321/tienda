@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const {
     type, isActive, title, subtitle, buttonText, reclaimText, legalText,
-    headerImage, centerType, centerText, triggerType, triggerDelay,
+    centerType, centerText, triggerType, triggerDelay,
     showFrequency, emailRequired, styles, prizes,
   } = body;
 
@@ -133,7 +133,6 @@ export async function POST(req: NextRequest) {
         buttonText: buttonText ?? "¡Girá y ganá!",
         reclaimText: reclaimText ?? "Reclamar premio",
         legalText: legalText ?? null,
-        headerImage: headerImage ?? null,
         centerType: centerType ?? "text",
         centerText: centerText ?? null,
         triggerType: triggerType ?? "FIRST_CLICK",
@@ -144,7 +143,7 @@ export async function POST(req: NextRequest) {
       },
       update: {
         type, isActive, title, subtitle, buttonText, reclaimText,
-        legalText, headerImage, centerType, centerText,
+        legalText, centerType, centerText,
         triggerType, triggerDelay, showFrequency,
         emailRequired: true, // siempre requerido — sin email no hay forma de avisarle al ganador
         ...(styles !== undefined ? { styles: JSON.stringify(styles) } : {}),
@@ -268,8 +267,18 @@ export async function DELETE() {
     });
     if (!widget) return;
 
-    // Desactivar cupones asociados (no los borramos, pueden haber sido usados en pedidos)
-    const couponIds = widget.prizes.map(p => p.couponId).filter(Boolean) as string[];
+    // Cupones plantilla configurados en el editor de premios
+    const templateCouponIds = widget.prizes.map(p => p.couponId).filter(Boolean) as string[];
+
+    // Cupones personales ya entregados a cada ganador (uno por giro ganador)
+    const spins = await tx.gamificationSpin.findMany({
+      where: { widgetId: widget.id, couponId: { not: null } },
+      select: { couponId: true },
+    });
+    const wonCouponIds = spins.map(s => s.couponId).filter(Boolean) as string[];
+
+    // Desactivar todos (no los borramos, pueden haber sido usados en pedidos)
+    const couponIds = [...new Set([...templateCouponIds, ...wonCouponIds])];
     if (couponIds.length > 0) {
       await tx.coupon.updateMany({ where: { id: { in: couponIds } }, data: { isActive: false } });
     }

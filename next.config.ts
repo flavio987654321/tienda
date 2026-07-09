@@ -10,10 +10,10 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 const csp = [
   "default-src 'self'",
   `img-src 'self' data: blob: https: https://${supabaseHost} https://res.cloudinary.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com https://client.crisp.chat`,
-  `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.mercadopago.com https://api.mercadolibre.com https://*.mercadolibre.com https://*.ingest.sentry.io https://*.crisp.chat wss://*.crisp.chat`,
+  `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.mercadopago.com https://api.mercadolibre.com https://*.mercadolibre.com https://*.ingest.sentry.io https://*.crisp.chat wss://*.crisp.chat https://challenges.cloudflare.com`,
   "media-src 'self' blob: https: https://res.cloudinary.com https://www.youtube.com https://www.instagram.com https://*.cdninstagram.com",
-  "frame-src 'self' https://www.youtube.com https://www.instagram.com https://sdk.mercadopago.com https://www.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://sdk.mercadopago.com https://client.crisp.chat`,
+  "frame-src 'self' https://www.youtube.com https://www.instagram.com https://sdk.mercadopago.com https://www.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://challenges.cloudflare.com",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://sdk.mercadopago.com https://client.crisp.chat https://challenges.cloudflare.com`,
   "style-src 'self' 'unsafe-inline' https://client.crisp.chat",
   "font-src 'self' data: https://client.crisp.chat",
   "object-src 'none'",
@@ -32,7 +32,7 @@ const securityHeaders = [
 ];
 
 // MercadoPago SDK requiere unsafe-eval — solo en páginas de pago (en prod; en dev ya viene en csp base)
-const cspPaymentScript = `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com https://client.crisp.chat`;
+const cspPaymentScript = `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.mercadopago.com https://client.crisp.chat https://challenges.cloudflare.com`;
 const cspPayment = csp.replace(/script-src[^;]+/, cspPaymentScript);
 const paymentHeaders = securityHeaders.map((h) =>
   h.key === "Content-Security-Policy" ? { key: h.key, value: cspPayment } : h

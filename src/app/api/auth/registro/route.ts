@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { getClientIp } from "@/lib/request-ip";
 
 const TERMS_VERSION = CURRENT_TERMS_VERSION;
 
@@ -18,7 +19,7 @@ function toSlug(text: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const ip = getClientIp(req);
     if (!(await checkRateLimit(`registro:${ip}`, 5, 60_000))) {
       return NextResponse.json({ error: "Demasiados intentos. Esperá un momento e intentá de nuevo." }, { status: 429 });
     }

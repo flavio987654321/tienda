@@ -35,7 +35,7 @@ type WidgetStyles = {
 type Widget = {
   id?: string; type: string; isActive: boolean;
   title: string; subtitle: string; buttonText: string; reclaimText: string;
-  legalText: string; headerImage: string | null; centerType: string; centerText: string;
+  legalText: string; centerType: string; centerText: string;
   triggerType: string; triggerDelay: number | null; showFrequency: string;
   emailRequired: boolean; styles: WidgetStyles; prizes: Prize[];
 };
@@ -53,7 +53,7 @@ const DEFAULT_WIDGET: Widget = {
   type: "SPIN", isActive: false,
   title: "¡Girá y ganá!", subtitle: "Probá tu suerte y ganá un premio",
   buttonText: "¡Girá y ganá!", reclaimText: "Reclamar premio",
-  legalText: "", headerImage: null, centerType: "text", centerText: "Tu marca",
+  legalText: "", centerType: "text", centerText: "Tu marca",
   triggerType: "FIRST_CLICK", triggerDelay: null, showFrequency: "ONCE_SESSION",
   emailRequired: true, styles: DEFAULT_STYLES, prizes: [],
 };
@@ -669,6 +669,17 @@ function WidgetEditor({ widget, onSave, onClose, saving, defaultTab = "general" 
     setForm((f) => ({ ...f, prizes: f.prizes.filter((_, i) => i !== idx).map((p, i) => ({ ...p, order: i })) }));
   }
 
+  function distributeEvenly() {
+    setForm((f) => {
+      const n = f.prizes.length;
+      if (n === 0) return f;
+      const base = Math.floor(100 / n);
+      const remainder = 100 - base * n;
+      // El resto (si 100 no es divisible exacto) se reparte de a 1% entre los primeros premios
+      return { ...f, prizes: f.prizes.map((p, i) => ({ ...p, probability: base + (i < remainder ? 1 : 0) })) };
+    });
+  }
+
   function updatePrize(idx: number, upd: Partial<Prize>) {
     setForm((f) => ({ ...f, prizes: f.prizes.map((p, i) => i === idx ? { ...p, ...upd } : p) }));
   }
@@ -724,6 +735,12 @@ function WidgetEditor({ widget, onSave, onClose, saving, defaultTab = "general" 
     onSave(form);
   }
 
+  function handleClose() {
+    const dirty = JSON.stringify(form) !== JSON.stringify(widget);
+    if (dirty && !confirm("Tenés cambios sin guardar. ¿Salir de todos modos?")) return;
+    onClose();
+  }
+
   const sum = probSum(form.prizes);
 
   return (
@@ -740,7 +757,7 @@ function WidgetEditor({ widget, onSave, onClose, saving, defaultTab = "general" 
               </button>
             ))}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
         </div>
 
         {/* Tabs */}
@@ -881,10 +898,18 @@ function WidgetEditor({ widget, onSave, onClose, saving, defaultTab = "general" 
             {/* ── PREMIOS ── */}
             {tab === "prizes" && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <p className="text-sm text-gray-500">Configurá los premios y sus chances. Las probabilidades deben sumar 100.</p>
-                  <div className={`text-sm font-bold rounded-full px-3 py-1 ${sum === 100 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-                    {sum}/100
+                  <div className="flex items-center gap-2 shrink-0">
+                    {form.prizes.length > 1 && (
+                      <button type="button" onClick={distributeEvenly}
+                        className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-100">
+                        Repartir en partes iguales
+                      </button>
+                    )}
+                    <div className={`text-sm font-bold rounded-full px-3 py-1 ${sum === 100 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+                      {sum}/100
+                    </div>
                   </div>
                 </div>
 
@@ -1039,7 +1064,7 @@ function WidgetEditor({ widget, onSave, onClose, saving, defaultTab = "general" 
           <div className="flex items-center justify-between">
             <p className="text-xs text-gray-400">Los códigos se generan automáticamente al guardar.</p>
             <div className="flex gap-3">
-              <button onClick={onClose} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">
+              <button onClick={handleClose} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">
                 Cancelar
               </button>
               <button onClick={handleSave} disabled={saving}

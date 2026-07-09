@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { cotizarEnvio } from "@/lib/enviopack";
+import { getClientIp } from "@/lib/request-ip";
 
 type CotizarBody = {
   storeId: string;
@@ -10,7 +11,7 @@ type CotizarBody = {
 };
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const ip = getClientIp(req);
   if (!(await checkRateLimit(`envios-cotizar:${ip}`, 20, 60_000))) {
     return NextResponse.json({ error: "Demasiadas cotizaciones. Esperá un momento." }, { status: 429 });
   }

@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { logAdminAction } from "@/lib/admin-log";
 import { createNotificationMany } from "@/lib/notifications";
+import { getClientIp } from "@/lib/request-ip";
 
 export async function PATCH(
   req: NextRequest,
@@ -42,7 +43,7 @@ export async function PATCH(
     targetId: id,
     targetType: "USER",
     details: { banned: isBanned },
-    ip: req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip"),
+    ip: getClientIp(req),
   });
 
   // Si la cuenta afectada es afiliada, avisar a los dueños de las tiendas donde está afiliada
@@ -336,7 +337,7 @@ export async function DELETE(
       hadStore: !!userData?.store,
       hadSubscription: !!userData?.subscription,
     },
-    ip: _req.headers.get("x-forwarded-for") ?? _req.headers.get("x-real-ip"),
+    ip: getClientIp(_req),
   });
 
   // Si era afiliada, avisar a los dueños de las tiendas donde estaba afiliada

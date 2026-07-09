@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getClientIpFromHeaders } from "@/lib/request-ip";
 
 export const dynamic = "force-dynamic";
 
@@ -64,8 +65,8 @@ export default async function ProductShortLinkPage({ params, searchParams }: Pro
   // Registrar el click con productId (máximo 1 click por IP por hora para evitar inflación)
   try {
     const headersList = await headers();
-    const rawIp = headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
-    const ip = rawIp && rawIp !== "unknown" ? rawIp : null;
+    const rawIp = getClientIpFromHeaders(headersList);
+    const ip = rawIp !== "unknown" ? rawIp : null;
 
     // Sin IP no podemos deduplicar — saltear para no inflar el contador con bots/proxies
     const shouldTrack = !!ip && !(await prisma.affiliateClick.findFirst({

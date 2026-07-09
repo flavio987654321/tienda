@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { platformClient } from "@/lib/mp";
 import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // La plata va directo a la cuenta de la plataforma (mismo patrón que las
 // suscripciones), no a un vendedor. Permite donar con o sin cuenta.
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const ip = getClientIp(req);
   if (!(await checkRateLimit(`canasta-donate:${ip}`, 5, 60_000))) {
     return NextResponse.json({ error: "Demasiados intentos. Esperá un momento." }, { status: 429 });
   }

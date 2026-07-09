@@ -9,6 +9,7 @@ import { DEFAULT_SHIPPING_METHODS, LIVE_QUOTE_DOMICILIO_ID } from "@/types/store
 import { cotizarEnvio } from "@/lib/enviopack";
 import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
 import { recordStockMovement } from "@/lib/stockMovements";
+import { getClientIp } from "@/lib/request-ip";
 
 type CheckoutItem = {
   productId: string;
@@ -80,7 +81,7 @@ async function resolveShipping(
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const ip = getClientIp(req);
   // Límite estricto por IP: 5 intentos por minuto
   if (!(await checkRateLimit(`checkout:${ip}`, 5, 60_000))) {
     return NextResponse.json({ error: "Demasiados pedidos. Esperá un momento." }, { status: 429 });

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { logAdminAction } from "@/lib/admin-log";
 import { revalidatePath } from "next/cache";
+import { getClientIp } from "@/lib/request-ip";
 
 const VALID_STATUSES = ["TRIAL", "ACTIVE", "GRACE", "EXPIRED", "CANCELLED"];
 
@@ -74,7 +75,7 @@ export async function PATCH(
       before: { status: sub.status, tier: sub.tier, plan: sub.plan, role: sub.role },
       after: data,
     },
-    ip: req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip"),
+    ip: getClientIp(req),
   });
 
   return NextResponse.json(updated);
