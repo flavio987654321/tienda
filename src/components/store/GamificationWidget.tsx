@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X, Copy, Check, Mail } from "lucide-react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import { Turnstile } from "@/components/Turnstile";
+
+// Se muestra cuando el dueño de la tienda no cargó su propio texto legal —
+// deja en claro que los sectores no tienen todos la misma chance de salir.
+const DEFAULT_LEGAL_TEXT = "Los premios se sortean con distinta probabilidad cada uno. Un premio por persona.";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -35,7 +40,16 @@ type PlayResult = {
   couponCode: string | null;
   isNoPrize: boolean;
   prizeIndex: number;
+  expiresAt: string | null;
 };
+
+function formatExpiry(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+  const time = d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  return `${date} a las ${time}`;
+}
 
 // ─── Wheel drawing ──────────────────────────────────────────────────────────
 
@@ -117,6 +131,8 @@ export default function GamificationWidget() {
   const [result, setResult] = useState<PlayResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileConfigured = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   const wheelRef = useRef<HTMLCanvasElement>(null);
   const scratchRef = useRef<HTMLCanvasElement>(null);
@@ -259,7 +275,7 @@ export default function GamificationWidget() {
       const res = await fetch("/api/gamification/spin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ widgetId: cfg.id, email: email.trim() || undefined }),
+        body: JSON.stringify({ widgetId: cfg.id, email: email.trim() || undefined, turnstileToken }),
       });
       const data: PlayResult = await res.json();
 
@@ -400,6 +416,10 @@ export default function GamificationWidget() {
                         style={{ background: s.buttonBg, color: s.buttonText }}>
                         {copied ? <><Check className="h-4 w-4" /> ¡Copiado!</> : <><Copy className="h-4 w-4" /> Copiar código</>}
                       </button>
+                      {result.expiresAt && (
+                        <p className="text-xs text-center opacity-50" style={{ color: s.textColor }}>Válido hasta el {formatExpiry(result.expiresAt)}</p>
+                      )}
+                      <p className="text-xs text-center opacity-40" style={{ color: s.textColor }}>Vas a poder volver a girar cuando uses este cupón o cuando venza.</p>
                     </>
                   )}
                   {result.isNoPrize && (
@@ -422,6 +442,9 @@ export default function GamificationWidget() {
                     style={{ background: s.buttonBg, color: s.buttonText }}>
                     {copied ? <><Check className="h-4 w-4" /> ¡Copiado!</> : <><Copy className="h-4 w-4" /> Copiar código</>}
                   </button>
+                  {result?.expiresAt && (
+                    <p className="text-xs text-center opacity-50" style={{ color: s.textColor }}>Válido hasta el {formatExpiry(result.expiresAt)}</p>
+                  )}
                   <p className="text-xs text-center opacity-50" style={{ color: s.textColor }}>Ingresalo al finalizar tu compra</p>
                 </>
               )}
@@ -484,18 +507,18 @@ export default function GamificationWidget() {
                     </div>
                   )}
 
+                  <Turnstile onVerify={setTurnstileToken} />
+
                   <button
                     onClick={handlePlay}
-                    disabled={busy}
+                    disabled={busy || (turnstileConfigured && !turnstileToken)}
                     className="w-full rounded-2xl py-3 font-bold transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ background: s.buttonBg, color: s.buttonText }}
                   >
                     {busy ? "Girando…" : cfg.buttonText}
                   </button>
 
-                  {cfg.legalText && (
-                    <p className="text-center text-xs opacity-40 leading-relaxed" style={{ color: s.textColor }}>{cfg.legalText}</p>
-                  )}
+                  <p className="text-center text-xs opacity-40 leading-relaxed" style={{ color: s.textColor }}>{cfg.legalText || DEFAULT_LEGAL_TEXT}</p>
                 </>
               )}
 
@@ -533,18 +556,18 @@ export default function GamificationWidget() {
                     </div>
                   )}
 
+                  <Turnstile onVerify={setTurnstileToken} />
+
                   <button
                     onClick={handlePlay}
-                    disabled={busy}
+                    disabled={busy || (turnstileConfigured && !turnstileToken)}
                     className="w-full rounded-2xl py-3 font-bold transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ background: s.buttonBg, color: s.buttonText }}
                   >
                     {busy ? "Preparando…" : cfg.buttonText}
                   </button>
 
-                  {cfg.legalText && (
-                    <p className="text-center text-xs opacity-40 leading-relaxed" style={{ color: s.textColor }}>{cfg.legalText}</p>
-                  )}
+                  <p className="text-center text-xs opacity-40 leading-relaxed" style={{ color: s.textColor }}>{cfg.legalText || DEFAULT_LEGAL_TEXT}</p>
                 </>
               )}
 
@@ -581,9 +604,7 @@ export default function GamificationWidget() {
 
                   <p className="text-center text-xs opacity-40" style={{ color: s.textColor }}>Raspá más del 50% para revelar</p>
 
-                  {cfg.legalText && (
-                    <p className="text-center text-xs opacity-40 leading-relaxed" style={{ color: s.textColor }}>{cfg.legalText}</p>
-                  )}
+                  <p className="text-center text-xs opacity-40 leading-relaxed" style={{ color: s.textColor }}>{cfg.legalText || DEFAULT_LEGAL_TEXT}</p>
                 </>
               )}
 

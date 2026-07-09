@@ -9,6 +9,7 @@ import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext"
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { promoModalText } from "@/lib/promoLabel";
 import { resolveVariantPrice } from "@/lib/variantPrice";
+import { Turnstile } from "@/components/Turnstile";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 
@@ -208,6 +209,8 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone, setReviewDone] = useState(false);
   const [reviewHoneypot, setReviewHoneypot] = useState("");
+  const [reviewTurnstileToken, setReviewTurnstileToken] = useState("");
+  const turnstileConfigured = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   useEffect(() => {
     if (!slug || !product.id) return;
@@ -229,12 +232,13 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
     try {
       const res = await fetch(`/api/public/${slug}/reviews`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: product.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, website: reviewHoneypot }),
+        body: JSON.stringify({ productId: product.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, website: reviewHoneypot, turnstileToken: reviewTurnstileToken }),
       });
       if (res.ok) {
         const data = await res.json();
         setReviews(p => [data.review, ...p]);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewTurnstileToken("");
         setReviewDone(true);
       }
     } catch {}
@@ -585,7 +589,8 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
               <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
                 placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
                 style={{ border: `1px solid ${theme.cardBorder}`, borderRadius: theme.radius, padding: "9px 12px", fontSize: 13, color: theme.text, background: "transparent", resize: "none", outline: "none" }} />
-              <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim()}
+              {!isPreview && <Turnstile onVerify={setReviewTurnstileToken} />}
+              <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || (turnstileConfigured && !reviewTurnstileToken)}
                 style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? theme.cardBorder : theme.accent, color: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? theme.muted : theme.accentText, border: "none", padding: "12px", fontSize: 13, fontWeight: 700, borderRadius: theme.radius, cursor: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>
                 {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
               </button>

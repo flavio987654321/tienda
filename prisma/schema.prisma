@@ -1050,6 +1050,7 @@ model GamificationPrize {
   probability Int                // 0-100, deben sumar 100 por widget
   isNoPrize   Boolean            @default(false)
   order       Int                @default(0)       // orden en la ruleta/raspadita
+  winHours    Int                @default(48)       // horas de validez del cupón para el ganador, desde que gana
 
   couponId    String?
   coupon      Coupon?            @relation(fields: [couponId], references: [id], onDelete: SetNull)

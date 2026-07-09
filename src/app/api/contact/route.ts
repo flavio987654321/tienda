@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendContactFormEmail } from "@/lib/email";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const ip = getClientIp(req);
   if (!(await checkRateLimit(`contact:${ip}`, 5, 60_000))) {
     return NextResponse.json({ error: "Demasiados mensajes. Esperá un momento." }, { status: 429 });
   }
@@ -14,7 +16,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
   }
 
-  const { storeId, nombre, email, mensaje } = body as Record<string, unknown>;
+  const { storeId, nombre, email, mensaje, turnstileToken } = body as Record<string, unknown>;
+
+  if (!(await verifyTurnstile(turnstileToken, ip))) {
+    return NextResponse.json({ error: "No pudimos verificar que sos una persona. Recargá la página e intentá de nuevo." }, { status: 400 });
+  }
 
   if (
     typeof storeId !== "string" || storeId.length === 0 ||

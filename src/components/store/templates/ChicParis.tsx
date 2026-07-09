@@ -21,7 +21,7 @@ import { colorToSwatch } from "@/lib/colorSwatch";
 import { promoModalText } from "@/lib/promoLabel";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
-import GamificationWidget from "@/components/store/GamificationWidget";
+import { Turnstile } from "@/components/Turnstile";
 
 type Product = StorefrontProduct;
 
@@ -100,6 +100,7 @@ export default function ChicParis() {
   const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
+  const [reviewTurnstileToken, setReviewTurnstileToken] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [reviewHoneypot, setReviewHoneypot] = useState("");
@@ -260,7 +261,9 @@ export default function ChicParis() {
     fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, editPendingItem,
     pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, editingIdx,
     handleContact, toggleFavorite,
+    contactTurnstileToken, setContactTurnstileToken,
   } = cart;
+  const turnstileConfigured = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const accentText = getContrastColor(ACC) === "light" ? "#fff" : "#111";
   const cartTheme: CartTheme = { BG:"#ffffff", S:"#fafafa", T:"#111111", MID:"#999999", border:"#e5e5e5", accent:ACC, accentText };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
@@ -404,12 +407,13 @@ export default function ChicParis() {
       const res = await fetch(`/api/public/${slug}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined }),
+        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, turnstileToken: reviewTurnstileToken }),
       });
       if (res.ok) {
         const data = await res.json();
         setReviews(p => [data.review, ...p]);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewTurnstileToken("");
         setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
       }
     } catch {} finally { setReviewSubmitting(false); }
@@ -1252,7 +1256,8 @@ export default function ChicParis() {
                   style={{ ...iStyle, resize: "none", borderColor: "#e0e0e0", marginBottom: 20 }}
                   onFocus={e => (e.target.style.borderColor = ACC)}
                   onBlur={e => (e.target.style.borderColor = "#e0e0e0")} />
-                <button type="submit" disabled={contactStatus === "sending"}
+                <Turnstile onVerify={setContactTurnstileToken} />
+                <button type="submit" disabled={contactStatus === "sending" || (turnstileConfigured && !contactTurnstileToken)}
                   style={{ background: "#111", color: "#fff", border: "none", padding: "15px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", alignSelf: "flex-start", opacity: contactStatus === "sending" ? 0.6 : 1, transition: "background 0.2s" }}
                   onMouseEnter={e => { if (contactStatus !== "sending") e.currentTarget.style.background = ACC; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "#111"; }}>
@@ -1736,7 +1741,8 @@ export default function ChicParis() {
                       <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
                         placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
                         style={{ border: "1px solid #e5e7eb", padding: "9px 12px", fontSize: 12, resize: "none", outline: "none" }} />
-                      <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim()}
+                      {!isPreview && <Turnstile onVerify={setReviewTurnstileToken} />}
+                      <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || (turnstileConfigured && !reviewTurnstileToken)}
                         style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#f3f4f6" : ACC, color: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#9ca3af" : getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "12px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: isPreview ? "default" : "pointer" }}>
                         {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
                       </button>
@@ -1894,7 +1900,6 @@ export default function ChicParis() {
           {toastMsg}
         </div>
       )}
-      <GamificationWidget />
     </div>
   );
 }

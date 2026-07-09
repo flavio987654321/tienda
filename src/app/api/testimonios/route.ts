@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export async function GET() {
   const testimonials = await prisma.testimonial.findMany({
@@ -12,12 +14,17 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const ip = getClientIp(req);
   if (!(await checkRateLimit(`testimonio:${ip}`, 3, 10 * 60_000))) {
     return NextResponse.json({ error: "Demasiados envíos. Esperá un momento." }, { status: 429 });
   }
 
   const body = await req.json();
+
+  if (!(await verifyTurnstile(body.turnstileToken, ip))) {
+    return NextResponse.json({ error: "No pudimos verificar que sos una persona. Recargá la página e intentá de nuevo." }, { status: 400 });
+  }
+
   const { name, role, location, text, rating } = body;
 
   if (!name?.trim() || !role?.trim() || !text?.trim()) {

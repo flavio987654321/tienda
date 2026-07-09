@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getCurrentUser } from "@/lib/auth-session";
 import { sendNewReviewToOwnerEmail } from "@/lib/email";
+import { getClientIp } from "@/lib/request-ip";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export async function GET(
   _req: NextRequest,
@@ -61,7 +63,7 @@ export async function POST(
 ) {
   const { slug } = await params;
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const ip = getClientIp(req);
   if (!(await checkRateLimit(`review:${ip}`, 3, 10 * 60_000))) {
     return NextResponse.json({ error: "Demasiadas reseñas. Esperá un momento." }, { status: 429 });
   }
@@ -69,10 +71,14 @@ export async function POST(
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
-  const { productId, rating, comment, reviewer, website, buyerEmail } = body;
+  const { productId, rating, comment, reviewer, website, buyerEmail, turnstileToken } = body;
 
   // Honeypot: bot detectado, responder con 201 falso para no revelar que fue bloqueado
   if (website) return NextResponse.json({ review: null }, { status: 201 });
+
+  if (!(await verifyTurnstile(turnstileToken, ip))) {
+    return NextResponse.json({ error: "No pudimos verificar que sos una persona. Recargá la página e intentá de nuevo." }, { status: 400 });
+  }
 
   if (!productId || !rating || !reviewer?.trim()) {
     return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });

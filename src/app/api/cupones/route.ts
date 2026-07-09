@@ -32,13 +32,28 @@ export async function GET(req: NextRequest) {
   // Volumen por tienda es chico (decenas/cientos) — se trae todo y se filtra/pagina en JS.
   // Necesario porque "agotado" depende de comparar dos columnas (usedCount vs maxUses),
   // algo que Prisma no puede expresar en un where sin SQL crudo.
-  const [allCoupons, discountAgg] = await Promise.all([
+  const [allCoupons, discountAgg, activePrizeTemplates] = await Promise.all([
     prisma.coupon.findMany({
-      where: { storeId: store.id, ...(search ? { code: { contains: search } } : {}) },
+      where: {
+        storeId: store.id,
+        ...(search ? {
+          OR: [
+            { code: { contains: search } },
+            { winnerEmail: { contains: search, mode: "insensitive" as const } },
+          ],
+        } : {}),
+      },
       orderBy: { createdAt: "desc" },
     }),
     prisma.order.aggregate({ where: { storeId: store.id, discountAmount: { gt: 0 } }, _sum: { discountAmount: true } }),
+    // Cupones que hoy son la plantilla activa de un premio de la ruleta — borrarlos
+    // deja a un futuro ganador con un premio sin código, así que se marcan aparte.
+    prisma.gamificationPrize.findMany({
+      where: { couponId: { not: null }, widget: { storeId: store.id, isActive: true } },
+      select: { couponId: true },
+    }),
   ]);
+  const activePrizeTemplateIds = new Set(activePrizeTemplates.map((p) => p.couponId as string));
 
   const stats = allCoupons.reduce(
     (acc, c) => {
@@ -64,8 +79,13 @@ export async function GET(req: NextRequest) {
     return true; // all
   });
 
+  const coupons = filtered.slice(skip, skip + take).map((c) => ({
+    ...c,
+    isActivePrizeTemplate: activePrizeTemplateIds.has(c.id),
+  }));
+
   return NextResponse.json({
-    coupons: filtered.slice(skip, skip + take),
+    coupons,
     total: filtered.length,
     take,
     skip,

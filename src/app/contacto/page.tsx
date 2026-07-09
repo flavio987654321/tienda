@@ -4,12 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { Package, MessageCircle, Send, Loader2, CheckCircle2, Mail, Clock, MapPin } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
+import { Turnstile } from "@/components/Turnstile";
 
 export default function ContactoPage() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileConfigured = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   function set(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }));
@@ -26,7 +29,7 @@ export default function ContactoPage() {
       const res = await fetch("/api/contacto", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, turnstileToken }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Error al enviar."); return; }
@@ -190,9 +193,11 @@ export default function ContactoPage() {
                     </div>
                   )}
 
+                  <Turnstile onVerify={setTurnstileToken} />
+
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || (turnstileConfigured && !turnstileToken)}
                     className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold py-3.5 rounded-xl text-sm transition-colors disabled:opacity-60"
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

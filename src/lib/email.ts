@@ -1620,6 +1620,87 @@ export async function sendCommissionRateChangedEmail({
   });
 }
 
+export async function sendGamificationWinEmail({
+  to,
+  storeName,
+  storeSlug,
+  prizeLabel,
+  couponCode,
+  discountType,
+  discountValue,
+  minOrderAmount,
+  expiresAt,
+  legalText,
+}: {
+  to: string;
+  storeName: string;
+  storeSlug: string;
+  prizeLabel: string;
+  couponCode: string;
+  discountType: "percentage" | "fixed";
+  discountValue: number;
+  minOrderAmount: number;
+  expiresAt: Date;
+  legalText?: string | null;
+}) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const storeUrl = `${appUrl}/tienda/${storeSlug}`;
+  const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
+  const discountLabel = discountType === "percentage" ? `${discountValue}% OFF` : `${fmt(discountValue)} OFF`;
+  const expiryLabel = `${expiresAt.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })} a las ${expiresAt.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
+
+  await transporter.sendMail({
+    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    to,
+    subject: `🎉 ¡Ganaste ${discountLabel} en ${storeName}!`,
+    html: `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#ffffff;">
+        <div style="background:linear-gradient(135deg,#6366f1,#4f46e5);border-radius:16px;padding:32px 28px;margin-bottom:24px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.75);font-size:12px;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px;font-weight:600;">${escapeHtml(storeName)}</p>
+          <div style="font-size:44px;margin-bottom:6px;">🎉</div>
+          <h1 style="color:#ffffff;font-size:22px;margin:0;font-weight:800;letter-spacing:-0.02em;">¡Ganaste ${escapeHtml(discountLabel)}!</h1>
+        </div>
+
+        <p style="font-size:15px;color:#374151;margin:0 0 20px;">
+          Jugaste en la ruleta de <strong>${escapeHtml(storeName)}</strong> y ganaste <strong>${escapeHtml(prizeLabel)}</strong>. Guardá este email — acá tenés tu código y hasta cuándo podés usarlo.
+        </p>
+
+        <div style="background:#f5f3ff;border:2px dashed #a5b4fc;border-radius:14px;padding:24px;text-align:center;margin-bottom:20px;">
+          <p style="font-size:11px;color:#6366f1;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 8px;font-weight:700;">Tu código</p>
+          <p style="font-size:28px;font-weight:900;letter-spacing:0.08em;color:#4338ca;margin:0;font-family:monospace;">${escapeHtml(couponCode)}</p>
+        </div>
+
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px;margin-bottom:24px;">
+          <div style="display:flex;justify-content:space-between;${minOrderAmount > 0 ? "margin-bottom:10px;" : ""}">
+            <span style="font-size:13px;color:#6b7280;">Válido hasta</span>
+            <span style="font-size:13px;font-weight:700;color:#111827;">${expiryLabel}</span>
+          </div>
+          ${minOrderAmount > 0 ? `
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-size:13px;color:#6b7280;">Compra mínima</span>
+            <span style="font-size:13px;font-weight:700;color:#111827;">${fmt(minOrderAmount)}</span>
+          </div>` : ""}
+        </div>
+
+        <div style="text-align:center;margin-bottom:20px;">
+          <a href="${storeUrl}"
+             style="display:inline-block;background:#4f46e5;color:#ffffff;padding:14px 36px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;">
+            Ir a ${escapeHtml(storeName)}
+          </a>
+        </div>
+
+        <p style="font-size:13px;color:#6b7280;margin-bottom:8px;">Ingresá el código al finalizar tu compra, en el paso de cupón de descuento.</p>
+
+        ${legalText ? `<p style="font-size:12px;color:#9ca3af;line-height:1.6;margin-top:20px;">${escapeHtml(legalText)}</p>` : ""}
+
+        <p style="color:#d1d5db;font-size:11px;text-align:center;margin-top:28px;">${escapeHtml(storeName)} · Premio de la ruleta</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendOtpEmail({
   to,
   name,

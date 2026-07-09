@@ -79,6 +79,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   const [toastMsg,       setToastMsg]       = useState<string | null>(null);
   const [contactStatus,  setContactStatus]  = useState<ContactStatus>("idle");
   const [contactForm,    setContactForm]    = useState({ nombre:"", email:"", mensaje:"" });
+  const [contactTurnstileToken, setContactTurnstileToken] = useState("");
   const [acceptedTerms,  setAcceptedTerms]  = useState(false);
   const [donationEnabled, setDonationEnabled] = useState(false);
   const [donationAmount,  setDonationAmount]  = useState(1000);
@@ -765,11 +766,13 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
           nombre: contactForm.nombre,
           email: contactForm.email,
           mensaje: contactForm.mensaje,
+          turnstileToken: contactTurnstileToken,
         }),
       });
       if (res.ok) {
         setContactStatus("sent");
         setContactForm({ nombre: "", email: "", mensaje: "" });
+        setContactTurnstileToken("");
       } else {
         setContactStatus("idle");
       }
@@ -814,6 +817,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg,
     contactStatus, setContactStatus, contactForm, setContactForm,
+    contactTurnstileToken, setContactTurnstileToken,
     acceptedTerms, setAcceptedTerms,
     donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
     // Derived

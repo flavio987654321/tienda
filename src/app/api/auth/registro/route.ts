@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 const TERMS_VERSION = CURRENT_TERMS_VERSION;
 
@@ -22,7 +23,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Demasiados intentos. Esperá un momento e intentá de nuevo." }, { status: 429 });
     }
 
-    const { name, email, password, storeName, accountType, billing, tier, phone, termsAccepted, ageConfirmed } = await req.json();
+    const { name, email, password, storeName, accountType, billing, tier, phone, termsAccepted, ageConfirmed, turnstileToken } = await req.json();
+
+    if (!(await verifyTurnstile(turnstileToken, ip))) {
+      return NextResponse.json({ error: "No pudimos verificar que sos una persona. Recargá la página e intentá de nuevo." }, { status: 400 });
+    }
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });

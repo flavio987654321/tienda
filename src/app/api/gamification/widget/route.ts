@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
+import { GAMIFICATION_EXCLUDED_TEMPLATES } from "@/lib/gamification";
 
 function generateCouponCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -22,7 +23,7 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } });
+  const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true, templateId: true } });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
   const widget = await prisma.gamificationWidget.findUnique({
@@ -39,7 +40,7 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json({ widget });
+  return NextResponse.json({ widget, storeTemplateId: store.templateId });
 }
 
 // POST — upsert widget + auto-crea/actualiza cupones por cada premio
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } });
+  const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true, templateId: true } });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
   const body = await req.json();
@@ -56,6 +57,10 @@ export async function POST(req: NextRequest) {
     headerImage, centerType, centerText, triggerType, triggerDelay,
     showFrequency, emailRequired, styles, prizes,
   } = body;
+
+  if (isActive && GAMIFICATION_EXCLUDED_TEMPLATES.has(store.templateId)) {
+    return NextResponse.json({ error: "La ruleta no está disponible para este tipo de tienda" }, { status: 400 });
+  }
 
   if (prizes && prizes.length > 0) {
     for (const p of prizes as PrizeInput[]) {
@@ -70,11 +75,34 @@ export async function POST(req: NextRequest) {
         if ((p.discountType ?? "percentage") === "percentage" && dv > 100) {
           return NextResponse.json({ error: `El descuento porcentual no puede superar el 100%` }, { status: 400 });
         }
+        if (!Number.isInteger(p.winHours) || (p.winHours as number) <= 0) {
+          return NextResponse.json({ error: "Las horas de validez para el ganador deben ser un número entero mayor a 0" }, { status: 400 });
+        }
+        if ((p.winHours as number) > 8760 * 5) {
+          return NextResponse.json({ error: "Las horas de validez para el ganador son demasiado altas" }, { status: 400 });
+        }
+        if (p.expiresAt && Number.isNaN(new Date(p.expiresAt).getTime())) {
+          return NextResponse.json({ error: "La fecha límite de la promo no es válida" }, { status: 400 });
+        }
       }
     }
     const total = prizes.reduce((s: number, p: { probability: number }) => s + (p.probability || 0), 0);
     if (total !== 100) {
       return NextResponse.json({ error: "Las probabilidades deben sumar exactamente 100%" }, { status: 400 });
+    }
+
+    // Los cupones referenciados por id deben pertenecer a esta tienda — si no, alguien
+    // está intentando modificar/reactivar/desactivar el cupón de otra tienda.
+    const referencedCouponIds = (prizes as PrizeInput[]).map((p) => p.couponId).filter((id): id is string => !!id);
+    if (referencedCouponIds.length > 0) {
+      const owned = await prisma.coupon.findMany({
+        where: { id: { in: referencedCouponIds }, storeId: store.id },
+        select: { id: true },
+      });
+      const ownedIds = new Set(owned.map((c) => c.id));
+      if (referencedCouponIds.some((id) => !ownedIds.has(id))) {
+        return NextResponse.json({ error: "No autorizado sobre uno de los cupones referenciados" }, { status: 403 });
+      }
     }
   }
 
@@ -89,6 +117,7 @@ export async function POST(req: NextRequest) {
     discountValue?: number;
     maxUses?: number | null;
     expiresAt?: string | null;
+    winHours?: number;
   };
 
   const widget = await prisma.$transaction(async (tx) => {
@@ -110,13 +139,14 @@ export async function POST(req: NextRequest) {
         triggerType: triggerType ?? "FIRST_CLICK",
         triggerDelay: triggerDelay ?? null,
         showFrequency: showFrequency ?? "ONCE_SESSION",
-        emailRequired: emailRequired ?? true,
+        emailRequired: true, // siempre requerido — sin email no hay forma de avisarle al ganador
         styles: styles ? JSON.stringify(styles) : "{}",
       },
       update: {
         type, isActive, title, subtitle, buttonText, reclaimText,
         legalText, headerImage, centerType, centerText,
-        triggerType, triggerDelay, showFrequency, emailRequired,
+        triggerType, triggerDelay, showFrequency,
+        emailRequired: true, // siempre requerido — sin email no hay forma de avisarle al ganador
         ...(styles !== undefined ? { styles: JSON.stringify(styles) } : {}),
       },
     });
@@ -183,6 +213,7 @@ export async function POST(req: NextRequest) {
             label: p.label,
             probability: p.probability,
             isNoPrize: p.isNoPrize ?? false,
+            winHours: p.winHours ?? 48,
             couponId,
             order: idx,
           },
@@ -212,10 +243,13 @@ export async function PATCH(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } });
+  const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true, templateId: true } });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
   const { isActive } = await req.json();
+  if (isActive && GAMIFICATION_EXCLUDED_TEMPLATES.has(store.templateId)) {
+    return NextResponse.json({ error: "La ruleta no está disponible para este tipo de tienda" }, { status: 400 });
+  }
   const widget = await prisma.gamificationWidget.update({ where: { storeId: store.id }, data: { isActive } });
   return NextResponse.json({ widget });
 }

@@ -13,6 +13,8 @@ import TechNova from "./templates/TechNova";
 import HomeStudio from "./templates/HomeStudio";
 import CasaClara from "./templates/CasaClara";
 import FlyerPopup from "./FlyerPopup";
+import GamificationWidget from "./GamificationWidget";
+import { GAMIFICATION_EXCLUDED_TEMPLATES } from "@/lib/gamification";
 
 const TEMPLATES: Record<string, React.ComponentType> = {
   "fashion-noir": FashionNoir,
@@ -53,6 +55,7 @@ export default function StorefrontTemplateRenderer({ config }: { config: StoreCo
         {!config.isOwner && config.flyerConfig?.enabled && (config.flyerConfig.images?.length ?? 0) > 0 && (
           <FlyerPopup flyer={config.flyerConfig} />
         )}
+        {!GAMIFICATION_EXCLUDED_TEMPLATES.has(config.template) && <GamificationWidget />}
       </EditContext.Provider>
     </StoreConfigContext.Provider>
   );

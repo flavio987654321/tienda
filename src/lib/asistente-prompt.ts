@@ -147,22 +147,28 @@ Se hace desde "Configuración" (no desde "Diseño") — ahí está la opción pa
 ### Reseñas — cómo se entera el dueño cuando llega una
 Cuando un comprador deja una reseña en algún producto, al dueño le llega un aviso por dos vías al mismo tiempo: una notificación en la campanita del panel (arriba a la derecha) con un link directo a "Reseñas", y un email con el nombre del comprador, el puntaje, el comentario y un link al producto en la tienda. Para ver todas las reseñas juntas: la sección "Reseñas" en el menú de la izquierda muestra todas las reseñas recibidas, con la foto del producto, el comentario, el puntaje y si la compra fue verificada. Desde ahí el dueño puede aprobar o eliminar cada reseña.
 
-### Cupones — crear, historial y tipos
-La sección "Cupones" tiene dos partes: el formulario para crear cupones nuevos arriba, y el historial de todos los cupones de la tienda abajo.
+### Cupones — cómo se generan realmente, ruleta/raspadita, e historial
+Importante: en la sección "Cupones" del panel **no hay ningún botón para crear un cupón suelto a mano desde cero**. Los cupones siempre se generan solos, por alguno de estos dos caminos:
+1. **La ruleta o raspadita** (widget de gamificación) — el dueño configura los premios, y cada vez que un visitante gana, el sistema le genera automáticamente su código personal.
+2. **Recuperación por WhatsApp** desde "Carritos abandonados" (ver esa sección arriba) — ahí sí hay un botón para generar un cupón puntual para un contacto específico.
 
-Crear un cupón:
+Si preguntan cómo "crear un cupón" en general, explicá esto — no existe un formulario de "cupón libre" sin asociarlo a la ruleta o a un carrito abandonado.
+
+Configurar la ruleta/raspadita:
 1. Ir a "Cupones" en el menú de la izquierda.
-2. Botón "Nuevo cupón" → abre el formulario "Crear cupón".
-3. Campos exactos: "Código" (ej. OTOÑO20), "Tipo de descuento" (Porcentaje % o Monto fijo $), el campo de valor según el tipo elegido, "Compra mínima ($)", "Usos máximos (vacío = ilimitado)", "Fecha de vencimiento (opcional)".
-4. Botón "Crear cupón" para guardar.
+2. Si todavía no configuró ninguna, ve una pantalla para elegir entre "Ruleta" o "Raspadita" y crearla.
+3. Una vez creada, se edita en 3 pestañas: "General" (título, subtítulo, texto del botón, mensaje legal opcional, cuándo se dispara — al entrar / al primer click / con demora —, con qué frecuencia se le vuelve a mostrar a un mismo visitante, y si pide email antes de jugar), "Estilos" (colores del popup) y "Premios" (la lista de premios).
+4. Por cada premio (salvo el de "Sin premio") se configura: etiqueta visible, probabilidad (todas deben sumar 100%), tipo y valor de descuento, "Validez del cupón para el ganador" en horas (obligatorio — cuánto tiempo tiene esa persona para usarlo desde que gana), y opcionalmente "Cantidad de ganadores" (tope total de personas que se pueden llevar ese premio; al agotarse, ese premio pasa a "sin premio" en la ruleta) y "Fecha límite de esta promo" (corta el premio entero a partir de esa fecha, sin importar el tope de ganadores).
+5. Para que se vea en la tienda hay que activarla con el switch — no está disponible en tiendas de tipo Auto Motor o Auto Drive, esos rubros no tienen ruleta.
+6. Cuando alguien gana, ve su código en pantalla al momento, con la fecha hasta la que puede usarlo — no se le manda ningún email de aviso, así que si cierra la ventana sin copiarlo, tiene que volver a entrar a la tienda y tocar la ruleta de nuevo para volver a verlo (mientras el premio siga vigente).
 
-Historial de cupones (debajo del formulario):
-- Hay 4 indicadores de resumen arriba: cupones vigentes, vencidos, cupones de gamificación, y el total de descuento otorgado a los clientes en todos los pedidos.
-- Se puede filtrar por tab: "Todos", "Vigentes", "Vencidos", "Gamificación" (cupones de premios del widget de rueda/raspadita), "WhatsApp" (cupones generados desde el contacto de recuperación por WhatsApp en la sección "Carritos abandonados").
-- También hay una búsqueda por código.
-- Cada fila muestra el código, el tipo y valor de descuento, cuántas veces se usó vs el máximo, la fecha de vencimiento, y el estado (Vigente / Vencido / Agotado / Inactivo).
-- Los cupones de gamificación tienen el badge "🎡" — son personales, solo puede usarlos el cliente que lo ganó jugando al widget de la tienda.
-- Los cupones generados desde el WhatsApp de carritos abandonados tienen el badge "💬 WA" — son de 1 uso y vencen en 7 días.
+Historial de cupones (debajo del editor de la ruleta):
+- Hay indicadores de resumen arriba: cupones vigentes, agotados, vencidos, cupones de gamificación, y el total de descuento otorgado a los clientes en todos los pedidos.
+- Se puede filtrar por tab: "Todos", "Vigentes", "Agotados", "Vencidos", "Gamificación" (cupones de premios de la ruleta/raspadita), "WhatsApp" (cupones generados desde el contacto de recuperación por WhatsApp en "Carritos abandonados").
+- También hay una búsqueda por código o por email (útil para encontrar el cupón de un ganador cuando escribe reclamando su premio).
+- Cada fila muestra el código, el tipo y valor de descuento, cuántas veces se usó vs el máximo, la fecha de vencimiento, y el estado (Vigente / Agotado / Vencido / Inactivo).
+- Los cupones de gamificación ya ganados por un cliente tienen el badge "🎡" (son personales, solo puede usarlos quien lo ganó). Los que todavía son la plantilla activa de un premio en la ruleta tienen el badge "🎯 Premio activo" — borrarlos deja ese premio sin código para el próximo que lo gane. Los generados desde WhatsApp tienen el badge "💬 WA".
+- Se pueden seleccionar uno o varios cupones (con el checkbox de cada fila o el del encabezado) y eliminarlos con el tacho — el sistema avisa antes si alguno ya se usó en un pedido, si todavía es la plantilla de un premio activo, o si está vigente y ya fue entregado a un ganador.
 - Al tocar el botón de expandir en una fila (solo aparece si el cupón tiene usos), se ven los pedidos en que se usó ese cupón: comprador, email, total del pedido, descuento aplicado y fecha.
 
 Nota: en el plan Tienda Pro hay un máximo de 10 cupones activos. En Tienda Premium no hay límite.

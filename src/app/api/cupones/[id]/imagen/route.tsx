@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
 import { getCouponVisualSeed } from "@/lib/coupons";
+import { getCurrentUser } from "@/lib/auth-session";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -232,9 +233,15 @@ function renderMinimal(args: {
 }
 
 export async function GET(req: Request, ctx: Ctx) {
+  const user = await getCurrentUser();
+  if (!user) return new Response("No autorizado", { status: 401 });
+
+  const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } });
+  if (!store) return new Response("Tienda no encontrada", { status: 404 });
+
   const { id } = await ctx.params;
-  const coupon = await prisma.coupon.findUnique({
-    where: { id },
+  const coupon = await prisma.coupon.findFirst({
+    where: { id, storeId: store.id },
     include: {
       store: {
         select: {

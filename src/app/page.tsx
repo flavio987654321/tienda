@@ -8,6 +8,7 @@ import { STORE_TYPES } from "@/lib/storeTypes";
 import PromotionsCarousel from "@/components/PromotionsCarousel";
 import AsistentePersonaje from "@/components/dashboard/AsistentePersonaje";
 import { AppLogo } from "@/components/AppLogo";
+import { Turnstile } from "@/components/Turnstile";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent } from "framer-motion";
 import {
   ArrowRight, X, Store, Users, TrendingUp, CheckCircle, Trophy,
@@ -88,6 +89,8 @@ function TestimonioModal({ onClose }: { onClose: () => void }) {
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileConfigured = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -97,7 +100,7 @@ function TestimonioModal({ onClose }: { onClose: () => void }) {
       const res = await fetch("/api/testimonios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, turnstileToken }),
       });
       if (!res.ok) throw new Error();
       setSent(true);
@@ -196,8 +199,9 @@ function TestimonioModal({ onClose }: { onClose: () => void }) {
                 <p className="text-right text-xs text-gray-400 mt-1">{form.text.length}/500</p>
               </div>
               {error && <p className="text-red-500 text-xs">{error}</p>}
+              <Turnstile onVerify={setTurnstileToken} />
               <button
-                type="submit" disabled={sending}
+                type="submit" disabled={sending || (turnstileConfigured && !turnstileToken)}
                 className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white py-3.5 rounded-xl font-semibold transition-all disabled:opacity-60 text-sm"
               >
                 {sending ? <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Send className="h-4 w-4" /> Enviar mi historia</>}

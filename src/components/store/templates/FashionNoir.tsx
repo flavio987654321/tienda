@@ -22,7 +22,7 @@ import { colorToSwatch } from "@/lib/colorSwatch";
 import { promoModalText } from "@/lib/promoLabel";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
-import GamificationWidget from "@/components/store/GamificationWidget";
+import { Turnstile } from "@/components/Turnstile";
 
 const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
@@ -115,6 +115,7 @@ export default function FashionNoir() {
   const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
+  const [reviewTurnstileToken, setReviewTurnstileToken] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [reviewHoneypot, setReviewHoneypot] = useState("");
@@ -198,7 +199,9 @@ export default function FashionNoir() {
     fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, editPendingItem,
     pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, editingIdx,
     handleContact, toggleFavorite,
+    contactTurnstileToken, setContactTurnstileToken,
   } = cart;
+  const turnstileConfigured = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
@@ -268,12 +271,13 @@ export default function FashionNoir() {
       const res = await fetch(`/api/public/${slug}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined }),
+        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, turnstileToken: reviewTurnstileToken }),
       });
       if (res.ok) {
         const data = await res.json();
         setReviews(p => [data.review, ...p]);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewTurnstileToken("");
         setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
       }
     } catch {} finally { setReviewSubmitting(false); }
@@ -1319,7 +1323,8 @@ export default function FashionNoir() {
                   placeholder="¿En qué podemos ayudarte?" style={{ width:"100%", background:contactoInputBg, border:`1px solid ${contactoInputBorder}`, color:contactoText, padding:"12px 16px", fontSize:13, outline:"none", resize:"vertical", fontFamily:"inherit", boxSizing:"border-box" }}
                   onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=contactoInputBorder)}/>
               </div>
-              <button type="submit" disabled={contactStatus==="sending"}
+              <Turnstile onVerify={setContactTurnstileToken} />
+              <button type="submit" disabled={contactStatus==="sending" || (turnstileConfigured && !contactTurnstileToken)}
                 style={{ background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", opacity: contactStatus==="sending" ? 0.6 : 1, transition:"opacity 0.2s" }}>
                 {contactStatus === "sending" ? "Enviando..." : "Enviar Mensaje"}
               </button>
@@ -1836,7 +1841,8 @@ export default function FashionNoir() {
                       <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
                         placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
                         style={{ background:"rgba(240,235,227,0.06)", border:"1px solid rgba(240,235,227,0.12)", color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none" }} />
-                      <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim()}
+                      {!isPreview && <Turnstile onVerify={setReviewTurnstileToken} />}
+                      <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || (turnstileConfigured && !reviewTurnstileToken)}
                         style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
                         {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
                       </button>
@@ -2000,7 +2006,6 @@ export default function FashionNoir() {
         </button>
       )}
 
-      <GamificationWidget />
     </div>
   );
 }

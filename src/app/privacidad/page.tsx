@@ -90,6 +90,16 @@ const CONTENT = {
         ],
       },
       {
+        title: "2 quater. Datos de la ruleta o raspadita de premios (gamificación)",
+        body: "Si activás el widget de ruleta o raspadita en tu tienda, almacenamos en tu nombre los datos de los visitantes que participan:",
+        list: [
+          "Qué almacenamos: el email del visitante (si tu configuración lo pide), su dirección IP, y el resultado del sorteo (qué premio ganó o si no ganó nada).",
+          "Finalidad exclusiva: evitar que la misma persona participe más de una vez mientras tenga un premio vigente sin usar, y entregarle su cupón por email si ganó.",
+          "Duración: se conserva mientras el widget exista. Si borrás el widget desde el panel, este registro deja de usarse para nuevos sorteos, pero no se elimina automáticamente (podés pedir su eliminación por los medios de contacto de esta política).",
+          "Sos responsable de que el mensaje legal que cargues en el widget (si lo cargás) cumpla con la legislación vigente sobre promociones.",
+        ],
+      },
+      {
         title: "3. Datos de tus clientes y potenciales compradores",
         body: "Como Dueño de tienda, tenés acceso a los datos de envío y contacto de tus compradores. Adicionalmente, cuando un potencial comprador hace una consulta por WhatsApp a través del link de un afiliado, la Plataforma registra el nombre, teléfono y mensaje del consultante y te lo muestra en el panel de Consultas para que puedas confirmar o rechazar la venta y gestionar la comisión correspondiente. Sos responsable de tratar esos datos de acuerdo con la legislación vigente (Ley 25.326 de Protección de Datos Personales) y no podés usarlos para fines distintos a la gestión del pedido o la consulta.",
       },
@@ -309,6 +319,16 @@ const CONTENT = {
           "Podés cancelar la suscripción en cualquier momento tocando el banner de notificaciones en la tienda y eligiendo 'Desactivar'. El token se elimina del servidor de inmediato.",
           "Si borrás los datos del navegador o desinstalás la app (en iPhone), la suscripción queda inválida y se elimina automáticamente del servidor la próxima vez que intentamos enviarte una notificación.",
           "La suscripción a notificaciones es voluntaria y no afecta tu acceso a la tienda ni a tus compras.",
+        ],
+      },
+      {
+        title: "6 ter. Ruleta o raspadita de premios",
+        body: "Si jugás al widget de ruleta o raspadita en una tienda de la plataforma:",
+        list: [
+          "Si la tienda te pide un email para jugar, lo usamos solo para identificarte como ganador o no, evitar que participes más de una vez mientras tengas un premio vigente sin usar, y avisarte por email el código y la fecha límite si ganaste.",
+          "No usamos ese email para publicidad ni se lo compartimos a otras tiendas — queda asociado únicamente a la tienda donde jugaste.",
+          "Si la tienda no pide email, igual registramos tu dirección IP para limitar cuántas veces se puede jugar desde la misma conexión.",
+          "Para pedir que se elimine tu participación, escribile directamente a la tienda o contactanos por los medios de la sección 8.",
         ],
       },
       {
