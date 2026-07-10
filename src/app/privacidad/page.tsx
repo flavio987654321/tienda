@@ -100,6 +100,18 @@ const CONTENT = {
         ],
       },
       {
+        title: "2 quinquies. Integración con Meta — Catálogo en Facebook e Instagram",
+        body: "Desde la sección Aplicaciones podés conectar tu tienda con Meta (Facebook e Instagram) para sincronizar tu catálogo de productos. Esta integración es completamente opcional:",
+        list: [
+          "Qué recopilamos al conectar: un token de acceso otorgado por Facebook mediante tu autorización expresa (almacenado cifrado con AES-256-GCM), el identificador de tu usuario de Facebook, y los identificadores de tu portfolio comercial, catálogo y feed de productos en Meta. Nunca vemos tu contraseña de Facebook.",
+          "Qué compartimos con Meta: los datos de tu catálogo de productos — nombre, descripción, precio, imágenes, disponibilidad y link de cada producto. Esta es la finalidad exclusiva de la integración: que tus productos aparezcan en Facebook e Instagram.",
+          "Qué NO compartimos con Meta: datos personales de tus compradores, pedidos, datos bancarios ni ninguna otra información de tu cuenta de TiendaApps.",
+          "Qué NO accedemos de tu Facebook: no leemos tus publicaciones, amigos, mensajes ni ningún contenido personal — solo los permisos de administración de negocios y catálogos que autorizás en la pantalla de conexión.",
+          "Los datos que Meta recibe se rigen por su propia política de privacidad: facebook.com/privacy",
+          "Eliminación de los datos de la integración: podés desconectar Facebook en cualquier momento desde tu panel (Aplicaciones → Catálogo de Meta → Desconectar) — al hacerlo eliminamos de inmediato el token de acceso y todos los identificadores de Meta de nuestra base de datos. También podés revocar el acceso desde tu propia cuenta de Facebook (Configuración → Integraciones comerciales) o solicitar la eliminación por email a marketplacemitienda@gmail.com con el asunto 'Eliminar datos de Meta — [tu email]'. El catálogo creado en Meta te pertenece y se administra desde Meta Commerce Manager.",
+        ],
+      },
+      {
         title: "3. Datos de tus clientes y potenciales compradores",
         body: "Como Dueño de tienda, tenés acceso a los datos de envío y contacto de tus compradores. Adicionalmente, cuando un potencial comprador hace una consulta por WhatsApp a través del link de un afiliado, la Plataforma registra el nombre, teléfono y mensaje del consultante y te lo muestra en el panel de Consultas para que puedas confirmar o rechazar la venta y gestionar la comisión correspondiente. Sos responsable de tratar esos datos de acuerdo con la legislación vigente (Ley 25.326 de Protección de Datos Personales) y no podés usarlos para fines distintos a la gestión del pedido o la consulta.",
       },
@@ -114,6 +126,7 @@ const CONTENT = {
           "Resend (resend.com): envío de emails transaccionales (confirmaciones, alertas). Solo se comparte el email necesario para cada mensaje. Política de privacidad: resend.com/legal/privacy-policy",
           "Anthropic (anthropic.com): procesa los datos agregados de tu tienda para el funcionamiento de Sasha, nuestro asistente con IA. Ver sección 2 ter para el detalle de qué le compartimos. Política de privacidad: anthropic.com/privacy",
           "Envíopack (enviopack.com): si activás la cotización automática de envío, le compartimos la dirección de origen de tu tienda y el peso de los productos para calcular tarifas con Correo Argentino, OCA y Andreani. Política de privacidad: enviopack.com",
+          "Meta Platforms (facebook.com): si conectás el Catálogo de Meta desde la sección Aplicaciones, le compartimos los datos de tu catálogo de productos (ver sección 2 quinquies). Política de privacidad: facebook.com/privacy",
           "Autoridades competentes cuando sea requerido por ley.",
         ],
       },
@@ -123,7 +136,7 @@ const CONTENT = {
         list: [
           "TiendaApps NO almacena datos de tarjetas de crédito o débito. Todo el procesamiento de pagos lo realiza Mercado Pago, certificado PCI-DSS nivel 1 (el estándar de seguridad más alto para pagos).",
           "Las comunicaciones entre tu navegador y nuestros servidores usan HTTPS con TLS 1.2 o superior.",
-          "Los datos de acceso bancario de las afiliadas (CBU, CUIL) y los tokens de MercadoPago de afiliados se almacenan cifrados con AES-256-GCM.",
+          "Los datos de acceso bancario de las afiliadas (CBU, CUIL), los tokens de MercadoPago y los tokens de acceso de Meta/Facebook se almacenan cifrados con AES-256-GCM.",
           "Las contraseñas se almacenan con hash bcrypt. Nunca las vemos ni podemos recuperarlas.",
         ],
       },

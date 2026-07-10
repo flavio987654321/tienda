@@ -106,6 +106,18 @@ const CONTENT = {
         ],
       },
       {
+        title: "6 quater. Aplicaciones e integraciones con servicios de terceros",
+        body: "La sección Aplicaciones del panel te permite conectar tu tienda con servicios de terceros de forma opcional (por ejemplo: Catálogo de Meta para Facebook e Instagram, Google Analytics, Meta Pixel). Al usarlas aceptás lo siguiente:",
+        list: [
+          "Cada integración se rige también por los términos del tercero correspondiente. En particular, al conectar el Catálogo de Meta aceptás los Términos Comerciales de Meta y sus Políticas de Comercio, y sos responsable de cumplirlos (productos permitidos, información veraz, etc.).",
+          "Sos responsable de la veracidad y legalidad de los datos de tu catálogo que se sincronizan con terceros (nombres, precios, imágenes, disponibilidad). La sincronización refleja lo que cargaste en tu tienda.",
+          "La disponibilidad, aprobación y continuidad de las funciones de terceros dependen exclusivamente de cada proveedor. Por ejemplo, la activación de la pestaña Tienda en Facebook o el etiquetado en Instagram está sujeta a revisiones y requisitos propios de Meta que TiendaApps no controla ni garantiza.",
+          "TiendaApps no es responsable por suspensiones, rechazos, cambios de políticas o interrupciones de los servicios de Meta, Google u otros terceros integrados.",
+          "Podés desconectar cualquier integración en cualquier momento desde el panel. El tratamiento de datos de estas integraciones se detalla en la Política de Privacidad (sección 2 quinquies).",
+          "TiendaApps puede agregar, modificar o discontinuar aplicaciones de la sección Aplicaciones, avisando con razonable anticipación cuando el cambio afecte una integración que tengas activa.",
+        ],
+      },
+      {
         title: "7. Cancelación y acceso",
         body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tu tienda permanecerá visible hasta el fin del período abonado. Tras el vencimiento y período de gracia, la tienda se ocultará pero tus datos no se borran — podés reactivarla en cualquier momento. La cancelación no extingue las obligaciones de pago de comisiones ya acreditadas en el panel de comisiones de afiliados activos.",
       },
