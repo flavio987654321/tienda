@@ -1,30 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { escapeXml, parseFirstImage } from "@/lib/metaFeed";
+import { getClientIp } from "@/lib/request-ip";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://tiendaapps.com";
 
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
-
-function parseFirstImage(images: string): string | null {
-  try {
-    const arr = JSON.parse(images);
-    if (!Array.isArray(arr) || arr.length === 0) return null;
-    return typeof arr[0] === "string" ? arr[0] : (arr[0] as { url?: string })?.url ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const ip = getClientIp(req);
   // Meta refresca feeds cada pocas horas — 30 req/hora por IP es suficiente
   if (!(await checkRateLimit(`feed:${ip}`, 30, 60 * 60_000))) {
     return new NextResponse("Too Many Requests", { status: 429 });

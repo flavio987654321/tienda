@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut,
   BarChart2, Tag, Loader2, MessageCircle, BadgeCheck, ChevronRight,
-  CreditCard, Menu, X, Wallet, AlertTriangle, Bell, ShoppingCart, Star,
+  CreditCard, Menu, X, Wallet, AlertTriangle, Bell, ShoppingCart, Star, LayoutGrid,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { AppLogo } from "@/components/AppLogo";
@@ -63,6 +63,11 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/dashboard/configuracion", label: "Diseño",         icon: Store,     tourId: "diseno" },
       { href: "/dashboard/ajustes",       label: "Configuración",  icon: Settings,  tourId: "configuracion" },
+      // Sección Aplicaciones oculta hasta el lanzamiento (App Review de Meta
+      // pendiente) — se habilita seteando NEXT_PUBLIC_APPS_ENABLED=1.
+      ...(process.env.NEXT_PUBLIC_APPS_ENABLED === "1"
+        ? [{ href: "/dashboard/aplicaciones", label: "Aplicaciones", icon: LayoutGrid, tourId: "aplicaciones" }]
+        : []),
       { href: "/dashboard/pagos",         label: "Pagos",          icon: Wallet,    tourId: "pagos", labelFor: { AUTOS: "Legal" } },
     ],
   },

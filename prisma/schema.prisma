@@ -204,6 +204,13 @@ model Store {
   mpRefreshToken        String?
   mpSellerId            String?
   mpConnectedAt         DateTime?
+  // Facebook/Meta — catálogo de productos vía Business Manager (token cifrado)
+  fbAccessToken         String?
+  fbUserId              String?
+  fbBusinessId          String?
+  fbCatalogId           String?
+  fbFeedId              String?
+  fbConnectedAt         DateTime?
   // Preview image generada al guardar el template
   previewImage          String?
   // Dirección de origen para cotizar envío en vivo (Envíopack). Opcional:
