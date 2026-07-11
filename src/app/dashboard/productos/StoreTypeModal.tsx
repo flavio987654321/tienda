@@ -22,9 +22,12 @@ export default function StoreTypeModal({
   const [saved, setSaved] = useState(false);
   // confirm step: solo cuando isEditing y cambia de tipo
   const [confirmStep, setConfirmStep] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [downloaded, setDownloaded] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloaded, setDownloaded] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
+  // CTA para desbloquearse cuando el server devuelve 409 (pedidos sin resolver, etc.)
+  const [errorLink, setErrorLink] = useState<{ href: string; label: string } | null>(null);
+  const [ackIrreversible, setAckIrreversible] = useState(false);
 
   const selectedConfig = STORE_TYPES.find((t) => t.id === selected);
   const isChangingType = isEditing && selected !== null && selected !== currentType;
@@ -34,35 +37,56 @@ export default function StoreTypeModal({
     else router.back();
   }
 
-  async function downloadCsv() {
+  async function downloadCsv(tipo: "productos" | "pedidos" | "cupones") {
     if (downloading) return;
-    setDownloading(true);
-    const res = await fetch("/api/store/export-csv");
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = res.headers.get("Content-Disposition")?.match(/filename="(.+)"/)?.[1] ?? "productos.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-    setDownloading(false);
-    setDownloaded(true);
+    setDownloading(tipo);
+    setError("");
+    try {
+      const res = await fetch(`/api/store/export-csv?tipo=${tipo}`);
+      // Sin esto, un 500/401 descarga el JSON de error como .csv y lo marca
+      // con tilde verde: el dueño confirma el borrado creyendo que tiene respaldo
+      if (!res.ok || !res.headers.get("Content-Type")?.includes("text/csv")) {
+        throw new Error();
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = res.headers.get("Content-Disposition")?.match(/filename="(.+)"/)?.[1] ?? `${tipo}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setDownloaded((prev) => ({ ...prev, [tipo]: true }));
+    } catch {
+      setError("No se pudo descargar el archivo. Revisá tu conexión y probá de nuevo.");
+    } finally {
+      setDownloading(null);
+    }
   }
 
   async function handleConfirmButton() {
     if (!selected) return;
     // Si es edición y cambia de tipo → mostrar advertencia primero
     if (isChangingType) {
+      setAckIrreversible(false);
       setConfirmStep(true);
       return;
     }
     await save();
   }
 
+  const BLOCK_LINKS: Record<string, { href: string; label: string }> = {
+    UNRESOLVED_ORDERS: { href: "/dashboard/pedidos", label: "Ver pedidos pendientes" },
+    UNCLAIMED_PRIZES: { href: "/dashboard/cupones", label: "Ver cupones y premios" },
+    PENDING_COMMISSIONS: { href: "/dashboard/pagos", label: "Ver pagos a afiliadas" },
+  };
+
   async function save() {
-    if (!selected) return;
+    // Guard síncrono anti doble-click: el disabled del botón depende del
+    // re-render de React y dos clicks rápidos dispararían dos resets
+    if (!selected || saving) return;
     setSaving(true);
     setError("");
+    setErrorLink(null);
 
     try {
       if (isChangingType) {
@@ -74,6 +98,7 @@ export default function StoreTypeModal({
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
+          setErrorLink(BLOCK_LINKS[data?.code] ?? null);
           throw new Error(data?.error || "No se pudo cambiar el tipo de tienda. Probá de nuevo.");
         }
         // Resetear tour para que aparezca de nuevo con el nuevo tipo
@@ -100,7 +125,8 @@ export default function StoreTypeModal({
       }
     } catch (err) {
       setSaving(false);
-      setConfirmStep(false);
+      // El error se muestra en la pantalla de confirmación (donde está parado
+      // el usuario), con el CTA de desbloqueo si el server mandó un code
       setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
       return;
     }
@@ -160,7 +186,9 @@ export default function StoreTypeModal({
                 "Todos los pedidos recibidos",
                 "Todas las consultas (leads)",
                 "Todos los cupones de descuento",
+                "Los carritos abandonados",
                 "Las reseñas de productos",
+                "El historial de ventas y estadísticas de tus afiliadas",
                 "La plantilla y configuración del diseño",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2.5 text-sm text-gray-600">
@@ -169,24 +197,65 @@ export default function StoreTypeModal({
                 </li>
               ))}
             </ul>
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 font-medium">
-              Esta acción no se puede deshacer. Se conservan: logo, colores, redes sociales, conexión MercadoPago y afiliados.
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 font-medium space-y-1.5">
+              <p>Esta acción no se puede deshacer desde el panel. Se conservan: logo, colores, redes sociales, conexión Mercado Pago y tus afiliadas (sin su historial de ventas). La ruleta queda desactivada hasta que la configures con premios nuevos.</p>
+              <p>Tu tienda va a quedar <strong>offline</strong> hasta que configures y publiques el catálogo del nuevo rubro.</p>
+              <p>TiendaApps guarda una copia interna de tus ventas como respaldo contable — podés descargarla después desde Configuración.</p>
             </div>
 
             {/* Exportar antes de borrar */}
-            <button
-              onClick={downloadCsv}
-              disabled={downloading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              {downloading ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Descargando...</>
-              ) : downloaded ? (
-                <><Check className="h-4 w-4 text-green-500" /> CSV descargado</>
-              ) : (
-                <><Download className="h-4 w-4" /> Guardar copia de mis productos (CSV)</>
-              )}
-            </button>
+            <div className="space-y-2">
+              <p className="text-xs text-gray-400 font-medium">Guardá una copia antes de continuar:</p>
+              {([
+                ["productos", "Mis productos"],
+                ["pedidos", "Mis pedidos (incluye pagos y comisiones)"],
+                ["cupones", "Mis cupones"],
+              ] as const).map(([tipo, label]) => (
+                <button
+                  key={tipo}
+                  onClick={() => downloadCsv(tipo)}
+                  disabled={downloading !== null}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  {downloading === tipo ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Descargando...</>
+                  ) : downloaded[tipo] ? (
+                    <><Check className="h-4 w-4 text-green-500" /> {label} — descargado</>
+                  ) : (
+                    <><Download className="h-4 w-4" /> {label} (CSV)</>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {error && (
+              <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-sm text-red-700 animate-fade-slide">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <p>{error}</p>
+                  {errorLink && (
+                    <a
+                      href={errorLink.href}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 underline underline-offset-2 hover:text-red-800"
+                    >
+                      {errorLink.label} →
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <label className="flex items-start gap-2.5 px-1 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={ackIrreversible}
+                onChange={(e) => setAckIrreversible(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-red-600"
+              />
+              <span className="text-xs text-gray-600">
+                Entiendo que esta acción es irreversible y ya descargué los respaldos que necesito.
+              </span>
+            </label>
           </div>
 
           <div className="px-7 pb-6 flex gap-3">
@@ -199,7 +268,7 @@ export default function StoreTypeModal({
             </button>
             <button
               onClick={save}
-              disabled={saving || saved}
+              disabled={saving || saved || downloading !== null || !ackIrreversible}
               className={`flex-1 py-3 rounded-2xl text-sm font-bold text-white transition-all duration-300 flex items-center justify-center gap-2 ${
                 saved ? "bg-green-500" : "bg-red-600 hover:bg-red-700 disabled:opacity-50"
               }`}
@@ -235,7 +304,7 @@ export default function StoreTypeModal({
           </h2>
           <p className="text-indigo-200 text-sm">
             {isEditing
-              ? "Cambiar el tipo de tienda va a reiniciar todos tus datos. Solo tu configuración y plantilla se conservan."
+              ? "Cambiar el tipo de tienda reinicia el catálogo, los pedidos y la plantilla. Se conservan tu logo, colores, redes y la conexión de Mercado Pago."
               : "Esto define los campos de tus productos, las categorías, el diseño sugerido y la experiencia de compra de tus clientes."}
           </p>
         </div>

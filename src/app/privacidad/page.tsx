@@ -65,6 +65,7 @@ const CONTENT = {
           "Datos de suscriptores push: consentimiento expreso del visitante al suscribirse (art. 5 inc. a).",
           "Logs de auditoría y seguridad: interés legítimo en la prevención de fraudes y obligación legal (art. 5 inc. c y f).",
           "Historial de pedidos conservado post-cancelación: obligación legal para resolución de disputas (Ley 24.240 art. 10 bis) e interés legítimo (art. 5 inc. f).",
+          "Respaldo de registros de ventas ante un cambio de rubro: obligación legal de conservación de documentación comercial (art. 328 del Código Civil y Comercial) e interés legítimo en la defensa ante disputas y contracargos (art. 5 inc. f).",
           "Datos de contacto para envío de emails transaccionales: ejecución del contrato (art. 5 inc. b).",
         ],
       },
@@ -147,6 +148,7 @@ const CONTENT = {
           "Datos de cuenta (nombre, email): mientras la cuenta esté activa + 90 días adicionales tras la cancelación.",
           "Datos de tienda (productos, precios, imágenes): mismos plazos que la cuenta.",
           "Historial de pedidos: 12 meses adicionales tras el cierre de cuenta para resolver disputas o reclamaciones de garantía.",
+          "Respaldo por cambio de rubro: si cambiás el tipo de tienda, los pedidos, pagos, comisiones y cupones del ciclo anterior se eliminan de tu panel, pero se conserva una copia interna de respaldo por hasta 10 años (plazo de conservación de documentación comercial, art. 328 del Código Civil y Comercial), con finalidad exclusiva contable y de resolución de disputas o contracargos. Podés descargarla en cualquier momento desde Configuración → Respaldos.",
           "Datos bancarios cifrados (CBU/CUIL): eliminados junto con la cuenta. No se conservan post-cancelación.",
           "Backups automáticos de base de datos: 30 días de retención gestionados por Supabase. Los backups no permiten recuperar una cuenta eliminada.",
           "Logs técnicos del servidor (Vercel): hasta 24 horas, gestionados automáticamente por la infraestructura de Vercel. Incluyen registros de webhooks de MercadoPago y errores de sistema.",
@@ -165,10 +167,12 @@ const CONTENT = {
           "Acceso: podés solicitar qué datos tenemos sobre vos, cómo los usamos y a quién los compartimos.",
           "Rectificación: podés pedir que corrijamos datos inexactos o incompletos.",
           "Cancelación / Eliminación: podés solicitar que eliminemos tus datos cuando ya no sean necesarios o retires tu consentimiento.",
+          "Excepción por obligación legal (art. 16 inc. 5, Ley 25.326): los datos que integran respaldos conservados por obligación legal — como los registros de ventas archivados ante un cambio de rubro — pueden quedar exceptuados de la supresión inmediata. En ese caso se mantienen bloqueados (solo disponibles ante disputas, contracargos o requerimiento de autoridad) hasta vencer el plazo de conservación.",
           "Oposición: podés oponerte al tratamiento de tus datos en casos justificados.",
           "Cómo ejercerlos: escribí a marketplacemitienda@gmail.com con el asunto 'Solicitud ARCO — [tipo de derecho]' indicando tu nombre completo y email de cuenta.",
           "Respondemos dentro de los 10 días hábiles conforme al art. 14 de la Ley 25.326.",
           "Si considerás que tu solicitud no fue atendida correctamente podés presentar una denuncia ante la Dirección Nacional de Protección de Datos Personales (argentina.gob.ar/aaip/datospersonales).",
+          "TiendaApps se encuentra inscripta en el Registro Nacional de Bases de Datos Personales de la AAIP bajo el legajo N° RL-2026-67455817-APN-DNPDP#AAIP.",
         ],
       },
       {
@@ -231,6 +235,7 @@ const CONTENT = {
         list: [
           "Datos de cuenta: mientras esté activa + 90 días adicionales tras la cancelación.",
           "Historial de comisiones: 3 años a efectos impositivos (AFIP).",
+          "Si la tienda a la que estás afiliada cambia de rubro, el detalle de comisiones de ese ciclo deja de verse en tu panel (tu saldo pendiente se liquida antes del cambio — la plataforma no permite el cambio de rubro con comisiones sin pagar). El detalle queda archivado en un respaldo interno: podés pedir una copia por email durante los 3 años de retención.",
           "Datos bancarios cifrados (CBU/CUIL): eliminados al cerrar la cuenta.",
           "Para solicitar eliminación escribí a marketplacemitienda@gmail.com con el asunto 'Eliminación de datos — [tu email]'.",
         ],
@@ -315,6 +320,7 @@ const CONTENT = {
         list: [
           "Datos de cuenta (nombre, email): mientras la cuenta esté activa + 30 días para eliminación completa.",
           "Historial de pedidos: 1 año tras el cierre de cuenta para resolución de garantías y disputas.",
+          "Si una tienda donde compraste cambia de rubro, ese pedido deja de verse en tu historial, pero TiendaApps conserva una copia interna de respaldo (incluye tus datos de contacto y envío de ese pedido) por hasta 10 años, con finalidad exclusiva de respaldo contable, garantías, disputas y contracargos. Podés pedir el comprobante de una compra archivada por los medios de la sección 8.",
           "Favoritos y preferencias: eliminados al eliminar la cuenta.",
           "Para eliminar tu cuenta antes del plazo escribí a marketplacemitienda@gmail.com con el asunto 'Eliminación de cuenta — [tu email]'.",
         ],
@@ -354,6 +360,7 @@ const CONTENT = {
         list: [
           "Desde la configuración de tu cuenta para acceder o eliminar tus datos directamente.",
           "Por email a marketplacemitienda@gmail.com con el asunto 'Solicitud ARCO — [tipo de derecho]'.",
+          "Excepción por obligación legal (art. 16 inc. 5, Ley 25.326): los datos que integran respaldos contables — como los registros de compras archivados cuando una tienda cambia de rubro — pueden conservarse bloqueados durante el plazo legal de conservación; no se usan para ningún otro fin.",
           "Respondemos dentro de los 10 días hábiles (art. 14, Ley 25.326).",
           "Si considerás que no fue atendido correctamente podés recurrir a la Dirección Nacional de Protección de Datos Personales: argentina.gob.ar/aaip/datospersonales",
         ],

@@ -102,7 +102,8 @@ export async function GET(req: NextRequest) {
 }
 
 
-const TC_VERSION = "1.7";
+// Mantener sincronizada con la versión visible en /afiliados/terminos
+const TC_VERSION = "2.0";
 
 // POST - afiliado se une a una tienda
 export async function POST(req: NextRequest) {

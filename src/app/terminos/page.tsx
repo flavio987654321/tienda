@@ -56,7 +56,7 @@ const CONTENT = {
           "Sos responsable de cumplir con los envíos y la atención al cliente.",
           "No podés publicar productos prohibidos, falsificados, ilegales o que infrinjan derechos de terceros.",
           "Sos responsable de las comisiones que acordés con tus afiliados.",
-          "Sos responsable de cumplir con las obligaciones impositivas de tu actividad comercial.",
+          "Sos responsable de cumplir con las obligaciones impositivas de tu actividad comercial. Sos el vendedor real frente a tus clientes y el emisor de los comprobantes de venta: la facturación y la conservación de la documentación comercial y fiscal de tus operaciones (conforme al art. 328 del Código Civil y Comercial y la normativa fiscal vigente) están a tu cargo. TiendaApps es un intermediario tecnológico y no emite comprobantes por tus ventas.",
         ],
       },
       {
@@ -130,6 +130,18 @@ const CONTENT = {
           "Mientras se tramita la transferencia de control, TiendaApps suspenderá el acceso a la cuenta para evitar usos no autorizados. Las comisiones ya acreditadas en paneles de afiliados activos siguen siendo exigibles durante este período.",
           "Una vez verificada la representación legal, TiendaApps transferirá el control de la cuenta al representante acreditado. Si no se inicia el trámite dentro de los 90 días corridos desde el fallecimiento o incapacidad declarada, TiendaApps puede cancelar la tienda tras notificar a los afiliados activos con 30 días de anticipación.",
           "Las comisiones acreditadas en los paneles de afiliados activos no se extinguen por el fallecimiento del/la Titular ni por la cancelación de la cuenta.",
+        ],
+      },
+      {
+        title: "7 ter. Cambio de rubro de la tienda",
+        body: "El panel te permite cambiar el tipo (rubro) de tu tienda. Es una acción con consecuencias importantes que aceptás al confirmarla:",
+        list: [
+          "El cambio de rubro reinicia tu tienda: se eliminan de tu panel los productos, pedidos, pagos, cupones, reseñas, consultas, carritos abandonados y el historial de ventas de tus afiliadas del ciclo anterior. La acción es irreversible desde el panel.",
+          "Bloqueos de protección: el cambio no se permite mientras tengas pedidos sin entregar o cancelar, premios de ruleta ganados por clientes y todavía vigentes sin usar, o comisiones de afiliadas sin liquidar (saldo acreditado o retiros pendientes). Las comisiones ya acreditadas no se extinguen por el cambio de rubro: el sistema exige liquidarlas antes.",
+          "Antes de confirmar, la plataforma te ofrece descargar una copia de tus productos, pedidos (con pagos y comisiones) y cupones. Como emisor de los comprobantes y responsable fiscal de tus ventas (sección 5), la conservación de esos registros es tu responsabilidad — te recomendamos descargarlos y guardarlos.",
+          "TiendaApps conserva además una copia interna de respaldo de los registros del ciclo anterior por hasta 10 años, con finalidad exclusiva contable y de defensa ante disputas, garantías o contracargos. Podés descargarla en cualquier momento desde Configuración → Respaldos.",
+          "Cupones vigentes: el cambio elimina todos los cupones de descuento. Si comunicaste cupones a tus clientes (por email, redes u otro medio) y siguen vigentes, sos responsable de avisarles de la baja por los mismos medios por los que los difundiste (art. 7, Ley 24.240 — la oferta obliga a quien la emite) o de esperar a que venzan antes de cambiar de rubro.",
+          "Tu tienda pública queda despublicada (offline) desde el cambio hasta que configures y publiques el catálogo del nuevo rubro. La ruleta de premios, si la usabas, queda desactivada hasta que la configures con premios nuevos.",
         ],
       },
       {
@@ -340,7 +352,7 @@ const CONTENT = {
       },
       {
         title: "8. Cancelación de cuenta",
-        body: "Podés eliminar tu cuenta en cualquier momento desde la configuración. Tus pedidos anteriores quedan registrados a efectos de garantías o reclamos.",
+        body: "Podés eliminar tu cuenta en cualquier momento desde la configuración. Tus pedidos anteriores quedan registrados a efectos de garantías o reclamos. Excepción: si una tienda donde compraste cambia de rubro, tus pedidos en esa tienda dejan de verse en tu historial; TiendaApps conserva una copia interna de respaldo y podés pedir el comprobante de esa compra escribiendo a marketplacemitienda@gmail.com con el asunto 'Comprobante de compra archivada'.",
       },
       {
         title: "9. Modificaciones",

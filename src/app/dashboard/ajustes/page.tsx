@@ -7,6 +7,7 @@ import DangerZone from "@/app/dashboard/configuracion/DangerZone";
 import AjustesClient from "./AjustesClient";
 import MpConnectButton from "./MpConnectButton";
 import LogoUploadCard from "@/components/LogoUploadCard";
+import ArchiveDownloadCard from "./ArchiveDownloadCard";
 
 export default async function AjustesPage({ searchParams }: { searchParams: Promise<{ mp?: string }> }) {
   const { mp } = await searchParams;
@@ -33,6 +34,15 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
         prisma.affiliate.count({ where: { storeId: store.id, status: "APPROVED", isActive: true } }),
       ])
     : [0, 0, 0];
+
+  // Respaldos de ciclos anteriores (se crean al cambiar de rubro)
+  const archives = store
+    ? await prisma.storeArchive.findMany({
+        where: { storeId: store.id },
+        select: { id: true, createdAt: true, tipoTiendaAnterior: true, ordersCount: true, totalFacturado: true },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
 
   const tier = sub?.tier ?? "BASIC";
   const isPremium = tier === "PREMIUM";
@@ -90,6 +100,15 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
                 mpSellerId={store?.mpSellerId ?? null}
                 mpStatus={mp === "connected" ? "connected" : mp === "error" ? "error" : undefined}
                 activeAffiliatesCount={activeAffiliateCount}
+              />
+            </section>
+          )}
+
+          {archives.length > 0 && (
+            <section>
+              <SectionLabel>Respaldos</SectionLabel>
+              <ArchiveDownloadCard
+                archives={archives.map((a) => ({ ...a, createdAt: a.createdAt.toISOString() }))}
               />
             </section>
           )}

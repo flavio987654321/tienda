@@ -19,7 +19,7 @@ export default function TerminosAfiliados() {
           Términos y Condiciones del Programa de Afiliados
         </h1>
         <p className="text-gray-500 text-sm mb-6">
-          Versión 1.9 — Vigente desde julio de 2026
+          Versión 2.0 — Vigente desde julio de 2026
         </p>
 
         <div className="rounded-xl border border-white/10 bg-white/5 p-5 mb-10 text-sm text-gray-300 space-y-1">
@@ -325,6 +325,33 @@ export default function TerminosAfiliados() {
           </section>
 
           <section>
+            <h2 className="text-lg font-bold text-white mb-3">8 quinquies. Cambio de rubro de la tienda</h2>
+            <p>
+              El/la Titular puede cambiar el rubro (tipo) de su tienda desde su panel. Ese cambio
+              reinicia el catálogo y elimina el historial de ventas del ciclo anterior, incluido el
+              detalle de tus comisiones en tu panel. Condiciones que te protegen:
+            </p>
+            <ul className="list-disc list-inside space-y-2 text-gray-400 mt-3">
+              <li>
+                <strong className="text-gray-300">Tu saldo está protegido:</strong> la Plataforma no permite
+                el cambio de rubro mientras exista saldo acreditado sin retirar o retiros pendientes en el
+                panel de comisiones de cualquier Afiliado/a de esa tienda. Las comisiones ya acreditadas se
+                liquidan antes del cambio — el cambio de rubro no las extingue.
+              </li>
+              <li>
+                Tras el cambio, tu vínculo de afiliación sigue activo, pero la tienda queda despublicada
+                hasta que el/la Titular publique el catálogo del nuevo rubro, y tus estadísticas y metas
+                del ciclo anterior se reinician. Vas a recibir una notificación en tu panel.
+              </li>
+              <li>
+                El detalle de comisiones del ciclo anterior queda archivado en un respaldo interno de la
+                Plataforma. Podés solicitar una copia escribiendo a marketplacemitienda@gmail.com dentro
+                de los 3 años posteriores al cambio (plazo de retención declarado en la Política de Privacidad).
+              </li>
+            </ul>
+          </section>
+
+          <section>
             <h2 className="text-lg font-bold text-white mb-3">8 quáter. Afiliados/as menores de edad</h2>
             <p>
               Si al momento de la desvinculación o del cierre de cuenta se detecta que el/la Afiliado/a
@@ -418,7 +445,7 @@ export default function TerminosAfiliados() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/5 text-xs text-gray-600 text-center">
-          <p>TiendaApps — Programa de Afiliados · Versión 1.9</p>
+          <p>TiendaApps — Programa de Afiliados · Versión 2.0</p>
           <p className="mt-1">Para consultas escribí a soporte desde tu panel de afiliado/a.</p>
         </div>
       </div>

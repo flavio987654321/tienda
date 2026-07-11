@@ -249,6 +249,7 @@ model Store {
   gamificationWidget  GamificationWidget?
   activityEvents      StoreActivityEvent[]
   milestones          StoreMilestone[]
+  archives            StoreArchive[]
 }
 
 // Suscripciones push a tiendas. userId es null para suscriptores anónimos legacy;
@@ -482,6 +483,27 @@ model AbandonedCart {
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@unique([storeId, customerEmail])
+  @@index([storeId])
+}
+
+// Respaldo generado automáticamente antes de un reset por cambio de rubro
+// (ver /api/store/reset). El reset borra pedidos, pagos, comisiones y cupones
+// del ciclo anterior porque son específicos del rubro viejo — pero esos
+// registros representan plata real ya cobrada, así que antes de borrarlos
+// se guarda acá una copia completa en JSON. Sirve de respaldo contable para
+// el dueño y de prueba ante un reclamo/contracargo de Mercado Pago.
+model StoreArchive {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  tipoTiendaAnterior String
+  ordersCount        Int
+  totalFacturado     Float
+  data               String // JSON: { orders: [...con items/pago/envío/comisión/cupón], coupons: [...] }
+
   @@index([storeId])
 }
 
