@@ -38,6 +38,11 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
+  // Verificación de dominio para Google Merchant Center (cuenta MCA de tiendaapps.com,
+  // usada para conectar el feed de Google Shopping de cada tienda).
+  verification: {
+    google: "2uTRyiZzvzrtaIjxXyhkoYc4ZrSHXsvg0GToyhdSyXI",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
