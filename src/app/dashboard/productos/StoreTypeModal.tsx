@@ -165,8 +165,8 @@ export default function StoreTypeModal({
     const toConfig   = STORE_TYPES.find((t) => t.id === selected);
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md animate-fade-slide">
-          <div className="bg-red-50 rounded-t-3xl px-7 py-6 border-b border-red-100">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col animate-fade-slide">
+          <div className="bg-red-50 rounded-t-3xl px-7 py-6 border-b border-red-100 shrink-0">
             <div className="flex items-center gap-3 mb-1">
               <div className="p-2 bg-red-100 rounded-xl">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -178,7 +178,7 @@ export default function StoreTypeModal({
             </p>
           </div>
 
-          <div className="px-7 py-5 space-y-4">
+          <div className="px-7 py-5 space-y-4 overflow-y-auto">
             <p className="text-sm text-gray-700 font-medium">Esto va a eliminar permanentemente:</p>
             <ul className="space-y-2">
               {[
@@ -258,7 +258,7 @@ export default function StoreTypeModal({
             </label>
           </div>
 
-          <div className="px-7 pb-6 flex gap-3">
+          <div className="px-7 pb-6 flex gap-3 shrink-0">
             <button
               onClick={() => setConfirmStep(false)}
               disabled={saving}
